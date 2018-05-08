@@ -1,0 +1,22 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Login
+{% endblock %}
+
+{% block form_content %}
+    <h2>Login</h2>
+    <form action="{{ url_for('security.login') }}" method="POST" name="login_user_form">
+        {{ login_user_form.hidden_tag() }}
+
+        {{ wtf.form_errors(login_user_form) }}
+
+        {{ wtf.form_field(login_user_form.email) }}
+        {{ wtf.form_field(login_user_form.password) }}
+        {{ wtf.form_field(login_user_form.remember) }}
+        {{ wtf.form_field(login_user_form.submit) }}
+
+    </form>
+{% endblock %}

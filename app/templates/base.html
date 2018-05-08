@@ -1,0 +1,89 @@
+{% extends "bootstrap/base.html" %}
+
+{% block styles %}
+{{super()}}
+    {% assets filters="cssmin", output="gen/packed.css", "css/site.css" %}
+          <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+{% endblock %}
+
+{% block navbar %}
+    <nav class="navbar navbar-default navbar-fixed-top topnav" role="navigation">
+        <div class="container topnav">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#mpsp-navbar-collapsed" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">MPS-Project</a>
+            </div>
+
+            <!-- Collect nav links and other content into a menu for mobile devices -->
+            <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
+                <ul class="nav navbar-nav navbar-right">
+
+                    <!-- add admin menu if user if administrator -->
+                    {% if current_user.has_role('admin') %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                Admin
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Create user</a></li>
+                                <li><a href="#">Create new project</a></li>
+                            </ul>
+                        </li>
+                    {% endif %}
+
+                    <!-- add user account menu if user is logged in -->
+                    {% if current_user.is_authenticated %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                <i class="fa fa-user"></i>
+                                {{ current_user.username }}
+                                {% if current_user.has_role('admin') %}
+                                    (admin)
+                                {% elif current_user.has_role('convenor') %}
+                                    (convenor)
+                                {% elif current_user.has_role('office') %}
+                                    (School Office)
+                                {% elif current_user.has_role('faculty') %}
+                                    (faculty)
+                                {% elif current_user.has_role('student') %}
+                                    (student)
+                                {% endif %}
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url_for('home.dashboard') }}">Dashboard</a></li>
+                                <li><a href="{{ url_for_security('change_password') }}">Change password</a></li>
+                                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <br/>
+          {{ utils.flashed_messages() }}
+        <br/>
+        {{ content }}
+    </div>
+    <footer>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-lg-12">
+                    <p class="copyright text-muted small">Copyright (c) 2018 University of Sussex</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+{% endblock %}

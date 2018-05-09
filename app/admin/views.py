@@ -8,13 +8,74 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, redirect, url_for, flash
-from flask_security import login_required, roles_required, current_user, logout_user
+from flask import current_app, render_template, redirect, url_for, flash, request, after_this_request, jsonify
+from werkzeug.local import LocalProxy
+from werkzeug.datastructures import MultiDict
+from flask_security import login_required, roles_required, current_user, logout_user, login_user
+from flask_security.registerable import register_user
+from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url
 
 from . import admin
 
 
-@admin.route('create_user')
+_security = LocalProxy(lambda: current_app.extensions['security'])
+_datastore = LocalProxy(lambda: _security.datastore)
+
+
+def _render_json(form, include_user=True, include_auth_token=False):
+    has_errors = len(form.errors) > 0
+
+    if has_errors:
+        code = 400
+        response = dict(errors=form.errors)
+    else:
+        code = 200
+        response = dict()
+        if include_user:
+            response['user'] = form.user.get_security_payload()
+
+        if include_auth_token:
+            token = form.user.get_auth_token()
+            response['user']['authentication_token'] = token
+
+    return jsonify(dict(meta=dict(code=code), response=response)), code
+
+
+def _commit(response=None):
+    _datastore.commit()
+    return response
+
+
+def _ctx(endpoint):
+    return _security._run_ctx_processor(endpoint)
+
+
+def get_post_action_redirect(config_key, declared=None):
+    urls = [
+        get_url(request.args.get('next')),
+        get_url(request.form.get('next')),
+        find_redirect(config_key)
+    ]
+    if declared:
+        urls.insert(0, declared)
+    for url in urls:
+        if validate_redirect_url(url):
+            return url
+
+
+def get_post_login_redirect(declared=None):
+    return get_post_action_redirect('SECURITY_POST_LOGIN_VIEW', declared)
+
+
+def get_post_register_redirect(declared=None):
+    return get_post_action_redirect('SECURITY_POST_REGISTER_VIEW', declared)
+
+
+def get_post_logout_redirect(declared=None):
+    return get_post_action_redirect('SECURITY_POST_LOGOUT_VIEW', declared)
+
+
+@admin.route('/create_user', methods=['GET', 'POST'])
 @roles_required('admin')
 def create_user():
     """

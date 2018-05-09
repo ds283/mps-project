@@ -33,7 +33,7 @@
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="#">Create user</a></li>
+                                <li><a href="{{ url_for('admin.create_user') }}">Create user</a></li>
                                 {% if current_user.has_role('admin') %}
                                     <li><a href="#">Create new project</a></li>
                                 {% endif %}

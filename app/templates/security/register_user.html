@@ -8,7 +8,7 @@
 
 {% block form_content %}
     <h2>Create a new user account</h2>
-    <form action="{{ url_for('security.register') }}" method="POST" name="register_user_form">
+    <form action="{{ url_for('admin.create_user') }}" method="POST" name="register_user_form">
         {{ register_user_form.hidden_tag() }}
 
         {{ wtf.form_errors(register_user_form) }}

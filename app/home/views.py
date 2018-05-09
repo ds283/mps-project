@@ -34,9 +34,3 @@ def dashboard():
     """
 
     return render_template('home/dashboard.html', title="Dashboard")
-
-    # user has no defined roles; set up a flash error message, log them out, and
-    # redirect to an information page
-    flash("No suitable roles were found for your user. You have been logged out. If you continue to be unable "
-          "to login, please contact the system administrator.")
-    return redirect(url_for('auth.logged_out'))

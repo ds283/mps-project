@@ -1,7 +1,8 @@
 {% extends "bootstrap/base.html" %}
+{% import "bootstrap/utils.html" as utils %}
 
 {% block styles %}
-{{super()}}
+    {{super()}}
     {% assets filters="cssmin", output="gen/packed.css", "css/site.css" %}
           <link rel="stylesheet" href="{{ ASSET_URL }}"/>
     {% endassets %}
@@ -17,7 +18,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#">MPS-Project</a>
+                <a class="navbar-brand" href="#">MPS Project Manager</a>
             </div>
 
             <!-- Collect nav links and other content into a menu for mobile devices -->
@@ -25,7 +26,7 @@
                 <ul class="nav navbar-nav navbar-right">
 
                     <!-- add admin menu if user if administrator -->
-                    {% if current_user.has_role('admin') %}
+                    {% if current_user.has_role('admin') or current_user.has_role('office') %}
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 Admin
@@ -33,7 +34,9 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="#">Create user</a></li>
-                                <li><a href="#">Create new project</a></li>
+                                {% if current_user.has_role('admin') %}
+                                    <li><a href="#">Create new project</a></li>
+                                {% endif %}
                             </ul>
                         </li>
                     {% endif %}
@@ -75,7 +78,7 @@
         <br/>
           {{ utils.flashed_messages() }}
         <br/>
-        {{ content }}
+        {% block bodyblock %}{% endblock %}
     </div>
     <footer>
         <div class="container-fluid">

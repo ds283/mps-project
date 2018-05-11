@@ -25,18 +25,30 @@
             <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
                 <ul class="nav navbar-nav navbar-right">
 
-                    <!-- add admin menu if user if administrator -->
-                    {% if current_user.has_role('admin') or current_user.has_role('office') %}
+                    <!-- add project management menu if user is system administrator -->
+                    {% if current_user.has_role('root') %}
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                Admin
+                                Project classes
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Create project class</a></li>
+                                <li><a href="#">Edit project classes</a></li>
+                            </ul>
+                        </li>
+                    {% endif %}
+
+                    <!-- add user management menu if user if administrator -->
+                    {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                Users
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('admin.create_user') }}">Create user</a></li>
-                                {% if current_user.has_role('admin') %}
-                                    <li><a href="#">Create new project</a></li>
-                                {% endif %}
+                                <li><a href="#">Edit users</a></li>
                             </ul>
                         </li>
                     {% endif %}
@@ -47,11 +59,7 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 <i class="fa fa-user"></i>
                                 {{ current_user.username }}
-                                {% if current_user.has_role('admin') %}
-                                    (admin)
-                                {% elif current_user.has_role('convenor') %}
-                                    (convenor)
-                                {% elif current_user.has_role('office') %}
+                                {% if current_user.has_role('office') %}
                                     (School Office)
                                 {% elif current_user.has_role('faculty') %}
                                     (faculty)

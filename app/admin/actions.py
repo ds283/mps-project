@@ -21,16 +21,19 @@ _datastore = LocalProxy(lambda: _security.datastore)
 
 
 def register_user(**kwargs):
+
     confirmation_link, token = None, None
     kwargs['password'] = hash_password(kwargs['password'])
+
     user = _datastore.create_user(**kwargs)
+
     _datastore.commit()
 
     if _security.confirmable:
         confirmation_link, token = generate_confirmation_link(user)
         do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
 
-    user_registered.send(app._get_current_object(),
+    user_registered.send(current_app._get_current_object(),
                          user=user, confirm_token=token)
 
     if config_value('SEND_REGISTER_EMAIL'):

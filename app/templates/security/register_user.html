@@ -11,13 +11,19 @@
     <form action="{{ url_for('admin.create_user') }}" method="POST" name="register_user_form">
         {{ register_user_form.hidden_tag() }}
 
-        {{ wtf.form_errors(register_user_form) }}
+{#        {{ wtf.form_errors(register_user_form) }}#}
 
         {{ wtf.form_field(register_user_form.email) }}
+        {{ wtf.form_field(register_user_form.username) }}
+
         {{ wtf.form_field(register_user_form.password) }}
         {% if register_user_form.password_confirm %}
             {{ wtf.form_field(register_user_form.password_confirm) }}
         {% endif %}
+
+        {{ wtf.form_field(register_user_form.first_name) }}
+        {{ wtf.form_field(register_user_form.last_name) }}
+
         {{ wtf.form_field(register_user_form.submit) }}
 
     </form>

@@ -8,13 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-import os
-
 from app import create_app
 
-# get current configuration, or default to production for safety
-config_name = os.environ.get('FLASK_CONFIG') or 'production'
-app, payload = create_app(config_name)
+app = create_app()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

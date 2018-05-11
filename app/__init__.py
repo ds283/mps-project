@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import os
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -23,7 +25,10 @@ from app.admin.forms import RegisterForm, ConfirmRegisterForm
 db = SQLAlchemy()
 
 
-def create_app(config_name):
+def create_app():
+
+    # get current configuration, or default to production for safety
+    config_name = os.environ.get('FLASK_ENV') or 'production'
 
     app = Flask(__name__, instance_relative_config=True)        # load configuration files from 'instance'
     app.config.from_object(app_config[config_name])

@@ -98,7 +98,8 @@ class PasswordConfirmFormMixin():
 class RoleMixin():
 
     available_roles = [('faculty', 'Faculty'), ('student', 'Student'), ('office', 'Office')]
-    roles = SelectField('Role', choices=available_roles, validators=[DataRequired(message="A role must be assigned")])
+    roles = SelectField('Role', choices=available_roles,
+                        validators=[DataRequired(message="A role must be assigned to each account")])
 
 
 class RegisterForm(Form, RegisterFormMixin, UniqueUserNameMixin, RoleMixin,
@@ -106,8 +107,6 @@ class RegisterForm(Form, RegisterFormMixin, UniqueUserNameMixin, RoleMixin,
 
     first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
     last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
-
-    pass
 
 
 class ConfirmRegisterForm(RegisterForm, PasswordConfirmFormMixin, NextFormMixin):

@@ -12,8 +12,9 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
 from werkzeug.local import LocalProxy
 from werkzeug.datastructures import MultiDict
 from flask_security import login_required, roles_required, current_user, logout_user, login_user
-from flask_security.registerable import register_user
 from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url
+
+from .actions import register_user
 
 from . import admin
 
@@ -95,7 +96,14 @@ def create_user():
     form = form_class(form_data)
 
     if form.validate_on_submit():
-        user = register_user(**form.to_dict())
+        field_data = form.to_dict()
+
+        # hack to handle fact that 'roles' field in register_user() expects a list, not just a single string
+        if 'roles' in field_data:
+            if isinstance(field_data['roles'], str):
+                field_data['roles'] = [ field_data['roles'] ]
+
+        user = register_user(**field_data)
         form.user = user
 
         if not _security.confirmable or _security.login_without_confirmation:

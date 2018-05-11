@@ -17,7 +17,7 @@ from flask_mail import Mail
 from flask_assets import Environment
 
 from config import app_config
-
+from app.admin.forms import RegisterForm, ConfirmRegisterForm
 
 # make db available as a static variable, so we can import into other parts of the code
 db = SQLAlchemy()
@@ -41,7 +41,7 @@ def create_app(config_name):
     from app import models
 
     user_datastore = SQLAlchemyUserDatastore(db, models.User, models.Role)
-    security = Security(app, user_datastore)
+    security = Security(app, user_datastore, register_form=RegisterForm, confirm_register_form=ConfirmRegisterForm)
 
     from .home import home as home_blueprint
     app.register_blueprint(home_blueprint)

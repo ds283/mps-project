@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block navbar %}
-    <nav class="navbar navbar-default navbar-fixed-top topnav" role="navigation">
+    <nav class="navbar navbar-inverse navbar-fixed-top topnav" role="navigation">
         <div class="container topnav">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#mpsp-navbar-collapsed" aria-expanded="false">
@@ -80,13 +80,9 @@
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>
-    <footer>
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-lg-12">
-                    <p class="copyright text-muted small">Copyright (c) 2018 University of Sussex</p>
-                </div>
-            </div>
+    <nav class="navbar navbar-default navbar-fixed-bottom" role="navigation">
+        <div class="navbar-header footer-bar">
+            <p class="copyright text-muted small">Copyright (c) 2018 University of Sussex</p>
         </div>
-    </footer>
+    </nav>
 {% endblock %}

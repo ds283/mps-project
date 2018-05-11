@@ -4,20 +4,12 @@ body, html {
     padding-top: 40px;
 }
 
-footer {
-    position: absolute;
-    bottom: 0;
-    width: 100%
-    padding: 50px 0;
-}
-
 p.copyright {
     margin: 15px 0 0;
 }
 
-.footer {
-    clear: both;
-    height: 4em;
+.footer-bar {
+    padding-left: 50px
 }
 
 .topnav {

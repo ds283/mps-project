@@ -9,8 +9,10 @@
 #
 
 from flask_security import UserMixin, RoleMixin
+from flask_sqlalchemy import SQLAlchemy
 
-from app import db
+# make db available as a static variable, so we can import into other parts of the code
+db = SQLAlchemy()
 
 
 # length of database string for typical fields, if used

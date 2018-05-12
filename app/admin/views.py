@@ -15,6 +15,7 @@ from flask_security import login_required, roles_required, current_user, logout_
 from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url
 
 from .actions import register_user
+from ..models import User
 
 from . import admin
 
@@ -125,3 +126,16 @@ def create_user():
     return _security.render_template(config_value('REGISTER_USER_TEMPLATE'),
                                      register_user_form=form,
                                      **_ctx('register'))
+
+
+@admin.route('/edit_users')
+@roles_required('admin')
+def edit_users():
+    """
+    View function that handles listing of all registered users
+    :return: HTML string
+    """
+
+    users = User.query.all()
+
+    return render_template("admin/edit_users.html", users=users)

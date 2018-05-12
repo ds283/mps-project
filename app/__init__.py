@@ -11,7 +11,6 @@
 import os
 
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_security import SQLAlchemyUserDatastore, Security
 from flask_bootstrap import Bootstrap
@@ -19,11 +18,8 @@ from flask_mail import Mail
 from flask_assets import Environment
 
 from config import app_config
-from app.admin.forms import RegisterForm, ConfirmRegisterForm
-
-# make db available as a static variable, so we can import into other parts of the code
-db = SQLAlchemy()
-
+from .admin.forms import RegisterForm, ConfirmRegisterForm
+from .models import db
 
 def create_app():
 

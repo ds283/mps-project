@@ -12,9 +12,12 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
 from werkzeug.local import LocalProxy
 from werkzeug.datastructures import MultiDict
 from flask_security import login_required, roles_required, current_user, logout_user, login_user
-from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url
+from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url, get_message, do_flash, send_mail
+from flask_security.confirmable import generate_confirmation_link
+from flask_security.signals import user_registered
 
 from .actions import register_user
+from .forms import EditUserForm
 from ..models import User
 
 from . import admin
@@ -125,7 +128,7 @@ def create_user():
 
     return _security.render_template(config_value('REGISTER_USER_TEMPLATE'),
                                      register_user_form=form,
-                                     **_ctx('register'))
+                                     **_ctx('register'), title='Register a new user account')
 
 
 @admin.route('/edit_users')
@@ -179,7 +182,7 @@ def remove_admin(id):
 @roles_required('root')
 def make_root(id):
     """
-    View function to add admin role
+    View function to add sysadmin=root role
     :param id:
     :return:
     """
@@ -197,7 +200,7 @@ def make_root(id):
 @roles_required('root')
 def remove_root(id):
     """
-    View function to remove admin role
+    View function to remove sysadmin=root role
     :param id:
     :return:
     """
@@ -208,3 +211,68 @@ def remove_root(id):
     _datastore.commit()
 
     return redirect(url_for('admin.edit_users'))
+
+
+@admin.route('/edit_user/<int:id>', methods=['GET', 'POST'])
+@roles_required('admin')
+def edit_user(id):
+    """
+    View function to
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+    form = EditUserForm(obj=user)
+
+    form.user = user
+
+    if form.validate_on_submit():
+
+        resend_confirmation = False
+        if form.email.data != user.email:
+
+            user.confirmed_at = None
+            resend_confirmation = True
+
+        user.email = form.email.data
+        user.username = form.username.data
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+
+        _datastore.remove_role_from_user(user, 'faculty')
+        _datastore.remove_role_from_user(user, 'office')
+        _datastore.remove_role_from_user(user, 'student')
+        _datastore.add_role_to_user(user, form.roles.data)
+
+        _datastore.commit()
+        flash('All changes saved')
+
+        if resend_confirmation:
+
+            confirmation_link, token = generate_confirmation_link(user)
+            do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
+
+            user_registered.send(current_app._get_current_object(),
+                                 user=user, confirm_token=token)
+
+            if config_value('SEND_REGISTER_EMAIL'):
+                send_mail(config_value('EMAIL_SUBJECT_REGISTER'), user.email,
+                          'welcome', user=user, confirmation_link=confirmation_link)
+
+
+        return redirect(url_for('admin.edit_users'))
+
+    # form.email.data = user.email
+    # form.username.data = user.username
+    # form.first_name.data = user.first_name
+    # form.last_name.data = user.last_name
+
+    if user.has_role('faculty'):
+        form.roles.data = 'faculty'
+    elif user.has_role('office'):
+        form.roles.data = 'office'
+    elif user.has_role('student'):
+        form.roles.data = 'student'
+
+    return render_template('security/edit_user.html', edit_user_form=form, user=user)

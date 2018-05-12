@@ -30,30 +30,18 @@
             <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
                 <ul class="nav navbar-nav navbar-right">
 
-                    <!-- add project management menu if user is system administrator -->
-                    {% if current_user.has_role('root') %}
-                        <li class="dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                Project classes
-                                <span class="caret"></span>
-                            </a>
-                            <ul class="dropdown-menu">
-                                <li><a href="#">Create project class</a></li>
-                                <li><a href="#">Edit project classes</a></li>
-                            </ul>
-                        </li>
-                    {% endif %}
-
-                    <!-- add user management menu if user if administrator -->
+                    <!-- add admin menu if user is an administrator (not sysadmin => admin) -->
                     {% if current_user.has_role('admin') or current_user.has_role('root') %}
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                Users
+                                Admin
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="{{ url_for('admin.create_user') }}">Create user</a></li>
-                                <li><a href="{{ url_for('admin.edit_users') }}">Edit users</a></li>
+                                <li><a href="{{ url_for('admin.edit_users') }}">Users</a></li>
+                                {% if current_user.has_role('root') %}
+                                    <li><a href="#">Project types</a></li>
+                                {% endif %}
                             </ul>
                         </li>
                     {% endif %}

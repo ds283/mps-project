@@ -1,0 +1,22 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Edit research group
+{% endblock %}
+
+{% block form_content %}
+    <h2>Add new research group</h2>
+    <form action="{{ url_for('admin.edit_group', id=group.id) }}" method="POST" name="edit_group_form">
+        {{ edit_group_form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(edit_group_form) }}#}
+
+        {{ wtf.form_field(edit_group_form.abbreviation) }}
+        {{ wtf.form_field(edit_group_form.name) }}
+
+        {{ wtf.form_field(edit_group_form.submit) }}
+
+    </form>
+{% endblock %}

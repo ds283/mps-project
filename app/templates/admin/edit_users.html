@@ -26,7 +26,7 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <h1 style="text-align:center;">Users</h1>
+    <h1 style="text-align:center;">Edit users</h1>
     {% if users %}
         <hr class="intro-divider">
         <div class="center">
@@ -75,10 +75,11 @@
                             <div class="dropdown">
                                 <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
                                     Actions
-                                    <span class="caret"></span></button>
+                                    <span class="caret"></span>
+                                </button>
                                 <ul class="dropdown-menu">
                                     <li>
-                                        <a class="btn btn-link" href="{{ url_for('admin.edit_user', id=user.id) }}">
+                                        <a href="{{ url_for('admin.edit_user', id=user.id) }}">
                                             <i class="fa fa-pencil"></i> Edit account
                                         </a>
                                     </li>
@@ -86,24 +87,24 @@
                                     {# current user always has role of at least 'admin', so no need to check here #}
                                     {% if not user.has_role('student') and not user.has_role('root') %}
                                         {% if user.has_role('admin') %}
-                                            <li>
-                                                <a class="btn btn-link {% if user.username == current_user.username %}disabled{% endif %}" href="{{ url_for('admin.remove_admin', id=user.id) }}">Remove admin</a>
+                                            <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
+                                                <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>Remove admin</a>
                                             </li>
                                         {% else %}
                                             <li>
-                                                <a class="btn btn-link" href="{{ url_for('admin.make_admin', id=user.id) }}">Make admin</a>
+                                                <a href="{{ url_for('admin.make_admin', id=user.id) }}">Make admin</a>
                                             </li>
                                         {% endif %}
                                     {% endif %}
 
                                     {% if current_user.has_role('root') and not user.has_role('student') %}
                                         {% if user.has_role('root') %}
-                                            <li>
-                                                <a class="btn btn-link {% if user.username == current_user.username %}disabled{% endif %}" href="{{ url_for('admin.remove_root', id=user.id) }}">Remove sysadmin</a>
+                                            <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
+                                                <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>Remove sysadmin</a>
                                             </li>
                                         {% else %}
                                             <li>
-                                                <a class="btn btn-link" href="{{ url_for('admin.make_root', id=user.id) }}">Make sysadmin</a>
+                                                <a href="{{ url_for('admin.make_root', id=user.id) }}">Make sysadmin</a>
                                             </li>
                                         {% endif %}
                                     {% endif %}
@@ -115,14 +116,15 @@
                 </tbody>
             </table>
         </div>
-        <div style="text-align: center">
+        <div style="text-align: center;">
     {% else %}
-        <div style="text-align: center">
+        <div style="text-align: center;">
         <h3> No users currently registered. </h3>
         <hr class="intro-divider">
     {% endif %}
     <a href="{{ url_for('admin.create_user') }}" class="btn btn-default btn-lg">
         <i class="fa fa-plus"></i>
-        Create new user
+        Add new user
     </a>
+    </div>
 {% endblock %}

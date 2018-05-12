@@ -1,0 +1,79 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('[class~="sortable-pageable"]').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit research groups
+{% endblock %}
+
+{% block bodyblock %}
+    <h1 style="text-align:center;">Edit research groups</h1>
+    {% if groups %}
+        <hr class="intro-divider">
+        <div class="center">
+            <table class="table table-striped table-bordered sortable-pageable">
+                <thead>
+                <tr>
+                    <th width="30%"> Abbreviation</th>
+                    <th width="50%"> Group name</th>
+                    <th width="20%"> Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for group in groups %}
+                    <tr>
+                        <td> {{ group.abbreviation }} </td>
+                        <td> {{ group.name }} </td>
+
+                        {# can assume user is admin or higher #}
+                        <td>
+                            <div class="dropdown">
+                                <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+                                    Actions
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="{{ url_for('admin.edit_group', id=group.id) }}">
+                                            <i class="fa fa-pencil"></i> Edit details
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="text-align: center;">
+    {% else %}
+        <div style="text-align: center;">
+        <h3> No research groups currently registered. </h3>
+        <hr class="intro=divider">
+    {% endif %}
+    <a href="{{ url_for('admin.add_group') }}" class="btn btn-default btn-lg">
+        <i class="fa fa-plus"></i>
+        Add new research group
+    </a>
+    </div>
+{%  endblock %}

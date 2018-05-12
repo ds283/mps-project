@@ -75,7 +75,8 @@
                             <a class="btn btn-link" href="{{ url_for('admin.edit_user', id=user.id) }}">
                                 <i class="fa fa-pencil"></i> Edit
                             </a>
-                            {% if current_user.has_role('admin') and not user.has_role('student') and not user.has_role('root') %}
+                            {# current user always has role of at least 'admin', so no need to check here #}
+                            {% if not user.has_role('student') and not user.has_role('root') %}
                                 {% if user.has_role('admin') %}
                                     <a class="btn btn-link {% if user.username == current_user.username %}disabled{% endif %}" href="{{ url_for('admin.remove_admin', id=user.id) }}">Remove admin</a>
                                 {% else %}

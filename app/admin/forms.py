@@ -28,17 +28,17 @@ def valid_username(form, field):
         raise ValidationError('User name "{name}" is not valid'.format(name=field.data))
 
 
-def unique_username(form, field):
+def globally_unique_username(form, field):
     if _datastore.get_user(field.data) is not None:
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
 
 
-def edit_unique_username(form, field):
+def unique_or_original_username(form, field):
     if field.data != form.user.username and _datastore.get_user(field.data) is not None:
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
 
 
-def edit_unique_email(form, field):
+def unique_or_original_email(form, field):
     if field.data != form.user.email and _datastore.get_user(field.data) is not None:
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
 
@@ -84,32 +84,25 @@ def password_strength(form, field):
         raise ValidationError(msg)
 
 
-def students_not_admin(form, field):
-
-    if (field.data == 'student') and (form.user.has_role('admin') or form.user.has_role('root')):
-
-        raise ValidationError('Administrative users cannot be students')
-
-
 class UniqueUserNameMixin():
 
     username = StringField(
         'Username',
-        validators=[DataRequired(message='Username is required'), valid_username, unique_username])
+        validators=[DataRequired(message='Username is required'), valid_username, globally_unique_username])
 
 
-class EditUniqueUserNameMixin():
+class EditUserNameMixin():
 
     username = StringField(
         'Username',
-        validators=[DataRequired(message='Username is required'), valid_username, edit_unique_username])
+        validators=[DataRequired(message='Username is required'), valid_username, unique_or_original_username])
 
 
-class EditUniqueEmailFormMixin():
+class EditEmailFormMixin():
 
     email = StringField(
         get_form_field_label('email'),
-        validators=[email_required, email_validator, edit_unique_email])
+        validators=[email_required, email_validator, unique_or_original_email])
 
 
 # redefine NewPasswordFormMixin from flask-security to check password strength
@@ -135,14 +128,6 @@ class RoleMixin():
                         validators=[DataRequired(message="A role must be assigned to each account")])
 
 
-class EditRoleMixin():
-
-    available_roles = [('faculty', 'Faculty'), ('student', 'Student'), ('office', 'Office')]
-    roles = SelectField('Role', choices=available_roles,
-                        validators=[DataRequired(message="A role must be assigned to each account"),
-                                    students_not_admin])
-
-
 class EditFormMixin():
 
     submit = SubmitField('Save changes')
@@ -163,7 +148,7 @@ class ConfirmRegisterForm(RegisterForm, PasswordConfirmFormMixin, NextFormMixin)
             self.next.data = request.args.get('next', '')
 
 
-class EditUserForm(Form, EditFormMixin, EditRoleMixin, EditUniqueUserNameMixin, EditUniqueEmailFormMixin):
+class EditUserForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin):
 
     first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
     last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])

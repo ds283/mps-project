@@ -240,11 +240,6 @@ def edit_user(id):
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
 
-        _datastore.remove_role_from_user(user, 'faculty')
-        _datastore.remove_role_from_user(user, 'office')
-        _datastore.remove_role_from_user(user, 'student')
-        _datastore.add_role_to_user(user, form.roles.data)
-
         _datastore.commit()
         flash('All changes saved')
 
@@ -262,17 +257,5 @@ def edit_user(id):
 
 
         return redirect(url_for('admin.edit_users'))
-
-    # form.email.data = user.email
-    # form.username.data = user.username
-    # form.first_name.data = user.first_name
-    # form.last_name.data = user.last_name
-
-    if user.has_role('faculty'):
-        form.roles.data = 'faculty'
-    elif user.has_role('office'):
-        form.roles.data = 'office'
-    elif user.has_role('student'):
-        form.roles.data = 'student'
 
     return render_template('security/edit_user.html', edit_user_form=form, user=user)

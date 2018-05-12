@@ -64,22 +64,21 @@
                             {% endif %}
                         </td>
                         <td>
-{#                            <a class="btn btn-info" href="{{ url_for('admin.edit_department', id=department.id) }}">#}
                             <a class="btn btn-link" href="#}">
                                 <i class="fa fa-pencil"></i> Edit
                             </a>
-                            {% if current_user.has_role('admin') %}
+                            {% if current_user.has_role('admin') and not user.has_role('student') and not user.has_role('root') %}
                                 {% if user.has_role('admin') %}
-                                    <a class="btn btn-link" href="#">Remove admin</a>
+                                    <a class="btn btn-link {% if user.username == current_user.username %}disabled{% endif %}" href="{{ url_for('admin.remove_admin', id=user.id) }}">Remove admin</a>
                                 {% else %}
-                                    <a class="btn btn-link" href="#">Make admin</a>
+                                    <a class="btn btn-link" href="{{ url_for('admin.make_admin', id=user.id) }}">Make admin</a>
                                 {% endif %}
                             {% endif %}
-                            {% if current_user.has_role('root') %}
+                            {% if current_user.has_role('root') and not user.has_role('student') %}
                                 {% if user.has_role('root') %}
-                                    <a class="btn btn-link" href="#">Remove sysadmin</a>
+                                    <a class="btn btn-link {% if user.username == current_user.username %}disabled{% endif %}" href="{{ url_for('admin.remove_root', id=user.id) }}">Remove sysadmin</a>
                                 {% else %}
-                                    <a class="btn btn-link" href="#">Make sysadmin</a>
+                                    <a class="btn btn-link" href="{{ url_for('admin.make_root', id=user.id) }}">Make sysadmin</a>
                                 {% endif %}
                             {% endif %}
                         </td>

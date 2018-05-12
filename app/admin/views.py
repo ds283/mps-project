@@ -139,3 +139,72 @@ def edit_users():
     users = User.query.all()
 
     return render_template("admin/edit_users.html", users=users)
+
+
+@admin.route('/make_admin/<int:id>', methods=['GET', 'POST'])
+@roles_required('admin')
+def make_admin(id):
+    """
+    View function to add admin role
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+
+    _datastore.add_role_to_user(user, 'admin')
+    _datastore.commit()
+
+    return redirect(url_for('admin.edit_users'))
+
+
+@admin.route('/remove_admin/<int:id>', methods=['GET', 'POST'])
+@roles_required('admin')
+def remove_admin(id):
+    """
+    View function to remove admin role
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+
+    _datastore.remove_role_from_user(user, 'admin')
+    _datastore.commit()
+
+    return redirect(url_for('admin.edit_users'))
+
+
+@admin.route('/make_root/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def make_root(id):
+    """
+    View function to add admin role
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+
+    _datastore.add_role_to_user(user, 'admin')
+    _datastore.add_role_to_user(user, 'root')
+    _datastore.commit()
+
+    return redirect(url_for('admin.edit_users'))
+
+
+@admin.route('/remove_root/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def remove_root(id):
+    """
+    View function to remove admin role
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+
+    _datastore.remove_role_from_user(user, 'root')
+    _datastore.commit()
+
+    return redirect(url_for('admin.edit_users'))

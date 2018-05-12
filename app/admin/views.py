@@ -17,8 +17,8 @@ from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
 from .actions import register_user
-from .forms import EditUserForm
-from ..models import User
+from .forms import EditUserForm, AddResearchGroupForm, EditResearchGroupForm
+from ..models import db, User, ResearchGroup
 
 from . import admin
 
@@ -217,7 +217,7 @@ def remove_root(id):
 @roles_required('admin')
 def edit_user(id):
     """
-    View function to
+    View function to edit an individual user account -- flask-security details only
     :param id:
     :return:
     """
@@ -259,3 +259,64 @@ def edit_user(id):
         return redirect(url_for('admin.edit_users'))
 
     return render_template('security/edit_user.html', edit_user_form=form, user=user)
+
+
+@admin.route('/edit_groups')
+@roles_required('root')
+def edit_groups():
+    """
+    View function that handles listing of all registered research groups
+    :return:
+    """
+
+    groups = ResearchGroup.query.all()
+
+    return render_template('admin/edit_groups.html', groups=groups)
+
+
+@admin.route('/add_group', methods=['GET', 'POST'])
+@roles_required('root')
+def add_group():
+    """
+    View function to add a new research group
+    :return:
+    """
+
+    form = AddResearchGroupForm(request.form)
+
+    if form.validate_on_submit():
+
+        group = ResearchGroup(abbreviation=form.abbreviation.data,
+                              name=form.name.data);
+        db.session.add(group)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_groups'))
+
+    return render_template('admin/add_group.html', add_group_form=form)
+
+
+@admin.route('/edit_group/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_group(id):
+    """
+    View function to edit an existing research group
+    :param id:
+    :return:
+    """
+
+    group = ResearchGroup.query.get_or_404(id)
+    form = EditResearchGroupForm(obj=group)
+
+    form.group = group
+
+    if form.validate_on_submit():
+
+        group.abbreviation = form.abbreviation.data
+        group.name = form.name.data
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_groups'))
+
+    return render_template('admin/edit_group.html', edit_group_form=form, group=group)

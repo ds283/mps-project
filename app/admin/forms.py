@@ -15,6 +15,8 @@ from werkzeug.local import LocalProxy
 from wtforms import StringField, SelectField, PasswordField, SubmitField, ValidationError
 from wtforms.validators import DataRequired
 
+from ..models import ResearchGroup
+
 from usernames import is_safe_username
 from zxcvbn import zxcvbn
 
@@ -41,6 +43,16 @@ def unique_or_original_username(form, field):
 def unique_or_original_email(form, field):
     if field.data != form.user.email and _datastore.get_user(field.data) is not None:
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
+
+
+def globally_unique_group_abbreviation(form, field):
+    if ResearchGroup.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
+
+
+def unique_or_original_abbreviation(form, field):
+    if field.data != form.group.abbreviation and ResearchGroup.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
 
 
 def password_strength(form, field):
@@ -152,3 +164,21 @@ class EditUserForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin):
 
     first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
     last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
+
+
+class AddResearchGroupForm(Form):
+
+    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='Abbreviation is required'),
+                                                           globally_unique_group_abbreviation])
+    name = StringField('Name', validators=[DataRequired(message='Name is required')])
+
+    submit = SubmitField('Add new group')
+
+
+class EditResearchGroupForm(Form):
+
+    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='Abbreviation is required'),
+                                                           unique_or_original_abbreviation])
+    name = StringField('Name', validators=[DataRequired(message='Name is required')])
+
+    submit = SubmitField('Save changes')

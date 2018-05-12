@@ -84,3 +84,17 @@ class User(db.Model, UserMixin):
 
     roles = db.relationship('Role', secondary=roles_to_users,
                             backref=db.backref('users', lazy='dynamic'))
+
+
+class ResearchGroup(db.Model):
+    """
+    Model a row from the research group table
+    """
+
+    # make table name plural
+    __tablename__ = 'research_groups'
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True, unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH))

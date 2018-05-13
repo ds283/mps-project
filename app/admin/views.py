@@ -354,3 +354,39 @@ def edit_group(id):
         return redirect(url_for('admin.edit_groups'))
 
     return render_template('admin/edit_group.html', edit_group_form=form, group=group)
+
+
+@admin.route('/make_group_active/<int:id>')
+@roles_required('root')
+def make_group_active(id):
+    """
+    View to make a research group active
+    :param id:
+    :return:
+    """
+
+    group = ResearchGroup.query.get_or_404(id)
+
+    group.active = True
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/make_group_inactive/<int:id>')
+@roles_required('root')
+def make_group_inactive(id):
+    """
+    View to make a research group inactive
+    :param id:
+    :return:
+    """
+
+    group = ResearchGroup.query.get_or_404(id)
+
+    group.active = False
+
+    db.session.commit()
+
+    return redirect(request.referrer)

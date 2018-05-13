@@ -1,11 +1,15 @@
 body {
     width: 100%;
     height: 100%;
-    background-color: #eeeadc;
+    background-color: #f4e8aa
 }
 
 p.copyright {
     margin: 15px 0 0;
+}
+
+.panel-primary {
+    background-color: #eeeadc;
 }
 
 .footer-bar {

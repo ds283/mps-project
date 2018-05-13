@@ -5,6 +5,7 @@ blinker==1.4
 cffi==1.11.5
 click==6.7
 cssmin==0.2.0
+decorator==4.3.0
 dominate==2.3.1
 Flask==1.0.2
 Flask-Assets==0.12
@@ -17,6 +18,8 @@ Flask-Principal==0.4.0
 Flask-Security==3.0.0
 Flask-SQLAlchemy==2.3.2
 Flask-WTF==0.14.2
+infinity==1.4
+intervals==0.8.1
 itsdangerous==0.24
 Jinja2==2.10
 Mako==1.0.7
@@ -25,11 +28,17 @@ passlib==1.7.1
 pycparser==2.18
 python-dateutil==2.7.2
 python-editor==1.0.3
+python-usernames==0.2.2
 pytz==2018.4
 six==1.11.0
 speaklater==1.3
 SQLAlchemy==1.2.7
+SQLAlchemy-Utils==0.33.3
+validators==0.12.1
 visitor==0.1.3
 webassets==0.12.1
 Werkzeug==0.14.1
 WTForms==2.1
+WTForms-Alchemy==0.16.7
+WTForms-Components==0.10.3
+zxcvbn==4.4.26

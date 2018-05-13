@@ -508,7 +508,7 @@ def edit_type(id):
 
         return redirect(url_for('admin.edit_programmes'))
 
-    return render_template('admin/edit_type', type_form=form, programme=degree_type, title='Edit degree type')
+    return render_template('admin/edit_type.html;', type_form=form, programme=degree_type, title='Edit degree type')
 
 
 @admin.route('/make_type_active/<int:id>')

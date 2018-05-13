@@ -26,10 +26,10 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <h1 style="text-align:center;">Edit research groups</h1>
     {% if groups %}
-        <hr class="intro-divider">
-        <div class="center">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Edit research groups</div>
+            <div class="panel-body">
             <table class="table table-striped table-bordered sortable-pageable">
                 <thead>
                 <tr>
@@ -84,6 +84,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         <div style="text-align: center;">
     {% else %}

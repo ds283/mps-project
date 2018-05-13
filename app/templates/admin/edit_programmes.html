@@ -26,10 +26,10 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <h1 style="text-align:center;">Edit degree types</h1>
     {% if types %}
-        <hr class="intro-divider">
-        <div class="center">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Edit degree types</div>
+            <div class="panel-body">
             <table class="table table-striped table-bordered sortable-pageable">
                 <thead>
                 <tr>
@@ -82,6 +82,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         <div style="text-align: center;">
     {% else %}
@@ -97,10 +98,10 @@
 
     <hr class="intro-divider">
 
-    <h1 style="text-align:center;">Edit degree programmes</h1>
     {% if programmes %}
-        <hr class="intro-divider">
-        <div class="center">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Edit degree programmes</div>
+            <div class="panel-body">
             <table class="table table-striped table-bordered sortable-pageable">
                 <thead>
                 <tr>
@@ -155,6 +156,7 @@
                 {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         <div style="text-align: center;">
     {% else %}

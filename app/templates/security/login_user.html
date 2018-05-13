@@ -6,8 +6,11 @@
     Login
 {% endblock %}
 
+{% block formtitle %}
+    Login
+{% endblock %}
+
 {% block form_content %}
-    <h2>Login</h2>
     <form action="{{ url_for('security.login') }}" method="POST" name="login_user_form">
         {{ login_user_form.hidden_tag() }}
 

@@ -6,8 +6,11 @@
     {{ title }}
 {% endblock %}
 
+{% block formtitle %}
+    {{ title }}
+{% endblock %}
+
 {% block form_content %}
-    <h2>{{ title }}</h2>
     {% if skill %}
         <form action="{{ url_for('admin.edit_skill', id=skill.id) }}" method="POST" name="skill_form">
     {% else %}

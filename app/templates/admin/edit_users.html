@@ -92,9 +92,9 @@
                                         </a>
                                     </li>
 
-                                    <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
+                                    <li {% if user.username == current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
                                         {% if user.is_active %}
-                                            <a {% if user.username != current_user.username %}href="{{ url_for('admin.make_inactive', id=user.id) }}"{% endif %}>
+                                            <a {% if user.username != current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.make_inactive', id=user.id) }}"{% endif %}>
                                                 Make inactive
                                             </a>
                                         {% else %}

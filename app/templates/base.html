@@ -42,10 +42,18 @@
                                     <i class="fa fa-pencil"></i> Users</a></li>
                                 {% if current_user.has_role('root') %}
                                     <li><a href="#">
-                                        <i class="fa fa-pencil"></i> Project types</a></li>
+                                        <i class="fa fa-pencil"></i> Project types
+                                    </a></li>
                                     <li><a href="{{ url_for('admin.edit_groups') }}">
-                                        <i class="fa fa-pencil"></i> Research groups</a></li>
+                                        <i class="fa fa-pencil"></i> Research groups
+                                    </a></li>
+                                    <li><a href="{{ url_for('admin.edit_programmes') }}">
+                                        <i class="fa fa-pencil"></i> Degree programmes
+                                    </a></li>
                                 {% endif %}
+                                <li><a href="{{ url_for('admin.edit_skills') }}">
+                                    <i class="fa fa-pencil"></i> Transferable skills
+                                </a></li>
                             </ul>
                         </li>
                     {% endif %}

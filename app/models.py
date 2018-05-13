@@ -28,19 +28,18 @@ YEAR_LENGTH = 4
 PASSWORD_HASH_LENGTH = 255
 
 
+# auxiliary table holding mapping from roles to users
+roles_to_users = db.Table('roles_users',
+                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True),
+                          db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True)
+                          )
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
     be one row giving the current configuration
     """
     year = db.Column(db.String(YEAR_LENGTH), primary_key=True)
-
-
-# auxiliary table holding mapping from roles to users
-roles_to_users = db.Table('roles_users',
-                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True),
-                          db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True)
-                          )
 
 
 class Role(db.Model, RoleMixin):

@@ -22,7 +22,7 @@ from .forms import EditUserForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
     AddTransferrableSkillForm, EditTransferableSkillForm
-from ..models import db, User, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill
+from ..models import db, User, FacultyData, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill
 
 from . import admin
 
@@ -301,6 +301,62 @@ def edit_user(id):
         return redirect(url_for('admin.edit_users'))
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
+
+
+@admin.route('/edit_affiliations/<int:id>')
+@roles_required('admin')
+def edit_affiliations(id):
+    """
+    View to edit research group affiliations for a given faculty member
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+    data = FacultyData.query.get_or_404(id)
+    research_groups = ResearchGroup.query.all()
+
+    return render_template('admin/edit_affiliations.html', user=user, data=data, research_groups=research_groups)
+
+
+@admin.route('/add_affiliation/<int:userid>/<int:groupid>')
+@roles_required('admin')
+def add_affiliation(userid, groupid):
+    """
+    View to add a research group affiliation to a faculty member
+    :param userid:
+    :param groupid:
+    :return:
+    """
+
+    data = FacultyData.query.get_or_404(userid)
+    group = ResearchGroup.query.get_or_404(groupid)
+
+    if group not in data.affiliations:
+        data.affiliations.append(group)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/remove_affiliation/<int:userid>/<int:groupid>')
+@roles_required('admin')
+def remove_affiliation(userid, groupid):
+    """
+    View to remove a research group affiliation to a faculty member
+    :param userid:
+    :param groupid:
+    :return:
+    """
+
+    data = FacultyData.query.get_or_404(userid)
+    group = ResearchGroup.query.get_or_404(groupid)
+
+    if group in data.affiliations:
+        data.affiliations.remove(group)
+        db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @admin.route('/edit_groups')

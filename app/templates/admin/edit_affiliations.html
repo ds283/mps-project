@@ -1,0 +1,46 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    <h2>Edit research group affiliations for <i class="fa fa-user"></i> {{ user.first_name }} {{ user.last_name }} ({{ user.username }})
+    </h2>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">Research group affiliations</div>
+        <div class="panel-body">
+            {% if data and data.affiliations and research_groups %}
+                <h4>
+                {% for group in research_groups %}
+                    {% if group in data.affiliations %}
+                        <a class="btn btn-success selection-label" href="{{ url_for('admin.remove_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-times"></i> {{ group.name }}</a>
+                    {% endif %}
+                {% endfor %}
+                </h4>
+            {% else %}
+                <p>No current affiliations</p>
+            {% endif %}
+        </div>
+        <div class="panel-footer">
+            {% if data and research_groups %}
+                <h4>
+                {% for group in research_groups %}
+                    {% if group not in data.affiliations %}
+                        <a class="btn btn-info selection-label" href="{{ url_for('admin.add_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-plus"></i> {{ group.name }}</a>
+                    {% endif %}
+                {% endfor %}
+                </h4>
+            {% else %}
+                <p>No available affiliations</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <a href="{{ url_for('admin.edit_users') }}">
+        <i class="fa fa-backward"></i> Return to user list
+    </a>
+{% endblock %}

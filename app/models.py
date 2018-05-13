@@ -34,6 +34,12 @@ roles_to_users = db.Table('roles_users',
                           db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True)
                           )
 
+# auxiliary table giving faculty research group affiliations
+faculty_affiliations = db.Table('faculty_affiliations',
+                                db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                                db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
+                                )
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -99,6 +105,20 @@ class ResearchGroup(db.Model):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     active = db.Column(db.Boolean())
+
+
+class FacultyData(db.Model):
+    """
+    Models extra data held on faculty members
+    """
+
+    __tablename__ = 'faculty_data'
+
+    # primary key is same as users.id for this faculty member
+    id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
+
+    affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations,
+                                   backref=db.backref('faculty', lazy='dynamic'))
 
 
 class DegreeType(db.Model):

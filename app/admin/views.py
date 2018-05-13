@@ -158,7 +158,7 @@ def make_admin(id):
     _datastore.add_role_to_user(user, 'admin')
     _datastore.commit()
 
-    return redirect(url_for('admin.edit_users'))
+    return redirect(request.referrer)
 
 
 @admin.route('/remove_admin/<int:id>', methods=['GET', 'POST'])
@@ -175,7 +175,7 @@ def remove_admin(id):
     _datastore.remove_role_from_user(user, 'admin')
     _datastore.commit()
 
-    return redirect(url_for('admin.edit_users'))
+    return redirect(request.referrer)
 
 
 @admin.route('/make_root/<int:id>', methods=['GET', 'POST'])
@@ -193,7 +193,7 @@ def make_root(id):
     _datastore.add_role_to_user(user, 'root')
     _datastore.commit()
 
-    return redirect(url_for('admin.edit_users'))
+    return redirect(request.referrer)
 
 
 @admin.route('/remove_root/<int:id>', methods=['GET', 'POST'])
@@ -210,7 +210,7 @@ def remove_root(id):
     _datastore.remove_role_from_user(user, 'root')
     _datastore.commit()
 
-    return redirect(url_for('admin.edit_users'))
+    return redirect(request.referrer)
 
 
 @admin.route('/edit_user/<int:id>', methods=['GET', 'POST'])

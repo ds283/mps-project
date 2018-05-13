@@ -1,0 +1,25 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    <h2>{{ title }}</h2>
+    {% if type %}
+        <form action="{{ url_for('admin.edit_type', id=type.id) }}" method="POST" name="type_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_type') }}" method="POST" name="type_form">
+    {% endif %}
+        {{ type_form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(type_form) }}#}
+
+        {{ wtf.form_field(type_form.name) }}
+
+        {{ wtf.form_field(type_form.submit) }}
+
+    </form>
+{% endblock %}

@@ -17,8 +17,12 @@ from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
 from .actions import register_user
-from .forms import EditUserForm, AddResearchGroupForm, EditResearchGroupForm
-from ..models import db, User, ResearchGroup
+from .forms import EditUserForm, \
+    AddResearchGroupForm, EditResearchGroupForm, \
+    AddDegreeTypeForm, EditDegreeTypeForm, \
+    AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
+    AddTransferrableSkillForm, EditTransferableSkillForm
+from ..models import db, User, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill
 
 from . import admin
 
@@ -172,6 +176,8 @@ def remove_admin(id):
 
     user = User.query.get_or_404(id)
 
+    # TODO: prevent 'admin' being removed from a 'root' user
+
     _datastore.remove_role_from_user(user, 'admin')
     _datastore.commit()
 
@@ -240,6 +246,8 @@ def make_inactive(id):
     """
 
     user = User.query.get_or_404(id)
+
+    # TODO: prevent admin or sysadmin users being made inactive
 
     _datastore.deactivate_user(user)
     _datastore.commit()
@@ -366,9 +374,7 @@ def make_group_active(id):
     """
 
     group = ResearchGroup.query.get_or_404(id)
-
     group.active = True
-
     db.session.commit()
 
     return redirect(request.referrer)
@@ -384,9 +390,241 @@ def make_group_inactive(id):
     """
 
     group = ResearchGroup.query.get_or_404(id)
-
     group.active = False
-
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/edit_programmes')
+@roles_required('root')
+def edit_programmes():
+    """
+    View for edit programmes
+    :return:
+    """
+
+    types = DegreeType.query.all()
+    programmes = DegreeProgramme.query.all()
+
+    return render_template('admin/edit_programmes.html', types=types, programmes=programmes)
+
+
+@admin.route('/add_type', methods=['GET', 'POST'])
+@roles_required('root')
+def add_type():
+    """
+    View to create a new type
+    :return:
+    """
+
+    form = AddDegreeTypeForm(request.form)
+
+    if form.validate_on_submit():
+
+        degree_type = DegreeType(name=form.name.data, active=True)
+        db.session.add(degree_type)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_programmes'))
+
+    return render_template('admin/edit_type.html', type_form=form, title='Add new degree type')
+
+
+@admin.route('/edit_type/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_type(id):
+    """
+    View to edit a degree type
+    :param id:
+    :return:
+    """
+
+    degree_type = DegreeType.query.get_or_404(id)
+    form = EditDegreeTypeForm(obj=degree_type)
+
+    form.degree_type = degree_type
+
+    if form.validate_on_submit():
+
+        degree_type.name = form.name.data
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_programmes'))
+
+    return render_template('admin/edit_type', type_form=form, programme=degree_type, title='Edit degree type')
+
+
+@admin.route('/make_type_active/<int:id>')
+@roles_required('root')
+def make_type_active(id):
+    """
+    Make a degree type active
+    :param id:
+    :return:
+    """
+
+    degree_type = DegreeType.query.get_or_404(id)
+    degree_type.active = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/make_type_inactive/<int:id>')
+@roles_required('root')
+def make_type_inactive(id):
+    """
+    Make a degree type inactive
+    :param id:
+    :return:
+    """
+
+    degree_type = DegreeType.query.get_or_404(id)
+    degree_type.active = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/add_programme', methods=['GET', 'POST'])
+@roles_required('root')
+def add_programme():
+    """
+    View to create a new programme
+    :return:
+    """
+
+    # check whether any active degree types exist, and raise an error if not
+    if not DegreeType.query.filter_by(active=True).first():
+
+        flash('No degree types are available. Set up at least one active degree type before adding a degree programme.')
+        return redirect(request.referrer)
+
+    form = AddDegreeProgrammeForm(request.form)
+
+    if form.validate_on_submit():
+
+        degree_type = form.degree_type.data
+        programme = DegreeProgramme(name=form.name.data, active=True, type_id=degree_type.id)
+        db.session.add(programme)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_programmes'))
+
+    return render_template('admin/edit_programme.html', programme_form=form, title='Add new degree programme')
+
+
+@admin.route('/edit_programme/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_programme(id):
+    """
+    View to edit a degree programme
+    :param id:
+    :return:
+    """
+
+    programme = DegreeProgramme.query.get_or_404(id)
+    form = EditDegreeProgrammeForm(obj=programme)
+
+    form.programme = programme
+
+    if form.validate_on_submit():
+
+        programme.name = form.name.data
+        programme.type_id = form.degree_type.data.id
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_programmes'))
+
+    return render_template('admin/edit_programme.html', programme_form=form, programme=programme, title='Edit degree programme')
+
+
+@admin.route('/make_programme_active/<int:id>')
+@roles_required('root')
+def make_programme_active(id):
+    """
+    Make a degree programme active
+    :param id:
+    :return:
+    """
+
+    programme = DegreeProgramme.query.get_or_404(id)
+    programme.active = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/make_programme_inactive/<int:id>')
+@roles_required('root')
+def make_programme_inactive(id):
+    """
+    Make a degree programme inactive
+    :param id:
+    :return:
+    """
+
+    programme = DegreeProgramme.query.get_or_404(id)
+    programme.active = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/edit_skills')
+@roles_required('admin')
+def edit_skills():
+    """
+    View for edit skills
+    :return:
+    """
+
+    skills = TransferableSkill.query.all()
+
+    return render_template('admin/edit_skills.html', skills=skills)
+
+
+@admin.route('/add_skill', methods=['GET', 'POST'])
+@roles_required('admin')
+def add_skill():
+    """
+    View to create a new transferable skill
+    :return:
+    """
+
+    form = AddTransferrableSkillForm(request.form)
+
+    if form.validate_on_submit():
+
+        skill = TransferableSkill(name=form.name.data)
+        db.session.add(skill)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_skills'))
+
+    return render_template('admin/edit_skill.html', skill_form=form, title='Add new transferable skill')
+
+
+@admin.route('/edit_skill/<int:id>', methods=['GET', 'POST'])
+@roles_required('admin')
+def edit_skill(id):
+    """
+    View to edit a transferable skill
+    :param id:
+    :return:
+    """
+
+    skill = TransferableSkill.query.get_or_404(id)
+    form = EditTransferableSkillForm(obj=skill)
+
+    form.skill = skill
+
+    if form.validate_on_submit():
+
+        skill.name = form.name.data
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_skills'))
+
+    return render_template('admin/edit_skill.html', skill_form=form, skill=skill, title='Edit transferable skill')

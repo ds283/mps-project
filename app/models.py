@@ -99,3 +99,47 @@ class ResearchGroup(db.Model):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     active = db.Column(db.Boolean())
+
+
+class DegreeType(db.Model):
+    """
+    Model a degree type
+    """
+
+    # make table name plural
+    __tablename__ = 'degree_types'
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    active = db.Column(db.Boolean())
+
+
+class DegreeProgramme(db.Model):
+    """
+    Model a row from the degree programme table
+    """
+
+    # make table name plural
+    __tablename__ = 'degree_programmes'
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'))
+    active = db.Column(db.Boolean())
+
+    degree_type = db.relationship('DegreeType', backref=db.backref('degree_types', lazy='dynamic'))
+
+
+class TransferableSkill(db.Model):
+    """
+    Model a transferable skill
+    """
+
+    # make table name plural
+    __tablename__ = "transferable_skills"
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)

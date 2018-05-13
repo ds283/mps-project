@@ -14,8 +14,9 @@ from flask_security.forms import password_required, password_length, email_requi
 from werkzeug.local import LocalProxy
 from wtforms import StringField, SelectField, PasswordField, SubmitField, ValidationError
 from wtforms.validators import DataRequired
+from wtforms_alchemy.fields import QuerySelectField
 
-from ..models import ResearchGroup
+from ..models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill
 
 from usernames import is_safe_username
 from zxcvbn import zxcvbn
@@ -53,6 +54,39 @@ def globally_unique_group_abbreviation(form, field):
 def unique_or_original_abbreviation(form, field):
     if field.data != form.group.abbreviation and ResearchGroup.query.filter_by(abbreviation=field.data).first():
         raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
+
+
+def globally_unique_degree_type(form, field):
+    if DegreeType.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a degree type'.format(name=field.data))
+
+
+def unique_or_original_degree_type(form, field):
+    if field.data != form.degree_type.name and DegreeType.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a degree type'.format(name=field.data))
+
+
+def globally_unique_degree_programme(form, field):
+    degree_type = form.degree_type.data
+    if DegreeProgramme.query.filter_by(name=field.data, type_id=degree_type.id).first():
+        raise ValidationError('{name} is already associated with a degree programme of the same type'.format(name=field.data))
+
+
+def unique_or_original_degree_programme(form, field):
+    degree_type = form.degree_type.data
+    if (field.data != form.programme.name or degree_type.id != form.programme.type_id) and \
+            DegreeProgramme.query.filter_by(name=field.data, type_id=degree_type.id).first():
+        raise ValidationError('{name} is already associated with a degree programme of the same type'.format(name=field.data))
+
+
+def globally_unique_transferable_skill(form, field):
+    if TransferableSkill.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a transferable skill'.format(name=field.data))
+
+
+def unique_or_original_transferable_skill(form, field):
+    if field.data != form.skill.name and TransferableSkill.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a transferable skill'.format(name=field.data))
 
 
 def password_strength(form, field):
@@ -94,6 +128,13 @@ def password_strength(form, field):
                     msg += '.'
 
         raise ValidationError(msg)
+
+
+def GetActiveDegreeTypes():
+
+    q = DegreeType.query
+
+    return q.filter_by(active=True)
 
 
 class UniqueUserNameMixin():
@@ -180,5 +221,55 @@ class EditResearchGroupForm(Form):
     abbreviation = StringField('Abbreviation', validators=[DataRequired(message='Abbreviation is required'),
                                                            unique_or_original_abbreviation])
     name = StringField('Name', validators=[DataRequired(message='Name is required')])
+
+    submit = SubmitField('Save changes')
+
+
+class AddDegreeTypeForm(Form):
+
+    name = StringField('Name', validators=[DataRequired(message='Degree type name is required'),
+                                           globally_unique_degree_type])
+
+    submit = SubmitField('Add new degree type')
+
+
+class EditDegreeTypeForm(Form):
+
+    name = StringField('Name', validators=[DataRequired(message='Degree type name is required'),
+                                           unique_or_original_degree_type])
+
+    submit = SubmitField('Save changes')
+
+
+class AddDegreeProgrammeForm(Form):
+
+    degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
+    name = StringField('Name', validators=[DataRequired(message='Degree programme name is required'),
+                                           globally_unique_degree_programme])
+
+    submit = SubmitField('Add new degree programme')
+
+
+class EditDegreeProgrammeForm(Form):
+
+    degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
+    name = StringField('Name', validators=[DataRequired(message='Degree programme name is required'),
+                                           unique_or_original_degree_programme])
+
+    submit = SubmitField('Save changes')
+
+
+class AddTransferrableSkillForm(Form):
+
+    name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
+                                            globally_unique_transferable_skill])
+
+    submit = SubmitField('Add new transferable skill')
+
+
+class EditTransferableSkillForm(Form):
+
+    name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
+                                            unique_or_original_transferable_skill])
 
     submit = SubmitField('Save changes')

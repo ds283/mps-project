@@ -127,7 +127,7 @@ def create_user():
         return _render_json(form)
 
     return _security.render_template(config_value('REGISTER_USER_TEMPLATE'),
-                                     register_user_form=form,
+                                     user_form=form,
                                      **_ctx('register'), title='Register a new user account')
 
 
@@ -292,7 +292,7 @@ def edit_user(id):
 
         return redirect(url_for('admin.edit_users'))
 
-    return render_template('security/edit_user.html', edit_user_form=form, user=user)
+    return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
 
 
 @admin.route('/edit_groups')
@@ -321,13 +321,13 @@ def add_group():
     if form.validate_on_submit():
 
         group = ResearchGroup(abbreviation=form.abbreviation.data,
-                              name=form.name.data);
+                              name=form.name.data, active=True);
         db.session.add(group)
         db.session.commit()
 
         return redirect(url_for('admin.edit_groups'))
 
-    return render_template('admin/add_group.html', add_group_form=form)
+    return render_template('admin/edit_group.html', group_form=form, title='Add new research group')
 
 
 @admin.route('/edit_group/<int:id>', methods=['GET', 'POST'])
@@ -353,7 +353,7 @@ def edit_group(id):
 
         return redirect(url_for('admin.edit_groups'))
 
-    return render_template('admin/edit_group.html', edit_group_form=form, group=group)
+    return render_template('admin/edit_group.html', group_form=form, group=group, title='Edit research group')
 
 
 @admin.route('/make_group_active/<int:id>')

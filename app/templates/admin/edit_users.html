@@ -73,10 +73,10 @@
                                 <span class="label label-default">student</span>
                             {% endif %}
                             {% if user.has_role('admin') %}
-                                <span class="label label-default">admin</span>
+                                <span class="label label-warning">admin</span>
                             {% endif %}
                             {% if user.has_role('root') %}
-                                <span class="label label-default">sysadmin</span>
+                                <span class="label label-danger">sysadmin</span>
                             {% endif %}
                         </td>
                         <td>

@@ -213,6 +213,40 @@ def remove_root(id):
     return redirect(request.referrer)
 
 
+@admin.route('/make_active/<int:id>')
+@roles_required('admin')
+def make_active(id):
+    """
+    Make a user account active
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+
+    _datastore.activate_user(user)
+    _datastore.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/make_inactive/<int:id>')
+@roles_required('admin')
+def make_inactive(id):
+    """
+    Make a user account active
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+
+    _datastore.deactivate_user(user)
+    _datastore.commit()
+
+    return redirect(request.referrer)
+
+
 @admin.route('/edit_user/<int:id>', methods=['GET', 'POST'])
 @roles_required('admin')
 def edit_user(id):

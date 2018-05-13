@@ -38,11 +38,12 @@
                     <th width="5%"> userid</th>
                     <th width="10%"> E-mail</th>
                     <th width="12%"> Confirmed</th>
+                    <th width="5%"> Status</th>
                     <th width="5%"> Logins</th>
                     <th width="12%"> Last login</th>
                     <th width="5%"> Last IP</th>
-                    <th width="15%"> Roles</th>
-                    <th width="20%"> Actions</th>
+                    <th width="13%"> Roles</th>
+                    <th width="17%"> Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -53,6 +54,13 @@
                         <td> {{ user.username }} </td>
                         <td> <a href="mailto:{{ user.email }}">{{ user.email }}</a></td>
                         <td> {% if user.confirmed_at %}{{ user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") }}{% endif %}</td>
+                        <td>
+                            {% if user.is_active %}
+                                Active
+                            {% else %}
+                                Inactive
+                            {% endif %}
+                        </td>
                         <td> {{ user.login_count }}</td>
                         <td> {% if user.last_login_at %}{{ user.last_login_at.strftime("%Y-%m-%d %H:%M:%S") }}{% endif %}</td>
                         <td> {{ user.last_login_ip }}</td>
@@ -73,7 +81,7 @@
                         </td>
                         <td>
                             <div class="dropdown">
-                                <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+                                <button class="btn btn-primary btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                     Actions
                                     <span class="caret"></span>
                                 </button>
@@ -82,6 +90,18 @@
                                         <a href="{{ url_for('admin.edit_user', id=user.id) }}">
                                             <i class="fa fa-pencil"></i> Edit account
                                         </a>
+                                    </li>
+
+                                    <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
+                                        {% if user.is_active %}
+                                            <a {% if user.username != current_user.username %}href="{{ url_for('admin.make_inactive', id=user.id) }}"{% endif %}>
+                                                Make inactive
+                                            </a>
+                                        {% else %}
+                                            <a href="{{ url_for('admin.make_active', id=user.id) }}">
+                                                Make active
+                                            </a>
+                                        {% endif %}
                                     </li>
 
                                     {# current user always has role of at least 'admin', so no need to check here #}

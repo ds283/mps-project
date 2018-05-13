@@ -3,30 +3,38 @@
 {% extends "security/index.html" %}
 
 {% block title %}
-    Create a new user acount
+    {{ title }}
 {% endblock %}
 
 {% block form_content %}
-    <h2>Create a new user account</h2>
-    <form action="{{ url_for('admin.create_user') }}" method="POST" name="register_user_form">
-        {{ register_user_form.hidden_tag() }}
+    <h2>{{ title }}</h2>
+    {% if user %}
+        <form action="{{ url_for('admin.edit_user', id=user.id) }}" method="POST" name="user_form">
+    {% else %}
+        <form action="{{ url_for('admin.create_user') }}" method="POST" name="user_form">
+    {% endif %}
+        {{ user_form.hidden_tag() }}
 
-{#        {{ wtf.form_errors(register_user_form) }}#}
+{#        {{ wtf.form_errors(user_form) }}#}
 
-        {{ wtf.form_field(register_user_form.email) }}
-        {{ wtf.form_field(register_user_form.username) }}
+        {{ wtf.form_field(user_form.email) }}
+        {{ wtf.form_field(user_form.username) }}
 
-        {{ wtf.form_field(register_user_form.password) }}
-        {% if register_user_form.password_confirm %}
-            {{ wtf.form_field(register_user_form.password_confirm) }}
+        {% if user_form.password %}
+            {{ wtf.form_field(user_form.password) }}
+        {% endif %}
+        {% if user_form.password_confirm %}
+            {{ wtf.form_field(user_form.password_confirm) }}
         {% endif %}
 
-        {{ wtf.form_field(register_user_form.first_name) }}
-        {{ wtf.form_field(register_user_form.last_name) }}
+        {{ wtf.form_field(user_form.first_name) }}
+        {{ wtf.form_field(user_form.last_name) }}
 
-        {{ wtf.form_field(register_user_form.roles) }}
+        {% if user_form.roles %}
+            {{ wtf.form_field(user_form.roles) }}
+        {% endif %}
 
-        {{ wtf.form_field(register_user_form.submit) }}
+        {{ wtf.form_field(user_form.submit) }}
 
     </form>
 {% endblock %}

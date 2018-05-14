@@ -21,8 +21,10 @@ from .forms import EditUserForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
-    AddTransferrableSkillForm, EditTransferableSkillForm
-from ..models import db, User, FacultyData, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill
+    AddTransferrableSkillForm, EditTransferableSkillForm, \
+    EditStudentDataForm
+from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
+    TransferableSkill
 
 from . import admin
 
@@ -116,7 +118,19 @@ def create_user():
 
         # insert associated records where needed
         if user.has_role('faculty'):
+
             data = FacultyData(id=user.id)
+            db.session.add(data)
+            db.session.commit()
+
+        elif user.has_role('student'):
+
+            query_years = MainConfig.query.all()
+            current_year = None
+            if len(query_years) > 0:
+                current_year = query_years[0].year
+
+            data = StudentData(id=user.id, cohort=current_year, programme=None)
             db.session.add(data)
             db.session.commit()
 
@@ -363,6 +377,33 @@ def remove_affiliation(userid, groupid):
         db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/edit_student/<int:id>', methods=['GET', 'POST'])
+@roles_required('admin')
+def edit_student(id):
+    """
+    View to edit student data
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+    data = StudentData.query.get_or_404(id)
+    form = EditStudentDataForm(obj=data)
+
+    if form.validate_on_submit():
+
+        data.exam_number = form.exam_number.data
+        data.cohort = form.cohort.data
+        data.programme_id = form.programme.data.id
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_users'))
+
+    return render_template('admin/edit_student.html', student_form=form,
+                           student=data, user=user, title='Edit student data')
 
 
 @admin.route('/edit_groups')

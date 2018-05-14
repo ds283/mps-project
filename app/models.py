@@ -45,7 +45,7 @@ class MainConfig(db.Model):
     Main application configuration table; generally, there should only
     be one row giving the current configuration
     """
-    year = db.Column(db.String(YEAR_LENGTH), primary_key=True)
+    year = db.Column(db.Integer(), primary_key=True)
 
 
 class Role(db.Model, RoleMixin):
@@ -121,6 +121,23 @@ class FacultyData(db.Model):
                                    backref=db.backref('faculty', lazy='dynamic'))
 
 
+class StudentData(db.Model):
+    """
+    Models extra data held on students
+    """
+
+    __tablename__ = 'student_data'
+
+    # primary key is same as users.id for this student member
+    id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
+
+    exam_number = db.Column(db.Integer(), index=True, unique=True)
+    cohort = db.Column(db.Integer(), index=True, unique=True)
+    programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
+
+    programme = db.relationship('DegreeProgramme', backref=db.backref('students', lazy='dynamic'))
+
+
 class DegreeType(db.Model):
     """
     Model a degree type
@@ -149,7 +166,7 @@ class DegreeProgramme(db.Model):
     type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'))
     active = db.Column(db.Boolean())
 
-    degree_type = db.relationship('DegreeType', backref=db.backref('degree_types', lazy='dynamic'))
+    degree_type = db.relationship('DegreeType', backref=db.backref('degree_programmes', lazy='dynamic'))
 
 
 class TransferableSkill(db.Model):

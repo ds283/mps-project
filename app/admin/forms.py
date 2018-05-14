@@ -12,7 +12,7 @@ from flask import request, current_app
 from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, get_form_field_label
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
-from wtforms import StringField, SelectField, PasswordField, SubmitField, ValidationError
+from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError
 from wtforms.validators import DataRequired
 from wtforms_alchemy.fields import QuerySelectField
 
@@ -132,9 +132,17 @@ def password_strength(form, field):
 
 def GetActiveDegreeTypes():
 
-    q = DegreeType.query
+    return DegreeType.query.filter_by(active=True)
 
-    return q.filter_by(active=True)
+
+def GetActiveDegreeProgrammes():
+
+    return DegreeProgramme.query.filter_by(active=True)
+
+
+def BuildDegreeProgrammeName(programme):
+
+    return programme.name + ' ' + programme.degree_type.name
 
 
 class UniqueUserNameMixin():
@@ -273,3 +281,13 @@ class EditTransferableSkillForm(Form):
                                             unique_or_original_transferable_skill])
 
     submit = SubmitField('Save changes')
+
+
+class EditStudentDataForm(Form):
+
+    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
+    cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
+    programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
+
+    submit = SubmitField('Save changes')
+

@@ -6,12 +6,12 @@
     {{ title }}
 {% endblock %}
 
-{% block form_content %}
-    <h2>Edit research group affiliations for <i class="fa fa-user"></i> {{ user.first_name }} {{ user.last_name }} ({{ user.username }})
-    </h2>
+{% block formtitle %}
+    Edit research group affiliations for <i class="fa fa-user"></i> {{ user.first_name }} {{ user.last_name }} ({{ user.username }})
+{% endblock %}
 
+{% block form_content %}
     <div class="panel panel-default">
-        <div class="panel-heading">Research group affiliations</div>
         <div class="panel-body">
             {% if data and data.affiliations and research_groups %}
                 <h4>

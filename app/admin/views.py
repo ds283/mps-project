@@ -93,6 +93,12 @@ def create_user():
     View function that handles creation of a user account
     """
 
+    # check whether any active degree programmes exist, and raise an error if not
+    if not DegreeProgramme.query.filter_by(active=True).first():
+
+        flash('No degree programmes are available. Set up at least one active degree programme before adding new users.')
+        return redirect(request.referrer)
+
     if _security.confirmable or request.is_json:
         form_class = _security.confirm_register_form
     else:

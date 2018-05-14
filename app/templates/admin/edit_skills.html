@@ -34,7 +34,7 @@
                 <thead>
                 <tr>
                     <th width="75%"> Transferrable skill</th>
-                    <th width="15%"> Actions</th>
+                    <th width="25%"> Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -44,18 +44,27 @@
 
                         {# can assume user is admin or higher #}
                         <td>
-                            <div class="dropdown">
-                                <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-                                    Actions
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="{{ url_for('admin.edit_skill', id=skill.id) }}">
-                                            <i class="fa fa-pencil"></i> Edit details
-                                        </a>
-                                    </li>
-                                </ul>
+                            <div class="row">
+                                <div class="col-xs-6">
+                                    <div class="dropdown">
+                                        <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                            Actions
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a href="{{ url_for('admin.edit_skill', id=skill.id) }}">
+                                                    <i class="fa fa-pencil"></i> Edit details
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-xs-6">
+                                    <a class="btn btn-danger btn-sm btn-block" type="button" href="{{ url_for('admin.delete_skill', id=skill.id) }}">
+                                        <i class="fa fa-trash"></i> Delete
+                                    </a>
+                                </div>
                             </div>
                         </td>
                     </tr>

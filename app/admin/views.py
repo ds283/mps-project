@@ -841,3 +841,21 @@ def edit_skill(id):
         return redirect(url_for('admin.edit_skills'))
 
     return render_template('admin/edit_skill.html', skill_form=form, skill=skill, title='Edit transferable skill')
+
+
+@admin.route('/delete_skill/<int:id>')
+@roles_required('admin')
+def delete_skill(id):
+    """
+    Delete a transferable skill
+    :param id:
+    :return:
+    """
+
+    skill = TransferableSkill.query.get_or_404(id)
+    db.session.delete(skill)
+    db.session.commit()
+
+    # TODO: delete any elements from association tables pointing into transferable skills
+
+    return redirect(request.referrer)

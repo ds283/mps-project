@@ -114,6 +114,12 @@ def create_user():
         user = register_user(**field_data)
         form.user = user
 
+        # insert associated records where needed
+        if user.has_role('faculty'):
+            data = FacultyData(id=user.id)
+            db.session.add(data)
+            db.session.commit()
+
         if not _security.confirmable or _security.login_without_confirmation:
             after_this_request(_commit)
             login_user(user)

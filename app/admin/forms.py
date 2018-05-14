@@ -51,9 +51,9 @@ def existing_username(form, field):
     user = _datastore.get_user(field.data)
 
     if user is None:
-        raise ValidationError('userid {name} is not an existing user'.format(name=form.data))
+        raise ValidationError('userid {name} is not an existing user'.format(name=field.data))
     if not user.is_active:
-        raise ValidationError('userid {name} exists, but it not currently active'.format(name=form.data))
+        raise ValidationError('userid {name} exists, but it not currently active'.format(name=field.data))
 
 
 def unique_or_original_email(form, field):

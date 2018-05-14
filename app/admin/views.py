@@ -895,7 +895,7 @@ def add_project_class():
 
         user = _datastore.get_user(form.convenor.data)
         data = ProjectClass(name=form.name.data, year=form.year.data, submissions=form.submissions.data,
-                            convenor=user, programmes=form.programmes.data)
+                            convenor=user, programmes=form.programmes.data, active=True)
         db.session.add(data)
         db.session.commit()
 
@@ -916,6 +916,8 @@ def edit_project_class(id):
     data = ProjectClass.query.get_or_404(id)
     form = EditProjectClassForm(obj=data)
 
+    form.project_class = data
+
     if form.validate_on_submit():
 
         user = _datastore.get_user(form.convenor.data)
@@ -930,5 +932,41 @@ def edit_project_class(id):
 
         return redirect(url_for('admin.edit_project_classes'))
 
-    return render_template('admin/edit_project_class.html.html', project_form=form, project_class=data,
+    elif request.method == 'GET':
+
+        form.convenor.data = data.convenor.username
+
+    return render_template('admin/edit_project_class.html', project_form=form, project_class=data,
                            title='Edit project class')
+
+
+@admin.route('/make_project_class_active/<int:id>')
+@roles_required('root')
+def make_project_class_active(id):
+    """
+    Make a project class active
+    :param id:
+    :return:
+    """
+
+    data = ProjectClass.query.get_or_404(id)
+    data.active = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/make_project_class_inactive/<int:id>')
+@roles_required('root')
+def make_project_class_inactive(id):
+    """
+    Make a project class inactive
+    :param id:
+    :return:
+    """
+
+    data = ProjectClass.query.get_or_404(id)
+    data.active = False
+    db.session.commit()
+
+    return redirect(request.referrer)

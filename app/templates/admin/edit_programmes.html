@@ -140,11 +140,11 @@
 
                                     <li>
                                         {% if programme.active %}
-                                            <a href="{{ url_for('admin.make_programme_active', id=programme.id) }}">
+                                            <a href="{{ url_for('admin.make_programme_inactive', id=programme.id) }}">
                                                 Make inactive
                                             </a>
                                         {% else %}
-                                            <a href="{{ url_for('admin.make_programme_inactive', id=programme.id) }}">
+                                            <a href="{{ url_for('admin.make_programme_active', id=programme.id) }}">
                                                 Make active
                                             </a>
                                         {% endif %}

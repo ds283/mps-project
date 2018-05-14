@@ -322,8 +322,7 @@ class ProjectClassMixin():
     year = IntegerField('Runs in year', validators=[DataRequired(message='Year is required')])
 
     submission_choices = [(0, 'None'), (1, 'One (yearly)'), (2, 'Two (termly)')]
-    submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
-                              validators=[DataRequired(message='Submission frequency is required')])
+    submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int)
 
     convenor = StringField('Convenor', validators=[DataRequired(message='A userid for the convenor is required'),
                                                   existing_username])

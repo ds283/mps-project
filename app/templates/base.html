@@ -75,9 +75,17 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('home.dashboard') }}">Dashboard</a></li>
-                                <li><a href="{{ url_for_security('change_password') }}">Change password</a></li>
+                                <li>
+                                    <a href="{{ url_for_security('change_password') }}">
+                                        <i class="fa fa-pencil"></i> Change password
+                                    </a>
+                                </li>
                                 {% if current_user.has_role('faculty') %}
-                                    <li><a href="{{ url_for('admin.my_affiliations') }}">Research affiliations</a></li>
+                                    <li>
+                                        <a href="{{ url_for('admin.my_affiliations') }}">
+                                            <i class="fa fa-pencil"></i> Research affiliations
+                                        </a>
+                                    </li>
                                 {% endif %}
                                 <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                             </ul>

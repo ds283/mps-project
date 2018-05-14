@@ -17,12 +17,11 @@ from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
 from .actions import register_user
-from .forms import EditUserForm, \
+from .forms import RoleSelectForm, ConfirmRegisterForm, EditUserForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
-    AddTransferrableSkillForm, EditTransferableSkillForm, \
-    EditStudentDataForm
+    AddTransferrableSkillForm, EditTransferableSkillForm
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill
 
@@ -99,25 +98,57 @@ def create_user():
         flash('No degree programmes are available. Set up at least one active degree programme before adding new users.')
         return redirect(request.referrer)
 
-    if _security.confirmable or request.is_json:
-        form_class = _security.confirm_register_form
-    else:
-        form_class = _security.register_form
-
-    if request.is_json:
-        form_data = MultiDict(request.get_json())
-    else:
-        form_data = request.form
-
-    form = form_class(form_data)
+    # first task is to capture the user role
+    form = RoleSelectForm(request.form)
 
     if form.validate_on_submit():
-        field_data = form.to_dict()
 
-        # hack to handle fact that 'roles' field in register_user() expects a list, not just a single string
-        if 'roles' in field_data:
-            if isinstance(field_data['roles'], str):
-                field_data['roles'] = [ field_data['roles'] ]
+        # get role and redirect to appropriate form
+        role = form.roles.data
+
+        if role == 'faculty' or role == 'office':
+
+            return redirect(url_for('admin.create_simple', role=role))
+
+        elif role == 'student':
+
+            return redirect(url_for('admin.create_student', role=role))
+
+        else:
+
+            flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
+            return redirect(url_for('admin.edit_users'))
+
+    return render_template('security/register_role.html', role_form=form, title='Select new account role')
+
+
+@admin.route('/create_simple/<string:role>', methods=['GET', 'POST'])
+@roles_required('admin')
+def create_simple(role):
+    """
+    Create a 'simple' user, current either faculty or office
+    :param role:
+    :return:
+    """
+
+    # check whether role is ok
+    if not (role == 'faculty' or role == 'office'):
+
+        flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
+        return redirect(url_for('admin.edit_users'))
+
+    form = ConfirmRegisterForm(request.form)
+
+    # delete fields that are not needed for a simple account
+    del form.cohort
+    del form.exam_number
+    del form.programme
+
+    if form.validate_on_submit():
+
+        # convert field values to a dictionary
+        field_data = form.to_dict()
+        field_data['roles'] = [role]
 
         user = register_user(**field_data)
         form.user = user
@@ -127,38 +158,54 @@ def create_user():
 
             data = FacultyData(id=user.id)
             db.session.add(data)
-            db.session.commit()
 
-        elif user.has_role('student'):
+        db.session.commit()
 
-            query_years = MainConfig.query.all()
-            current_year = None
-            if len(query_years) > 0:
-                current_year = query_years[0].year
+        return redirect(url_for('admin.edit_users'))
 
-            data = StudentData(id=user.id, cohort=current_year, programme=None)
-            db.session.add(data)
-            db.session.commit()
+    return render_template('security/register_user.html', user_form=form, role=role, title='Register a new {r} user account'.format(r=role))
 
-        if not _security.confirmable or _security.login_without_confirmation:
-            after_this_request(_commit)
-            login_user(user)
 
-        if not request.is_json:
-            if 'next' in form:
-                redirect_url = get_post_register_redirect(form.next.data)
-            else:
-                redirect_url = get_post_register_redirect()
+@admin.route('/create_student/<string:role>', methods=['GET', 'POST'])
+@roles_required('admin')
+def create_student(role):
 
-            return redirect(redirect_url)
-        return _render_json(form, include_auth_token=True)
+    # check whether role is ok
+    if not (role == 'student'):
 
-    if request.is_json:
-        return _render_json(form)
+        flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
+        return redirect(url_for('admin.edit_users'))
 
-    return _security.render_template(config_value('REGISTER_USER_TEMPLATE'),
-                                     user_form=form,
-                                     **_ctx('register'), title='Register a new user account')
+    form = ConfirmRegisterForm(request.form)
+
+    # populate cohort with default value
+    query_years = MainConfig.query.all()
+    current_year = None
+    if len(query_years) > 0:
+        current_year = query_years[0].year
+
+    form.cohort.data = current_year
+
+    if form.validate_on_submit():
+
+        # convert field values to a dictionary
+        field_data = form.to_dict()
+        field_data['roles'] = [role]
+
+        user = register_user(**field_data)
+        form.user = user
+
+        # insert extra data for student accounts
+
+        data = StudentData(id=user.id, exam_number=form.exam_number.data,
+                           cohort=form.cohort.data, programme=form.programme.data)
+        db.session.add(data)
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_users'))
+
+    return render_template('security/register_user.html', user_form=form, role=role, title='Register a new {r} user account'.format(r=role))
 
 
 @admin.route('/edit_users')
@@ -273,7 +320,10 @@ def make_inactive(id):
 
     user = User.query.get_or_404(id)
 
-    # TODO: prevent admin or sysadmin users being made inactive
+    if user.has_role('admin') or user.has_role('root'):
+
+        flash("Administrative users cannot be made inactive. Remove administration status before marking the user as inactive.")
+        return redirect(request.referrer)
 
     _datastore.deactivate_user(user)
     _datastore.commit()
@@ -293,6 +343,18 @@ def edit_user(id):
     user = User.query.get_or_404(id)
     form = EditUserForm(obj=user)
 
+    # remove fields for students if not needed
+    is_student = user.has_role('student')
+    if is_student:
+
+        student = StudentData.query.get_or_404(id)
+
+    else:
+
+        del form.exam_number
+        del form.cohort
+        del form.programme
+
     form.user = user
 
     if form.validate_on_submit():
@@ -308,7 +370,15 @@ def edit_user(id):
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
 
+        if is_student:
+
+            student.exam_number = form.exam_number.data
+            student.cohort = form.cohort.data
+            student.programme_id = form.programme.data.id
+
+        # just '_datastore.commit()' will commit all changes
         _datastore.commit()
+
         flash('All changes saved')
 
         if resend_confirmation:
@@ -325,6 +395,16 @@ def edit_user(id):
 
 
         return redirect(url_for('admin.edit_users'))
+
+    else:
+
+        # populate default values if this is the first time we are rendering the form,
+        # distinguished by the method being 'GET' rather than 'POST'
+        if is_student and request.method == 'GET':
+
+            form.exam_number.data = student.exam_number
+            form.cohort.data = student.cohort
+            form.programme.data = student.programme
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
 
@@ -383,33 +463,6 @@ def remove_affiliation(userid, groupid):
         db.session.commit()
 
     return redirect(request.referrer)
-
-
-@admin.route('/edit_student/<int:id>', methods=['GET', 'POST'])
-@roles_required('admin')
-def edit_student(id):
-    """
-    View to edit student data
-    :param id:
-    :return:
-    """
-
-    user = User.query.get_or_404(id)
-    data = StudentData.query.get_or_404(id)
-    form = EditStudentDataForm(obj=data)
-
-    if form.validate_on_submit():
-
-        data.exam_number = form.exam_number.data
-        data.cohort = form.cohort.data
-        data.programme_id = form.programme.data.id
-
-        db.session.commit()
-
-        return redirect(url_for('admin.edit_users'))
-
-    return render_template('admin/edit_student.html', student_form=form,
-                           student=data, user=user, title='Edit student data')
 
 
 @admin.route('/edit_groups')

@@ -7,14 +7,22 @@
 {% endblock %}
 
 {% block formtitle %}
-    {{ title }}
+    {% if user %}
+        Edit user account data for <i class="fa fa-user"></i> {{ user.first_name }} {{ user.last_name }} ({{ user.username }})
+    {% else %}
+        {{ title }}
+    {% endif %}
 {% endblock %}
 
 {% block form_content %}
     {% if user %}
         <form action="{{ url_for('admin.edit_user', id=user.id) }}" method="POST" name="user_form">
     {% else %}
-        <form action="{{ url_for('admin.create_user') }}" method="POST" name="user_form">
+        {% if role == 'faculty' or role == 'office' %}
+            <form action="{{ url_for('admin.create_simple', role=role) }}" method="POST" name="user_form">
+        {% else %} {# current role == 'student' is only choice #}
+            <form action="{{ url_for('admin.create_student', role=role) }}" method="POST" name="user_form">
+        {% endif %}
     {% endif %}
         {{ user_form.hidden_tag() }}
 
@@ -33,8 +41,14 @@
         {{ wtf.form_field(user_form.first_name) }}
         {{ wtf.form_field(user_form.last_name) }}
 
-        {% if user_form.roles %}
-            {{ wtf.form_field(user_form.roles) }}
+        {% if user_form.exam_number %}
+            {{ wtf.form_field(user_form.exam_number) }}
+        {% endif %}
+        {% if user_form.cohort %}
+            {{ wtf.form_field(user_form.cohort) }}
+        {% endif %}
+        {% if user_form.programme %}
+            {{ wtf.form_field(user_form.programme) }}
         {% endif %}
 
         {{ wtf.form_field(user_form.submit) }}

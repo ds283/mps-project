@@ -232,6 +232,10 @@ def make_admin(id):
 
     user = User.query.get_or_404(id)
 
+    if not user.is_active:
+        flash('Inactive users cannot be given admin privileges.')
+        return redirect(request.referrer)
+
     _datastore.add_role_to_user(user, 'admin')
     _datastore.commit()
 
@@ -249,7 +253,9 @@ def remove_admin(id):
 
     user = User.query.get_or_404(id)
 
-    # TODO: prevent 'admin' being removed from a 'root' user
+    if user.has_role('root'):
+        flash('Administration privileges cannot be removed from a system administrator.')
+        return redirect(request.referrer)
 
     _datastore.remove_role_from_user(user, 'admin')
     _datastore.commit()
@@ -267,6 +273,10 @@ def make_root(id):
     """
 
     user = User.query.get_or_404(id)
+
+    if not user.is_active:
+        flash('Inactive users cannot be given sysadmin privileges.')
+        return redirect(request.referrer)
 
     _datastore.add_role_to_user(user, 'admin')
     _datastore.add_role_to_user(user, 'root')

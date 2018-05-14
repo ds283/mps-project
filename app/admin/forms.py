@@ -12,11 +12,11 @@ from flask import request, current_app
 from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, get_form_field_label
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
-from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError
+from wtforms import widgets, StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError
 from wtforms.validators import DataRequired
-from wtforms_alchemy.fields import QuerySelectField
+from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill
+from ..models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, ProjectClass
 
 from usernames import is_safe_username
 from zxcvbn import zxcvbn
@@ -24,6 +24,12 @@ from zxcvbn import zxcvbn
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
+
+
+class CheckboxQuerySelectMultipleField(QuerySelectMultipleField):
+
+    widget = widgets.ListWidget(prefix_label=False)
+    option_widget = widgets.CheckboxInput()
 
 
 def valid_username(form, field):
@@ -39,6 +45,15 @@ def globally_unique_username(form, field):
 def unique_or_original_username(form, field):
     if field.data != form.user.username and _datastore.get_user(field.data) is not None:
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
+
+
+def existing_username(form, field):
+    user = _datastore.get_user(field.data)
+
+    if user is None:
+        raise ValidationError('userid {name} is not an existing user'.format(name=form.data))
+    if not user.is_active:
+        raise ValidationError('userid {name} exists, but it not currently active'.format(name=form.data))
 
 
 def unique_or_original_email(form, field):
@@ -87,6 +102,16 @@ def globally_unique_transferable_skill(form, field):
 def unique_or_original_transferable_skill(form, field):
     if field.data != form.skill.name and TransferableSkill.query.filter_by(name=field.data).first():
         raise ValidationError('{name} is already associated with a transferable skill'.format(name=field.data))
+
+
+def globally_unique_project_class(form, field):
+    if ProjectClass.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a project class'.format(name=field.data))
+
+
+def unique_or_original_project_class(form, field):
+    if field.data != form.project_class.name and ProjectClass.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a project class'.format(name=field.data))
 
 
 def password_strength(form, field):
@@ -194,21 +219,29 @@ class EditFormMixin():
     submit = SubmitField('Save changes')
 
 
-class RoleSelectForm(Form, RoleMixin):
+class RoleSelectForm(RoleMixin):
 
     submit = SubmitField('Select role')
 
 
-class RegisterForm(Form, RegisterFormMixin, UniqueUserNameMixin,
-                   UniqueEmailFormMixin, NewPasswordFormMixin):
+class FirstLastNameMixin():
 
     first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
     last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
+
+
+class StudentDataMixin():
 
     # student data fields; should be deleted if not needed
     exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
     cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
     programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
+
+
+class RegisterForm(Form, RegisterFormMixin, UniqueUserNameMixin, UniqueEmailFormMixin, NewPasswordFormMixin,
+                   FirstLastNameMixin, StudentDataMixin):
+
+    pass
 
 
 class ConfirmRegisterForm(RegisterForm, PasswordConfirmFormMixin, NextFormMixin):
@@ -219,15 +252,9 @@ class ConfirmRegisterForm(RegisterForm, PasswordConfirmFormMixin, NextFormMixin)
             self.next.data = request.args.get('next', '')
 
 
-class EditUserForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin):
+class EditUserForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin, FirstLastNameMixin, StudentDataMixin):
 
-    first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
-    last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
-
-    # student data fields; should be deleted if not needed
-    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
-    cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
-    programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
+    pass
 
 
 class AddResearchGroupForm(Form):
@@ -288,3 +315,32 @@ class EditTransferableSkillForm(Form, EditFormMixin):
 
     name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
                                             unique_or_original_transferable_skill])
+
+
+class ProjectClassMixin():
+
+    year = IntegerField('Runs in year', validators=[DataRequired(message='Year is required')])
+
+    submission_choices = [(0, 'None'), (1, 'One (yearly)'), (2, 'Two (termly)')]
+    submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
+                              validators=[DataRequired(message='Submission frequency is required')])
+
+    convenor = StringField('Convenor', validators=[DataRequired(message='A userid for the convenor is required'),
+                                                  existing_username])
+
+    programmes = CheckboxQuerySelectMultipleField('Attached to degree programmes', query_factory=GetActiveDegreeProgrammes,
+                                                  get_label=BuildDegreeProgrammeName)
+
+
+class AddProjectClassForm(Form, ProjectClassMixin):
+
+    name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
+                                          globally_unique_project_class])
+
+    submit = SubmitField('Add new project class')
+
+
+class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
+
+    name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
+                                          unique_or_original_project_class])

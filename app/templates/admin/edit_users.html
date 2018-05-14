@@ -118,8 +118,8 @@
                                                 <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>Remove admin</a>
                                             </li>
                                         {% else %}
-                                            <li>
-                                                <a href="{{ url_for('admin.make_admin', id=user.id) }}">Make admin</a>
+                                            <li {% if not user.is_active %}class="disabled"{% endif %}>
+                                                <a {% if user.is_active %}href="{{ url_for('admin.make_admin', id=user.id) }}{% endif %}">Make admin</a>
                                             </li>
                                         {% endif %}
                                     {% endif %}
@@ -130,8 +130,8 @@
                                                 <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>Remove sysadmin</a>
                                             </li>
                                         {% else %}
-                                            <li>
-                                                <a href="{{ url_for('admin.make_root', id=user.id) }}">Make sysadmin</a>
+                                            <li {% if not user.is_active %}class="disabled"{% endif %}>
+                                                <a {% if user.is_active %}href="{{ url_for('admin.make_root', id=user.id) }}{% endif %}">Make sysadmin</a>
                                             </li>
                                         {% endif %}
                                     {% endif %}

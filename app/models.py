@@ -40,6 +40,12 @@ faculty_affiliations = db.Table('faculty_affiliations',
                                 db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
                                 )
 
+# auxiliary table giving association between projects and degree programmes
+project_associations = db.Table('project_programmes',
+                                db.Column('project_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
+                                db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
+                                )
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -180,3 +186,33 @@ class TransferableSkill(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+
+
+class ProjectClass(db.Model):
+    """
+    Model a single project class
+    """
+
+    # make table name plural
+    __tablename__ = "project_classes"
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    active = db.Column(db.Boolean())
+
+    # which year does this project class run for?
+    year = db.Column(db.Integer())
+
+    # how many submissions per year does this project have?
+    submissions = db.Column(db.Integer())
+
+    # project convenor; must be a faculty member, so might be pereferable to link to faculty_data table,
+    # but to generate eg. tables we will need to extract usernames and emails
+    # For that purpose, it's better to link to the User table directly
+    convenor_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    convenor = db.relationship('User', backref=db.backref('convenor_for', lazy='dynamic'))
+
+    # associate this project with a set of degree programmes
+    programmes = db.relationship('DegreeProgramme', secondary=project_associations,
+                                 backref=db.backref('projects', lazy='dynamic'))

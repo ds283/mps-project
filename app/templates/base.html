@@ -41,7 +41,7 @@
                                 <li><a href="{{ url_for('admin.edit_users') }}">
                                     <i class="fa fa-pencil"></i> Users</a></li>
                                 {% if current_user.has_role('root') %}
-                                    <li><a href="#">
+                                    <li><a href="{{ url_for('admin.edit_project_classes') }}">
                                         <i class="fa fa-pencil"></i> Project types
                                     </a></li>
                                     <li><a href="{{ url_for('admin.edit_groups') }}">

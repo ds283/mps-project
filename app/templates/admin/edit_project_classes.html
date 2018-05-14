@@ -34,7 +34,7 @@
                 <thead>
                 <tr>
                     <th width="15%"> Name</th>
-                    <th width="9%" Status</th>
+                    <th width="9%"> Status</th>
                     <th width="8%"> Runs in year</th>
                     <th width="8%"> Submissions per year</th>
                     <th width="15%"> Convenor</th>
@@ -55,7 +55,7 @@
                         </td>
                         <td> {{ class.year }} </td>
                         <td> {{ class.submissions }} </td>
-                        <td> {{ class.convenor.username }} <a href="mailto:{{ class.convenor.email }}">{{ class.convenor.email }}</a></td>
+                        <td> {{ class.convenor.first_name }} {{ class.convenor.last_name }} <a href="mailto:{{ class.convenor.email }}">{{ class.convenor.email }}</a></td>
                         <td>
                             {% for programme in class.programmes %}
                                 <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
@@ -75,13 +75,15 @@
                                     </li>
 
                                     <li>
-                                        <a href="#">
+                                    {% if class.active %}
+                                        <a href="{{ url_for('admin.make_project_class_inactive', id=class.id) }}">
                                             Make inactive
                                         </a>
                                     {% else %}
-                                        <a href="#">
+                                        <a href="{{ url_for('admin.make_project_class_active', id=class.id) }}">
                                             Make active
                                         </a>
+                                    {% endif %}
                                     </li>
                                 </ul>
                             </div>

@@ -21,9 +21,10 @@ from .forms import RoleSelectForm, ConfirmRegisterForm, EditUserForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
-    AddTransferrableSkillForm, EditTransferableSkillForm
+    AddTransferrableSkillForm, EditTransferableSkillForm, \
+    AddProjectClassForm, EditProjectClassForm
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill
+    TransferableSkill, ProjectClass
 
 from . import admin
 
@@ -859,3 +860,75 @@ def delete_skill(id):
     # TODO: delete any elements from association tables pointing into transferable skills
 
     return redirect(request.referrer)
+
+
+@admin.route('/edit_project_classes')
+@roles_required('root')
+def edit_project_classes():
+    """
+    Provide list and edit view for project classes
+    :return:
+    """
+
+    classes = ProjectClass.query.all()
+
+    return render_template('admin/edit_project_classes.html', classes=classes)
+
+
+@admin.route('/add_project_class', methods=['GET', 'POST'])
+@roles_required('root')
+def add_project_class():
+    """
+    Create a new project class
+    :return:
+    """
+
+    # check whether any active degree types exist, and raise an error if not
+    if not DegreeType.query.filter_by(active=True).first():
+
+        flash('No degree types are available. Set up at least one active degree type before adding a project class.')
+        return redirect(request.referrer)
+
+    form = AddProjectClassForm(request.form)
+
+    if form.validate_on_submit():
+
+        user = _datastore.get_user(form.convenor.data)
+        data = ProjectClass(name=form.name.data, year=form.year.data, submissions=form.submissions.data,
+                            convenor=user, programmes=form.programmes.data)
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_project_classes'))
+
+    return render_template('admin/edit_project_class.html', project_form=form, title='Add new project class')
+
+
+@admin.route('/edit_project_class/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_project_class(id):
+    """
+    Edit properties for an existing project class
+    :param id:
+    :return:
+    """
+
+    data = ProjectClass.query.get_or_404(id)
+    form = EditProjectClassForm(obj=data)
+
+    if form.validate_on_submit():
+
+        user = _datastore.get_user(form.convenor.data)
+
+        data.name = form.name.data
+        data.year = form.year.data
+        data.submissions = form.submissions.data
+        data.convenor = user
+        data.programmes = form.programmes.data
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_project_classes'))
+
+    return render_template('admin/edit_project_class.html.html', project_form=form, project_class=data,
+                           title='Edit project class')

@@ -186,7 +186,7 @@ class RoleMixin():
 
     available_roles = [('faculty', 'Faculty'), ('student', 'Student'), ('office', 'Office')]
     roles = SelectField('Role', choices=available_roles,
-                        validators=[DataRequired(message="A role must be assigned to each account")])
+                        validators=[DataRequired(message="A role must be assigned before the account can be created")])
 
 
 class EditFormMixin():
@@ -194,11 +194,21 @@ class EditFormMixin():
     submit = SubmitField('Save changes')
 
 
-class RegisterForm(Form, RegisterFormMixin, UniqueUserNameMixin, RoleMixin,
+class RoleSelectForm(Form, RoleMixin):
+
+    submit = SubmitField('Select role')
+
+
+class RegisterForm(Form, RegisterFormMixin, UniqueUserNameMixin,
                    UniqueEmailFormMixin, NewPasswordFormMixin):
 
     first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
     last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
+
+    # student data fields; should be deleted if not needed
+    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
+    cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
+    programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
 
 
 class ConfirmRegisterForm(RegisterForm, PasswordConfirmFormMixin, NextFormMixin):
@@ -214,6 +224,11 @@ class EditUserForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin):
     first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
     last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
 
+    # student data fields; should be deleted if not needed
+    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
+    cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
+    programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
+
 
 class AddResearchGroupForm(Form):
 
@@ -224,13 +239,11 @@ class AddResearchGroupForm(Form):
     submit = SubmitField('Add new group')
 
 
-class EditResearchGroupForm(Form):
+class EditResearchGroupForm(Form, EditFormMixin):
 
     abbreviation = StringField('Abbreviation', validators=[DataRequired(message='Abbreviation is required'),
                                                            unique_or_original_abbreviation])
     name = StringField('Name', validators=[DataRequired(message='Name is required')])
-
-    submit = SubmitField('Save changes')
 
 
 class AddDegreeTypeForm(Form):
@@ -241,12 +254,10 @@ class AddDegreeTypeForm(Form):
     submit = SubmitField('Add new degree type')
 
 
-class EditDegreeTypeForm(Form):
+class EditDegreeTypeForm(Form, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Degree type name is required'),
                                            unique_or_original_degree_type])
-
-    submit = SubmitField('Save changes')
 
 
 class AddDegreeProgrammeForm(Form):
@@ -258,13 +269,11 @@ class AddDegreeProgrammeForm(Form):
     submit = SubmitField('Add new degree programme')
 
 
-class EditDegreeProgrammeForm(Form):
+class EditDegreeProgrammeForm(Form, EditFormMixin):
 
     degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
     name = StringField('Name', validators=[DataRequired(message='Degree programme name is required'),
                                            unique_or_original_degree_programme])
-
-    submit = SubmitField('Save changes')
 
 
 class AddTransferrableSkillForm(Form):
@@ -275,19 +284,7 @@ class AddTransferrableSkillForm(Form):
     submit = SubmitField('Add new transferable skill')
 
 
-class EditTransferableSkillForm(Form):
+class EditTransferableSkillForm(Form, EditFormMixin):
 
     name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
                                             unique_or_original_transferable_skill])
-
-    submit = SubmitField('Save changes')
-
-
-class EditStudentDataForm(Form):
-
-    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
-    cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
-    programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
-
-    submit = SubmitField('Save changes')
-

@@ -18,7 +18,6 @@ from flask_mail import Mail
 from flask_assets import Environment
 
 from config import app_config
-from .admin.forms import RegisterForm, ConfirmRegisterForm
 from .models import db
 
 def create_app():
@@ -42,7 +41,10 @@ def create_app():
     from app import models
 
     user_datastore = SQLAlchemyUserDatastore(db, models.User, models.Role)
-    security = Security(app, user_datastore, register_form=RegisterForm, confirm_register_form=ConfirmRegisterForm)
+
+    # we don't override any of Security's internal forms, but we do replace its create user funciton
+    # that automatically uses our own replacements
+    security = Security(app, user_datastore)
 
     from .home import home as home_blueprint
     app.register_blueprint(home_blueprint)

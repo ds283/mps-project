@@ -40,11 +40,35 @@ faculty_affiliations = db.Table('faculty_affiliations',
                                 db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
                                 )
 
+# auxiliary table giving association between project classes and degree programmes
+project_class_associations = db.Table('project_class_to_programmes',
+                                      db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
+                                      db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
+                                      )
+
+# auxiliary table giving association between projects and project classes
+project_classes = db.Table('project_to_classes',
+                           db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                           db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True)
+                           )
+
+# auxiliary table giving association between projects and transferable skills
+project_skills = db.Table('project_to_skills',
+                          db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                          db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True)
+                          )
+
 # auxiliary table giving association between projects and degree programmes
-project_associations = db.Table('project_programmes',
-                                db.Column('project_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
-                                db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
-                                )
+project_programmes = db.Table('project_to_programmes',
+                              db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                              db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
+                              )
+
+# auxiliary table giving association between projects and supervision tram
+project_supervision = db.Table('project_to_supervision',
+                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                               db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True)
+                               )
 
 class MainConfig(db.Model):
     """
@@ -123,8 +147,12 @@ class FacultyData(db.Model):
     # primary key is same as users.id for this faculty member
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
 
+    # list research group affilations
     affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations,
                                    backref=db.backref('faculty', lazy='dynamic'))
+
+    # this faculty wants to sign off on students before they can apply
+    sign_off_students = db.Column(db.Boolean())
 
 
 class StudentData(db.Model):
@@ -186,6 +214,7 @@ class TransferableSkill(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    active = db.Column(db.Boolean())
 
 
 class ProjectClass(db.Model):
@@ -214,5 +243,59 @@ class ProjectClass(db.Model):
     convenor = db.relationship('User', backref=db.backref('convenor_for', lazy='dynamic'))
 
     # associate this project with a set of degree programmes
-    programmes = db.relationship('DegreeProgramme', secondary=project_associations,
+    programmes = db.relationship('DegreeProgramme', secondary=project_class_associations,
+                                 backref=db.backref('project_classes', lazy='dynamic'))
+
+
+class Supervisor(db.Model):
+    """
+    Model a supervision team member
+    """
+
+    # make table name plural
+    __tablename__ = 'supervision_team'
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    active = db.Column(db.Boolean())
+
+
+class Project(db.Model):
+    """
+    Model a project
+    """
+
+    # make table name plural
+    __tablename__ = "projects"
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    active = db.Column(db.Boolean())
+
+    # which faculty member owns this project?
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    owner = db.relationship('User', backref=db.backref('projects', lazy='dynamic'))
+
+    # which research group is associated with this project?
+    group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'))
+    group = db.relationship('ResearchGroup', backref=db.backref('projects', lazy='dynamic'))
+
+    # which project class are associared this project?
+    project_classes = db.relationship('ProjectClass', secondary=project_classes,
+                                      backref=db.backref('projects', lazy='dynamic'))
+
+    # which transferable skills are associated with this project?
+    skills = db.relationship('TransferableSkill', secondary=project_skills,
+                             backref=db.backref('projects', lazy='dynamic'))
+
+    # which degree programmes are associated with this project?
+    programmes = db.relationship('DegreeProgramme', secondary=project_programmes,
                                  backref=db.backref('projects', lazy='dynamic'))
+
+    # is a meeting required before selecting this project?
+    MEETING_REQUIRED = 1
+    MEETING_OPTIONAL = 2
+    MEETING_NONE = 3
+    meeting_reqd = db.Column(db.Integer())

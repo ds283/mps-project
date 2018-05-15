@@ -47,12 +47,15 @@ def create_app():
     security = Security(app, user_datastore)
 
     from .home import home as home_blueprint
-    app.register_blueprint(home_blueprint)
+    app.register_blueprint(home_blueprint, url_prefix='/home')
 
     from .auth import auth as auth_blueprint
-    app.register_blueprint(auth_blueprint)
+    app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
     from .admin import admin as admin_blueprint
     app.register_blueprint(admin_blueprint, url_prefix='/admin')
+
+    from .faculty import faculty as faculty_blueprint
+    app.register_blueprint(faculty_blueprint, url_prefix='/faculty')
 
     return app

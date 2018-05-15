@@ -9,10 +9,7 @@
 #
 
 from flask import current_app, render_template, redirect, url_for, flash, request
-from flask_security import login_required, roles_required, current_user
-from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url, get_message, do_flash, send_mail
-from flask_security.confirmable import generate_confirmation_link
-from flask_security.signals import user_registered
+from flask_security import login_required, roles_required, roles_accepted, current_user
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, Supervisor, Project
@@ -66,7 +63,7 @@ def _available_degree_programmes(data):
 
 
 @faculty.route('/edit_my_projects')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def edit_my_projects():
 
     # filter list of projects for current user
@@ -76,7 +73,7 @@ def edit_my_projects():
 
 
 @faculty.route('/add_project', methods=['GET', 'POST'])
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def add_project():
 
     # set up form
@@ -105,7 +102,7 @@ def add_project():
 
 
 @faculty.route('/edit_project/<int:id>', methods=['GET', 'POST'])
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def edit_project(id):
 
     # set up form
@@ -137,7 +134,7 @@ def edit_project(id):
 
 
 @faculty.route('/make_project_active/<int:id>')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def make_project_active(id):
 
     # get project details
@@ -154,7 +151,7 @@ def make_project_active(id):
 
 
 @faculty.route('/make_project_inactive/<int:id>')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def make_project_inactive(id):
 
     # get project details
@@ -171,7 +168,7 @@ def make_project_inactive(id):
 
 
 @faculty.route('/attach_skills/<int:id>')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def attach_skills(id):
 
     # get project details
@@ -188,7 +185,7 @@ def attach_skills(id):
 
 
 @faculty.route('/add_skill/<int:projectid>/<int:skillid>')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def add_skill(projectid, skillid):
 
     # get project details
@@ -208,7 +205,7 @@ def add_skill(projectid, skillid):
 
 
 @faculty.route('/remove_skill/<int:projectid>/<int:skillid>')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def remove_skill(projectid, skillid):
 
     # get project details
@@ -228,7 +225,7 @@ def remove_skill(projectid, skillid):
 
 
 @faculty.route('/attach_programmes/<int:id>')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def attach_programmes(id):
 
     # get project details
@@ -244,7 +241,7 @@ def attach_programmes(id):
 
 
 @faculty.route('/add_programme/<int:projectid>/<int:progid>')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def add_programme(projectid, progid):
 
     # get project details
@@ -264,7 +261,7 @@ def add_programme(projectid, progid):
 
 
 @faculty.route('/remove_programme/<int:projectid>/<int:progid>')
-@roles_required('faculty')
+@roles_accepted('faculty', 'office')
 def remove_programme(projectid, progid):
 
     # get project details

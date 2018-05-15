@@ -27,6 +27,9 @@ YEAR_LENGTH = 4
 # length of database string for password hash field, if used
 PASSWORD_HASH_LENGTH = 255
 
+# length of project description fields
+DESCRIPTION_STRING_LENGTH = 8000
+
 
 # auxiliary table holding mapping from roles to users
 roles_to_users = db.Table('roles_users',
@@ -299,3 +302,9 @@ class Project(db.Model):
     MEETING_OPTIONAL = 2
     MEETING_NONE = 3
     meeting_reqd = db.Column(db.Integer())
+
+    # project description
+    description = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+
+    # recommended reading
+    reading = db.Column(db.String(DESCRIPTION_STRING_LENGTH))

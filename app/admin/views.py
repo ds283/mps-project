@@ -854,9 +854,8 @@ def add_project_class():
 
     if form.validate_on_submit():
 
-        user = _datastore.get_user(form.convenor.data)
         data = ProjectClass(name=form.name.data, year=form.year.data, submissions=form.submissions.data,
-                            convenor=user, programmes=form.programmes.data, active=True)
+                            convenor=form.convenor.data, programmes=form.programmes.data, active=True)
         db.session.add(data)
         db.session.commit()
 
@@ -881,21 +880,15 @@ def edit_project_class(id):
 
     if form.validate_on_submit():
 
-        user = _datastore.get_user(form.convenor.data)
-
         data.name = form.name.data
         data.year = form.year.data
         data.submissions = form.submissions.data
-        data.convenor = user
+        data.convenor = form.convenor.data
         data.programmes = form.programmes.data
 
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))
-
-    elif request.method == 'GET':
-
-        form.convenor.data = data.convenor.username
 
     return render_template('admin/edit_project_class.html', project_form=form, project_class=data,
                            title='Edit project class')

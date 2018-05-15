@@ -16,8 +16,8 @@ from wtforms import widgets, StringField, IntegerField, SelectField, PasswordFie
 from wtforms.validators import DataRequired
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, ProjectClass, Supervisor, \
-    Project
+from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
+    ProjectClass, Supervisor, Project
 
 from usernames import is_safe_username
 from zxcvbn import zxcvbn
@@ -181,6 +181,16 @@ def BuildDegreeProgrammeName(programme):
     return programme.name + ' ' + programme.degree_type.name
 
 
+def GetActiveFaculty():
+
+    return User.query.filter(User.active, User.roles.any(Role.name == 'faculty'))
+
+
+def BuildUserRealName(user):
+
+    return user.first_name + ' ' + user.last_name + ' (' + user.username + ')'
+
+
 class UniqueUserNameMixin():
 
     username = StringField(
@@ -335,8 +345,7 @@ class ProjectClassMixin():
     submission_choices = [(0, 'None'), (1, 'One (yearly)'), (2, 'Two (termly)')]
     submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int)
 
-    convenor = StringField('Convenor', validators=[DataRequired(message='A userid for the convenor is required'),
-                                                  existing_username])
+    convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
     programmes = CheckboxQuerySelectMultipleField('Attached to degree programmes', query_factory=GetActiveDegreeProgrammes,
                                                   get_label=BuildDegreeProgrammeName)
@@ -365,5 +374,6 @@ class AddSupervisorForm(Form):
 
 
 class EditSupervisorForm(Form, EditFormMixin):
+
     name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
                                            unique_or_original_supervisor])

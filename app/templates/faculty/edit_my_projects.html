@@ -85,7 +85,9 @@
                         {# prefer degree programmes #}
                         <td>
                             {% for programme in project.programmes %}
-                                <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
+                                {% if programme.active %}
+                                    <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
+                                {% endif %}
                             {% endfor %}
                         </td>
 

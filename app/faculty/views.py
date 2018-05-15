@@ -40,6 +40,31 @@ def _validate_user(data):
     return True
 
 
+def _available_degree_programmes(data):
+    """
+    Computes the degree programmes available to a particular project, from knowing which project
+    classes it is available to
+    :param data:
+    :return:
+    """
+
+    # get list of active degree programmes relevant for our degree classes;
+    # to do this we have to build a rather complex UNION query
+    queries = []
+    for proj_class in data.project_classes:
+        queries.append(
+            DegreeProgramme.query.filter(DegreeProgramme.active, DegreeProgramme.project_classes.any(id=proj_class.id)))
+
+    if len(queries) > 0:
+        q = queries[0]
+        for query in queries[1:]:
+            q = q.union(query)
+    else:
+        q = None
+
+    return q
+
+
 @faculty.route('/edit_my_projects')
 @roles_required('faculty')
 def edit_my_projects():
@@ -213,10 +238,9 @@ def attach_programmes(id):
     if not _validate_user(data):
         return redirect(request.referrer)
 
-    # get list of active degree programmes relevant for our degree classes
-    programmes = DegreeProgramme.query.filter_by(active=True)
+    q = _available_degree_programmes(data)
 
-    return render_template('faculty/attach_programmes.html', data=data, programmes=programmes)
+    return render_template('faculty/attach_programmes.html', data=data, programmes=q.all())
 
 
 @faculty.route('/add_programme/<int:projectid>/<int:progid>')

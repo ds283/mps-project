@@ -27,13 +27,21 @@
         </div>
         <div class="panel-footer">
             {% if data and programmes %}
-                <h4>
-                {% for programme in programmes %}
-                    {% if programme not in data.programmes %}
-                        <a class="btn btn-info selection-label" href="{{ url_for('faculty.add_programme', projectid=data.id, progid=programme.id) }}"><i class="fa fa-plus"></i> {{ programme.name }} {{ programme.degree_type.name }}</a>
+                {% for proj_class in data.project_classes %}
+                    {% set ns = namespace(output = false) %}
+                    <p><strong>{{ proj_class.name }}</strong></p>
+                    <h4>
+                    {% for programme in programmes %}
+                        {% if (programme in proj_class.programmes) and (programme not in data.programmes) %}
+                            <a class="btn btn-info selection-label" href="{{ url_for('faculty.add_programme', projectid=data.id, progid=programme.id) }}"><i class="fa fa-plus"></i> {{ programme.name }} {{ programme.degree_type.name }}</a>
+                            {% set ns.output = true %}
+                        {% endif %}
+                    {% endfor %}
+                    </h4>
+                    {% if not ns.output %}
+                        <p>No available programmes</p>
                     {% endif %}
                 {% endfor %}
-                </h4>
             {% else %}
                 <p>No available programmes</p>
             {% endif %}

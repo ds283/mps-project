@@ -35,9 +35,9 @@
                 <tr>
                     <th width="15%"> Name</th>
                     <th width="9%"> Status</th>
-                    <th width="15%"> Class</th>
-                    <th width="6%"> Meeting required</th>
-                    <th width="15%"> Group affiliation</th>
+                    <th width="15%"> Available for</th>
+                    <th width="6%"> Meeting required?</th>
+                    <th width="15%"> Affiliation</th>
                     <th width="25%"> Degree programmes</th>
                     <th width="15%"> Actions</th>
                 </tr>
@@ -45,7 +45,10 @@
                 <tbody>
                 {% for project in projects %}
                     <tr>
+                        {# name #}
                         <td> {{ project.name }} </td>
+
+                        {# status #}
                         <td>
                             {% if project.active %}
                                 Active
@@ -53,7 +56,17 @@
                                 Inactive
                             {% endif %}
                         </td>
-                        <td> {{ project.project_class.name }} </td>
+
+                        {# project classes #}
+                        <td>
+                            {% for pclass in project.project_classes %}
+                                <a class="btn btn-info btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}" href="mailto:{{ pclass.convenor.email }}">
+                                    {{ pclass.name }} ({{ pclass.convenor.first_name }} {{ pclass.convenor.last_name }})
+                                </a>
+                            {% endfor %}
+                        </td>
+
+                        {# meeting required #}
                         <td>
                             {% if project.meeting_reqd == 1 %}
                                 Required
@@ -65,12 +78,18 @@
                                 Unknown
                             {% endif %}
                         </td>
+
+                        {# affiliation #}
                         <td> <span class="label label-success">{{ project.group.name }}</span> </td>
+
+                        {# degree programmes #}
                         <td>
-                            {% for programme in class.programmes %}
+                            {% for programme in projects.programmes %}
                                 <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
                             {% endfor %}
                         </td>
+
+                        {# actions #}
                         <td>
                             <div class="dropdown">
                                 <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
@@ -79,18 +98,18 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li>
-                                        <a href="{{ url_for('admin.edit_project_class', id=class.id) }}">
-                                            <i class="fa fa-pencil"></i> Edit project class
+                                        <a href="{{ url_for('faculty.edit_project', id=project.id) }}">
+                                            <i class="fa fa-pencil"></i> Edit project
                                         </a>
                                     </li>
 
                                     <li>
-                                    {% if class.active %}
-                                        <a href="{{ url_for('admin.make_project_class_inactive', id=class.id) }}">
+                                    {% if project.active %}
+                                        <a href="{{ url_for('faculty.make_project_inactive', id=project.id) }}">
                                             Make inactive
                                         </a>
                                     {% else %}
-                                        <a href="{{ url_for('admin.make_project_class_active', id=class.id) }}">
+                                        <a href="{{ url_for('faculty.make_project_active', id=project.id) }}">
                                             Make active
                                         </a>
                                     {% endif %}
@@ -107,10 +126,10 @@
         <div style="text-align: center;">
     {% else %}
         <div style="text-align: center;">
-        <h3> No project classes currently registered. </h3>
+        <h3> No projects currently registered. </h3>
         <hr class="intro-divider">
     {% endif %}
-    <a href="{{ url_for('admin.add_project_class') }}" class="btn btn-default btn-lg">
+    <a href="{{ url_for('faculty.add_project') }}" class="btn btn-default btn-lg">
         <i class="fa fa-plus"></i>
         Add new project class
     </a>

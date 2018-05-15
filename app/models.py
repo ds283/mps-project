@@ -303,6 +303,9 @@ class Project(db.Model):
     MEETING_NONE = 3
     meeting_reqd = db.Column(db.Integer())
 
+    team = db.relationship('Supervisor', secondary=project_supervision,
+                           backref=db.backref('projects', lazy='dynamic'))
+
     # project description
     description = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
 

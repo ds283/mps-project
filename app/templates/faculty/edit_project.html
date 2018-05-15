@@ -23,14 +23,31 @@
         {{ wtf.form_field(project_form.name) }}
         {{ wtf.form_field(project_form.group) }}
 
-        <div class="well">
+        <div class="well {% if project_form.project_classes.errors %}has-error{% endif %}">
             Select the project classes for which this project should be made available
             {% for widget in project_form.project_classes %}
                 {{ wtf.form_field(widget) }}
             {% endfor %}
+            {% if project_form.project_classes.errors %}
+                {%- for error in project_form.project_classes.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {%- endfor %}
+            {% endif %}
         </div>
 
         {{ wtf.form_field(project_form.meeting) }}
+
+        <div class="well {% if project_form.team.errors %}has-error{% endif %}">
+            Who will be part of the supervisory team?
+            {% for widget in project_form.team %}
+                {{ wtf.form_field(widget) }}
+            {% endfor %}
+            {% if project_form.team.errors %}
+                {%- for error in project_form.team.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {%- endfor %}
+            {% endif %}
+        </div>
 
         {{ wtf.form_field(project_form.description) }}
         {{ wtf.form_field(project_form.reading) }}

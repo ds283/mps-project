@@ -42,16 +42,26 @@ def GetProjectClasses():
     return ProjectClass.query.filter_by(active=True)
 
 
+def GetSupervisorRoles():
+
+    return Supervisor.query.filter_by(active=True)
+
+
 class ProjectMixin():
 
     group = QuerySelectField('Research group', query_factory=CurrentUserResearchGroups, get_label='name')
 
     project_classes = CheckboxQuerySelectMultipleField('Project classes',
-                                                       query_factory=GetProjectClasses, get_label='name')
+                                                       query_factory=GetProjectClasses, get_label='name',
+                                                       validators=[DataRequired(message='At least one project class must be selected')])
 
     meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
                        (Project.MEETING_NONE, "Prefer not to meet")]
     meeting = SelectField('Meeting required?', choices=meeting_options, coerce=int)
+
+    team = CheckboxQuerySelectMultipleField('Supervisory team',
+                                            query_factory=GetSupervisorRoles, get_label='name',
+                                            validators=[DataRequired(message='At least one supervisory role must be selected')])
 
     description = TextAreaField('Project description',
                                 validators=[DataRequired(message='A project description is required')])

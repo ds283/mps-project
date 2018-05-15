@@ -245,7 +245,7 @@ class ProjectClass(db.Model):
     convenor_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     convenor = db.relationship('User', backref=db.backref('convenor_for', lazy='dynamic'))
 
-    # associate this project with a set of degree programmes
+    # associate this project class with a set of degree programmes
     programmes = db.relationship('DegreeProgramme', secondary=project_class_associations,
                                  backref=db.backref('project_classes', lazy='dynamic'))
 

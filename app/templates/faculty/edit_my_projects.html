@@ -80,12 +80,12 @@
                         </td>
 
                         {# affiliation #}
-                        <td> <button class="btn btn-success btn-block btn-sm">{{ project.group.name }}</button> </td>
+                        <td> <span class="label label-success">{{ project.group.name }}</span> </td>
 
                         {# prefer degree programmes #}
                         <td>
                             {% for programme in project.programmes %}
-                                <button class="btn btn-info btn-block btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}">{{ programme.name }} {{ programme.degree_type.name }}</button>
+                                <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
                             {% endfor %}
                         </td>
 

@@ -16,7 +16,8 @@ from wtforms import widgets, StringField, IntegerField, SelectField, PasswordFie
 from wtforms.validators import DataRequired
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, ProjectClass
+from ..models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, ProjectClass, Supervisor, \
+    Project
 
 from usernames import is_safe_username
 from zxcvbn import zxcvbn
@@ -112,6 +113,16 @@ def globally_unique_project_class(form, field):
 def unique_or_original_project_class(form, field):
     if field.data != form.project_class.name and ProjectClass.query.filter_by(name=field.data).first():
         raise ValidationError('{name} is already associated with a project class'.format(name=field.data))
+
+
+def globally_unique_supervisor(form, field):
+    if Supervisor.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a supervisory role'.format(name=field.data))
+
+
+def unique_or_original_supervisor(form, field):
+    if field.data != form.supervisor.name and Supervisor.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a supervisory role'.format(name=field.data))
 
 
 def password_strength(form, field):
@@ -343,3 +354,16 @@ class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
                                           unique_or_original_project_class])
+
+
+class AddSupervisorForm(Form):
+
+    name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
+                                           globally_unique_supervisor])
+
+    submit = SubmitField('Add new supervisory role')
+
+
+class EditSupervisorForm(Form, EditFormMixin):
+    name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
+                                           unique_or_original_supervisor])

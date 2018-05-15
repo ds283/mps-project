@@ -8,9 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template, redirect, url_for, flash, request, after_this_request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.local import LocalProxy
-from werkzeug.datastructures import MultiDict
 from flask_security import login_required, roles_required, current_user, logout_user, login_user
 from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url, get_message, do_flash, send_mail
 from flask_security.confirmable import generate_confirmation_link
@@ -22,68 +21,16 @@ from .forms import RoleSelectForm, ConfirmRegisterForm, EditUserForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
     AddTransferrableSkillForm, EditTransferableSkillForm, \
-    AddProjectClassForm, EditProjectClassForm
+    AddProjectClassForm, EditProjectClassForm, \
+    AddSupervisorForm, EditSupervisorForm
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass
+    TransferableSkill, ProjectClass, Supervisor, Project
 
 from . import admin
 
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
-
-
-def _render_json(form, include_user=True, include_auth_token=False):
-    has_errors = len(form.errors) > 0
-
-    if has_errors:
-        code = 400
-        response = dict(errors=form.errors)
-    else:
-        code = 200
-        response = dict()
-        if include_user:
-            response['user'] = form.user.get_security_payload()
-
-        if include_auth_token:
-            token = form.user.get_auth_token()
-            response['user']['authentication_token'] = token
-
-    return jsonify(dict(meta=dict(code=code), response=response)), code
-
-
-def _commit(response=None):
-    _datastore.commit()
-    return response
-
-
-def _ctx(endpoint):
-    return _security._run_ctx_processor(endpoint)
-
-
-def get_post_action_redirect(config_key, declared=None):
-    urls = [
-        get_url(request.args.get('next')),
-        get_url(request.form.get('next')),
-        find_redirect(config_key)
-    ]
-    if declared:
-        urls.insert(0, declared)
-    for url in urls:
-        if validate_redirect_url(url):
-            return url
-
-
-def get_post_login_redirect(declared=None):
-    return get_post_action_redirect('SECURITY_POST_LOGIN_VIEW', declared)
-
-
-def get_post_register_redirect(declared=None):
-    return get_post_action_redirect('SECURITY_POST_REGISTER_VIEW', declared)
-
-
-def get_post_logout_redirect(declared=None):
-    return get_post_action_redirect('SECURITY_POST_LOGOUT_VIEW', declared)
 
 
 @admin.route('/create_user', methods=['GET', 'POST'])
@@ -844,20 +791,34 @@ def edit_skill(id):
     return render_template('admin/edit_skill.html', skill_form=form, skill=skill, title='Edit transferable skill')
 
 
-@admin.route('/delete_skill/<int:id>')
-@roles_required('admin')
-def delete_skill(id):
+@admin.route('/make_skill_active/<int:id>')
+@roles_required('root')
+def make_skill_active(id):
     """
-    Delete a transferable skill
+    Make a transferable active
     :param id:
     :return:
     """
 
     skill = TransferableSkill.query.get_or_404(id)
-    db.session.delete(skill)
+    skill.active = True
     db.session.commit()
 
-    # TODO: delete any elements from association tables pointing into transferable skills
+    return redirect(request.referrer)
+
+
+@admin.route('/make_skill_inactive/<int:id>')
+@roles_required('root')
+def make_skill_inactive(id):
+    """
+    Make a transferable inactive
+    :param id:
+    :return:
+    """
+
+    skill = TransferableSkill.query.get_or_404(id)
+    skill.active = False
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -966,6 +927,95 @@ def make_project_class_inactive(id):
     """
 
     data = ProjectClass.query.get_or_404(id)
+    data.active = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/edit_supervisors', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_supervisors():
+    """
+    View to list and edit supervisory roles
+    :return:
+    """
+
+    roles = Supervisor.query.all()
+
+    return render_template('admin/edit_supervisors.html', roles=roles)
+
+
+@admin.route('/add_supervisor', methods=['GET', 'POST'])
+@roles_required('root')
+def add_supervisor():
+    """
+    Create a new supervisory role
+    :return:
+    """
+
+    form = AddSupervisorForm(request.form)
+
+    if form.validate_on_submit():
+
+        data = Supervisor(name=form.name.data, active=True)
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_supervisors'))
+
+    return render_template('admin/edit_supervisor.html', supervisor_form=form, title='Add new supervisory role')
+
+
+@admin.route('/edit_supervisor/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_supervisor(id):
+    """
+    Edit a supervisory role
+    :param id:
+    :return:
+    """
+
+    data = Supervisor.query.get_or_404(id)
+    form = EditSupervisorForm(obj=data)
+
+    if form.validate_on_submit():
+
+        data.name = form.name.data
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_supervisors'))
+
+    return render_template('admin/edit_supervisor.html', supervisor_form=form, role=data,
+                           title='Edit supervisory role')
+
+
+@admin.route('/make_supervisor_active/<int:id>')
+@roles_required('root')
+def make_supervisor_active(id):
+    """
+    Make a supervisor active
+    :param id:
+    :return:
+    """
+
+    data = Supervisor.query.get_or_404(id)
+    data.active = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/make_supervisor_inactive/<int:id>')
+@roles_required('root')
+def make_supervisor_inactive(id):
+    """
+    Make a supervisor inactive
+    :param id:
+    :return:
+    """
+
+    data = Supervisor.query.get_or_404(id)
     data.active = False
     db.session.commit()
 

@@ -9,7 +9,7 @@
 {% block styles %}
     {{ super() }}
     {% assets filters="cssmin", output="gen/packed.css", "css/site.css" %}
-          <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
     {% endassets %}
 {% endblock %}
 
@@ -17,7 +17,8 @@
     <nav class="navbar navbar-inverse navbar-fixed-top topnav" role="navigation">
         <div class="container topnav">
             <div class="navbar-header">
-                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#mpsp-navbar-collapsed" aria-expanded="false">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                        data-target="#mpsp-navbar-collapsed" aria-expanded="false">
                     <span class="sr-only">Toggle navigation</span>
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
@@ -30,6 +31,39 @@
             <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
                 <ul class="nav navbar-nav navbar-right">
 
+                    <!-- add 'my projects' if user is a faculty member -->
+                    {% if current_user.has_role('faculty') %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                My projects
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url_for('faculty.edit_my_projects') }}">
+                                    <i class="fa fa-pencil"></i> Edit projects
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% endif %}
+
+                    <!-- add convenor menu if needed -->
+                    {% if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.count() > 0 %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                Convenor
+                                <span class="caret"></span>
+                            </a>
+
+                            <ul class="dropdown-menu">
+                            {% for project_class in current_user.convenor_for %}
+                                <li><a href="#">
+                                    <i class="fa fa-pencil"></i> {{ project_class.name }}
+                                </a></li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {%  endif %}
+
                     <!-- add admin menu if user is an administrator (not sysadmin => admin) -->
                     {% if current_user.has_role('admin') or current_user.has_role('root') %}
                         <li class="dropdown">
@@ -39,7 +73,11 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('admin.edit_users') }}">
-                                    <i class="fa fa-pencil"></i> Users</a></li>
+                                    <i class="fa fa-pencil"></i> Users
+                                </a></li>
+                                <li><a href="{{ url_for('admin.edit_skills') }}">
+                                    <i class="fa fa-pencil"></i> Transferable skills
+                                </a></li>
                                 {% if current_user.has_role('root') %}
                                     <li><a href="{{ url_for('admin.edit_project_classes') }}">
                                         <i class="fa fa-pencil"></i> Project types
@@ -50,10 +88,10 @@
                                     <li><a href="{{ url_for('admin.edit_programmes') }}">
                                         <i class="fa fa-pencil"></i> Degree programmes
                                     </a></li>
+                                    <li><a href="{{ url_for('admin.edit_supervisors') }}">
+                                        <i class="fa fa-pencil"></i> Supervisory team
+                                    </a></li>
                                 {% endif %}
-                                <li><a href="{{ url_for('admin.edit_skills') }}">
-                                    <i class="fa fa-pencil"></i> Transferable skills
-                                </a></li>
                             </ul>
                         </li>
                     {% endif %}
@@ -100,7 +138,7 @@
 {% block content %}
     <div class="container-fluid main-content">
         <br/>
-          {{ utils.flashed_messages() }}
+        {{ utils.flashed_messages() }}
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>

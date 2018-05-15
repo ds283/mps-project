@@ -1,0 +1,28 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    {% if role %}
+        <form action="{{ url_for('admin.edit_supervisor', id=role.id) }}" method="POST" name="supervisor_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_supervisor') }}" method="POST" name="supervisor_form">
+    {% endif %}
+        {{ supervisor_form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(supervisor_form) }}#}
+
+        {{ wtf.form_field(supervisor_form.name) }}
+
+        {{ wtf.form_field(supervisor_form.submit) }}
+
+    </form>
+{% endblock %}

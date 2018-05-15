@@ -21,6 +21,7 @@
 {#        {{ wtf.form_errors(project_form) }}#}
 
         {{ wtf.form_field(project_form.name) }}
+        {{ wtf.form_field(project_form.keywords) }}
         {{ wtf.form_field(project_form.group) }}
 
         <div class="well {% if project_form.project_classes.errors %}has-error{% endif %}">

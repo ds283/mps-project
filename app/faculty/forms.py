@@ -49,6 +49,8 @@ def GetSupervisorRoles():
 
 class ProjectMixin():
 
+    keywords = StringField('Keywords', description='Optional. Separate with commas or semicolons.')
+
     group = QuerySelectField('Research group', query_factory=CurrentUserResearchGroups, get_label='name')
 
     project_classes = CheckboxQuerySelectMultipleField('Project classes',
@@ -63,10 +65,10 @@ class ProjectMixin():
                                             query_factory=GetSupervisorRoles, get_label='name',
                                             validators=[DataRequired(message='At least one supervisory role must be selected')])
 
-    description = TextAreaField('Project description',
+    description = TextAreaField('Project description', render_kw={"rows": 20},
                                 validators=[DataRequired(message='A project description is required')])
 
-    reading = TextAreaField('Recommended reading')
+    reading = TextAreaField('Recommended reading', render_kw={"rows": 10},)
 
 
 class AddProjectForm(Form, ProjectMixin):

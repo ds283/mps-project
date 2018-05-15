@@ -277,6 +277,9 @@ class Project(db.Model):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
     active = db.Column(db.Boolean())
 
+    # free keywords describing scientific area
+    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
     # which faculty member owns this project?
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     owner = db.relationship('User', backref=db.backref('projects', lazy='dynamic'))
@@ -285,7 +288,7 @@ class Project(db.Model):
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'))
     group = db.relationship('ResearchGroup', backref=db.backref('projects', lazy='dynamic'))
 
-    # which project class are associated this project?
+    # which project class are associated with this project?
     project_classes = db.relationship('ProjectClass', secondary=project_classes,
                                       backref=db.backref('projects', lazy='dynamic'))
 

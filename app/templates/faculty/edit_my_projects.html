@@ -60,7 +60,7 @@
                         {# project classes #}
                         <td>
                             {% for pclass in project.project_classes %}
-                                <a class="btn btn-info btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}" href="mailto:{{ pclass.convenor.email }}">
+                                <a class="btn btn-info btn-block btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}" href="mailto:{{ pclass.convenor.email }}">
                                     {{ pclass.name }} ({{ pclass.convenor.first_name }} {{ pclass.convenor.last_name }})
                                 </a>
                             {% endfor %}
@@ -80,12 +80,12 @@
                         </td>
 
                         {# affiliation #}
-                        <td> <span class="label label-success lg-label-size">{{ project.group.name }}</span> </td>
+                        <td> <button class="btn btn-success btn-block btn-sm">{{ project.group.name }}</button> </td>
 
-                        {# degree programmes #}
+                        {# prefer degree programmes #}
                         <td>
-                            {% for programme in projects.programmes %}
-                                <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
+                            {% for programme in project.programmes %}
+                                <button class="btn btn-info btn-block btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}">{{ programme.name }} {{ programme.degree_type.name }}</button>
                             {% endfor %}
                         </td>
 
@@ -100,6 +100,18 @@
                                     <li>
                                         <a href="{{ url_for('faculty.edit_project', id=project.id) }}">
                                             <i class="fa fa-pencil"></i> Edit project
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a href="{{ url_for('faculty.attach_skills', id=project.id) }}">
+                                            <i class="fa fa-pencil"></i> Transferable skills
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a href="{{ url_for('faculty.attach_programmes', id=project.id) }}">
+                                            <i class="fa fa-pencil"></i> Degree programmes
                                         </a>
                                     </li>
 

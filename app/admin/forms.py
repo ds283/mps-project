@@ -12,12 +12,14 @@ from flask import request, current_app
 from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, get_form_field_label
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
-from wtforms import widgets, StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError
+from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError
 from wtforms.validators import DataRequired
-from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
+from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor, Project
+    ProjectClass, Supervisor
+
+from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
 from usernames import is_safe_username
 from zxcvbn import zxcvbn
@@ -25,12 +27,6 @@ from zxcvbn import zxcvbn
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
-
-
-class CheckboxQuerySelectMultipleField(QuerySelectMultipleField):
-
-    widget = widgets.ListWidget(prefix_label=False)
-    option_widget = widgets.CheckboxInput()
 
 
 def valid_username(form, field):
@@ -233,11 +229,6 @@ class RoleMixin():
     available_roles = [('faculty', 'Faculty'), ('student', 'Student'), ('office', 'Office')]
     roles = SelectField('Role', choices=available_roles,
                         validators=[DataRequired(message="A role must be assigned before the account can be created")])
-
-
-class EditFormMixin():
-
-    submit = SubmitField('Save changes')
 
 
 class RoleSelectForm(RoleMixin):

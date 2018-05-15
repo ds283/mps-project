@@ -1,0 +1,41 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    {% if project %}
+        <form action="{{ url_for('faculty.edit_project', id=project.id) }}" method="POST" name="project_form">
+    {% else %}
+        <form action="{{ url_for('faculty.add_project') }}" method="POST" name="project_form">
+    {% endif %}
+        {{ project_form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(project_form) }}#}
+
+        {{ wtf.form_field(project_form.name) }}
+        {{ wtf.form_field(project_form.group) }}
+
+        <div class="well">
+            Select the project classes for which this project should be made available
+            {% for widget in project_form.project_classes %}
+                {{ wtf.form_field(widget) }}
+            {% endfor %}
+        </div>
+
+        {{ wtf.form_field(project_form.meeting) }}
+
+        {{ wtf.form_field(project_form.description) }}
+        {{ wtf.form_field(project_form.reading) }}
+
+        {{ wtf.form_field(project_form.submit) }}
+
+    </form>
+{% endblock %}

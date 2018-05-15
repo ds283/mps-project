@@ -285,7 +285,7 @@ class Project(db.Model):
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'))
     group = db.relationship('ResearchGroup', backref=db.backref('projects', lazy='dynamic'))
 
-    # which project class are associared this project?
+    # which project class are associated this project?
     project_classes = db.relationship('ProjectClass', secondary=project_classes,
                                       backref=db.backref('projects', lazy='dynamic'))
 

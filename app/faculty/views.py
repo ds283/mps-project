@@ -49,6 +49,7 @@ def add_project():
                        skills=[],
                        programmes=[],
                        meeting_reqd=form.meeting.data,
+                       team=form.team.data,
                        description=form.description.data,
                        reading=form.reading.data)
         db.session.add(data)
@@ -75,12 +76,13 @@ def edit_project(id):
 
     if form.validate_on_submit():
 
-        data.name=form.name.data
-        data.group=form.group.data
-        data.project_classes=form.project_classes.data
-        data.meeting_reqd=form.meeting.data
-        data.description=form.description.data
-        data.reading=form.reading.data
+        data.name = form.name.data
+        data.group = form.group.data
+        data.project_classes = form.project_classes.data
+        data.meeting_reqd = form.meeting.data
+        data.team = form.team.data
+        data.description = form.description.data
+        data.reading = form.reading.data
 
         db.session.commit()
 

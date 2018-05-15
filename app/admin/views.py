@@ -472,7 +472,7 @@ def edit_groups():
     :return:
     """
 
-    groups = ResearchGroup.query.all()
+    groups = ResearchGroup.query.filter_by(active=True)
 
     return render_template('admin/edit_groups.html', groups=groups)
 

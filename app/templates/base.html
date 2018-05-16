@@ -22,12 +22,12 @@
 
         <ul class="dropdown-menu">
         {% for project_class in pclasses %}
-            <li><a href="{{ url_for('faculty.convenor_dashboard', id=project_class.id) }}">
+            <li><a href="{{ url_for('faculty.convenor_dashboard', id=project_class.id, tabid=1) }}">
                 <i class="fa fa-pencil"></i> {{ project_class.name }}
             </a></li>
         {% endfor %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            <li><a href="{{ url_for('faculty.convenor_dashboard', id=0) }}">
+            <li><a href="{{ url_for('faculty.convenor_dashboard', id=0, tabid=0) }}">
                 Unattached projects
             </a></li>
         {% endif %}

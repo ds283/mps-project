@@ -48,7 +48,7 @@
                     <tr>
                         {# name #}
                         <td>
-                            {% set offerable = project.offerable() %}
+                            {% set offerable = project.offerable %}
                             <div class="{% if not offerable %}has-error{% endif %}">
                                 <strong>{{ project.name }}</strong>
                                 {% if not offerable and project.error %}

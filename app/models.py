@@ -534,6 +534,7 @@ class Project(db.Model):
         self.active = True
 
 
+    @property
     def offerable(self):
         """
         Determine whether this project is available for selection

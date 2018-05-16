@@ -19,6 +19,20 @@ from . import faculty
 from .forms import AddProjectForm, EditProjectForm
 
 
+def _validate_administrator():
+    """
+    Ensure that user in an administrator
+    :return:
+    """
+
+    if not current_user.has_role('admin') and not current_user.has_role('root'):
+
+        flash('Only administrative users can view unattached projects.')
+        return False
+
+    return True
+
+
 def _validate_user(project):
     """
     Validate that the logged-in user is privileged to edit a project
@@ -54,6 +68,7 @@ def _validate_convenor(pclass):
         return False
 
     return True
+
 
 @faculty.route('/edit_my_projects')
 @roles_accepted('faculty', 'admin', 'root')
@@ -138,12 +153,20 @@ def edit_project(id):
 @roles_accepted('faculty', 'admin', 'root')
 def convenor_add_project(pclass_id):
 
-    # get project class details
-    pclass = ProjectClass.query.get_or_404(pclass_id)
+    if pclass_id == 0:
 
-    # if logged in user is not a suitable convenor, or an administrator, object
-    if not _validate_convenor(pclass):
-        return redirect(request.referrer)
+        # got here from unattached projects view; reject if user is not administrator
+        if not _validate_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not _validate_convenor(pclass):
+            return redirect(request.referrer)
 
     # set up form
     form = AddProjectForm(request.form, allow_all_groups=True)
@@ -174,15 +197,23 @@ def convenor_add_project(pclass_id):
 @roles_accepted('faculty', 'admin', 'root')
 def convenor_edit_project(id, pclass_id):
 
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not _validate_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not _validate_convenor(pclass):
+            return redirect(request.referrer)
+
     # set up form
     data = Project.query.get_or_404(id)
-
-    # get project class details
-    pclass = ProjectClass.query.get_or_404(pclass_id)
-
-    # if logged in user is not a suitable convenor, or an administrator, object
-    if not _validate_convenor(pclass):
-        return redirect(request.referrer)
 
     form = EditProjectForm(obj=data, allow_all_groups=True)
     form.project = data
@@ -266,12 +297,20 @@ def convenor_attach_skills(id, pclass_id):
     # get project details
     data = Project.query.get_or_404(id)
 
-    # get project class details
-    pclass = ProjectClass.query.get_or_404(pclass_id)
+    if pclass_id == 0:
 
-    # if logged in user is not a suitable convenor, or an administrator, object
-    if not _validate_convenor(pclass):
-        return redirect(request.referrer)
+        # got here from unattached projects view; reject if user is not administrator
+        if not _validate_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not _validate_convenor(pclass):
+            return redirect(request.referrer)
 
     # get list of active skills
     skills = TransferableSkill.query.filter_by(active=True)
@@ -342,12 +381,20 @@ def convenor_attach_programmes(id, pclass_id):
     # get project details
     data = Project.query.get_or_404(id)
 
-    # get project class details
-    pclass = ProjectClass.query.get_or_404(pclass_id)
+    if pclass_id == 0:
 
-    # if logged in user is not a suitable convenor, or an administrator, object
-    if not _validate_convenor(pclass):
-        return redirect(request.referrer)
+        # got here from unattached projects view; reject if user is not administrator
+        if not _validate_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not _validate_convenor(pclass):
+            return redirect(request.referrer)
 
     q = data.available_degree_programmes()
 
@@ -398,11 +445,23 @@ def remove_programme(projectid, progid):
 @roles_accepted('faculty', 'admin', 'root')
 def convenor_dashboard(id):
 
-    # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    if id == 0:
 
-    # reject user if not entitled to view this dashboard
-    if not _validate_convenor(pclass):
-        return redirect(request.referrer)
+        # special-case of unattached projects; reject user if not administrator
+        if not _validate_administrator():
+            return redirect(request.referrer)
 
-    return render_template('faculty/convenor_dashboard.html', pclass=pclass, projects=pclass.projects)
+        projects = [ proj for proj in Project.query.all() if not proj.offerable ]
+
+        return render_template('faculty/unattached_dashboard.html', projects=projects)
+
+    else:
+
+        # get details for project class
+        pclass = ProjectClass.query.get_or_404(id)
+
+        # reject user if not entitled to view this dashboard
+        if not _validate_convenor(pclass):
+            return redirect(request.referrer)
+
+        return render_template('faculty/convenor_dashboard.html', pclass=pclass, projects=pclass.projects)

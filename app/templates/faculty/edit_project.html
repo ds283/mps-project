@@ -12,13 +12,13 @@
 
 {% block form_content %}
     {% if project %}
-        {% if pclass_id %}
+        {% if pclass_id is defined %}
             <form action="{{ url_for('faculty.convenor_edit_project', id=project.id, pclass_id=pclass_id) }}" method="POST" name="project_form">
         {% else %}
             <form action="{{ url_for('faculty.edit_project', id=project.id) }}" method="POST" name="project_form">
         {% endif %}
     {% else %}
-        {% if pclass_id %}
+        {% if pclass_id is defined %}
             <form action="{{ url_for('faculty.convenor_add_project', pclass_id=pclass_id) }}" method="POST" name="project_form">
         {% else %}
             <form action="{{ url_for('faculty.add_project') }}" method="POST" name="project_form">

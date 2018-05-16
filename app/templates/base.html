@@ -25,7 +25,12 @@
             <li><a href="{{ url_for('faculty.convenor_dashboard', id=project_class.id) }}">
                 <i class="fa fa-pencil"></i> {{ project_class.name }}
             </a></li>
-            {% endfor %}
+        {% endfor %}
+        {% if current_user.has_role('admin') or current_user.has_role('root') %}
+            <li><a href="{{ url_for('faculty.convenor_dashboard', id=0) }}">
+                Unattached projects
+            </a></li>
+        {% endif %}
         </ul>
     </li>
 {% endmacro %}

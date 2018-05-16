@@ -547,8 +547,8 @@ class Project(db.Model):
     reading = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
 
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.error = None
 
 

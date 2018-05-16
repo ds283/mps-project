@@ -19,6 +19,11 @@ from . import faculty
 from .forms import AddProjectForm, EditProjectForm
 
 
+_ConvenorDashboardSettingsTab=1
+_ConvenorDashboardProjectsTab=2
+_ConvenorDashboardFacultyTab=3
+
+
 def _validate_administrator():
     """
     Ensure that user in an administrator
@@ -199,7 +204,7 @@ def convenor_add_project(pclass_id):
         db.session.add(data)
         db.session.commit()
 
-        return redirect(url_for('faculty.convenor_dashboard', id=pclass_id))
+        return redirect(url_for('faculty.convenor_dashboard', id=pclass_id, tabid=_ConvenorDashboardProjectsTab))
 
     return render_template('faculty/edit_project.html', project_form=form, pclass_id=pclass_id, title='Add new project')
 
@@ -245,7 +250,7 @@ def convenor_edit_project(id, pclass_id):
 
         db.session.commit()
 
-        return redirect(url_for('faculty.convenor_dashboard', id=pclass_id))
+        return redirect(url_for('faculty.convenor_dashboard', id=pclass_id, tabid=_ConvenorDashboardProjectsTab))
 
     return render_template('faculty/edit_project.html', project_form=form, project=data, pclass_id=pclass_id, title='Edit project details')
 
@@ -282,6 +287,46 @@ def make_project_inactive(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@faculty.route('/convenor_make_project_active/<int:id>/<int:pclassid>')
+@roles_accepted('faculty', 'admin', 'root')
+def convenor_make_project_active(id, pclassid):
+
+    # get project details
+    data = Project.query.get_or_404(id)
+
+    # get project class details
+    pclass = ProjectClass.query.get_or_404(pclassid)
+
+    # if logged in user is not a suitable convenor, or an administrator, object
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    data.enable()
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclassid, tabid=2))
+
+
+@faculty.route('/convenor_make_project_inactive/<int:id>/<int:pclassid>')
+@roles_accepted('faculty', 'admin', 'root')
+def convenor_make_project_inactive(id, pclassid):
+
+    # get project details
+    data = Project.query.get_or_404(id)
+
+    # get project class details
+    pclass = ProjectClass.query.get_or_404(pclassid)
+
+    # if logged in user is not a suitable convenor, or an administrator, object
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    data.disable()
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclassid, tabid=2))
 
 
 @faculty.route('/attach_skills/<int:id>')
@@ -452,9 +497,9 @@ def remove_programme(projectid, progid):
     return redirect(request.referrer)
 
 
-@faculty.route('/convenor_dashboard/<int:id>')
+@faculty.route('/convenor_dashboard/<int:id>/<int:tabid>')
 @roles_accepted('faculty', 'admin', 'root')
-def convenor_dashboard(id):
+def convenor_dashboard(id, tabid):
 
     if id == 0:
 
@@ -475,4 +520,4 @@ def convenor_dashboard(id):
         if not _validate_convenor(pclass):
             return redirect(request.referrer)
 
-        return render_template('faculty/convenor_dashboard.html', pclass=pclass, projects=pclass.projects)
+        return render_template('faculty/convenor_dashboard.html', pclass=pclass, tabid=tabid, projects=pclass.projects)

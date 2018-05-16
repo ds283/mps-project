@@ -140,6 +140,28 @@ class ResearchGroup(db.Model):
     active = db.Column(db.Boolean())
 
 
+    def disable(self):
+        """
+        Disable this research group
+        :return:
+        """
+
+        self.active = False
+
+        # remove this group from any faculty that have become affiliated with it
+        for member in self.faculty:
+            member.remove_affiliation(self)
+
+
+    def enable(self):
+        """
+        Enable this research group
+        :return:
+        """
+
+        self.active = True
+
+
 class FacultyData(db.Model):
     """
     Models extra data held on faculty members
@@ -151,11 +173,37 @@ class FacultyData(db.Model):
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
 
     # list research group affilations
-    affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations,
+    affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations, lazy='dynamic',
                                    backref=db.backref('faculty', lazy='dynamic'))
 
     # this faculty wants to sign off on students before they can apply
     sign_off_students = db.Column(db.Boolean())
+
+
+    def remove_affiliation(self, group):
+        """
+        Remove an affiliation from a faculty member
+        :param group:
+        :return:
+        """
+
+        self.affiliations.remove(group)
+
+        # remove this group affiliation label from any projects owned by this faculty member
+        ps = Project.query.filter_by(owner_id=self.id, group_id=group.id)
+
+        for proj in ps.all():
+            proj.group = None
+
+
+    def add_affiliation(self, group):
+        """
+        Add an affiliation to this faculty member
+        :param group:
+        :return:
+        """
+
+        self.affiliations.append(group)
 
 
 class StudentData(db.Model):
@@ -170,8 +218,8 @@ class StudentData(db.Model):
 
     exam_number = db.Column(db.Integer(), index=True, unique=True)
     cohort = db.Column(db.Integer(), index=True, unique=True)
-    programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
 
+    programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
     programme = db.relationship('DegreeProgramme', backref=db.backref('students', lazy='dynamic'))
 
 
@@ -189,6 +237,28 @@ class DegreeType(db.Model):
     active = db.Column(db.Boolean())
 
 
+    def disable(self):
+        """
+        Disable this degree type
+        :return:
+        """
+
+        self.active = False
+
+        # disable any degree programmes that depend on this degree type
+        for prog in self.degree_programmes:
+            prog.disable()
+
+
+    def enable(self):
+        """
+        Enable this degree type
+        :return:
+        """
+
+        self.active = True
+
+
 class DegreeProgramme(db.Model):
     """
     Model a row from the degree programme table
@@ -200,10 +270,43 @@ class DegreeProgramme(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
-    type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'), index=True)
     active = db.Column(db.Boolean())
 
+    type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'), index=True)
     degree_type = db.relationship('DegreeType', backref=db.backref('degree_programmes', lazy='dynamic'))
+
+
+    def disable(self):
+        """
+        Disable this degree programme
+        :return:
+        """
+
+        self.active = False
+
+        # disable any project classes that depend on this programme
+        for pclass in self.project_classes:
+            pclass.disable()
+
+
+    def enable(self):
+        """
+        Enable this degree programme
+        :return:
+        """
+
+        if self.available():
+            self.active = True
+
+
+    def available(self):
+        """
+        Determine whether this degree programme is available for use (or activation)
+        :return:
+        """
+
+        # ensure degree type is active
+        return self.degree_type.active
 
 
 class TransferableSkill(db.Model):
@@ -218,6 +321,28 @@ class TransferableSkill(db.Model):
 
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
     active = db.Column(db.Boolean())
+
+
+    def disable(self):
+        """
+        Disable this transferable skill and cascade, ie. remove from any projects that have been labelled with it
+        :return:
+        """
+
+        self.active = False
+
+        # remove this skill from any projects that have been labelled with it
+        for proj in self.projects:
+            proj.skills.remove(self)
+
+
+    def enable(self):
+        """
+        Enable this transferable skill
+        :return:
+        """
+
+        self.active = True
 
 
 class ProjectClass(db.Model):
@@ -247,8 +372,44 @@ class ProjectClass(db.Model):
     convenor = db.relationship('User', backref=db.backref('convenor_for', lazy='dynamic'))
 
     # associate this project class with a set of degree programmes
-    programmes = db.relationship('DegreeProgramme', secondary=project_class_associations,
+    programmes = db.relationship('DegreeProgramme', secondary=project_class_associations, lazy='dynamic',
                                  backref=db.backref('project_classes', lazy='dynamic'))
+
+
+    def disable(self):
+        """
+        Disable this project class
+        :return:
+        """
+
+        self.active = False
+
+        # remove this project class from any projects that have been attached with it
+        for proj in self.projects:
+            proj.project_classes.remove(self)
+
+
+    def enable(self):
+        """
+        Enable this project class
+        :return:
+        """
+
+        if self.available():
+            self.active = True
+
+
+    def available(self):
+        """
+        Determine whether this project class is available for use (or activation)
+        :return:
+        """
+
+        # ensure that at least one active programme is available
+        if not self.programmes.filter(DegreeProgramme.active).first():
+            return False
+
+        return True
 
 
 class Supervisor(db.Model):
@@ -263,6 +424,28 @@ class Supervisor(db.Model):
 
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
     active = db.Column(db.Boolean())
+
+
+    def disable(self):
+        """
+        Disable this supervisory role and cascade, ie. remove from any projects that have been labelled with it
+        :return:
+        """
+
+        self.active = False
+
+        # remove this supervisory role from any projects that have been labelled with it
+        for proj in self.projects:
+            proj.team.remove(self)
+
+
+    def enable(self):
+        """
+        Enable this supervisory role
+        :return:
+        """
+
+        self.active = True
 
 
 class Project(db.Model):
@@ -290,15 +473,15 @@ class Project(db.Model):
     group = db.relationship('ResearchGroup', backref=db.backref('projects', lazy='dynamic'))
 
     # which project class are associated with this project?
-    project_classes = db.relationship('ProjectClass', secondary=project_classes,
+    project_classes = db.relationship('ProjectClass', secondary=project_classes, lazy='dynamic',
                                       backref=db.backref('projects', lazy='dynamic'))
 
     # which transferable skills are associated with this project?
-    skills = db.relationship('TransferableSkill', secondary=project_skills,
+    skills = db.relationship('TransferableSkill', secondary=project_skills, lazy='dynamic',
                              backref=db.backref('projects', lazy='dynamic'))
 
     # which degree programmes are associated with this project?
-    programmes = db.relationship('DegreeProgramme', secondary=project_programmes,
+    programmes = db.relationship('DegreeProgramme', secondary=project_programmes, lazy='dynamic',
                                  backref=db.backref('projects', lazy='dynamic'))
 
     # is a meeting required before selecting this project?
@@ -307,7 +490,7 @@ class Project(db.Model):
     MEETING_NONE = 3
     meeting_reqd = db.Column(db.Integer())
 
-    team = db.relationship('Supervisor', secondary=project_supervision,
+    team = db.relationship('Supervisor', secondary=project_supervision, lazy='dynamic',
                            backref=db.backref('projects', lazy='dynamic'))
 
     # project description
@@ -315,3 +498,103 @@ class Project(db.Model):
 
     # recommended reading
     reading = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+
+
+    def __init__(self):
+        super().__init__()
+        self.error = None
+
+
+    def disable(self):
+        """
+        Disable this project
+        :return:
+        """
+
+        self.active = False
+
+
+    def enable(self):
+        """
+        Enable this project
+        :return:
+        """
+
+        self.active = True
+
+
+    def offerable(self):
+        """
+        Determine whether this project is available for selection
+        :return:
+        """
+
+        if not self.project_classes.filter(ProjectClass.active).first():
+            self.error = "No active project types assigned to project"
+            return False
+
+        if not self.team.filter(Supervisor.active).first():
+            self.error = "No active supervisory roles assigned to project"
+            return False
+
+        if self.group is None:
+            self.error = "No active research group affiliated with project"
+            return False
+
+        return True
+
+
+    def add_skill(self, skill):
+
+        self.skills.append(skill)
+
+
+    def remove_skill(self, skill):
+
+        self.skills.remove(skill)
+
+
+    def add_programme(self, prog):
+
+        self.programmes.append(prog)
+
+
+    def remove_programme(self, prog):
+
+        self.programmes.remove(prog)
+
+
+    def available_degree_programmes(data):
+        """
+        Computes the degree programmes available to this project, from knowing which project
+        classes it is available to
+        :param data:
+        :return:
+        """
+
+        # get list of active degree programmes relevant for our degree classes;
+        # to do this we have to build a rather complex UNION query
+        queries = []
+        for proj_class in data.project_classes:
+            queries.append(
+                DegreeProgramme.query.filter(DegreeProgramme.active,
+                                             DegreeProgramme.project_classes.any(id=proj_class.id)))
+
+        if len(queries) > 0:
+            q = queries[0]
+            for query in queries[1:]:
+                q = q.union(query)
+        else:
+            q = None
+
+        return q
+
+
+    def validate_programmes(self):
+
+        available_programmes = self.available_degree_programmes()
+
+        for prog in self.programmes:
+
+            if prog not in available_programmes:
+                self.remove_programme(prog)

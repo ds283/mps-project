@@ -53,17 +53,17 @@ class ProjectMixin():
 
     group = QuerySelectField('Research group', query_factory=CurrentUserResearchGroups, get_label='name')
 
+    # allow the project_class list to be empty (byt then the project is not offered)
     project_classes = CheckboxQuerySelectMultipleField('Project classes',
-                                                       query_factory=GetProjectClasses, get_label='name',
-                                                       validators=[DataRequired(message='At least one project class must be selected')])
+                                                       query_factory=GetProjectClasses, get_label='name')
 
     meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
                        (Project.MEETING_NONE, "Prefer not to meet")]
     meeting = SelectField('Meeting required?', choices=meeting_options, coerce=int)
 
+    # allow team to be empty (but then the project is not offered)
     team = CheckboxQuerySelectMultipleField('Supervisory team',
-                                            query_factory=GetSupervisorRoles, get_label='name',
-                                            validators=[DataRequired(message='At least one supervisory role must be selected')])
+                                            query_factory=GetSupervisorRoles, get_label='name')
 
     description = TextAreaField('Project description', render_kw={"rows": 20},
                                 validators=[DataRequired(message='A project description is required')])

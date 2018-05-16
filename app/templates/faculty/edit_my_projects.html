@@ -47,14 +47,26 @@
                 {% for project in projects %}
                     <tr>
                         {# name #}
-                        <td> {{ project.name }} </td>
+                        <td>
+                            {% set offerable = project.offerable() %}
+                            <div class="{% if not offerable %}has-error{% endif %}">
+                                <strong>{{ project.name }}</strong>
+                                {% if not offerable and project.error %}
+                                    <p class="help-block">Warning: {{ project.error }}</p>
+                                {% endif %}
+                            </div>
+                        </td>
 
                         {# status #}
                         <td>
-                            {% if project.active %}
-                                Active
+                            {% if offerable %}
+                                {% if project.active %}
+                                    Active
+                                {% else %}
+                                    Inactive
+                                {% endif %}
                             {% else %}
-                                Inactive
+                                <strong>Not available</strong>
                             {% endif %}
                         </td>
 

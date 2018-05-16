@@ -74,17 +74,22 @@
                                         </a>
                                     </li>
 
-                                    <li>
                                     {% if class.active %}
-                                        <a href="{{ url_for('admin.make_project_class_inactive', id=class.id) }}">
+                                        <li><a href="{{ url_for('admin.make_project_class_inactive', id=class.id) }}">
                                             Make inactive
-                                        </a>
+                                        </a></li>
                                     {% else %}
-                                        <a href="{{ url_for('admin.make_project_class_active', id=class.id) }}">
-                                            Make active
-                                        </a>
+                                        {% if class.available() %}
+                                            <li><a href="{{ url_for('admin.make_project_class_active', id=class.id) }}">
+                                                Make active
+                                            </a></li>
+                                        {% else %}
+                                            <li class="disabled"><a>
+                                                Programmes inactive
+                                            </a>
+                                            </li>
+                                        {% endif %}
                                     {% endif %}
-                                    </li>
                                 </ul>
                             </div>
                         </td>

@@ -12,9 +12,17 @@
 
 {% block form_content %}
     {% if project %}
-        <form action="{{ url_for('faculty.edit_project', id=project.id) }}" method="POST" name="project_form">
+        {% if pclass_id %}
+            <form action="{{ url_for('faculty.convenor_edit_project', id=project.id, pclass_id=pclass_id) }}" method="POST" name="project_form">
+        {% else %}
+            <form action="{{ url_for('faculty.edit_project', id=project.id) }}" method="POST" name="project_form">
+        {% endif %}
     {% else %}
-        <form action="{{ url_for('faculty.add_project') }}" method="POST" name="project_form">
+        {% if pclass_id %}
+            <form action="{{ url_for('faculty.convenor_add_project', pclass_id=pclass_id) }}" method="POST" name="project_form">
+        {% else %}
+            <form action="{{ url_for('faculty.add_project') }}" method="POST" name="project_form">
+        {% endif %}
     {% endif %}
         {{ project_form.hidden_tag() }}
 
@@ -23,6 +31,10 @@
         {{ wtf.form_field(project_form.name) }}
         {{ wtf.form_field(project_form.keywords) }}
         {{ wtf.form_field(project_form.group) }}
+
+        {% if project_form.owner %}
+            {{ wtf.form_field(project_form.owner) }}
+        {% endif %}
 
         <div class="well {% if project_form.project_classes.errors %}has-error{% endif %}">
             Select the project classes for which this project should be made available

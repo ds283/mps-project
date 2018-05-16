@@ -19,6 +19,7 @@ from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, Tra
 
 from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
+from ..admin.forms import GetActiveFaculty, BuildUserRealName
 
 def globally_unique_project(form, field):
 
@@ -37,6 +38,11 @@ def CurrentUserResearchGroups():
     return ResearchGroup.query.filter(ResearchGroup.active, ResearchGroup.faculty.any(id=current_user.id))
 
 
+def AllResearchGroups():
+
+    return ResearchGroup.query.filter_by(active=True)
+
+
 def GetProjectClasses():
 
     return ProjectClass.query.filter_by(active=True)
@@ -48,6 +54,8 @@ def GetSupervisorRoles():
 
 
 class ProjectMixin():
+
+    owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
     keywords = StringField('Keywords', description='Optional. Separate with commas or semicolons.')
 
@@ -73,6 +81,18 @@ class ProjectMixin():
 
 class AddProjectForm(Form, ProjectMixin):
 
+    def __init__(self,  *args, **kwargs):
+
+        reset_group_query = False
+        if 'allow_all_groups' in kwargs:
+            reset_group_query = True
+            del kwargs['allow_all_groups']
+
+        super().__init__(*args, **kwargs)
+
+        if reset_group_query:
+            self.group.query_factory = AllResearchGroups
+
     name = StringField('Title', validators=[DataRequired(message='Project title is required'),
                                             globally_unique_project])
 
@@ -80,6 +100,18 @@ class AddProjectForm(Form, ProjectMixin):
 
 
 class EditProjectForm(Form, ProjectMixin, EditFormMixin):
+
+    def __init__(self, *args, **kwargs):
+
+        reset_group_query = False
+        if 'allow_all_groups' in kwargs:
+            reset_group_query = True
+            del kwargs['allow_all_groups']
+
+        super().__init__(*args, **kwargs)
+
+        if reset_group_query:
+            self.group.query_factory = AllResearchGroups
 
     name = StringField('Title', validators=[DataRequired(message='Project title is required'),
                                             unique_or_original_project])

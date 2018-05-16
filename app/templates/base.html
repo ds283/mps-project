@@ -22,7 +22,7 @@
 
         <ul class="dropdown-menu">
         {% for project_class in pclasses %}
-            <li><a href="#">
+            <li><a href="{{ url_for('faculty.convenor_dashboard', id=project_class.id) }}">
                 <i class="fa fa-pencil"></i> {{ project_class.name }}
             </a></li>
             {% endfor %}

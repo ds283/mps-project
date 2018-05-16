@@ -607,5 +607,5 @@ class Project(db.Model):
 
         for prog in self.programmes:
 
-            if prog not in available_programmes:
+            if available_programmes is None or prog not in available_programmes:
                 self.remove_programme(prog)

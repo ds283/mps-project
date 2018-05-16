@@ -43,6 +43,16 @@ def AllResearchGroups():
     return ResearchGroup.query.filter_by(active=True)
 
 
+def CurrentUserProjectClasses():
+
+    return ProjectClass.query.filter(ProjectClass.active, ProjectClass.enrolled_faculty.any(id=current_user.id))
+
+
+def AllProjectClasses():
+
+    return ProjectClass.query.filter_by(active=True)
+
+
 def GetProjectClasses():
 
     return ProjectClass.query.filter_by(active=True)
@@ -63,7 +73,7 @@ class ProjectMixin():
 
     # allow the project_class list to be empty (byt then the project is not offered)
     project_classes = CheckboxQuerySelectMultipleField('Project classes',
-                                                       query_factory=GetProjectClasses, get_label='name')
+                                                       query_factory=CurrentUserProjectClasses, get_label='name')
 
     meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
                        (Project.MEETING_NONE, "Prefer not to meet")]
@@ -83,14 +93,15 @@ class AddProjectForm(Form, ProjectMixin):
 
     def __init__(self,  *args, **kwargs):
 
-        reset_group_query = False
-        if 'allow_all_groups' in kwargs:
-            reset_group_query = True
-            del kwargs['allow_all_groups']
+        convenor_editing = False
+        if 'convenor_editing' in kwargs:
+            convenor_editing = True
+            del kwargs['convenor_editing']
 
         super().__init__(*args, **kwargs)
 
-        if reset_group_query:
+        if convenor_editing:
+            self.project_classes.query_factory = AllProjectClasses
             self.group.query_factory = AllResearchGroups
 
     name = StringField('Title', validators=[DataRequired(message='Project title is required'),
@@ -103,14 +114,15 @@ class EditProjectForm(Form, ProjectMixin, EditFormMixin):
 
     def __init__(self, *args, **kwargs):
 
-        reset_group_query = False
-        if 'allow_all_groups' in kwargs:
-            reset_group_query = True
-            del kwargs['allow_all_groups']
+        convenor_editing = False
+        if 'convenor_editing' in kwargs:
+            convenor_editing = True
+            del kwargs['convenor_editing']
 
         super().__init__(*args, **kwargs)
 
-        if reset_group_query:
+        if convenor_editing:
+            self.project_classes.query_factory = AllProjectClasses
             self.group.query_factory = AllResearchGroups
 
     name = StringField('Title', validators=[DataRequired(message='Project title is required'),

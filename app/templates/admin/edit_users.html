@@ -97,6 +97,11 @@
                                                 <i class="fa fa-pencil"></i> Edit affiliations
                                             </a>
                                         </li>
+                                        <li>
+                                            <a href="{{ url_for('admin.edit_enrollments', id=user.id) }}">
+                                                <i class="fa fa-pencil"></i> Edit enrollments
+                                            </a>
+                                        </li>
                                     {% endif %}
 
                                     <li {% if user.username == current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>

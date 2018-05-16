@@ -371,16 +371,32 @@ def edit_user(id):
 @roles_required('admin')
 def edit_affiliations(id):
     """
-    View to edit research group affiliations for a given faculty member
+    View to edit research group affiliations for a faculty member
     :param id:
     :return:
     """
 
     user = User.query.get_or_404(id)
     data = FacultyData.query.get_or_404(id)
-    research_groups = ResearchGroup.query.all()
+    research_groups = ResearchGroup.query.filter_by(active=True)
 
     return render_template('admin/edit_affiliations.html', user=user, data=data, research_groups=research_groups)
+
+
+@admin.route('/edit_enrollments/<int:id>')
+@roles_required('admin')
+def edit_enrollments(id):
+    """
+    View to edit project class enrollments for a faculty member
+    :param id:
+    :return:
+    """
+
+    user = User.query.get_or_404(id)
+    data = FacultyData.query.get_or_404(id)
+    project_classes = ProjectClass.query.filter_by(active=True)
+
+    return render_template('admin/edit_enrollments.html', user=user, data=data, project_classes=project_classes)
 
 
 @admin.route('/add_affiliation/<int:userid>/<int:groupid>')
@@ -418,6 +434,46 @@ def remove_affiliation(userid, groupid):
 
     if group in data.affiliations:
         data.remove_affiliation(group)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/add_enrollment/<int:userid>/<int:pclassid>')
+@roles_required('admin')
+def add_enrollment(userid, pclassid):
+    """
+    View to add a project class enrollment to a faculty member
+    :param userid:
+    :param pclassid:
+    :return:
+    """
+
+    data = FacultyData.query.get_or_404(userid)
+    pclass = ProjectClass.query.get_or_404(pclassid)
+
+    if pclass not in data.enrollments:
+        data.add_enrollment(pclass)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/remove_enrollment/<int:userid>/<int:pclassid>')
+@roles_required('admin')
+def remove_enrollment(userid, pclassid):
+    """
+    View to remove a project class enrollment from a faculty member
+    :param userid:
+    :param pclassid:
+    :return:
+    """
+
+    data = FacultyData.query.get_or_404(userid)
+    pclass = ProjectClass.query.get_or_404(pclassid)
+
+    if pclass in data.enrollments:
+        data.remove_enrollment(pclass)
         db.session.commit()
 
     return redirect(request.referrer)

@@ -43,6 +43,12 @@ faculty_affiliations = db.Table('faculty_affiliations',
                                 db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
                                 )
 
+# auxiliary table giving faculty enrollment on project classes
+faculty_enrollments = db.Table('faculty_enrollments',
+                               db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                               db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True)
+                               )
+
 # auxiliary table giving association between project classes and degree programmes
 project_class_associations = db.Table('project_class_to_programmes',
                                       db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
@@ -183,11 +189,15 @@ class FacultyData(db.Model):
     # primary key is same as users.id for this faculty member
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
 
-    # list research group affilations
+    # research group affiliations for this faculty member
     affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations, lazy='dynamic',
                                    backref=db.backref('faculty', lazy='dynamic'))
 
-    # this faculty wants to sign off on students before they can apply
+    # project class enrollments for this faculty member
+    enrollments = db.relationship('ProjectClass', secondary=faculty_enrollments, lazy='dynamic',
+                                  backref=db.backref('enrolled_faculty', lazy='dynamic'))
+
+    # does this faculty want to sign off on students before they can apply?
     sign_off_students = db.Column(db.Boolean())
 
 
@@ -215,6 +225,32 @@ class FacultyData(db.Model):
         """
 
         self.affiliations.append(group)
+
+
+    def remove_enrollment(self, pclass):
+        """
+        Remove an enrollment from a faculty member
+        :param pclass:
+        :return:
+        """
+
+        self.enrollments.remove(pclass)
+
+        # remove this project class from any projects owned by this faculty member
+        ps = Project.query.filter(Project.owner_id==self.id, Project.project_classes.any(id=pclass.id))
+
+        for proj in ps.all():
+            proj.remove_project_class(pclass)
+
+
+    def add_enrollment(self, pclass):
+        """
+        Add an enrollment to this faculty member
+        :param pclass:
+        :return:
+        """
+
+        self.enrollments.append(pclass)
 
 
 class StudentData(db.Model):
@@ -574,6 +610,11 @@ class Project(db.Model):
     def remove_programme(self, prog):
 
         self.programmes.remove(prog)
+
+
+    def remove_project_class(self, pclass):
+
+        self.project_classes.remove(pclass)
 
 
     def available_degree_programmes(data):

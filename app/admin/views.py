@@ -397,7 +397,7 @@ def add_affiliation(userid, groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group not in data.affiliations:
-        data.affiliations.append(group)
+        data.add_affiliation(group)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -417,7 +417,7 @@ def remove_affiliation(userid, groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group in data.affiliations:
-        data.affiliations.remove(group)
+        data.remove_affiliation(group)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -445,7 +445,7 @@ def add_my_affiliation(groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group not in data.affiliations:
-        data.affiliations.append(group)
+        data.add_affiliation(group)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -458,7 +458,7 @@ def remove_my_affiliation(groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group in data.affiliations:
-        data.affiliations.remove(group)
+        data.remove_affiliation(group)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -535,7 +535,7 @@ def make_group_active(id):
     """
 
     group = ResearchGroup.query.get_or_404(id)
-    group.active = True
+    group.enable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -551,7 +551,7 @@ def make_group_inactive(id):
     """
 
     group = ResearchGroup.query.get_or_404(id)
-    group.active = False
+    group.disable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -559,7 +559,7 @@ def make_group_inactive(id):
 
 @admin.route('/edit_programmes')
 @roles_required('root')
-def edit_programmes():
+def edit_degree_programmes():
     """
     View for edit programmes
     :return:
@@ -573,9 +573,9 @@ def edit_programmes():
 
 @admin.route('/add_type', methods=['GET', 'POST'])
 @roles_required('root')
-def add_type():
+def add_degree_type():
     """
-    View to create a new type
+    View to create a new degree type
     :return:
     """
 
@@ -587,14 +587,14 @@ def add_type():
         db.session.add(degree_type)
         db.session.commit()
 
-        return redirect(url_for('admin.edit_programmes'))
+        return redirect(url_for('admin.edit_degree_programmes'))
 
     return render_template('admin/edit_type.html', type_form=form, title='Add new degree type')
 
 
 @admin.route('/edit_type/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
-def edit_type(id):
+def edit_degree_type(id):
     """
     View to edit a degree type
     :param id:
@@ -611,14 +611,14 @@ def edit_type(id):
         degree_type.name = form.name.data
         db.session.commit()
 
-        return redirect(url_for('admin.edit_programmes'))
+        return redirect(url_for('admin.edit_degree_programmes'))
 
     return render_template('admin/edit_type.html;', type_form=form, programme=degree_type, title='Edit degree type')
 
 
 @admin.route('/make_type_active/<int:id>')
 @roles_required('root')
-def make_type_active(id):
+def make_degree_type_active(id):
     """
     Make a degree type active
     :param id:
@@ -626,7 +626,7 @@ def make_type_active(id):
     """
 
     degree_type = DegreeType.query.get_or_404(id)
-    degree_type.active = True
+    degree_type.enable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -634,7 +634,7 @@ def make_type_active(id):
 
 @admin.route('/make_type_inactive/<int:id>')
 @roles_required('root')
-def make_type_inactive(id):
+def make_degree_type_inactive(id):
     """
     Make a degree type inactive
     :param id:
@@ -642,7 +642,7 @@ def make_type_inactive(id):
     """
 
     degree_type = DegreeType.query.get_or_404(id)
-    degree_type.active = False
+    degree_type.disable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -650,9 +650,9 @@ def make_type_inactive(id):
 
 @admin.route('/add_programme', methods=['GET', 'POST'])
 @roles_required('root')
-def add_programme():
+def add_degree_programme():
     """
-    View to create a new programme
+    View to create a new degree programme
     :return:
     """
 
@@ -671,14 +671,14 @@ def add_programme():
         db.session.add(programme)
         db.session.commit()
 
-        return redirect(url_for('admin.edit_programmes'))
+        return redirect(url_for('admin.edit_degree_programmes'))
 
     return render_template('admin/edit_programme.html', programme_form=form, title='Add new degree programme')
 
 
 @admin.route('/edit_programme/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
-def edit_programme(id):
+def edit_degree_programme(id):
     """
     View to edit a degree programme
     :param id:
@@ -696,14 +696,14 @@ def edit_programme(id):
         programme.type_id = form.degree_type.data.id
         db.session.commit()
 
-        return redirect(url_for('admin.edit_programmes'))
+        return redirect(url_for('admin.edit_degree_programmes'))
 
     return render_template('admin/edit_programme.html', programme_form=form, programme=programme, title='Edit degree programme')
 
 
 @admin.route('/make_programme_active/<int:id>')
 @roles_required('root')
-def make_programme_active(id):
+def make_degree_programme_active(id):
     """
     Make a degree programme active
     :param id:
@@ -711,7 +711,7 @@ def make_programme_active(id):
     """
 
     programme = DegreeProgramme.query.get_or_404(id)
-    programme.active = True
+    programme.enable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -719,7 +719,7 @@ def make_programme_active(id):
 
 @admin.route('/make_programme_inactive/<int:id>')
 @roles_required('root')
-def make_programme_inactive(id):
+def make_degree_programme_inactive(id):
     """
     Make a degree programme inactive
     :param id:
@@ -727,7 +727,7 @@ def make_programme_inactive(id):
     """
 
     programme = DegreeProgramme.query.get_or_404(id)
-    programme.active = False
+    programme.disable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -801,7 +801,7 @@ def make_skill_active(id):
     """
 
     skill = TransferableSkill.query.get_or_404(id)
-    skill.active = True
+    skill.enable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -817,7 +817,7 @@ def make_skill_inactive(id):
     """
 
     skill = TransferableSkill.query.get_or_404(id)
-    skill.active = False
+    skill.disable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -904,7 +904,7 @@ def make_project_class_active(id):
     """
 
     data = ProjectClass.query.get_or_404(id)
-    data.active = True
+    data.enable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -920,7 +920,7 @@ def make_project_class_inactive(id):
     """
 
     data = ProjectClass.query.get_or_404(id)
-    data.active = False
+    data.disable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -993,7 +993,7 @@ def make_supervisor_active(id):
     """
 
     data = Supervisor.query.get_or_404(id)
-    data.active = True
+    data.enable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -1009,7 +1009,7 @@ def make_supervisor_inactive(id):
     """
 
     data = Supervisor.query.get_or_404(id)
-    data.active = False
+    data.disable()
     db.session.commit()
 
     return redirect(request.referrer)

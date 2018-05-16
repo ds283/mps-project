@@ -59,22 +59,20 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li>
-                                        <a href="{{ url_for('admin.edit_type', id=type.id) }}">
+                                        <a href="{{ url_for('admin.edit_degree_type', id=type.id) }}">
                                             <i class="fa fa-pencil"></i> Edit details
                                         </a>
                                     </li>
 
-                                    <li>
-                                        {% if type.active %}
-                                            <a href="{{ url_for('admin.make_type_inactive', id=type.id) }}">
-                                                Make inactive
-                                            </a>
-                                        {% else %}
-                                            <a href="{{ url_for('admin.make_type_active', id=type.id) }}">
-                                                Make active
-                                            </a>
-                                        {% endif %}
-                                    </li>
+                                    {% if type.active %}
+                                        <li><a href="{{ url_for('admin.make_degree_type_inactive', id=type.id) }}">
+                                            Make inactive
+                                        </a></li>
+                                    {% else %}
+                                        <li><a href="{{ url_for('admin.make_degree_type_active', id=type.id) }}">
+                                            Make active
+                                        </a></li>
+                                    {% endif %}
                                 </ul>
                             </div>
                         </td>
@@ -90,7 +88,7 @@
         <h3> No degree types currently registered. </h3>
         <hr class="intro-divider">
     {% endif %}
-    <a href="{{ url_for('admin.add_type') }}" class="btn btn-default btn-lg">
+    <a href="{{ url_for('admin.add_degree_type') }}" class="btn btn-default btn-lg">
         <i class="fa fa-plus"></i>
         Add new degree type
     </a>
@@ -133,22 +131,26 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li>
-                                        <a href="{{ url_for('admin.edit_programme', id=programme.id) }}">
+                                        <a href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
                                             <i class="fa fa-pencil"></i> Edit details
                                         </a>
                                     </li>
 
-                                    <li>
-                                        {% if programme.active %}
-                                            <a href="{{ url_for('admin.make_programme_inactive', id=programme.id) }}">
-                                                Make inactive
-                                            </a>
-                                        {% else %}
-                                            <a href="{{ url_for('admin.make_programme_active', id=programme.id) }}">
+                                    {% if programme.active %}
+                                        <li><a href="{{ url_for('admin.make_degree_programme_inactive', id=programme.id) }}">
+                                            Make inactive
+                                        </a></li>
+                                    {% else %}
+                                        {% if programme.available() %}
+                                            <li><a href="{{ url_for('admin.make_degree_programme_active', id=programme.id) }}">
                                                 Make active
-                                            </a>
+                                            </a></li>
+                                        {% else %}
+                                            <li class="disabled"><a>
+                                                Degree type inactive
+                                            </a></li>
                                         {% endif %}
-                                    </li>
+                                    {% endif %}
                                 </ul>
                             </div>
                         </td>
@@ -164,7 +166,7 @@
         <h3> No degree programmes currently registered. </h3>
         <hr class="intro-divider">
     {% endif %}
-    <a href="{{ url_for('admin.add_programme') }}" class="btn btn-default btn-lg">
+    <a href="{{ url_for('admin.add_degree_programme') }}" class="btn btn-default btn-lg">
         <i class="fa fa-plus"></i>
         Add new degree programme
     </a>

@@ -37,31 +37,6 @@ def _validate_user(data):
     return True
 
 
-def _available_degree_programmes(data):
-    """
-    Computes the degree programmes available to a particular project, from knowing which project
-    classes it is available to
-    :param data:
-    :return:
-    """
-
-    # get list of active degree programmes relevant for our degree classes;
-    # to do this we have to build a rather complex UNION query
-    queries = []
-    for proj_class in data.project_classes:
-        queries.append(
-            DegreeProgramme.query.filter(DegreeProgramme.active, DegreeProgramme.project_classes.any(id=proj_class.id)))
-
-    if len(queries) > 0:
-        q = queries[0]
-        for query in queries[1:]:
-            q = q.union(query)
-    else:
-        q = None
-
-    return q
-
-
 @faculty.route('/edit_my_projects')
 @roles_accepted('faculty', 'office')
 def edit_my_projects():
@@ -126,6 +101,8 @@ def edit_project(id):
         data.description = form.description.data
         data.reading = form.reading.data
 
+        data.validate_programmes()
+
         db.session.commit()
 
         return redirect(url_for('faculty.edit_my_projects'))
@@ -144,7 +121,7 @@ def make_project_active(id):
     if not _validate_user(data):
         return redirect(request.referrer)
 
-    data.active = True
+    data.enable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -161,7 +138,7 @@ def make_project_inactive(id):
     if not _validate_user(data):
         return redirect(request.referrer)
 
-    data.active = False
+    data.disable()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -198,7 +175,7 @@ def add_skill(projectid, skillid):
     skill = TransferableSkill.query.get_or_404(skillid)
 
     if skill not in data.skills:
-        data.skills.append(skill)
+        data.add_skill(skill)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -218,7 +195,7 @@ def remove_skill(projectid, skillid):
     skill = TransferableSkill.query.get_or_404(skillid)
 
     if skill in data.skills:
-        data.skills.remove(skill)
+        data.remove_skill(skill)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -235,7 +212,7 @@ def attach_programmes(id):
     if not _validate_user(data):
         return redirect(request.referrer)
 
-    q = _available_degree_programmes(data)
+    q = data.available_degree_programmes()
 
     return render_template('faculty/attach_programmes.html', data=data, programmes=q.all())
 
@@ -254,7 +231,7 @@ def add_programme(projectid, progid):
     programme = DegreeProgramme.query.get_or_404(progid)
 
     if programme not in data.programmes:
-        data.programmes.append(programme)
+        data.add_programme(programme)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -274,7 +251,7 @@ def remove_programme(projectid, progid):
     programme = DegreeProgramme.query.get_or_404(progid)
 
     if programme in data.programmes:
-        data.programmes.remove(programme)
+        data.remove_programme(programme)
         db.session.commit()
 
     return redirect(request.referrer)

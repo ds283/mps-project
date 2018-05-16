@@ -70,6 +70,17 @@ def _validate_convenor(pclass):
     return True
 
 
+@faculty.route('/dashboard')
+@roles_required('faculty')
+def dashboard():
+    """
+    Render the dashboard for a faculty user
+    :return:
+    """
+
+    return render_template('faculty/dashboard.html')
+
+
 @faculty.route('/edit_my_projects')
 @roles_accepted('faculty', 'admin', 'root')
 def edit_my_projects():

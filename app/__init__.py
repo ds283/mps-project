@@ -58,4 +58,10 @@ def create_app():
     from .faculty import faculty as faculty_blueprint
     app.register_blueprint(faculty_blueprint, url_prefix='/faculty')
 
+    from .student import student as student_blueprint
+    app.register_blueprint(student_blueprint, url_prefix='/student')
+
+    from .office import office as office_blueprint
+    app.register_blueprint(office_blueprint, url_prefix='/office')
+
     return app

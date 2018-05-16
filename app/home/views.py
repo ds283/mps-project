@@ -14,6 +14,7 @@ from flask_security import login_required, current_user, logout_user
 from . import home
 
 @home.route('/')
+@login_required
 def homepage():
     """
     By default the homepage redirects to the dashboard, which will force a login if the user
@@ -21,16 +22,20 @@ def homepage():
     :return: HTML string
     """
 
-    # after logging in, simply redirect to the dashboard
-    return redirect(url_for('home.dashboard'))
+    # after logging in, simply redirect to the appropriate dashboard
+    if current_user.has_role('faculty'):
 
+        return redirect(url_for('faculty.dashboard'))
 
-@home.route('/dashboard')
-@login_required
-def dashboard():
-    """
-    Render the dashboard template
-    :return: HTML string
-    """
+    elif current_user.has_role('student'):
 
-    return render_template('home/dashboard.html', title="Dashboard")
+        return redirect(url_for('student.dashboard'))
+
+    elif current_user.has_role('office'):
+
+        return redirect(url_for('office.dashboard'))
+
+    else:
+
+        flash('Your role could not be identified. Please contact the system administrator.')
+        return redirect(url_for('auth.logged_out'))

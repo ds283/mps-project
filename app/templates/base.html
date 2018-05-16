@@ -8,10 +8,27 @@
 
 {% block styles %}
     {{ super() }}
-    {% assets filters="cssmin", output="gen/packed.css", "css/site.css" %}
+    {% assets filters="cssmin", output="gen/packed.css", "css/site.css" -%}
         <link rel="stylesheet" href="{{ ASSET_URL }}"/>
     {% endassets %}
-{% endblock %}
+{%- endblock %}
+
+{% macro convenor_menu(pclasses) %}
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+            Convenor
+            <span class="caret"></span>
+        </a>
+
+        <ul class="dropdown-menu">
+        {% for project_class in pclasses %}
+            <li><a href="#">
+                <i class="fa fa-pencil"></i> {{ project_class.name }}
+            </a></li>
+            {% endfor %}
+        </ul>
+    </li>
+{% endmacro %}
 
 {% block navbar %}
     <nav class="navbar navbar-inverse navbar-fixed-top topnav" role="navigation">
@@ -46,23 +63,14 @@
                         </li>
                     {% endif %}
 
-                    <!-- add convenor menu if needed -->
-                    {% if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.count() > 0 %}
-                        <li class="dropdown">
-                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                Convenor
-                                <span class="caret"></span>
-                            </a>
-
-                            <ul class="dropdown-menu">
-                            {% for project_class in current_user.convenor_for %}
-                                <li><a href="#">
-                                    <i class="fa fa-pencil"></i> {{ project_class.name }}
-                                </a></li>
-                                {% endfor %}
-                            </ul>
-                        </li>
-                    {%  endif %}
+                    <!-- add convenor menu if user is a convenor, or an admin user -->
+                    {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                        {{ convenor_menu(current_user.get_project_classes()) }}
+                    {% else  %}
+                        {% if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.count() > 0 %}
+                            {{ convenor_menu(current_user.convenor_for) }}
+                        {% endif %}
+                    {% endif %}
 
                     <!-- add admin menu if user is an administrator (not sysadmin => admin) -->
                     {% if current_user.has_role('admin') or current_user.has_role('root') %}

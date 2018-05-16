@@ -180,7 +180,7 @@ def convenor_add_project(pclass_id):
             return redirect(request.referrer)
 
     # set up form
-    form = AddProjectForm(request.form, allow_all_groups=True)
+    form = AddProjectForm(request.form, convenor_editing=True)
 
     if form.validate_on_submit():
 
@@ -226,7 +226,7 @@ def convenor_edit_project(id, pclass_id):
     # set up form
     data = Project.query.get_or_404(id)
 
-    form = EditProjectForm(obj=data, allow_all_groups=True)
+    form = EditProjectForm(obj=data, convenor_editing=True)
     form.project = data
 
     if form.validate_on_submit():

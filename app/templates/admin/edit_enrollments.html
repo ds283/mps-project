@@ -1,0 +1,46 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    Edit enrollments <i class="fa fa-user"></i> {{ user.first_name }} {{ user.last_name }} ({{ user.username }})
+{% endblock %}
+
+{% block form_content %}
+    <div class="panel panel-default">
+        <div class="panel-body">
+            {% if data and data.enrollments and project_classes %}
+                <h4>
+                {% for pclass in project_classes %}
+                    {% if pclass in data.enrollments %}
+                        <a class="btn btn-success btn-sm selection-label" href="{{ url_for('admin.remove_enrollment', userid=user.id, pclassid=pclass.id) }}"><i class="fa fa-times"></i> {{ pclass.name }}</a>
+                    {% endif %}
+                {% endfor %}
+                </h4>
+            {% else %}
+                <p>No current enrollments</p>
+            {% endif %}
+        </div>
+        <div class="panel-footer">
+            {% if data and project_classes %}
+                <h4>
+                {% for pclass in project_classes %}
+                    {% if pclass not in data.enrollments %}
+                        <a class="btn btn-info selection-label" href="{{ url_for('admin.add_enrollment', userid=user.id, pclassid=pclass.id) }}"><i class="fa fa-plus"></i> {{ pclass.name }}</a>
+                    {% endif %}
+                {% endfor %}
+                </h4>
+            {% else %}
+                <p>No available project classes</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <a href="{{ url_for('admin.edit_users') }}">
+        <i class="fa fa-backward"></i> Return to user list
+    </a>
+{% endblock %}

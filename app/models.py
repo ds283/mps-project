@@ -185,7 +185,7 @@ class DegreeType(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
     active = db.Column(db.Boolean())
 
 
@@ -199,8 +199,8 @@ class DegreeProgramme(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
-    type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'))
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'), index=True)
     active = db.Column(db.Boolean())
 
     degree_type = db.relationship('DegreeType', backref=db.backref('degree_programmes', lazy='dynamic'))
@@ -216,7 +216,7 @@ class TransferableSkill(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
     active = db.Column(db.Boolean())
 
 
@@ -230,11 +230,12 @@ class ProjectClass(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
     active = db.Column(db.Boolean())
 
     # which year does this project class run for?
-    year = db.Column(db.Integer())
+    year = db.Column(db.Integer(), index=True)
 
     # how many submissions per year does this project have?
     submissions = db.Column(db.Integer())
@@ -242,7 +243,7 @@ class ProjectClass(db.Model):
     # project convenor; must be a faculty member, so might be pereferable to link to faculty_data table,
     # but to generate eg. tables we will need to extract usernames and emails
     # For that purpose, it's better to link to the User table directly
-    convenor_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    convenor_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
     convenor = db.relationship('User', backref=db.backref('convenor_for', lazy='dynamic'))
 
     # associate this project class with a set of degree programmes
@@ -274,18 +275,18 @@ class Project(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
     active = db.Column(db.Boolean())
 
     # free keywords describing scientific area
     keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # which faculty member owns this project?
-    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
     owner = db.relationship('User', backref=db.backref('projects', lazy='dynamic'))
 
     # which research group is associated with this project?
-    group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'))
+    group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
     group = db.relationship('ResearchGroup', backref=db.backref('projects', lazy='dynamic'))
 
     # which project class are associated with this project?

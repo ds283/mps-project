@@ -25,11 +25,17 @@
 {#        {{ wtf.form_errors(project_form) }}#}
 
         {{ wtf.form_field(project_form.name) }}
-        <div class="well">
-        <p>Select degree programmes to which this project class applies</p>
-        {% for widget in project_form.programmes %}
-            {{ wtf.form_field(widget) }}
-        {% endfor %}
+        {{ wtf.form_field(project_form.abbreviation) }}
+        <div class="well {% if project_form.programmes.errors %}has-error{% endif %}">
+            <p>Select degree programmes to which this project class applies</p>
+            {% for widget in project_form.programmes %}
+                {{ wtf.form_field(widget) }}
+            {% endfor %}
+            {% if project_form.programmes.errors %}
+                {% for error in project_form.programmes.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
         </div>
         {{ wtf.form_field(project_form.year) }}
         {{ wtf.form_field(project_form.submissions) }}

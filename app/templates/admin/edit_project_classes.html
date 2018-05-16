@@ -33,8 +33,8 @@
             <table class="table table-striped table-bordered sortable-pageable">
                 <thead>
                 <tr>
-                    <th width="15%"> Name</th>
-                    <th width="9%"> Status</th>
+                    <th width="19%"> Name</th>
+                    <th width="5%"> Status</th>
                     <th width="8%"> Runs in year</th>
                     <th width="8%"> Submissions per year</th>
                     <th width="15%"> Convenor</th>
@@ -45,7 +45,7 @@
                 <tbody>
                 {% for class in classes %}
                     <tr>
-                        <td> {{ class.name }} </td>
+                        <td> {{ class.name }} ({{ class.abbreviation }}) </td>
                         <td>
                             {% if class.active %}
                                 Active

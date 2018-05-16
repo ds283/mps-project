@@ -111,6 +111,16 @@ def unique_or_original_project_class(form, field):
         raise ValidationError('{name} is already associated with a project class'.format(name=field.data))
 
 
+def globally_unique_project_class_abbrev(form, field):
+    if ProjectClass.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('{name} is already in use as an abbreviation'.format(name=field.data))
+
+
+def unique_or_original_project_class_abbrev(form, field):
+    if field.data != form.project_class.abbreviation and ProjectClass.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('{name} is already in use as an abbreviation'.format(name=field.data))
+
+
 def globally_unique_supervisor(form, field):
     if Supervisor.query.filter_by(name=field.data).first():
         raise ValidationError('{name} is already associated with a supervisory role'.format(name=field.data))
@@ -339,13 +349,16 @@ class ProjectClassMixin():
     convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
     programmes = CheckboxQuerySelectMultipleField('Attached to degree programmes', query_factory=GetActiveDegreeProgrammes,
-                                                  get_label=BuildDegreeProgrammeName)
+                                                  get_label=BuildDegreeProgrammeName,
+                                                  validators=[DataRequired(message='At least one degree programme should be selected')])
 
 
 class AddProjectClassForm(Form, ProjectClassMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
-                                          globally_unique_project_class])
+                                           globally_unique_project_class])
+    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is rqwuired'),
+                                                           globally_unique_project_class_abbrev])
 
     submit = SubmitField('Add new project class')
 
@@ -354,6 +367,8 @@ class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
                                           unique_or_original_project_class])
+    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is rqwuired'),
+                                                           unique_or_original_project_class_abbrev])
 
 
 class AddSupervisorForm(Form):

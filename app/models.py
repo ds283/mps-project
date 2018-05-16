@@ -124,6 +124,17 @@ class User(db.Model, UserMixin):
                             backref=db.backref('users', lazy='dynamic'))
 
 
+    # allow user objects to get all project classes so that we can render
+    # a 'Convenor' menu in the navbar for all admin users
+    def get_project_classes(self):
+        """
+        Get available project classes
+        :return:
+        """
+
+        return ProjectClass.query.all()
+
+
 class ResearchGroup(db.Model):
     """
     Model a row from the research group table

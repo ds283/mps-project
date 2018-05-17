@@ -546,7 +546,7 @@ def add_group():
     if form.validate_on_submit():
 
         group = ResearchGroup(abbreviation=form.abbreviation.data,
-                              name=form.name.data, active=True);
+                              name=form.name.data, website=form.website.data, active=True);
         db.session.add(group)
         db.session.commit()
 
@@ -573,6 +573,7 @@ def edit_group(id):
 
         group.abbreviation = form.abbreviation.data
         group.name = form.name.data
+        group.website = form.website.data
 
         db.session.commit()
 

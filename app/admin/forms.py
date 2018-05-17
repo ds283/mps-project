@@ -279,16 +279,22 @@ class EditUserForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin, F
     pass
 
 
-class AddResearchGroupForm(Form):
+class ResearchGroupForm():
+
+    name = StringField('Name', validators=[DataRequired(message='Name is required')])
+
+    website = StringField('Website', description='Optional. Do not include http://')
+
+
+class AddResearchGroupForm(Form, ResearchGroupForm):
 
     abbreviation = StringField('Abbreviation', validators=[DataRequired(message='Abbreviation is required'),
                                                            globally_unique_group_abbreviation])
-    name = StringField('Name', validators=[DataRequired(message='Name is required')])
 
     submit = SubmitField('Add new group')
 
 
-class EditResearchGroupForm(Form, EditFormMixin):
+class EditResearchGroupForm(Form, ResearchGroupForm, EditFormMixin):
 
     abbreviation = StringField('Abbreviation', validators=[DataRequired(message='Abbreviation is required'),
                                                            unique_or_original_abbreviation])

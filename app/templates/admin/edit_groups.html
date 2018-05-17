@@ -35,7 +35,8 @@
                 <tr>
                     <th width="15%"> Abbreviation</th>
                     <th width="10%"> Status</th>
-                    <th width="60%"> Group name</th>
+                    <th width="40%"> Group name</th>
+                    <th width="20%"> Website</th>
                     <th width="15%"> Actions</th>
                 </tr>
                 </thead>
@@ -51,6 +52,13 @@
                             {% endif %}
                         </td>
                         <td> {{ group.name }} </td>
+                        <td>
+                            {% if group.website and group.website is not none %}
+                                <a href="http://{{ group.website }}">{{ group.website }}</a>
+                            {% else %}
+                                None
+                            {% endif %}
+                        </td>
 
                         {# can assume user is admin or higher #}
                         <td>

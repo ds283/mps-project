@@ -154,6 +154,8 @@ class ResearchGroup(db.Model):
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True, unique=True)
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
+    website = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
     active = db.Column(db.Boolean())
 
 

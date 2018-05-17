@@ -530,6 +530,8 @@ def convenor_dashboard(id, tabid):
         # get current configuration record for this project class
         config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
+        form.sanitize(current_year, config)
+
         if form.validate_on_submit():
 
             pass

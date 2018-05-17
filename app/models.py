@@ -188,6 +188,7 @@ class FacultyData(db.Model):
 
     # primary key is same as users.id for this faculty member
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
+    user = db.relationship('User')
 
     # research group affiliations for this faculty member
     affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations, lazy='dynamic',
@@ -199,6 +200,21 @@ class FacultyData(db.Model):
 
     # does this faculty want to sign off on students before they can apply?
     sign_off_students = db.Column(db.Boolean())
+
+
+    def projects_offered(self, pclass):
+
+        return Project.query.filter(Project.active, Project.project_classes.any(id=self.id)).count()
+
+
+    def projects_unofferable(self):
+
+        unofferable = 0
+        for proj in self.user.projects:
+            if not proj.offerable:
+                unofferable += 1
+
+        return unofferable
 
 
     def remove_affiliation(self, group):

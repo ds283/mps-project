@@ -27,8 +27,8 @@
                     </a>
                 {% endfor %}
             </h3>
-            <hr class="intro-divider">
             {% if data.enrollments.count() != project_classes.count() %}
+                <hr class="intro-divider">
                 <p>You are not currently enrolled for the following project classes</p>
                 <h3>
                     {% for pclass in current_user.get_project_classes() %}

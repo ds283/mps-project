@@ -74,3 +74,8 @@ p.copyright {
     font-size: 32px;
     font-weight: lighter;
 }
+
+.vertical-align {
+    display: flex;
+    align-items: center;
+}

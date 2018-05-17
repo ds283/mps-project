@@ -79,37 +79,47 @@
                         <div class="panel-heading">Status</div>
                         <div class="panel-body">
                             {% if config.live and config.closed %}
-                                <strong>Student choices are now closed</strong>
+                                <div class="panel panel-success">
+                                    <div class="panel-body"><strong>Student choices are now closed</strong></div>
+                                </div>
                             {% elif config.open %}
-                                <div class="row">
-                                    <div class="col-xs-9">
-                                        <strong>Student choices are currently live</strong>
-                                    </div>
-                                    <div class="col-xs-3">
-                                        <div class="pull-right">
-                                            {{ wtf.form_field(form.close) }}
+                                <div class="panel panel-info">
+                                    <div class="panel panel-heading"><strong>Student choices are currently live</strong></div>
+                                    <div class="panel-body">
+                                        <div class="row vertical-align">
+                                            <div class="col-xs-9">
+                                                Close student choices
+                                            </div>
+                                            <div class="col-xs-3">
+                                                <div class="pull-right">
+                                                    {{ wtf.form_field(form.close) }}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             {% elif not config.live %}
-                                <div class="row">
-                                    <div class="col-xs-9">
-                                        <strong>Student choices are not yet live</strong>
-                                    </div>
-                                    <div class="col-xs-3">
-                                        <div class="pull-right">
-                                            {{ wtf.form_field(form.golive) }}
+                                <div class="panel panel-danger">
+                                    <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
+                                    <div class="panel-body">
+                                        <div class="row vertical-align">
+                                            <div class="col-xs-9">
+                                                {% if config.golive_required.count() == 0 %}
+                                                    <p>All faculty confirmations have now been received</p>
+                                                {% else %}
+                                                    <p>Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong></p>
+                                                {% endif %}
+                                           </div>
+                                            <div class="col-xs-3">
+                                                <div class="pull-right">
+                                                    {{ wtf.form_field(form.golive) }}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <hr class="intro-divider">
-
-                                {% if config.golive_required.count() == 0 %}
-                                    <p>All faculty confirmations have now been received</p>
-                                {% else %}
-                                    <p>Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong></p>
-
+                                {% if config.golive_required.count() != 0 %}
                                     <table class="table table-striped table-bordered sortable-pageable">
                                         <thead>
                                         <tr>

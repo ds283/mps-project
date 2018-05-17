@@ -34,69 +34,133 @@ DESCRIPTION_STRING_LENGTH = 8000
 # labels and keys for 'submissions' field
 submission_choices = [(0, 'None'), (1, 'One (yearly)'), (2, 'Two (termly)')]
 
-# labels and keys for 'year' field
-year_choices = [(1, 'Year 1'), (2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
+# labels and keys for 'year' field; it's not possible to join in Y1; treat students as
+# joining in Y2
+year_choices = [(2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
 
 # labels and keys for 'extent' field
-extent_choices = [ (1, '1 year'), (2, '2 years'), (3, '3 years')]
+extent_choices = [(1, '1 year'), (2, '2 years')]
 
 # labels and keys for 'academic titles' field
 academic_titles = [(1, 'Dr'), (2, 'Professor')]
 
 
-# auxiliary table holding mapping from roles to users
+# association table holding mapping from roles to users
 roles_to_users = db.Table('roles_users',
                           db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True),
                           db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True)
                           )
 
-# auxiliary table giving faculty research group affiliations
+# association table giving faculty research group affiliations
 faculty_affiliations = db.Table('faculty_affiliations',
                                 db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
                                 db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
                                 )
 
-# auxiliary table giving faculty enrollment on project classes
+# association table giving faculty enrollment on project classes
 faculty_enrollments = db.Table('faculty_enrollments',
                                db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True)
                                )
 
-# auxiliary table giving association between project classes and degree programmes
+# association table giving association between project classes and degree programmes
 project_class_associations = db.Table('project_class_to_programmes',
                                       db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
                                       db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
                                       )
 
-# auxiliary table giving association between projects and project classes
+
+# GO-LIVE CONFIRMATIONS FROM FACULTY
+
+golive_confirmation = db.Table('go_live_confirmation',
+                               db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                               db.Column('pclass_config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True)
+                               )
+
+
+# PROJECT ASSOCIATIONS (NOT LIVE)
+
+
+# association table giving association between projects and project classes
 project_classes = db.Table('project_to_classes',
                            db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                            db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True)
                            )
 
-# auxiliary table giving association between projects and transferable skills
+# association table giving association between projects and transferable skills
 project_skills = db.Table('project_to_skills',
                           db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                           db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True)
                           )
 
-# auxiliary table giving association between projects and degree programmes
+# association table giving association between projects and degree programmes
 project_programmes = db.Table('project_to_programmes',
                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                               db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
                               )
 
-# auxiliary table giving association between projects and supervision tram
+# association table giving association between projects and supervision tram
 project_supervision = db.Table('project_to_supervision',
                                db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                                db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True)
                                )
+
+
+# PROJECT ASSOCIATIONS (LIVE)
+
+
+# association table giving association between projects and project classes
+live_project_classes = db.Table('live_project_to_classes',
+                                db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True)
+                                )
+
+# association table giving association between projects and transferable skills
+live_project_skills = db.Table('live_project_to_skills',
+                               db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                               db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True)
+                               )
+
+# association table giving association between projects and degree programmes
+live_project_programmes = db.Table('live_project_to_programmes',
+                                   db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                                   db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
+                                   )
+
+# association table giving association between projects and supervision tram
+live_project_supervision = db.Table('live_project_to_supervision',
+                                    db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                                    db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True)
+                                    )
+
+
+# LIVE STUDENT ASSOCIATIONS
+
+# association table: live student bookmarks
+project_bookmarks = db.Table('project_bookmarks',
+                             db.Column('student_id', db.Integer(), db.ForeignKey('live_students.id'), primary_key=True),
+                             db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True)
+                             )
+
+# association table: faculty confirmation requests
+confirmation_requests = db.Table('confirmation_requests',
+                                 db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                                 db.Column('student_id', db.Integer(), db.ForeignKey('live_students.id'), primary_key=True)
+                                 )
+
+# association table: faculty confirmed meetings
+faculty_confirmations = db.Table('faculty_confirmations',
+                                 db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                                 db.Column('student_id', db.Integer(), db.ForeignKey('live_students.id'), primary_key=True)
+                                 )
+
 
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
     be one row giving the current configuration
     """
+
     year = db.Column(db.Integer(), primary_key=True)
 
 
@@ -527,6 +591,58 @@ class ProjectClass(db.Model):
         return True
 
 
+class ProjectClassConfig(db.Model):
+    """
+    Model current configuration options for each project class
+    """
+
+    # make table name plural
+    __tablename__ = 'project_class_config'
+
+    # id is really a surrogate key for (year, pclass_id) - need to ensure these remain unique
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # year should match an available year in MainConfig
+    year = db.Column(db.Integer(), db.ForeignKey('main_config.year'))
+    main_config = db.relationship('MainConfig', uselist=False, backref=db.backref('project_classes', lazy='dynamic'))
+
+    # id should be an available project class
+    pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
+    project_class = db.relationship('ProjectClass', backref=db.backref('config', uselist=False))
+
+    # have we gone 'live' this year, ie. frozen a definitive 'live table' of projects and
+    # made these available to students?
+    live = db.Column(db.Boolean())
+
+    # is project selection closed?
+    closed = db.Column(db.Boolean())
+
+    # capture which faculty have still to sign-off on this configuration
+    golive_required = db.relationship('FacultyData', secondary=golive_confirmation, lazy='dynamic',
+                                      backref=db.backref('golive', lazy='dynamic'))
+
+
+    @property
+    def open(self):
+        return self.live and not self.closed
+
+
+    def generate_golive_requests(self):
+        """
+        Generate sign-off requests to all active faculty
+        :return:
+        """
+
+        # exit if called in error
+        if not self.project_class.require_confirm:
+            return
+
+        active_faculty = FacultyData.query.join(User).filter(User.active)
+
+        for member in active_faculty:
+            self.golive_required.append(member)
+
+
 class Supervisor(db.Model):
     """
     Model a supervision team member
@@ -719,3 +835,111 @@ class Project(db.Model):
 
             if available_programmes is None or prog not in available_programmes:
                 self.remove_programme(prog)
+
+
+class LiveProject(db.Model):
+    """
+    The definitive live project table
+    """
+
+    __tablename__ = 'live_projects'
+
+
+    # surrogate key for (config_id, number) -- need to ensure these are unique!
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # key to ProjectClassConfig record that identifies the year and pclass
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', uselist=False,
+                             backref=db.backref('live_projects', lazy='dynamic'))
+
+    # definitive project number in this year
+    number = db.Column(db.Integer())
+
+    # project name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # free keywords describing scientific area
+    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # which faculty member owns this project?
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
+    owner = db.relationship('User', backref=db.backref('live_projects', lazy='dynamic'))
+
+    # which research group is associated with this project?
+    group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
+    group = db.relationship('ResearchGroup', backref=db.backref('live_projects', lazy='dynamic'))
+
+    # which project class are associated with this project?
+    project_classes = db.relationship('ProjectClass', secondary=live_project_classes, lazy='dynamic',
+                                      backref=db.backref('live_projects', lazy='dynamic'))
+
+    # which transferable skills are associated with this project?
+    skills = db.relationship('TransferableSkill', secondary=live_project_skills, lazy='dynamic',
+                             backref=db.backref('live_projects', lazy='dynamic'))
+
+    # which degree programmes are associated with this project?
+    programmes = db.relationship('DegreeProgramme', secondary=live_project_programmes, lazy='dynamic',
+                                 backref=db.backref('live_projects', lazy='dynamic'))
+
+    # is a meeting required before selecting this project?
+    MEETING_REQUIRED = 1
+    MEETING_OPTIONAL = 2
+    MEETING_NONE = 3
+    meeting_reqd = db.Column(db.Integer())
+
+    team = db.relationship('Supervisor', secondary=live_project_supervision, lazy='dynamic',
+                           backref=db.backref('live_projects', lazy='dynamic'))
+
+    # project description
+    description = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+
+    # recommended reading
+    reading = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+
+
+    # METADATA
+
+    page_views = db.Column(db.Integer())
+
+
+class LiveStudent(db.Model):
+    """
+    The definitive live student table
+    """
+
+    __tablename__ = 'live_students'
+
+
+    # surrogate key for (config_id, user_id) - need to ensure these remain unique!
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # key to ProjectClass config record that identifies this year and pclass
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', uselist=False,
+                             backref=db.backref('live_students', lazy='dynamic'))
+
+    # key to student userid
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', uselist=False, backref=db.backref('live_students', lazy='dynamic'))
+
+    # final project assignment
+    project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    project = db.relationship('LiveProject', uselist=False, backref=db.backref('live_students', lazy='dynamic'))
+
+    # second marker assignment
+    # (first marker is project owner)
+    examiner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    examiner = db.relationship('FacultyData', uselist=False, backref=db.backref('second_marker_for', lazy='dynamic'))
+
+    # bookmarked projects
+    bookmarks = db.relationship('LiveProject', secondary=project_bookmarks, lazy='dynamic',
+                                backref=db.backref('bookmarked_students', lazy='dynamic'))
+
+    # confirmation requests issued
+    confirm_requests = db.relationship('FacultyData', secondary=confirmation_requests, lazy='dynamic',
+                                       backref=db.backref('confirm_waiting', lazy='dynamic'))
+
+    # confirmation requests granted
+    confirmed = db.relationship('FacultyData', secondary=faculty_confirmations, lazy='dynamic',
+                                backref=db.backref('confirmed_students', lazy='dynamic'))

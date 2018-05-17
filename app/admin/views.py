@@ -27,7 +27,7 @@ from .forms import GlobalRolloverForm, RoleSelectForm, \
     AddSupervisorForm, EditSupervisorForm, \
     FacultySettingsForm
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, Supervisor, Project
+    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project
 
 from . import admin
 
@@ -1045,6 +1045,7 @@ def add_project_class():
 
     if form.validate_on_submit():
 
+        # insert a record for this project class
         data = ProjectClass(name=form.name.data,
                             abbreviation=form.abbreviation.data,
                             year=form.year.data,
@@ -1056,6 +1057,20 @@ def add_project_class():
                             programmes=form.programmes.data,
                             active=True)
         db.session.add(data)
+
+        # generate a corresponding configuration record for the current academic year
+        current_year = MainConfig.query.order_by(MainConfig.year.desc()).first().year
+
+        config = ProjectClassConfig(year=current_year,
+                                    pclass_id=data.id,
+                                    live=False,
+                                    closed=False)
+
+        db.session.add(config)
+
+        if data.require_confirm:
+            config.generate_golive_requests()
+
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))

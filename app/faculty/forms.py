@@ -129,3 +129,12 @@ class EditProjectForm(Form, ProjectMixin, EditFormMixin):
                                             unique_or_original_project])
 
     pass
+
+
+class ConvenorDashboardForm(Form):
+
+    rollover = SubmitField('Rollover')
+
+    golive = SubmitField('Go live')
+
+    close = SubmitField('Close student options')

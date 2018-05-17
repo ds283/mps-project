@@ -31,6 +31,11 @@ PASSWORD_HASH_LENGTH = 255
 DESCRIPTION_STRING_LENGTH = 8000
 
 
+submission_choices = [(0, 'None'), (1, 'One (yearly)'), (2, 'Two (termly)')]
+
+academic_titles = [(1, 'Dr'), (2, 'Professor')]
+
+
 # auxiliary table holding mapping from roles to users
 roles_to_users = db.Table('roles_users',
                           db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True),
@@ -141,6 +146,28 @@ class User(db.Model, UserMixin):
         return ProjectClass.query.all()
 
 
+    # build a name for this user
+    def build_name(self):
+
+        prefix = ''
+
+        if self.faculty_data is not None and self.faculty_data.use_academic_title:
+
+            for key, value in academic_titles:
+
+                if key == self.faculty_data.academic_title:
+
+                    prefix = value + ' '
+                    break
+
+        return prefix + self.first_name + ' ' + self.last_name
+
+
+    def build_name_and_username(self):
+
+        return self.build_name() + ' (' + self.username + ')'
+
+
 class ResearchGroup(db.Model):
     """
     Model a row from the research group table
@@ -190,7 +217,7 @@ class FacultyData(db.Model):
 
     # primary key is same as users.id for this faculty member
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
-    user = db.relationship('User')
+    user = db.relationship('User', backref=db.backref('faculty_data', uselist=False))
 
     # research group affiliations for this faculty member
     affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations, lazy='dynamic',
@@ -199,6 +226,12 @@ class FacultyData(db.Model):
     # project class enrollments for this faculty member
     enrollments = db.relationship('ProjectClass', secondary=faculty_enrollments, lazy='dynamic',
                                   backref=db.backref('enrolled_faculty', lazy='dynamic'))
+
+    # academic title (Prof, Dr)
+    academic_title = db.Column(db.Integer())
+
+    # use academic title?
+    use_academic_title = db.Column(db.Boolean())
 
     # does this faculty want to sign off on students before they can apply?
     sign_off_students = db.Column(db.Boolean())

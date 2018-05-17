@@ -16,7 +16,9 @@ from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
 from .actions import register_user
-from .forms import RoleSelectForm, ConfirmRegisterForm, EditUserForm, \
+from .forms import RoleSelectForm,\
+    ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
+    EditOfficeForm, EditFacultyForm, EditStudentForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
@@ -54,9 +56,13 @@ def create_user():
         # get role and redirect to appropriate form
         role = form.roles.data
 
-        if role == 'faculty' or role == 'office':
+        if role == 'office':
 
-            return redirect(url_for('admin.create_simple', role=role))
+            return redirect(url_for('admin.create_office', role=role))
+
+        elif role == 'faculty':
+
+            return redirect(url_for('admin.create_faculty', role=role))
 
         elif role == 'student':
 
@@ -70,27 +76,22 @@ def create_user():
     return render_template('security/register_role.html', role_form=form, title='Select new account role')
 
 
-@admin.route('/create_simple/<string:role>', methods=['GET', 'POST'])
+@admin.route('/create_office/<string:role>', methods=['GET', 'POST'])
 @roles_required('admin')
-def create_simple(role):
+def create_office(role):
     """
-    Create a 'simple' user, current either faculty or office
+    Create an 'office' user
     :param role:
     :return:
     """
 
     # check whether role is ok
-    if not (role == 'faculty' or role == 'office'):
+    if not (role == 'office'):
 
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
         return redirect(url_for('admin.edit_users'))
 
-    form = ConfirmRegisterForm(request.form)
-
-    # delete fields that are not needed for a simple account
-    del form.cohort
-    del form.exam_number
-    del form.programme
+    form = ConfirmRegisterOfficeForm(request.form)
 
     if form.validate_on_submit():
 
@@ -101,11 +102,46 @@ def create_simple(role):
         user = register_user(**field_data)
         form.user = user
 
-        # insert associated records where needed
-        if user.has_role('faculty'):
+        db.session.commit()
 
-            data = FacultyData(id=user.id)
-            db.session.add(data)
+        return redirect(url_for('admin.edit_users'))
+
+    return render_template('security/register_user.html', user_form=form, role=role, title='Register a new {r} user account'.format(r=role))
+
+
+@admin.route('/create_faculty/<string:role>', methods=['GET', 'POST'])
+@roles_required('admin')
+def create_faculty(role):
+    """
+    Create a 'faculty' user
+    :param role:
+    :return:
+    """
+
+    # check whether role is ok
+    if not (role == 'faculty'):
+
+        flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
+        return redirect(url_for('admin.edit_users'))
+
+    form = ConfirmRegisterFacultyForm(request.form)
+
+    if form.validate_on_submit():
+
+        # convert field values to a dictionary
+        field_data = form.to_dict()
+        field_data['roles'] = [role]
+
+        user = register_user(**field_data)
+        form.user = user
+
+        # insert extra data for faculty accounts
+
+        data = FacultyData(id=user.id,
+                           academic_title=form.academic_title.data,
+                           use_academic_title=form.use_academic_title.data,
+                           sign_off_students=form.sign_off_students.data)
+        db.session.add(data)
 
         db.session.commit()
 
@@ -124,7 +160,10 @@ def create_student(role):
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
         return redirect(url_for('admin.edit_users'))
 
-    form = ConfirmRegisterForm(request.form)
+    form = ConfirmRegisterStudentForm(request.form)
+
+    # delete fields that are not needed for a student account
+    form.delete_faculty_fields()
 
     # populate cohort with default value
     query_years = MainConfig.query.all()
@@ -293,25 +332,48 @@ def make_inactive(id):
 @roles_required('admin')
 def edit_user(id):
     """
-    View function to edit an individual user account -- flask-security details only
+    View function to edit an individual user account
     :param id:
     :return:
     """
 
     user = User.query.get_or_404(id)
-    form = EditUserForm(obj=user)
 
-    # remove fields for students if not needed
-    is_student = user.has_role('student')
-    if is_student:
+    if user.has_role('office'):
 
-        student = StudentData.query.get_or_404(id)
+        return redirect(url_for('admin.edit_office', id=id))
 
-    else:
+    elif user.has_role('faculty'):
 
-        del form.exam_number
-        del form.cohort
-        del form.programme
+        return redirect(url_for('admin.edit_faculty', id=id))
+
+    elif user.has_role('student'):
+
+        return redirect(url_for('admin.edit_student', id=id))
+
+    flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
+    return redirect(url_for('admin.edit_users'))
+
+
+def _resend_confirm_email(user):
+
+    confirmation_link, token = generate_confirmation_link(user)
+    do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
+
+    user_registered.send(current_app._get_current_object(),
+                         user=user, confirm_token=token)
+
+    if config_value('SEND_REGISTER_EMAIL'):
+        send_mail(config_value('EMAIL_SUBJECT_REGISTER'), user.email,
+                  'welcome', user=user, confirmation_link=confirmation_link)
+
+
+@admin.route('/edit_office/<int:id>', methods=['GET', 'POST'])
+@roles_required('admin')
+def edit_office(id):
+
+    user = User.query.get_or_404(id)
+    form = EditOfficeForm(obj=user)
 
     form.user = user
 
@@ -328,29 +390,51 @@ def edit_user(id):
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
 
-        if is_student:
-
-            student.exam_number = form.exam_number.data
-            student.cohort = form.cohort.data
-            student.programme_id = form.programme.data.id
-
-        # just '_datastore.commit()' will commit all changes
         _datastore.commit()
 
         flash('All changes saved')
 
         if resend_confirmation:
+            _resend_confirm_email(user)
 
-            confirmation_link, token = generate_confirmation_link(user)
-            do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
+        return redirect(url_for('admin.edit_users'))
 
-            user_registered.send(current_app._get_current_object(),
-                                 user=user, confirm_token=token)
+    return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
 
-            if config_value('SEND_REGISTER_EMAIL'):
-                send_mail(config_value('EMAIL_SUBJECT_REGISTER'), user.email,
-                          'welcome', user=user, confirmation_link=confirmation_link)
 
+@admin.route('/edit_faculty/<int:id>', methods=['GET', 'POST'])
+@roles_required('admin')
+def edit_faculty(id):
+
+    user = User.query.get_or_404(id)
+    form = EditFacultyForm(obj=user)
+
+    form.user = user
+
+    data = FacultyData.query.get_or_404(id)
+
+    if form.validate_on_submit():
+
+        resend_confirmation = False
+        if form.email.data != user.email:
+            user.confirmed_at = None
+            resend_confirmation = True
+
+        user.email = form.email.data
+        user.username = form.username.data
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+
+        data.academic_title = form.academic_title.data
+        data.use_academic_title = form.use_academic_title.data
+        data.sign_off_students = form.sign_off_students.data
+
+        _datastore.commit()
+
+        flash('All changes saved')
+
+        if resend_confirmation:
+            _resend_confirm_email(user)
 
         return redirect(url_for('admin.edit_users'))
 
@@ -358,11 +442,60 @@ def edit_user(id):
 
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
-        if is_student and request.method == 'GET':
+        if request.method == 'GET':
 
-            form.exam_number.data = student.exam_number
-            form.cohort.data = student.cohort
-            form.programme.data = student.programme
+            form.academic_title.data = data.academic_title
+            form.use_academic_title.data = data.use_academic_title
+            form.sign_off_students.data = data.sign_off_students
+
+    return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
+
+
+@admin.route('/edit_student/<int:id>', methods=['GET', 'POST'])
+@roles_required('admin')
+def edit_student(id):
+
+    user = User.query.get_or_404(id)
+    form = EditStudentForm(obj=user)
+
+    form.user = user
+
+    data = StudentData.query.get_or_404(id)
+
+    if form.validate_on_submit():
+
+        resend_confirmation = False
+        if form.email.data != user.email:
+            user.confirmed_at = None
+            resend_confirmation = True
+
+        user.email = form.email.data
+        user.username = form.username.data
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+
+        data.exam_number = form.exam_number.data
+        data.cohort = form.cohort.data
+        data.programme_id = form.programme.data.id
+
+        _datastore.commit()
+
+        flash('All changes saved')
+
+        if resend_confirmation:
+            _resend_confirm_email(user)
+
+        return redirect(url_for('admin.edit_users'))
+
+    else:
+
+        # populate default values if this is the first time we are rendering the form,
+        # distinguished by the method being 'GET' rather than 'POST'
+        if request.method == 'GET':
+
+            form.exam_number.data = data.exam_number
+            form.cohort.data = data.cohort
+            form.programme.data = data.programme
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
 

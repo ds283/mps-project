@@ -12,7 +12,7 @@
         <div class="col-xs-8">
             <div class="jumbotron">
                 <p><span class="project-title">{{ title }}</span></p>
-                <span class="label label-success project-owner-name">{{ project.owner.first_name }} {{ project.owner.last_name }}</span>
+                <span class="label label-success project-owner-name">{{ project.owner.build_name() }}</span>
                 {% if project.group  %}
                     <span class="pull-right">
                         <span class="label label-info research-group-banner">{{ project.group.name }}</span>

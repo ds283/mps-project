@@ -12,12 +12,12 @@ from flask import request, current_app
 from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, get_form_field_label
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
-from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError
+from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, ValidationError
 from wtforms.validators import DataRequired
 from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor
+    ProjectClass, Supervisor, submission_choices, academic_titles
 
 from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -194,7 +194,7 @@ def GetActiveFaculty():
 
 def BuildUserRealName(user):
 
-    return user.first_name + ' ' + user.last_name + ' (' + user.username + ')'
+    return user.build_name_and_username()
 
 
 class UniqueUserNameMixin():
@@ -237,8 +237,7 @@ class PasswordConfirmFormMixin():
 class RoleMixin():
 
     available_roles = [('faculty', 'Faculty'), ('student', 'Student'), ('office', 'Office')]
-    roles = SelectField('Role', choices=available_roles,
-                        validators=[DataRequired(message="A role must be assigned before the account can be created")])
+    roles = SelectField('Role', choices=available_roles)
 
 
 class RoleSelectForm(Form, RoleMixin):
@@ -252,21 +251,30 @@ class FirstLastNameMixin():
     last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
 
 
+class FacultyDataMixin():
+
+    academic_title = SelectField('Academic title', choices=academic_titles, coerce=int)
+
+    use_academic_title = BooleanField('Use academic title', default=True,
+                                      description='User Dr, Professor or similar in student-facing web pages')
+    sign_off_students = BooleanField('Ask to confirm student meetings', default=True,
+                                     description='If meetings are required before project selection, confirmation is needed before allowing students to sign uip ')
+
+
 class StudentDataMixin():
 
-    # student data fields; should be deleted if not needed
     exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
     cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
     programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
 
 
-class RegisterForm(Form, RegisterFormMixin, UniqueUserNameMixin, UniqueEmailFormMixin, NewPasswordFormMixin,
-                   FirstLastNameMixin, StudentDataMixin):
+class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, UniqueEmailFormMixin, NewPasswordFormMixin,
+                         FirstLastNameMixin):
 
     pass
 
 
-class ConfirmRegisterForm(RegisterForm, PasswordConfirmFormMixin, NextFormMixin):
+class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, NextFormMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -274,7 +282,37 @@ class ConfirmRegisterForm(RegisterForm, PasswordConfirmFormMixin, NextFormMixin)
             self.next.data = request.args.get('next', '')
 
 
-class EditUserForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin, FirstLastNameMixin, StudentDataMixin):
+class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixin):
+
+    pass
+
+
+class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixin):
+
+    pass
+
+
+class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin):
+
+    pass
+
+
+class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
+
+    pass
+
+
+class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin, FirstLastNameMixin):
+
+    pass
+
+
+class EditFacultyForm(EditOfficeForm, FacultyDataMixin):
+
+    pass
+
+
+class EditStudentForm(EditOfficeForm, StudentDataMixin):
 
     pass
 
@@ -349,7 +387,6 @@ class ProjectClassMixin():
 
     year = IntegerField('Runs in year', validators=[DataRequired(message='Year is required')])
 
-    submission_choices = [(0, 'None'), (1, 'One (yearly)'), (2, 'Two (termly)')]
     submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int)
 
     convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)

@@ -317,6 +317,11 @@ class EditStudentForm(EditOfficeForm, StudentDataMixin):
     pass
 
 
+class FacultySettingsForm(Form, FacultyDataMixin, FirstLastNameMixin, EditFormMixin):
+
+    pass
+
+
 class ResearchGroupForm():
 
     name = StringField('Name', validators=[DataRequired(message='Name is required')])

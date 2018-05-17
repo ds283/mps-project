@@ -143,7 +143,7 @@ class User(db.Model, UserMixin):
         :return:
         """
 
-        return ProjectClass.query.all()
+        return ProjectClass.query.filter_by(active=True)
 
 
     # build a name for this user

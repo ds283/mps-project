@@ -520,4 +520,48 @@ def convenor_dashboard(id, tabid):
         if not _validate_convenor(pclass):
             return redirect(request.referrer)
 
-        return render_template('faculty/convenor_dashboard.html', pclass=pclass, tabid=tabid, projects=pclass.projects)
+        # build list of all active faculty, together with their FacultyData records
+        faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData)
+
+        # count number of faculty enrolled on this project
+        fac_count = db.session.query(User).filter(User.active).join(FacultyData).filter(
+            FacultyData.enrollments.any(id=id)).count()
+
+        return render_template('faculty/convenor_dashboard.html', pclass=pclass, tabid=tabid,
+                               projects=pclass.projects, faculty=faculty, fac_count=fac_count)
+
+
+@faculty.route('/convenor_enroll/<int:userid>/<int:pclassid>')
+@roles_accepted('faculty', 'admin', 'root')
+def convenor_enroll(userid, pclassid):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(pclassid)
+
+    # reject user if not a suitable convenor or administrator
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    data = FacultyData.query.get_or_404(userid)
+    data.add_enrollment(pclass)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclassid, tabid=_ConvenorDashboardFacultyTab))
+
+
+@faculty.route('/convenor_unenroll/<int:userid>/<int:pclassid>')
+@roles_accepted('faculty', 'admin', 'root')
+def convenor_unenroll(userid, pclassid):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(pclassid)
+
+    # reject user if not a suitable convenor or administrator
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    data = FacultyData.query.get_or_404(userid)
+    data.remove_enrollment(pclass)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclassid, tabid=_ConvenorDashboardFacultyTab))

@@ -38,6 +38,9 @@
         </a></li>
         <li {% if tabid==3 %}class="active"{% endif %}><a data-toggle="pill" href="#faculty">
             Faculty enrollment
+            {% if fac_count and faculty and faculty.count() > 0%}
+                <span class="badge">{{ fac_count }}/{{ faculty.count() }}</span>
+            {% endif %}
         </a></li>
     </ul>
     <hr class="intro-divider">
@@ -185,7 +188,98 @@
             </div>
         </div>
         <div id="faculty" class="tab-pane fade {% if tabid==3 %}in active{% endif %}">
-            Faculty pane
+            {% if faculty and faculty.count() > 0 %}
+                <div class="panel panel-primary">
+                    <div class="panel-heading">Faculty enrolled in <strong>{{ pclass.name }}</strong></div>
+                    <div class="panel-body">
+                    <table class="table table-striped table-bordered sortable-pageable">
+                        <thead>
+                        <tr>
+                            <th width="15%"> Name</th>
+                            <th width="15%"> Email</th>
+                            <th width="10%"> Username</th>
+                            <th width="10%"> Enrolled?</th>
+                            <th width="10%"> Projects available</th>
+                            <th width="10%"> Projects not offerable</th>
+                            <th width="10%"> Confirmed</th>
+                            <th width="20%"> Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for user, userdata in faculty %}
+                            <tr>
+                                {# name #}
+                                <td>
+                                    {{ user.first_name }} {{ user.last_name }}
+                                </td>
+
+                                {# email #}
+                                <td>
+                                    <a href="mailto:{{ user.email }}">{{ user.email }}</a>
+                                </td>
+
+                                {# username #}
+                                <td>
+                                    {{ user.username }}
+                                </td>
+
+                                {# enrolled #}
+                                <td>
+                                    {% if pclass in userdata.enrollments %}
+                                        Yes
+                                    {% else %}
+                                        No
+                                    {% endif %}
+                                </td>
+
+                                {# number of projects offered #}
+                                <td>
+                                    {{ userdata.projects_offered(pclass) }}
+                                </td>
+
+                                {# number of unofferable projects #}
+                                <td>
+                                    {{ userdata.projects_unofferable() }}
+                                </td>
+
+                                {# confirmed #}
+                                <td>
+                                </td>
+
+                                {# actions #}
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                            Actions
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                            {% if pclass in userdata.enrollments %}
+                                                <a href="{{ url_for('faculty.convenor_unenroll', userid=user.id, pclassid=pclass.id) }}">
+                                                    Unenroll
+                                                </a>
+                                            {% else %}
+                                                <a href="{{ url_for('faculty.convenor_enroll', userid=user.id, pclassid=pclass.id) }}">
+                                                    Enroll
+                                                </a>
+                                            {% endif %}
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            {% else %}
+                <div style="text-align: center;">
+                <h3> No projects currently attached to <span class="label label-default">{{ pclass.name }}</span></h3>
+                <hr class="intro-divider">
+                </div>
+            {% endif %}
         </div>
     </div>
 {% endblock %}

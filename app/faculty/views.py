@@ -18,6 +18,8 @@ from . import faculty
 
 from .forms import AddProjectForm, EditProjectForm
 
+import re
+
 
 _ConvenorDashboardSettingsTab=1
 _ConvenorDashboardProjectsTab=2
@@ -578,4 +580,6 @@ def project_preview(id):
     if not _validate_user(data):
         return redirect(request.referrer)
 
-    return render_template('student/show_project.html', title=data.name, project=data)
+    keywords = [ kw.strip() for kw in re.split(";.", data.keywords) ]
+
+    return render_template('student/show_project.html', title=data.name, project=data, keywords=keywords)

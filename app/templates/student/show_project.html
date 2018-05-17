@@ -10,41 +10,68 @@
     <div class="row">
         <div class="col-xs-2"></div>
         <div class="col-xs-8">
-            <div class="jumbotron">
+            <div class="jumbotron project-title-well">
                 <p><span class="project-title">{{ title }}</span></p>
-                <span class="label label-success project-owner-name">{{ project.owner.build_name() }}</span>
+                <p><span class="label label-success project-owner-name">{{ project.owner.build_name() }}</span></p>
                 {% if project.group  %}
-                    <span class="pull-right">
-                        <span class="label label-info research-group-banner">{{ project.group.name }}</span>
-                    </span>
+                    <p><span class="research-group-banner">{{ project.group.name }}</span>
                     {% if project.group.website and project.group.website is not none %}
-                        <p><span class="pull-right">
+                        <span class="pull-right">
                             <a class="research-group-webpage" href="http://{{ project.group.website }}">
-                                <i class="fa fa-external-link">Research group website</i>
+                                Research group website <i class="fa fa-external-link"></i>
                             </a>
-                        </span></p>
+                        </span>
                     {% endif %}
+                    </p>
                 {% endif %}
             </div>
 
-            {% if keywords and keywords|length > 0 %}
-                <div class="well">
-                    {% for keyword in keywords %}
-                        <span class="label label-info">{{ keyword }}</span>
-                    {% endfor %}
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    <strong>At a glance</strong>
+                    {% if project.meeting_reqd == project.MEETING_REQUIRED %}
+                        <div class="pull-right">
+                            <span class="label label-danger sign-up-label">Pre-signup meeting required</span>
+                        </div>
+                    {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
+                        <div class="pull-right">
+                            <span class="label label-warning sign-up-label">Pre-signup meeting optional</span>
+                        </div>
+                    {% else %}
+                        <div class="pull-right">
+                            <span class="label label-default sign-up-label">Pre-signup meeting not required</span>
+                        </div>
+                    {% endif %}
                 </div>
-            {% endif %}
+                <div class="panel-body">
+                    {% if keywords and keywords|length > 0 %}
+                        <h4>Subject keywords</h4>
+                        <h4>
+                        {% for keyword in keywords %}
+                            <span class="label label-info">{{ keyword }}</span>
+                        {% endfor %}
+                        </h4>
+                        <hr class="intro-divider">
+                    {% endif %}
 
-            {% if project.skills and project.skills.count() > 0 %}
-                <div class="well">
-                    <strong>Transferable skills</strong>
+                    {% if project.skills and project.skills.count() > 0 %}
+                        <h4>Transferable skills</h4>
+                        <h4>
+                        {% for skill in project.skills %}
+                            <span class="label label-info">{{ skill.name }}</span>
+                        {% endfor %}
+                        </h4>
+                        <hr class="intro-divider">
+                    {% endif %}
+
+                    <h4>Supervision team</h4>
                     <h4>
-                    {% for skill in project.skills %}
-                        <span class="label label-info">{{ skill.name }}</span>
+                    {% for role in project.team %}
+                        <span class="label label-info">{{ role.name }}</span>
                     {% endfor %}
                     </h4>
                 </div>
-            {% endif %}
+            </div>
 
             <div class="panel panel-default">
                 <div class="panel-body"><p class="project-description">{{ project.description }}</p></div>

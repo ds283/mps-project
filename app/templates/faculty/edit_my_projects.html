@@ -126,6 +126,11 @@
                                             <i class="fa fa-pencil"></i> Edit project
                                         </a>
                                     </li>
+                                    <li>
+                                        <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+                                            Preview web page
+                                        </a>
+                                    </li>
 
                                     <li>
                                         <a href="{{ url_for('faculty.attach_skills', id=project.id) }}">

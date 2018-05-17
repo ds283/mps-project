@@ -139,6 +139,8 @@ class ConvenorDashboardForm(Form):
 
     close = SubmitField('Close student options')
 
+    issue_requests = SubmitField('Issue confirmation requests')
+
 
     def sanitize(self, current_year, config):
         """
@@ -147,6 +149,9 @@ class ConvenorDashboardForm(Form):
         :param config:
         :return:
         """
+
+        if not config.project_class.require_confirm or config.requests_issued:
+            del self.issue_requests
 
         if config.year >= current_year:
             del self.rollover

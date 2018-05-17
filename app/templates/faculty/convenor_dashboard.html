@@ -84,6 +84,24 @@
                     <div class="panel panel-primary">
                         <div class="panel-heading">Status</div>
                         <div class="panel-body">
+                            {% if config.project_class.require_confirm and not config.requests_issued %}
+                                <div class="panel panel-danger">
+                                    <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
+                                    <div class="panel-body">
+                                        <div class="row vertical-align">
+                                            <div class="col-xs-9">
+                                                Confirmation requests have not yet been issued to faculty
+                                            </div>
+                                            <div class="col-xs-3">
+                                                <div class="pull-right">
+                                                    {{ wtf.form_field(form.issue_requests) }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+
                             {% if config.live and config.closed %}
                                 <div class="panel panel-success">
                                     <div class="panel-body"><strong>Student choices are now closed</strong></div>
@@ -111,9 +129,14 @@
                                         <div class="row vertical-align">
                                             <div class="col-xs-9">
                                                 {% if config.golive_required.count() == 0 %}
-                                                    <p>All faculty confirmations have now been received</p>
+                                                    {% if config.requests_issued %}
+                                                        All faculty confirmations have now been received.
+                                                        Freeze project descriptions and issue to students
+                                                    {% else %}
+                                                        Freeze project descriptions and issue to students
+                                                    {% endif %}
                                                 {% else %}
-                                                    <p>Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong></p>
+                                                    Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong>
                                                 {% endif %}
                                            </div>
                                             <div class="col-xs-3">

@@ -608,7 +608,10 @@ class ProjectClassConfig(db.Model):
 
     # id should be an available project class
     pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
-    project_class = db.relationship('ProjectClass', backref=db.backref('config', uselist=False))
+    project_class = db.relationship('ProjectClass', backref=db.backref('configs', uselist=False))
+
+    # are faculty requests to confirm projects open?
+    requests_issued = db.Column(db.Boolean())
 
     # have we gone 'live' this year, ie. frozen a definitive 'live table' of projects and
     # made these available to students?

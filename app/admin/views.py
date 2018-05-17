@@ -1063,6 +1063,7 @@ def add_project_class():
 
         config = ProjectClassConfig(year=current_year,
                                     pclass_id=data.id,
+                                    requests_issued=False,
                                     live=False,
                                     closed=False)
 

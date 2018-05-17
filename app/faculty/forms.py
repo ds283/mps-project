@@ -85,9 +85,12 @@ class ProjectMixin():
                                             query_factory=GetSupervisorRoles, get_label='name')
 
     description = TextAreaField('Project description', render_kw={"rows": 20},
+                                description='Enter a description of your project. '
+                                            'You can use Markdown to add bold and italic, to generate lists, or to embed links. ',
                                 validators=[DataRequired(message='A project description is required')])
 
-    reading = TextAreaField('Recommended reading', render_kw={"rows": 10},)
+    reading = TextAreaField('Recommended reading', render_kw={"rows": 10},
+                            description='Optional. Use Markdown for styling.')
 
 
 class AddProjectForm(Form, ProjectMixin):

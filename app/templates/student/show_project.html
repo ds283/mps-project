@@ -74,13 +74,13 @@
             </div>
 
             <div class="panel panel-default">
-                <div class="panel-body"><p class="project-description">{{ project.description }}</p></div>
+                <div class="panel-body project-description">{{ project.description|markdown|bclean|blinkify|safe }}</div>
             </div>
 
             {% if project.reading and project.reading is not none %}
                 <div class="panel panel-info">
                     <div class="panel-heading">Recommended reading</div>
-                    <div class="panel-body"><p>{{ project.reading }}</p></div>
+                    <div class="panel-body">{{ project.reading|markdown|bclean|blinkify|safe }}</div>
                 </div>
             {% endif %}
             </div>

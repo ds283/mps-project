@@ -613,16 +613,22 @@ class ProjectClassConfig(db.Model):
     # are faculty requests to confirm projects open?
     requests_issued = db.Column(db.Boolean())
 
+    # deadline for confirmation requests
+    request_deadline = db.Column(db.DateTime())
+
     # have we gone 'live' this year, ie. frozen a definitive 'live table' of projects and
     # made these available to students?
     live = db.Column(db.Boolean())
+
+    # deadline for students to make their choices on the live system
+    live_deadline = db.Column(db.DateTime())
 
     # is project selection closed?
     closed = db.Column(db.Boolean())
 
     # capture which faculty have still to sign-off on this configuration
     golive_required = db.relationship('FacultyData', secondary=golive_confirmation, lazy='dynamic',
-                                      backref=db.backref('golive', lazy='dynamic'))
+                                      backref=db.backref('live', lazy='dynamic'))
 
 
     @property
@@ -643,7 +649,10 @@ class ProjectClassConfig(db.Model):
         active_faculty = FacultyData.query.join(User).filter(User.active)
 
         for member in active_faculty:
-            self.golive_required.append(member)
+
+            if member not in self.golive_required:      # don't object if we are generating a duplicate request
+
+                self.golive_required.append(member)
 
 
 class Supervisor(db.Model):

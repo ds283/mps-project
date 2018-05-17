@@ -10,7 +10,8 @@
 
 from flask_security import current_user
 from flask_security.forms import Form
-from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError, TextAreaField
+from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError, \
+    TextAreaField, DateField
 from wtforms.validators import DataRequired
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
@@ -135,11 +136,15 @@ class ConvenorDashboardForm(Form):
 
     rollover = SubmitField('Rollover')
 
-    golive = SubmitField('Go live')
+    live = SubmitField('Go live')
+    live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[DataRequired()])
 
     close = SubmitField('Close student options')
 
-    issue_requests = SubmitField('Issue confirmation requests')
+    requests_issued = SubmitField('Issue confirmation requests')
+    request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[DataRequired()])
+
+    confirm_all = SubmitField('Confirm all outstanding projects')
 
 
     def sanitize(self, current_year, config):
@@ -150,14 +155,49 @@ class ConvenorDashboardForm(Form):
         :return:
         """
 
-        if not config.project_class.require_confirm or config.requests_issued:
-            del self.issue_requests
-
+        # rollover button is not used if config is up-to-date
         if config.year >= current_year:
+
             del self.rollover
 
-        if config.live:
-            del self.golive
+        if config.project_class.require_confirm and not config.requests_issued:
 
-        if config.closed:
-            del self.close
+            # form offers to issue confirmation requests
+            del self.confirm_all, self.live, self.live_deadline, self.close
+
+        else:
+
+            if config.live and config.closed:
+
+                # form offers no choices at all
+                del self.requests_issued, self.request_deadline, self.live, \
+                    self.live_deadline, self.confirm_all, self.close
+
+            elif config.open:
+
+                # form offers to close student choices
+                del self.requests_issued, self.request_deadline, self.confirm_all, \
+                    self.live, self.live_deadline
+
+            elif not config.live:
+
+                if config.project_class.require_confirm:
+
+                    # if we get here then we can assume requests have been issued, because of the outermost if
+
+                    if config.golive_required.count() == 0:
+
+                        # form offers to go live
+                        del self.requests_issued, self.request_deadline, self.confirm_all, self.close
+
+                    else:
+
+                        # form offers to force confirm all, and to adjust the request deadline
+                        del self.live, self.live_deadline, self.close
+                        self.requests_issued.label.text = 'Save changes'
+                        self.request_deadline.label.text = 'Adjust current deadline'
+
+                else:
+
+                    # no confirmations required, so form offers to go live
+                    del self.requests_issued, self.requests_issued, self.confirm_all, self.close

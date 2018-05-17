@@ -1069,8 +1069,7 @@ def add_project_class():
 
         db.session.add(config)
 
-        if data.require_confirm:
-            config.generate_golive_requests()
+        # don't generate any go-live requests here; this is done explicitly by user action
 
         db.session.commit()
 

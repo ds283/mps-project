@@ -38,3 +38,25 @@ p.copyright {
 .dashboard-nav {
     margin-bottom: 10px;
 }
+
+.project-title {
+    /*font-weight: bold;*/
+    font-size: 44px;
+}
+
+.project-owner-name {
+    font-size: 22px;
+}
+
+.research-group-banner {
+    font-size: 18px;
+}
+
+.research-group-webpage {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.project-description {
+    font-size: 16px;
+}

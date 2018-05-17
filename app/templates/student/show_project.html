@@ -1,0 +1,63 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="jumbotron">
+                <p><span class="project-title">{{ title }}</span></p>
+                <span class="label label-success project-owner-name">{{ project.owner.first_name }} {{ project.owner.last_name }}</span>
+                {% if project.group  %}
+                    <span class="pull-right">
+                        <span class="label label-info research-group-banner">{{ project.group.name }}</span>
+                    </span>
+                    {% if project.group.website and project.group.website is not none %}
+                        <p><span class="pull-right">
+                            <a class="research-group-webpage" href="http://{{ project.group.website }}">
+                                <i class="fa fa-external-link">Research group website</i>
+                            </a>
+                        </span></p>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            {% if keywords and keywords|length > 0 %}
+                <div class="well">
+                    {% for keyword in keywords %}
+                        <span class="label label-info">{{ keyword }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if project.skills and project.skills.count() > 0 %}
+                <div class="well">
+                    <strong>Transferable skills</strong>
+                    <h4>
+                    {% for skill in project.skills %}
+                        <span class="label label-info">{{ skill.name }}</span>
+                    {% endfor %}
+                    </h4>
+                </div>
+            {% endif %}
+
+            <div class="panel panel-default">
+                <div class="panel-body"><p class="project-description">{{ project.description }}</p></div>
+            </div>
+
+            {% if project.reading and project.reading is not none %}
+                <div class="panel panel-info">
+                    <div class="panel-heading">Recommended reading</div>
+                    <div class="panel-body"><p>{{ project.reading }}</p></div>
+                </div>
+            {% endif %}
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock bodyblock %}

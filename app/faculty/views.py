@@ -565,3 +565,17 @@ def convenor_unenroll(userid, pclassid):
     db.session.commit()
 
     return redirect(url_for('faculty.convenor_dashboard', id=pclassid, tabid=_ConvenorDashboardFacultyTab))
+
+
+@faculty.route('/preview/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def project_preview(id):
+
+    # get project details
+    data = Project.query.get_or_404(id)
+
+    # if project owner is not logged in user or a suitable convenor, or an administrator, object
+    if not _validate_user(data):
+        return redirect(request.referrer)
+
+    return render_template('student/show_project.html', title=data.name, project=data)

@@ -16,9 +16,14 @@ from flask_security import SQLAlchemyUserDatastore, Security
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
 from flask_assets import Environment
+from app.flask_bleach import Bleach
+from flaskext.markdown import Markdown
 
 from config import app_config
 from .models import db
+
+from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
+
 
 def create_app():
 
@@ -34,6 +39,11 @@ def create_app():
     migrate = Migrate(app, db)
     bootstrap = Bootstrap(app)
     mail = Mail(app)
+    bleach = Bleach(app)
+    md = Markdown(app)
+
+    app.config['BLEACH_ALLOWED_TAGS'] = markdown_tags
+    app.config['BLEACH_ALLOWED_ATTRS'] = markdown_attrs
 
     # set up CSS and javascript assets
     env = Environment(app)

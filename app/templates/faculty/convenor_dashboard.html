@@ -40,15 +40,119 @@
             Faculty enrollment
             {% if fac_count and faculty and faculty.count() > 0%}
                 <span class="badge">{{ fac_count }}/{{ faculty.count() }}</span>
+            {% else %}
+                <span class="badge">0</span>
             {% endif %}
         </a></li>
     </ul>
+
+
+
     <hr class="intro-divider">
 
-    <div class="tab-content">
+
+
+    <form class="tab-content" method="POST" name="convenor-dashboard-form">
+
         <div id="settings" class="tab-pane fade {% if tabid==1 %}in active{% endif %}">
-            Settings pane
+            <div class="row">
+                <div class="col-xs-1"></div>
+                <div class="col-xs-10">
+                    <div class="convenor-dashboard-title">{{ pclass.name }} {{ config.year }}</div>
+                    <hr class="intro-divider">
+
+                    {# offer rollover of academic year if available #}
+                    {% if config.year < current_year %}
+                        <div class="panel panel-danger">
+                            <div class="panel-heading"><strong>Rollover of academic year available</strong></div>
+                            <div class="panel-body">
+                                Rollover of the academic year to {{ current_year }} is now available
+                                <div class="pull-right">
+                                    {{ wtf.form_field(form.rollover) }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {# provide summary #}
+                    <div class="panel panel-primary">
+                        <div class="panel-heading">Status</div>
+                        <div class="panel-body">
+                            {% if config.live and config.closed %}
+                                <strong>Student choices are now closed</strong>
+                            {% elif config.open %}
+                                <div class="row">
+                                    <div class="col-xs-9">
+                                        <strong>Student choices are currently live</strong>
+                                    </div>
+                                    <div class="col-xs-3">
+                                        <div class="pull-right">
+                                            {{ wtf.form_field(form.close) }}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% elif not config.live %}
+                                <div class="row">
+                                    <div class="col-xs-9">
+                                        <strong>Student choices are not yet live</strong>
+                                    </div>
+                                    <div class="col-xs-3">
+                                        <div class="pull-right">
+                                            {{ wtf.form_field(form.golive) }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="intro-divider">
+
+                                {% if config.golive_required.count() == 0 %}
+                                    <p>All faculty confirmations have now been received</p>
+                                {% else %}
+                                    <p>Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong></p>
+
+                                    <table class="table table-striped table-bordered sortable-pageable">
+                                        <thead>
+                                        <tr>
+                                            <th width="50%"> Name</th>
+                                            <th width="20%"> Email</th>
+                                            <th width="10%"> Project available</th>
+                                            <th width="10%"> Projects not offerable</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for faculty in config.golive_required %}
+                                                <tr>
+                                                    {# name #}
+                                                    <td> {{ faculty.user.build_name() }} </td>
+
+                                                    {# email #}
+                                                    <td>
+                                                        <a href="mailto:{{ faculty.user.email }}">{{ faculty.user.email }}
+                                                        </a>
+                                                    </td>
+
+                                                    {# projects available #}
+                                                    <td>{{ faculty.projects_offered(pclass) }}</td>
+
+                                                    {# projects unofferable #}
+                                                    <td>{{ faculty.projects_unofferable() }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-xs-1"></div>
+            </div>
         </div>
+
+
+
         <div id="projects" class="tab-pane fade {% if tabid==2 %}in active{% endif %}">
             {% if projects and projects.count() > 0 %}
                 <div class="panel panel-primary">
@@ -192,6 +296,9 @@
             </a>
             </div>
         </div>
+
+
+
         <div id="faculty" class="tab-pane fade {% if tabid==3 %}in active{% endif %}">
             {% if faculty and faculty.count() > 0 %}
                 <div class="panel panel-primary">

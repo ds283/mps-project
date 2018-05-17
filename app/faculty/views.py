@@ -12,11 +12,11 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
 from flask_security import login_required, roles_required, roles_accepted, current_user
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, Supervisor, Project
+    TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, LiveStudent, Supervisor, Project
 
 from . import faculty
 
-from .forms import AddProjectForm, EditProjectForm
+from .forms import AddProjectForm, EditProjectForm, ConvenorDashboardForm
 
 import re
 
@@ -499,7 +499,7 @@ def remove_programme(projectid, progid):
     return redirect(request.referrer)
 
 
-@faculty.route('/convenor_dashboard/<int:id>/<int:tabid>')
+@faculty.route('/convenor_dashboard/<int:id>/<int:tabid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def convenor_dashboard(id, tabid):
 
@@ -515,12 +515,24 @@ def convenor_dashboard(id, tabid):
 
     else:
 
+        form = ConvenorDashboardForm(request.form)
+
         # get details for project class
         pclass = ProjectClass.query.get_or_404(id)
 
         # reject user if not entitled to view this dashboard
         if not _validate_convenor(pclass):
             return redirect(request.referrer)
+
+        # get current academic year
+        current_year = MainConfig.query.order_by(MainConfig.year.desc()).first().year
+
+        # get current configuration record for this project class
+        config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+        if form.validate_on_submit():
+
+            pass
 
         # build list of all active faculty, together with their FacultyData records
         faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData)
@@ -529,7 +541,8 @@ def convenor_dashboard(id, tabid):
         fac_count = db.session.query(User).filter(User.active).join(FacultyData).filter(
             FacultyData.enrollments.any(id=id)).count()
 
-        return render_template('faculty/convenor_dashboard.html', pclass=pclass, tabid=tabid,
+        return render_template('faculty/convenor_dashboard.html', form=form, pclass=pclass, config=config,
+                               current_year=current_year, tabid=tabid,
                                projects=pclass.projects, faculty=faculty, fac_count=fac_count)
 
 

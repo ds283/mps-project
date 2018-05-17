@@ -16,7 +16,7 @@ from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
 from .actions import register_user
-from .forms import RoleSelectForm,\
+from .forms import GlobalRolloverForm, RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
     EditOfficeForm, EditFacultyForm, EditStudentForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
@@ -1045,8 +1045,16 @@ def add_project_class():
 
     if form.validate_on_submit():
 
-        data = ProjectClass(name=form.name.data, year=form.year.data, submissions=form.submissions.data,
-                            convenor=form.convenor.data, programmes=form.programmes.data, active=True)
+        data = ProjectClass(name=form.name.data,
+                            abbreviation=form.abbreviation.data,
+                            year=form.year.data,
+                            extent=form.extent.data,
+                            require_confirm=form.require_confirm.data,
+                            supervisor_carryover=form.supervisor_carryover.data,
+                            submissions=form.submissions.data,
+                            convenor=form.convenor.data,
+                            programmes=form.programmes.data,
+                            active=True)
         db.session.add(data)
         db.session.commit()
 
@@ -1073,6 +1081,9 @@ def edit_project_class(id):
 
         data.name = form.name.data
         data.year = form.year.data
+        data.extent = form.extent.data
+        data.require_confirm = form.require_confirm.data
+        data.supervisor_carryover = form.supervisor_carryover.data
         data.submissions = form.submissions.data
         data.convenor = form.convenor.data
         data.programmes = form.programmes.data
@@ -1243,3 +1254,30 @@ def faculty_settings():
 
     return render_template('admin/faculty_settings.html', settings_form=form, data=data,
                            project_classes=ProjectClass.query.filter_by(active=True))
+
+
+@admin.route('/global_rollover', methods=['GET', 'POST'])
+@roles_required('root')
+def global_rollover():
+    """
+    Globally advance the academic year
+    (doesn't actually do anything directly; each project class must be advanced
+    independently by its convenor or an administrator)
+    :return:
+    """
+
+    current_year = MainConfig.query.order_by(MainConfig.year.desc()).first()
+    next_year = current_year.year + 1
+
+    form = GlobalRolloverForm(request.form)
+    form.submit.label.text = 'Rollover to {yr}'.format(yr=next_year)
+
+    if form.validate_on_submit():
+
+        new_year = MainConfig(year=next_year)
+        db.session.add(new_year)
+        db.session.commit()
+
+        return redirect(url_for('home.homepage'))
+
+    return render_template('admin/global_rollover.html', rollover_form=form, year=next_year)

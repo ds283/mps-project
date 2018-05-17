@@ -35,10 +35,11 @@
                 <tr>
                     <th width="19%"> Name</th>
                     <th width="5%"> Status</th>
-                    <th width="8%"> Runs in year</th>
-                    <th width="8%"> Submissions per year</th>
+                    <th width="7%"> Runs in</th>
+                    <th width="7%"> Extent</th>
+                    <th width="7%"> Reports per year</th>
                     <th width="15%"> Convenor</th>
-                    <th width="30%"> Degree programmes</th>
+                    <th width="25%"> Degree programmes</th>
                     <th width="15%"> Actions</th>
                 </tr>
                 </thead>
@@ -53,7 +54,8 @@
                                 Inactive
                             {% endif %}
                         </td>
-                        <td> {{ class.year }} </td>
+                        <td> Y{{ class.year }} </td>
+                        <td> {{ class.extent }}yr </td>
                         <td> {{ class.submissions }} </td>
                         <td> {{ class.convenor.build_name() }} <a href="mailto:{{ class.convenor.email }}">{{ class.convenor.email }}</a></td>
                         <td>

@@ -138,3 +138,21 @@ class ConvenorDashboardForm(Form):
     golive = SubmitField('Go live')
 
     close = SubmitField('Close student options')
+
+
+    def sanitize(self, current_year, config):
+        """
+        Remove unneeded buttons to avoid security risks
+        :param current_year:
+        :param config:
+        :return:
+        """
+
+        if config.year >= current_year:
+            del self.rollover
+
+        if config.live:
+            del self.golive
+
+        if config.closed:
+            del self.close

@@ -17,8 +17,16 @@
 
                         {{ rollover_form.hidden_tag() }}
 
-                        <p>Please confirm that you wish to advance the global academic year to {{ year }}</p>
-                        {{ wtf.form_field(rollover_form.submit) }}
+                        <div class="row vertical-align">
+                            <div class="col-xs-9">
+                                Please confirm that you wish to advance the global academic year to {{ year }}
+                            </div>
+                            <div class="col-xs-3">
+                                <div class="pull-right">
+                                    {{ wtf.form_field(rollover_form.submit) }}
+                                </div>
+                            </div>
+                        </div>
 
                     </form>
                 </div>

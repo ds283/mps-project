@@ -31,8 +31,16 @@ PASSWORD_HASH_LENGTH = 255
 DESCRIPTION_STRING_LENGTH = 8000
 
 
+# labels and keys for 'submissions' field
 submission_choices = [(0, 'None'), (1, 'One (yearly)'), (2, 'Two (termly)')]
 
+# labels and keys for 'year' field
+year_choices = [(1, 'Year 1'), (2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
+
+# labels and keys for 'extent' field
+extent_choices = [ (1, '1 year'), (2, '2 years'), (3, '3 years')]
+
+# labels and keys for 'academic titles' field
 academic_titles = [(1, 'Dr'), (2, 'Professor')]
 
 
@@ -459,6 +467,15 @@ class ProjectClass(db.Model):
 
     # which year does this project class run for?
     year = db.Column(db.Integer(), index=True)
+
+    # how many years does the project extend? usually 1, but RP is more
+    extent = db.Column(db.Integer())
+
+    # explicitly ask supervisors to confirm projects each year?
+    require_confirm = db.Column(db.Boolean())
+
+    # carry over supervisor in subsequent years?
+    supervisor_carryover = db.Column(db.Boolean())
 
     # how many submissions per year does this project have?
     submissions = db.Column(db.Integer())

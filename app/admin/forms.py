@@ -17,7 +17,7 @@ from wtforms.validators import DataRequired
 from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor, submission_choices, academic_titles
+    ProjectClass, Supervisor, submission_choices, academic_titles, extent_choices, year_choices
 
 from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -158,14 +158,11 @@ def password_strength(form, field):
                     if msg[-1] != '.':
                         msg += '.'
 
-        if 'crack_times_display' and 'crack_times_seconds' in results:
+        if 'crack_times_display' in results:
 
-            source = results['crack_times_seconds']
-            crack_seconds = { k: float(source[k]) for k in source }
+            if 'online_no_throttling_10_per_second' in results['crack_times_display']:
 
-            minkey = min(crack_seconds, key=crack_seconds.get)
-            if minkey in results['crack_times_display']:
-                msg = msg + " Estimated crack time: " + results['crack_times_display'][minkey]
+                msg = msg + " Estimated crack time: " + results['crack_times_display']['online_no_throttling_10_per_second']
                 if msg[-1] != '.':
                     msg += '.'
 
@@ -390,9 +387,17 @@ class EditTransferableSkillForm(Form, EditFormMixin):
 
 class ProjectClassMixin():
 
-    year = IntegerField('Runs in year', validators=[DataRequired(message='Year is required')])
+    year = SelectField('Runs in year', choices=year_choices, coerce=int,
+                       description='Select the academic year in which students join the project')
+    extent = SelectField('Duration', choices=extent_choices, coerce=int,
+                         description='Select for how many academic years students participate')
 
-    submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int)
+    require_confirm = BooleanField('Require faculty to confirm projects yearly')
+
+    supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')
+
+    submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
+                              description='Select number of marked reports submitted per academic year')
 
     convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
@@ -431,3 +436,8 @@ class EditSupervisorForm(Form, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
                                            unique_or_original_supervisor])
+
+
+class GlobalRolloverForm(Form):
+
+    submit = SubmitField('Rollover')

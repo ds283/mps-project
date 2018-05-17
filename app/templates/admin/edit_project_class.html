@@ -26,6 +26,7 @@
 
         {{ wtf.form_field(project_form.name) }}
         {{ wtf.form_field(project_form.abbreviation) }}
+
         <div class="well {% if project_form.programmes.errors %}has-error{% endif %}">
             <p>Select degree programmes to which this project class applies</p>
             {% for widget in project_form.programmes %}
@@ -37,9 +38,15 @@
                 {% endfor %}
             {% endif %}
         </div>
+
         {{ wtf.form_field(project_form.year) }}
+        {{ wtf.form_field(project_form.extent) }}
+
         {{ wtf.form_field(project_form.submissions) }}
         {{ wtf.form_field(project_form.convenor) }}
+
+        {{ wtf.form_field(project_form.require_confirm) }}
+        {{ wtf.form_field(project_form.supervisor_carryover) }}
 
         {{ wtf.form_field(project_form.submit) }}
 

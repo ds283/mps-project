@@ -24,7 +24,8 @@ from .forms import RoleSelectForm,\
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
     AddTransferrableSkillForm, EditTransferableSkillForm, \
     AddProjectClassForm, EditProjectClassForm, \
-    AddSupervisorForm, EditSupervisorForm
+    AddSupervisorForm, EditSupervisorForm, \
+    FacultySettingsForm
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, Supervisor, Project
 
@@ -1203,3 +1204,42 @@ def make_supervisor_inactive(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/faculty_settings', methods=['GET', 'POST'])
+@roles_required('faculty')
+def faculty_settings():
+    """
+    Edit settings for a faculty member
+    :return:
+    """
+
+    user = User.query.get_or_404(current_user.id)
+    data = FacultyData.query.get_or_404(current_user.id)
+
+    form = FacultySettingsForm(obj=data)
+
+    if form.validate_on_submit():
+
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+
+        data.academic_title = form.academic_title.data
+        data.use_academic_title = form.use_academic_title.data
+        data.sign_off_students = form.sign_off_students.data
+
+        flash('All changes saved')
+
+        db.session.commit()
+
+        return redirect(url_for('faculty.dashboard'))
+
+    else:
+
+        if request.method == 'GET':
+
+            form.first_name.data = user.first_name
+            form.last_name.data = user.last_name
+
+    return render_template('admin/faculty_settings.html', settings_form=form, data=data,
+                           project_classes=ProjectClass.query.filter_by(active=True))

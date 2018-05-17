@@ -19,6 +19,7 @@ from . import faculty
 from .forms import AddProjectForm, EditProjectForm, ConvenorDashboardForm
 
 import re
+from datetime import date, timedelta
 
 
 _ConvenorDashboardSettingsTab=1
@@ -532,9 +533,28 @@ def convenor_dashboard(id, tabid):
 
         form.sanitize(current_year, config)
 
-        if form.validate_on_submit():
+        if form.is_submitted():
 
-            pass
+            if 'requests_issued' in form._fields and form.requests_issued.data is True:
+
+                if not config.requests_issued: # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
+                    config.generate_golive_requests()
+
+                config.requests_issued = True
+                config.request_deadline = form.request_deadline.data
+
+                db.session.commit()
+
+        else:
+
+            if request.method == 'GET':
+
+                # set default deadlines to be today + 6weeks
+                if 'request_deadline' in form._fields:
+                    form.request_deadline.data = date.today() + timedelta(weeks=6)
+
+                if 'live_deadline' in form._fields:
+                    form.live_deadline = date.today() + timedelta(weeks=6)
 
         # build list of all active faculty, together with their FacultyData records
         faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData)

@@ -145,7 +145,7 @@ def password_strength(form, field):
         if 'feedback' in results:
             if 'warning' in results['feedback']:
                 msg = results['feedback']['warning']
-                if msg[-1] != '.':
+                if msg is not None and len(msg) > 0 and msg[-1] != '.':
                     msg += '.'
 
         if len(msg) is 0:
@@ -241,7 +241,7 @@ class RoleMixin():
                         validators=[DataRequired(message="A role must be assigned before the account can be created")])
 
 
-class RoleSelectForm(RoleMixin):
+class RoleSelectForm(Form, RoleMixin):
 
     submit = SubmitField('Select role')
 

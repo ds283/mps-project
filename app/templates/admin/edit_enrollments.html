@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block formtitle %}
-    Edit enrollments <i class="fa fa-user"></i> {{ user.first_name }} {{ user.last_name }} ({{ user.username }})
+    Edit enrollments <i class="fa fa-user"></i> {{ user.build_name_and_username() }}
 {% endblock %}
 
 {% block form_content %}

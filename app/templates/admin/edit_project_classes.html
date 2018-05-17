@@ -55,7 +55,7 @@
                         </td>
                         <td> {{ class.year }} </td>
                         <td> {{ class.submissions }} </td>
-                        <td> {{ class.convenor.first_name }} {{ class.convenor.last_name }} <a href="mailto:{{ class.convenor.email }}">{{ class.convenor.email }}</a></td>
+                        <td> {{ class.convenor.build_name() }} <a href="mailto:{{ class.convenor.email }}">{{ class.convenor.email }}</a></td>
                         <td>
                             {% for programme in class.programmes %}
                                 <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>

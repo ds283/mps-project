@@ -74,7 +74,7 @@
                         <td>
                             {% for pclass in project.project_classes %}
                                 <a class="btn btn-info btn-block btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}" href="mailto:{{ pclass.convenor.email }}">
-                                    {{ pclass.abbreviation }} ({{ pclass.convenor.first_name }} {{ pclass.convenor.last_name }})
+                                    {{ pclass.abbreviation }} ({{ pclass.convenor.build_name() }})
                                 </a>
                             {% endfor %}
                         </td>

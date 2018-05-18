@@ -31,6 +31,8 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
 
 from . import admin
 
+from datetime import date
+
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -163,14 +165,6 @@ def create_student(role):
 
     form = ConfirmRegisterStudentForm(request.form)
 
-    # populate cohort with default value
-    query_years = MainConfig.query.all()
-    current_year = None
-    if len(query_years) > 0:
-        current_year = query_years[0].year
-
-    form.cohort.data = current_year
-
     if form.validate_on_submit():
 
         # convert field values to a dictionary
@@ -189,6 +183,21 @@ def create_student(role):
         db.session.commit()
 
         return redirect(url_for('admin.edit_users'))
+
+    else:
+
+        if request.method == 'GET':
+
+            # populate cohort with default value on first load
+            query_year = MainConfig.query.first()
+
+            if query_year:
+
+                form.cohort.data = query_year.year
+
+            else:
+
+                form.cohort.data = date.today().year
 
     return render_template('security/register_user.html', user_form=form, role=role, title='Register a new {r} user account'.format(r=role))
 

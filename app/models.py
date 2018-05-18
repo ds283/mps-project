@@ -141,20 +141,20 @@ live_project_supervision = db.Table('live_project_to_supervision',
 
 # association table: live student bookmarks
 project_bookmarks = db.Table('project_bookmarks',
-                             db.Column('student_id', db.Integer(), db.ForeignKey('live_students.id'), primary_key=True),
+                             db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
                              db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True)
                              )
 
 # association table: faculty confirmation requests
 confirmation_requests = db.Table('confirmation_requests',
                                  db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
-                                 db.Column('student_id', db.Integer(), db.ForeignKey('live_students.id'), primary_key=True)
+                                 db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True)
                                  )
 
 # association table: faculty confirmed meetings
 faculty_confirmations = db.Table('faculty_confirmations',
                                  db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
-                                 db.Column('student_id', db.Integer(), db.ForeignKey('live_students.id'), primary_key=True)
+                                 db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True)
                                  )
 
 
@@ -390,10 +390,15 @@ class StudentData(db.Model):
 
     # primary key is same as users.id for this student member
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
+    user = db.relationship('User', backref=db.backref('student_data', uselist=False))
 
+    # exam number is needed for marking
     exam_number = db.Column(db.Integer(), index=True, unique=True)
+
+    # cohort identifies which project classes this student will be enrolled for
     cohort = db.Column(db.Integer(), index=True)
 
+    # degree programme
     programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
     programme = db.relationship('DegreeProgramme', backref=db.backref('students', lazy='dynamic'))
 
@@ -940,34 +945,27 @@ class LiveProject(db.Model):
     page_views = db.Column(db.Integer())
 
 
-class LiveStudent(db.Model):
+class SelectingStudent(db.Model):
     """
-    The definitive live student table
+    Model a student who is selecting a project in the current cycle
     """
 
-    __tablename__ = 'live_students'
+    __tablename__ = 'selecting_students'
 
 
     # surrogate key for (config_id, user_id) - need to ensure these remain unique!
     id = db.Column(db.Integer(), primary_key=True)
 
+    retired = db.Column(db.Integer())
+
     # key to ProjectClass config record that identifies this year and pclass
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
     config = db.relationship('ProjectClassConfig', uselist=False,
-                             backref=db.backref('live_students', lazy='dynamic'))
+                             backref=db.backref('selecting_students', lazy='dynamic'))
 
     # key to student userid
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', uselist=False, backref=db.backref('live_students', lazy='dynamic'))
-
-    # final project assignment
-    project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
-    project = db.relationship('LiveProject', uselist=False, backref=db.backref('live_students', lazy='dynamic'))
-
-    # second marker assignment
-    # (first marker is project owner)
-    examiner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
-    examiner = db.relationship('FacultyData', uselist=False, backref=db.backref('second_marker_for', lazy='dynamic'))
+    user = db.relationship('User', uselist=False, backref=db.backref('selecting_students', lazy='dynamic'))
 
     # bookmarked projects
     bookmarks = db.relationship('LiveProject', secondary=project_bookmarks, lazy='dynamic',
@@ -980,3 +978,26 @@ class LiveStudent(db.Model):
     # confirmation requests granted
     confirmed = db.relationship('FacultyData', secondary=faculty_confirmations, lazy='dynamic',
                                 backref=db.backref('confirmed_students', lazy='dynamic'))
+
+
+class SubmittingStudent(db.Model):
+    """
+    Model a student who is submitting work for evaluation in the current cycle
+    """
+
+    __tablename__ = 'submitting_students'
+
+
+    # surrogate key for (config_id, user_id) - need to ensure these remain unique!
+    id = db.Column(db.Integer(), primary_key=True)
+
+    retired = db.Column(db.Integer())
+
+    # key to ProjectClass config record that identifies this year and pclass
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', uselist=False,
+                             backref=db.backref('submitting_students', lazy='dynamic'))
+
+    # key to student userid
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', uselist=False, backref=db.backref('submitting_students', lazy='dynamic'))

@@ -775,7 +775,12 @@ def dashboard():
     pcs = []
     for item in current_user.faculty_data.enrollments:
 
-        pcs.append(item.configs.order_by(ProjectClassConfig.year.desc()).first())
+        config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
+
+        # get live projects
+        live_projects = config.live_projects.filter_by(owner_id=current_user.id)
+
+        pcs.append((config,live_projects))
 
     return render_template('faculty/dashboard.html', enrollments=pcs)
 
@@ -793,8 +798,8 @@ def confirm_pclass(id):
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     if not config.requests_issued:
-
-        flash('Confirmation requests have not yet been issued for {project} {year}'.format(project=config.project_class.name), year=config.year)
+        flash('Confirmation requests have not yet been issued for {project} {year}'.format(
+            project=config.project_class.name, year=config.year))
         return redirect(url_for('faculty.dashboard'))
 
     if current_user.faculty_data in config.golive_required:
@@ -805,5 +810,7 @@ def confirm_pclass(id):
         flash('Thank-you. You confirmation has been recorded.')
         return redirect(url_for('faculty.dashboard'))
 
-    flash('You have no outstanding confirmation requests for {project} {year}'.format(project=config.project_class.name), year=config.year)
+    flash('You have no outstanding confirmation requests for {project} {year}'.format(
+        project=config.project_class.name, year=config.year))
+
     return redirect(url_for('faculty.dashboard'))

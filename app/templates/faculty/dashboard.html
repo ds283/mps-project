@@ -25,8 +25,16 @@
                             </a>
                         </span></p>
 
+                        {% set nproj = current_user.faculty_data.projects_offered(pclass) %}
+                        {% if nproj == 1 %}
+                            {% set plural = '' %}
+                        {% else %}
+                            {% set plural = 's' %}
+                        {% endif %}
                         <div class="panel
-                            {% if config.open %}
+                            {% if nproj == 0 %}
+                                panel-danger
+                            {% elif config.open %}
                                 panel-success
                             {% elif config.closed %}
                                 panel-warning
@@ -79,12 +87,6 @@
                                 {% endif %}
 
                                 {# show basic details about this project #}
-                                {% set nproj = current_user.faculty_data.projects_offered(pclass) %}
-                                {% if nproj == 1 %}
-                                    {% set plural = '' %}
-                                {% else %}
-                                    {% set plural = 's' %}
-                                {% endif %}
                                 <div class="row vertical-align">
                                     <div class="col-xs-9">
                                         {% if nproj == 0 %}

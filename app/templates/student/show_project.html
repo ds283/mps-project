@@ -45,7 +45,7 @@
                 </div>
                 <div class="panel-body">
                     {% if keywords and keywords|length > 0 %}
-                        <h4>Subject keywords</h4>
+                        <p>Subject keywords</p>
                         <h4>
                         {% for keyword in keywords %}
                             <span class="label label-info">{{ keyword }}</span>
@@ -55,7 +55,7 @@
                     {% endif %}
 
                     {% if project.skills and project.skills.count() > 0 %}
-                        <h4>Transferable skills</h4>
+                        <p>Transferable skills</p>
                         <h4>
                         {% for skill in project.skills %}
                             <span class="label label-info">{{ skill.name }}</span>
@@ -64,7 +64,7 @@
                         <hr class="intro-divider">
                     {% endif %}
 
-                    <h4>Supervision team</h4>
+                    <p>Supervision team</p>
                     <h4>
                     {% for role in project.team %}
                         <span class="label label-info">{{ role.name }}</span>

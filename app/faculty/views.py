@@ -686,6 +686,7 @@ def go_live(id):
                                     reading=item.description,
                                     page_views=0)
             db.session.add(live_item)
+            number += 1
 
         config.live = True
         config.live_deadline = form.live_deadline.data

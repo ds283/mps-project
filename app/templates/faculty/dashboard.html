@@ -10,7 +10,52 @@
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
-            Testing
+            {% if enrollments %}
+                {% for config in enrollments %}
+                    {% set pclass = config.project_class %}
+                    <div class="well">
+                        <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}</span></p>
+                        <p><span>
+                            Convenor:
+                            <a class="btn btn-link" href="mailto:{{ pclass.convenor.email }}">
+                                {{ pclass.convenor.build_name() }}
+                            </a>
+                        </span></p>
+
+                        <div class="panel panel-primary">
+                            <div class="panel-heading">Status</div>
+                            <div class="panel-body">
+                                {% if config.project_class.require_confirm and config.requests_issued and current_user.faculty_data in config.golive_required %}
+                                    <div class="panel panel-danger">
+                                        <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
+                                        <div class="panel-body">
+                                            <div class="row vertical-align">
+                                                <div class="col-xs-9">
+                                                    <p>Please review your projects and ensure the correct
+                                                        descriptions are available.</p>
+                                                    {% if config.request_deadline %}
+                                                        <p>The project convenor has set a deadline of
+                                                            {{ config.request_deadline.date() }}, which is
+                                                            <strong>{{ config.time_to_request_deadline }} from now</strong>.
+                                                            After the deadline, projects will be finalized and
+                                                            made avaliable to the students for selection.
+                                                        </p>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-xs-3">
+                                                    <span class="pull-right">
+                                                        <button class="btn btn-default">Confirm</button>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
         </div>
         <div class="col-xs-1"></div>
     </div>

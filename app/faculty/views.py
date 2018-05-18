@@ -86,7 +86,13 @@ def dashboard():
     :return:
     """
 
-    return render_template('faculty/dashboard.html')
+    pcs = []
+
+    for item in current_user.faculty_data.enrollments:
+
+        pcs.append(item.configs.order_by(ProjectClassConfig.year.desc()).first())
+
+    return render_template('faculty/dashboard.html', enrollments=pcs)
 
 
 @faculty.route('/edit_my_projects')
@@ -506,66 +512,80 @@ def convenor_dashboard(id, tabid):
 
     if id == 0:
 
-        # special-case of unattached projects; reject user if not administrator
-        if not _validate_administrator():
-            return redirect(request.referrer)
+        return _render_unattached()
 
-        projects = [ proj for proj in Project.query.all() if not proj.offerable ]
+    form = ConvenorDashboardForm(request.form)
 
-        return render_template('faculty/unattached_dashboard.html', projects=projects)
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = MainConfig.query.order_by(MainConfig.year.desc()).first().year
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    form.sanitize(current_year, config)
+
+    if form.is_submitted():
+
+        if 'requests_issued' in form._fields and form.requests_issued.data is True:
+
+            # set request deadline and issue requests if needed
+            _set_request_deadline(config, form)
 
     else:
 
-        form = ConvenorDashboardForm(request.form)
+        if request.method == 'GET':
 
-        # get details for project class
-        pclass = ProjectClass.query.get_or_404(id)
+            # set default deadlines to be today + 6weeks
+            if 'request_deadline' in form._fields and config.request_deadline is None:
+                form.request_deadline.data = date.today() + timedelta(weeks=6)
+            else:
+                form.request_deadline.data = config.request_deadline
 
-        # reject user if not entitled to view this dashboard
-        if not _validate_convenor(pclass):
-            return redirect(request.referrer)
+            if 'live_deadline' in form._fields and config.live_deadline is None:
+                form.live_deadline = date.today() + timedelta(weeks=6)
+            else:
+                form.live_deadline = config.live_deadline
 
-        # get current academic year
-        current_year = MainConfig.query.order_by(MainConfig.year.desc()).first().year
+    # build list of all active faculty, together with their FacultyData records
+    faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData)
 
-        # get current configuration record for this project class
-        config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    # count number of faculty enrolled on this project
+    fac_count = db.session.query(User).filter(User.active).join(FacultyData).filter(
+        FacultyData.enrollments.any(id=id)).count()
 
-        form.sanitize(current_year, config)
+    return render_template('faculty/convenor_dashboard.html', form=form, pclass=pclass, config=config,
+                           current_year=current_year, tabid=tabid,
+                           projects=pclass.projects, faculty=faculty, fac_count=fac_count)
 
-        if form.is_submitted():
 
-            if 'requests_issued' in form._fields and form.requests_issued.data is True:
+def _set_request_deadline(config, form):
 
-                if not config.requests_issued: # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
-                    config.generate_golive_requests()
+    # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
+    if not config.requests_issued:
 
-                config.requests_issued = True
-                config.request_deadline = form.request_deadline.data
+        config.generate_golive_requests()
 
-                db.session.commit()
+    config.requests_issued = True
+    config.request_deadline = form.request_deadline.data
 
-        else:
+    db.session.commit()
 
-            if request.method == 'GET':
 
-                # set default deadlines to be today + 6weeks
-                if 'request_deadline' in form._fields:
-                    form.request_deadline.data = date.today() + timedelta(weeks=6)
+def _render_unattached():
 
-                if 'live_deadline' in form._fields:
-                    form.live_deadline = date.today() + timedelta(weeks=6)
+    # special-case of unattached projects; reject user if not administrator
 
-        # build list of all active faculty, together with their FacultyData records
-        faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData)
-
-        # count number of faculty enrolled on this project
-        fac_count = db.session.query(User).filter(User.active).join(FacultyData).filter(
-            FacultyData.enrollments.any(id=id)).count()
-
-        return render_template('faculty/convenor_dashboard.html', form=form, pclass=pclass, config=config,
-                               current_year=current_year, tabid=tabid,
-                               projects=pclass.projects, faculty=faculty, fac_count=fac_count)
+    if not _validate_administrator():
+        return redirect(request.referrer)
+    projects = [proj for proj in Project.query.all() if not proj.offerable]
+    return render_template('faculty/unattached_dashboard.html', projects=projects)
 
 
 @faculty.route('/convenor_enroll/<int:userid>/<int:pclassid>')

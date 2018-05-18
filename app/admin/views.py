@@ -163,9 +163,6 @@ def create_student(role):
 
     form = ConfirmRegisterStudentForm(request.form)
 
-    # delete fields that are not needed for a student account
-    form.delete_faculty_fields()
-
     # populate cohort with default value
     query_years = MainConfig.query.all()
     current_year = None

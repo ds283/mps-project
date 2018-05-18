@@ -11,7 +11,7 @@
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
 
-            {% if enrollments %}
+            {% if enrollments and enrollments|length > 0 %}
 
                 {% for config, live_projects in enrollments %}
 
@@ -138,6 +138,12 @@
                     </div>
 
                 {% endfor %}
+
+            {% else %}
+
+                <div style="text-align: center;">
+                    <h3> You are not currently enrolled in any project classes </h3>
+                <hr class="intro-divider">
 
             {% endif %}
 

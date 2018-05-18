@@ -22,35 +22,60 @@
                             </a>
                         </span></p>
 
-                        <div class="panel panel-primary">
+                        <div class="panel panel-info">
                             <div class="panel-heading">Status</div>
+
                             <div class="panel-body">
+
+                                {# show confirmation request if one is active #}
                                 {% if config.project_class.require_confirm and config.requests_issued and current_user.faculty_data in config.golive_required %}
                                     <div class="panel panel-danger">
                                         <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
                                         <div class="panel-body">
-                                            <div class="row vertical-align">
-                                                <div class="col-xs-9">
-                                                    <p>Please review your projects and ensure the correct
-                                                        descriptions are available.</p>
-                                                    {% if config.request_deadline %}
-                                                        <p>The project convenor has set a deadline of
-                                                            {{ config.request_deadline.date() }}, which is
-                                                            <strong>{{ config.time_to_request_deadline }} from now</strong>.
-                                                            After the deadline, projects will be finalized and
-                                                            made avaliable to the students for selection.
-                                                        </p>
-                                                    {% endif %}
-                                                </div>
-                                                <div class="col-xs-3">
-                                                    <span class="pull-right">
-                                                        <button class="btn btn-default">Confirm</button>
-                                                    </span>
-                                                </div>
-                                            </div>
+                                            <p>Please review your projects to ensure the descriptions are up-to-date,
+                                            and those you wish to offer next year are active and attached to
+                                            the correct project classes.</p>
+                                            {% if config.request_deadline %}
+                                                <p>The project convenor has set a deadline of
+                                                    <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                                    <strong>{{ config.time_to_request_deadline }} from now</strong>.
+                                                </p>
+                                                <p>After the deadline, projects will be finalized and
+                                                    made avaliable to the students for selection.
+                                                </p>
+                                            {% endif %}
+                                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-danger">Confirm</a>
                                         </div>
                                     </div>
                                 {% endif %}
+
+                                {# show basic details about this project #}
+                                {% set nproj = current_user.faculty_data.projects_offered(pclass) %}
+                                {% if nproj == 1 %}
+                                    {% set plural = '' %}
+                                {% else %}
+                                    {% set plural = 's' %}
+                                {% endif %}
+                                <div class="row vertical-align">
+                                    <div class="col-xs-9">
+                                        {% if nproj == 0 %}
+                                        <div class="has-error">
+                                        <div class="help-block">
+                                        <strong>
+                                        {% endif %}
+                                        {{ nproj }} active project{{ plural }} attached to this project class.
+                                        {% if nproj == 0 %}
+                                        </strong>
+                                        </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-xs-3">
+                                        <span class="pull-right">
+                                            <a href="{{ url_for('faculty.edit_my_projects') }}" class="btn btn-default">Edit my projects</a>
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

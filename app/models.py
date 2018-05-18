@@ -314,14 +314,16 @@ class FacultyData(db.Model):
 
     def projects_offered(self, pclass):
 
-        return Project.query.filter(Project.active, Project.project_classes.any(id=self.id)).count()
+        return Project.query.filter(Project.active,
+                                    Project.owner_id == self.id,
+                                    Project.project_classes.any(id=pclass.id)).count()
 
 
     def projects_unofferable(self):
 
         unofferable = 0
         for proj in self.user.projects:
-            if not proj.offerable:
+            if proj.active and not proj.offerable:
                 unofferable += 1
 
         return unofferable

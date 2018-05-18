@@ -16,7 +16,8 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
 
 from . import faculty
 
-from .forms import AddProjectForm, EditProjectForm, ConvenorDashboardForm
+from .forms import AddProjectForm, EditProjectForm, RolloverForm, GoLiveForm, CloseStudentSelectionsForm, \
+    IssueFacultyConfirmRequestForm, ConfirmAllRequestsForm
 
 import re
 from datetime import date, timedelta
@@ -76,23 +77,6 @@ def _validate_convenor(pclass):
         return False
 
     return True
-
-
-@faculty.route('/dashboard')
-@roles_required('faculty')
-def dashboard():
-    """
-    Render the dashboard for a faculty user
-    :return:
-    """
-
-    pcs = []
-
-    for item in current_user.faculty_data.enrollments:
-
-        pcs.append(item.configs.order_by(ProjectClassConfig.year.desc()).first())
-
-    return render_template('faculty/dashboard.html', enrollments=pcs)
 
 
 @faculty.route('/edit_my_projects')
@@ -514,8 +498,6 @@ def convenor_dashboard(id, tabid):
 
         return _render_unattached()
 
-    form = ConvenorDashboardForm(request.form)
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -529,29 +511,27 @@ def convenor_dashboard(id, tabid):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    form.sanitize(current_year, config)
+    # build forms
+    rollover_form = RolloverForm(request.form)
+    golive_form = GoLiveForm(request.form)
+    close_form = CloseStudentSelectionsForm(request.form)
+    issue_form = IssueFacultyConfirmRequestForm(request.form)
+    confirm_form = ConfirmAllRequestsForm(request.form)
 
-    if form.is_submitted():
+    if config.requests_issued:
+        issue_form.requests_issued.label.text = 'Save changes'
 
-        if 'requests_issued' in form._fields and form.requests_issued.data is True:
+    if request.method == 'GET':
 
-            # set request deadline and issue requests if needed
-            _set_request_deadline(config, form)
+        if config.request_deadline is not None:
+            issue_form.request_deadline.data = config.request_deadline
+        else:
+            issue_form.request_deadline.data = date.today() + timedelta(weeks=6)
 
-    else:
-
-        if request.method == 'GET':
-
-            # set default deadlines to be today + 6weeks
-            if 'request_deadline' in form._fields and config.request_deadline is None:
-                form.request_deadline.data = date.today() + timedelta(weeks=6)
-            else:
-                form.request_deadline.data = config.request_deadline
-
-            if 'live_deadline' in form._fields and config.live_deadline is None:
-                form.live_deadline = date.today() + timedelta(weeks=6)
-            else:
-                form.live_deadline = config.live_deadline
+        if config.live_deadline is not None:
+            golive_form.live_deadline.data = config.live_deadline
+        else:
+            golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
     # build list of all active faculty, together with their FacultyData records
     faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData)
@@ -560,22 +540,43 @@ def convenor_dashboard(id, tabid):
     fac_count = db.session.query(User).filter(User.active).join(FacultyData).filter(
         FacultyData.enrollments.any(id=id)).count()
 
-    return render_template('faculty/convenor_dashboard.html', form=form, pclass=pclass, config=config,
+    return render_template('faculty/convenor_dashboard.html',
+                           rollover_form=rollover_form, golive_form=golive_form, close_form=close_form,
+                           issue_form=issue_form, confirm_form=confirm_form, pclass=pclass, config=config,
                            current_year=current_year, tabid=tabid,
                            projects=pclass.projects, faculty=faculty, fac_count=fac_count)
 
 
-def _set_request_deadline(config, form):
+@faculty.route('/issue_confirm_requests/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def issue_confirm_requests(id):
 
-    # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
-    if not config.requests_issued:
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
 
-        config.generate_golive_requests()
+    # reject user if not entitled to perform dashboard functions
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
 
-    config.requests_issued = True
-    config.request_deadline = form.request_deadline.data
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    db.session.commit()
+    issue_form = IssueFacultyConfirmRequestForm(request.form)
+
+    if issue_form.is_submitted() and issue_form.requests_issued.data is True:
+
+        # set request deadline and issue requests if needed
+
+        # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
+        if not config.requests_issued:
+            config.generate_golive_requests()
+
+        config.requests_issued = True
+        config.request_deadline = issue_form.request_deadline.data
+
+        db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
 
 
 def _render_unattached():
@@ -638,3 +639,63 @@ def project_preview(id):
     keywords = [ kw.strip() for kw in re.split(";.", data.keywords) ]
 
     return render_template('student/show_project.html', title=data.name, project=data, keywords=keywords)
+
+
+@faculty.route('/dashboard')
+@roles_required('faculty')
+def dashboard():
+    """
+    Render the dashboard for a faculty user
+    :return:
+    """
+
+    # check for unofferable projects
+    unofferable = current_user.faculty_data.projects_unofferable()
+    if unofferable > 0:
+        plural='s'
+        isare='are'
+
+        if unofferable == 1:
+            plural=''
+            isare='is'
+
+        flash('You have {n} project{plural} that {isare} active but cannot be offered to students. '
+              'Please check your project list.'.format(n=unofferable, plural=plural, isare=isare),
+              'error')
+
+    # build list of enrolled projects
+    pcs = []
+    for item in current_user.faculty_data.enrollments:
+
+        pcs.append(item.configs.order_by(ProjectClassConfig.year.desc()).first())
+
+    return render_template('faculty/dashboard.html', enrollments=pcs)
+
+
+@faculty.route('/confirm_pclass/<int:id>')
+@roles_accepted('faculty')
+def confirm_pclass(id):
+    """
+    Issue confirmation for this project class and logged-in user
+    :param id:
+    :return:
+    """
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    if not config.requests_issued:
+
+        flash('Confirmation requests have not yet been issued for {project} {year}'.format(project=config.project_class.name), year=config.year)
+        return redirect(url_for('faculty.dashboard'))
+
+    if current_user.faculty_data in config.golive_required:
+
+        config.golive_required.remove(current_user.faculty_data)
+        db.session.commit()
+
+        flash('Thank-you. You confirmation has been recorded.')
+        return redirect(url_for('faculty.dashboard'))
+
+    flash('You have no outstanding confirmation requests for {project} {year}'.format(project=config.project_class.name), year=config.year)
+    return redirect(url_for('faculty.dashboard'))

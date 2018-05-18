@@ -135,72 +135,28 @@ class EditProjectForm(Form, ProjectMixin, EditFormMixin):
     pass
 
 
-class ConvenorDashboardForm(Form):
+class RolloverForm(Form):
 
     rollover = SubmitField('Rollover')
+
+
+class GoLiveForm(Form):
 
     live = SubmitField('Go live')
     live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[DataRequired()])
 
-    close = SubmitField('Close student options')
+
+class CloseStudentSelectionsForm(Form):
+
+    close = SubmitField('Close student selections')
+
+
+class IssueFacultyConfirmRequestForm(Form):
 
     requests_issued = SubmitField('Issue confirmation requests')
     request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[DataRequired()])
 
+
+class ConfirmAllRequestsForm(Form):
+
     confirm_all = SubmitField('Confirm all outstanding projects')
-
-
-    def sanitize(self, current_year, config):
-        """
-        Remove unneeded buttons to avoid security risks
-        :param current_year:
-        :param config:
-        :return:
-        """
-
-        # rollover button is not used if config is up-to-date
-        if config.year >= current_year:
-
-            del self.rollover
-
-        if config.project_class.require_confirm and not config.requests_issued:
-
-            # form offers to issue confirmation requests
-            del self.confirm_all, self.live, self.live_deadline, self.close
-
-        else:
-
-            if config.live and config.closed:
-
-                # form offers no choices at all
-                del self.requests_issued, self.request_deadline, self.live, \
-                    self.live_deadline, self.confirm_all, self.close
-
-            elif config.open:
-
-                # form offers to close student choices
-                del self.requests_issued, self.request_deadline, self.confirm_all, \
-                    self.live, self.live_deadline
-
-            elif not config.live:
-
-                if config.project_class.require_confirm:
-
-                    # if we get here then we can assume requests have been issued, because of the outermost if
-
-                    if config.golive_required.count() == 0:
-
-                        # form offers to go live
-                        del self.requests_issued, self.request_deadline, self.confirm_all, self.close
-
-                    else:
-
-                        # form offers to force confirm all, and to adjust the request deadline
-                        del self.live, self.live_deadline, self.close
-                        self.requests_issued.label.text = 'Save changes'
-                        self.request_deadline.label.text = 'Adjust current deadline'
-
-                else:
-
-                    # no confirmations required, so form offers to go live
-                    del self.requests_issued, self.requests_issued, self.confirm_all, self.close

@@ -52,7 +52,7 @@
 
 
 
-    <form class="tab-content" action="{{ url_for('faculty.convenor_dashboard', id=pclass.id, tabid=tabid) }}" method="POST" name="convenor-dashboard-form">
+    <div class="tab-content">
 
         <div id="settings" class="tab-pane fade {% if tabid==1 %}in active{% endif %}">
             <div class="row">
@@ -72,7 +72,9 @@
                                     </div>
                                     <div class="col-xs-3">
                                         <div class="pull-right">
-                                            {{ wtf.form_field(form.rollover) }}
+                                            <form method="POST" name="rollover-form">
+                                                {{ wtf.form_field(rollover_form.rollover) }}
+                                            </form>
                                         </div>
                                     </div>
                                 </div>
@@ -88,17 +90,19 @@
                                 <div class="panel panel-danger">
                                     <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
                                     <div class="panel-body">
-                                        <div class="row vertical-align">
-                                            <div class="col-xs-9">
-                                                Confirmation requests have not yet been issued to faculty
-                                            </div>
-                                            <div class="col-xs-3">
-                                                <div class="pull-right">
-                                                    {{ wtf.form_field(form.request_deadline) }}
-                                                    {{ wtf.form_field(form.requests_issued) }}
+                                        <form action="{{ url_for('faculty.issue_confirm_requests', id=pclass.id) }}" method="POST" name="issue-form">
+                                            <div class="row vertical-align">
+                                                <div class="col-xs-9">
+                                                    Confirmation requests have not yet been issued to faculty
                                                 </div>
+                                                <div class="col-xs-3">
+                                                    <div class="pull-right">
+                                                        {{ wtf.form_field(issue_form.request_deadline) }}
+                                                        {{ wtf.form_field(issue_form.requests_issued) }}
+                                                    </div>
                                             </div>
-                                        </div>
+                                            </div>
+                                        </form>
                                     </div>
                                 </div>
                             {% else %}
@@ -117,7 +121,9 @@
                                                 </div>
                                                 <div class="col-xs-3">
                                                     <div class="pull-right">
-                                                        {{ wtf.form_field(form.close) }}
+                                                        <form method="POST" name="close-form">
+                                                            {{ wtf.form_field(close_form.close) }}
+                                                        </form>
                                                     </div>
                                                 </div>
                                             </div>
@@ -134,36 +140,42 @@
                                                 {% if config.golive_required.count() == 0 %}
                                                     <div class="row vertical-align">
                                                         <div class="col-xs-9">
-                                                            All faculty confirmations have now been received.
-                                                            Freeze project descriptions and open student choices.
+                                                            <p>All faculty confirmations have now been received.</p>
+                                                            <p>Freeze project descriptions and open student choices.</p>
                                                         </div>
                                                         <div class="col-xs-3">
                                                             <div class="pull-right">
-                                                                {{ wtf.form_field(form.live_deadline) }}
-                                                                {{ wtf.form_field(form.live) }}
+                                                                <form method="POST" name="golive-form">
+                                                                    {{ wtf.form_field(golive_form.live_deadline) }}
+                                                                    {{ wtf.form_field(golive_form.live) }}
+                                                                </form>
                                                             </div>
                                                         </div>
                                                     </div>
                                                 {% else %}
-                                                    <div class="row vertical-align">
-                                                        <div class="col-xs-9">
-                                                            Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong>.
-                                                        </div>
-                                                        <div class="col-xs-3">
-                                                            <div class="pull-right">
-                                                                {{ wtf.form_field(form.confirm_all) }}
+                                                    <form method="POST" name="confirm-form">
+                                                        <div class="row vertical-align">
+                                                            <div class="col-xs-9">
+                                                                Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong>.
+                                                            </div>
+                                                            <div class="col-xs-3">
+                                                                <div class="pull-right">
+                                                                    {{ wtf.form_field(confirm_form.confirm_all) }}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                    <div class="row vertical-align">
-                                                        <div class="col-xs-9">
-                                                            {{ wtf.form_field(form.request_deadline) }}
-                                                        </div>
-                                                        <div class="col-xs-3">
-                                                            <div class="pull-right">
-                                                                {{ wtf.form_field(form.requests_issued) }}
+                                                    </form>
+                                                    <form action="{{ url_for('faculty.issue_confirm_requests', id=pclass.id) }}" method="POST" name="issue-form">
+                                                        <div class="row vertical-align">
+                                                            <div class="col-xs-9">
+                                                                {{ wtf.form_field(issue_form.request_deadline) }}
                                                             </div>
-                                                        </div>
+                                                            <div class="col-xs-3">
+                                                                <div class="pull-right">
+                                                                    {{ wtf.form_field(issue_form.requests_issued) }}
+                                                                </div>
+                                                            </div>
+                                                        </form>
                                                     </div>
                                                 {% endif %}
 
@@ -215,8 +227,10 @@
                                                    </div>
                                                 <div class="col-xs-3">
                                                     <div class="pull-right">
-                                                        {{ wtf.form_field(form.live_deadline) }}
-                                                        {{ wtf.form_field(form.live) }}
+                                                        <form method="POST" name="golive-form">
+                                                            {{ wtf.form_field(golive_form.live_deadline) }}
+                                                            {{ wtf.form_field(golive_form.live) }}
+                                                        </form>
                                                     </div>
                                                 </div>
                                             </div>

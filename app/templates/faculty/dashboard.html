@@ -17,7 +17,7 @@
 
                     {% set pclass = config.project_class %}
                     <div class="well">
-                        <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}</span></p>
+                        <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                         <p><span>
                             Convenor:
                             <a class="btn btn-link" href="mailto:{{ pclass.convenor.email }}">
@@ -49,7 +49,7 @@
                                 {% if config.open %}
                                     <strong>Status</strong>
                                     <div class="pull-right">
-                                        <span class="label label-success">Student choices open</span>
+                                        <span class="label label-success">Student choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
                                         {% if config.live_deadline %}
                                             <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                                         {% endif %}
@@ -117,7 +117,8 @@
                                 {% endif %}
                                 {% if config.open and live_projects.count() > 0 %}
                                     <hr class="intro-divider">
-                                    <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }} on the live system for students making selections this year.</p>
+                                    <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
+                                        on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>
                                     <table class="table table-condensed table-hover">
                                         <thead>
                                             <tr>

@@ -1,8 +1,8 @@
-"""move migration start point
+"""update migration start point
 
-Revision ID: 01b8037f03aa
+Revision ID: 9a3d25cde1f7
 Revises: 
-Create Date: 2018-05-15 22:40:23.422188
+Create Date: 2018-05-18 23:38:36.955100
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '01b8037f03aa'
+revision = '9a3d25cde1f7'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -33,6 +33,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('abbreviation', sa.String(length=255), nullable=True),
     sa.Column('name', sa.String(length=255), nullable=True),
+    sa.Column('website', sa.String(length=255), nullable=True),
     sa.Column('active', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
@@ -81,8 +82,8 @@ def upgrade():
     op.create_table('degree_programmes',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=True),
-    sa.Column('type_id', sa.Integer(), nullable=True),
     sa.Column('active', sa.Boolean(), nullable=True),
+    sa.Column('type_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['type_id'], ['degree_types.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -90,6 +91,8 @@ def upgrade():
     op.create_index(op.f('ix_degree_programmes_type_id'), 'degree_programmes', ['type_id'], unique=False)
     op.create_table('faculty_data',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('academic_title', sa.Integer(), nullable=True),
+    sa.Column('use_academic_title', sa.Boolean(), nullable=True),
     sa.Column('sign_off_students', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -100,6 +103,9 @@ def upgrade():
     sa.Column('abbreviation', sa.String(length=255), nullable=True),
     sa.Column('active', sa.Boolean(), nullable=True),
     sa.Column('year', sa.Integer(), nullable=True),
+    sa.Column('extent', sa.Integer(), nullable=True),
+    sa.Column('require_confirm', sa.Boolean(), nullable=True),
+    sa.Column('supervisor_carryover', sa.Boolean(), nullable=True),
     sa.Column('submissions', sa.Integer(), nullable=True),
     sa.Column('convenor_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['convenor_id'], ['users.id'], ),
@@ -139,6 +145,26 @@ def upgrade():
     sa.ForeignKeyConstraint(['group_id'], ['research_groups.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['faculty_data.id'], ),
     sa.PrimaryKeyConstraint('user_id', 'group_id')
+    )
+    op.create_table('faculty_enrollments',
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('project_class_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['project_class_id'], ['project_classes.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['faculty_data.id'], ),
+    sa.PrimaryKeyConstraint('user_id', 'project_class_id')
+    )
+    op.create_table('project_class_config',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('year', sa.Integer(), nullable=True),
+    sa.Column('pclass_id', sa.Integer(), nullable=True),
+    sa.Column('requests_issued', sa.Boolean(), nullable=True),
+    sa.Column('request_deadline', sa.DateTime(), nullable=True),
+    sa.Column('live', sa.Boolean(), nullable=True),
+    sa.Column('live_deadline', sa.DateTime(), nullable=True),
+    sa.Column('closed', sa.Boolean(), nullable=True),
+    sa.ForeignKeyConstraint(['pclass_id'], ['project_classes.id'], ),
+    sa.ForeignKeyConstraint(['year'], ['main_config.year'], ),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('project_class_to_programmes',
     sa.Column('project_class_id', sa.Integer(), nullable=False),
@@ -184,13 +210,121 @@ def upgrade():
     sa.ForeignKeyConstraint(['programme_id'], ['degree_programmes.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_student_data_cohort'), 'student_data', ['cohort'], unique=True)
+    op.create_index(op.f('ix_student_data_cohort'), 'student_data', ['cohort'], unique=False)
     op.create_index(op.f('ix_student_data_exam_number'), 'student_data', ['exam_number'], unique=True)
+    op.create_table('go_live_confirmation',
+    sa.Column('faculty_id', sa.Integer(), nullable=False),
+    sa.Column('pclass_config_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['faculty_id'], ['faculty_data.id'], ),
+    sa.ForeignKeyConstraint(['pclass_config_id'], ['project_class_config.id'], ),
+    sa.PrimaryKeyConstraint('faculty_id', 'pclass_config_id')
+    )
+    op.create_table('live_projects',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('config_id', sa.Integer(), nullable=True),
+    sa.Column('number', sa.Integer(), nullable=True),
+    sa.Column('name', sa.String(length=255), nullable=True),
+    sa.Column('keywords', sa.String(length=255), nullable=True),
+    sa.Column('owner_id', sa.Integer(), nullable=True),
+    sa.Column('group_id', sa.Integer(), nullable=True),
+    sa.Column('meeting_reqd', sa.Integer(), nullable=True),
+    sa.Column('description', sa.String(length=8000), nullable=True),
+    sa.Column('reading', sa.String(length=8000), nullable=True),
+    sa.Column('page_views', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['config_id'], ['project_class_config.id'], ),
+    sa.ForeignKeyConstraint(['group_id'], ['research_groups.id'], ),
+    sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_live_projects_group_id'), 'live_projects', ['group_id'], unique=False)
+    op.create_index(op.f('ix_live_projects_name'), 'live_projects', ['name'], unique=True)
+    op.create_index(op.f('ix_live_projects_owner_id'), 'live_projects', ['owner_id'], unique=False)
+    op.create_table('selecting_students',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('retired', sa.Integer(), nullable=True),
+    sa.Column('config_id', sa.Integer(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['config_id'], ['project_class_config.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('submitting_students',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('retired', sa.Integer(), nullable=True),
+    sa.Column('config_id', sa.Integer(), nullable=True),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['config_id'], ['project_class_config.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('confirmation_requests',
+    sa.Column('faculty_id', sa.Integer(), nullable=False),
+    sa.Column('student_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['faculty_id'], ['faculty_data.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['selecting_students.id'], ),
+    sa.PrimaryKeyConstraint('faculty_id', 'student_id')
+    )
+    op.create_table('faculty_confirmations',
+    sa.Column('faculty_id', sa.Integer(), nullable=False),
+    sa.Column('student_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['faculty_id'], ['faculty_data.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['selecting_students.id'], ),
+    sa.PrimaryKeyConstraint('faculty_id', 'student_id')
+    )
+    op.create_table('live_project_to_classes',
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('project_class_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['project_class_id'], ['project_classes.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['live_projects.id'], ),
+    sa.PrimaryKeyConstraint('project_id', 'project_class_id')
+    )
+    op.create_table('live_project_to_programmes',
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('programme_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['programme_id'], ['degree_programmes.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['live_projects.id'], ),
+    sa.PrimaryKeyConstraint('project_id', 'programme_id')
+    )
+    op.create_table('live_project_to_skills',
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('skill_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['project_id'], ['live_projects.id'], ),
+    sa.ForeignKeyConstraint(['skill_id'], ['transferable_skills.id'], ),
+    sa.PrimaryKeyConstraint('project_id', 'skill_id')
+    )
+    op.create_table('live_project_to_supervision',
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.Column('supervisor.id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['project_id'], ['live_projects.id'], ),
+    sa.ForeignKeyConstraint(['supervisor.id'], ['supervision_team.id'], ),
+    sa.PrimaryKeyConstraint('project_id', 'supervisor.id')
+    )
+    op.create_table('project_bookmarks',
+    sa.Column('student_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['project_id'], ['live_projects.id'], ),
+    sa.ForeignKeyConstraint(['student_id'], ['selecting_students.id'], ),
+    sa.PrimaryKeyConstraint('student_id', 'project_id')
+    )
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('project_bookmarks')
+    op.drop_table('live_project_to_supervision')
+    op.drop_table('live_project_to_skills')
+    op.drop_table('live_project_to_programmes')
+    op.drop_table('live_project_to_classes')
+    op.drop_table('faculty_confirmations')
+    op.drop_table('confirmation_requests')
+    op.drop_table('submitting_students')
+    op.drop_table('selecting_students')
+    op.drop_index(op.f('ix_live_projects_owner_id'), table_name='live_projects')
+    op.drop_index(op.f('ix_live_projects_name'), table_name='live_projects')
+    op.drop_index(op.f('ix_live_projects_group_id'), table_name='live_projects')
+    op.drop_table('live_projects')
+    op.drop_table('go_live_confirmation')
     op.drop_index(op.f('ix_student_data_exam_number'), table_name='student_data')
     op.drop_index(op.f('ix_student_data_cohort'), table_name='student_data')
     op.drop_table('student_data')
@@ -199,6 +333,8 @@ def downgrade():
     op.drop_table('project_to_programmes')
     op.drop_table('project_to_classes')
     op.drop_table('project_class_to_programmes')
+    op.drop_table('project_class_config')
+    op.drop_table('faculty_enrollments')
     op.drop_table('faculty_affiliations')
     op.drop_table('roles_users')
     op.drop_index(op.f('ix_projects_owner_id'), table_name='projects')

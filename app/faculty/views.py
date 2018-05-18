@@ -12,7 +12,8 @@ from flask import current_app, render_template, redirect, url_for, flash, reques
 from flask_security import login_required, roles_required, roles_accepted, current_user
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, LiveStudent, Supervisor, Project
+    TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
+    Supervisor, Project
 
 from . import faculty
 
@@ -548,11 +549,17 @@ def convenor_dashboard(id, tabid):
     fac_count = db.session.query(User).filter(User.active).join(FacultyData).filter(
         FacultyData.enrollments.any(id=id)).count()
 
+    # build a list of live students selecting from this project class
+    selectors = config.selecting_students.filter_by(retired=False)
+
+    # build a list of live students submitting work for evaluation in this project class
+    submitters = config.submitting_students.filter_by(retired=False)
+
     return render_template('faculty/convenor_dashboard.html',
                            golive_form=golive_form, issue_form=issue_form,
-                           pclass=pclass, config=config,
-                           current_year=current_year, tabid=tabid,
-                           projects=pclass.projects, faculty=faculty, fac_count=fac_count)
+                           pclass=pclass, config=config, current_year=current_year, tabid=tabid,
+                           projects=pclass.projects, faculty=faculty, fac_count=fac_count,
+                           selectors=selectors, submitters=submitters)
 
 
 @faculty.route('/issue_confirm_requests/<int:id>', methods=['GET', 'POST'])
@@ -651,8 +658,10 @@ def go_live(id):
         # ensure there are no outstanding confirm requests
         if config.golive_required.count() > 0:
 
-            flash('Cannot yet go live for {name} {year} because some confirmation requests are outstanding. '
-                  'If needed, force all confirmations and try again.'.format(name=pclass.name, year=config.year),
+            flash('Cannot yet go live for {name} {yeara}-{yearb}'
+                  ' because some confirmation requests are outstanding. '
+                  'If needed, force all confirmations and try again.'.format(
+                    name=pclass.name, yeara=config.year, yearb=config.year+1),
                   'error')
 
             return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
@@ -663,7 +672,9 @@ def go_live(id):
 
         if projects.count() == 0:
 
-            flash('Cannot yet go live for {name} {year} because there are no available projects.'.format(name=pclass.name, year=config.year),
+            flash('Cannot yet go live for {name} {yeara}-{yearb} '
+                  'because there are no available projects.'.format(
+                    name=pclass.name, yeara=config.year, yearb=config.year+1),
                   'error')
 
             return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
@@ -693,7 +704,7 @@ def go_live(id):
 
         db.session.commit()
 
-        flash('{name} {year} is now live'.format(name=pclass.name, year=config.year), 'success')
+        flash('{name} {yeara}-{yearb} is now live'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
 
     return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
 
@@ -799,8 +810,8 @@ def confirm_pclass(id):
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     if not config.requests_issued:
-        flash('Confirmation requests have not yet been issued for {project} {year}'.format(
-            project=config.project_class.name, year=config.year))
+        flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
+            project=config.project_class.name, yeara=config.year, yearb=config.year+1))
         return redirect(url_for('faculty.dashboard'))
 
     if current_user.faculty_data in config.golive_required:
@@ -811,7 +822,7 @@ def confirm_pclass(id):
         flash('Thank-you. You confirmation has been recorded.')
         return redirect(url_for('faculty.dashboard'))
 
-    flash('You have no outstanding confirmation requests for {project} {year}'.format(
-        project=config.project_class.name, year=config.year))
+    flash('You have no outstanding confirmation requests for {project} {yeara}-{yearb}'.format(
+        project=config.project_class.name, yeara=config.year, yearb=config.year+1))
 
     return redirect(url_for('faculty.dashboard'))

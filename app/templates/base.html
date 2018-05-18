@@ -159,6 +159,8 @@
 {% block content %}
     <div class="container-fluid main-content">
         <br/>
+        {% block pillblock %}
+        {% endblock %}
         {{ utils.flashed_messages() }}
         <br/>
         {% block bodyblock %}{% endblock %}

@@ -512,13 +512,11 @@ def convenor_dashboard(id, tabid):
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     # build forms
-    rollover_form = RolloverForm(request.form)
     golive_form = GoLiveForm(request.form)
-    close_form = CloseStudentSelectionsForm(request.form)
     issue_form = IssueFacultyConfirmRequestForm(request.form)
-    confirm_form = ConfirmAllRequestsForm(request.form)
 
     if config.requests_issued:
+
         issue_form.requests_issued.label.text = 'Save changes'
 
     if request.method == 'GET':
@@ -541,8 +539,8 @@ def convenor_dashboard(id, tabid):
         FacultyData.enrollments.any(id=id)).count()
 
     return render_template('faculty/convenor_dashboard.html',
-                           rollover_form=rollover_form, golive_form=golive_form, close_form=close_form,
-                           issue_form=issue_form, confirm_form=confirm_form, pclass=pclass, config=config,
+                           golive_form=golive_form, issue_form=issue_form,
+                           pclass=pclass, config=config,
                            current_year=current_year, tabid=tabid,
                            projects=pclass.projects, faculty=faculty, fac_count=fac_count)
 
@@ -569,7 +567,14 @@ def issue_confirm_requests(id):
 
         # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
         if not config.requests_issued:
+
             config.generate_golive_requests()
+            requests = config.golive_required.count()
+            plural = 's'
+            if requests == 0:
+                plural = ''
+
+            flash('{n} confirmation request{plural} have been issued'.format(n=requests, plural=plural))
 
         config.requests_issued = True
         config.request_deadline = issue_form.request_deadline.data
@@ -582,11 +587,37 @@ def issue_confirm_requests(id):
 def _render_unattached():
 
     # special-case of unattached projects; reject user if not administrator
-
     if not _validate_administrator():
         return redirect(request.referrer)
+
     projects = [proj for proj in Project.query.all() if not proj.offerable]
+
     return render_template('faculty/unattached_dashboard.html', projects=projects)
+
+
+@faculty.route('/force_confirm_all/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def force_confirm_all(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to perform dashboard functions
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    for item in config.golive_required.all():
+
+        config.golive_required.remove(item)
+
+    db.session.commit()
+
+    flash('All outstanding confirmation requests have been removed.', 'success')
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
 
 
 @faculty.route('/convenor_enroll/<int:userid>/<int:pclassid>')

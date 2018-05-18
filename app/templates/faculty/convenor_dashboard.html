@@ -25,7 +25,7 @@
     {{ pclass.name }}
 {% endblock %}
 
-{% block bodyblock %}
+{% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li {% if tabid==1 %}class="active"{% endif %}><a data-toggle="pill" href="#settings">
             Settings
@@ -45,13 +45,11 @@
             {% endif %}
         </a></li>
     </ul>
+{% endblock %}
 
 
-
+{% block bodyblock %}
     <hr class="intro-divider">
-
-
-
     <div class="tab-content">
 
         <div id="settings" class="tab-pane fade {% if tabid==1 %}in active{% endif %}">
@@ -72,9 +70,7 @@
                                     </div>
                                     <div class="col-xs-3">
                                         <div class="pull-right">
-                                            <form method="POST" name="rollover-form">
-                                                {{ wtf.form_field(rollover_form.rollover) }}
-                                            </form>
+                                            <a class="btn btn-default">Rollover</a>
                                         </div>
                                     </div>
                                 </div>
@@ -121,9 +117,9 @@
                                                 </div>
                                                 <div class="col-xs-3">
                                                     <div class="pull-right">
-                                                        <form method="POST" name="close-form">
-                                                            {{ wtf.form_field(close_form.close) }}
-                                                        </form>
+                                                        <a class="btn btn-default">
+                                                            Close student selections
+                                                        </a>
                                                     </div>
                                                 </div>
                                             </div>
@@ -138,33 +134,33 @@
                                             <div class="panel-body">
 
                                                 {% if config.golive_required.count() == 0 %}
-                                                    <div class="row vertical-align">
-                                                        <div class="col-xs-9">
-                                                            <p>All faculty confirmations have now been received.</p>
-                                                            <p>Freeze project descriptions and open student choices.</p>
-                                                        </div>
-                                                        <div class="col-xs-3">
-                                                            <div class="pull-right">
-                                                                <form method="POST" name="golive-form">
-                                                                    {{ wtf.form_field(golive_form.live_deadline) }}
-                                                                    {{ wtf.form_field(golive_form.live) }}
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                {% else %}
-                                                    <form method="POST" name="confirm-form">
+                                                    <form method="POST" name="golive-form">
                                                         <div class="row vertical-align">
                                                             <div class="col-xs-9">
-                                                                Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong>.
+                                                                <p>All faculty confirmations have now been received.</p>
+                                                                <p>Freeze project descriptions and open student choices.</p>
                                                             </div>
                                                             <div class="col-xs-3">
                                                                 <div class="pull-right">
-                                                                    {{ wtf.form_field(confirm_form.confirm_all) }}
+                                                                    {{ wtf.form_field(golive_form.live_deadline) }}
+                                                                    {{ wtf.form_field(golive_form.live) }}
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </form>
+                                                {% else %}
+                                                    <div class="row vertical-align">
+                                                        <div class="col-xs-9">
+                                                            Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong>.
+                                                        </div>
+                                                        <div class="col-xs-3">
+                                                            <div class="pull-right">
+                                                                <a href="{{ url_for('faculty.force_confirm_all', id=pclass.id) }}" class="btn btn-danger">
+                                                                    Force confirm all
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                     <form action="{{ url_for('faculty.issue_confirm_requests', id=pclass.id) }}" method="POST" name="issue-form">
                                                         <div class="row vertical-align">
                                                             <div class="col-xs-9">
@@ -175,8 +171,8 @@
                                                                     {{ wtf.form_field(issue_form.requests_issued) }}
                                                                 </div>
                                                             </div>
-                                                        </form>
-                                                    </div>
+                                                        </div>
+                                                    </form>
                                                 {% endif %}
 
                                             </div>
@@ -221,18 +217,18 @@
                                         <div class="panel panel-danger">
                                             <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
                                             <div class="panel-body">
-                                                <div class="row vertical-align">
-                                                    <div class="col-xs-9">
-                                                        Freeze project descriptions and open student choices.
-                                                   </div>
-                                                <div class="col-xs-3">
-                                                    <div class="pull-right">
-                                                        <form method="POST" name="golive-form">
+                                                <form method="POST" name="golive-form">
+                                                    <div class="row vertical-align">
+                                                        <div class="col-xs-9">
+                                                            Freeze project descriptions and open student choices.
+                                                       </div>
+                                                    <div class="col-xs-3">
+                                                        <div class="pull-right">
                                                             {{ wtf.form_field(golive_form.live_deadline) }}
                                                             {{ wtf.form_field(golive_form.live) }}
-                                                        </form>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                </form>
                                             </div>
                                         </div>
 

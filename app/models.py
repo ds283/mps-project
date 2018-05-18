@@ -11,6 +11,9 @@
 from flask_security import UserMixin, RoleMixin
 from flask_sqlalchemy import SQLAlchemy
 
+from datetime import date, timedelta
+
+
 # make db available as a static variable, so we can import into other parts of the code
 db = SQLAlchemy()
 
@@ -608,7 +611,7 @@ class ProjectClassConfig(db.Model):
 
     # id should be an available project class
     pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
-    project_class = db.relationship('ProjectClass', backref=db.backref('configs', uselist=False))
+    project_class = db.relationship('ProjectClass', uselist=False, backref=db.backref('configs', lazy='dynamic'))
 
     # are faculty requests to confirm projects open?
     requests_issued = db.Column(db.Boolean())
@@ -633,7 +636,22 @@ class ProjectClassConfig(db.Model):
 
     @property
     def open(self):
+
         return self.live and not self.closed
+
+
+    @property
+    def time_to_request_deadline(self):
+
+        delta = self.request_deadline.date() - date.today()
+        days = delta.days
+
+        str = '{days} day'.format(days=days)
+
+        if days != 1:
+            str += 's'
+
+        return str
 
 
     def generate_golive_requests(self):

@@ -31,7 +31,7 @@
             Settings
         </a></li>
         <li {% if tabid==2 %}class="active"{% endif %}><a data-toggle="pill" href="#projects">
-            Available projects
+            Attached projects
             {% if projects %}
                 <span class="badge">{{ projects.count() }}</span>
             {% endif %}
@@ -44,6 +44,21 @@
                 <span class="badge">0</span>
             {% endif %}
         </a></li>
+        <li {% if tabid==4 %}class="active"{% endif %}><a data-toggle="pill" href="#selecting">
+            Students selecting this year
+        </a></li>
+        <li {% if tabid==5 %}class="active"{% endif %}><a data-toggle="pill" href="#joined">
+            Students active this year
+        </a></li>
+        {% if config.live_projects %}
+            {% set number_live_projects = config.live_projects.count() %}
+            {% if number_live_projects > 0 %}
+                <li {% if tabid==6 %}class="active"{% endif %}><a data-toggle="pill" href="#live">
+                    Live projects
+                    <span class="badge">{{ number_live_projects }}</span>
+                </a></li>
+            {% endif %}
+        {% endif %}
     </ul>
 {% endblock %}
 
@@ -51,6 +66,8 @@
 {% block bodyblock %}
     <hr class="intro-divider">
     <div class="tab-content">
+
+
 
         <div id="settings" class="tab-pane fade {% if tabid==1 %}in active{% endif %}">
             <div class="row">
@@ -281,7 +298,7 @@
 
                                 {# owner #}
                                 <td>
-                                    {{ project.owner.build_name_and_username() }}
+                                    <a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name_and_username() }}</a>
                                 </td>
 
                                 {# status #}
@@ -500,5 +517,84 @@
                 </div>
             {% endif %}
         </div>
+
+
+
+        <div id="selecting" class="tab-pane fade {% if tabid==4 %}in active{% endif %}">
+        </div>
+
+
+
+        <div id="joined" class="tab-pane fade {% if tabid==5 %}in active{% endif %}">
+        </div>
+
+        {% set number_live_projects = config.live_projects.count() %}
+        {% if number_live_projects > 0 %}
+            <div id="live" class="tab-pane fade {% if tabid==6 %}in active{% endif %}">
+
+                <div class="panel panel-primary">
+                    <div class="panel-heading">Live projects <strong>{{ pclass.name }} {{ config.year }}</strong></div>
+                    <div class="panel-body">
+                    <table class="table table-striped table-bordered sortable-pageable">
+                        <thead>
+                        <tr>
+                            <th width="5%"> Number</th>
+                            <th width="25%"> Name</th>
+                            <th width="15%"> Owner</th>
+                            <th width="20%"> Affiliation</th>
+                            <th width="10%"> Bookmarks</th>
+                            <th width="10%"> Page views</th>
+                            <th width="15%"> Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for project in config.live_projects %}
+                            <tr>
+                                {# number #}
+                                <td><strong>{{ project.number }}</strong></td>
+
+                                {# name #}
+                                <td><strong>{{ project.name }}</strong></td>
+
+                                {# owner #}
+                                <td><a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name_and_username() }}</a></td>
+
+                                {# affiliation #}
+                                <td> <span class="label label-success">{{ project.group.name }}</span> </td>
+
+                                {# bookmarks #}
+                                <td>{{ project.bookmarked_students.count() }}</td>
+
+                                {# page views #}
+                                <td>{{ project.page_views }}</td>
+
+                                {# actions #}
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                            Actions
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li>
+                                                <a href="">
+                                                    Preview web page
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+
+            </div>
+        {% endif %}
+
+
+
     </div>
 {% endblock %}

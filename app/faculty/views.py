@@ -239,7 +239,17 @@ def convenor_edit_project(id, pclass_id):
         data.description = form.description.data
         data.reading = form.reading.data
 
+        # ensure that list of preferred degree programmes is now consistent
         data.validate_programmes()
+
+        # auto-enroll if implied by current project class associations
+        owner = data.owner.faculty_data
+        for pclass in data.project_classes:
+
+            if owner not in pclass.enrolled_faculty.all():
+
+                owner.enrollments.append(pclass)
+                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.build_name(), pclass=pclass.name))
 
         db.session.commit()
 
@@ -616,6 +626,73 @@ def force_confirm_all(id):
     db.session.commit()
 
     flash('All outstanding confirmation requests have been removed.', 'success')
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
+
+
+@faculty.route('/go_live/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'route')
+def go_live(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to perform dashboard functions
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    form = GoLiveForm(request.form)
+
+    if form.is_submitted():
+
+        # ensure there are no outstanding confirm requests
+        if config.golive_required.count() > 0:
+
+            flash('Cannot yet go live for {name} {year} because some confirmation requests are outstanding. '
+                  'If needed, force all confirmations and try again.'.format(name=pclass.name, year=config.year),
+                  'error')
+
+            return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
+
+        # going live consists of copying all tables for this project to the live project table,
+        # in alphabetical order
+        projects = pclass.projects.filter(Project.active).join(User).order_by(User.last_name, User.first_name)
+
+        if projects.count() == 0:
+
+            flash('Cannot yet go live for {name} {year} because there are no available projects.'.format(name=pclass.name, year=config.year),
+                  'error')
+
+            return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
+
+        number = 1
+        for item in projects.all():
+
+            live_item = LiveProject(config_id=pclass.id,
+                                    number=number,
+                                    name=item.name,
+                                    keywords=item.keywords,
+                                    owner_id=item.owner_id,
+                                    group_id=item.group_id,
+                                    project_classes=item.project_classes,
+                                    skills=item.skills,
+                                    programmes=item.programmes,
+                                    meeting_reqd=item.meeting_reqd,
+                                    team=item.team,
+                                    description=item.description,
+                                    reading=item.description,
+                                    page_views=0)
+            db.session.add(live_item)
+
+        config.live = True
+        config.live_deadline = form.live_deadline.data
+
+        db.session.commit()
+
+        flash('{name} {year} is now live'.format(name=pclass.name, year=config.year), 'success')
 
     return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
 

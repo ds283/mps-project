@@ -860,6 +860,11 @@ class Project(db.Model):
 
 
     def validate_programmes(self):
+        """
+        Validate that the degree programmes associated with this project
+        are valid, given the current project class associations
+        :return:
+        """
 
         available_programmes = self.available_degree_programmes()
 

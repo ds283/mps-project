@@ -104,11 +104,11 @@
                             {% else %}
 
                                 {% if config.live and config.closed %}
-                                    <div class="panel panel-success">
+                                    <div class="panel panel-warning">
                                         <div class="panel-body"><strong>Student choices are now closed</strong></div>
                                     </div>
                                 {% elif config.open %}
-                                    <div class="panel panel-info">
+                                    <div class="panel panel-success">
                                         <div class="panel panel-heading"><strong>Student choices are currently live</strong></div>
                                         <div class="panel-body">
                                             <div class="row vertical-align">
@@ -117,7 +117,7 @@
                                                 </div>
                                                 <div class="col-xs-3">
                                                     <div class="pull-right">
-                                                        <a class="btn btn-default">
+                                                        <a class="btn btn-success">
                                                             Close student selections
                                                         </a>
                                                     </div>
@@ -134,7 +134,7 @@
                                             <div class="panel-body">
 
                                                 {% if config.golive_required.count() == 0 %}
-                                                    <form method="POST" name="golive-form">
+                                                    <form action="{{ url_for('faculty.go_live', id=pclass.id) }}" method="POST" name="golive-form">
                                                         <div class="row vertical-align">
                                                             <div class="col-xs-9">
                                                                 <p>All faculty confirmations have now been received.</p>
@@ -217,7 +217,7 @@
                                         <div class="panel panel-danger">
                                             <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
                                             <div class="panel-body">
-                                                <form method="POST" name="golive-form">
+                                                <form action="{{ url_for('faculty.go_live', id=pclass.id) }}" method="POST" name="golive-form">
                                                     <div class="row vertical-align">
                                                         <div class="col-xs-9">
                                                             Freeze project descriptions and open student choices.

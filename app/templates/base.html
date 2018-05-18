@@ -91,6 +91,9 @@
                                 <li><a href="{{ url_for('admin.edit_skills') }}">
                                     <i class="fa fa-pencil"></i> Transferable skills
                                 </a></li>
+                                <li><a href="{{ url_for('admin.edit_supervisors') }}">
+                                    <i class="fa fa-pencil"></i> Supervisory team
+                                </a></li>
                                 {% if current_user.has_role('root') %}
                                     <li><a href="{{ url_for('admin.edit_project_classes') }}">
                                         <i class="fa fa-pencil"></i> Project types
@@ -100,9 +103,6 @@
                                     </a></li>
                                     <li><a href="{{ url_for('admin.edit_degree_programmes') }}">
                                         <i class="fa fa-pencil"></i> Degree programmes
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.edit_supervisors') }}">
-                                        <i class="fa fa-pencil"></i> Supervisory team
                                     </a></li>
                                     <li><a href="{{ url_for('admin.global_rollover') }}">
                                         Roll over academic year

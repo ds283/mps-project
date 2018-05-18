@@ -10,7 +10,7 @@
 
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.local import LocalProxy
-from flask_security import login_required, roles_required, current_user, logout_user, login_user
+from flask_security import login_required, roles_required, roles_accepted, current_user, logout_user, login_user
 from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url, get_message, do_flash, send_mail
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
@@ -1144,7 +1144,7 @@ def make_project_class_inactive(id):
 
 
 @admin.route('/edit_supervisors', methods=['GET', 'POST'])
-@roles_required('root')
+@roles_accepted('admin', 'root')
 def edit_supervisors():
     """
     View to list and edit supervisory roles
@@ -1157,7 +1157,7 @@ def edit_supervisors():
 
 
 @admin.route('/add_supervisor', methods=['GET', 'POST'])
-@roles_required('root')
+@roles_accepted('admin', 'root')
 def add_supervisor():
     """
     Create a new supervisory role
@@ -1178,7 +1178,7 @@ def add_supervisor():
 
 
 @admin.route('/edit_supervisor/<int:id>', methods=['GET', 'POST'])
-@roles_required('root')
+@roles_accepted('admin', 'root')
 def edit_supervisor(id):
     """
     Edit a supervisory role
@@ -1201,7 +1201,7 @@ def edit_supervisor(id):
 
 
 @admin.route('/make_supervisor_active/<int:id>')
-@roles_required('root')
+@roles_accepted('admin', 'root')
 def make_supervisor_active(id):
     """
     Make a supervisor active
@@ -1217,7 +1217,7 @@ def make_supervisor_active(id):
 
 
 @admin.route('/make_supervisor_inactive/<int:id>')
-@roles_required('root')
+@roles_accepted('admin', 'root')
 def make_supervisor_inactive(id):
     """
     Make a supervisor inactive

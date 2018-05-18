@@ -392,7 +392,7 @@ class StudentData(db.Model):
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
 
     exam_number = db.Column(db.Integer(), index=True, unique=True)
-    cohort = db.Column(db.Integer(), index=True, unique=True)
+    cohort = db.Column(db.Integer(), index=True)
 
     programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
     programme = db.relationship('DegreeProgramme', backref=db.backref('students', lazy='dynamic'))

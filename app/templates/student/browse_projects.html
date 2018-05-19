@@ -1,0 +1,114 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('[class~="sortable-pageable"]').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Browse projects
+{% endblock %}
+
+{% block bodyblock %}
+    {% if projects %}
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                Projects available for
+                <strong>{{ config.project_class.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
+            </div>
+            <div class="panel-body">
+                <table class="table table-striped table-bordered sortable-pageable">
+                    <thead>
+                    <tr>
+                        <th width="5%"> Number</th>
+                        <th width="20%"> Title</th>
+                        <th width="15%"> Supervisor</th>
+                        <th width="20%"> Research group</th>
+                        <th width="20%"> Prefer degree programmes</th>
+                        <th width="5%"> Bookmarked</th>
+                        <th width="15%"> Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for project in projects %}
+                        <tr>
+                            {# number #}
+                            <td>{{ project.number }}</td>
+
+                            {# title #}
+                            <td><a href="{{ url_for('student.view_project', selid=sel.id, projid=project.id) }}">{{ project.name }}</a></td>
+
+                            {# supervisor #}
+                            <td>{{ project.owner.build_name() }} <a href="mailto:{{ project.owner.email }}">{{ project.owner.email }}</a></td>
+
+                            {# research group #}
+                            <td> <span class="label label-success">{{ project.group.name }}</span> </td>
+
+                            {# prefer degree programmes #}
+                            <td>
+                                {% for programme in project.programmes %}
+                                    {% if programme.active %}
+                                        <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+
+                            {# bookmarked #}
+                            <td>
+                                {% set bookmarked = false %}
+                                {% if project in sel.bookmarks %}
+                                    {% set bookmarked = true %}
+                                    Yes
+                                {% else %}
+                                    No
+                                {% endif %}
+                            </td>
+
+                            {# actions #}
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                        Actions
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        {% if bookmarked %}
+                                            <li><a>Remove bookmark</a></li>
+                                        {% else %}
+                                            <li><a>Add bookmark</a></li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    {% else %}
+
+        <div style="text-align: center;">
+            <h3> No projects available </h3>
+            <hr class="intro-divider">
+        </div>
+
+    {% endif %}
+{% endblock %}

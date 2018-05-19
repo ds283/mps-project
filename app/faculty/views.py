@@ -769,7 +769,7 @@ def dashboard():
     :return:
     """
 
-    # check for unofferable projects
+    # check for unofferable projects and warn if any are prsent
     unofferable = current_user.faculty_data.projects_unofferable()
     if unofferable > 0:
         plural='s'
@@ -783,18 +783,18 @@ def dashboard():
               'Please check your project list.'.format(n=unofferable, plural=plural, isare=isare),
               'error')
 
-    # build list of enrolled projects
-    pcs = []
+    # build list of current configuration records for all enrolled project classes
+    enrollments = []
     for item in current_user.faculty_data.enrollments:
 
         config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
 
-        # get live projects
+        # get live projects belonging to both this config item and the active user
         live_projects = config.live_projects.filter_by(owner_id=current_user.id)
 
-        pcs.append((config,live_projects))
+        enrollments.append((config, live_projects))
 
-    return render_template('faculty/dashboard.html', enrollments=pcs)
+    return render_template('faculty/dashboard.html', enrollments=enrollments)
 
 
 @faculty.route('/confirm_pclass/<int:id>')

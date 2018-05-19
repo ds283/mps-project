@@ -650,7 +650,27 @@ class ProjectClassConfig(db.Model):
     @property
     def time_to_request_deadline(self):
 
+        if self.request_deadline is None:
+            return '<invalid>'
+
         delta = self.request_deadline.date() - date.today()
+        days = delta.days
+
+        str = '{days} day'.format(days=days)
+
+        if days != 1:
+            str += 's'
+
+        return str
+
+
+    @property
+    def time_to_live_deadline(self):
+
+        if self.live_deadline is None:
+            return '<invalid>'
+
+        delta = self.live_deadline.date() - date.today()
         days = delta.days
 
         str = '{days} day'.format(days=days)
@@ -965,7 +985,7 @@ class SelectingStudent(db.Model):
 
     # key to student userid
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', uselist=False, backref=db.backref('selecting_students', lazy='dynamic'))
+    user = db.relationship('User', uselist=False, backref=db.backref('selecting', lazy='dynamic'))
 
     # bookmarked projects
     bookmarks = db.relationship('LiveProject', secondary=project_bookmarks, lazy='dynamic',
@@ -1000,4 +1020,4 @@ class SubmittingStudent(db.Model):
 
     # key to student userid
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', uselist=False, backref=db.backref('submitting_students', lazy='dynamic'))
+    user = db.relationship('User', uselist=False, backref=db.backref('submitting', lazy='dynamic'))

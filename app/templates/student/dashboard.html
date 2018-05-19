@@ -3,9 +3,143 @@
 {% extends "base.html" %}
 
 {% block title %}
-    Dashboard
+    Student dashboard
 {% endblock %}
 
 {% block bodyblock %}
-    Testing student
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+
+            {% if enrollments and enrollments|length > 0 %}
+
+                {% for config, sel, sub in enrollments %}
+
+                    {% set pclass = config.project_class %}
+                    <div class="well">
+                        <p><span
+                                class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span>
+                        </p>
+                        <p><span>
+                            Convenor:
+                            <a class="btn btn-link" href="mailto:{{ pclass.convenor.email }}">
+                                {{ pclass.convenor.build_name() }}
+                            </a>
+                        </span></p>
+
+                        {% if sel %}
+                            <div class="panel
+                                {% if config.open %}
+                                    panel-success
+                                {% elif config.closed %}
+                                    panel-warning
+                                {% else %}
+                                    panel-default
+                                {% endif %}
+                                ">
+                                <div class="panel-heading">
+                                    <strong>Project selection</strong>
+                                    {% if config.open %}
+                                        <div class="pull-right">
+                                            <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                                            {% if config.live_deadline %}
+                                                <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <div class="pull-right">
+                                            <span class="label label-default">Student choices not open</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="panel-body">
+                                    {% if config.open %}
+                                        <div class="row vertical-align">
+                                            <div class="col-xs-9">
+                                                <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                                                    is now available.</p>
+                                            </div>
+                                            <div class="col-xs-3">
+                                                <span class="pull-right">
+                                                    <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-default">Browse projects</a>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {% if config.live_deadline %}
+                                            <div class="row vertical-align">
+                                                <div class="col-xs-9">
+                                                    <p>You can adjust your selection until the deadline
+                                                        <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                                        <strong>{{ config.time_to_live_deadline }} from now.</strong>
+                                                    </p>
+                                                </div>
+                                                <div class="col-xs-3"></div>
+                                            </div>
+                                        {% endif %}
+                                    {% elif project.closed %}
+                                        <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                                            is now closed.</p>
+                                    {% else %}
+                                        <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                                            is not yet available.</p></p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if sub %}
+                            <div class="panel panel-primary">
+                                <div class="panel-heading"><strong>Project details</strong></div>
+                                <div class="panel-body"></div>
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div style="text-align: center;">
+                    <h3> You are not currently participating in any projects. </h3>
+                    <p>If you feel this is a mistake, please contact the appropriate
+                        project convenor.</p>
+                    <hr class="intro-divider">
+                </div>
+
+                {% if pclasses and pclasses.count() > 0 %}
+                    <div class="row">
+                        <div class="col-xs-3"></div>
+                        <div class="col-xs-6">
+                            <table class="table table-condensed table-hover">
+                                <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Convenor</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for pclass in pclasses %}
+                                    <tr>
+                                        <td>{{ pclass.name }}</td>
+                                        <td>{{ pclass.convenor.build_name() }}
+                                            <a href="mailto:{{ pclass.convenor.email }}">
+                                                {{ pclass.convenor.email }}
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-xs-3"></div>
+                    </div>
+                {% endif %}
+
+            {% endif %}
+
+        </div>
+        <div class="col-xs-1"></div>
+
+    </div>
 {% endblock %}

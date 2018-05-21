@@ -698,6 +698,8 @@ def go_live(id):
         number = 1
         for item in projects.all():
 
+            # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
+            # all project classes need their own LiveProject record
             live_item = LiveProject(config_id=pclass.id,
                                     number=number,
                                     name=item.name,
@@ -706,7 +708,6 @@ def go_live(id):
                                     group_id=item.group_id,
                                     project_classes=item.project_classes,
                                     skills=item.skills,
-                                    programmes=item.programmes,
                                     meeting_reqd=item.meeting_reqd,
                                     team=item.team,
                                     description=item.description,

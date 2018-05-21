@@ -39,35 +39,43 @@ p.copyright {
     margin-bottom: 10px;
 }
 
-.project-title-well {
-    background-color: azure;
-}
-
 .project-title {
-    /*font-weight: bold;*/
     font-size: 44px;
+    /*font-weight: lighter;*/
+    justify-content: center;
 }
 
 .project-owner-name {
     font-size: 20px;
-    font-weight: normal;
+    /*font-weight: lighter;*/
 }
 
 .research-group-banner {
     font-size: 20px;
+    /*font-weight: lighter;*/
 }
 
 .research-group-webpage {
-    font-size: 14px;
-    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: bolder;
+}
+
+.gap-below {
+    margin-bottom: 5%;
+}
+
+.sm-gap-below {
+    margin-bottom: 3%;
 }
 
 .project-description {
     font-size: 16px;
 }
 
-.sign-up-label {
-    font-size: 14px;
+.project-label {
+    display: inline-block;
+    font-size: 100%;
+    margin-bottom: 2px;
 }
 
 .dashboard-project-title {
@@ -80,10 +88,19 @@ p.copyright {
     align-items: center;
 }
 
+.vertical-top {
+    display: flex;
+    align-items: start;
+}
+
 .bookmark-table {
     margin-bottom: 1%;
 }
 
 .fac-project-table {
     margin-bottom: 1%;
+}
+
+.table-button {
+    margin: 1px;
 }

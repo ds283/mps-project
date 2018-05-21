@@ -80,6 +80,22 @@ def _validate_convenor(pclass):
     return True
 
 
+def _validate_view(project, pclass):
+    """
+    Validate that the logged-in user is privileged to view a project on the live system
+    :param project:
+    :return:
+    """
+
+    # if the logged-in user owns this project, it's ok to view
+    if current_user.id == project.owner_id:
+
+        return True
+
+    # otherwise, check that the user is a convenor for the project class
+    return _validate_convenor(pclass)
+
+
 @faculty.route('/edit_my_projects')
 @roles_accepted('faculty', 'admin', 'root')
 def edit_my_projects():
@@ -694,8 +710,9 @@ def go_live(id):
                                     meeting_reqd=item.meeting_reqd,
                                     team=item.team,
                                     description=item.description,
-                                    reading=item.description,
-                                    page_views=0)
+                                    reading=item.reading,
+                                    page_views=0,
+                                    last_view=None)
             db.session.add(live_item)
             number += 1
 
@@ -756,9 +773,41 @@ def project_preview(id):
     if not _validate_user(data):
         return redirect(request.referrer)
 
+    # build list of keywords
     keywords = [ kw.strip() for kw in re.split(";.", data.keywords) ]
 
     return render_template('student/show_project.html', title=data.name, project=data, keywords=keywords)
+
+
+
+@faculty.route('/live_project/<int:pid>/<int:classid>/<int:tabid>')
+@roles_accepted('faculty', 'admin', 'root')
+def view_live_project(pid, classid, tabid):
+    """
+    View a specific project on the live system
+    :param tabid:
+    :param classid:
+    :param pid:
+    :return:
+    """
+
+    # pid is the id for a LiveProject
+    data = LiveProject.query.get_or_404(pid)
+
+    # verify the logged-in user is allowed to view this live project
+    if not _validate_user(data):
+
+        if tabid == 0:
+            return redirect(url_for('faculty.dashboard'))
+        else:
+            return redirect(url_for('convenor_dashboard', id=classid, tabid=tabid))
+
+    # build list of keywords
+    keywords = [ kw.strip() for kw in re.split(";.", data.keywords) ]
+
+    # without the sel variable, won't render any of the student-specific items
+    return render_template('student/show_project.html', title=data.name, project=data, keywords=keywords)
+
 
 
 @faculty.route('/dashboard')
@@ -995,3 +1044,181 @@ def _cancel_confirm(sel, project):
 
     project.confirm_waiting.remove(sel)
     return True
+
+
+@faculty.route('/convenor_project_confirm_all/<int:pid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_project_confirm_all(pid):
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    pclass = project.config.project_class
+
+    # validate that logged-in user is allowed to edit this LiveProject
+    if not _validate_convenor(pclass):
+        return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+    for item in project.confirm_waiting:
+        if item not in project.confirmed_students:
+            project.confirmed_students.append(item)
+        project.confirm_waiting.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+
+@faculty.route('/convenor_project_clear_requests/<int:pid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_project_clear_requests(pid):
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    pclass = project.config.project_class
+
+    # validate that logged-in user is allowed to edit this LiveProject
+    if not _validate_convenor(pclass):
+        return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+    for item in project.confirm_waiting:
+        project.confirm_waiting.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+
+@faculty.route('/convenor_project_remove_confirms/<int:pid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_project_remove_confirms(pid):
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    pclass = project.config.project_class
+
+    # validate that logged-in user is allowed to edit this LiveProject
+    if not _validate_convenor(pclass):
+        return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+    for item in project.confirmed_students:
+        project.confirmed_students.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+
+@faculty.route('/convenor_project_make_all_confirms_pending/<int:pid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_project_make_all_confirms_pending(pid):
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    pclass = project.config.project_class
+
+    # validate that logged-in user is allowed to edit this LiveProject
+    if not _validate_convenor(pclass):
+        return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+    for item in project.confirmed_students:
+        if item not in project.confirm_waiting:
+            project.confirm_waiting.append(item)
+        project.confirmed_students.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+
+@faculty.route('/convenor_student_confirm_all/<int:sid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_student_confirm_all(sid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+    for item in sel.confirm_requests:
+        if item not in sel.confirmed:
+            sel.confirmed.append(item)
+        sel.confirm_requests.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+
+@faculty.route('/convenor_student_remove_confirms/<int:sid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_student_remove_confirms(sid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+    for item in sel.confirmed:
+        sel.confirmed.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+
+@faculty.route('/convenor_student_clear_requests/<int:sid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_student_clear_requests(sid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+    for item in sel.confirm_requests:
+        sel.confirm_requests.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+
+@faculty.route('/convenor_student_make_all_confirms_pending/<int:sid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_student_make_all_confirms_pending(sid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+    for item in sel.confirmed:
+        if item not in sel.confirm_requests:
+            sel.confirm_requests.append(item)
+        sel.confirmed.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+
+@faculty.route('/convenor_student_clear_bookmarks/<int:sid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_student_clear_bookmarks(sid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+    for item in sel.bookmarks:
+        sel.bookmarks.remove(item)
+    db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))

@@ -50,7 +50,9 @@
                         <td>
                             {% set offerable = project.offerable %}
                             <div class="{% if not offerable %}has-error{% endif %}">
-                                <strong>{{ project.name }}</strong>
+                                <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+                                    <strong>{{ project.name }}</strong>
+                                </a>
                                 {% if not offerable and project.error %}
                                     <p class="help-block">Warning: {{ project.error }}</p>
                                 {% endif %}

@@ -686,6 +686,19 @@ class ProjectClassConfig(db.Model):
         return str
 
 
+    @property
+    def count_valid_students(self):
+
+        total_students = self.selecting_students.count()
+
+        count = 0
+        for student in self.selecting_students:
+            if student.is_valid_selection:
+                count += 1
+
+        return count, total_students
+
+
     def generate_golive_requests(self):
         """
         Generate sign-off requests to all active faculty
@@ -863,6 +876,7 @@ class Project(db.Model):
         self.project_classes.remove(pclass)
 
 
+    @property
     def available_degree_programmes(data):
         """
         Computes the degree programmes available to this project, from knowing which project
@@ -896,7 +910,7 @@ class Project(db.Model):
         :return:
         """
 
-        available_programmes = self.available_degree_programmes()
+        available_programmes = self.available_degree_programmes
 
         for prog in self.programmes:
 
@@ -1023,6 +1037,7 @@ class SelectingStudent(db.Model):
                                 backref=db.backref('confirmed_students', lazy='dynamic'))
 
 
+    @property
     def has_bookmarks(self):
         """
         determine whether this SelectingStudent has bookmarks
@@ -1032,6 +1047,7 @@ class SelectingStudent(db.Model):
         return self.bookmarks.count() > 0
 
 
+    @property
     def get_ordered_bookmarks(self):
         """
         return bookmarks in rank order
@@ -1041,6 +1057,7 @@ class SelectingStudent(db.Model):
         return self.bookmarks.order_by(Bookmark.rank)
 
 
+    @property
     def get_academic_year(self):
         """
         Compute the current academic year for this student, relative this ProjectClassConfig
@@ -1050,30 +1067,54 @@ class SelectingStudent(db.Model):
         return self.config.year - self.user.student_data.cohort + 1
 
 
+    @property
     def is_initial_selection(self):
         """
         Determine whether this is the initial selection or a switch
         :return:
         """
 
-        academic_year = self.get_academic_year()
+        academic_year = self.get_academic_year
 
         return academic_year == self.config.project_class.year-1
 
 
+    @property
     def number_choices(self):
         """
         Compute the number of choices this student should make
         :return:
         """
 
-        if self.is_initial_selection():
-
+        if self.is_initial_selection:
             return self.config.project_class.initial_choices
 
         else:
-
             return self.config.project_class.switch_choices
+
+
+    @property
+    def is_valid_selection(self):
+        """
+        Determine whether the current selection is valid
+        :return:
+        """
+
+        num_choices = self.number_choices
+
+        if self.bookmarks.count() < num_choices:
+            return False
+
+        count = 0
+        for item in self.bookmarks.order_by(Bookmark.rank).all():
+            if not item.liveproject.is_available(self):
+                return False
+
+            count +=1
+            if count >= num_choices:
+                break
+
+        return True
 
 
 class SubmittingStudent(db.Model):
@@ -1099,6 +1140,7 @@ class SubmittingStudent(db.Model):
     user = db.relationship('User', uselist=False, backref=db.backref('submitting', lazy='dynamic'))
 
 
+    @property
     def get_academic_year(self):
         """
         Compute the current academic year for this student, relative this ProjectClassConfig

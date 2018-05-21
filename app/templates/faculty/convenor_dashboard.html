@@ -153,11 +153,14 @@
                                         <div class="panel-body">
                                             <div class="row vertical-align">
                                                 <div class="col-xs-9">
-                                                    Finalize student selections
+                                                    {% set valid, total = config.count_valid_students %}
+                                                    <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
+                                                        students have valid selections (<strong>{{ total-valid }}</strong> remaining).</p>
+                                                    <p>Finalize student selections</p>
                                                 </div>
                                                 <div class="col-xs-3">
                                                     <div class="pull-right">
-                                                        <a class="btn btn-success">
+                                                        <a href="{{ url_for('faculty.close_selections', id=config.id) }}" class="btn btn-success">
                                                             Close
                                                         </a>
                                                     </div>
@@ -555,11 +558,12 @@
                             <thead>
                                 <tr>
                                     <th width="10%"> Last name </th>
-                                    <th width="10%"> First name </th>
-                                    <th width="15%"> Programme </th>
+                                    <th width="8%"> First name </th>
+                                    <th width="12%"> Programme </th>
                                     <th width="15%"> Bookmarks </th>
                                     <th width="17%"> Pending </th>
                                     <th width="18%"> Confirmed </th>
+                                    <th width="5%"> OK?</th>
                                     <th width="15%"> Actions</th>
                                 </tr>
                             </thead>
@@ -575,7 +579,7 @@
                                         {# programme and cohort #}
                                         <td>
                                             <span class="label label-default">{{ student.user.student_data.programme.name }}</span>
-                                            <span class="label label-info">Y{{ student.get_academic_year() }}</span>
+                                            <span class="label label-info">Y{{ student.get_academic_year }}</span>
                                             <span class="label label-success">Cohort {{ student.user.student_data.cohort }}</span>
                                          </td>
 
@@ -639,6 +643,15 @@
                                             {% else %}
                                                 <span class="label label-default">None</span>
                                             {% endfor %}
+                                        </td>
+
+                                        {# student's selection is OK? #}
+                                        <td>
+                                            {% if student.is_valid_selection %}
+                                                <span class="label label-success">OK</span>
+                                            {% else %}
+                                                <span class="label label-danger">No</span>
+                                            {% endif %}
                                         </td>
 
                                         {# actions #}
@@ -749,7 +762,7 @@
                                         {# programme and cohort #}
                                         <td>
                                             <span class="label label-default">{{ student.user.student_data.programme.name }}</span>
-                                            <span class="label label-info">Y{{ student.get_academic_year() }}</span>
+                                            <span class="label label-info">Y{{ student.get_academic_year }}</span>
                                             <span class="label label-success">Cohort {{ student.user.student_data.cohort }}</span>
                                         </td>
                                     </tr>

@@ -39,7 +39,8 @@
                             {% elif config.closed %}
                                 panel-warning
                             {% elif config.requests_issued and current_user.faculty_data in config.golive_required %}
-                                panel-primary
+                                {# panel-primary#}
+                                panel-info
                             {% else %}
                                 panel-info
                             {% endif %}

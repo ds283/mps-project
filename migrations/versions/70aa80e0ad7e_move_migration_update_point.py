@@ -1,8 +1,8 @@
-"""update migration start point
+"""move migration update point
 
-Revision ID: 9a3d25cde1f7
+Revision ID: 70aa80e0ad7e
 Revises: 
-Create Date: 2018-05-18 23:38:36.955100
+Create Date: 2018-05-21 09:02:02.150348
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '9a3d25cde1f7'
+revision = '70aa80e0ad7e'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -231,6 +231,7 @@ def upgrade():
     sa.Column('description', sa.String(length=8000), nullable=True),
     sa.Column('reading', sa.String(length=8000), nullable=True),
     sa.Column('page_views', sa.Integer(), nullable=True),
+    sa.Column('last_view', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['config_id'], ['project_class_config.id'], ),
     sa.ForeignKeyConstraint(['group_id'], ['research_groups.id'], ),
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ),
@@ -258,18 +259,18 @@ def upgrade():
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('confirmation_requests',
-    sa.Column('faculty_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
     sa.Column('student_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['faculty_id'], ['faculty_data.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['live_projects.id'], ),
     sa.ForeignKeyConstraint(['student_id'], ['selecting_students.id'], ),
-    sa.PrimaryKeyConstraint('faculty_id', 'student_id')
+    sa.PrimaryKeyConstraint('project_id', 'student_id')
     )
     op.create_table('faculty_confirmations',
-    sa.Column('faculty_id', sa.Integer(), nullable=False),
+    sa.Column('project_id', sa.Integer(), nullable=False),
     sa.Column('student_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['faculty_id'], ['faculty_data.id'], ),
+    sa.ForeignKeyConstraint(['project_id'], ['live_projects.id'], ),
     sa.ForeignKeyConstraint(['student_id'], ['selecting_students.id'], ),
-    sa.PrimaryKeyConstraint('faculty_id', 'student_id')
+    sa.PrimaryKeyConstraint('project_id', 'student_id')
     )
     op.create_table('live_project_to_classes',
     sa.Column('project_id', sa.Integer(), nullable=False),

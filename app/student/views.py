@@ -9,20 +9,46 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash
+from flask import render_template, redirect, url_for, flash, request
 from flask_security import login_required, current_user, logout_user, roles_required, roles_accepted
 
 from . import student
 
 from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject
 
+import datetime
 
 def _verify_selector(sel):
+    """
+    Validate that the logged in user is allowed to perform operations on a particular SelectingStudent
+    :param sel:
+    :return:
+    """
 
-    # verify the logged-in user is allowed to view this SelectingStudent
+    # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if sel.user_id != current_user.id and not current_user.has_role('admin') and not current_user.has_role('root'):
 
-        flash('You do not have permission to open the browse view for this user.', 'error')
+        flash('You do not have permission to perform operations for this user. '
+              'If you believe this is incorrect, contract the system administrator.', 'error')
+        return False
+
+    return True
+
+
+def _verify_view_project(sel, project):
+    """
+    Validate that a particular SelectingStudent is allowed to perform operations on a given LiveProject
+    :param sel:
+    :param project:
+    :return:
+    """
+
+    if not project in sel.config.live_projects:
+
+        flash('You are not able to view or bookmark this project because it is not attached to your student '
+              'record for this type of project. Return to the dashboard and try to access the project from there. '
+              'If problems persist, contact the system administrator.', 'error')
+
         return False
 
     return True
@@ -71,7 +97,7 @@ def dashboard():
 
         sub = submit_q.first()
 
-        enrollments.append((config,sel,sub))
+        enrollments.append((config, sel, sub))
 
     pclasses = ProjectClass.query.filter_by(active=True)
 
@@ -98,31 +124,159 @@ def browse_projects(id):
                            projects=sel.config.live_projects)
 
 
-@student.route('/view_project/<int:selid>/<int:projid>')
+@student.route('/view_project/<int:sid>/<int:pid>')
 @roles_accepted('student', 'admin', 'root')
-def view_project(selid, projid):
+def view_project(sid, pid):
     """
     View a specific project
-    :param selid:
-    :param projid:
+    :param sid:
+    :param pid:
     :return:
     """
 
-    # selid is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(selid)
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
 
-    # verify the logged-in user is allowed to view this SelectingStudent
+    # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if not _verify_selector(sel):
         return redirect(url_for('student.dashboard'))
 
-    # projid is the id for a LiveProject
-    live_project = LiveProject.query.get_or_404(projid)
+    # pid is the id for a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify student is allowed to view this live project
+    if not _verify_view_project(sel, project):
+        return redirect(url_for('student.dashboard'))
 
     # update page views
-    if live_project.page_views is None:
-        live_project.page_views = 1
+    if project.page_views is None:
+        project.page_views = 1
     else:
-        live_project.page_views += 1
+        project.page_views += 1
+
+    now = datetime.datetime.today()
+    project.last_view = now
     db.session.commit()
 
-    return render_template('student/show_project.html', sel=sel, project=live_project)
+    return render_template('student/show_project.html', sel=sel, project=project)
+
+
+@student.route('/add_bookmark/<int:sid>/<int:pid>')
+@roles_accepted('student', 'admin', 'root')
+def add_bookmark(sid, pid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # verify the logged-in user is allowed to perform operations for this SelectingStudent
+    if not _verify_selector(sel):
+        return redirect(request.referrer)
+
+    # pid is the id for a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify student is allowed to view this live project
+    if not _verify_view_project(sel, project):
+        return redirect(request.referrer)
+
+    # add bookmark
+    if project not in sel.bookmarks:
+        sel.bookmarks.append(project)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@student.route('/remove_bookmark/<int:sid>/<int:pid>')
+@roles_accepted('student', 'admin', 'root')
+def remove_bookmark(sid, pid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # verify the logged-in user is allowed to perform operations for this SelectingStudent
+    if not _verify_selector(sel):
+        return redirect(request.referrer)
+
+    # pid is the id for a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify student is allowed to view this live project
+    if not _verify_view_project(sel, project):
+        return redirect(request.referrer)
+
+    # remove bookmark
+    if project in sel.bookmarks:
+        sel.bookmarks.remove(project)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@student.route('/request_confirm/<int:sid>/<int:pid>')
+@roles_accepted('student', 'admin', 'root')
+def request_confirmation(sid, pid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # verify the logged-in user is allowed to perform operations for this SelectingStudent
+    if not _verify_selector(sel):
+        return redirect(request.referrer)
+
+    # pid is the id for a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify student is allowed to view this live project
+    if not _verify_view_project(sel, project):
+        return redirect(request.referrer)
+
+    # check if confirmation has already been issued
+    if sel in project.confirmed_students:
+
+        flash('Confirmation has already been issued for project "{n}"'.format(n=project.name), 'info')
+        return redirect(request.referrer)
+
+    # check if confirmation is already pending
+    if sel in project.confirm_waiting:
+
+        flash('Confirmation is already pending for project "{n}"'.format(n=project.name), 'info')
+        return redirect(request.referrer)
+
+    # add confirm request
+    project.confirm_waiting.append(sel)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@student.route('/cancel_confirm/<int:sid>/<int:pid>')
+@roles_accepted('student', 'admin', 'root')
+def cancel_confirmation(sid, pid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # verify the logged-in user is allowed to perform operations for this SelectingStudent
+    if not _verify_selector(sel):
+        return redirect(request.referrer)
+
+    # pid is the id for a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify student is allowed to view this live project
+    if not _verify_view_project(sel, project):
+        return redirect(request.referrer)
+
+    # check if confirmation has already been issued
+    if sel in project.confirmed_students:
+
+        flash('Confirmation has already been issued for project "{n}"'.format(n=project.name), 'info')
+        return redirect(request.referrer)
+
+    # remove confirm request if one exists
+    if sel in project.confirm_waiting:
+        project.confirm_waiting.remove(sel)
+        db.session.commit()
+
+    return redirect(request.referrer)

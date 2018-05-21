@@ -74,7 +74,7 @@ def _validate_convenor(pclass):
         and not current_user.has_role('admin') \
         and not current_user.has_role('root'):
 
-        flash('The convenor dashboard is available only to project convenors and administrative users.')
+        flash('Convenor actions are available only to project convenors and administrative users.')
         return False
 
     return True
@@ -826,3 +826,172 @@ def confirm_pclass(id):
         project=config.project_class.name, yeara=config.year, yearb=config.year+1))
 
     return redirect(url_for('faculty.dashboard'))
+
+
+@faculty.route('/confirm/<int:sid>/<int:pid>')
+@roles_accepted('faculty')
+def confirm(sid, pid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify that logged-in user is the owner of this liveproject
+    if project.owner_id != current_user.id:
+
+        flash('You do not have privileges to edit this project', 'error')
+        return redirect(request.referrer)
+
+    if _confirm(sel, project):
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/deconfirm/<int:sid>/<int:pid>')
+@roles_accepted('faculty')
+def deconfirm(sid, pid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify that logged-in user is the owner of this liveproject
+    if project.owner_id != current_user.id:
+        flash('You do not have privileges to edit this project', 'error')
+        return redirect(request.referrer)
+
+    if _deconfirm(sel, project):
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/convenor_confirm/<int:sid>/<int:pid>/<int:tabid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_confirm(sid, pid, tabid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+    if _confirm(sel, project):
+        db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+
+@faculty.route('/convenor_deconfirm/<int:sid>/<int:pid>/<int:tabid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_deconfirm(sid, pid, tabid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+    if _deconfirm(sel, project):
+        db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+
+@faculty.route('/convenor_deconfirm_to_pending/<int:sid>/<int:pid>/<int:tabid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_deconfirm_to_pending(sid, pid, tabid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+    if _deconfirm_to_pending(sel, project):
+        db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+
+@faculty.route('/convenor_cancel_confirm/<int:sid>/<int:pid>/<int:tabid>')
+@roles_accepted('faculty', 'admin', 'route')
+def convenor_cancel_confirm(sid, pid, tabid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+    if _cancel_confirm(sel, project):
+        db.session.commit()
+
+    return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+
+def _confirm(sel, project):
+
+    if sel not in project.confirm_waiting:
+
+        return False
+
+    project.confirm_waiting.remove(sel)
+
+    if sel not in project.confirmed_students:
+
+        project.confirmed_students.append(sel)
+
+    return True
+
+
+def _deconfirm(sel, project):
+
+    if sel in project.confirmed_students:
+
+        project.confirmed_students.remove(sel)
+        return True
+
+    return False
+
+
+def _deconfirm_to_pending(sel, project):
+
+    if sel not in project.confirmed_students:
+
+        return False
+
+    project.confirmed_students.remove(sel)
+
+    if sel not in project.confirm_waiting:
+
+        project.confirm_waiting.append(sel)
+
+    return True
+
+
+def _cancel_confirm(sel, project):
+
+    if sel not in project.confirm_waiting:
+
+        return False
+
+    project.confirm_waiting.remove(sel)
+    return True

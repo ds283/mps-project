@@ -46,7 +46,7 @@
                         <div class="col-xs-8">
                             {% if sel %}
                                 <div class="pull-right">
-                                    {% if project in sel.bookmarks %}
+                                    {% if sel.bookmarks.filter_by(liveproject_id=project.id).count() > 0 %}
                                         <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">
                                             Remove bookmark
                                         </a>

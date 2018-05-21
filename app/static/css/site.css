@@ -94,7 +94,8 @@ p.copyright {
 }
 
 .bookmark-table {
-    margin-bottom: 1%;
+    border-collapse: collapse;
+    border-width: 0px;
 }
 
 .fac-project-table {
@@ -103,4 +104,8 @@ p.copyright {
 
 .table-button {
     margin: 1px;
+}
+
+.drag-handle {
+    padding-right: 5%;
 }

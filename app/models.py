@@ -139,12 +139,6 @@ live_project_supervision = db.Table('live_project_to_supervision',
 
 # LIVE STUDENT ASSOCIATIONS
 
-# association table: live student bookmarks
-project_bookmarks = db.Table('project_bookmarks',
-                             db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
-                             db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True)
-                             )
-
 # association table: faculty confirmation requests
 confirmation_requests = db.Table('confirmation_requests',
                                  db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
@@ -535,8 +529,13 @@ class ProjectClass(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
+    # project class name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # user-facing abbreviatiaon
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # active?
     active = db.Column(db.Boolean())
 
     # which year does this project class run for?
@@ -1009,10 +1008,6 @@ class SelectingStudent(db.Model):
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     user = db.relationship('User', uselist=False, backref=db.backref('selecting', lazy='dynamic'))
 
-    # bookmarked projects
-    bookmarks = db.relationship('LiveProject', secondary=project_bookmarks, lazy='dynamic',
-                                backref=db.backref('bookmarked_students', lazy='dynamic'))
-
     # confirmation requests issued
     confirm_requests = db.relationship('LiveProject', secondary=confirmation_requests, lazy='dynamic',
                                        backref=db.backref('confirm_waiting', lazy='dynamic'))
@@ -1020,6 +1015,24 @@ class SelectingStudent(db.Model):
     # confirmation requests granted
     confirmed = db.relationship('LiveProject', secondary=faculty_confirmations, lazy='dynamic',
                                 backref=db.backref('confirmed_students', lazy='dynamic'))
+
+
+    def has_bookmarks(self):
+        """
+        determine whether this SelectingStudent has bookmarks
+        :return:
+        """
+
+        return self.bookmarks.count() > 0
+
+
+    def get_ordered_bookmarks(self):
+        """
+        return bookmarks in rank order
+        :return:
+        """
+
+        return self.bookmarks.order_by(Bookmark.rank)
 
 
 class SubmittingStudent(db.Model):
@@ -1043,3 +1056,28 @@ class SubmittingStudent(db.Model):
     # key to student userid
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     user = db.relationship('User', uselist=False, backref=db.backref('submitting', lazy='dynamic'))
+
+
+class Bookmark(db.Model):
+    """
+    Model an (orderable) bookmark
+    """
+
+    __tablename__ = "bookmarks"
+
+
+    # unique ID for this bookmark
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # id of owning SelectingStudent
+    user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+    users = db.relationship('SelectingStudent', uselist=False,
+                            backref=db.backref('bookmarks', lazy='dynamic'))
+
+    # LiveProject we are linking to
+    liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    liveproject = db.relationship('LiveProject', uselist=False,
+                                  backref=db.backref('bookmarks', lazy='dynamic'))
+
+    # rank in owner's list
+    rank = db.Column(db.Integer())

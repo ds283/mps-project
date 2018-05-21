@@ -399,6 +399,12 @@ class ProjectClassMixin():
     submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
                               description='Select number of marked reports submitted per academic year')
 
+    initial_choices = IntegerField('Number of initial project choices',
+                                   description='Select number of choices students should make before joining')
+
+    switch_choices = IntegerField('Number of subsequent project choices',
+                                      description='If switching is allowed in later years, number of options to allow')
+
     convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
     programmes = CheckboxQuerySelectMultipleField('Attached to degree programmes', query_factory=GetActiveDegreeProgrammes,

@@ -15,7 +15,11 @@
                 type: "POST",
                 data: JSON.stringify({ranking: ranking, configid: configid, sid: selid}),
                 contentType: "application/json; charset=utf-8",
-                success: function(dat) { console.log(dat); }
+                success: function(dat) {
+                    console.log(dat);
+                    $("#" + dat['hide']).addClass('hidden');
+                    $("#" + dat['reveal']).removeClass('hidden');
+                }
             });
         }
 
@@ -52,7 +56,7 @@
                     {% set pclass = config.project_class %}
                     <div class="well">
                         <p><span
-                                class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span>
+                                class="dashboard-project-title">{{ pclass.name }}</span>
                         </p>
                         <p><span>
                             Convenor:
@@ -62,11 +66,11 @@
                         </span></p>
                         <p><span>
                             Commences in academic year
-                            <span class="label label-info">Y{{ pclass.year }}</span>.
+                            <strong>Y{{ pclass.year }}</strong>.
                             You are part of the
-                            <span class="label label-success">{{ sel.user.student_data.cohort }} cohort</span>
+                            <strong>{{ sel.user.student_data.cohort }} cohort</strong>
                             and are currently in
-                            <span class="label label-info">Y{{ sel.get_academic_year() }}</span>
+                            <strong>Y{{ sel.get_academic_year }}</strong>.
                         </span></p>
 
                         {% if sel %}
@@ -102,7 +106,7 @@
                                         {# head -- inform selections are available #}
                                         <div class="row vertical-align">
                                             <div class="col-xs-9">
-                                                <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                                                <p>Project selection for <strong>{{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
                                                     is now available.</p>
                                             </div>
                                             <div class="col-xs-3">
@@ -127,25 +131,32 @@
 
                                         <div class="row vertical-align">
                                             <div class="col-xs-9">
-                                                {% set num_choices = sel.number_choices() %}
+                                                {% set num_choices = sel.number_choices %}
                                                 {% set numpl = 's' %}
                                                 {% if num_choices == 1 %}
                                                     {% set numpl = '' %}
                                                 {% endif %}
-                                                {% if sel.is_initial_selection() %}
+                                                {% if sel.is_initial_selection %}
                                                     This is your initial selection.
                                                 {% else %}
                                                     Add bookmarks if you wish to switch projects or supervisors.
                                                 {% endif %}
                                                 You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
                                             </div>
-                                            <div class="col-xs-3"></div>
+                                            <div class="col-xs-3">
+                                                <div class="pull-right">
+                                                    {% set is_valid = sel.is_valid_selection %}
+                                                    <span id="P{{ config.id }}-valid-message" class="label label-primary validity-label {% if not is_valid %}hidden{% endif %}">Valid selection</span>
+                                                    <span id="P{{ config.id }}-invalid-message" class="label label-danger validity-label {% if is_valid %}hidden{% endif %}">Invalid or incomplete selection</span>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {# render bookmarks #}
-                                        {% if sel.has_bookmarks() %}
+                                        {% if sel.has_bookmarks %}
+                                            <hr class="intro-divider">
                                             <div class="container-fluid list-group" id="P{{ config.id }}-bookmarks" >
-                                                {% for bookmark in sel.get_ordered_bookmarks() %}
+                                                {% for bookmark in sel.get_ordered_bookmarks %}
                                                 {% set project = bookmark.liveproject %}
                                                     <div id="P{{ config.id }}-{{ project.id }}" class="row vertical-align bookmark-table list-group-item">
                                                         <div class="col-xs-4">
@@ -155,7 +166,7 @@
                                                             </a>
                                                         </div>
                                                         <div class="col-xs-2">
-                                                            <p>{{ project.owner.build_name() }}</p>
+                                                            {{ project.owner.build_name() }}
                                                         </div>
                                                         <div class="col-xs-3">
                                                             {% if not project.is_available(sel) %}
@@ -188,9 +199,41 @@
                                             </div>
                                         {% endif %}
 
-                                    {% elif project.closed %}
+                                    {% elif config.closed %}
                                         <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
                                             is now closed.</p>
+
+                                        {% if not sel.is_valid_selection %}
+                                            <p>You did not submit a valid selection before the deadline.</p>
+                                        {% elif sel.has_bookmarks and sel.is_valid_selection %}
+                                            <p>Your final ranked selection was:</p>
+                                            <hr class="intro-divider">
+                                            <div class="container-fluid">
+                                                <div class="row vertical-align bookmark-table final-selection-table">
+                                                    <div class="col-xs-1"><strong>Rank</strong></div>
+                                                    <div class="col-xs-8"><strong>Project title</strong></div>
+                                                    <div class="col-xs-3"><strong>Supervisor</strong></div>
+                                                </div>
+                                                {% set num_projects = sel.number_choices %}
+                                                {% for bookmark in sel.get_ordered_bookmarks if loop.index <= num_projects%}
+                                                {% set project = bookmark.liveproject %}
+                                                    <div class="row vertical-align bookmark-table final-selection-table">
+                                                        <div class="col-xs-1">
+                                                            <strong>{{ loop.index }}</strong>
+                                                        </div>
+                                                        <div class="col-xs-8">
+                                                            <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
+                                                                <strong>{{ project.name }}</strong>
+                                                            </a>
+                                                        </div>
+                                                        <div class="col-xs-3">
+                                                            {{ project.owner.build_name() }}
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
                                     {% else %}
                                         <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
                                             is not yet available.</p></p>

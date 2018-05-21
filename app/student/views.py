@@ -58,6 +58,22 @@ def _verify_view_project(sel, project):
     return True
 
 
+def _verify_open(config):
+    """
+    Validate that a particular ProjectClassConfig is open for student selections
+    :param config:
+    :return:
+    """
+
+    if not config.open:
+
+        flash('Project "{name}" is not open for student selections'.config(name=config.project_class.name), 'error')
+
+        return False
+
+    return True
+
+
 @student.route('/dashboard')
 @roles_accepted('student', 'admin', 'root')
 def dashboard():
@@ -182,6 +198,10 @@ def add_bookmark(sid, pid):
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
+    # verify project is open
+    if not _verify_open(project.config):
+        return redirect(request.referrer)
+
     # verify student is allowed to view this live project
     if not _verify_view_project(sel, project):
         return redirect(request.referrer)
@@ -210,6 +230,10 @@ def remove_bookmark(sid, pid):
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
+    # verify project is open
+    if not _verify_open(project.config):
+        return redirect(request.referrer)
+
     # verify student is allowed to view this live project
     if not _verify_view_project(sel, project):
         return redirect(request.referrer)
@@ -237,6 +261,10 @@ def request_confirmation(sid, pid):
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
+
+    # verify project is open
+    if not _verify_open(project.config):
+        return redirect(request.referrer)
 
     # verify student is allowed to view this live project
     if not _verify_view_project(sel, project):
@@ -274,6 +302,10 @@ def cancel_confirmation(sid, pid):
 
     # pid is the id for a LiveProject
     project = LiveProject.query.get_or_404(pid)
+
+    # verify project is open
+    if not _verify_open(project.config):
+        return redirect(request.referrer)
 
     # verify student is allowed to view this live project
     if not _verify_view_project(sel, project):
@@ -340,4 +372,12 @@ def update_ranking():
         bookmark.rank = rmap[bookmark.liveproject.id]
     db.session.commit()
 
-    return jsonify({'status': 'success'})
+    # work out which HTML elements to make visible and which to hide, based on validity of this selection
+    if sel.is_valid_selection:
+        hide_elt = 'P{config}-invalid-message'.format(config=config.id)
+        reveal_elt = 'P{config}-valid-message'.format(config=config.id)
+    else:
+        hide_elt = 'P{config}-valid-message'.format(config=config.id)
+        reveal_elt = 'P{config}-invalid-message'.format(config=config.id)
+
+    return jsonify({'status': 'success', 'hide': hide_elt, 'reveal': reveal_elt})

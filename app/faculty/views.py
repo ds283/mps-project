@@ -96,6 +96,22 @@ def _validate_view(project, pclass):
     return _validate_convenor(pclass)
 
 
+def _validate_open(config):
+    """
+    Validate that a particular ProjectClassConfig is open for student selections
+    :param config:
+    :return:
+    """
+
+    if not config.open:
+
+        flash('Project "{name}" is not open for student selections'.config(name=config.project_class.name), 'error')
+
+        return False
+
+    return True
+
+
 @faculty.route('/edit_my_projects')
 @roles_accepted('faculty', 'admin', 'root')
 def edit_my_projects():
@@ -445,7 +461,7 @@ def attach_programmes(id):
     if not _validate_user(data):
         return redirect(request.referrer)
 
-    q = data.available_degree_programmes()
+    q = data.available_degree_programmes
 
     return render_template('faculty/attach_programmes.html', data=data, programmes=q.all())
 
@@ -472,7 +488,7 @@ def convenor_attach_programmes(id, pclass_id):
         if not _validate_convenor(pclass):
             return redirect(request.referrer)
 
-    q = data.available_degree_programmes()
+    q = data.available_degree_programmes
 
     return render_template('faculty/convenor_attach_programmes.html', data=data, programmes=q.all(), pclass_id=pclass_id)
 
@@ -727,6 +743,28 @@ def go_live(id):
     return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
 
 
+@faculty.route('/close_selections/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'route')
+def close_selections(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to perform dashboard functions
+    if not _validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    config.closed = True
+    db.session.commit()
+
+    flash('Student selections for{name} {yeara}-{yearb} have now been closed'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
+
+    return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=1))
+
+
 @faculty.route('/convenor_enroll/<int:userid>/<int:pclassid>')
 @roles_accepted('faculty', 'admin', 'root')
 def convenor_enroll(userid, pclassid):
@@ -894,6 +932,10 @@ def confirm(sid, pid):
         flash('You do not have privileges to edit this project', 'error')
         return redirect(request.referrer)
 
+    # validate that project is open
+    if not _validate_open(sel.config):
+        return redirect(url_for(request.referrer))
+
     if _confirm(sel, project):
         db.session.commit()
 
@@ -915,6 +957,10 @@ def deconfirm(sid, pid):
         flash('You do not have privileges to edit this project', 'error')
         return redirect(request.referrer)
 
+    # validate that project is open
+    if not _validate_open(sel.config):
+        return redirect(url_for(request.referrer))
+
     if _deconfirm(sel, project):
         db.session.commit()
 
@@ -932,6 +978,10 @@ def convenor_confirm(sid, pid, tabid):
     project = LiveProject.query.get_or_404(pid)
 
     if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+    # validate that project is open
+    if not _validate_open(sel.config):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
 
     if _confirm(sel, project):
@@ -953,6 +1003,10 @@ def convenor_deconfirm(sid, pid, tabid):
     if not _validate_convenor(sel.config.project_class):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
 
+    # validate that project is open
+    if not _validate_open(sel.config):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
     if _deconfirm(sel, project):
         db.session.commit()
 
@@ -972,6 +1026,10 @@ def convenor_deconfirm_to_pending(sid, pid, tabid):
     if not _validate_convenor(sel.config.project_class):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
 
+    # validate that project is open
+    if not _validate_open(sel.config):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
     if _deconfirm_to_pending(sel, project):
         db.session.commit()
 
@@ -989,6 +1047,10 @@ def convenor_cancel_confirm(sid, pid, tabid):
     project = LiveProject.query.get_or_404(pid)
 
     if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
+
+    # validate that project is open
+    if not _validate_open(sel.config):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=tabid))
 
     if _cancel_confirm(sel, project):
@@ -1060,6 +1122,10 @@ def convenor_project_confirm_all(pid):
     if not _validate_convenor(pclass):
         return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
 
+    # validate that project is open
+    if not _validate_open(project.config):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=6))
+
     for item in project.confirm_waiting:
         if item not in project.confirmed_students:
             project.confirmed_students.append(item)
@@ -1082,6 +1148,10 @@ def convenor_project_clear_requests(pid):
     if not _validate_convenor(pclass):
         return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
 
+    # validate that project is open
+    if not _validate_open(project.config):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=6))
+
     for item in project.confirm_waiting:
         project.confirm_waiting.remove(item)
     db.session.commit()
@@ -1101,6 +1171,10 @@ def convenor_project_remove_confirms(pid):
     # validate that logged-in user is allowed to edit this LiveProject
     if not _validate_convenor(pclass):
         return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
+
+    # validate that project is open
+    if not _validate_open(project.config):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=6))
 
     for item in project.confirmed_students:
         project.confirmed_students.remove(item)
@@ -1122,6 +1196,10 @@ def convenor_project_make_all_confirms_pending(pid):
     if not _validate_convenor(pclass):
         return redirect(url_for('faculty.convenor_dashboard', id=pclass.id, tabid=6))
 
+    # validate that project is open
+    if not _validate_open(project.config):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=6))
+
     for item in project.confirmed_students:
         if item not in project.confirm_waiting:
             project.confirm_waiting.append(item)
@@ -1140,6 +1218,10 @@ def convenor_student_confirm_all(sid):
 
     # validate that logged-in user is allowed to edit this SelectingStudent
     if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+    # validate that project is open
+    if not _validate_open(sel.config):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
 
     for item in sel.confirm_requests:
@@ -1162,6 +1244,10 @@ def convenor_student_remove_confirms(sid):
     if not _validate_convenor(sel.config.project_class):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
 
+    # validate that project is open
+    if not _validate_open(sel.config):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
     for item in sel.confirmed:
         sel.confirmed.remove(item)
     db.session.commit()
@@ -1178,6 +1264,10 @@ def convenor_student_clear_requests(sid):
 
     # validate that logged-in user is allowed to edit this SelectingStudent
     if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+    # validate that project is open
+    if not _validate_open(sel.config):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
 
     for item in sel.confirm_requests:
@@ -1198,6 +1288,10 @@ def convenor_student_make_all_confirms_pending(sid):
     if not _validate_convenor(sel.config.project_class):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
 
+    # validate that project is open
+    if not _validate_open(sel.config):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
     for item in sel.confirmed:
         if item not in sel.confirm_requests:
             sel.confirm_requests.append(item)
@@ -1216,6 +1310,10 @@ def convenor_student_clear_bookmarks(sid):
 
     # validate that logged-in user is allowed to edit this SelectingStudent
     if not _validate_convenor(sel.config.project_class):
+        return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
+
+    # validate that project is open
+    if not _validate_open(sel.config):
         return redirect(url_for('faculty.convenor_dashboard', id=sel.config.id, tabid=4))
 
     for item in sel.bookmarks:

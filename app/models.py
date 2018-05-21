@@ -932,10 +932,6 @@ class LiveProject(db.Model):
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
     group = db.relationship('ResearchGroup', backref=db.backref('live_projects', lazy='dynamic'))
 
-    # which project class are associated with this project?
-    project_classes = db.relationship('ProjectClass', secondary=live_project_classes, lazy='dynamic',
-                                      backref=db.backref('live_projects', lazy='dynamic'))
-
     # which transferable skills are associated with this project?
     skills = db.relationship('TransferableSkill', secondary=live_project_skills, lazy='dynamic',
                              backref=db.backref('live_projects', lazy='dynamic'))

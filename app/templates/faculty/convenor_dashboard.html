@@ -25,6 +25,14 @@
     {{ pclass.name }}
 {% endblock %}
 
+{% macro truncate(name) %}
+    {% if name|length > 20 %}
+        {{ name[0:20] }}...
+    {% else %}
+        {{ name }}
+    {% endif %}
+{% endmacro %}
+
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li {% if tabid==1 %}class="active"{% endif %}><a data-toggle="pill" href="#settings">
@@ -304,7 +312,9 @@
                                 <td>
                                     {% set offerable = project.offerable %}
                                     <div class="{% if not offerable %}has-error{% endif %}">
-                                        <strong>{{ project.name }}</strong>
+                                        <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+                                            <strong>{{ project.name }}</strong>
+                                        </a>
                                         {% if not offerable and project.error %}
                                             <p class="help-block">Warning: {{ project.error }}</p>
                                         {% endif %}
@@ -548,29 +558,31 @@
                                     <th width="10%"> First name </th>
                                     <th width="15%"> Programme </th>
                                     <th width="15%"> Bookmarks </th>
-                                    <th width="17%"> Confirmation pending </th>
-                                    <th width="18%"> Faculty confirmation </th>
+                                    <th width="17%"> Pending </th>
+                                    <th width="18%"> Confirmed </th>
                                     <th width="15%"> Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for select_student in selectors %}
+                                {% for student in selectors %}
                                     <tr>
                                         {# last name #}
-                                        <td>{{ select_student.user.last_name }}</td>
+                                        <td>{{ student.user.last_name }}</td>
 
                                         {# first name #}
-                                        <td>{{ select_student.user.first_name }}</td>
+                                        <td>{{ student.user.first_name }}</td>
 
                                         {# cohort #}
                                         <td>
-                                            <span class="label label-default">{{ select_student.user.student_data.programme.name }}</span>
+                                            <span class="label label-default">{{ student.user.student_data.programme.name }}</span>
                                         </td>
 
                                         {# bookmarks #}
                                         <td>
-                                            {% for liveproject in select_student.bookmarks %}
-                                                <span class="label label-info">{{ liveproject.number }}</span>
+                                            {% for project in student.bookmarks %}
+                                                <a href="{{ url_for('faculty.view_live_project', pid=project.id, classid=pclass.id, tabid=4) }}" class="btn btn-info btn-sm table-button">
+                                                    {{ truncate(project.name) }}
+                                                </a>
                                             {% else %}
                                                 <span class="label label-default">None</span>
                                             {% endfor %}
@@ -578,19 +590,19 @@
 
                                         {# confirm pending #}
                                         <td>
-                                            {% for liveproject in select_student.confirm_requests %}
+                                            {% for project in student.confirm_requests %}
                                                 <div class="dropdown">
-                                                    <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
-                                                        <i class="fa fa-plus"></i> {{ liveproject.owner.build_name() }}
+                                                    <button class="btn btn-success btn-sm dropdown-toggle table-button" type="button" data-toggle="dropdown">
+                                                        <i class="fa fa-plus"></i> {{ truncate(project.name) }}
                                                     </button>
                                                     <ul class="dropdown-menu">
                                                         <li>
-                                                            <a href="{{ url_for('faculty.convenor_confirm', sid=select_student.id, pid=liveproject.id, tabid=4) }}">
+                                                            <a href="{{ url_for('faculty.convenor_confirm', sid=student.id, pid=project.id, tabid=4) }}">
                                                                 Confirm
                                                             </a>
                                                         </li>
                                                         <li>
-                                                            <a href="{{ url_for('faculty.convenor_cancel_confirm', sid=select_student.id, pid=liveproject.id, tabid=4) }}">
+                                                            <a href="{{ url_for('faculty.convenor_cancel_confirm', sid=student.id, pid=project.id, tabid=4) }}">
                                                                 Remove
                                                             </a>
                                                         </li>
@@ -603,19 +615,19 @@
 
                                         {# confirmation granted #}
                                         <td>
-                                            {% for liveproject in select_student.confirmed %}
+                                            {% for liveproject in student.confirmed %}
                                                 <div class="dropdown">
-                                                    <button class="btn btn-warning btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
-                                                        <i class="fa fa-plus"></i> {{ liveproject.owner.build_name() }}
+                                                    <button class="btn btn-warning btn-sm dropdown-toggle table-button" type="button" data-toggle="dropdown">
+                                                        <i class="fa fa-plus"></i> {{ truncate(liveproject.name) }}
                                                     </button>
                                                     <ul class="dropdown-menu">
                                                         <li>
-                                                            <a href="{{ url_for('faculty.convenor_deconfirm', sid=select_student.id, pid=liveproject.id, tabid=4) }}">
+                                                            <a href="{{ url_for('faculty.convenor_deconfirm', sid=student.id, pid=liveproject.id, tabid=4) }}">
                                                                 Remove
                                                             </a>
                                                         </li>
                                                         <li>
-                                                            <a href="{{ url_for('faculty.convenor_deconfirm_to_pending', sid=select_student.id, pid=liveproject.id, tabid=4) }}">
+                                                            <a href="{{ url_for('faculty.convenor_deconfirm_to_pending', sid=student.id, pid=liveproject.id, tabid=4) }}">
                                                                 Make pending
                                                             </a>
                                                         </li>
@@ -634,21 +646,55 @@
                                                     <span class="caret"></span>
                                                 </button>
                                                 <ul class="dropdown-menu">
-                                                    <li>
-                                                        <a href="#">
-                                                            Clear bookmarks
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a href="#">
-                                                            Clear requests
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a href="#">
-                                                            Clear confirmations
-                                                        </a>
-                                                    </li>
+                                                    {% if student.bookmarks and student.bookmarks.count() > 0 %}
+                                                        <li>
+                                                            <a href="{{ url_for('faculty.convenor_student_clear_bookmarks', sid=student.id) }}">
+                                                                Clear bookmarks
+                                                            </a>
+                                                        </li>
+                                                    {% else %}
+                                                        <li class="disabled">
+                                                            <a>Clear bookmarks</a>
+                                                        </li>
+                                                    {% endif %}
+
+                                                    {% if student.confirm_requests and student.confirm_requests.count() > 0 %}
+                                                        <li>
+                                                            <a href="{{ url_for('faculty.convenor_student_confirm_all', sid=student.id) }}">
+                                                                Confirm all requests
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a href="{{ url_for('faculty.convenor_student_clear_requests', sid=student.id) }}">
+                                                                Clear all requests
+                                                            </a>
+                                                        </li>
+                                                    {% else %}
+                                                        <li class="disabled">
+                                                            <a>Confirm all requests</a>
+                                                        </li>
+                                                        <li class="disabled">
+                                                            <a>Clear all requests</a>
+                                                        </li>
+                                                    {% endif %}
+
+                                                    {% if student.confirmed and student.confirmed.count() > 0 %}
+                                                        <li>
+                                                            <a href="{{ url_for('faculty.convenor_student_remove_confirms', sid=student.id) }}">
+                                                                Remove confirmations
+                                                            </a>
+                                                            <a href="{{ url_for('faculty.convenor_student_make_all_confirms_pending', sid=student.id) }}">
+                                                                Make all pending
+                                                            </a>
+                                                        </li>
+                                                    {% else %}
+                                                        <li class="disabled">
+                                                            <a>Remove confirmations</a>
+                                                        </li>
+                                                        <li class="disabled">
+                                                            <a>Make all pending</a>
+                                                        </li>
+                                                    {% endif %}
                                                 </ul>
                                             </div>
                                         </td>
@@ -748,7 +794,11 @@
                                 <td><strong>{{ project.number }}</strong></td>
 
                                 {# name #}
-                                <td><strong>{{ project.name }}</strong></td>
+                                <td><strong>
+                                    <a href="{{ url_for('faculty.view_live_project', pid=project.id, classid=pclass.id, tabid=6) }}">
+                                        {{ project.name }}
+                                    </a>
+                                </strong></td>
 
                                 {# owner #}
                                 <td><a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name_and_username() }}</a></td>
@@ -792,7 +842,7 @@
                                 <td>
                                     {% for student in project.confirmed_students %}
                                         <div class="dropdown">
-                                            <button class="btn btn-warning btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                            <button class="btn btn-warning btn-sm dropdown-toggle table-button" type="button" data-toggle="dropdown">
                                                 <i class="fa fa-plus"></i> {{ student.user.build_name() }}
                                             </button>
                                             <ul class="dropdown-menu">
@@ -816,26 +866,51 @@
                                 {# actions #}
                                 <td>
                                     <div class="dropdown">
-                                        <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <button class="btn btn-success btn-sm btn-block dropdown-toggle table-button" type="button" data-toggle="dropdown">
                                             Actions
                                             <span class="caret"></span>
                                         </button>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a href="#">
+                                                <a href="{{ url_for('faculty.view_live_project', pid=project.id, classid=pclass.id, tabid=6) }}">
                                                     Preview web page
                                                 </a>
                                             </li>
-                                            <li>
-                                                <a href="#">
-                                                    Confirm all
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="#">
-                                                    Remove confirmations
-                                                </a>
-                                            </li>
+                                            {% if project.confirm_waiting and project.confirm_waiting.count() > 0 %}
+                                                <li>
+                                                    <a href="{{ url_for('faculty.convenor_project_confirm_all', pid=project.id) }}">
+                                                        Confirm all requests
+                                                    </a>
+                                                    <a href="{{ url_for('faculty.convenor_project_clear_requests', pid=project.id) }}">
+                                                        Clear all requests
+                                                    </a>
+                                                </li>
+                                            {% else %}
+                                                <li class="disabled">
+                                                    <a>Confirm all requests</a>
+                                                </li>
+                                                <li class="disabled">
+                                                    <a>Clear all requests</a>
+                                                </li>
+                                            {% endif %}
+
+                                            {% if project.confirmed_students and project.confirmed_students.count() > 0 %}
+                                                <li>
+                                                    <a href="{{ url_for('faculty.convenor_project_remove_confirms', pid=project.id) }}">
+                                                        Remove confirmations
+                                                    </a>
+                                                    <a href="{{ url_for('faculty.convenor_project_make_all_confirms_pending', pid=project.id) }}">
+                                                        Make all pending
+                                                    </a>
+                                                </li>
+                                            {% else %}
+                                                <li class="disabled">
+                                                    <a>Remove confirmations</a>
+                                                </li>
+                                                <li class="disabled">
+                                                    <a>Make all pending</a>
+                                                </li>
+                                            {% endif %}
                                         </ul>
                                     </div>
                                 </td>

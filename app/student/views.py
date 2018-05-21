@@ -16,6 +16,7 @@ from . import student
 
 from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject
 
+import re
 import datetime
 
 def _verify_selector(sel):
@@ -158,7 +159,10 @@ def view_project(sid, pid):
     project.last_view = now
     db.session.commit()
 
-    return render_template('student/show_project.html', sel=sel, project=project)
+    # build list of keywords
+    keywords = [ kw.strip() for kw in re.split(";.", project.keywords) ]
+
+    return render_template('student/show_project.html', title=project.name, sel=sel, project=project, keywords=keywords)
 
 
 @student.route('/add_bookmark/<int:sid>/<int:pid>')

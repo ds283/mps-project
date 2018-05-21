@@ -105,7 +105,7 @@ def _validate_open(config):
 
     if not config.open:
 
-        flash('Project "{name}" is not open for student selections'.config(name=config.project_class.name), 'error')
+        flash('Project "{name}" is not open for student selections'.format(name=config.project_class.name), 'error')
 
         return False
 

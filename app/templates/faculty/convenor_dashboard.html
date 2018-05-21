@@ -33,6 +33,25 @@
     {% endif %}
 {% endmacro %}
 
+{% macro closed_panel(config) %}
+    {% if config.live and config.closed %}
+        <div class="panel panel-warning">
+            <div class="panel-heading"><strong>Student choices are now closed</strong></div>
+            <div class="panel-body">
+                <div class="row vertical-align">
+                    <div class="col-xs-9">
+                        {% set valid, total = config.count_valid_students %}
+                        <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
+                            students have valid selections (<strong>{{ total-valid }}</strong> remaining).</p>
+                    </div>
+                    <div class="col-xs-3">
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endmacro %}
+
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li {% if tabid==1 %}class="active"{% endif %}><a data-toggle="pill" href="#settings">
@@ -123,6 +142,7 @@
                         <div class="panel-heading">Status</div>
                         <div class="panel-body">
                             {% if config.project_class.require_confirm and not config.requests_issued %}
+
                                 <div class="panel panel-danger">
                                     <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
                                     <div class="panel-body">
@@ -141,12 +161,11 @@
                                         </form>
                                     </div>
                                 </div>
+
                             {% else %}
 
                                 {% if config.live and config.closed %}
-                                    <div class="panel panel-warning">
-                                        <div class="panel-body"><strong>Student choices are now closed</strong></div>
-                                    </div>
+                                    {{ closed_panel(config) }}
                                 {% elif config.open %}
                                     <div class="panel panel-success">
                                         <div class="panel-heading"><strong>Student choices are currently live</strong></div>
@@ -291,6 +310,7 @@
 
 
         <div id="projects" class="tab-pane fade {% if tabid==2 %}in active{% endif %}">
+            {{ closed_panel(config) }}
             {% if projects and projects.count() > 0 %}
                 <div class="panel panel-primary">
                     <div class="panel-heading">Projects attached to <strong>{{ pclass.name }}</strong></div>
@@ -439,6 +459,8 @@
 
 
         <div id="faculty" class="tab-pane fade {% if tabid==3 %}in active{% endif %}">
+
+            {{ closed_panel(config) }}
             {% if faculty and faculty.count() > 0 %}
                 <div class="panel panel-primary">
                     <div class="panel-heading">Faculty enrolled in <strong>{{ pclass.name }}</strong></div>
@@ -550,6 +572,7 @@
 
         <div id="selecting" class="tab-pane fade {% if tabid==4 %}in active{% endif %}">
 
+            {{ closed_panel(config) }}
             {% if selectors and selectors.count() > 0 %}
                 <div class="panel panel-primary">
                     <div class="panel-heading">{{ title }}</div>
@@ -603,16 +626,25 @@
                                                         <i class="fa fa-plus"></i> {{ truncate(project.name) }}
                                                     </button>
                                                     <ul class="dropdown-menu">
-                                                        <li>
-                                                            <a href="{{ url_for('faculty.convenor_confirm', sid=student.id, pid=project.id, tabid=4) }}">
-                                                                Confirm
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a href="{{ url_for('faculty.convenor_cancel_confirm', sid=student.id, pid=project.id, tabid=4) }}">
-                                                                Remove
-                                                            </a>
-                                                        </li>
+                                                        {% if config.open %}
+                                                            <li>
+                                                                <a href="{{ url_for('faculty.convenor_confirm', sid=student.id, pid=project.id, tabid=4) }}">
+                                                                    Confirm
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a href="{{ url_for('faculty.convenor_cancel_confirm', sid=student.id, pid=project.id, tabid=4) }}">
+                                                                    Remove
+                                                                </a>
+                                                            </li>
+                                                        {% else %}
+                                                            <li class="disabled">
+                                                                <a>Confirm</a>
+                                                            </li>
+                                                            <li class="disabled">
+                                                                <a>Remove</a>
+                                                            </li>
+                                                        {% endif %}
                                                     </ul>
                                                 </div>
                                             {% else %}
@@ -628,16 +660,25 @@
                                                         <i class="fa fa-plus"></i> {{ truncate(liveproject.name) }}
                                                     </button>
                                                     <ul class="dropdown-menu">
-                                                        <li>
-                                                            <a href="{{ url_for('faculty.convenor_deconfirm', sid=student.id, pid=liveproject.id, tabid=4) }}">
-                                                                Remove
-                                                            </a>
-                                                        </li>
-                                                        <li>
-                                                            <a href="{{ url_for('faculty.convenor_deconfirm_to_pending', sid=student.id, pid=liveproject.id, tabid=4) }}">
-                                                                Make pending
-                                                            </a>
-                                                        </li>
+                                                        {% if config.open %}
+                                                            <li>
+                                                                <a href="{{ url_for('faculty.convenor_deconfirm', sid=student.id, pid=liveproject.id, tabid=4) }}">
+                                                                    Remove
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a href="{{ url_for('faculty.convenor_deconfirm_to_pending', sid=student.id, pid=liveproject.id, tabid=4) }}">
+                                                                    Make pending
+                                                                </a>
+                                                            </li>
+                                                        {% else %}
+                                                            <li class="disabled">
+                                                                <a>Remove</a>
+                                                            </li>
+                                                            <li class="disabled">
+                                                                <a>Make pending</a>
+                                                            </li>
+                                                        {% endif %}
                                                     </ul>
                                                 </div>
                                             {% else %}
@@ -662,7 +703,7 @@
                                                     <span class="caret"></span>
                                                 </button>
                                                 <ul class="dropdown-menu">
-                                                    {% if student.bookmarks and student.bookmarks.count() > 0 %}
+                                                    {% if config.open and student.bookmarks and student.bookmarks.count() > 0 %}
                                                         <li>
                                                             <a href="{{ url_for('faculty.convenor_student_clear_bookmarks', sid=student.id) }}">
                                                                 Clear bookmarks
@@ -674,7 +715,7 @@
                                                         </li>
                                                     {% endif %}
 
-                                                    {% if student.confirm_requests and student.confirm_requests.count() > 0 %}
+                                                    {% if config.open and student.confirm_requests and student.confirm_requests.count() > 0 %}
                                                         <li>
                                                             <a href="{{ url_for('faculty.convenor_student_confirm_all', sid=student.id) }}">
                                                                 Confirm all requests
@@ -694,7 +735,7 @@
                                                         </li>
                                                     {% endif %}
 
-                                                    {% if student.confirmed and student.confirmed.count() > 0 %}
+                                                    {% if config.open and student.confirmed and student.confirmed.count() > 0 %}
                                                         <li>
                                                             <a href="{{ url_for('faculty.convenor_student_remove_confirms', sid=student.id) }}">
                                                                 Remove confirmations
@@ -738,6 +779,7 @@
 
         <div id="joined" class="tab-pane fade {% if tabid==5 %}in active{% endif %}">
 
+            {{ closed_panel(config) }}
             {% if submitters and submitters.count() > 0 %}
                 <div class="panel panel-primary">
                     <div class="panel-heading">{{ title }}</div>
@@ -789,6 +831,7 @@
         {% if number_live_projects > 0 %}
             <div id="live" class="tab-pane fade {% if tabid==6 %}in active{% endif %}">
 
+                {{ closed_panel(config) }}
                 <div class="panel panel-primary">
                     <div class="panel-heading">Live projects for selection: <strong>{{ pclass.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
                     <div class="panel-body">
@@ -826,7 +869,8 @@
 
                                 {# bookmarks #}
                                 <td>
-                                    {% for student in project.bookmarked_students %}
+                                    {% for bookmark in project.bookmarks %}
+                                        {% set student = bookmark.user %}
                                         <span class="label label-default">{{ student.user.build_name() }}</span>
                                     {% endfor %}
                                 </td>
@@ -839,16 +883,25 @@
                                                 <i class="fa fa-plus"></i> {{ student.user.build_name() }}
                                             </button>
                                             <ul class="dropdown-menu">
-                                                <li>
-                                                    <a href="{{ url_for('faculty.convenor_confirm', sid=student.id, pid=project.id, tabid=6) }}">
-                                                        Confirm
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('faculty.convenor_cancel_confirm', sid=student.id, pid=project.id, tabid=6) }}">
-                                                        Remove
-                                                    </a>
-                                                </li>
+                                                {% if config.open %}
+                                                    <li>
+                                                        <a href="{{ url_for('faculty.convenor_confirm', sid=student.id, pid=project.id, tabid=6) }}">
+                                                            Confirm
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a href="{{ url_for('faculty.convenor_cancel_confirm', sid=student.id, pid=project.id, tabid=6) }}">
+                                                            Remove
+                                                        </a>
+                                                    </li>
+                                                {% else %}
+                                                    <li class="disabled">
+                                                        <a>Confirm</a>
+                                                    </li>
+                                                    <li class="disabled">
+                                                        <a>Remove</a>
+                                                    </li>
+                                                {% endif %}
                                             </ul>
                                         </div>
                                     {% else %}
@@ -864,16 +917,25 @@
                                                 <i class="fa fa-plus"></i> {{ student.user.build_name() }}
                                             </button>
                                             <ul class="dropdown-menu">
-                                                <li>
-                                                    <a href="{{ url_for('faculty.convenor_deconfirm', sid=student.id, pid=project.id, tabid=6) }}">
-                                                        Remove
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('faculty.convenor_deconfirm_to_pending', sid=student.id, pid=project.id, tabid=6) }}">
-                                                        Make pending
-                                                    </a>
-                                                </li>
+                                                {% if config.open %}
+                                                    <li>
+                                                        <a href="{{ url_for('faculty.convenor_deconfirm', sid=student.id, pid=project.id, tabid=6) }}">
+                                                            Remove
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a href="{{ url_for('faculty.convenor_deconfirm_to_pending', sid=student.id, pid=project.id, tabid=6) }}">
+                                                            Make pending
+                                                        </a>
+                                                    </li>
+                                                {% else %}
+                                                    <li class="disabled">
+                                                        <a>Remove</a>
+                                                    </li>
+                                                    <li class="disabled">
+                                                        <a>Make pending</a>
+                                                    </li>
+                                                {% endif %}
                                             </ul>
                                         </div>
                                     {% else %}
@@ -894,7 +956,7 @@
                                                     Preview web page
                                                 </a>
                                             </li>
-                                            {% if project.confirm_waiting and project.confirm_waiting.count() > 0 %}
+                                            {% if config.open and project.confirm_waiting and project.confirm_waiting.count() > 0 %}
                                                 <li>
                                                     <a href="{{ url_for('faculty.convenor_project_confirm_all', pid=project.id) }}">
                                                         Confirm all requests
@@ -912,7 +974,7 @@
                                                 </li>
                                             {% endif %}
 
-                                            {% if project.confirmed_students and project.confirmed_students.count() > 0 %}
+                                            {% if config.open and project.confirmed_students and project.confirmed_students.count() > 0 %}
                                                 <li>
                                                     <a href="{{ url_for('faculty.convenor_project_remove_confirms', pid=project.id) }}">
                                                         Remove confirmations

@@ -119,24 +119,54 @@
                                     <hr class="intro-divider">
                                     <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
                                         on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>
-                                    <table class="table table-condensed table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Bookmarks</th>
-                                                <th>Page views</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for project in live_projects %}
-                                                <tr>
-                                                    <td>{{ project.name }}</td>
-                                                    <td>{{ project.bookmarked_students.count() }}</td>
-                                                    <td>{{ project.page_views }}</td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+                                    <div class="container-fluid">
+                                        <div class="row fac-project-table">
+                                            <div class="col-xs-3"><strong>Name</strong></div>
+                                            <div class="col-xs-3"><strong>Info</strong></div>
+                                            <div class="col-xs-3"><strong>Requests</strong></div>
+                                            <div class="col-xs-3"><strong>Confirmed</strong></div>
+                                        </div>
+                                        {% for project in live_projects %}
+                                            <div class="row fac-project-table">
+                                                <div class="col-xs-3">{{ project.name }}</div>
+                                                <div class="col-xs-3">
+                                                    {% set bookmarks = project.bookmarked_students.count() %}
+                                                    {% if bookmarks == 1 %}
+                                                        {% set bmplural = '' %}
+                                                    {% else %}
+                                                        {% set bmplural = 's' %}
+                                                    {% endif %}
+                                                    {{ bookmarks }} bookmark{{ bmplural }},
+
+                                                    {% set pageviews = project.page_views %}
+                                                    {% if pageviews == 1 %}
+                                                        {% set pvplural = '' %}
+                                                    {% else %}
+                                                        {% set pvplural = 's' %}
+                                                    {% endif %}
+                                                    {{ pageviews }} view{{ pvplural }}
+
+                                                    {% if project.last_view %}
+                                                        (last {{ project.last_view.strftime("%a %b %d %H:%M:%S") }})
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-xs-3">
+                                                    {% for student in project.confirm_waiting %}
+                                                        <a href="{{ url_for('faculty.confirm', sid=student.id, pid=project.id) }}" class="btn btn-success btn-sm">
+                                                            <i class="fa fa-plus"></i> {{ student.user.build_name() }}
+                                                        </a>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="col-xs-3">
+                                                    {% for student in project.confirmed_students %}
+                                                        <a href="{{ url_for('faculty.deconfirm', sid=student.id, pid=project.id) }}" class="btn btn-warning btn-sm">
+                                                            <i class="fa fa-times"></i> {{ student.user.build_name() }}
+                                                        </a>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
                                 {% endif %}
 
                             </div>

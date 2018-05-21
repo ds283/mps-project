@@ -79,3 +79,11 @@ p.copyright {
     display: flex;
     align-items: center;
 }
+
+.bookmark-table {
+    margin-bottom: 1%;
+}
+
+.fac-project-table {
+    margin-bottom: 1%;
+}

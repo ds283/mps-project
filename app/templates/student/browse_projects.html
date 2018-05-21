@@ -5,11 +5,13 @@
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+    <link rel="stylesheet" type="text/css"
+          href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
 
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+    <script type="text/javascript"
+            src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
 
     <script>
         $(document).ready(function () {
@@ -52,13 +54,16 @@
                             <td>{{ project.number }}</td>
 
                             {# title #}
-                            <td><a href="{{ url_for('student.view_project', selid=sel.id, projid=project.id) }}">{{ project.name }}</a></td>
+                            <td>
+                                <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">{{ project.name }}</a>
+                            </td>
 
                             {# supervisor #}
-                            <td>{{ project.owner.build_name() }} <a href="mailto:{{ project.owner.email }}">{{ project.owner.email }}</a></td>
+                            <td>{{ project.owner.build_name() }} <a
+                                    href="mailto:{{ project.owner.email }}">{{ project.owner.email }}</a></td>
 
                             {# research group #}
-                            <td> <span class="label label-success">{{ project.group.name }}</span> </td>
+                            <td><span class="label label-success">{{ project.group.name }}</span></td>
 
                             {# prefer degree programmes #}
                             <td>
@@ -74,24 +79,55 @@
                                 {% set bookmarked = false %}
                                 {% if project in sel.bookmarks %}
                                     {% set bookmarked = true %}
-                                    Yes
+                                    <div class="row vertical-align">
+                                        <div class="col-xs-4">
+                                            Yes
+                                        </div>
+                                        <div class="col-xs-8">
+                                            <div class="pull-right">
+                                                <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">
+                                                    Remove
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 {% else %}
-                                    No
+                                    <div class="row vertical-align">
+                                        <div class="col-xs-5">
+                                            No
+                                        </div>
+                                        <div class="col-xs-7">
+                                            <div class="pull-right">
+                                                <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">
+                                                    Add
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 {% endif %}
                             </td>
 
                             {# actions #}
                             <td>
                                 <div class="dropdown">
-                                    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button"
+                                            data-toggle="dropdown">
                                         Actions
                                         <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu">
                                         {% if bookmarked %}
-                                            <li><a>Remove bookmark</a></li>
+                                            <li>
+                                                <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
+                                                    Remove bookmark
+                                                </a>
+                                            </li>
                                         {% else %}
-                                            <li><a>Add bookmark</a></li>
+                                            <li>
+                                                <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}">
+                                                    Add bookmark
+                                                </a>
+                                            </li>
                                         {% endif %}
                                     </ul>
                                 </div>

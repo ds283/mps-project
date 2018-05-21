@@ -147,13 +147,13 @@ project_bookmarks = db.Table('project_bookmarks',
 
 # association table: faculty confirmation requests
 confirmation_requests = db.Table('confirmation_requests',
-                                 db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                                 db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                                  db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True)
                                  )
 
 # association table: faculty confirmed meetings
 faculty_confirmations = db.Table('faculty_confirmations',
-                                 db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                                 db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                                  db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True)
                                  )
 
@@ -962,7 +962,33 @@ class LiveProject(db.Model):
 
     # METADATA
 
+    # count number of page views
     page_views = db.Column(db.Integer())
+
+    # date of last view
+    last_view = db.Column(db.DateTime())
+
+
+    def is_available(self, sel):
+        """
+        determine whether a this LiveProject is available for selection to a particular SelectingStudent
+        :param sel:
+        :return:
+        """
+
+        # if project doesn't require sign off, is always available
+        # if project owner doesn't require confirmation, is always available
+        if self.meeting_reqd != self.MEETING_REQUIRED or self.owner.faculty_data.sign_off_students is False:
+
+            return True
+
+        # otherwise, check is sel is in list of confirmed students
+        if sel in self.confirmed_students:
+
+            return True
+
+        return False
+
 
 
 class SelectingStudent(db.Model):
@@ -992,11 +1018,11 @@ class SelectingStudent(db.Model):
                                 backref=db.backref('bookmarked_students', lazy='dynamic'))
 
     # confirmation requests issued
-    confirm_requests = db.relationship('FacultyData', secondary=confirmation_requests, lazy='dynamic',
+    confirm_requests = db.relationship('LiveProject', secondary=confirmation_requests, lazy='dynamic',
                                        backref=db.backref('confirm_waiting', lazy='dynamic'))
 
     # confirmation requests granted
-    confirmed = db.relationship('FacultyData', secondary=faculty_confirmations, lazy='dynamic',
+    confirmed = db.relationship('LiveProject', secondary=faculty_confirmations, lazy='dynamic',
                                 backref=db.backref('confirmed_students', lazy='dynamic'))
 
 

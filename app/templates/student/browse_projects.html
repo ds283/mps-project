@@ -92,7 +92,7 @@
                             {# bookmarked #}
                             <td>
                                 {% set bookmarked = false %}
-                                {% if project in sel.bookmarks %}
+                                {% if sel.bookmarks.filter_by(liveproject_id=project.id).count() > 0 %}
                                     {% set bookmarked = true %}
                                     <div class="row vertical-align">
                                         <div class="col-xs-4">

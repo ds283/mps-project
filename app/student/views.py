@@ -9,15 +9,18 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_security import login_required, current_user, logout_user, roles_required, roles_accepted
 
 from . import student
 
-from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject
+from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
+    Bookmark
 
 import re
 import datetime
+import parse
+
 
 def _verify_selector(sel):
     """
@@ -184,8 +187,10 @@ def add_bookmark(sid, pid):
         return redirect(request.referrer)
 
     # add bookmark
-    if project not in sel.bookmarks:
-        sel.bookmarks.append(project)
+    if not sel.bookmarks.filter_by(liveproject_id=pid).first():
+
+        bm = Bookmark(user_id=sid, liveproject_id=pid, rank=sel.bookmarks.count()+1)
+        db.session.add(bm)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -210,8 +215,10 @@ def remove_bookmark(sid, pid):
         return redirect(request.referrer)
 
     # remove bookmark
-    if project in sel.bookmarks:
-        sel.bookmarks.remove(project)
+    bm = sel.bookmarks.filter_by(liveproject_id=pid).first()
+
+    if bm:
+        sel.bookmarks.remove(bm)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -284,3 +291,53 @@ def cancel_confirmation(sid, pid):
         db.session.commit()
 
     return redirect(request.referrer)
+
+
+def _demap_project(item_id):
+
+    result = parse.parse('P{configid}-{pid}', item_id)
+
+    return int(result['pid'])
+
+
+@student.route('update_ranking', methods=['GET', 'POST'])
+@roles_accepted('student', 'admin', 'root')
+def update_ranking():
+
+    data = request.get_json()
+
+    # discard if request is ill-formed
+    if 'ranking' not in data or 'configid' not in data or 'sid' not in data:
+
+        return jsonify({'status': 'ill_formed'})
+
+    config_id = data['configid']
+    sid = data['sid']
+    ranking = data['ranking']
+
+    config = ProjectClassConfig.query.filter_by(id=config_id).first()
+    sel = SelectingStudent.query.filter_by(id=sid).first()
+
+    if config is None or sel is None:
+
+        return jsonify({'status': 'data_missing'})
+
+    # check logged-in user is eligible to modify ranking data
+    if current_user.id != sel.user.id:
+
+        return jsonify({'status': 'insufficient_privileges'})
+
+    projects = map(_demap_project, ranking)
+
+    rmap = {}
+    index = 1
+    for p in projects:
+        rmap[p] = index
+        index += 1
+
+    # update ranking
+    for bookmark in sel.bookmarks:
+        bookmark.rank = rmap[bookmark.liveproject.id]
+    db.session.commit()
+
+    return jsonify({'status': 'success'})

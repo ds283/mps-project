@@ -2,6 +2,40 @@
 
 {% extends "base.html" %}
 
+{% block scripts %}
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.6.1/Sortable.min.js"></script>
+
+    <script type=text/javascript>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        function sendAjax(ranking, configid, selid) {
+            $.ajax({
+                url: $SCRIPT_ROOT + "/student/update_ranking",
+                type: "POST",
+                data: JSON.stringify({ranking: ranking, configid: configid, sid: selid}),
+                contentType: "application/json; charset=utf-8",
+                success: function(dat) { console.log(dat); }
+            });
+        }
+
+        {% for config, sel, sub in enrollments %}
+            Sortable.create(document.getElementById("P{{ config.id }}-bookmarks"), {
+                handle: '.drag-handle',
+                animation: 150,
+                onSort: function(e) {
+                    const items = e.to.children;
+                    let result = [];
+                    for (let i=0; i < items.length; i++) {
+                        result.push($(items[i]).attr('id'))
+                    }
+                    sendAjax(result, {{ config.id }}, {{ sel.id }});
+                }
+            });
+        {% endfor %}
+    </script>
+{% endblock %}
+
 {% block title %}
     Student dashboard
 {% endblock %}
@@ -84,17 +118,17 @@
                                         {% endif %}
 
                                         {# render bookmarks #}
-                                        {% if sel.bookmarks.count() > 0 %}
+                                        {% if sel.has_bookmarks() %}
                                             <hr class="divider">
-                                            <div class="container-fluid">
-                                                {% for project in sel.bookmarks %}
-                                                    <div class="row vertical-align bookmark-table">
+                                            <div class="container-fluid list-group" id="P{{ config.id }}-bookmarks" >
+                                                {% for bookmark in sel.get_ordered_bookmarks() %}
+                                                {% set project = bookmark.liveproject %}
+                                                    <div id="P{{ config.id }}-{{ project.id }}" class="row vertical-align bookmark-table list-group-item">
                                                         <div class="col-xs-4">
-                                                            <p>
-                                                                <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
-                                                                    <strong>{{ project.name }}</strong>
-                                                                </a>
-                                                            </p>
+                                                            <i class="fa fa-bars drag-handle"></i>
+                                                            <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
+                                                                <strong>{{ project.name }}</strong>
+                                                            </a>
                                                         </div>
                                                         <div class="col-xs-2">
                                                             <p>{{ project.owner.build_name() }}</p>

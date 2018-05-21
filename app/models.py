@@ -1163,8 +1163,8 @@ class Bookmark(db.Model):
 
     # id of owning SelectingStudent
     user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    users = db.relationship('SelectingStudent', uselist=False,
-                            backref=db.backref('bookmarks', lazy='dynamic'))
+    user = db.relationship('SelectingStudent', uselist=False,
+                           backref=db.backref('bookmarks', lazy='dynamic'))
 
     # LiveProject we are linking to
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))

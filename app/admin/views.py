@@ -1061,6 +1061,8 @@ def add_project_class():
                             submissions=form.submissions.data,
                             convenor=form.convenor.data,
                             programmes=form.programmes.data,
+                            initial_choices=form.initial_choices.data,
+                            switch_choices=form.switch_choices.data,
                             active=True)
         db.session.add(data)
 
@@ -1108,6 +1110,8 @@ def edit_project_class(id):
         data.submissions = form.submissions.data
         data.convenor = form.convenor.data
         data.programmes = form.programmes.data
+        data.initial_choices = form.initial_choices.data
+        data.switch_choices = form.switch_choices.data
 
         db.session.commit()
 

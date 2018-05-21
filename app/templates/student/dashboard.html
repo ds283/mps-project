@@ -60,6 +60,14 @@
                                 {{ pclass.convenor.build_name() }}
                             </a>
                         </span></p>
+                        <p><span>
+                            Commences in academic year
+                            <span class="label label-info">Y{{ pclass.year }}</span>.
+                            You are part of the
+                            <span class="label label-success">{{ sel.user.student_data.cohort }} cohort</span>
+                            and are currently in
+                            <span class="label label-info">Y{{ sel.get_academic_year() }}</span>
+                        </span></p>
 
                         {% if sel %}
                             <div class="panel
@@ -117,9 +125,25 @@
                                             </div>
                                         {% endif %}
 
+                                        <div class="row vertical-align">
+                                            <div class="col-xs-9">
+                                                {% set num_choices = sel.number_choices() %}
+                                                {% set numpl = 's' %}
+                                                {% if num_choices == 1 %}
+                                                    {% set numpl = '' %}
+                                                {% endif %}
+                                                {% if sel.is_initial_selection() %}
+                                                    This is your initial selection.
+                                                {% else %}
+                                                    Add bookmarks if you wish to switch projects or supervisors.
+                                                {% endif %}
+                                                You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                            </div>
+                                            <div class="col-xs-3"></div>
+                                        </div>
+
                                         {# render bookmarks #}
                                         {% if sel.has_bookmarks() %}
-                                            <hr class="divider">
                                             <div class="container-fluid list-group" id="P{{ config.id }}-bookmarks" >
                                                 {% for bookmark in sel.get_ordered_bookmarks() %}
                                                 {% set project = bookmark.liveproject %}

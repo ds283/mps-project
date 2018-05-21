@@ -449,7 +449,7 @@
                             <th width="10%"> Enrolled?</th>
                             <th width="10%"> Projects available</th>
                             <th width="10%"> Projects not offerable</th>
-                            <th width="10%"> Confirmed</th>
+                            <th width="10%"> Go-live?</th>
                             <th width="20%"> Actions</th>
                         </tr>
                         </thead>
@@ -490,14 +490,14 @@
                                     {{ userdata.projects_unofferable() }}
                                 </td>
 
-                                {# confirmed #}
+                                {# go-live confirmation received? #}
                                 <td>
                                     {% if config.project_class.require_confirm %}
                                         {% if config.requests_issued %}
                                             {% if current_user.faculty_data in config.golive_required %}
                                                 Outstanding
                                             {% else %}
-                                                Yes
+                                                Confirmed
                                             {% endif %}
                                         {% else %}
                                             Not issued
@@ -572,10 +572,12 @@
                                         {# first name #}
                                         <td>{{ student.user.first_name }}</td>
 
-                                        {# cohort #}
+                                        {# programme and cohort #}
                                         <td>
                                             <span class="label label-default">{{ student.user.student_data.programme.name }}</span>
-                                        </td>
+                                            <span class="label label-info">Y{{ student.get_academic_year() }}</span>
+                                            <span class="label label-success">Cohort {{ student.user.student_data.cohort }}</span>
+                                         </td>
 
                                         {# bookmarks #}
                                         <td>
@@ -736,17 +738,19 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for submit_student in submitters %}
+                                {% for student in submitters %}
                                     <tr>
                                         {# last name #}
-                                        <td>{{ submit_student.user.last_name }}</td>
+                                        <td>{{ student.user.last_name }}</td>
 
                                         {# first name #}
-                                        <td>{{ submit_student.user.first_name }}</td>
+                                        <td>{{ student.user.first_name }}</td>
 
-                                        {# cohort #}
+                                        {# programme and cohort #}
                                         <td>
-                                            <span class="label label-default">{{ submit_student.user.student_data.programme.name }}</span>
+                                            <span class="label label-default">{{ student.user.student_data.programme.name }}</span>
+                                            <span class="label label-info">Y{{ student.get_academic_year() }}</span>
+                                            <span class="label label-success">Cohort {{ student.user.student_data.cohort }}</span>
                                         </td>
                                     </tr>
                                 {% endfor %}

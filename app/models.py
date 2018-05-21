@@ -553,6 +553,12 @@ class ProjectClass(db.Model):
     # how many submissions per year does this project have?
     submissions = db.Column(db.Integer())
 
+    # how many initial_choices should students make?
+    initial_choices = db.Column(db.Integer())
+
+    # how many switch choices should students be allowed?
+    switch_choices = db.Column(db.Integer())
+
     # project convenor; must be a faculty member, so might be pereferable to link to faculty_data table,
     # but to generate eg. tables we will need to extract usernames and emails
     # For that purpose, it's better to link to the User table directly
@@ -1035,6 +1041,41 @@ class SelectingStudent(db.Model):
         return self.bookmarks.order_by(Bookmark.rank)
 
 
+    def get_academic_year(self):
+        """
+        Compute the current academic year for this student, relative this ProjectClassConfig
+        :return:
+        """
+
+        return self.config.year - self.user.student_data.cohort + 1
+
+
+    def is_initial_selection(self):
+        """
+        Determine whether this is the initial selection or a switch
+        :return:
+        """
+
+        academic_year = self.get_academic_year()
+
+        return academic_year == self.config.project_class.year-1
+
+
+    def number_choices(self):
+        """
+        Compute the number of choices this student should make
+        :return:
+        """
+
+        if self.is_initial_selection():
+
+            return self.config.project_class.initial_choices
+
+        else:
+
+            return self.config.project_class.switch_choices
+
+
 class SubmittingStudent(db.Model):
     """
     Model a student who is submitting work for evaluation in the current cycle
@@ -1056,6 +1097,15 @@ class SubmittingStudent(db.Model):
     # key to student userid
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     user = db.relationship('User', uselist=False, backref=db.backref('submitting', lazy='dynamic'))
+
+
+    def get_academic_year(self):
+        """
+        Compute the current academic year for this student, relative this ProjectClassConfig
+        :return:
+        """
+
+        return self.config.year - self.user.student_data.cohort + 1
 
 
 class Bookmark(db.Model):

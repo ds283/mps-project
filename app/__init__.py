@@ -8,22 +8,27 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import os
+
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_security import SQLAlchemyUserDatastore, Security
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
 from flask_assets import Environment
+from app.flask_bleach import Bleach
+from flaskext.markdown import Markdown
 
 from config import app_config
+from .models import db
+
+from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
 
-# make db available as a static variable, so we can import into other parts of the code
-db = SQLAlchemy()
+def create_app():
 
-
-def create_app(config_name):
+    # get current configuration, or default to production for safety
+    config_name = os.environ.get('FLASK_ENV') or 'production'
 
     app = Flask(__name__, instance_relative_config=True)        # load configuration files from 'instance'
     app.config.from_object(app_config[config_name])
@@ -34,6 +39,11 @@ def create_app(config_name):
     migrate = Migrate(app, db)
     bootstrap = Bootstrap(app)
     mail = Mail(app)
+    bleach = Bleach(app)
+    md = Markdown(app)
+
+    app.config['BLEACH_ALLOWED_TAGS'] = markdown_tags
+    app.config['BLEACH_ALLOWED_ATTRS'] = markdown_attrs
 
     # set up CSS and javascript assets
     env = Environment(app)
@@ -41,15 +51,27 @@ def create_app(config_name):
     from app import models
 
     user_datastore = SQLAlchemyUserDatastore(db, models.User, models.Role)
+
+    # we don't override any of Security's internal forms, but we do replace its create user funciton
+    # that automatically uses our own replacements
     security = Security(app, user_datastore)
 
     from .home import home as home_blueprint
-    app.register_blueprint(home_blueprint)
+    app.register_blueprint(home_blueprint, url_prefix='/')
 
     from .auth import auth as auth_blueprint
-    app.register_blueprint(auth_blueprint)
+    app.register_blueprint(auth_blueprint, url_prefix='/auth')
 
     from .admin import admin as admin_blueprint
     app.register_blueprint(admin_blueprint, url_prefix='/admin')
+
+    from .faculty import faculty as faculty_blueprint
+    app.register_blueprint(faculty_blueprint, url_prefix='/faculty')
+
+    from .student import student as student_blueprint
+    app.register_blueprint(student_blueprint, url_prefix='/student')
+
+    from .office import office as office_blueprint
+    app.register_blueprint(office_blueprint, url_prefix='/office')
 
     return app

@@ -22,7 +22,7 @@ def logout():
 
     logout_user()
     flash("You have been logged out")
-    return redirect(url_for('home.dashboard'))
+    return redirect(url_for('home.homepage'))
 
 
 @auth.route('/logged_out')

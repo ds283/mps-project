@@ -1,0 +1,29 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    {% if programme %}
+        <form action="{{ url_for('admin.edit_degree_programme', id=programme.id) }}" method="POST" name="programme_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_degree_programme') }}" method="POST" name="programme_form">
+    {% endif %}
+        {{ programme_form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(programme_form) }}#}
+
+        {{ wtf.form_field(programme_form.degree_type) }}
+        {{ wtf.form_field(programme_form.name) }}
+
+        {{ wtf.form_field(programme_form.submit) }}
+
+    </form>
+{% endblock %}

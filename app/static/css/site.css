@@ -1,25 +1,120 @@
-body, html {
+body {
     width: 100%;
     height: 100%;
-    padding-top: 40px;
-}
-
-footer {
-    position: absolute;
-    bottom: 0;
-    width: 100%
-    padding: 50px 0;
+    background-color: antiquewhite;
 }
 
 p.copyright {
     margin: 15px 0 0;
 }
 
-.footer {
-    clear: both;
-    height: 4em;
+.panel-primary {
+    background-color: #eeeadc;
+}
+
+.footer-bar {
+    padding-left: 50px
 }
 
 .topnav {
     font-size: 14px;
+}
+
+.main-content {
+    margin-top: 40px;
+    margin-bottom: 65px;
+}
+
+.selection-label {
+    display: inline-block;
+    margin-top: 5px;
+    margin-right: 5px;
+}
+
+.btn-table-block {
+    margin-top: 5px;
+}
+
+.dashboard-nav {
+    margin-bottom: 10px;
+}
+
+.project-title {
+    font-size: 44px;
+    /*font-weight: lighter;*/
+    justify-content: center;
+}
+
+.project-owner-name {
+    font-size: 20px;
+    /*font-weight: lighter;*/
+}
+
+.research-group-banner {
+    font-size: 20px;
+    /*font-weight: lighter;*/
+}
+
+.research-group-webpage {
+    font-size: 12px;
+    font-weight: bolder;
+}
+
+.gap-below {
+    margin-bottom: 5%;
+}
+
+.sm-gap-below {
+    margin-bottom: 3%;
+}
+
+.project-description {
+    font-size: 16px;
+}
+
+.project-label {
+    display: inline-block;
+    font-size: 100%;
+    margin-bottom: 2px;
+}
+
+.dashboard-project-title {
+    font-size: 32px;
+    font-weight: lighter;
+}
+
+.vertical-align {
+    display: flex;
+    align-items: center;
+}
+
+.vertical-top {
+    display: flex;
+    align-items: start;
+}
+
+.bookmark-table {
+    border-collapse: collapse;
+    border-width: 0px;
+}
+
+.final-selection-table {
+    margin-bottom: 1%;
+}
+
+.fac-project-table {
+    margin-bottom: 1%;
+}
+
+.table-button {
+    margin: 1px;
+}
+
+.drag-handle {
+    padding-right: 5%;
+}
+
+.validity-label {
+    display: inline-block;
+    font-size: 100%;
 }

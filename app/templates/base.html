@@ -1,18 +1,46 @@
 {% extends "bootstrap/base.html" %}
 {% import "bootstrap/utils.html" as utils %}
 
-{% block styles %}
-    {{super()}}
-    {% assets filters="cssmin", output="gen/packed.css", "css/site.css" %}
-          <link rel="stylesheet" href="{{ ASSET_URL }}"/>
-    {% endassets %}
+{% block scripts %}
+    {{ super() }}
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
 {% endblock %}
 
+{% block styles %}
+    {{ super() }}
+    {% assets filters="cssmin", output="gen/packed.css", "css/site.css" -%}
+        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+{%- endblock %}
+
+{% macro convenor_menu(pclasses) %}
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+            Convenor
+            <span class="caret"></span>
+        </a>
+
+        <ul class="dropdown-menu">
+        {% for project_class in pclasses %}
+            <li><a href="{{ url_for('faculty.convenor_dashboard', id=project_class.id, tabid=1) }}">
+                <i class="fa fa-pencil"></i> {{ project_class.name }}
+            </a></li>
+        {% endfor %}
+        {% if current_user.has_role('admin') or current_user.has_role('root') %}
+            <li><a href="{{ url_for('faculty.convenor_dashboard', id=0, tabid=0) }}">
+                Unattached projects
+            </a></li>
+        {% endif %}
+        </ul>
+    </li>
+{% endmacro %}
+
 {% block navbar %}
-    <nav class="navbar navbar-default navbar-fixed-top topnav" role="navigation">
+    <nav class="navbar navbar-inverse navbar-fixed-top topnav" role="navigation">
         <div class="container topnav">
             <div class="navbar-header">
-                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#mpsp-navbar-collapsed" aria-expanded="false">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                        data-target="#mpsp-navbar-collapsed" aria-expanded="false">
                     <span class="sr-only">Toggle navigation</span>
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
@@ -25,17 +53,60 @@
             <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
                 <ul class="nav navbar-nav navbar-right">
 
-                    <!-- add admin menu if user if administrator -->
-                    {% if current_user.has_role('admin') or current_user.has_role('office') %}
+                    <!-- add 'my projects' if user is a faculty member -->
+                    {% if current_user.has_role('faculty') %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                My projects
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url_for('faculty.edit_my_projects') }}">
+                                    <i class="fa fa-pencil"></i> Edit projects
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% endif %}
+
+                    <!-- add convenor menu if user is a convenor, or an admin user -->
+                    {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                        {{ convenor_menu(current_user.get_project_classes()) }}
+                    {% else  %}
+                        {% if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.count() > 0 %}
+                            {{ convenor_menu(current_user.convenor_for) }}
+                        {% endif %}
+                    {% endif %}
+
+                    <!-- add admin menu if user is an administrator (not sysadmin => admin) -->
+                    {% if current_user.has_role('admin') or current_user.has_role('root') %}
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 Admin
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="{{ url_for('admin.create_user') }}">Create user</a></li>
-                                {% if current_user.has_role('admin') %}
-                                    <li><a href="#">Create new project</a></li>
+                                <li><a href="{{ url_for('admin.edit_users') }}">
+                                    <i class="fa fa-pencil"></i> Users
+                                </a></li>
+                                <li><a href="{{ url_for('admin.edit_skills') }}">
+                                    <i class="fa fa-pencil"></i> Transferable skills
+                                </a></li>
+                                <li><a href="{{ url_for('admin.edit_supervisors') }}">
+                                    <i class="fa fa-pencil"></i> Supervisory team
+                                </a></li>
+                                {% if current_user.has_role('root') %}
+                                    <li><a href="{{ url_for('admin.edit_project_classes') }}">
+                                        <i class="fa fa-pencil"></i> Project types
+                                    </a></li>
+                                    <li><a href="{{ url_for('admin.edit_groups') }}">
+                                        <i class="fa fa-pencil"></i> Research groups
+                                    </a></li>
+                                    <li><a href="{{ url_for('admin.edit_degree_programmes') }}">
+                                        <i class="fa fa-pencil"></i> Degree programmes
+                                    </a></li>
+                                    <li><a href="{{ url_for('admin.global_rollover') }}">
+                                        Roll over academic year
+                                    </a></li>
                                 {% endif %}
                             </ul>
                         </li>
@@ -47,11 +118,7 @@
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 <i class="fa fa-user"></i>
                                 {{ current_user.username }}
-                                {% if current_user.has_role('admin') %}
-                                    (admin)
-                                {% elif current_user.has_role('convenor') %}
-                                    (convenor)
-                                {% elif current_user.has_role('office') %}
+                                {% if current_user.has_role('office') %}
                                     (School Office)
                                 {% elif current_user.has_role('faculty') %}
                                     (faculty)
@@ -61,8 +128,24 @@
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="{{ url_for('home.dashboard') }}">Dashboard</a></li>
-                                <li><a href="{{ url_for_security('change_password') }}">Change password</a></li>
+                                <li><a href="{{ url_for('home.homepage') }}">Dashboard</a></li>
+                                {% if current_user.has_role('faculty') %}
+                                    <li>
+                                        <a href="{{ url_for('admin.faculty_settings') }}">
+                                            <i class="fa fa-user"></i> Settings
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('admin.my_affiliations') }}">
+                                            <i class="fa fa-pencil"></i> Research affiliations
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                <li>
+                                    <a href="{{ url_for_security('change_password') }}">
+                                        <i class="fa fa-pencil"></i> Change password
+                                    </a>
+                                </li>
                                 <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                             </ul>
                         </li>
@@ -74,19 +157,17 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid">
+    <div class="container-fluid main-content">
         <br/>
-          {{ utils.flashed_messages() }}
+        {% block pillblock %}
+        {% endblock %}
+        {{ utils.flashed_messages() }}
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>
-    <footer>
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-lg-12">
-                    <p class="copyright text-muted small">Copyright (c) 2018 University of Sussex</p>
-                </div>
-            </div>
+    <nav class="navbar navbar-default navbar-fixed-bottom" role="navigation">
+        <div class="navbar-header footer-bar">
+            <p class="copyright text-muted small">Copyright (c) 2018 University of Sussex</p>
         </div>
-    </footer>
+    </nav>
 {% endblock %}

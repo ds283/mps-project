@@ -1,5 +1,5 @@
 #
-# Created by David Seery on 08/05/2018.
+# Created by David Seery on 16/05/2018.
 # Copyright (c) 2018 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
@@ -8,10 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from app import create_app
 
-app = create_app()
+from flask import Blueprint
 
-# pass control to application entry point if we are the controlling script
-if __name__ == '__main__':
-    app.run()
+student = Blueprint('student', __name__)
+
+from . import views

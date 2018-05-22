@@ -1,0 +1,314 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.6.1/Sortable.min.js"></script>
+
+    <script type=text/javascript>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        function sendAjax(ranking, configid, selid) {
+            $.ajax({
+                url: $SCRIPT_ROOT + "/student/update_ranking",
+                type: "POST",
+                data: JSON.stringify({ranking: ranking, configid: configid, sid: selid}),
+                contentType: "application/json; charset=utf-8",
+                success: function(dat) {
+                    console.log(dat);
+                    $("#" + dat['hide']).addClass('hidden');
+                    $("#" + dat['reveal']).removeClass('hidden');
+                }
+            });
+        }
+
+        {% for config, sel, sub in enrollments %}
+            Sortable.create(document.getElementById("P{{ config.id }}-bookmarks"), {
+                handle: '.drag-handle',
+                animation: 150,
+                onSort: function(e) {
+                    const items = e.to.children;
+                    let result = [];
+                    for (let i=0; i < items.length; i++) {
+                        result.push($(items[i]).attr('id'))
+                    }
+                    sendAjax(result, {{ config.id }}, {{ sel.id }});
+                }
+            });
+        {% endfor %}
+    </script>
+{% endblock %}
+
+{% block title %}
+    Student dashboard
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+
+            {% if enrollments and enrollments|length > 0 %}
+
+                {% for config, sel, sub in enrollments %}
+
+                    {% set pclass = config.project_class %}
+                    <div class="well">
+                        <p><span
+                                class="dashboard-project-title">{{ pclass.name }}</span>
+                        </p>
+                        <p><span>
+                            Convenor:
+                            <a class="btn btn-link" href="mailto:{{ pclass.convenor.email }}">
+                                {{ pclass.convenor.build_name() }}
+                            </a>
+                        </span></p>
+                        <p><span>
+                            Commences in academic year
+                            <strong>Y{{ pclass.year }}</strong>.
+                            You are part of the
+                            {% if sel %}
+                                <strong>{{ sel.user.student_data.cohort }} cohort</strong>
+                                and are currently in
+                                <strong>Y{{ sel.get_academic_year }}</strong>.
+                            {% elif sub %}
+                                <strong>{{ sub.user.student_data.cohort }} cohort</strong>
+                                and are currently in
+                                <strong>Y{{ sub.get_academic_year }}</strong>.
+                            {% endif %}
+                        </span></p>
+
+                        {% if sel %}
+                            <div class="panel
+                                {% if config.open %}
+                                    panel-success
+                                {% elif config.closed %}
+                                    panel-warning
+                                {% else %}
+                                    panel-default
+                                {% endif %}
+                                ">
+                                <div class="panel-heading">
+                                    {% if sub %}
+                                        <strong>Request to switch projects</strong>
+                                    {% else %}
+                                        <strong>Project selection</strong>
+                                    {% endif %}
+                                    {% if config.open %}
+                                        <div class="pull-right">
+                                            <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                                            {% if config.live_deadline %}
+                                                <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <div class="pull-right">
+                                            <span class="label label-default">Student choices not open</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="panel-body">
+                                    {% if config.open %}
+
+                                        {# MAIN FUNCTIONS ALL HERE -- SELECTIONS ARE OPEN #}
+
+                                        {# head -- inform selections are available #}
+                                        <div class="row vertical-align">
+                                            <div class="col-xs-9">
+                                                <p>Project selection for <strong>{{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
+                                                    is now available.</p>
+                                            </div>
+                                            <div class="col-xs-3">
+                                                <span class="pull-right">
+                                                    <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-default">Browse projects</a>
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {# add data about deadline, if present #}
+                                        {% if config.live_deadline %}
+                                            <div class="row vertical-align">
+                                                <div class="col-xs-9">
+                                                    <p>You can adjust your selection until the deadline
+                                                        <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                                        <strong>{{ config.time_to_live_deadline }} from now.</strong>
+                                                    </p>
+                                                </div>
+                                                <div class="col-xs-3"></div>
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="row vertical-align">
+                                            <div class="col-xs-9">
+                                                {% set num_choices = sel.number_choices %}
+                                                {% set numpl = 's' %}
+                                                {% if num_choices == 1 %}
+                                                    {% set numpl = '' %}
+                                                {% endif %}
+                                                {% if sel.is_initial_selection %}
+                                                    This is your initial selection.
+                                                {% else %}
+                                                    Add bookmarks if you wish to switch projects or supervisors.
+                                                {% endif %}
+                                                You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                            </div>
+                                            <div class="col-xs-3">
+                                                <div class="pull-right">
+                                                    {% set is_valid = sel.is_valid_selection %}
+                                                    <span id="P{{ config.id }}-valid-message" class="label label-primary validity-label {% if not is_valid %}hidden{% endif %}">Valid selection</span>
+                                                    <span id="P{{ config.id }}-invalid-message" class="label label-danger validity-label {% if is_valid %}hidden{% endif %}">Invalid or incomplete selection</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {# render bookmarks #}
+                                        {% if sel.has_bookmarks %}
+                                            <hr class="intro-divider">
+                                            <div class="container-fluid list-group" id="P{{ config.id }}-bookmarks" >
+                                                {% for bookmark in sel.get_ordered_bookmarks %}
+                                                {% set project = bookmark.liveproject %}
+                                                    <div id="P{{ config.id }}-{{ project.id }}" class="row vertical-align bookmark-table list-group-item">
+                                                        <div class="col-xs-4">
+                                                            <i class="fa fa-bars drag-handle"></i>
+                                                            <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
+                                                                <strong>{{ project.name }}</strong>
+                                                            </a>
+                                                        </div>
+                                                        <div class="col-xs-2">
+                                                            <a href="mailto:{{ project.owner.email }}">
+                                                                {{ project.owner.build_name() }}
+                                                            </a>
+                                                        </div>
+                                                        <div class="col-xs-3">
+                                                            {% if not project.is_available(sel) %}
+                                                                {% if sel in project.confirm_waiting %}
+                                                                    Confirmation requested
+                                                                    <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-warning btn-sm">
+                                                                        Cancel
+                                                                    </a>
+                                                                {% else %}
+                                                                    Requires confirmation
+                                                                    <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-success btn-sm">
+                                                                        Request
+                                                                    </a>
+                                                                {% endif %}
+                                                            {% else %}
+                                                                {% if sel in project.confirmed_students %}
+                                                                    Available (confirmation received)
+                                                                {% else %}
+                                                                    Available
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="col-xs-3">
+                                                            <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">
+                                                                Remove bookmark
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                    {% elif config.closed %}
+                                        <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                                            is now closed.</p>
+
+                                        {% if not sel.is_valid_selection %}
+                                            <p>You did not submit a valid selection before the deadline.</p>
+                                        {% elif sel.has_bookmarks and sel.is_valid_selection %}
+                                            <p>Your final ranked selection was:</p>
+                                            <hr class="intro-divider">
+                                            <div class="container-fluid">
+                                                <div class="row vertical-align bookmark-table final-selection-table">
+                                                    <div class="col-xs-1"><strong>Rank</strong></div>
+                                                    <div class="col-xs-8"><strong>Project title</strong></div>
+                                                    <div class="col-xs-3"><strong>Supervisor</strong></div>
+                                                </div>
+                                                {% set num_projects = sel.number_choices %}
+                                                {% for bookmark in sel.get_ordered_bookmarks if loop.index <= num_projects%}
+                                                {% set project = bookmark.liveproject %}
+                                                    <div class="row vertical-align bookmark-table final-selection-table">
+                                                        <div class="col-xs-1">
+                                                            <strong>{{ loop.index }}</strong>
+                                                        </div>
+                                                        <div class="col-xs-8">
+                                                            <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
+                                                                <strong>{{ project.name }}</strong>
+                                                            </a>
+                                                        </div>
+                                                        <div class="col-xs-3">
+                                                            <a href="mailto:{{ project.owner.email }}">
+                                                                {{ project.owner.build_name() }}
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+
+                                    {% else %}
+                                        <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                                            is not yet available.</p></p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if sub %}
+                            <div class="panel panel-primary">
+                                <div class="panel-heading"><strong>Project details</strong></div>
+                                <div class="panel-body"></div>
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div style="text-align: center;">
+                    <h3> You are not currently participating in any projects. </h3>
+                    <p>If you feel this is a mistake, please contact the appropriate
+                        project convenor.</p>
+                    <hr class="intro-divider">
+                </div>
+
+                {% if pclasses and pclasses.count() > 0 %}
+                    <div class="row">
+                        <div class="col-xs-3"></div>
+                        <div class="col-xs-6">
+                            <table class="table table-condensed table-hover">
+                                <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Convenor</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for pclass in pclasses %}
+                                    <tr>
+                                        <td>{{ pclass.name }}</td>
+                                        <td>{{ pclass.convenor.build_name() }}
+                                            <a href="mailto:{{ pclass.convenor.email }}">
+                                                {{ pclass.convenor.email }}
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-xs-3"></div>
+                    </div>
+                {% endif %}
+
+            {% endif %}
+
+        </div>
+        <div class="col-xs-1"></div>
+
+    </div>
+{% endblock %}

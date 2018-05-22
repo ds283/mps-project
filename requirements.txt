@@ -29,6 +29,7 @@ Jinja2==2.10
 Mako==1.0.7
 Markdown==2.6.11
 MarkupSafe==1.0
+parse==1.8.2
 passlib==1.7.1
 pycparser==2.18
 python-dateutil==2.7.2

@@ -68,9 +68,15 @@
                             Commences in academic year
                             <strong>Y{{ pclass.year }}</strong>.
                             You are part of the
-                            <strong>{{ sel.user.student_data.cohort }} cohort</strong>
-                            and are currently in
-                            <strong>Y{{ sel.get_academic_year }}</strong>.
+                            {% if sel %}
+                                <strong>{{ sel.user.student_data.cohort }} cohort</strong>
+                                and are currently in
+                                <strong>Y{{ sel.get_academic_year }}</strong>.
+                            {% elif sub %}
+                                <strong>{{ sub.user.student_data.cohort }} cohort</strong>
+                                and are currently in
+                                <strong>Y{{ sub.get_academic_year }}</strong>.
+                            {% endif %}
                         </span></p>
 
                         {% if sel %}

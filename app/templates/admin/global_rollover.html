@@ -1,0 +1,37 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Global rollover to {{ year }}&ndash;{{ year+1 }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="panel panel-danger">
+                <div class="panel-heading"><strong>Global rollover of academic year to {{ year }}&ndash;{{ year+1 }}</strong></div>
+                <div class="panel-body">
+                    <form action="{{ url_for('admin.global_rollover') }}" method="POST" name="rollover_form">
+
+                        {{ rollover_form.hidden_tag() }}
+
+                        <div class="row vertical-align">
+                            <div class="col-xs-9">
+                                Please confirm that you wish to advance the global academic year to {{ year }}&ndash;{{ year+1 }}
+                            </div>
+                            <div class="col-xs-3">
+                                <div class="pull-right">
+                                    {{ wtf.form_field(rollover_form.submit) }}
+                                </div>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

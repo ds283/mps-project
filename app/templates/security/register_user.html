@@ -3,22 +3,77 @@
 {% extends "security/index.html" %}
 
 {% block title %}
-    Register
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if user %}
+        Edit user account data for <i class="fa fa-user"></i> {{ user.build_name_and_username() }}
+    {% else %}
+        {{ title }}
+    {% endif %}
 {% endblock %}
 
 {% block form_content %}
-    <h2>Create a new user account</h2>
-    <form action="{{ url_for('admin.create_user') }}" method="POST" name="register_user_form">
-        {{ register_user_form.hidden_tag() }}
-
-        {{ wtf.form_errors(register_user_form) }}
-
-        {{ wtf.form_field(register_user_form.email) }}
-        {{ wtf.form_field(register_user_form.password) }}
-        {% if register_user_form.password_confirm %}
-            {{ wtf.form_field(register_user_form.password_confirm) }}
+    {% if user %}
+        {% if user.has_role('office') %}
+            <form action="{{ url_for('admin.edit_office', id=user.id) }}" method="POST" name="user_form">
+        {% elif user.has_role('faculty') %}
+            <form action="{{ url_for('admin.edit_faculty', id=user.id) }}" method="POST" name="user_form">
+        {% else %} {# current role == 'student' is only choice #}
+            <form action="{{ url_for('admin.edit_student', id=user.id) }}" method="POST" name="user_form">
         {% endif %}
-        {{ wtf.form_field(register_user_form.submit) }}
+    {% else %}
+        {% if role == 'office' %}
+            <form action="{{ url_for('admin.create_office', role=role) }}" method="POST" name="user_form">
+        {% elif role == 'faculty' %}
+            <form action="{{ url_for('admin.create_faculty', role=role) }}" method="POST" name="user_form">
+        {% else %} {# current role == 'student' is only choice #}
+            <form action="{{ url_for('admin.create_student', role=role) }}" method="POST" name="user_form">
+        {% endif %}
+    {% endif %}
+        {{ user_form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(user_form) }}#}
+
+        {{ wtf.form_field(user_form.email) }}
+        {{ wtf.form_field(user_form.username) }}
+
+        {% if user_form.password %}
+            {{ wtf.form_field(user_form.password) }}
+        {% endif %}
+        {% if user_form.password_confirm %}
+            {{ wtf.form_field(user_form.password_confirm) }}
+        {% endif %}
+
+        {{ wtf.form_field(user_form.first_name) }}
+        {{ wtf.form_field(user_form.last_name) }}
+
+        {# STUDENT FIELDS #}
+
+        {% if user_form.exam_number %}
+            {{ wtf.form_field(user_form.exam_number) }}
+        {% endif %}
+        {% if user_form.cohort %}
+            {{ wtf.form_field(user_form.cohort) }}
+        {% endif %}
+        {% if user_form.programme %}
+            {{ wtf.form_field(user_form.programme) }}
+        {% endif %}
+
+        {# FACULTY FIELDS #}
+
+        {% if user_form.academic_title %}
+            {{ wtf.form_field(user_form.academic_title) }}
+        {% endif %}
+        {% if user_form.use_academic_title %}
+            {{ wtf.form_field(user_form.use_academic_title) }}
+        {% endif %}
+        {% if user_form.sign_off_students %}
+            {{ wtf.form_field(user_form.sign_off_students) }}
+        {% endif %}
+
+        {{ wtf.form_field(user_form.submit) }}
 
     </form>
 {% endblock %}

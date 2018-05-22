@@ -1,0 +1,170 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('[class~="sortable-pageable"]').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print']
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Unattached projects
+{% endblock %}
+
+{% block bodyblock %}
+    {% if projects and projects|length > 0 %}
+        <div class="panel panel-primary">
+            <div class="panel-heading">Unattached projects</div>
+            <div class="panel-body">
+            <table class="table table-striped table-bordered sortable-pageable">
+                <thead>
+                <tr>
+                    <th width="15%"> Name</th>
+                    <th width="5%"> Owner</th>
+                    <th width="5%"> Status</th>
+                    <th width="10%"> Available for</th>
+                    <th width="15%"> Affiliation</th>
+                    <th width="20%"> Prefer degree programmes</th>
+                    <th width="20%"> Transferable skills</th>
+                    <th width="10%"> Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for project in projects %}
+                    <tr>
+                        {# name #}
+                        <td>
+                            {% set offerable = project.offerable %}
+                            <div class="{% if not offerable %}has-error{% endif %}">
+                                <strong>{{ project.name }}</strong>
+                                {% if not offerable and project.error %}
+                                    <p class="help-block">Warning: {{ project.error }}</p>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        {# owner #}
+                        <td>
+                            {{ project.owner.build_name_and_username() }})
+                        </td>
+
+                        {# status #}
+                        <td>
+                            {% if offerable %}
+                                {% if project.active %}
+                                    Active
+                                {% else %}
+                                    Inactive
+                                {% endif %}
+                            {% else %}
+                                <strong>Not available</strong>
+                            {% endif %}
+                        </td>
+
+                        {# project classes #}
+                        <td>
+                            {% for pclass in project.project_classes %}
+                                <a class="btn btn-info btn-block btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}" href="mailto:{{ pclass.convenor.email }}">
+                                    {{ pclass.abbreviation }} ({{ pclass.convenor.build_name() }})
+                                </a>
+                            {% endfor %}
+                        </td>
+
+                        {# affiliation #}
+                        <td> <span class="label label-success">{{ project.group.name }}</span> </td>
+
+                        {# prefer degree programmes #}
+                        <td>
+                            {% for programme in project.programmes %}
+                                {% if programme.active %}
+                                    <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+
+                        {# transferable skills #}
+                        <td>
+                            {% for skill in project.skills %}
+                                {% if skill.active %}
+                                    <span class="label label-default">{{ skill.name }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+
+                        {# actions #}
+                        <td>
+                            <div class="dropdown">
+                                <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                    Actions
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="{{ url_for('faculty.convenor_edit_project', id=project.id, pclass_id=0) }}">
+                                            <i class="fa fa-pencil"></i> Edit project
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+                                            Preview web page
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a href="{{ url_for('faculty.convenor_attach_skills', id=project.id, pclass_id=0) }}">
+                                            <i class="fa fa-pencil"></i> Transferable skills
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                        <a href="{{ url_for('faculty.convenor_attach_programmes', id=project.id, pclass_id=0) }}">
+                                            <i class="fa fa-pencil"></i> Degree programmes
+                                        </a>
+                                    </li>
+
+                                    <li>
+                                    {% if project.active %}
+                                        <a href="{{ url_for('faculty.make_project_inactive', id=project.id) }}">
+                                            Make inactive
+                                        </a>
+                                    {% else %}
+                                        <a href="{{ url_for('faculty.make_project_active', id=project.id) }}">
+                                            Make active
+                                        </a>
+                                    {% endif %}
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        <div style="text-align: center;">
+    {% else %}
+        <div style="text-align: center;">
+        <h3> No unattached projects</h3>
+        <hr class="intro-divider">
+    {% endif %}
+    <a href="{{ url_for('faculty.convenor_add_project', pclass_id=0) }}" class="btn btn-default btn-lg">
+        <i class="fa fa-plus"></i>
+        Add new project
+    </a>
+    </div>
+{% endblock %}

@@ -37,6 +37,7 @@ class Config(object):
 
     SECURITY_USER_IDENTITY_ATTRIBUTES = ['email', 'username']
 
+
 class DevelopmentConfig(Config):
     """
     Options used only during development
@@ -44,6 +45,13 @@ class DevelopmentConfig(Config):
 
     DEBUG = True                    # enable Flask debugger
     SQLALCHEMY_ECHO = True          # enable SQLAlchemy logging
+
+    SECURITY_EMAIL_SUBJECT_REGISTER = False
+    SECURITY_EMAIL_SUBJECT_PASSWORDLESS = False
+    SECURITY_EMAIL_SUBJECT_PASSWORD_NOTICE = False
+    SECURITY_EMAIL_SUBJECT_PASSWORD_RESET = False
+    SECURITY_EMAIL_SUBJECT_PASSWORD_CHANGE_NOTICE = False
+    SECURITY_EMAIL_SUBJECT_CONFIRM = False
 
 
 class ProductionConfig(Config):

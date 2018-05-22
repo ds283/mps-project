@@ -1,0 +1,46 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    Edit transferable skills for project <strong>{{ data.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <div class="panel panel-default">
+        <div class="panel-body">
+            {% if data and data.skills and skills %}
+                <h4>
+                {% for skill in skills %}
+                    {% if skill in data.skills %}
+                        <a class="btn btn-success btn-sm selection-label" href="{{ url_for('faculty.remove_skill', projectid=data.id, skillid=skill.id) }}"><i class="fa fa-times"></i> {{ skill.name }}</a>
+                    {% endif %}
+                {% endfor %}
+                </h4>
+            {% else %}
+                <p>No current skills</p>
+            {% endif %}
+        </div>
+        <div class="panel-footer">
+            {% if data and skills %}
+                <h4>
+                {% for skill in skills %}
+                    {% if skill not in data.skills %}
+                        <a class="btn btn-info selection-label" href="{{ url_for('faculty.add_skill', projectid=data.id, skillid=skill.id) }}"><i class="fa fa-plus"></i> {{ skill.name }}</a>
+                    {% endif %}
+                {% endfor %}
+                </h4>
+            {% else %}
+                <p>No available skills</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <a href="{{ url_for('faculty.convenor_dashboard', id=pclass_id, tabid=2) }}">
+        <i class="fa fa-backward"></i> Return to convenor dashboard
+    </a>
+{% endblock %}

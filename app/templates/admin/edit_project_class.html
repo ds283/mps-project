@@ -1,0 +1,56 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if project_class %}
+        Edit properties for project class '{{ project_class.name }}'
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if project_class %}
+        <form action="{{ url_for('admin.edit_project_class', id=project_class.id) }}" method="POST" name="project_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_project_class') }}" method="POST" name="project_form">
+    {% endif %}
+        {{ project_form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(project_form) }}#}
+
+        {{ wtf.form_field(project_form.name) }}
+        {{ wtf.form_field(project_form.abbreviation) }}
+
+        <div class="well {% if project_form.programmes.errors %}has-error{% endif %}">
+            <p>Select degree programmes to which this project class applies</p>
+            {% for widget in project_form.programmes %}
+                {{ wtf.form_field(widget) }}
+            {% endfor %}
+            {% if project_form.programmes.errors %}
+                {% for error in project_form.programmes.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {{ wtf.form_field(project_form.year) }}
+        {{ wtf.form_field(project_form.extent) }}
+        {{ wtf.form_field(project_form.submissions) }}
+        {{ wtf.form_field(project_form.initial_choices) }}
+        {{ wtf.form_field(project_form.switch_choices) }}
+
+        {{ wtf.form_field(project_form.convenor) }}
+
+        {{ wtf.form_field(project_form.require_confirm) }}
+        {{ wtf.form_field(project_form.supervisor_carryover) }}
+
+        {{ wtf.form_field(project_form.submit) }}
+
+    </form>
+{% endblock %}

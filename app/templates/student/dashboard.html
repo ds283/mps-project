@@ -90,7 +90,11 @@
                                 {% endif %}
                                 ">
                                 <div class="panel-heading">
-                                    <strong>Project selection</strong>
+                                    {% if sub %}
+                                        <strong>Request to switch projects</strong>
+                                    {% else %}
+                                        <strong>Project selection</strong>
+                                    {% endif %}
                                     {% if config.open %}
                                         <div class="pull-right">
                                             <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>

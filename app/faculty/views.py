@@ -875,12 +875,14 @@ def dashboard():
     enrollments = []
     for item in current_user.faculty_data.enrollments:
 
-        config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
+        if item.active:
 
-        # get live projects belonging to both this config item and the active user
-        live_projects = config.live_projects.filter_by(owner_id=current_user.id)
+            config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
 
-        enrollments.append((config, live_projects))
+            # get live projects belonging to both this config item and the active user
+            live_projects = config.live_projects.filter_by(owner_id=current_user.id)
+
+            enrollments.append((config, live_projects))
 
     return render_template('faculty/dashboard.html', enrollments=enrollments)
 

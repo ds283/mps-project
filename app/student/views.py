@@ -87,13 +87,13 @@ def dashboard():
     for item in current_user.selecting.filter_by(retired=False).all():
 
         pclass = item.config.project_class
-        if pclass not in pcs:
+        if pclass.active and pclass not in pcs:
             pcs.append(pclass)
 
     for item in current_user.submitting.filter_by(retired=False).all():
 
         pclass = item.config.project_class
-        if pclass not in pcs:
+        if pclass.active and pclass not in pcs:
             pcs.append(pclass)
 
     enrollments = []

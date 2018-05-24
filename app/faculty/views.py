@@ -147,7 +147,7 @@ def add_project():
                        description=form.description.data,
                        reading=form.reading.data,
                        creator_id=current_user.id,
-                       creation_timestamp=datetime.datetime.now())
+                       creation_timestamp=datetime.now())
         db.session.add(data)
         db.session.commit()
 
@@ -184,7 +184,7 @@ def edit_project(id):
         data.description = form.description.data
         data.reading = form.reading.data
         data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.datetime.now()
+        data.last_edit_timestamp = datetime.now()
 
         data.validate_programmes()
 
@@ -232,7 +232,7 @@ def convenor_add_project(pclass_id):
                        description=form.description.data,
                        reading=form.reading.data,
                        creator_id=current_user.id,
-                       creation_timestamp=datetime.datetime.now())
+                       creation_timestamp=datetime.now())
         db.session.add(data)
         db.session.commit()
 
@@ -278,7 +278,7 @@ def convenor_edit_project(id, pclass_id):
         data.description = form.description.data
         data.reading = form.reading.data
         data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.datetime.now()
+        data.last_edit_timestamp = datetime.now()
 
         # ensure that list of preferred degree programmes is now consistent
         data.validate_programmes()
@@ -733,7 +733,7 @@ def go_live(id):
             # all project classes need their own LiveProject record
             live_item = LiveProject(config_id=config.id,
                                     creator_id=current_user.id,
-                                    timestamp=datetime.datetime.now(),
+                                    timestamp=datetime.now(),
                                     number=number,
                                     name=item.name,
                                     keywords=item.keywords,
@@ -752,7 +752,7 @@ def go_live(id):
         config.live = True
         config.live_deadline = form.live_deadline.data
         config.golive_id = current_user.id
-        config.golive_timestamp = datetime.datetime.now()
+        config.golive_timestamp = datetime.now()
 
         db.session.commit()
 
@@ -777,7 +777,7 @@ def close_selections(id):
 
     config.closed = True
     config.closed_id = current_user.id
-    config.closed_timestamp = datetime.datetime.now()
+    config.closed_timestamp = datetime.now()
 
     db.session.commit()
 
@@ -1380,7 +1380,7 @@ def rollover(pid, configid):
     new_config = ProjectClassConfig(year=current_year,
                                     pclass_id=pid,
                                     creator_id=current_user.id,
-                                    timestamp=datetime.datetime.now(),
+                                    timestamp=datetime.now(),
                                     requests_issued=False,
                                     request_deadline=None,
                                     live=False,

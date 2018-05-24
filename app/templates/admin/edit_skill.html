@@ -20,8 +20,6 @@
 
         {{ skill_form.hidden_tag() }}
 
-        {{ edit_data(skill) }}
-
 {#        {{ wtf.form_errors(skill_form) }}#}
 
         {{ wtf.form_field(skill_form.name) }}
@@ -29,4 +27,8 @@
         {{ wtf.form_field(skill_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(skill) }}
 {% endblock %}

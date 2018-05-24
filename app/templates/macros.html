@@ -1,22 +1,26 @@
 {% macro edit_data(item) %}
     {% if item and (item.created_by or item.last_edited_by) %}
-        <div class="well">
-        {% if item.created_by %}
-            <p>
-                Created by {{ item.created_by.build_name_and_username() }}
-                {% if item.creation_timestamp %}
-                    on {{ item.creation_timestamp.strftime("%a %b %Y %H:%M:%S") }}
+        <hr class="intro-divider">
+        <div class="panel panel-default">
+            <div class="panel-heading">History</div>
+            <div class="panel-body">
+                {% if item.created_by %}
+                    <p>
+                        Created by {{ item.created_by.build_name_and_username() }}
+                        {% if item.creation_timestamp %}
+                            on {{ item.creation_timestamp.strftime("%a %b %Y %H:%M:%S") }}
+                        {% endif %}
+                    </p>
                 {% endif %}
-            </p>
-        {% endif %}
-        {% if item.last_edited_by %}
-            <p>
-                Last edited by {{ item.last_edited_by.build_name_and_username() }}
-                {% if item.last_edit_timestamp %}
-                    on {{ item.last_edit_timestamp.strftime("%a %b %Y %H:%M:%S") }}
+                {% if item.last_edited_by %}
+                    <p>
+                        Last edited by {{ item.last_edited_by.build_name_and_username() }}
+                        {% if item.last_edit_timestamp %}
+                            on {{ item.last_edit_timestamp.strftime("%a %b %Y %H:%M:%S") }}
+                        {% endif %}
+                    </p>
                 {% endif %}
-            </p>
-        {% endif %}
+            </div>
         </div>
     {% endif %}
 {% endmacro %}

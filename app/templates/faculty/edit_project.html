@@ -28,8 +28,6 @@
 
         {{ project_form.hidden_tag() }}
 
-        {{ edit_data(project) }}
-
 {#        {{ wtf.form_errors(project_form) }}#}
 
         {{ wtf.form_field(project_form.name) }}
@@ -80,4 +78,8 @@
         {{ wtf.form_field(project_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(project) }}
 {% endblock %}

@@ -20,8 +20,6 @@
 
         {{ group_form.hidden_tag() }}
 
-        {{ edit_data(group) }}
-
 {#        {{ wtf.form_errors(group_form) }}#}
 
         {{ wtf.form_field(group_form.abbreviation) }}
@@ -32,4 +30,8 @@
         {{ wtf.form_field(group_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(group) }}
 {% endblock %}

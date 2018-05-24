@@ -124,7 +124,7 @@ def dashboard(id, tabid):
     # build a list of live students submitting work for evaluation in this project class
     submitters = config.submitting_students.filter_by(retired=False)
 
-    return render_template('convenor/convenor_dashboard.html',
+    return render_template('convenor/dashboard.html',
                            golive_form=golive_form, issue_form=issue_form,
                            pclass=pclass, config=config, current_year=current_year, tabid=tabid,
                            projects=pclass.projects, faculty=faculty, fac_count=fac_count, fac_nooffer=fac_nooffer,
@@ -304,7 +304,7 @@ def attach_skills(id, pclass_id):
     # get list of active skills
     skills = TransferableSkill.query.filter_by(active=True)
 
-    return render_template('convenor/convenor_attach_skills.html', data=data, skills=skills, pclass_id=pclass_id)
+    return render_template('convenor/attach_skills.html', data=data, skills=skills, pclass_id=pclass_id)
 
 
 @convenor.route('/attach_programmes/<int:id>/<int:pclass_id>')
@@ -331,7 +331,7 @@ def attach_programmes(id, pclass_id):
 
     q = data.available_degree_programmes
 
-    return render_template('convenor/convenor_attach_programmes.html', data=data, programmes=q.all(), pclass_id=pclass_id)
+    return render_template('convenor/attach_programmes.html', data=data, programmes=q.all(), pclass_id=pclass_id)
 
 
 @convenor.route('/issue_confirm_requests/<int:id>', methods=['GET', 'POST'])

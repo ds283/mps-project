@@ -114,7 +114,7 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li>
-                                        <a href="{{ url_for('faculty.convenor_edit_project', id=project.id, pclass_id=0) }}">
+                                        <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
                                             <i class="fa fa-pencil"></i> Edit project
                                         </a>
                                     </li>
@@ -125,13 +125,13 @@
                                     </li>
 
                                     <li>
-                                        <a href="{{ url_for('faculty.convenor_attach_skills', id=project.id, pclass_id=0) }}">
+                                        <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
                                             <i class="fa fa-pencil"></i> Transferable skills
                                         </a>
                                     </li>
 
                                     <li>
-                                        <a href="{{ url_for('faculty.convenor_attach_programmes', id=project.id, pclass_id=0) }}">
+                                        <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
                                             <i class="fa fa-pencil"></i> Degree programmes
                                         </a>
                                     </li>
@@ -162,7 +162,7 @@
         <h3> No unattached projects</h3>
         <hr class="intro-divider">
     {% endif %}
-    <a href="{{ url_for('faculty.convenor_add_project', pclass_id=0) }}" class="btn btn-default btn-lg">
+    <a href="{{ url_for('convenor.add_project', pclass_id=0) }}" class="btn btn-default btn-lg">
         <i class="fa fa-plus"></i>
         Add new project
     </a>

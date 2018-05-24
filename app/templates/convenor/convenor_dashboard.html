@@ -129,7 +129,7 @@
                                     </div>
                                     <div class="col-xs-3">
                                         <div class="pull-right">
-                                            <a href="{{ url_for('faculty.rollover', pid=pclass.id, configid=config.id) }}" class="btn btn-danger">Rollover</a>
+                                            <a href="{{ url_for('convenor.rollover', pid=pclass.id, configid=config.id) }}" class="btn btn-danger">Rollover</a>
                                         </div>
                                     </div>
                                 </div>
@@ -146,7 +146,7 @@
                                 <div class="panel panel-danger">
                                     <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
                                     <div class="panel-body">
-                                        <form action="{{ url_for('faculty.issue_confirm_requests', id=pclass.id) }}" method="POST" name="issue-form">
+                                        <form action="{{ url_for('convenor.issue_confirm_requests', id=pclass.id) }}" method="POST" name="issue-form">
                                             <div class="row vertical-top">
                                                 <div class="col-xs-9">
                                                     Confirmation requests have not yet been issued to faculty
@@ -179,7 +179,7 @@
                                                 </div>
                                                 <div class="col-xs-3">
                                                     <div class="pull-right">
-                                                        <a href="{{ url_for('faculty.close_selections', id=config.id) }}" class="btn btn-success">
+                                                        <a href="{{ url_for('convenor.close_selections', id=config.id) }}" class="btn btn-success">
                                                             Close
                                                         </a>
                                                     </div>
@@ -196,7 +196,7 @@
                                             <div class="panel-body">
 
                                                 {% if config.golive_required.count() == 0 %}
-                                                    <form action="{{ url_for('faculty.go_live', id=pclass.id) }}" method="POST" name="golive-form">
+                                                    <form action="{{ url_for('convenor.go_live', id=pclass.id) }}" method="POST" name="golive-form">
                                                         <div class="row vertical-top">
                                                             <div class="col-xs-9">
                                                                 <p>All faculty confirmations have now been received.</p>
@@ -224,13 +224,13 @@
                                                         </div>
                                                         <div class="col-xs-3">
                                                             <div class="pull-right">
-                                                                <a href="{{ url_for('faculty.force_confirm_all', id=pclass.id) }}" class="btn btn-danger">
+                                                                <a href="{{ url_for('convenor.force_confirm_all', id=pclass.id) }}" class="btn btn-danger">
                                                                     Force confirm all
                                                                 </a>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <form action="{{ url_for('faculty.issue_confirm_requests', id=pclass.id) }}" method="POST" name="issue-form">
+                                                    <form action="{{ url_for('convenor.issue_confirm_requests', id=pclass.id) }}" method="POST" name="issue-form">
                                                         <div class="row vertical-align">
                                                             <div class="col-xs-9">
                                                                 {{ wtf.form_field(issue_form.request_deadline) }}
@@ -286,7 +286,7 @@
                                         <div class="panel panel-danger">
                                             <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
                                             <div class="panel-body">
-                                                <form action="{{ url_for('faculty.go_live', id=pclass.id) }}" method="POST" name="golive-form">
+                                                <form action="{{ url_for('convenor.go_live', id=pclass.id) }}" method="POST" name="golive-form">
                                                     <div class="row vertical-align">
                                                         <div class="col-xs-9">
                                                             Freeze project descriptions and open student choices.
@@ -408,7 +408,7 @@
                                         </button>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a href="{{ url_for('faculty.convenor_edit_project', id=project.id, pclass_id=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=pclass.id) }}">
                                                     <i class="fa fa-pencil"></i> Edit project
                                                 </a>
                                             </li>
@@ -419,24 +419,24 @@
                                             </li>
 
                                             <li>
-                                                <a href="{{ url_for('faculty.convenor_attach_skills', id=project.id, pclass_id=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=pclass.id) }}">
                                                     <i class="fa fa-pencil"></i> Transferable skills
                                                 </a>
                                             </li>
 
                                             <li>
-                                                <a href="{{ url_for('faculty.convenor_attach_programmes', id=project.id, pclass_id=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=pclass.id) }}">
                                                     <i class="fa fa-pencil"></i> Degree programmes
                                                 </a>
                                             </li>
 
                                             <li>
                                             {% if project.active %}
-                                                <a href="{{ url_for('faculty.convenor_make_project_inactive', id=project.id, pclassid=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.make_project_inactive', id=project.id, pclassid=pclass.id) }}">
                                                     Make inactive
                                                 </a>
                                             {% else %}
-                                                <a href="{{ url_for('faculty.convenor_make_project_active', id=project.id, pclassid=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.make_project_active', id=project.id, pclassid=pclass.id) }}">
                                                     Make active
                                                 </a>
                                             {% endif %}
@@ -456,7 +456,7 @@
                 <h3> No projects currently attached to <span class="label label-default">{{ pclass.name }}</span></h3>
                 <hr class="intro-divider">
             {% endif %}
-            <a href="{{ url_for('faculty.convenor_add_project', pclass_id=pclass.id) }}" class="btn btn-default btn-lg">
+            <a href="{{ url_for('convenor.add_project', pclass_id=pclass.id) }}" class="btn btn-default btn-lg">
                 <i class="fa fa-plus"></i>
                 Add new project
             </a>
@@ -549,11 +549,11 @@
                                         <ul class="dropdown-menu">
                                             <li>
                                             {% if pclass in userdata.enrollments %}
-                                                <a href="{{ url_for('faculty.convenor_unenroll', userid=user.id, pclassid=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
                                                     Remove enrollment
                                                 </a>
                                             {% else %}
-                                                <a href="{{ url_for('faculty.convenor_enroll', userid=user.id, pclassid=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.enroll', userid=user.id, pclassid=pclass.id) }}">
                                                     Enroll
                                                 </a>
                                             {% endif %}
@@ -635,12 +635,12 @@
                                                     <ul class="dropdown-menu">
                                                         {% if config.open %}
                                                             <li>
-                                                                <a href="{{ url_for('faculty.convenor_confirm', sid=student.id, pid=project.id, tabid=4) }}">
+                                                                <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id, tabid=4) }}">
                                                                     Confirm
                                                                 </a>
                                                             </li>
                                                             <li>
-                                                                <a href="{{ url_for('faculty.convenor_cancel_confirm', sid=student.id, pid=project.id, tabid=4) }}">
+                                                                <a href="{{ url_for('convenor.cancel_confirm', sid=student.id, pid=project.id, tabid=4) }}">
                                                                     Remove
                                                                 </a>
                                                             </li>
@@ -669,12 +669,12 @@
                                                     <ul class="dropdown-menu">
                                                         {% if config.open %}
                                                             <li>
-                                                                <a href="{{ url_for('faculty.convenor_deconfirm', sid=student.id, pid=liveproject.id, tabid=4) }}">
+                                                                <a href="{{ url_for('convenor.deconfirm', sid=student.id, pid=liveproject.id, tabid=4) }}">
                                                                     Remove
                                                                 </a>
                                                             </li>
                                                             <li>
-                                                                <a href="{{ url_for('faculty.convenor_deconfirm_to_pending', sid=student.id, pid=liveproject.id, tabid=4) }}">
+                                                                <a href="{{ url_for('convenor.deconfirm_to_pending', sid=student.id, pid=liveproject.id, tabid=4) }}">
                                                                     Make pending
                                                                 </a>
                                                             </li>
@@ -712,7 +712,7 @@
                                                 <ul class="dropdown-menu">
                                                     {% if config.open and student.bookmarks and student.bookmarks.count() > 0 %}
                                                         <li>
-                                                            <a href="{{ url_for('faculty.convenor_student_clear_bookmarks', sid=student.id) }}">
+                                                            <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
                                                                 Clear bookmarks
                                                             </a>
                                                         </li>
@@ -724,12 +724,12 @@
 
                                                     {% if config.open and student.confirm_requests and student.confirm_requests.count() > 0 %}
                                                         <li>
-                                                            <a href="{{ url_for('faculty.convenor_student_confirm_all', sid=student.id) }}">
+                                                            <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
                                                                 Confirm all requests
                                                             </a>
                                                         </li>
                                                         <li>
-                                                            <a href="{{ url_for('faculty.convenor_student_clear_requests', sid=student.id) }}">
+                                                            <a href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
                                                                 Clear all requests
                                                             </a>
                                                         </li>
@@ -744,10 +744,10 @@
 
                                                     {% if config.open and student.confirmed and student.confirmed.count() > 0 %}
                                                         <li>
-                                                            <a href="{{ url_for('faculty.convenor_student_remove_confirms', sid=student.id) }}">
+                                                            <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
                                                                 Remove confirmations
                                                             </a>
-                                                            <a href="{{ url_for('faculty.convenor_student_make_all_confirms_pending', sid=student.id) }}">
+                                                            <a href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
                                                                 Make all pending
                                                             </a>
                                                         </li>
@@ -892,12 +892,12 @@
                                             <ul class="dropdown-menu">
                                                 {% if config.open %}
                                                     <li>
-                                                        <a href="{{ url_for('faculty.convenor_confirm', sid=student.id, pid=project.id, tabid=6) }}">
+                                                        <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id, tabid=6) }}">
                                                             Confirm
                                                         </a>
                                                     </li>
                                                     <li>
-                                                        <a href="{{ url_for('faculty.convenor_cancel_confirm', sid=student.id, pid=project.id, tabid=6) }}">
+                                                        <a href="{{ url_for('convenor.cancel_confirm', sid=student.id, pid=project.id, tabid=6) }}">
                                                             Remove
                                                         </a>
                                                     </li>
@@ -926,12 +926,12 @@
                                             <ul class="dropdown-menu">
                                                 {% if config.open %}
                                                     <li>
-                                                        <a href="{{ url_for('faculty.convenor_deconfirm', sid=student.id, pid=project.id, tabid=6) }}">
+                                                        <a href="{{ url_for('convenor.deconfirm', sid=student.id, pid=project.id, tabid=6) }}">
                                                             Remove
                                                         </a>
                                                     </li>
                                                     <li>
-                                                        <a href="{{ url_for('faculty.convenor_deconfirm_to_pending', sid=student.id, pid=project.id, tabid=6) }}">
+                                                        <a href="{{ url_for('convenor.deconfirm_to_pending', sid=student.id, pid=project.id, tabid=6) }}">
                                                             Make pending
                                                         </a>
                                                     </li>
@@ -965,10 +965,10 @@
                                             </li>
                                             {% if config.open and project.confirm_waiting and project.confirm_waiting.count() > 0 %}
                                                 <li>
-                                                    <a href="{{ url_for('faculty.convenor_project_confirm_all', pid=project.id) }}">
+                                                    <a href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
                                                         Confirm all requests
                                                     </a>
-                                                    <a href="{{ url_for('faculty.convenor_project_clear_requests', pid=project.id) }}">
+                                                    <a href="{{ url_for('convenor.project_clear_requests', pid=project.id) }}">
                                                         Clear all requests
                                                     </a>
                                                 </li>
@@ -983,10 +983,10 @@
 
                                             {% if config.open and project.confirmed_students and project.confirmed_students.count() > 0 %}
                                                 <li>
-                                                    <a href="{{ url_for('faculty.convenor_project_remove_confirms', pid=project.id) }}">
+                                                    <a href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
                                                         Remove confirmations
                                                     </a>
-                                                    <a href="{{ url_for('faculty.convenor_project_make_all_confirms_pending', pid=project.id) }}">
+                                                    <a href="{{ url_for('convenor.project_make_all_confirms_pending', pid=project.id) }}">
                                                         Make all pending
                                                     </a>
                                                 </li>

@@ -1,0 +1,22 @@
+{% macro edit_data(item) %}
+    {% if item and (item.created_by or item.last_edited_by) %}
+        <div class="well">
+        {% if item.created_by %}
+            <p>
+                Created by {{ item.created_by.build_name_and_username() }}
+                {% if item.creation_timestamp %}
+                    on {{ item.creation_timestamp.strftime("%a %b %Y %H:%M:%S") }}
+                {% endif %}
+            </p>
+        {% endif %}
+        {% if item.last_edited_by %}
+            <p>
+                Last edited by {{ item.last_edited_by.build_name_and_username() }}
+                {% if item.last_edit_timestamp %}
+                    on {{ item.last_edit_timestamp.strftime("%a %b %Y %H:%M:%S") }}
+                {% endif %}
+            </p>
+        {% endif %}
+        </div>
+    {% endif %}
+{% endmacro %}

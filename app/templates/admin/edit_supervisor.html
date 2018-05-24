@@ -1,4 +1,5 @@
 {% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
 
 {% extends "security/index.html" %}
 
@@ -16,7 +17,10 @@
     {% else %}
         <form action="{{ url_for('admin.add_supervisor') }}" method="POST" name="supervisor_form">
     {% endif %}
+
         {{ supervisor_form.hidden_tag() }}
+
+        {{ edit_data(role) }}
 
 {#        {{ wtf.form_errors(supervisor_form) }}#}
 

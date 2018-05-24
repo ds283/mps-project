@@ -68,6 +68,9 @@ def create_app():
     from .faculty import faculty as faculty_blueprint
     app.register_blueprint(faculty_blueprint, url_prefix='/faculty')
 
+    from .convenor import convenor as convenor_blueprint
+    app.register_blueprint(convenor_blueprint, url_prefix='/convenor')
+
     from .student import student as student_blueprint
     app.register_blueprint(student_blueprint, url_prefix='/student')
 

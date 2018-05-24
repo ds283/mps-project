@@ -305,7 +305,7 @@ class FacultyData(db.Model):
 
     # primary key is same as users.id for this faculty member
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
-    user = db.relationship('User', backref=db.backref('faculty_data', uselist=False))
+    user = db.relationship('User', foreign_keys=[id], backref=db.backref('faculty_data', uselist=False))
 
     # research group affiliations for this faculty member
     affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations, lazy='dynamic',
@@ -417,7 +417,7 @@ class StudentData(db.Model):
 
     # primary key is same as users.id for this student member
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
-    user = db.relationship('User', backref=db.backref('student_data', uselist=False))
+    user = db.relationship('User', foreign_keys=[id], backref=db.backref('student_data', uselist=False))
 
     # exam number is needed for marking
     exam_number = db.Column(db.Integer(), index=True, unique=True)
@@ -652,7 +652,8 @@ class ProjectClass(db.Model):
     # but to generate eg. tables we will need to extract usernames and emails
     # For that purpose, it's better to link to the User table directly
     convenor_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
-    convenor = db.relationship('User', backref=db.backref('convenor_for', lazy='dynamic'))
+    convenor = db.relationship('User', foreign_keys=[convenor_id],
+                               backref=db.backref('convenor_for', lazy='dynamic'))
 
     # associate this project class with a set of degree programmes
     programmes = db.relationship('DegreeProgramme', secondary=project_class_associations, lazy='dynamic',
@@ -910,7 +911,7 @@ class Project(db.Model):
 
     # which faculty member owns this project?
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
-    owner = db.relationship('User', backref=db.backref('projects', lazy='dynamic'))
+    owner = db.relationship('User', foreign_keys=[owner_id], backref=db.backref('projects', lazy='dynamic'))
 
     # which research group is associated with this project?
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
@@ -1179,7 +1180,8 @@ class SelectingStudent(db.Model):
 
     # key to student userid
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', uselist=False, backref=db.backref('selecting', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
+                           backref=db.backref('selecting', lazy='dynamic'))
 
     # confirmation requests issued
     confirm_requests = db.relationship('LiveProject', secondary=confirmation_requests, lazy='dynamic',
@@ -1290,7 +1292,8 @@ class SubmittingStudent(db.Model):
 
     # key to student userid
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', uselist=False, backref=db.backref('submitting', lazy='dynamic'))
+    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
+                           backref=db.backref('submitting', lazy='dynamic'))
 
 
     @property

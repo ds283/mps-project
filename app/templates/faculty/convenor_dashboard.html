@@ -147,7 +147,7 @@
                                     <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
                                     <div class="panel-body">
                                         <form action="{{ url_for('faculty.issue_confirm_requests', id=pclass.id) }}" method="POST" name="issue-form">
-                                            <div class="row vertical-align">
+                                            <div class="row vertical-top">
                                                 <div class="col-xs-9">
                                                     Confirmation requests have not yet been issued to faculty
                                                 </div>
@@ -191,27 +191,34 @@
                                     {% if config.project_class.require_confirm %}
 
                                         {# if we get here then we can assume requests have been issued because of the outermost if#}
-                                        <div class="panel panel-danger">
+                                        <div class="panel panel-default">
                                             <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
                                             <div class="panel-body">
 
                                                 {% if config.golive_required.count() == 0 %}
                                                     <form action="{{ url_for('faculty.go_live', id=pclass.id) }}" method="POST" name="golive-form">
-                                                        <div class="row vertical-align">
+                                                        <div class="row vertical-top">
                                                             <div class="col-xs-9">
                                                                 <p>All faculty confirmations have now been received.</p>
-                                                                <p>Freeze project descriptions and open student choices.</p>
+                                                                {% if projects %}
+                                                                    <p>
+                                                                        <strong>{{ projects.count() }}</strong> projects are currently
+                                                                        available to go live.
+                                                                        <strong>{{ fac_nooffer }} out of {{ fac_count }}</strong> eligible faculty
+                                                                        do not yet have available projects.
+                                                                    </p>
+                                                                {% endif %}
                                                             </div>
                                                             <div class="col-xs-3">
                                                                 <div class="pull-right">
                                                                     {{ wtf.form_field(golive_form.live_deadline) }}
-                                                                    {{ wtf.form_field(golive_form.live, button_map={'live': 'success'}) }}
+                                                                    {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </form>
                                                 {% else %}
-                                                    <div class="row vertical-align">
+                                                    <div class="row vertical-top">
                                                         <div class="col-xs-9">
                                                             Confirmations are still outstanding from <strong>{{ config.golive_required.count() }} faculty</strong>.
                                                         </div>
@@ -230,7 +237,7 @@
                                                             </div>
                                                             <div class="col-xs-3">
                                                                 <div class="pull-right">
-                                                                    {{ wtf.form_field(issue_form.requests_issued, button_map={'requests_issued': 'warning'}) }}
+                                                                    {{ wtf.form_field(issue_form.requests_issued, button_map={'requests_issued': 'primary'}) }}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -372,7 +379,7 @@
                                 </td>
 
                                 {# affiliation #}
-                                <td> <span class="label label-success">{{ project.group.name }}</span> </td>
+                                <td> <span class="label label-success">{{ project.group.abbreviation }}</span> </td>
 
                                 {# prefer degree programmes #}
                                 <td>
@@ -865,7 +872,7 @@
                                 <td><a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name_and_username() }}</a></td>
 
                                 {# affiliation #}
-                                <td> <span class="label label-success">{{ project.group.name }}</span> </td>
+                                <td> <span class="label label-success">{{ project.group.abbreviation }}</span> </td>
 
                                 {# bookmarks #}
                                 <td>

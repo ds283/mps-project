@@ -31,7 +31,7 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
 
 from . import admin
 
-from datetime import date
+from datetime import date, datetime
 
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
@@ -143,7 +143,9 @@ def create_faculty(role):
         data = FacultyData(id=user.id,
                            academic_title=form.academic_title.data,
                            use_academic_title=form.use_academic_title.data,
-                           sign_off_students=form.sign_off_students.data)
+                           sign_off_students=form.sign_off_students.data,
+                           creator_id=current_user.id,
+                           creator_timestamp=datetime.datetime.now())
         db.session.add(data)
 
         db.session.commit()
@@ -176,8 +178,12 @@ def create_student(role):
 
         # insert extra data for student accounts
 
-        data = StudentData(id=user.id, exam_number=form.exam_number.data,
-                           cohort=form.cohort.data, programme=form.programme.data)
+        data = StudentData(id=user.id,
+                           exam_number=form.exam_number.data,
+                           cohort=form.cohort.data,
+                           programme=form.programme.data,
+                           creator_id=current_user.id,
+                           creator_timestamp=datetime.datetime.now())
         db.session.add(data)
 
         db.session.commit()
@@ -435,6 +441,8 @@ def edit_faculty(id):
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
         data.sign_off_students = form.sign_off_students.data
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.datetime.now()
 
         _datastore.commit()
 
@@ -484,6 +492,8 @@ def edit_student(id):
         data.exam_number = form.exam_number.data
         data.cohort = form.cohort.data
         data.programme_id = form.programme.data.id
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.datetime.now()
 
         _datastore.commit()
 
@@ -686,7 +696,11 @@ def add_group():
     if form.validate_on_submit():
 
         group = ResearchGroup(abbreviation=form.abbreviation.data,
-                              name=form.name.data, website=form.website.data, active=True);
+                              name=form.name.data,
+                              website=form.website.data,
+                              active=True,
+                              creator_id=current_user.id,
+                              creation_timestamp=datetime.datetime.now());
         db.session.add(group)
         db.session.commit()
 
@@ -714,6 +728,8 @@ def edit_group(id):
         group.abbreviation = form.abbreviation.data
         group.name = form.name.data
         group.website = form.website.data
+        group.last_edit_id = current_user.id
+        group.last_edit_timestamp = datetime.datetime.now()
 
         db.session.commit()
 
@@ -780,7 +796,10 @@ def add_degree_type():
 
     if form.validate_on_submit():
 
-        degree_type = DegreeType(name=form.name.data, active=True)
+        degree_type = DegreeType(name=form.name.data,
+                                 active=True,
+                                 creator_id=current_user.id,
+                                 creation_timestamp=datetime.datetime.now())
         db.session.add(degree_type)
         db.session.commit()
 
@@ -806,6 +825,9 @@ def edit_degree_type(id):
     if form.validate_on_submit():
 
         degree_type.name = form.name.data
+        degree_type.last_edit_id = current_user.id
+        degree_type.last_edit_timestamp = datetime.datetime.now()
+
         db.session.commit()
 
         return redirect(url_for('admin.edit_degree_programmes'))
@@ -864,7 +886,11 @@ def add_degree_programme():
     if form.validate_on_submit():
 
         degree_type = form.degree_type.data
-        programme = DegreeProgramme(name=form.name.data, active=True, type_id=degree_type.id)
+        programme = DegreeProgramme(name=form.name.data,
+                                    active=True,
+                                    type_id=degree_type.id,
+                                    creator_id=current_user.id,
+                                    creation_timestamp=datetime.datetime.now())
         db.session.add(programme)
         db.session.commit()
 
@@ -891,6 +917,9 @@ def edit_degree_programme(id):
 
         programme.name = form.name.data
         programme.type_id = form.degree_type.data.id
+        programme.last_edit_id = current_user.id
+        programme.last_edit_timestamp = datetime.datetime.now()
+
         db.session.commit()
 
         return redirect(url_for('admin.edit_degree_programmes'))
@@ -955,7 +984,9 @@ def add_skill():
 
     if form.validate_on_submit():
 
-        skill = TransferableSkill(name=form.name.data)
+        skill = TransferableSkill(name=form.name.data,
+                                  creator_id=current_user.id,
+                                  creation_timestamp=datetime.datetime.now())
         db.session.add(skill)
         db.session.commit()
 
@@ -981,6 +1012,9 @@ def edit_skill(id):
     if form.validate_on_submit():
 
         skill.name = form.name.data
+        skill.last_edit_id = current_user.id
+        skill.last_edit_timestamp = datetime.datetime.now()
+
         db.session.commit()
 
         return redirect(url_for('admin.edit_skills'))
@@ -1063,7 +1097,9 @@ def add_project_class():
                             programmes=form.programmes.data,
                             initial_choices=form.initial_choices.data,
                             switch_choices=form.switch_choices.data,
-                            active=True)
+                            active=True,
+                            creator_id=current_user.id,
+                            creation_timestamp=datetime.datetime.now())
         db.session.add(data)
 
         # generate a corresponding configuration record for the current academic year
@@ -1073,7 +1109,9 @@ def add_project_class():
                                     pclass_id=data.id,
                                     requests_issued=False,
                                     live=False,
-                                    closed=False)
+                                    closed=False,
+                                    creator_id=current_user.id,
+                                    creation_timestamp=datetime.datetime.now())
 
         db.session.add(config)
 
@@ -1112,6 +1150,8 @@ def edit_project_class(id):
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data
         data.switch_choices = form.switch_choices.data
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.datetime.now()
 
         db.session.commit()
 
@@ -1178,7 +1218,10 @@ def add_supervisor():
 
     if form.validate_on_submit():
 
-        data = Supervisor(name=form.name.data, active=True)
+        data = Supervisor(name=form.name.data,
+                          active=True,
+                          creator_id=current_user.id,
+                          creation_timestamp=datetime.datetime.now())
         db.session.add(data)
         db.session.commit()
 
@@ -1202,6 +1245,9 @@ def edit_supervisor(id):
     if form.validate_on_submit():
 
         data.name = form.name.data
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.datetime.now()
+
         db.session.commit()
 
         return redirect(url_for('admin.edit_supervisors'))
@@ -1263,6 +1309,9 @@ def faculty_settings():
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
         data.sign_off_students = form.sign_off_students.data
+
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.datetime.now()
 
         flash('All changes saved')
 

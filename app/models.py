@@ -247,12 +247,31 @@ class ResearchGroup(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
+    # abbreviation for use in space-limited contexts
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True, unique=True)
+
+    # long-form name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
+    # optional website
     website = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
+    # active flag
     active = db.Column(db.Boolean())
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def disable(self):
@@ -304,6 +323,20 @@ class FacultyData(db.Model):
 
     # does this faculty want to sign off on students before they can apply?
     sign_off_students = db.Column(db.Boolean())
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def projects_offered(self, pclass):
@@ -396,6 +429,20 @@ class StudentData(db.Model):
     programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
     programme = db.relationship('DegreeProgramme', backref=db.backref('students', lazy='dynamic'))
 
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
 
 class DegreeType(db.Model):
     """
@@ -409,6 +456,20 @@ class DegreeType(db.Model):
 
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
     active = db.Column(db.Boolean())
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def disable(self):
@@ -448,6 +509,20 @@ class DegreeProgramme(db.Model):
 
     type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'), index=True)
     degree_type = db.relationship('DegreeType', backref=db.backref('degree_programmes', lazy='dynamic'))
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def disable(self):
@@ -495,6 +570,20 @@ class TransferableSkill(db.Model):
 
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
     active = db.Column(db.Boolean())
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def disable(self):
@@ -569,6 +658,20 @@ class ProjectClass(db.Model):
     programmes = db.relationship('DegreeProgramme', secondary=project_class_associations, lazy='dynamic',
                                  backref=db.backref('project_classes', lazy='dynamic'))
 
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
 
     def disable(self):
         """
@@ -625,6 +728,13 @@ class ProjectClassConfig(db.Model):
     pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
     project_class = db.relationship('ProjectClass', uselist=False, backref=db.backref('configs', lazy='dynamic'))
 
+    # who created this record, ie. initiated the rollover of the academic year?
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', uselist=False, foreign_keys=[creator_id])
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
     # are faculty requests to confirm projects open?
     requests_issued = db.Column(db.Boolean())
 
@@ -635,11 +745,25 @@ class ProjectClassConfig(db.Model):
     # made these available to students?
     live = db.Column(db.Boolean())
 
+    # who signed-off on go live event?
+    golive_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    golive_by = db.relationship('User', uselist=False, foreign_keys=[golive_id])
+
+    # golive timestamp
+    golive_timestamp = db.Column(db.DateTime())
+
     # deadline for students to make their choices on the live system
     live_deadline = db.Column(db.DateTime())
 
     # is project selection closed?
     closed = db.Column(db.Boolean())
+
+    # who signed-off on close event?
+    closed_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    closed_by = db.relationship('User', uselist=False, foreign_keys=[closed_id])
+
+    # closed timestamp
+    closed_timestamp = db.Column(db.DateTime())
 
     # capture which faculty have still to sign-off on this configuration
     golive_required = db.relationship('FacultyData', secondary=golive_confirmation, lazy='dynamic',
@@ -731,6 +855,20 @@ class Supervisor(db.Model):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
     active = db.Column(db.Boolean())
 
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
 
     def disable(self):
         """
@@ -804,6 +942,20 @@ class Project(db.Model):
 
     # recommended reading
     reading = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def __init__(self, *args, **kwargs):
@@ -938,14 +1090,15 @@ class LiveProject(db.Model):
     number = db.Column(db.Integer())
 
     # project name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
 
     # free keywords describing scientific area
     keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # which faculty member owns this project?
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
-    owner = db.relationship('User', backref=db.backref('live_projects', lazy='dynamic'))
+    owner = db.relationship('User', foreign_keys=[owner_id],
+                            backref=db.backref('live_projects', lazy='dynamic'))
 
     # which research group is associated with this project?
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)

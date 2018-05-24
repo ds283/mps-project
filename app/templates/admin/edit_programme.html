@@ -20,8 +20,6 @@
 
         {{ programme_form.hidden_tag() }}
 
-        {{ edit_data(programme) }}
-
 {#        {{ wtf.form_errors(programme_form) }}#}
 
         {{ wtf.form_field(programme_form.degree_type) }}
@@ -30,4 +28,8 @@
         {{ wtf.form_field(programme_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(programme) }}
 {% endblock %}

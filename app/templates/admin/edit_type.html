@@ -20,8 +20,6 @@
 
         {{ type_form.hidden_tag() }}
 
-        {{ edit_data(type) }}
-
 {#        {{ wtf.form_errors(type_form) }}#}
 
         {{ wtf.form_field(type_form.name) }}
@@ -29,4 +27,8 @@
         {{ wtf.form_field(type_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(type) }}
 {% endblock %}

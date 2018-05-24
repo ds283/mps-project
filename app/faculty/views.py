@@ -21,7 +21,7 @@ from .forms import AddProjectForm, EditProjectForm, RolloverForm, GoLiveForm, Cl
     IssueFacultyConfirmRequestForm, ConfirmAllRequestsForm
 
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 
 _ConvenorDashboardSettingsTab=1
@@ -145,7 +145,9 @@ def add_project():
                        meeting_reqd=form.meeting.data,
                        team=form.team.data,
                        description=form.description.data,
-                       reading=form.reading.data)
+                       reading=form.reading.data,
+                       creator_id=current_user.id,
+                       creation_timestamp=datetime.datetime.now())
         db.session.add(data)
         db.session.commit()
 
@@ -181,6 +183,8 @@ def edit_project(id):
         data.team = form.team.data
         data.description = form.description.data
         data.reading = form.reading.data
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.datetime.now()
 
         data.validate_programmes()
 
@@ -226,7 +230,9 @@ def convenor_add_project(pclass_id):
                        meeting_reqd=form.meeting.data,
                        team=form.team.data,
                        description=form.description.data,
-                       reading=form.reading.data)
+                       reading=form.reading.data,
+                       creator_id=current_user.id,
+                       creation_timestamp=datetime.datetime.now())
         db.session.add(data)
         db.session.commit()
 
@@ -271,6 +277,8 @@ def convenor_edit_project(id, pclass_id):
         data.team = form.team.data
         data.description = form.description.data
         data.reading = form.reading.data
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.datetime.now()
 
         # ensure that list of preferred degree programmes is now consistent
         data.validate_programmes()
@@ -577,9 +585,16 @@ def convenor_dashboard(id, tabid):
     # build list of all active faculty, together with their FacultyData records
     faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData)
 
+    # restrict to number of faculty with zero available projects
+    faculty_enrolled = faculty.filter(FacultyData.enrollments.any(id=pclass.id))
+
     # count number of faculty enrolled on this project
-    fac_count = db.session.query(User).filter(User.active).join(FacultyData).filter(
-        FacultyData.enrollments.any(id=id)).count()
+    fac_count = faculty_enrolled.count()
+
+    fac_nooffer = 0
+    for item in faculty_enrolled.all():
+        if item.FacultyData.projects_offered(pclass) == 0:
+            fac_nooffer += 1
 
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False)
@@ -590,7 +605,7 @@ def convenor_dashboard(id, tabid):
     return render_template('faculty/convenor_dashboard.html',
                            golive_form=golive_form, issue_form=issue_form,
                            pclass=pclass, config=config, current_year=current_year, tabid=tabid,
-                           projects=pclass.projects, faculty=faculty, fac_count=fac_count,
+                           projects=pclass.projects, faculty=faculty, fac_count=fac_count, fac_nooffer=fac_nooffer,
                            selectors=selectors, submitters=submitters)
 
 
@@ -716,13 +731,14 @@ def go_live(id):
 
             # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
             # all project classes need their own LiveProject record
-            live_item = LiveProject(config_id=pclass.id,
+            live_item = LiveProject(config_id=config.id,
+                                    creator_id=current_user.id,
+                                    timestamp=datetime.datetime.now(),
                                     number=number,
                                     name=item.name,
                                     keywords=item.keywords,
                                     owner_id=item.owner_id,
                                     group_id=item.group_id,
-                                    project_classes=item.project_classes,
                                     skills=item.skills,
                                     meeting_reqd=item.meeting_reqd,
                                     team=item.team,
@@ -735,6 +751,8 @@ def go_live(id):
 
         config.live = True
         config.live_deadline = form.live_deadline.data
+        config.golive_id = current_user.id
+        config.golive_timestamp = datetime.datetime.now()
 
         db.session.commit()
 
@@ -758,6 +776,9 @@ def close_selections(id):
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     config.closed = True
+    config.closed_id = current_user.id
+    config.closed_timestamp = datetime.datetime.now()
+
     db.session.commit()
 
     flash('Student selections for{name} {yeara}-{yearb} have now been closed'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
@@ -1358,6 +1379,8 @@ def rollover(pid, configid):
     # generate a new ProjectClassConfig for this year
     new_config = ProjectClassConfig(year=current_year,
                                     pclass_id=pid,
+                                    creator_id=current_user.id,
+                                    timestamp=datetime.datetime.now(),
                                     requests_issued=False,
                                     request_deadline=None,
                                     live=False,

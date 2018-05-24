@@ -11,7 +11,7 @@
 from flask_security import current_user
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError, \
-    TextAreaField, DateField
+    TextAreaField, DateField, BooleanField
 from wtforms.validators import DataRequired
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
@@ -79,6 +79,10 @@ class ProjectMixin():
     meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
                        (Project.MEETING_NONE, "Prefer not to meet")]
     meeting = SelectField('Meeting required?', choices=meeting_options, coerce=int)
+
+    capacity = IntegerField('Maximum capacity', description='Optional. Used only if enforce option is selected')
+
+    enforce_capacity = BooleanField('Enforce maximum capacity')
 
     # allow team to be empty (but then the project is not offered)
     team = CheckboxQuerySelectMultipleField('Supervisory team',

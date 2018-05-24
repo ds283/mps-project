@@ -1094,6 +1094,7 @@ def add_project_class():
                             supervisor_carryover=form.supervisor_carryover.data,
                             submissions=form.submissions.data,
                             convenor=form.convenor.data,
+                            selection_open_to_all=form.selection_open_to_all.data,
                             programmes=form.programmes.data,
                             initial_choices=form.initial_choices.data,
                             switch_choices=form.switch_choices.data,
@@ -1111,7 +1112,8 @@ def add_project_class():
                                     live=False,
                                     closed=False,
                                     creator_id=current_user.id,
-                                    creation_timestamp=datetime.now())
+                                    creation_timestamp=datetime.now(),
+                                    submission_period=1)
 
         db.session.add(config)
 
@@ -1147,6 +1149,7 @@ def edit_project_class(id):
         data.supervisor_carryover = form.supervisor_carryover.data
         data.submissions = form.submissions.data
         data.convenor = form.convenor.data
+        data.selection_open_to_all = form.selection_open_to_all.data
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data
         data.switch_choices = form.switch_choices.data

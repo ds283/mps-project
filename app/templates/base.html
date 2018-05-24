@@ -27,6 +27,9 @@
             </a></li>
         {% endfor %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
+            {% if pclasses and pclasses.count() > 0 %}
+                <li role="separator" class="divider"></li>
+            {% endif %}
             <li><a href="{{ url_for('faculty.convenor_dashboard', id=0, tabid=0) }}">
                 Unattached projects
             </a></li>
@@ -88,6 +91,8 @@
                                 <li><a href="{{ url_for('admin.edit_users') }}">
                                     <i class="fa fa-pencil"></i> Users
                                 </a></li>
+                                <li role="separator" class="divider"></li>
+                                <li class="dropdown-header">Project components</li>
                                 <li><a href="{{ url_for('admin.edit_skills') }}">
                                     <i class="fa fa-pencil"></i> Transferable skills
                                 </a></li>
@@ -95,6 +100,8 @@
                                     <i class="fa fa-pencil"></i> Supervisory team
                                 </a></li>
                                 {% if current_user.has_role('root') %}
+                                    <li role="separator" class="divider"></li>
+                                    <li class="dropdown-header">Sysadmin only</li>
                                     <li><a href="{{ url_for('admin.edit_project_classes') }}">
                                         <i class="fa fa-pencil"></i> Project types
                                     </a></li>
@@ -104,6 +111,7 @@
                                     <li><a href="{{ url_for('admin.edit_degree_programmes') }}">
                                         <i class="fa fa-pencil"></i> Degree programmes
                                     </a></li>
+                                    <li role="separator" class="divider"></li>
                                     <li><a href="{{ url_for('admin.global_rollover') }}">
                                         Roll over academic year
                                     </a></li>

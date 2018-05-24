@@ -1,4 +1,5 @@
 {% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
 
 {% extends "security/index.html" %}
 
@@ -16,7 +17,10 @@
     {% else %}
         <form action="{{ url_for('admin.add_degree_programme') }}" method="POST" name="programme_form">
     {% endif %}
+
         {{ programme_form.hidden_tag() }}
+
+        {{ edit_data(programme) }}
 
 {#        {{ wtf.form_errors(programme_form) }}#}
 

@@ -832,7 +832,7 @@ def edit_degree_type(id):
 
         return redirect(url_for('admin.edit_degree_programmes'))
 
-    return render_template('admin/edit_type.html;', type_form=form, programme=degree_type, title='Edit degree type')
+    return render_template('admin/edit_type.html', type_form=form, type=degree_type, title='Edit degree type')
 
 
 @admin.route('/make_type_active/<int:id>')
@@ -1241,6 +1241,8 @@ def edit_supervisor(id):
 
     data = Supervisor.query.get_or_404(id)
     form = EditSupervisorForm(obj=data)
+
+    form.supervisor = data
 
     if form.validate_on_submit():
 

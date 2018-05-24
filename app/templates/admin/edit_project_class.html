@@ -1,4 +1,5 @@
 {% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
 
 {% extends "security/index.html" %}
 
@@ -20,7 +21,10 @@
     {% else %}
         <form action="{{ url_for('admin.add_project_class') }}" method="POST" name="project_form">
     {% endif %}
+
         {{ project_form.hidden_tag() }}
+
+        {{ edit_data(project_class) }}
 
 {#        {{ wtf.form_errors(project_form) }}#}
 

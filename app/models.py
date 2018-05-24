@@ -648,6 +648,9 @@ class ProjectClass(db.Model):
     # how many switch choices should students be allowed?
     switch_choices = db.Column(db.Integer())
 
+    # is project selection open to all students?
+    selection_open_to_all = db.Column(db.Boolean())
+
     # project convenor; must be a faculty member, so might be pereferable to link to faculty_data table,
     # but to generate eg. tables we will need to extract usernames and emails
     # For that purpose, it's better to link to the User table directly
@@ -736,6 +739,9 @@ class ProjectClassConfig(db.Model):
     # creation timestamp
     creation_timestamp = db.Column(db.DateTime())
 
+
+    # SELECTION MANAGEMENT
+
     # are faculty requests to confirm projects open?
     requests_issued = db.Column(db.Boolean())
 
@@ -769,6 +775,11 @@ class ProjectClassConfig(db.Model):
     # capture which faculty have still to sign-off on this configuration
     golive_required = db.relationship('FacultyData', secondary=golive_confirmation, lazy='dynamic',
                                       backref=db.backref('live', lazy='dynamic'))
+
+    # SUBMISSION MANAGEMENT
+
+    # submission period
+    submission_period = db.Column(db.Integer())
 
 
     @property
@@ -935,6 +946,13 @@ class Project(db.Model):
     MEETING_NONE = 3
     meeting_reqd = db.Column(db.Integer())
 
+    # maximum number of students
+    capacity = db.Column(db.Integer())
+
+    # impose limitation on capacity
+    enforce_capacity = db.Column(db.Boolean())
+
+    # supervisory roles
     team = db.relationship('Supervisor', secondary=project_supervision, lazy='dynamic',
                            backref=db.backref('projects', lazy='dynamic'))
 
@@ -1113,6 +1131,12 @@ class LiveProject(db.Model):
     programmes = db.relationship('DegreeProgramme', secondary=live_project_programmes, lazy='dynamic',
                                  backref=db.backref('live_projects', lazy='dynamic'))
 
+    # maximum number of students
+    capacity = db.Column(db.Integer())
+
+    # impose limitation on capacity
+    enforce_capacity = db.Column(db.Boolean())
+
     # is a meeting required before selecting this project?
     MEETING_REQUIRED = 1
     MEETING_OPTIONAL = 2
@@ -1232,6 +1256,16 @@ class SelectingStudent(db.Model):
         academic_year = self.get_academic_year
 
         return academic_year == self.config.project_class.year-1
+
+
+    @property
+    def is_optional(self):
+        """
+        Determine whether this selection is optional
+        :return:
+        """
+
+        return self.user.student_data.programme in self.config.project_class.programmes
 
 
     @property

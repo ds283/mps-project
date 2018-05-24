@@ -390,7 +390,7 @@ class ProjectClassMixin():
     year = SelectField('Runs in year', choices=year_choices, coerce=int,
                        description='Select the academic year in which students join the project')
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
-                         description='Select for how many academic years students participate')
+                         description='For how many academic years do students participate in the project?')
 
     require_confirm = BooleanField('Require faculty to confirm projects yearly')
 
@@ -399,15 +399,18 @@ class ProjectClassMixin():
     submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
                               description='Select number of marked reports submitted per academic year')
 
-    initial_choices = IntegerField('Number of initial project choices',
-                                   description='Select number of choices students should make before joining')
+    initial_choices = IntegerField('Number of initial project preferences',
+                                   description='Select number of preferences students should list before joining')
 
-    switch_choices = IntegerField('Number of subsequent project choices',
-                                      description='If switching is allowed in later years, number of options to allow')
+    switch_choices = IntegerField('Number of subsequent project preferences',
+                                      description='Number of preferences to allow in subsequent years, if switching is allowed')
 
     convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
-    programmes = CheckboxQuerySelectMultipleField('Attached to degree programmes', query_factory=GetActiveDegreeProgrammes,
+    selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',
+                                         description='Not normally required, but use for Research Placement projects')
+
+    programmes = CheckboxQuerySelectMultipleField('Auto-enroll students from degree programmes', query_factory=GetActiveDegreeProgrammes,
                                                   get_label=BuildDegreeProgrammeName,
                                                   validators=[DataRequired(message='At least one degree programme should be selected')])
 

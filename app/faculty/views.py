@@ -228,6 +228,8 @@ def convenor_add_project(pclass_id):
                        skills=[],
                        programmes=[],
                        meeting_reqd=form.meeting.data,
+                       capacity=form.capacity.data,
+                       enforce_capacity=form.enforce_capacity.data,
                        team=form.team.data,
                        description=form.description.data,
                        reading=form.reading.data,
@@ -274,6 +276,8 @@ def convenor_edit_project(id, pclass_id):
         data.group = form.group.data
         data.project_classes = form.project_classes.data
         data.meeting_reqd = form.meeting.data
+        data.capacity = form.capacity.data
+        data.enforce_capacity = form.enforce_capacity.data
         data.team = form.team.data
         data.description = form.description.data
         data.reading = form.reading.data
@@ -583,7 +587,7 @@ def convenor_dashboard(id, tabid):
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
     # build list of all active faculty, together with their FacultyData records
-    faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData)
+    faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
 
     # restrict to number of faculty with zero available projects
     faculty_enrolled = faculty.filter(FacultyData.enrollments.any(id=pclass.id))
@@ -740,6 +744,8 @@ def go_live(id):
                                     owner_id=item.owner_id,
                                     group_id=item.group_id,
                                     skills=item.skills,
+                                    capacity=item.capacity,
+                                    enforce_capacity=item.enforce_capacity,
                                     meeting_reqd=item.meeting_reqd,
                                     team=item.team,
                                     description=item.description,
@@ -1385,7 +1391,8 @@ def rollover(pid, configid):
                                     request_deadline=None,
                                     live=False,
                                     live_deadline=None,
-                                    closed=False)
+                                    closed=False,
+                                    submission_period=1)
     db.session.add(new_config)
 
     # generate SubmittingStudent records for each student who will be in the correct submitting year
@@ -1393,9 +1400,8 @@ def rollover(pid, configid):
 
         academic_year = current_year - student.cohort + 1
 
-        if academic_year >= pclass.year - 1 \
-                and academic_year < pclass.year + pclass.extent - 1 \
-                and student.programme in pclass.programmes:
+        if pclass.year - 1 <= academic_year < pclass.year + pclass.extent - 1 \
+                and (pclass.selection_open_to_all or student.programme in pclass.programmes):
 
             # will be a selecting student
             selector = SelectingStudent(config_id=new_config.id,
@@ -1403,8 +1409,7 @@ def rollover(pid, configid):
                                         retired=False)
             db.session.add(selector)
 
-        if academic_year >= pclass.year \
-                and academic_year < pclass.year + pclass.extent \
+        if pclass.year <= academic_year < pclass.year + pclass.extent \
                 and student.programme in pclass.programmes:
 
             # will be a submitting student

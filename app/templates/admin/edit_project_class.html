@@ -41,6 +41,16 @@
                     <p class="help-block">{{ error }}</p>
                 {% endfor %}
             {% endif %}
+
+            <hr class="intro-divider">
+            {% if project_form.selection_open_to_all.description %}
+                <div>{{ project_form.selection_open_to_all.description }}</div>
+            {% endif %}
+            <div class="checkbox">
+                <label>
+                    {{ project_form.selection_open_to_all()|safe }} {{ project_form.selection_open_to_all.label.text|safe }}
+                </label>
+            </div>
         </div>
 
         {{ wtf.form_field(project_form.year) }}

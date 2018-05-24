@@ -146,12 +146,38 @@
                                                 {% if num_choices == 1 %}
                                                     {% set numpl = '' %}
                                                 {% endif %}
-                                                {% if sel.is_initial_selection %}
-                                                    This is your initial selection.
+                                                {% if sel.is_optional %}
+                                                    This project is <strong>optional</strong> for your degree programme.
+                                                    If you wish to participate, add bookmarks to keep track of the projects
+                                                    in which you are interested.
+                                                    Drag-and-drop your bookmarks using the drag handle
+                                                    to rank them in order of preference.
+
+                                                    Some projects may require the project supervisor to confirm that
+                                                    a pre-selection meeting has taken place, or least been arranged,
+                                                    before the project becomes available.
+
+                                                    If you wish to enroll
+                                                    you should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
                                                 {% else %}
-                                                    Add bookmarks if you wish to switch projects or supervisors.
+                                                    {% if sel.is_initial_selection %}
+                                                        This project is <strong>mandatory</strong> for your degree programme.
+                                                        Add bookmarks to keep track of the projects in which you are interested,
+                                                        then drag-and-drop to rank them in order of preference.
+
+                                                        Some projects may require the project supervisor to confirm that
+                                                        a pre-selection meeting has taken place, or least been arranged,
+                                                        before the project becomes available.
+
+                                                        You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                                    {% else %}
+                                                        If you wish to <strong>switch supervisors</strong>,
+                                                        then add bookmarks for each project of interest.
+                                                        Drag-and-drop your bookmarks to indicate your order of preference.
+
+                                                        You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                                    {% endif %}
                                                 {% endif %}
-                                                You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
                                             </div>
                                             <div class="col-xs-3">
                                                 <div class="pull-right">

@@ -41,9 +41,11 @@
         {% endif %}
 
         <div class="well {% if project_form.project_classes.errors %}has-error{% endif %}">
-            Select the project classes for which this project should be made available
+            <p>Select the project classes for which this project should be made available</p>
             {% for widget in project_form.project_classes %}
                 {{ wtf.form_field(widget) }}
+            {% else %}
+                <span class="label label-danger">No project classes currently available</span>
             {% endfor %}
             {% if project_form.project_classes.errors %}
                 {% for error in project_form.project_classes.errors %}
@@ -54,11 +56,17 @@
 
         {{ wtf.form_field(project_form.meeting) }}
 
+        {{ wtf.form_field(project_form.enforce_capacity) }}
+        {{ wtf.form_field(project_form.capacity) }}
+
         <div class="well {% if project_form.team.errors %}has-error{% endif %}">
-            Who will be part of the supervisory team?
+            <p>Who will be part of the supervisory team?</p>
             {% for widget in project_form.team %}
                 {{ wtf.form_field(widget) }}
-            {% endfor %}            {% if project_form.team.errors %}
+            {% else %}
+                <span class="label label-danger">No supervisory roles currently available</span>
+            {% endfor %}
+            {% if project_form.team.errors %}
                 {% for error in project_form.team.errors %}
                     <p class="help-block">{{ error }}</p>
                 {% endfor %}

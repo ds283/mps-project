@@ -23,7 +23,7 @@ class Config(object):
 
     # read database URI from DATABASE_URI environment variable, or
     # else store locally in this directory
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI') or \
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'MPS-Project.sqlite')
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False         # suppress notifications on database changes

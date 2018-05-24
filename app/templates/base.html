@@ -21,6 +21,9 @@
         </a>
 
         <ul class="dropdown-menu">
+        {% if pclasses and pclasses.count() > 0 %}
+            <li class="dropdown-header">Convenorships</li>
+        {% endif %}
         {% for project_class in pclasses %}
             <li><a href="{{ url_for('faculty.convenor_dashboard', id=project_class.id, tabid=1) }}">
                 <i class="fa fa-pencil"></i> {{ project_class.name }}
@@ -138,6 +141,8 @@
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('home.homepage') }}">Dashboard</a></li>
                                 {% if current_user.has_role('faculty') %}
+                                    <li role="separator" class="divider"></li>
+                                    <li class="dropdown-header">Faculty options</li>
                                     <li>
                                         <a href="{{ url_for('admin.faculty_settings') }}">
                                             <i class="fa fa-user"></i> Settings
@@ -154,6 +159,7 @@
                                         <i class="fa fa-pencil"></i> Change password
                                     </a>
                                 </li>
+                                <li role="separator" class="divider"></li>
                                 <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                             </ul>
                         </li>

@@ -145,7 +145,7 @@ def create_faculty(role):
                            use_academic_title=form.use_academic_title.data,
                            sign_off_students=form.sign_off_students.data,
                            creator_id=current_user.id,
-                           creator_timestamp=datetime.datetime.now())
+                           creator_timestamp=datetime.now())
         db.session.add(data)
 
         db.session.commit()
@@ -183,7 +183,7 @@ def create_student(role):
                            cohort=form.cohort.data,
                            programme=form.programme.data,
                            creator_id=current_user.id,
-                           creator_timestamp=datetime.datetime.now())
+                           creator_timestamp=datetime.now())
         db.session.add(data)
 
         db.session.commit()
@@ -442,7 +442,7 @@ def edit_faculty(id):
         data.use_academic_title = form.use_academic_title.data
         data.sign_off_students = form.sign_off_students.data
         data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.datetime.now()
+        data.last_edit_timestamp = datetime.now()
 
         _datastore.commit()
 
@@ -493,7 +493,7 @@ def edit_student(id):
         data.cohort = form.cohort.data
         data.programme_id = form.programme.data.id
         data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.datetime.now()
+        data.last_edit_timestamp = datetime.now()
 
         _datastore.commit()
 
@@ -700,7 +700,7 @@ def add_group():
                               website=form.website.data,
                               active=True,
                               creator_id=current_user.id,
-                              creation_timestamp=datetime.datetime.now());
+                              creation_timestamp=datetime.now());
         db.session.add(group)
         db.session.commit()
 
@@ -729,7 +729,7 @@ def edit_group(id):
         group.name = form.name.data
         group.website = form.website.data
         group.last_edit_id = current_user.id
-        group.last_edit_timestamp = datetime.datetime.now()
+        group.last_edit_timestamp = datetime.now()
 
         db.session.commit()
 
@@ -799,7 +799,7 @@ def add_degree_type():
         degree_type = DegreeType(name=form.name.data,
                                  active=True,
                                  creator_id=current_user.id,
-                                 creation_timestamp=datetime.datetime.now())
+                                 creation_timestamp=datetime.now())
         db.session.add(degree_type)
         db.session.commit()
 
@@ -826,7 +826,7 @@ def edit_degree_type(id):
 
         degree_type.name = form.name.data
         degree_type.last_edit_id = current_user.id
-        degree_type.last_edit_timestamp = datetime.datetime.now()
+        degree_type.last_edit_timestamp = datetime.now()
 
         db.session.commit()
 
@@ -890,7 +890,7 @@ def add_degree_programme():
                                     active=True,
                                     type_id=degree_type.id,
                                     creator_id=current_user.id,
-                                    creation_timestamp=datetime.datetime.now())
+                                    creation_timestamp=datetime.now())
         db.session.add(programme)
         db.session.commit()
 
@@ -918,7 +918,7 @@ def edit_degree_programme(id):
         programme.name = form.name.data
         programme.type_id = form.degree_type.data.id
         programme.last_edit_id = current_user.id
-        programme.last_edit_timestamp = datetime.datetime.now()
+        programme.last_edit_timestamp = datetime.now()
 
         db.session.commit()
 
@@ -986,7 +986,7 @@ def add_skill():
 
         skill = TransferableSkill(name=form.name.data,
                                   creator_id=current_user.id,
-                                  creation_timestamp=datetime.datetime.now())
+                                  creation_timestamp=datetime.now())
         db.session.add(skill)
         db.session.commit()
 
@@ -1013,7 +1013,7 @@ def edit_skill(id):
 
         skill.name = form.name.data
         skill.last_edit_id = current_user.id
-        skill.last_edit_timestamp = datetime.datetime.now()
+        skill.last_edit_timestamp = datetime.now()
 
         db.session.commit()
 
@@ -1099,7 +1099,7 @@ def add_project_class():
                             switch_choices=form.switch_choices.data,
                             active=True,
                             creator_id=current_user.id,
-                            creation_timestamp=datetime.datetime.now())
+                            creation_timestamp=datetime.now())
         db.session.add(data)
 
         # generate a corresponding configuration record for the current academic year
@@ -1111,7 +1111,7 @@ def add_project_class():
                                     live=False,
                                     closed=False,
                                     creator_id=current_user.id,
-                                    creation_timestamp=datetime.datetime.now())
+                                    creation_timestamp=datetime.now())
 
         db.session.add(config)
 
@@ -1151,7 +1151,7 @@ def edit_project_class(id):
         data.initial_choices = form.initial_choices.data
         data.switch_choices = form.switch_choices.data
         data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.datetime.now()
+        data.last_edit_timestamp = datetime.now()
 
         db.session.commit()
 
@@ -1221,7 +1221,7 @@ def add_supervisor():
         data = Supervisor(name=form.name.data,
                           active=True,
                           creator_id=current_user.id,
-                          creation_timestamp=datetime.datetime.now())
+                          creation_timestamp=datetime.now())
         db.session.add(data)
         db.session.commit()
 
@@ -1246,7 +1246,7 @@ def edit_supervisor(id):
 
         data.name = form.name.data
         data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.datetime.now()
+        data.last_edit_timestamp = datetime.now()
 
         db.session.commit()
 
@@ -1311,7 +1311,7 @@ def faculty_settings():
         data.sign_off_students = form.sign_off_students.data
 
         data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.datetime.now()
+        data.last_edit_timestamp = datetime.now()
 
         flash('All changes saved')
 

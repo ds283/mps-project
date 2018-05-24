@@ -18,7 +18,7 @@ from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, Sub
     Bookmark
 
 import re
-import datetime
+from datetime import date, datetime
 import parse
 
 
@@ -174,8 +174,7 @@ def view_project(sid, pid):
     else:
         project.page_views += 1
 
-    now = datetime.datetime.today()
-    project.last_view = now
+    project.last_view = datetime.today()
     db.session.commit()
 
     # build list of keywords

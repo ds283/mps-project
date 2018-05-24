@@ -50,7 +50,7 @@
         {{ wtf.form_field(project_form.require_confirm) }}
         {{ wtf.form_field(project_form.supervisor_carryover) }}
 
-        {{ wtf.form_field(project_form.submit) }}
+        {{ wtf.form_field(project_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

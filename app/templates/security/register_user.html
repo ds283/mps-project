@@ -73,7 +73,7 @@
             {{ wtf.form_field(user_form.sign_off_students) }}
         {% endif %}
 
-        {{ wtf.form_field(user_form.submit) }}
+        {{ wtf.form_field(user_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

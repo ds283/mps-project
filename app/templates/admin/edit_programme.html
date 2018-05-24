@@ -23,7 +23,7 @@
         {{ wtf.form_field(programme_form.degree_type) }}
         {{ wtf.form_field(programme_form.name) }}
 
-        {{ wtf.form_field(programme_form.submit) }}
+        {{ wtf.form_field(programme_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

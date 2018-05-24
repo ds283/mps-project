@@ -60,7 +60,7 @@
     {{ wtf.form_field(settings_form.use_academic_title) }}
     {{ wtf.form_field(settings_form.sign_off_students) }}
 
-    {{ wtf.form_field(settings_form.submit) }}
+    {{ wtf.form_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

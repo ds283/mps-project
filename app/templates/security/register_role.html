@@ -17,7 +17,7 @@
         {{ role_form.hidden_tag() }}
 
         {{ wtf.form_field(role_form.roles) }}
-        {{ wtf.form_field(role_form.submit) }}
+        {{ wtf.form_field(role_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

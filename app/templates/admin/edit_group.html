@@ -25,7 +25,7 @@
 
         {{ wtf.form_field(group_form.website) }}
 
-        {{ wtf.form_field(group_form.submit) }}
+        {{ wtf.form_field(group_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}

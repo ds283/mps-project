@@ -42,7 +42,7 @@
                 <hr class="intro-divider">
 
                 <div class="panel panel-primary">
-                    <div class="panel-heading">Project description</div>
+                    <div class="panel-heading">Project details</div>
                     <div class="panel-body">
                         <div class="panel panel-default ataglance-background">
                             <div class="panel-heading">
@@ -148,7 +148,7 @@
                             </div>
                         </div>
 
-                        <h4>Details</h4>
+                        <h4>Description</h4>
                         <div class="project-description">{{ project.description|markdown|bclean|blinkify|safe }}</div>
 
                         {% if project.reading and project.reading is not none %}

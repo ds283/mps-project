@@ -324,6 +324,9 @@ class FacultyData(db.Model):
     # does this faculty want to sign off on students before they can apply?
     sign_off_students = db.Column(db.Boolean())
 
+    # office
+    office = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)

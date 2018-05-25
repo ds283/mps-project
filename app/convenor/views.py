@@ -302,7 +302,7 @@ def attach_skills(id, pclass_id):
             return redirect(request.referrer)
 
     # get list of active skills
-    skills = TransferableSkill.query.filter_by(active=True)
+    skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name)
 
     return render_template('convenor/attach_skills.html', data=data, skills=skills, pclass_id=pclass_id)
 

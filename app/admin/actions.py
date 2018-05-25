@@ -15,6 +15,8 @@ from flask_security.utils import hash_password, do_flash, config_value, send_mai
 from flask_security.signals import user_registered
 from flask_security.confirmable import generate_confirmation_link
 
+from datetime import datetime
+
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -23,21 +25,36 @@ _datastore = LocalProxy(lambda: _security.datastore)
 def register_user(**kwargs):
 
     confirmation_link, token = None, None
-    kwargs['password'] = hash_password(kwargs['password'])
+
+    if ('null_password' in kwargs and kwargs['null_password']) or len(kwargs['password']) == 0:
+
+        kwargs['password'] = None
+
+    else:
+
+        kwargs['password'] = hash_password(kwargs['password'])
 
     user = _datastore.create_user(**kwargs)
 
     _datastore.commit()
 
     if _security.confirmable:
-        confirmation_link, token = generate_confirmation_link(user)
-        do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
 
-        user_registered.send(current_app._get_current_object(),
-                             user=user, confirm_token=token)
+        if 'ask_confirm' in kwargs and kwargs['ask_confirm']:
 
-        if config_value('SEND_REGISTER_EMAIL'):
-            send_mail(config_value('EMAIL_SUBJECT_REGISTER'), user.email,
-                      'welcome', user=user, confirmation_link=confirmation_link)
+            confirmation_link, token = generate_confirmation_link(user)
+            do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
+
+            user_registered.send(current_app._get_current_object(),
+                                 user=user, confirm_token=token)
+
+            if config_value('SEND_REGISTER_EMAIL'):
+                send_mail(config_value('EMAIL_SUBJECT_REGISTER'), user.email,
+                          'welcome', user=user, confirmation_link=confirmation_link)
+
+        else:
+
+            user.confirmed_at = datetime.now()
+            _datastore.commit()
 
     return user

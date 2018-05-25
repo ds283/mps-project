@@ -32,11 +32,15 @@
             <form action="{{ url_for('admin.create_student', role=role) }}" method="POST" name="user_form">
         {% endif %}
     {% endif %}
+
         {{ user_form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(user_form) }}#}
 
         {{ wtf.form_field(user_form.email) }}
+        {% if user_form.ask_confirm %}
+            {{ wtf.form_field(user_form.ask_confirm) }}
+        {% endif %}
         {{ wtf.form_field(user_form.username) }}
 
         {% if user_form.password %}
@@ -44,6 +48,9 @@
         {% endif %}
         {% if user_form.password_confirm %}
             {{ wtf.form_field(user_form.password_confirm) }}
+        {% endif %}
+        {% if user_form.null_password %}
+            {{ wtf.form_field(user_form.null_password) }}
         {% endif %}
 
         {{ wtf.form_field(user_form.first_name) }}
@@ -63,6 +70,9 @@
 
         {# FACULTY FIELDS #}
 
+        {% if user_form.office %}
+            {{ wtf.form_field(user_form.office) }}
+        {% endif %}
         {% if user_form.academic_title %}
             {{ wtf.form_field(user_form.academic_title) }}
         {% endif %}

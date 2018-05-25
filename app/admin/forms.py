@@ -13,7 +13,7 @@ from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, 
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, ValidationError
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
@@ -137,6 +137,11 @@ def password_strength(form, field):
     first_name = form.first_name.data or ''
     last_name = form.last_name.data or ''
 
+    # password length validation doesn't stop the validation chain if the password is too short
+    # in this case, just exit because validating the password doesn't make sense
+    if len(field.data) < 6:
+        return
+
     results = zxcvbn(field.data, user_inputs=[username, first_name, last_name])
 
     if 'score' in results and int(results['score']) <= 2:
@@ -167,6 +172,28 @@ def password_strength(form, field):
                     msg += '.'
 
         raise ValidationError(msg)
+
+
+class OptionalIf(Optional):
+    """
+    Makes a field optional if another field is set true
+    """
+
+    def __init__(self, other_field_name, *args, **kwargs):
+
+        self.other_field_name = other_field_name
+        super(OptionalIf, self).__init__(*args, **kwargs)
+
+
+    def __call__(self, form, field):
+
+        other_field = form._fields.get(self.other_field_name)
+
+        if other_field is None:
+            return
+
+        if bool(other_field.data):
+            super(OptionalIf, self).__call__(form, field)
 
 
 def GetActiveDegreeTypes():
@@ -215,20 +242,26 @@ class EditEmailFormMixin():
         validators=[email_required, email_validator, unique_or_original_email])
 
 
+class AskConfirmFormMixin():
+
+    ask_confirm = BooleanField('Send confirmation email')
+
+
 # redefine NewPasswordFormMixin from flask-security to check password strength
 class NewPasswordFormMixin():
 
+    null_password = BooleanField('Generate null password')
+
     password = PasswordField(
         get_form_field_label('password'),
-        validators=[password_required, password_length, password_strength])
+        validators=[OptionalIf('null_password'), password_length, password_strength])
 
 
 class PasswordConfirmFormMixin():
 
     password_confirm = PasswordField(
         get_form_field_label('retype_password'),
-        validators=[EqualTo('password', message='RETYPE_PASSWORD_MISMATCH'),
-                    password_required])
+        validators=[OptionalIf('null_password'), EqualTo('password', message='RETYPE_PASSWORD_MISMATCH')])
 
 
 class RoleMixin():
@@ -255,18 +288,25 @@ class FacultyDataMixin():
     use_academic_title = BooleanField('Use academic title', default=True,
                                       description='User Dr, Professor or similar in student-facing web pages')
     sign_off_students = BooleanField('Ask to confirm student meetings', default=True,
-                                     description='If meetings are required before project selection, confirmation is needed before allowing students to sign uip ')
+                                     description='If meetings are required before project selection, '
+                                                 'confirmation is needed before allowing students to sign up ')
+
+    office = StringField('Office', validators=[DataRequired(message='Please enter your office details to help '
+                                                                    'students find you')])
 
 
 class StudentDataMixin():
 
     exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
+
     cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
-    programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes, get_label=BuildDegreeProgrammeName)
+
+    programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes,
+                                 get_label=BuildDegreeProgrammeName)
 
 
-class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, UniqueEmailFormMixin, NewPasswordFormMixin,
-                         FirstLastNameMixin):
+class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmFormMixin,
+                         UniqueEmailFormMixin, NewPasswordFormMixin, FirstLastNameMixin):
 
     pass
 

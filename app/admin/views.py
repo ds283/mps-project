@@ -144,8 +144,9 @@ def create_faculty(role):
                            academic_title=form.academic_title.data,
                            use_academic_title=form.use_academic_title.data,
                            sign_off_students=form.sign_off_students.data,
+                           office=form.office.data,
                            creator_id=current_user.id,
-                           creator_timestamp=datetime.now())
+                           creation_timestamp=datetime.now())
         db.session.add(data)
 
         db.session.commit()
@@ -183,7 +184,7 @@ def create_student(role):
                            cohort=form.cohort.data,
                            programme=form.programme.data,
                            creator_id=current_user.id,
-                           creator_timestamp=datetime.now())
+                           creation_timestamp=datetime.now())
         db.session.add(data)
 
         db.session.commit()
@@ -393,7 +394,7 @@ def edit_office(id):
     if form.validate_on_submit():
 
         resend_confirmation = False
-        if form.email.data != user.email:
+        if form.email.data != user.email and form.ask_confirm.data is True:
 
             user.confirmed_at = None
             resend_confirmation = True
@@ -429,7 +430,7 @@ def edit_faculty(id):
     if form.validate_on_submit():
 
         resend_confirmation = False
-        if form.email.data != user.email:
+        if form.email.data != user.email and form.ask_confirm.data is True:
             user.confirmed_at = None
             resend_confirmation = True
 
@@ -441,6 +442,7 @@ def edit_faculty(id):
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
         data.sign_off_students = form.sign_off_students.data
+        data.office = form.office.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 
@@ -462,6 +464,7 @@ def edit_faculty(id):
             form.academic_title.data = data.academic_title
             form.use_academic_title.data = data.use_academic_title
             form.sign_off_students.data = data.sign_off_students
+            form.office.data = data.office
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
 
@@ -477,7 +480,7 @@ def edit_student(id):
 
     data = StudentData.query.get_or_404(id)
 
-    if form.validate_on_submit():
+    if form.validate_on_submit() and form.ask_confirm.data is True:
 
         resend_confirmation = False
         if form.email.data != user.email:

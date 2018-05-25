@@ -527,15 +527,15 @@
                                     {% if config.project_class.require_confirm %}
                                         {% if config.requests_issued %}
                                             {% if current_user.faculty_data in config.golive_required %}
-                                                Outstanding
+                                                <span class="label label-warning">Outstanding</span>
                                             {% else %}
-                                                Confirmed
+                                                <span class="label label-success">Confirmed</span>
                                             {% endif %}
                                         {% else %}
-                                            Not issued
+                                            <span class="label label-danger">Not yet issued</span>
                                         {% endif %}
                                     {% else %}
-                                        Disabled
+                                        <span class="label label-default">Disabled</span>
                                     {% endif %}
                                 </td>
 

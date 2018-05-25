@@ -1309,15 +1309,18 @@ def faculty_settings():
     data = FacultyData.query.get_or_404(current_user.id)
 
     form = FacultySettingsForm(obj=data)
+    form.user = user
 
     if form.validate_on_submit():
 
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
+        user.username = form.username.data
 
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
         data.sign_off_students = form.sign_off_students.data
+        data.office = form.office.data
 
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
@@ -1334,6 +1337,7 @@ def faculty_settings():
 
             form.first_name.data = user.first_name
             form.last_name.data = user.last_name
+            form.username.data = user.username
 
     return render_template('admin/faculty_settings.html', settings_form=form, data=data,
                            project_classes=ProjectClass.query.filter_by(active=True))

@@ -54,9 +54,11 @@
         {% endif %}
     </div>
 
+    {{ wtf.form_field(settings_form.username) }}
     {{ wtf.form_field(settings_form.first_name) }}
     {{ wtf.form_field(settings_form.last_name) }}
 
+    {{ wtf.form_field(settings_form.office) }}
     {{ wtf.form_field(settings_form.academic_title) }}
     {{ wtf.form_field(settings_form.use_academic_title) }}
     {{ wtf.form_field(settings_form.sign_off_students) }}

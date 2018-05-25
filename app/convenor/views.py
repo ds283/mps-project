@@ -171,6 +171,19 @@ def add_project(pclass_id):
                        reading=form.reading.data,
                        creator_id=current_user.id,
                        creation_timestamp=datetime.now())
+
+        # ensure that list of preferred degree programmes is consistent
+        data.validate_programmes()
+
+        # auto-enroll if implied by current project class associations
+        owner = data.owner.faculty_data
+        for pclass in data.project_classes:
+
+            if owner not in pclass.enrolled_faculty.all():
+
+                owner.enrollments.append(pclass)
+                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.build_name(), pclass=pclass.name))
+
         db.session.add(data)
         db.session.commit()
 
@@ -381,7 +394,7 @@ def _render_unattached():
 
     projects = [proj for proj in Project.query.all() if not proj.offerable]
 
-    return render_template('faculty/unattached_dashboard.html', projects=projects)
+    return render_template('convenor/unattached_dashboard.html', projects=projects)
 
 
 @convenor.route('/force_confirm_all/<int:id>')

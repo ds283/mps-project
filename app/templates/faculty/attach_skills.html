@@ -19,10 +19,12 @@
                     {% if skill in data.skills %}
                         <a class="btn btn-success btn-sm selection-label" href="{{ url_for('faculty.remove_skill', projectid=data.id, skillid=skill.id) }}"><i class="fa fa-times"></i> {{ skill.name }}</a>
                     {% endif %}
+                {% else %}
+                    No skills currently attached.
                 {% endfor %}
                 </h4>
             {% else %}
-                <p>No current skills</p>
+                <p>No skills currently defined</p>
             {% endif %}
         </div>
         <div class="panel-footer">
@@ -32,10 +34,12 @@
                     {% if skill not in data.skills %}
                         <a class="btn btn-info selection-label" href="{{ url_for('faculty.add_skill', projectid=data.id, skillid=skill.id) }}"><i class="fa fa-plus"></i> {{ skill.name }}</a>
                     {% endif %}
+                {% else %}
+                    No skills available.
                 {% endfor %}
                 </h4>
             {% else %}
-                <p>No available skills</p>
+                <p>No skills currently defined</p>
             {% endif %}
         </div>
     </div>

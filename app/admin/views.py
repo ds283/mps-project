@@ -985,6 +985,7 @@ def add_skill():
     if form.validate_on_submit():
 
         skill = TransferableSkill(name=form.name.data,
+                                  active=True,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
         db.session.add(skill)

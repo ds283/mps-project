@@ -12,7 +12,7 @@ from flask_security import current_user
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError, \
     TextAreaField, DateField, BooleanField
-from wtforms.validators import DataRequired
+from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
@@ -80,7 +80,8 @@ class ProjectMixin():
                        (Project.MEETING_NONE, "Prefer not to meet")]
     meeting = SelectField('Meeting required?', choices=meeting_options, coerce=int)
 
-    capacity = IntegerField('Maximum capacity', description='Optional. Used only if enforce option is selected')
+    capacity = IntegerField('Maximum capacity', description='Optional. Used only if enforce option is selected',
+                            validators=[Optional()])
 
     enforce_capacity = BooleanField('Enforce maximum capacity')
 
@@ -89,12 +90,18 @@ class ProjectMixin():
                                             query_factory=GetSupervisorRoles, get_label='name')
 
     description = TextAreaField('Project description', render_kw={"rows": 20},
-                                description='Enter a description of your project. '
-                                            'You can use Markdown to add bold and italic, to generate lists, or to embed links. ',
+                                description=r'Enter a description of your project. '
+                                            r'You can use Markdown to add bold and italic, to generate lists, or to embed links. '
+                                            r'You can also use LaTeX markup for mathematics, which will be rendered using the '
+                                            r'MathJax plugin when viewed as a webpage. <strong>Note</strong> that MathJax '
+                                            r'expects $$ or \\[...]\] delimiters for displayed mathematics and \\(...\\) for inline equations. '
+                                            r'It does not support single dollar $ delimiters since these also occur frequently in '
+                                            r'non-mathematical contexts. Note that you need to double the slashes \\ compared to '
+                                            r'LaTeX, since otherwise they are incorrectly interpreted by the Markdown compiler.',
                                 validators=[DataRequired(message='A project description is required')])
 
     reading = TextAreaField('Recommended reading', render_kw={"rows": 10},
-                            description='Optional. Use Markdown for styling.')
+                            description='Optional. The same styling and LaTeX options are available.')
 
 
 class AddProjectForm(Form, ProjectMixin):

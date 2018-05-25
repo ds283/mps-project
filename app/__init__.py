@@ -22,6 +22,8 @@ from flaskext.markdown import Markdown
 from config import app_config
 from .models import db
 
+from mdx_smartypants import makeExtension
+
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
 
@@ -40,7 +42,7 @@ def create_app():
     bootstrap = Bootstrap(app)
     mail = Mail(app)
     bleach = Bleach(app)
-    md = Markdown(app)
+    md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
 
     app.config['BLEACH_ALLOWED_TAGS'] = markdown_tags
     app.config['BLEACH_ALLOWED_ATTRS'] = markdown_attrs

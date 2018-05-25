@@ -223,16 +223,14 @@ def BuildUserRealName(user):
 
 class UniqueUserNameMixin():
 
-    username = StringField(
-        'Username',
-        validators=[DataRequired(message='Username is required'), valid_username, globally_unique_username])
+    username = StringField('Username', validators=[DataRequired(message='Username is required'),
+                                                   valid_username, globally_unique_username])
 
 
 class EditUserNameMixin():
 
-    username = StringField(
-        'Username',
-        validators=[DataRequired(message='Username is required'), valid_username, unique_or_original_username])
+    username = StringField('Username', validators=[DataRequired(message='Username is required'),
+                                                   valid_username, unique_or_original_username])
 
 
 class EditEmailFormMixin():
@@ -339,7 +337,7 @@ class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
     pass
 
 
-class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, EditEmailFormMixin, FirstLastNameMixin):
+class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, AskConfirmFormMixin, EditEmailFormMixin, FirstLastNameMixin):
 
     pass
 
@@ -354,7 +352,7 @@ class EditStudentForm(EditOfficeForm, StudentDataMixin):
     pass
 
 
-class FacultySettingsForm(Form, FacultyDataMixin, FirstLastNameMixin, EditFormMixin):
+class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixin, FirstLastNameMixin, EditFormMixin):
 
     pass
 

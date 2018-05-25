@@ -353,7 +353,7 @@
 
                                 {# owner #}
                                 <td>
-                                    <a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name_and_username() }}</a>
+                                    <a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name() }}</a>
                                 </td>
 
                                 {# status #}
@@ -869,7 +869,7 @@
                                 </strong></td>
 
                                 {# owner #}
-                                <td><a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name_and_username() }}</a></td>
+                                <td><a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name() }}</a></td>
 
                                 {# affiliation #}
                                 <td> <span class="label label-success">{{ project.group.abbreviation }}</span> </td>

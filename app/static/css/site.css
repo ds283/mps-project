@@ -39,45 +39,6 @@ p.copyright {
     margin-bottom: 10px;
 }
 
-.project-title {
-    font-size: 44px;
-    /*font-weight: lighter;*/
-    justify-content: center;
-}
-
-.project-owner-name {
-    font-size: 20px;
-    /*font-weight: lighter;*/
-}
-
-.research-group-banner {
-    font-size: 20px;
-    /*font-weight: lighter;*/
-}
-
-.research-group-webpage {
-    font-size: 12px;
-    font-weight: bolder;
-}
-
-.gap-below {
-    margin-bottom: 5%;
-}
-
-.sm-gap-below {
-    margin-bottom: 3%;
-}
-
-.project-description {
-    font-size: 16px;
-}
-
-.project-label {
-    display: inline-block;
-    font-size: 100%;
-    margin-bottom: 2px;
-}
-
 .dashboard-project-title {
     font-size: 32px;
     font-weight: lighter;

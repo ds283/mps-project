@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+
+{% block styles %}
+    {{ super() }}
+    {% assets filters="cssmin", output="gen/packed_project.css", "css/project.css" -%}
+        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+{%- endblock %}

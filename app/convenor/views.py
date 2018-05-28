@@ -443,7 +443,7 @@ def go_live(id):
     if form.is_submitted():
 
         # ensure there are no outstanding confirm requests
-        if config.golive_required.count() > 0:
+        if config.golive_required.first() is not None:
 
             flash('Cannot yet go live for {name} {yeara}-{yearb}'
                   ' because some confirmation requests are outstanding. '

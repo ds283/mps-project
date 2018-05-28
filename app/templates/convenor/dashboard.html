@@ -66,7 +66,7 @@
         </a></li>
         <li {% if tabid==3 %}class="active"{% endif %}><a data-toggle="pill" href="#faculty">
             Faculty enrollment
-            {% if fac_count and faculty and faculty.count() > 0%}
+            {% if fac_count and faculty and faculty.first()%}
                 <span class="badge">{{ fac_count }}/{{ faculty.count() }}</span>
             {% else %}
                 <span class="badge">0</span>
@@ -318,7 +318,7 @@
 
         <div id="projects" class="tab-pane fade {% if tabid==2 %}in active{% endif %}">
             {{ closed_panel(config) }}
-            {% if projects and projects.count() > 0 %}
+            {% if projects and projects.first() %}
                 <div class="panel panel-primary panel-primary-bg">
                     <div class="panel-heading">Projects attached to <strong>{{ pclass.name }}</strong></div>
                     <div class="panel-body">
@@ -458,7 +458,7 @@
         <div id="faculty" class="tab-pane fade {% if tabid==3 %}in active{% endif %}">
 
             {{ closed_panel(config) }}
-            {% if faculty and faculty.count() > 0 %}
+            {% if faculty and faculty.first() %}
                 <div class="panel panel-primary panel-primary-bg">
                     <div class="panel-heading">Faculty enrolled in <strong>{{ pclass.name }}</strong></div>
                     <div class="panel-body">
@@ -570,7 +570,7 @@
         <div id="selecting" class="tab-pane fade {% if tabid==4 %}in active{% endif %}">
 
             {{ closed_panel(config) }}
-            {% if selectors and selectors.count() > 0 %}
+            {% if selectors and selectors.first() %}
                 <div class="panel panel-primary panel-primary-bg">
                     <div class="panel-heading">{{ title }}</div>
                     <div class="panel-body">
@@ -700,7 +700,7 @@
                                                     <span class="caret"></span>
                                                 </button>
                                                 <ul class="dropdown-menu">
-                                                    {% if config.open and student.bookmarks and student.bookmarks.count() > 0 %}
+                                                    {% if config.open and student.bookmarks and student.bookmarks.first() %}
                                                         <li>
                                                             <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
                                                                 Clear bookmarks
@@ -712,7 +712,7 @@
                                                         </li>
                                                     {% endif %}
 
-                                                    {% if config.open and student.confirm_requests and student.confirm_requests.count() > 0 %}
+                                                    {% if config.open and student.confirm_requests and student.confirm_requests.first() %}
                                                         <li>
                                                             <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
                                                                 Confirm all requests
@@ -732,7 +732,7 @@
                                                         </li>
                                                     {% endif %}
 
-                                                    {% if config.open and student.confirmed and student.confirmed.count() > 0 %}
+                                                    {% if config.open and student.confirmed and student.confirmed.first() %}
                                                         <li>
                                                             <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
                                                                 Remove confirmations
@@ -777,7 +777,7 @@
         <div id="joined" class="tab-pane fade {% if tabid==5 %}in active{% endif %}">
 
             {{ closed_panel(config) }}
-            {% if submitters and submitters.count() > 0 %}
+            {% if submitters and submitters.first() %}
                 <div class="panel panel-primary panel-primary-bg">
                     <div class="panel-heading">{{ title }}</div>
                     <div class="panel-body">
@@ -953,7 +953,7 @@
                                                     Preview web page
                                                 </a>
                                             </li>
-                                            {% if config.open and project.confirm_waiting and project.confirm_waiting.count() > 0 %}
+                                            {% if config.open and project.confirm_waiting and project.confirm_waiting.first() %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
                                                         Confirm all requests
@@ -971,7 +971,7 @@
                                                 </li>
                                             {% endif %}
 
-                                            {% if config.open and project.confirmed_students and project.confirmed_students.count() > 0 %}
+                                            {% if config.open and project.confirmed_students and project.confirmed_students.first() %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
                                                         Remove confirmations

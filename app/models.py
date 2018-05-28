@@ -1227,7 +1227,7 @@ class SelectingStudent(db.Model):
         :return:
         """
 
-        return self.bookmarks.count() > 0
+        return self.bookmarks.first() is not None
 
 
     @property

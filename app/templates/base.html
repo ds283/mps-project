@@ -14,7 +14,7 @@
         </a>
 
         <ul class="dropdown-menu">
-        {% if pclasses and pclasses.count() > 0 %}
+        {% if pclasses and pclasses.first() %}
             <li class="dropdown-header">Convenorships</li>
         {% endif %}
         {% for project_class in pclasses %}
@@ -23,7 +23,7 @@
             </a></li>
         {% endfor %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            {% if pclasses and pclasses.count() > 0 %}
+            {% if pclasses and pclasses.first() %}
                 <li role="separator" class="divider"></li>
             {% endif %}
             <li><a href="{{ url_for('convenor.dashboard', id=0, tabid=0) }}">
@@ -71,7 +71,7 @@
                     {% if current_user.has_role('admin') or current_user.has_role('root') %}
                         {{ convenor_menu(current_user.get_project_classes()) }}
                     {% else  %}
-                        {% if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.count() > 0 %}
+                        {% if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.first() %}
                             {{ convenor_menu(current_user.convenor_for) }}
                         {% endif %}
                     {% endif %}

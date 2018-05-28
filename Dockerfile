@@ -14,8 +14,9 @@ RUN venv/bin/pip install gunicorn
 
 COPY app app
 COPY migrations migrations
-COPY mpsproject.py config.py boot.sh ./
+COPY mpsproject.py config.py boot.sh launch_celery.sh ./
 RUN chmod +x boot.sh
+RUN chmod +x launch_celery.sh
 
 ENV FLASK_APP mpsproject.py
 

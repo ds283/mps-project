@@ -25,8 +25,11 @@ class Config(object):
     # else store locally in this directory
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'mysql+pymysql://mpsproject:Bridle12Way2007@localhost/mpsproject'
-
     SQLALCHEMY_TRACK_MODIFICATIONS = False         # suppress notifications on database changes
+
+    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND') or 'redis://localhost:6379'
+    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379'
+    CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 
     # Flask-Security features
     SECURITY_CONFIRMABLE = True
@@ -46,6 +49,7 @@ class DevelopmentConfig(Config):
     DEBUG = True                    # enable Flask debugger
     SQLALCHEMY_ECHO = True          # enable SQLAlchemy logging
 
+    # turn off Flask-Security emails
     SECURITY_EMAIL_SUBJECT_REGISTER = False
     SECURITY_EMAIL_SUBJECT_PASSWORDLESS = False
     SECURITY_EMAIL_SUBJECT_PASSWORD_NOTICE = False

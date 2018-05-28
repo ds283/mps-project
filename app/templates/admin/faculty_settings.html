@@ -19,7 +19,7 @@
 {#        {{ wtf.form_errors(settings_form) }}#}
 
     <div class="well">
-        {% if data and data.enrollments and data.enrollments.count() > 0 %}
+        {% if data and data.enrollments and data.enrollments.first() %}
             <p>You are currently enrolled for the following project classes</p>
             <h3>
                 {% for pclass in data.enrollments %}

@@ -116,7 +116,7 @@
                                 {% else %}
                                     {% set number_live_plural = 's' %}
                                 {% endif %}
-                                {% if config.open and live_projects.count() > 0 %}
+                                {% if config.open and live_projects.first() %}
                                     <hr class="intro-divider">
                                     <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
                                         on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>

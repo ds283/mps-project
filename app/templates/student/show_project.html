@@ -53,7 +53,7 @@
                                     <div class="col-xs-8">
                                         {% if sel and sel.config.open %}
                                             <div class="pull-right">
-                                                {% if sel.bookmarks.filter_by(liveproject_id=project.id).count() > 0 %}
+                                                {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
                                                     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">
                                                         Remove bookmark
                                                     </a>
@@ -112,7 +112,7 @@
                                         </div>
                                     {% endif %}
 
-                                    {% if project.skills and project.skills.count() > 0 %}
+                                    {% if project.skills and project.skills.first() %}
                                         <div class="row sm-gap-below vertical-top">
                                             <div class="col-xs-3">Transferable skills</div>
                                             <div class="col-xs-9">
@@ -123,7 +123,7 @@
                                         </div>
                                     {% endif %}
 
-                                    {% if project.programmes and project.programmes.count() > 0 %}
+                                    {% if project.programmes and project.programmes.first() %}
                                         <div class="row sm-gap-below vertical-top">
                                             <div class="col-xs-3">Prefer degree programmes</div>
                                             <div class="col-xs-9">

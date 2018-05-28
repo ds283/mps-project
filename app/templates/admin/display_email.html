@@ -1,0 +1,48 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base_app.html" %}
+
+{% block title %}
+    Email log
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="panel panel-primary">
+                <div class="panel-heading">{{ email.subject }}</div>
+                <div class="panel-body email-display">
+                    <p>To: <strong>{{ email.user.build_name() }}</strong> &lt;{{ email.user.email }}&gt;</p>
+                    <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
+                    <p>Subject: <strong>{{ email.subject }}</strong></p>
+                    <hr class="intro-divider">
+                    {{ email.body }}
+                </div>
+                <div class="panel-footer email-display">
+                    <h4>HTML content</h4>
+                    {{ email.html }}
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="row vertical-align">
+                <div class="col-xs-6">
+                    <a href="{{ url_for('admin.email_log') }}">
+                        <i class="fa fa-backward"></i> Return to email log
+                    </a>
+                </div>
+                <div class="col-xs-6">
+                    <div class="pull-right">
+                        <a href="{{ url_for('admin.delete_email', id=email.id) }}" class="btn btn-danger">Delete</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

@@ -10,7 +10,7 @@
 
 import os
 
-from flask import Flask
+from flask import Flask, flash
 from flask_migrate import Migrate
 from flask_security import SQLAlchemyUserDatastore, Security
 from flask_bootstrap import Bootstrap
@@ -20,12 +20,14 @@ from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 
 from config import app_config
-from .models import db
+from .models import db, User, EmailLog
 from .tasks import make_celery
 
 from mdx_smartypants import makeExtension
 
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
+
+from datetime import datetime
 
 
 def create_app():
@@ -67,6 +69,23 @@ def create_app():
     @celery.task(serializer='pickle')
     def send_flask_mail(msg):
         mail.send(msg)
+
+        # store message in email log
+        user = User.query.filter_by(email=msg.recipients[0]).first()
+        if user is not None:
+
+            log = EmailLog(user_id=user.id,
+                           send_date=datetime.now(),
+                           subject=msg.subject,
+                           body=msg.body,
+                           html=msg.html)
+            db.session.add(log)
+            db.session.commit()
+
+        else:
+
+            flash('Failed to log email message. Please report this error to the system administrator', 'error')
+
 
     # make Flask-Security use deferred email sender
     @security.send_mail_task

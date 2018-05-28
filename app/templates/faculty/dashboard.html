@@ -39,7 +39,7 @@
                             {% elif config.closed %}
                                 panel-warning
                             {% elif config.requests_issued and current_user.faculty_data in config.golive_required %}
-                                {# panel-primary#}
+                                {# panel-primary #}
                                 panel-info
                             {% else %}
                                 panel-info
@@ -152,7 +152,7 @@
                                                     {{ pageviews }} view{{ pvplural }}
 
                                                     {% if project.last_view %}
-                                                        (last {{ project.last_view.strftime("%a %b %d %H:%M:%S") }})
+                                                        (last {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }})
                                                     {% endif %}
                                                 </div>
                                                 <div class="col-xs-3">

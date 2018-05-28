@@ -8,7 +8,7 @@
                     <p>
                         Created by {{ item.created_by.build_name_and_username() }}
                         {% if item.creation_timestamp %}
-                            on {{ item.creation_timestamp.strftime("%a %b %Y %H:%M:%S") }}
+                            on {{ item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                         {% endif %}
                     </p>
                 {% endif %}
@@ -16,7 +16,7 @@
                     <p>
                         Last edited by {{ item.last_edited_by.build_name_and_username() }}
                         {% if item.last_edit_timestamp %}
-                            on {{ item.last_edit_timestamp.strftime("%a %b %Y %H:%M:%S") }}
+                            on {{ item.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                         {% endif %}
                     </p>
                 {% endif %}

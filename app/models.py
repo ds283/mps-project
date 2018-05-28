@@ -1367,3 +1367,32 @@ class Bookmark(db.Model):
 
     # rank in owner's list
     rank = db.Column(db.Integer())
+
+
+class EmailLog(db.Model):
+    """
+    Model a logged email
+    """
+
+    __tablename__ = "email_log"
+
+
+    # unique id for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # id of owning user
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', uselist=False,
+                           backref=db.backref('emails', lazy='dynamic'))
+
+    # date of sending attempt
+    send_date = db.Column(db.DateTime(), index=True)
+
+    # subject
+    subject = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # message body (text)
+    body = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+
+    # message body (HTML)
+    html = db.Column(db.String(DESCRIPTION_STRING_LENGTH))

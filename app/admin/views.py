@@ -25,16 +25,16 @@ from .forms import RoleSelectForm, \
     AddTransferrableSkillForm, EditTransferableSkillForm, \
     AddProjectClassForm, EditProjectClassForm, \
     AddSupervisorForm, EditSupervisorForm, \
-    FacultySettingsForm
+    FacultySettingsForm, EmailLogForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project
+    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project, EmailLog
 
 from ..utils import get_main_config, get_current_year
 
 from . import admin
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
@@ -1384,3 +1384,75 @@ def perform_global_rollover():
     db.session.commit()
 
     return redirect(url_for('home.homepage'))
+
+
+@admin.route('/email_log', methods=['GET', 'POST'])
+@roles_required('root')
+def email_log():
+    """
+    Display a log of sent emails
+    :return: 
+    """
+
+    form = EmailLogForm(request.form)
+
+    if form.validate_on_submit():
+
+        if form.delete_age.data is True:
+
+            cutoff = form.days.data
+
+            now = datetime.now()
+            delta = timedelta(days=cutoff)
+            limit = now - delta
+
+            EmailLog.query.filter(EmailLog.send_date < limit).delete()
+            db.session.commit()
+
+    emails = EmailLog.query.order_by(EmailLog.send_date)
+
+    return render_template('admin/email_log.html', form=form, emails=emails)
+
+
+@admin.route('/display_email/<int:id>')
+@roles_required('root')
+def display_email(id):
+    """
+    Display a specific email
+    :param id:
+    :return:
+    """
+
+    email = EmailLog.query.get_or_404(id)
+
+    return render_template('admin/display_email.html', email=email)
+
+
+@admin.route('/delete_email/<int:id>')
+@roles_required('root')
+def delete_email(id):
+    """
+    Delete an email
+    :param id:
+    :return:
+    """
+
+    email = EmailLog.query.get_or_404(id)
+    db.session.remove(email)
+    db.session.commit()
+
+    return redirect(url_for('admin.email_log'))
+
+
+@admin.route('/delete_all_emails')
+@roles_required('root')
+def delete_all_emails():
+    """
+    Delete all emails stored in the log
+    :return:
+    """
+
+    db.session.query(EmailLog).delete()
+    db.session.commit()
+
+    return redirect(request.referrer)

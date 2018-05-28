@@ -483,3 +483,10 @@ class EditSupervisorForm(Form, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
                                            unique_or_original_supervisor])
+
+
+class EmailLogForm(Form):
+
+    days = IntegerField('Age cutoff in days', validators=[DataRequired(message='Cutoff is required')])
+
+    delete_age = SubmitField('Delete emails older than cutoff')

@@ -158,6 +158,7 @@ class MainConfig(db.Model):
     be one row giving the current configuration
     """
 
+    # year is the main configuration variable
     year = db.Column(db.Integer(), primary_key=True)
 
 

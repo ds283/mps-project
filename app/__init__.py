@@ -62,11 +62,13 @@ def create_app():
     # set up  celery
     celery = make_celery(app)
 
+    # set up deferred email sender for Flask-Email; note that Flask-Email's Message object is not
+    # JSON-serializable so we have to pickle instead
     @celery.task(serializer='pickle')
     def send_flask_mail(msg):
         mail.send(msg)
 
-    # define custom, celery-fied mail sending task for Flask-Security
+    # make Flask-Security use deferred email sender
     @security.send_mail_task
     def delay_flask_security_mail(msg):
         send_flask_mail.delay(msg)

@@ -213,7 +213,7 @@ def BuildDegreeProgrammeName(programme):
 
 def GetActiveFaculty():
 
-    return User.query.filter(User.active, User.roles.any(Role.name == 'faculty'))
+    return User.query.filter(User.active, User.roles.any(Role.name == 'faculty')).order_by(User.last_name, User.first_name)
 
 
 def BuildUserRealName(user):

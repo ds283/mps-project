@@ -483,8 +483,3 @@ class EditSupervisorForm(Form, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
                                            unique_or_original_supervisor])
-
-
-class GlobalRolloverForm(Form):
-
-    submit = SubmitField('Rollover')

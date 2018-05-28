@@ -16,6 +16,8 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
     TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
     Supervisor, Project
 
+from ..utils import get_current_year
+
 from . import convenor
 
 from ..faculty.forms import AddProjectForm, EditProjectForm, RolloverForm, GoLiveForm, CloseStudentSelectionsForm, \
@@ -79,7 +81,7 @@ def dashboard(id, tabid):
         return redirect(request.referrer)
 
     # get current academic year
-    current_year = MainConfig.query.order_by(MainConfig.year.desc()).first().year
+    current_year = get_current_year()
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
@@ -896,7 +898,7 @@ def rollover(pid, configid):
 
 
     # get new, rolled-over academic year
-    current_year = MainConfig.query.order_by(MainConfig.year.desc()).first().year
+    current_year = get_current_year()
 
     # generate a new ProjectClassConfig for this year
     new_config = ProjectClassConfig(year=current_year,

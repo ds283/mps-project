@@ -16,7 +16,7 @@ from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
 from .actions import register_user
-from .forms import GlobalRolloverForm, RoleSelectForm, \
+from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
     EditOfficeForm, EditFacultyForm, EditStudentForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
@@ -26,8 +26,11 @@ from .forms import GlobalRolloverForm, RoleSelectForm, \
     AddProjectClassForm, EditProjectClassForm, \
     AddSupervisorForm, EditSupervisorForm, \
     FacultySettingsForm
+
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project
+
+from ..utils import get_main_config, get_current_year
 
 from . import admin
 
@@ -196,11 +199,11 @@ def create_student(role):
         if request.method == 'GET':
 
             # populate cohort with default value on first load
-            query_year = MainConfig.query.first()
+            config = get_main_config()
 
-            if query_year:
+            if config:
 
-                form.cohort.data = query_year.year
+                form.cohort.data = config.year
 
             else:
 
@@ -1108,7 +1111,7 @@ def add_project_class():
         db.session.add(data)
 
         # generate a corresponding configuration record for the current academic year
-        current_year = MainConfig.query.order_by(MainConfig.year.desc()).first().year
+        current_year = get_current_year()
 
         config = ProjectClassConfig(year=current_year,
                                     pclass_id=data.id,
@@ -1343,9 +1346,30 @@ def faculty_settings():
                            project_classes=ProjectClass.query.filter_by(active=True))
 
 
-@admin.route('/global_rollover', methods=['GET', 'POST'])
+@admin.route('/confirm_global_rollover')
 @roles_required('root')
-def global_rollover():
+def confirm_global_rollover():
+    """
+    Show confirmation box for global advance of academic year
+    :return:
+    """
+
+    next_year = get_current_year() + 1
+
+    title = 'Global rollover to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year+1)
+    panel_title = 'Global rollover of academic year to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year+1)
+    action_url = url_for('admin.perform_global_rollover')
+    message = 'Please confirm that you wish to advance the global academic year to ' \
+              '{yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year+1)
+    submit_label = 'Rollover to {yr}'.format(yr=next_year)
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_global_rollover')
+@roles_required('root')
+def perform_global_rollover():
     """
     Globally advance the academic year
     (doesn't actually do anything directly; each project class must be advanced
@@ -1353,18 +1377,10 @@ def global_rollover():
     :return:
     """
 
-    current_year = MainConfig.query.order_by(MainConfig.year.desc()).first()
-    next_year = current_year.year + 1
+    next_year = get_current_year() + 1
 
-    form = GlobalRolloverForm(request.form)
-    form.submit.label.text = 'Rollover to {yr}'.format(yr=next_year)
+    new_year = MainConfig(year=next_year)
+    db.session.add(new_year)
+    db.session.commit()
 
-    if form.validate_on_submit():
-
-        new_year = MainConfig(year=next_year)
-        db.session.add(new_year)
-        db.session.commit()
-
-        return redirect(url_for('home.homepage'))
-
-    return render_template('admin/global_rollover.html', rollover_form=form, year=next_year)
+    return redirect(url_for('home.homepage'))

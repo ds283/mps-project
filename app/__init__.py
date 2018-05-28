@@ -21,6 +21,7 @@ from flaskext.markdown import Markdown
 
 from config import app_config
 from .models import db
+from .tasks import make_celery
 
 from mdx_smartypants import makeExtension
 
@@ -58,6 +59,21 @@ def create_app():
     # that automatically uses our own replacements
     security = Security(app, user_datastore)
 
+    # set up  celery
+    celery = make_celery(app)
+
+    @celery.task(serializer='pickle')
+    def send_flask_mail(msg):
+        mail.send(msg)
+
+    # define custom, celery-fied mail sending task for Flask-Security
+    @security.send_mail_task
+    def delay_flask_security_mail(msg):
+        send_flask_mail.delay(msg)
+
+
+    # IMPORT BLUEPRINTS
+
     from .home import home as home_blueprint
     app.register_blueprint(home_blueprint, url_prefix='/')
 
@@ -79,4 +95,5 @@ def create_app():
     from .office import office as office_blueprint
     app.register_blueprint(office_blueprint, url_prefix='/office')
 
-    return app
+    return app, celery
+

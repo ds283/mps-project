@@ -10,7 +10,7 @@
 
 from app import create_app
 
-app = create_app()
+app, celery = create_app()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

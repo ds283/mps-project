@@ -172,6 +172,7 @@ def create_faculty(role):
 @admin.route('/create_student/<string:role>', methods=['GET', 'POST'])
 @roles_required('admin')
 def create_student(role):
+
     # check whether role is ok
     if not (role == 'student'):
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
@@ -344,8 +345,8 @@ def make_inactive(id):
     user = User.query.get_or_404(id)
 
     if user.has_role('admin') or user.has_role('root'):
-        flash(
-            "Administrative users cannot be made inactive. Remove administration status before marking the user as inactive.")
+        flash('Administrative users cannot be made inactive. '
+              'Remove administration status before marking the user as inactive.')
         return redirect(request.referrer)
 
     _datastore.deactivate_user(user)
@@ -1098,6 +1099,7 @@ def add_project_class():
     form = AddProjectClassForm(request.form)
 
     if form.validate_on_submit():
+
         # insert a record for this project class
         data = ProjectClass(name=form.name.data,
                             abbreviation=form.abbreviation.data,
@@ -1128,6 +1130,8 @@ def add_project_class():
                                     creation_timestamp=datetime.now(),
                                     submission_period=1)
 
+        data.convenor.add_convenorship(data)
+
         db.session.add(config)
 
         # don't generate any go-live requests here; this is done explicitly by user action
@@ -1153,7 +1157,11 @@ def edit_project_class(id):
 
     form.project_class = data
 
+    # remember old convenor
+    old_convenor = data.convenor
+
     if form.validate_on_submit():
+
         data.name = form.name.data
         data.year = form.year.data
         data.extent = form.extent.data
@@ -1167,6 +1175,11 @@ def edit_project_class(id):
         data.switch_choices = form.switch_choices.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
+
+        if data.convenor.id != old_convenor.id:
+
+            old_convenor.remove_convenorship(data)
+            data.convenor.add_convenorship(data)
 
         db.session.commit()
 

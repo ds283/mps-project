@@ -325,7 +325,7 @@ def view_live_project(pid, classid, tabid):
     if not _validate_user(data):
 
         if tabid == 0:
-            return redirect(url_for('faculty.dashboard'))
+            return home_dashboard()
         else:
             return redirect(url_for('convenor.dashboard', id=classid, tabid=tabid))
 
@@ -390,7 +390,7 @@ def confirm_pclass(id):
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
             project=config.project_class.name, yeara=config.year, yearb=config.year+1))
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     if current_user.faculty_data in config.golive_required:
 
@@ -398,12 +398,12 @@ def confirm_pclass(id):
         db.session.commit()
 
         flash('Thank-you. You confirmation has been recorded.')
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     flash('You have no outstanding confirmation requests for {project} {yeara}-{yearb}'.format(
         project=config.project_class.name, yeara=config.year, yearb=config.year+1))
 
-    return redirect(url_for('faculty.dashboard'))
+    return home_dashboard()
 
 
 @faculty.route('/confirm/<int:sid>/<int:pid>')

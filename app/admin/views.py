@@ -28,9 +28,9 @@ from .forms import RoleSelectForm, \
     FacultySettingsForm, EmailLogForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project, EmailLog
+    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project, EmailLog, MessageOfTheDay
 
-from ..utils import get_main_config, get_current_year
+from ..utils import get_main_config, get_current_year, home_dashboard
 
 from . import admin
 
@@ -39,6 +39,18 @@ from datetime import date, datetime, timedelta
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
+
+
+def _check_admin_or_convenor():
+
+    if current_user.has_role('admin') or current_user.has_role('root'):
+        return True
+
+    if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.first() is not Null:
+        return True
+
+    flash('This operation is only available to administrative users and project class convenors')
+    return False
 
 
 @admin.route('/create_user', methods=['GET', 'POST'])
@@ -966,12 +978,15 @@ def make_degree_programme_inactive(id):
 
 
 @admin.route('/edit_skills')
-@roles_required('admin')
+@roles_accepted('admin', 'root', 'faculty')
 def edit_skills():
     """
     View for edit skills
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     skills = TransferableSkill.query.all()
 
@@ -979,12 +994,15 @@ def edit_skills():
 
 
 @admin.route('/add_skill', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root', 'faculty')
 def add_skill():
     """
     View to create a new transferable skill
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     form = AddTransferrableSkillForm(request.form)
 
@@ -1003,13 +1021,16 @@ def add_skill():
 
 
 @admin.route('/edit_skill/<int:id>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root', 'faculty')
 def edit_skill(id):
     """
     View to edit a transferable skill
     :param id:
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
     form = EditTransferableSkillForm(obj=skill)
@@ -1030,13 +1051,16 @@ def edit_skill(id):
 
 
 @admin.route('/make_skill_active/<int:id>')
-@roles_required('root')
+@roles_accepted('admin', 'root', 'faculty')
 def make_skill_active(id):
     """
     Make a transferable active
     :param id:
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
     skill.enable()
@@ -1046,13 +1070,16 @@ def make_skill_active(id):
 
 
 @admin.route('/make_skill_inactive/<int:id>')
-@roles_required('root')
+@roles_accepted('admin', 'root', 'faculty')
 def make_skill_inactive(id):
     """
     Make a transferable inactive
     :param id:
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
     skill.disable()
@@ -1204,7 +1231,7 @@ def make_project_class_inactive(id):
 
 
 @admin.route('/edit_supervisors', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root')
+@roles_accepted('admin', 'root', 'faculty')
 def edit_supervisors():
     """
     View to list and edit supervisory roles
@@ -1217,12 +1244,15 @@ def edit_supervisors():
 
 
 @admin.route('/add_supervisor', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root')
+@roles_accepted('admin', 'root', 'faculty')
 def add_supervisor():
     """
     Create a new supervisory role
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     form = AddSupervisorForm(request.form)
 
@@ -1241,13 +1271,16 @@ def add_supervisor():
 
 
 @admin.route('/edit_supervisor/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root')
+@roles_accepted('admin', 'root', 'faculty')
 def edit_supervisor(id):
     """
     Edit a supervisory role
     :param id:
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
     form = EditSupervisorForm(obj=data)
@@ -1269,13 +1302,16 @@ def edit_supervisor(id):
 
 
 @admin.route('/make_supervisor_active/<int:id>')
-@roles_accepted('admin', 'root')
+@roles_accepted('admin', 'root', 'faculty')
 def make_supervisor_active(id):
     """
     Make a supervisor active
     :param id:
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
     data.enable()
@@ -1285,13 +1321,16 @@ def make_supervisor_active(id):
 
 
 @admin.route('/make_supervisor_inactive/<int:id>')
-@roles_accepted('admin', 'root')
+@roles_accepted('admin', 'root', 'faculty')
 def make_supervisor_inactive(id):
     """
     Make a supervisor inactive
     :param id:
     :return:
     """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
     data.disable()
@@ -1332,7 +1371,7 @@ def faculty_settings():
 
         db.session.commit()
 
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     else:
 
@@ -1456,3 +1495,26 @@ def delete_all_emails():
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/edit_messages')
+@roles_required('faculty', 'admin', 'root')
+def edit_messages():
+    """
+    Edit message-of-the-day type messages
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    if current_user.has_role('admin') or current_user.has_role('root'):
+
+        # admin users can edit all messages
+        messages = MessageOfTheDay.query.all()
+
+    else:
+
+        # convenors can only see their own messages
+        messages = MessageOfTheDay.query.filter_by(user_id=current_user.id).all()
+
+    return render_template('admin/edit_messages.html', messages=messages)

@@ -13,6 +13,8 @@ from flask_security import login_required, current_user, logout_user
 
 from . import home
 
+from ..utils import home_dashboard
+
 @home.route('/')
 @login_required
 def homepage():
@@ -23,19 +25,4 @@ def homepage():
     """
 
     # after logging in, simply redirect to the appropriate dashboard
-    if current_user.has_role('faculty'):
-
-        return redirect(url_for('faculty.dashboard'))
-
-    elif current_user.has_role('student'):
-
-        return redirect(url_for('student.dashboard'))
-
-    elif current_user.has_role('office'):
-
-        return redirect(url_for('office.dashboard'))
-
-    else:
-
-        flash('Your role could not be identified. Please contact the system administrator.')
-        return redirect(url_for('auth.logged_out'))
+    return home_dashboard()

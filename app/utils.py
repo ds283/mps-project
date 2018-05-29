@@ -8,6 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
+from flask import redirect, url_for, flash
+from flask_login import current_user
+
 from .models import MainConfig
 
 
@@ -19,3 +23,23 @@ def get_main_config():
 def get_current_year():
 
     return get_main_config().year
+
+
+def home_dashboard():
+
+    if current_user.has_role('faculty'):
+
+        return redirect(url_for('faculty.dashboard'))
+
+    elif current_user.has_role('student'):
+
+        return redirect(url_for('student.dashboard'))
+
+    elif current_user.has_role('office'):
+
+        return redirect(url_for('office.dashboard'))
+
+    else:
+
+        flash('Your role could not be identified. Please contact the system administrator.')
+        return redirect(url_for('auth.logged_out'))

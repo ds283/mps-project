@@ -1,0 +1,166 @@
+{% macro pclass_card(config, live_projects) %}
+
+    {% set pclass = config.project_class %}
+    <div class="well">
+        <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
+        <p><span>
+            Convenor:
+            <a class="btn btn-link" href="mailto:{{ pclass.convenor.email }}">
+                {{ pclass.convenor.build_name() }}
+            </a>
+        </span></p>
+
+        {% set nproj = current_user.faculty_data.projects_offered(pclass) %}
+        {% if nproj == 1 %}
+            {% set nproj_plural = '' %}
+        {% else %}
+            {% set nproj_plural = 's' %}
+        {% endif %}
+        <div class="panel
+            {% if nproj == 0 %}
+                panel-danger
+            {% elif config.open %}
+                panel-success
+            {% elif config.closed %}
+                panel-warning
+            {% elif config.requests_issued and current_user.faculty_data in config.golive_required %}
+                {# panel-primary #}
+                panel-info
+            {% else %}
+                panel-info
+            {% endif %}
+            ">
+
+            <div class="panel-heading">
+                {% if config.open %}
+                    <strong>Status</strong>
+                    <div class="pull-right">
+                        <span class="label label-success">Student choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                        {% if config.live_deadline %}
+                            <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    Status
+                    <div class="pull-right">
+                        <span class="label label-default">Student choices not open</span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="panel-body">
+
+                {# show confirmation request if one is active #}
+                {% if config.project_class.require_confirm and config.requests_issued and current_user.faculty_data in config.golive_required %}
+                    <div class="panel panel-danger">
+                        <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
+                        <div class="panel-body">
+                            <p>Please review your projects to ensure the descriptions are up-to-date,
+                            and those you wish to offer next year are active and attached to
+                            the correct project classes.</p>
+                            {% if config.request_deadline %}
+                                <p>The project convenor has set a deadline of
+                                    <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                    <strong>{{ config.time_to_request_deadline }} from now</strong>.
+                                </p>
+                                <p>After the deadline, projects will be finalized and
+                                    made avaliable to the students for selection.
+                                </p>
+                            {% endif %}
+                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-danger">Confirm</a>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {# show basic details about this project #}
+                <div class="row vertical-align">
+                    <div class="col-xs-9">
+                        {% if nproj == 0 %}
+                        <div class="has-error">
+                        <div class="help-block">
+                        <strong>
+                        {% endif %}
+                        {{ nproj }} active project{{ nproj_plural }} attached to this project class.
+                        {% if nproj == 0 %}
+                        </strong>
+                        </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-xs-3">
+                        <span class="pull-right">
+                            <a href="{{ url_for('faculty.edit_my_projects') }}" class="btn {% if nproj==0 %}btn-danger{% else %}btn-default{% endif %}">Edit my projects</a>
+                        </span>
+                    </div>
+                </div>
+
+                {# show details about projects on the live system #}
+                {% set number_live_projects = live_projects.count() %}
+                {% if number_live_projects == 1 %}
+                    {% set number_live_plural = '' %}
+                {% else %}
+                    {% set number_live_plural = 's' %}
+                {% endif %}
+                {% if config.open and live_projects.first() %}
+                    <hr class="intro-divider">
+                    <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
+                        on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>
+                    <div class="container-fluid">
+                        <div class="row fac-project-table">
+                            <div class="col-xs-3"><strong>Name</strong></div>
+                            <div class="col-xs-3"><strong>Info</strong></div>
+                            <div class="col-xs-3"><strong>Requests</strong></div>
+                            <div class="col-xs-3"><strong>Confirmed</strong></div>
+                        </div>
+                        {% for project in live_projects %}
+                            <div class="row fac-project-table">
+                                <div class="col-xs-3">
+                                    <a href="{{ url_for('faculty.view_live_project', pid=project.id, classid=config.project_class.id, tabid=0) }}">
+                                        {{ project.name }}
+                                    </a>
+                                </div>
+                                <div class="col-xs-3">
+                                    {% set bookmarks = project.bookmarks.count() %}
+                                    {% if bookmarks == 1 %}
+                                        {% set bmplural = '' %}
+                                    {% else %}
+                                        {% set bmplural = 's' %}
+                                    {% endif %}
+                                    {{ bookmarks }} bookmark{{ bmplural }},
+
+                                    {% set pageviews = project.page_views %}
+                                    {% if pageviews == 1 %}
+                                        {% set pvplural = '' %}
+                                    {% else %}
+                                        {% set pvplural = 's' %}
+                                    {% endif %}
+                                    {{ pageviews }} view{{ pvplural }}
+
+                                    {% if project.last_view %}
+                                        (last {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }})
+                                    {% endif %}
+                                </div>
+                                <div class="col-xs-3">
+                                    {% for student in project.confirm_waiting %}
+                                        <a href="{{ url_for('faculty.confirm', sid=student.id, pid=project.id) }}" class="btn btn-success btn-sm">
+                                            <i class="fa fa-plus"></i> {{ student.user.build_name() }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-xs-3">
+                                    {% for student in project.confirmed_students %}
+                                        <a href="{{ url_for('faculty.deconfirm', sid=student.id, pid=project.id) }}" class="btn btn-warning btn-sm">
+                                            <i class="fa fa-times"></i> {{ student.user.build_name() }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+{% endmacro %}

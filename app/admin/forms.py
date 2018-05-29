@@ -515,7 +515,9 @@ class MessageMixin():
 
     show_faculty = BooleanField('Display to faculty')
 
-    show_login = BooleanField('If a broadcast message, display on login screen')
+    show_login = BooleanField('Display on login screen if a broadcast message')
+
+    dismissible = BooleanField('Allow message to be dismissed')
 
     title = StringField('Title', validators=[Optional()], description='Optional. Briefly summarize your message.')
 

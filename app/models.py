@@ -77,11 +77,21 @@ pclass_programme_associations = db.Table('project_class_to_programmes',
                                          db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
                                          )
 
+
+# SYSTEM MESSAGES
+
+
 # association between project classes and messages
 pclass_message_associations = db.Table('project_class_to_messages',
                                        db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
                                        db.Column('message_id', db.Integer(), db.ForeignKey('messages.id'), primary_key=True)
                                        )
+
+# associate dismissals with messages
+message_dismissals = db.Table('message_dismissals',
+                              db.Column('message_id', db.Integer(), db.ForeignKey('messages.id'), primary_key=True),
+                              db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True)
+                              )
 
 
 # GO-LIVE CONFIRMATIONS FROM FACULTY
@@ -1480,6 +1490,9 @@ class MessageOfTheDay(db.Model):
     # display on login screen?
     show_login = db.Column(db.Boolean())
 
+    # is this message dismissible?
+    dismissible = db.Column(db.Boolean())
+
     # title
     title = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
@@ -1489,3 +1502,6 @@ class MessageOfTheDay(db.Model):
     # associate with which projects?
     project_classes = db.relationship('ProjectClass', secondary=pclass_message_associations, lazy='dynamic',
                                       backref=db.backref('messages', lazy='dynamic'))
+
+    # which users have dismissed this message already?
+    dismissed_by = db.relationship('User', secondary=message_dismissals, lazy='dynamic')

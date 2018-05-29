@@ -1541,6 +1541,7 @@ def add_message():
                                show_students=form.show_students.data,
                                show_faculty=form.show_faculty.data,
                                show_login=show_login,
+                               dismissible=form.dismissible.data,
                                title=form.title.data,
                                body=form.body.data,
                                project_classes=form.project_classes.data)
@@ -1589,6 +1590,7 @@ def edit_message(id):
         data.show_students = form.show_students.data
         data.show_faculty = form.show_faculty.data
         data.show_login = show_login
+        data.dismissible = form.dismissible.data
         data.title = form.title.data
         data.body = form.body.data
         data.project_classes = form.project_classes.data
@@ -1621,6 +1623,49 @@ def delete_message(id):
             return home_dashboard()
 
     db.session.delete(data)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/dismiss_message/<int:id>')
+@login_required
+def dismiss_message(id):
+    """
+    Record that the current user has dismissed a particular message
+    :param id:
+    :return:
+    """
+
+    message = MessageOfTheDay.query.get_or_404(id)
+
+    if current_user not in message.dismissed_by:
+
+        message.dismissed_by.append(current_user)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/reset_dismissals/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def reset_dismissals(id):
+    """
+    Remove dismissals from a message (eg. we might want to do this after updating the text)
+    :param id:
+    :return:
+    """
+
+    message = MessageOfTheDay.query.get_or_404(id)
+
+    # convenors can only reset their own messages
+    if not current_user.has_role('admin') and not current_user.has_role('root'):
+
+        if message.user_id != current_user.id:
+            flash('Only administrative users can reset dismissals for messages that are not their own.')
+            return home_dashboard()
+
+    message.dismissed_by = []
     db.session.commit()
 
     return redirect(request.referrer)

@@ -76,16 +76,23 @@
                         {% endif %}
                     {% endif %}
 
-                    <!-- add admin menu if user is an administrator (not sysadmin => admin) -->
-                    {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                    <!-- add admin menu if user is an administrator or system administrator, or a convenor -->
+                    {% if current_user.has_role('admin') or current_user.has_role('root') or (current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.first()) %}
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 Admin
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="{{ url_for('admin.edit_users') }}">
-                                    <i class="fa fa-pencil"></i> Users
+                                {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                                    <li><a href="{{ url_for('admin.edit_users') }}">
+                                        <i class="fa fa-pencil"></i> Users
+                                    </a></li>
+                                    <li role="separator" class="divider"></li>
+                                {% endif %}
+                                <li class="dropdown-header">Tools</li>
+                                <li><a href="{{ url_for('admin.edit_messages') }}">
+                                    Messages
                                 </a></li>
                                 <li role="separator" class="divider"></li>
                                 <li class="dropdown-header">Project components</li>

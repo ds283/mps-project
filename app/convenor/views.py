@@ -16,7 +16,7 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
     TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
     Supervisor, Project
 
-from ..utils import get_current_year
+from ..utils import get_current_year, home_dashboard
 
 from . import convenor
 
@@ -575,7 +575,7 @@ def confirm(sid, pid, tabid):
     project = LiveProject.query.get_or_404(pid)
 
     if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(sel.config):
@@ -598,7 +598,7 @@ def deconfirm(sid, pid, tabid):
     project = LiveProject.query.get_or_404(pid)
 
     if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(sel.config):
@@ -621,7 +621,7 @@ def deconfirm_to_pending(sid, pid, tabid):
     project = LiveProject.query.get_or_404(pid)
 
     if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(sel.config):
@@ -644,7 +644,7 @@ def cancel_confirm(sid, pid, tabid):
     project = LiveProject.query.get_or_404(pid)
 
     if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(sel.config):
@@ -667,7 +667,7 @@ def project_confirm_all(pid):
 
     # validate that logged-in user is allowed to edit this LiveProject
     if not _validate_convenor(pclass):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(project.config):
@@ -693,7 +693,7 @@ def project_clear_requests(pid):
 
     # validate that logged-in user is allowed to edit this LiveProject
     if not _validate_convenor(pclass):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(project.config):
@@ -717,7 +717,7 @@ def project_remove_confirms(pid):
 
     # validate that logged-in user is allowed to edit this LiveProject
     if not _validate_convenor(pclass):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(project.config):
@@ -741,7 +741,7 @@ def project_make_all_confirms_pending(pid):
 
     # validate that logged-in user is allowed to edit this LiveProject
     if not _validate_convenor(pclass):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(project.config):
@@ -789,7 +789,7 @@ def student_remove_confirms(sid):
 
     # validate that logged-in user is allowed to edit this SelectingStudent
     if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(sel.config):
@@ -811,7 +811,7 @@ def student_clear_requests(sid):
 
     # validate that logged-in user is allowed to edit this SelectingStudent
     if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(sel.config):
@@ -833,7 +833,7 @@ def student_make_all_confirms_pending(sid):
 
     # validate that logged-in user is allowed to edit this SelectingStudent
     if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(sel.config):
@@ -857,7 +857,7 @@ def student_clear_bookmarks(sid):
 
     # validate that logged-in user is allowed to edit this SelectingStudent
     if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that project is open
     if not _validate_open(sel.config):
@@ -879,11 +879,11 @@ def rollover(pid, configid):
 
     if not pclass.active:
         flash('{name} is not an active project class'.format(name=pclass.name), 'error')
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not _validate_convenor(pclass):
-        return redirect(url_for('faculty.dashboard'))
+        return home_dashboard()
 
     # get current config record and retire all IDs
     current_config = ProjectClassConfig.query.get_or_404(configid)

@@ -60,6 +60,10 @@ faculty_affiliations = db.Table('faculty_affiliations',
                                 db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
                                 )
 
+
+# PROJECT CLASS ASSOCIATIONS
+
+
 # association table giving faculty enrollment on project classes
 faculty_enrollments = db.Table('faculty_enrollments',
                                db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
@@ -67,10 +71,16 @@ faculty_enrollments = db.Table('faculty_enrollments',
                                )
 
 # association table giving association between project classes and degree programmes
-project_class_associations = db.Table('project_class_to_programmes',
-                                      db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
-                                      db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
-                                      )
+pclass_programme_associations = db.Table('project_class_to_programmes',
+                                         db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
+                                         db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
+                                         )
+
+# association between project classes and messages
+pclass_message_associations = db.Table('project_class_to_messages',
+                                       db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
+                                       db.Column('message_id', db.Integer(), db.ForeignKey('messages.id'), primary_key=True)
+                                       )
 
 
 # GO-LIVE CONFIRMATIONS FROM FACULTY
@@ -663,7 +673,7 @@ class ProjectClass(db.Model):
                                backref=db.backref('convenor_for', lazy='dynamic'))
 
     # associate this project class with a set of degree programmes
-    programmes = db.relationship('DegreeProgramme', secondary=project_class_associations, lazy='dynamic',
+    programmes = db.relationship('DegreeProgramme', secondary=pclass_programme_associations, lazy='dynamic',
                                  backref=db.backref('project_classes', lazy='dynamic'))
 
     # created by
@@ -1396,3 +1406,42 @@ class EmailLog(db.Model):
 
     # message body (HTML)
     html = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+
+
+class MessageOfTheDay(db.Model):
+    """
+    Model a message broadcast to all users, or a specific subset of users
+    """
+
+    __tablename__ = "messages"
+
+
+    # unique id for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # id of issuing user
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', uselist=False,
+                           backref=db.backref('messages', lazy='dynamic'))
+
+    # data of issue
+    issue_date = db.Column(db.DateTime(), index=True)
+
+    # show to students?
+    show_students = db.Column(db.Boolean())
+
+    # show to faculty?
+    show_faculty = db.Column(db.Boolean())
+
+    # display on login screen?
+    show_login = db.Column(db.Boolean())
+
+    # title
+    title = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # message text
+    body = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+
+    # associate with which projects?
+    projects = db.relationship('ProjectClass', secondary=pclass_message_associations, lazy='dynamic',
+                               backref=db.backref('messages', lazy='dynamic'))

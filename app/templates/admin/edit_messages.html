@@ -87,6 +87,29 @@
                                             <i class="fa fa-trash"></i> Delete message
                                         </a>
                                     </li>
+                                    <li role="separator" class="divider"></li>
+                                    {% if message.dismissible %}
+                                        {% set dismiss_count = message.dismissed_by.count() %}
+                                        {% set dpl = 's' %}
+                                        {% if dismiss_count == 1 %}
+                                            {% set dpl = '' %}
+                                        {% endif %}
+                                        {% if dismiss_count > 0 %}
+                                            <li>
+                                                <a href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
+                                                    Reset {{ dismiss_count }} dismissal{{ dpl }}
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="disabled">
+                                                <a>No dismissals</a>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="disabled">
+                                            <a>Not dismissible</a>
+                                        </li>
+                                    {% endif %}
                                 </ul>
                             </div>
                         </td>

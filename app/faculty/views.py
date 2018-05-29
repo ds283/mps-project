@@ -374,7 +374,8 @@ def dashboard():
 
     # build list of system messages to consider displaying
     messages = []
-    for message in MessageOfTheDay.query.filter_by(show_faculty=True).all():
+    for message in MessageOfTheDay.query.filter(MessageOfTheDay.show_faculty,
+                                                ~MessageOfTheDay.dismissed_by.any(id=current_user.id)).all():
 
         include = message.project_classes.first() is None
         if not include:

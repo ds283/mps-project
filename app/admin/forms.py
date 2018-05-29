@@ -265,18 +265,18 @@ class AskConfirmEditFormMixin():
 # redefine NewPasswordFormMixin from flask-security to check password strength
 class NewPasswordFormMixin():
 
-    null_password = BooleanField('Generate null password')
+    random_password = BooleanField('Generate random password')
 
     password = PasswordField(
         get_form_field_label('password'),
-        validators=[OptionalIf('null_password'), password_length, password_strength])
+        validators=[OptionalIf('random_password'), password_length, password_strength])
 
 
 class PasswordConfirmFormMixin():
 
     password_confirm = PasswordField(
         get_form_field_label('retype_password'),
-        validators=[OptionalIf('null_password'), EqualTo('password', message='RETYPE_PASSWORD_MISMATCH')])
+        validators=[OptionalIf('random_password'), EqualTo('password', message='RETYPE_PASSWORD_MISMATCH')])
 
 
 class RoleMixin():

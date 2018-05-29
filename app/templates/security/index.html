@@ -1,5 +1,7 @@
 {% extends "base_app.html" %}
 
+{% from "macros.html" import message_card %}
+
 {% block title %}
     Authentication
 {% endblock %}
@@ -8,6 +10,13 @@
     <div class="row">
         <div class="col-xs-2"></div>
         <div class="col-xs-8">
+
+            {% if messages %}
+                {% for message in messages %}
+                    {{ message_card(message, enrolled_classes) }}
+                {% endfor %}
+            {% endif %}
+
             <div class="panel panel-success">
                 <div class="panel-heading">{% block formtitle %}{% endblock %}</div>
                 <div class="panel-body">

@@ -35,11 +35,13 @@
             </div>
             <div class="col-xs-7">
                 <div class="pull-right">
-                    {% for pclass in message.project_classes %}
-                        {% if pclass in enrolled_classes %}
-                            <span class="label label-info">{{ pclass.name }}</span>
-                        {% endif %}
-                    {% endfor %}
+                    {% if enrolled_classes %}
+                        {% for pclass in message.project_classes %}
+                            {% if pclass in enrolled_classes %}
+                                <span class="label label-info">{{ pclass.name }}</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </div>
         </div>

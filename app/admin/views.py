@@ -397,6 +397,7 @@ def _resend_confirm_email(user):
 @admin.route('/edit_office/<int:id>', methods=['GET', 'POST'])
 @roles_required('admin')
 def edit_office(id):
+
     user = User.query.get_or_404(id)
     form = EditOfficeForm(obj=user)
 
@@ -429,6 +430,7 @@ def edit_office(id):
 @admin.route('/edit_faculty/<int:id>', methods=['GET', 'POST'])
 @roles_required('admin')
 def edit_faculty(id):
+
     user = User.query.get_or_404(id)
     form = EditFacultyForm(obj=user)
 
@@ -480,6 +482,7 @@ def edit_faculty(id):
 @admin.route('/edit_student/<int:id>', methods=['GET', 'POST'])
 @roles_required('admin')
 def edit_student(id):
+
     user = User.query.get_or_404(id)
     form = EditStudentForm(obj=user)
 
@@ -487,10 +490,10 @@ def edit_student(id):
 
     data = StudentData.query.get_or_404(id)
 
-    if form.validate_on_submit() and form.ask_confirm.data is True:
+    if form.validate_on_submit():
 
         resend_confirmation = False
-        if form.email.data != user.email:
+        if form.email.data != user.email and form.ask_confirm.data is True:
             user.confirmed_at = None
             resend_confirmation = True
 

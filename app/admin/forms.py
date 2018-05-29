@@ -252,9 +252,14 @@ class EditEmailFormMixin():
         validators=[email_required, email_validator, unique_or_original_email])
 
 
-class AskConfirmFormMixin():
+class AskConfirmAddFormMixin():
 
     ask_confirm = BooleanField('Send confirmation email')
+
+
+class AskConfirmEditFormMixin():
+
+    ask_confirm = BooleanField('Resend confirmation email if address is changed')
 
 
 # redefine NewPasswordFormMixin from flask-security to check password strength
@@ -315,7 +320,7 @@ class StudentDataMixin():
                                  get_label=BuildDegreeProgrammeName)
 
 
-class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmFormMixin,
+class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin,
                          UniqueEmailFormMixin, NewPasswordFormMixin, FirstLastNameMixin):
 
     pass
@@ -349,7 +354,7 @@ class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
     pass
 
 
-class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, AskConfirmFormMixin, EditEmailFormMixin, FirstLastNameMixin):
+class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, AskConfirmEditFormMixin, EditEmailFormMixin, FirstLastNameMixin):
 
     pass
 

@@ -1443,5 +1443,5 @@ class MessageOfTheDay(db.Model):
     body = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
 
     # associate with which projects?
-    projects = db.relationship('ProjectClass', secondary=pclass_message_associations, lazy='dynamic',
-                               backref=db.backref('messages', lazy='dynamic'))
+    project_classes = db.relationship('ProjectClass', secondary=pclass_message_associations, lazy='dynamic',
+                                      backref=db.backref('messages', lazy='dynamic'))

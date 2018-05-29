@@ -864,7 +864,7 @@ def student_clear_bookmarks(sid):
         return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
 
     for item in sel.bookmarks:
-        db.session.remove(item)
+        db.session.delete(item)
     db.session.commit()
 
     return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))

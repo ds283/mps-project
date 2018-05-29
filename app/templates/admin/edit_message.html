@@ -1,0 +1,57 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if message %}
+        {% if message.title and message.title|length > 0 %}
+            Edit message <strong>{{ message.title }}</strong>
+        {% else %}
+            {{ title }}
+        {% endif %}
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if message %}
+        <form action="{{ url_for('admin.edit_message', id=message.id) }}" method="POST" name="message_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_message') }}" method="POST" name="message_form">
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+    
+        {{ wtf.form_field(form.show_students) }}
+        {{ wtf.form_field(form.show_faculty) }}
+        {% if form.show_login %}
+            {{ wtf.form_field(form.show_login) }}
+        {% endif %}
+
+        <div class="well {% if form.project_classes.errors %}has-error{% endif %}">
+            <p>Select the project classes for which this message should be isplayed</p>
+            {% for widget in form.project_classes %}
+                {{ wtf.form_field(widget) }}
+            {% else %}
+                <span class="label label-danger">No project classes currently available</span>
+            {% endfor %}
+            {% if form.project_classes.errors %}
+                {% for error in form.project_classes.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {{ wtf.form_field(form.title) }}
+        {{ wtf.form_field(form.body) }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

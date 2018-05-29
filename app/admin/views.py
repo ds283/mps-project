@@ -11,7 +11,8 @@
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.local import LocalProxy
 from flask_security import login_required, roles_required, roles_accepted, current_user, logout_user, login_user
-from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url, get_message, do_flash, send_mail
+from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url, get_message, do_flash, \
+    send_mail
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
@@ -25,7 +26,8 @@ from .forms import RoleSelectForm, \
     AddTransferrableSkillForm, EditTransferableSkillForm, \
     AddProjectClassForm, EditProjectClassForm, \
     AddSupervisorForm, EditSupervisorForm, \
-    FacultySettingsForm, EmailLogForm
+    FacultySettingsForm, EmailLogForm, \
+    AddMessageForm, EditMessageForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project, EmailLog, MessageOfTheDay
@@ -36,13 +38,11 @@ from . import admin
 
 from datetime import date, datetime, timedelta
 
-
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
 
 
 def _check_admin_or_convenor():
-
     if current_user.has_role('admin') or current_user.has_role('root'):
         return True
 
@@ -62,8 +62,8 @@ def create_user():
 
     # check whether any active degree programmes exist, and raise an error if not
     if not DegreeProgramme.query.filter_by(active=True).first():
-
-        flash('No degree programmes are available. Set up at least one active degree programme before adding new users.')
+        flash(
+            'No degree programmes are available. Set up at least one active degree programme before adding new users.')
         return redirect(request.referrer)
 
     # first task is to capture the user role
@@ -105,14 +105,12 @@ def create_office(role):
 
     # check whether role is ok
     if not (role == 'office'):
-
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
         return redirect(url_for('admin.edit_users'))
 
     form = ConfirmRegisterOfficeForm(request.form)
 
     if form.validate_on_submit():
-
         # convert field values to a dictionary
         field_data = form.to_dict()
         field_data['roles'] = [role]
@@ -124,7 +122,8 @@ def create_office(role):
 
         return redirect(url_for('admin.edit_users'))
 
-    return render_template('security/register_user.html', user_form=form, role=role, title='Register a new {r} user account'.format(r=role))
+    return render_template('security/register_user.html', user_form=form, role=role,
+                           title='Register a new {r} user account'.format(r=role))
 
 
 @admin.route('/create_faculty/<string:role>', methods=['GET', 'POST'])
@@ -138,14 +137,12 @@ def create_faculty(role):
 
     # check whether role is ok
     if not (role == 'faculty'):
-
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
         return redirect(url_for('admin.edit_users'))
 
     form = ConfirmRegisterFacultyForm(request.form)
 
     if form.validate_on_submit():
-
         # convert field values to a dictionary
         field_data = form.to_dict()
         field_data['roles'] = [role]
@@ -168,16 +165,15 @@ def create_faculty(role):
 
         return redirect(url_for('admin.edit_users'))
 
-    return render_template('security/register_user.html', user_form=form, role=role, title='Register a new {r} user account'.format(r=role))
+    return render_template('security/register_user.html', user_form=form, role=role,
+                           title='Register a new {r} user account'.format(r=role))
 
 
 @admin.route('/create_student/<string:role>', methods=['GET', 'POST'])
 @roles_required('admin')
 def create_student(role):
-
     # check whether role is ok
     if not (role == 'student'):
-
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
         return redirect(url_for('admin.edit_users'))
 
@@ -221,7 +217,8 @@ def create_student(role):
 
                 form.cohort.data = date.today().year
 
-    return render_template('security/register_user.html', user_form=form, role=role, title='Register a new {r} user account'.format(r=role))
+    return render_template('security/register_user.html', user_form=form, role=role,
+                           title='Register a new {r} user account'.format(r=role))
 
 
 @admin.route('/edit_users')
@@ -347,8 +344,8 @@ def make_inactive(id):
     user = User.query.get_or_404(id)
 
     if user.has_role('admin') or user.has_role('root'):
-
-        flash("Administrative users cannot be made inactive. Remove administration status before marking the user as inactive.")
+        flash(
+            "Administrative users cannot be made inactive. Remove administration status before marking the user as inactive.")
         return redirect(request.referrer)
 
     _datastore.deactivate_user(user)
@@ -385,7 +382,6 @@ def edit_user(id):
 
 
 def _resend_confirm_email(user):
-
     confirmation_link, token = generate_confirmation_link(user)
     do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
 
@@ -400,7 +396,6 @@ def _resend_confirm_email(user):
 @admin.route('/edit_office/<int:id>', methods=['GET', 'POST'])
 @roles_required('admin')
 def edit_office(id):
-
     user = User.query.get_or_404(id)
     form = EditOfficeForm(obj=user)
 
@@ -410,7 +405,6 @@ def edit_office(id):
 
         resend_confirmation = False
         if form.email.data != user.email and form.ask_confirm.data is True:
-
             user.confirmed_at = None
             resend_confirmation = True
 
@@ -434,7 +428,6 @@ def edit_office(id):
 @admin.route('/edit_faculty/<int:id>', methods=['GET', 'POST'])
 @roles_required('admin')
 def edit_faculty(id):
-
     user = User.query.get_or_404(id)
     form = EditFacultyForm(obj=user)
 
@@ -475,7 +468,6 @@ def edit_faculty(id):
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == 'GET':
-
             form.academic_title.data = data.academic_title
             form.use_academic_title.data = data.use_academic_title
             form.sign_off_students.data = data.sign_off_students
@@ -487,7 +479,6 @@ def edit_faculty(id):
 @admin.route('/edit_student/<int:id>', methods=['GET', 'POST'])
 @roles_required('admin')
 def edit_student(id):
-
     user = User.query.get_or_404(id)
     form = EditStudentForm(obj=user)
 
@@ -527,7 +518,6 @@ def edit_student(id):
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == 'GET':
-
             form.exam_number.data = data.exam_number
             form.cohort.data = data.cohort
             form.programme.data = data.programme
@@ -664,7 +654,6 @@ def my_affiliations():
 @admin.route('/add_my_affiliation/<int:groupid>')
 @roles_required('faculty')
 def add_my_affiliation(groupid):
-
     data = FacultyData.query.get_or_404(current_user.id)
     group = ResearchGroup.query.get_or_404(groupid)
 
@@ -712,7 +701,6 @@ def add_group():
     form = AddResearchGroupForm(request.form)
 
     if form.validate_on_submit():
-
         group = ResearchGroup(abbreviation=form.abbreviation.data,
                               name=form.name.data,
                               website=form.website.data,
@@ -742,7 +730,6 @@ def edit_group(id):
     form.group = group
 
     if form.validate_on_submit():
-
         group.abbreviation = form.abbreviation.data
         group.name = form.name.data
         group.website = form.website.data
@@ -813,7 +800,6 @@ def add_degree_type():
     form = AddDegreeTypeForm(request.form)
 
     if form.validate_on_submit():
-
         degree_type = DegreeType(name=form.name.data,
                                  active=True,
                                  creator_id=current_user.id,
@@ -841,7 +827,6 @@ def edit_degree_type(id):
     form.degree_type = degree_type
 
     if form.validate_on_submit():
-
         degree_type.name = form.name.data
         degree_type.last_edit_id = current_user.id
         degree_type.last_edit_timestamp = datetime.now()
@@ -895,14 +880,12 @@ def add_degree_programme():
 
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
-
         flash('No degree types are available. Set up at least one active degree type before adding a degree programme.')
         return redirect(request.referrer)
 
     form = AddDegreeProgrammeForm(request.form)
 
     if form.validate_on_submit():
-
         degree_type = form.degree_type.data
         programme = DegreeProgramme(name=form.name.data,
                                     active=True,
@@ -932,7 +915,6 @@ def edit_degree_programme(id):
     form.programme = programme
 
     if form.validate_on_submit():
-
         programme.name = form.name.data
         programme.type_id = form.degree_type.data.id
         programme.last_edit_id = current_user.id
@@ -942,7 +924,8 @@ def edit_degree_programme(id):
 
         return redirect(url_for('admin.edit_degree_programmes'))
 
-    return render_template('admin/edit_programme.html', programme_form=form, programme=programme, title='Edit degree programme')
+    return render_template('admin/edit_programme.html', programme_form=form, programme=programme,
+                           title='Edit degree programme')
 
 
 @admin.route('/make_programme_active/<int:id>')
@@ -1007,7 +990,6 @@ def add_skill():
     form = AddTransferrableSkillForm(request.form)
 
     if form.validate_on_submit():
-
         skill = TransferableSkill(name=form.name.data,
                                   active=True,
                                   creator_id=current_user.id,
@@ -1038,7 +1020,6 @@ def edit_skill(id):
     form.skill = skill
 
     if form.validate_on_submit():
-
         skill.name = form.name.data
         skill.last_edit_id = current_user.id
         skill.last_edit_timestamp = datetime.now()
@@ -1111,14 +1092,12 @@ def add_project_class():
 
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
-
         flash('No degree types are available. Set up at least one active degree type before adding a project class.')
         return redirect(request.referrer)
 
     form = AddProjectClassForm(request.form)
 
     if form.validate_on_submit():
-
         # insert a record for this project class
         data = ProjectClass(name=form.name.data,
                             abbreviation=form.abbreviation.data,
@@ -1175,7 +1154,6 @@ def edit_project_class(id):
     form.project_class = data
 
     if form.validate_on_submit():
-
         data.name = form.name.data
         data.year = form.year.data
         data.extent = form.extent.data
@@ -1257,7 +1235,6 @@ def add_supervisor():
     form = AddSupervisorForm(request.form)
 
     if form.validate_on_submit():
-
         data = Supervisor(name=form.name.data,
                           active=True,
                           creator_id=current_user.id,
@@ -1288,7 +1265,6 @@ def edit_supervisor(id):
     form.supervisor = data
 
     if form.validate_on_submit():
-
         data.name = form.name.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
@@ -1376,7 +1352,6 @@ def faculty_settings():
     else:
 
         if request.method == 'GET':
-
             form.first_name.data = user.first_name
             form.last_name.data = user.last_name
             form.username.data = user.username
@@ -1395,11 +1370,12 @@ def confirm_global_rollover():
 
     next_year = get_current_year() + 1
 
-    title = 'Global rollover to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year+1)
-    panel_title = 'Global rollover of academic year to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year+1)
+    title = 'Global rollover to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year + 1)
+    panel_title = 'Global rollover of academic year to {yeara}&ndash;{yearb}'.format(yeara=next_year,
+                                                                                     yearb=next_year + 1)
     action_url = url_for('admin.perform_global_rollover')
     message = 'Please confirm that you wish to advance the global academic year to ' \
-              '{yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year+1)
+              '{yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year + 1)
     submit_label = 'Rollover to {yr}'.format(yr=next_year)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -1438,7 +1414,6 @@ def email_log():
     if form.validate_on_submit():
 
         if form.delete_age.data is True:
-
             cutoff = form.days.data
 
             now = datetime.now()
@@ -1477,7 +1452,7 @@ def delete_email(id):
     """
 
     email = EmailLog.query.get_or_404(id)
-    db.session.remove(email)
+    db.session.delete(email)
     db.session.commit()
 
     return redirect(url_for('admin.email_log'))
@@ -1498,7 +1473,7 @@ def delete_all_emails():
 
 
 @admin.route('/edit_messages')
-@roles_required('faculty', 'admin', 'root')
+@roles_accepted('faculty', 'admin', 'root')
 def edit_messages():
     """
     Edit message-of-the-day type messages
@@ -1518,3 +1493,118 @@ def edit_messages():
         messages = MessageOfTheDay.query.filter_by(user_id=current_user.id).all()
 
     return render_template('admin/edit_messages.html', messages=messages)
+
+
+@admin.route('/add_message', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def add_message():
+    """
+    Add a new message-of-the-day message
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    # convenors can't show login-screen messages
+    if not current_user.has_role('admin') and not current_user.has_role('root'):
+        form = AddMessageForm(request.form, convenor_editing=True)
+        del form.show_login
+    else:
+        form = AddMessageForm(request.form)
+
+    if form.validate_on_submit():
+
+        if 'show_login' in form._fields:
+            show_login = form._fields.get('show_login').data
+        else:
+            show_login = False
+
+        data = MessageOfTheDay(user_id=current_user.id,
+                               issue_date=datetime.now(),
+                               show_students=form.show_students.data,
+                               show_faculty=form.show_faculty.data,
+                               show_login=show_login,
+                               title=form.title.data,
+                               body=form.body.data,
+                               project_classes=form.project_classes.data)
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_messages'))
+
+    return render_template('admin/edit_message.html', form=form, title='Add new broadcast message')
+
+
+@admin.route('/edit_message/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_message(id):
+    """
+    Edit a message-of-the-day message
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    data = MessageOfTheDay.query.get_or_404(id)
+
+    # convenors can't show login-screen messages and can only edit their own messages
+    if not current_user.has_role('admin') and not current_user.has_role('root'):
+
+        if data.user_id != current_user.id:
+            flash('Only administrative users can edit messages that they do not own')
+            return home_dashboard()
+
+        form = EditMessageForm(obj=data, convenor_editing=True)
+        del form.show_login
+
+    else:
+
+        form = EditMessageForm(obj=data)
+
+    if form.validate_on_submit():
+
+        if 'show_login' in form._fields:
+            show_login = form._fields.get('show_login').data
+        else:
+            show_login = False
+
+        data.show_students = form.show_students.data
+        data.show_faculty = form.show_faculty.data
+        data.show_login = show_login
+        data.title = form.title.data
+        data.body = form.body.data
+        data.project_classes = form.project_classes.data
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_messages'))
+
+    return render_template('admin/edit_message.html', message=data, form=form, title='Edit broadcast message')
+
+
+@admin.route('/delete_message/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_message(id):
+    """
+    Delete message-of-the-day message
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    data = MessageOfTheDay.query.get_or_404(id)
+
+    # convenors can only delete their own messages
+    if not current_user.has_role('admin') and not current_user.has_role('root'):
+
+        if data.user_id != current_user.id:
+            flash('Only administrative users can edit messages that are not their own.')
+            return home_dashboard()
+
+    db.session.delete(data)
+    db.session.commit()
+
+    return redirect(request.referrer)

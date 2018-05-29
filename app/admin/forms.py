@@ -9,10 +9,12 @@
 #
 
 from flask import request, current_app
+from flask_security import current_user
 from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, get_form_field_label
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
-from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, ValidationError
+from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
+    TextAreaField, ValidationError
 from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
@@ -219,6 +221,16 @@ def GetActiveFaculty():
 def BuildUserRealName(user):
 
     return user.build_name_and_username()
+
+
+def GetAllProjectClasses():
+
+    return ProjectClass.query.filter_by(active=True)
+
+
+def GetConvenorProjectClasses():
+
+    return ProjectClass.query.filter(ProjectClass.active, ProjectClass.convenor_id==current_user.id)
 
 
 class UniqueUserNameMixin():
@@ -490,3 +502,54 @@ class EmailLogForm(Form):
     days = IntegerField('Age cutoff in days', validators=[DataRequired(message='Cutoff is required')])
 
     delete_age = SubmitField('Delete emails older than cutoff')
+
+
+class MessageMixin():
+
+    show_students = BooleanField('Display to students')
+
+    show_faculty = BooleanField('Display to faculty')
+
+    show_login = BooleanField('Display on login screen')
+
+    title = StringField('Title', validators=[Optional()], description='Optional. Briefly summarize your message.')
+
+    body = TextAreaField('Message', validators=[DataRequired(message='You must enter a message, however short')])
+
+    project_classes = CheckboxQuerySelectMultipleField('Display to users enrolled with',
+                                                       query_factory=GetAllProjectClasses, get_label='name',
+                                                       validators=[Optional()])
+
+
+class AddMessageForm(Form, MessageMixin):
+
+    def __init__(self, *args, **kwargs):
+
+        convenor_editing = False
+        if 'convenor_editing' in kwargs:
+            convenor_editing = True
+            del kwargs['convenor_editing']
+
+        super().__init__(*args, **kwargs)
+
+        if convenor_editing:
+            self.projects.query_factory = GetConvenorProjectClasses
+            self.projects.validators = [DataRequired(message='At least one project class should be selected')]
+
+    submit = SubmitField('Add new message')
+
+
+class EditMessageForm(Form, MessageMixin, EditFormMixin):
+
+    def __init__(self, *args, **kwargs):
+
+        convenor_editing = False
+        if 'convenor_editing' in kwargs:
+            convenor_editing = True
+            del kwargs['convenor_editing']
+
+        super().__init__(*args, **kwargs)
+
+        if convenor_editing:
+            self.projects.query_factory = GetConvenorProjectClasses
+            self.projects.validators = [Optional()]

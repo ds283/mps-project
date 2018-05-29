@@ -24,3 +24,36 @@
         </div>
     {% endif %}
 {% endmacro %}
+
+{% macro message_card(message, enrolled_classes) %}
+    <div class="well">
+        <div class="row vertical-top" style="margin-bottom: 1%;">
+            <div class="col-xs-5">
+                {% if message.title|length > 0 %}
+                    <strong>{{ message.title }}</strong>
+                {% endif %}
+            </div>
+            <div class="col-xs-7">
+                <div class="pull-right">
+                    {% for pclass in message.project_classes %}
+                        {% if pclass in enrolled_classes %}
+                            <span class="label label-info">{{ pclass.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xs-12">
+                {{ message.body }}
+            </div>
+        </div>
+        <hr class="intro-divider">
+        <div class="row">
+            <div class="col-xs-12">
+                Issued by <a href="mailto:{{ message.user.email }}">{{ message.user.build_name() }}</a>
+                at {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}
+            </div>
+        </div>
+    </div>
+{% endmacro %}

@@ -3,6 +3,7 @@
 {% extends "base_app.html" %}
 
 {% from "faculty/dashboard/pclass_card.html" import pclass_card with context %}
+{% from "macros.html" import message_card %}
 
 {% block title %}
     Faculty dashboard
@@ -12,6 +13,12 @@
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
+
+            {% if messages %}
+                {% for message in messages %}
+                    {{ message_card(message, enrolled_classes) }}
+                {% endfor %}
+            {% endif %}
 
             {% if enrollments and enrollments|length > 0 %}
 

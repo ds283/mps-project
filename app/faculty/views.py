@@ -13,7 +13,7 @@ from flask_security import login_required, roles_required, roles_accepted, curre
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
-    Supervisor, Project
+    Supervisor, Project, MessageOfTheDay
 
 from . import faculty
 
@@ -372,7 +372,24 @@ def dashboard():
 
             enrollments.append((config, live_projects))
 
-    return render_template('faculty/dashboard.html', enrollments=enrollments)
+    # build list of system messages to consider displaying
+    messages = []
+    for message in MessageOfTheDay.query.filter_by(show_faculty=True).all():
+
+        include = message.project_classes.first() is None
+        if not include:
+            for pcl in message.project_classes:
+                if pcl in current_user.faculty_data.enrollments:
+                    include = True
+                    break
+
+        if include:
+            messages.append(message)
+
+    return render_template('faculty/dashboard.html',
+                           enrolled_classes=current_user.faculty_data.enrollments,
+                           enrollments=enrollments,
+                           messages=messages)
 
 
 @faculty.route('/confirm_pclass/<int:id>')

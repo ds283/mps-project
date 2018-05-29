@@ -30,12 +30,12 @@
     
         {{ wtf.form_field(form.show_students) }}
         {{ wtf.form_field(form.show_faculty) }}
-        {% if form.show_login %}
-            {{ wtf.form_field(form.show_login) }}
-        {% endif %}
 
         <div class="well {% if form.project_classes.errors %}has-error{% endif %}">
-            <p>Select the project classes for which this message should be isplayed</p>
+            <p>Select the project classes for which this message should be displayed.</p>
+            {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                <p>Leave this selection <strong>blank</strong> to broadcast a message to everyone.</p>
+            {% endif %}
             {% for widget in form.project_classes %}
                 {{ wtf.form_field(widget) }}
             {% else %}
@@ -47,6 +47,10 @@
                 {% endfor %}
             {% endif %}
         </div>
+
+        {% if form.show_login %}
+            {{ wtf.form_field(form.show_login) }}
+        {% endif %}
 
         {{ wtf.form_field(form.title) }}
         {{ wtf.form_field(form.body) }}

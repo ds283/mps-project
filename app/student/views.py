@@ -15,7 +15,7 @@ from flask_security import login_required, current_user, logout_user, roles_requ
 from . import student
 
 from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
-    Bookmark
+    Bookmark, MessageOfTheDay
 
 import re
 from datetime import date, datetime
@@ -82,6 +82,7 @@ def dashboard():
     :return:
     """
 
+    # build list of all project classes for which this student has roles
     pcs = []
 
     for item in current_user.selecting.filter_by(retired=False).all():
@@ -96,32 +97,55 @@ def dashboard():
         if pclass.active and pclass not in pcs:
             pcs.append(pclass)
 
+    # map list of project classes into ProjectClassConfig instance, and selector/submitter cards
     enrollments = []
     for item in pcs:
 
+        # extract live configuration for this project class
         config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
 
+        # determine whether this student has a selector role for this project class
         select_q = config.selecting_students.filter_by(retired=False, user_id=current_user.id)
 
+        # TODO: consider performance impact of count() here. Is there a better alternative?
         if select_q.count() > 1:
-            flash('Multiple live "select" records exist for your account. Please contact '
-                  'the system administrator', 'error')
+            flash('Multiple live "selector" records exist for "{pclass}" on your account. Please contact '
+                  'the system administrator'.format(pclass=item.name), 'error')
 
         sel = select_q.first()
 
+        # determine whether this student has a submitter role for this project class
         submit_q = config.submitting_students.filter_by(retired=False, user_id=current_user.id)
 
+        # TODO: consider performance impact of count() here. Is there a better alternative?
         if submit_q.count() > 1:
-            flash('Multiple live "submit" records exist for your account. Please contact '
-                  'the system administrator', 'error')
+            flash('Multiple live "submitter" records exist for "{pclass}" on your account. Please contact '
+                  'the system administrator'.format(pclass=item.name), 'error')
 
         sub = submit_q.first()
 
         enrollments.append((config, sel, sub))
 
+    # list of all project classes used to generate a simple informational dashboard in the event
+    # that this student doesn't have any live selector or submitter roles
     pclasses = ProjectClass.query.filter_by(active=True)
 
-    return render_template('student/dashboard.html', enrollments=enrollments, pclasses=pclasses)
+    # build list of system messages to consider displaying
+    messages = []
+    for message in MessageOfTheDay.query.filter_by(show_student=True).all():
+
+        include = message.project_classes.first() is None
+        if not include:
+            for pcl in message.project_classes:
+                if pcl in pcs:
+                    include = True
+                    break
+
+        if include:
+            messages.append(message)
+
+    return render_template('student/dashboard.html', enrolled_classes=pcs, enrollments=enrollments, pclasses=pclasses,
+                           messages=messages)
 
 
 @student.route('/browse_projects/<int:id>')

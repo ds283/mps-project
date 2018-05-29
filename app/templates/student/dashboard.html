@@ -4,6 +4,7 @@
 
 {% from "student/dashboard/selection_card.html" import selection_card with context %}
 {% from "student/dashboard/submission_card.html" import submission_card with context %}
+{% from "macros.html" import message_card %}
 
 {% block scripts %}
     {{ super() }}
@@ -51,6 +52,12 @@
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
+
+            {% if messages %}
+                {% for message in messages %}
+                    {{ message_card(message, enrolled_classes) }}
+                {% endfor %}
+            {% endif %}
 
             {% if enrollments and enrollments|length > 0 %}
 

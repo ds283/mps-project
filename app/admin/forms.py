@@ -510,11 +510,12 @@ class MessageMixin():
 
     show_faculty = BooleanField('Display to faculty')
 
-    show_login = BooleanField('Display on login screen')
+    show_login = BooleanField('If a broadcast message, display on login screen')
 
     title = StringField('Title', validators=[Optional()], description='Optional. Briefly summarize your message.')
 
-    body = TextAreaField('Message', validators=[DataRequired(message='You must enter a message, however short')])
+    body = TextAreaField('Message', render_kw={"rows": 5},
+                         validators=[DataRequired(message='You must enter a message, however short')])
 
     project_classes = CheckboxQuerySelectMultipleField('Display to users enrolled with',
                                                        query_factory=GetAllProjectClasses, get_label='name',

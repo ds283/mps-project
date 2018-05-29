@@ -8,6 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import flash
 from flask_security import UserMixin, RoleMixin
 from flask_sqlalchemy import SQLAlchemy
 
@@ -246,6 +247,49 @@ class User(db.Model, UserMixin):
     def build_name_and_username(self):
 
         return self.build_name() + ' (' + self.username + ')'
+
+
+    def add_convenorship(self, pclass):
+        """
+        Set up this user (assumed to be linked to a FacultyData record) for the convenorship
+        of the given project class. Currently empty.
+        :param pclass:
+        :return:
+        """
+
+        flash('Installed {name} as convenor of {title}'.format(name=self.build_name(), title=pclass.name))
+
+
+    def remove_convenorship(self, pclass):
+        """
+        Remove the convenorship of the given project class from this user
+        :param pclass:
+        :return:
+        """
+
+        # currently our only task is to remove system messages emplaced by this user in their role as convenor
+
+        for item in MessageOfTheDay.query.filter_by(user_id=self.id).all():
+
+            # if no assigned classes then this is a broadcast message; move on
+            # (we can assume the user is still an administrator)
+            if item.project_classes.first() is None:
+
+                break
+
+            # otherwise, remove this project class from the classes associated with this
+            if pclass in item.project_classes:
+
+                item.project_classes.remove(pclass)
+
+                # if assigned project classes are now empty then delete the parent message
+                if item.project_classes.first() is None:
+
+                    db.session.delete(item)
+
+        db.session.commit()
+
+        flash('Removed {name} as convenor of {title}'.format(name=self.build_name(), title=pclass.name))
 
 
 class ResearchGroup(db.Model):

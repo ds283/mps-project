@@ -16,28 +16,38 @@ from flask_security.signals import user_registered
 from flask_security.confirmable import generate_confirmation_link
 
 from datetime import datetime
+import string
+import random
 
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
 
 
+def _randompassword():
+
+  chars = string.ascii_uppercase + string.ascii_lowercase + string.digits
+  size = random.randint(8, 12)
+
+  return ''.join(random.choice(chars) for x in range(size))
+
+
 def register_user(**kwargs):
 
     confirmation_link, token = None, None
 
-    if ('null_password' in kwargs and kwargs['null_password']) or len(kwargs['password']) == 0:
+    if ('random_password' in kwargs and kwargs['random_password']) or len(kwargs['password']) == 0:
 
-        kwargs['password'] = None
+        kwargs['password'] = _randompassword()
 
-    else:
+    # hash password so that we never store the original
+    kwargs['password'] = hash_password(kwargs['password'])
 
-        kwargs['password'] = hash_password(kwargs['password'])
-
+    # generate a User record and commit it
     user = _datastore.create_user(**kwargs)
-
     _datastore.commit()
 
+    # send confirmation email if we have been asked to
     if _security.confirmable:
 
         if 'ask_confirm' in kwargs and kwargs['ask_confirm']:

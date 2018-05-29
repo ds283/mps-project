@@ -49,8 +49,8 @@
         {% if user_form.password_confirm %}
             {{ wtf.form_field(user_form.password_confirm) }}
         {% endif %}
-        {% if user_form.null_password %}
-            {{ wtf.form_field(user_form.null_password) }}
+        {% if user_form.random_password %}
+            {{ wtf.form_field(user_form.random_password) }}
         {% endif %}
 
         {{ wtf.form_field(user_form.first_name) }}

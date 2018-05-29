@@ -132,7 +132,7 @@ def dashboard():
 
     # build list of system messages to consider displaying
     messages = []
-    for message in MessageOfTheDay.query.filter_by(show_student=True).all():
+    for message in MessageOfTheDay.query.filter_by(show_students=True).all():
 
         include = message.project_classes.first() is None
         if not include:

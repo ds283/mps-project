@@ -20,7 +20,7 @@ from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 
 from config import app_config
-from .models import db, User, EmailLog
+from .models import db, User, EmailLog, MessageOfTheDay
 from .tasks import make_celery
 
 from mdx_smartypants import makeExtension
@@ -91,6 +91,20 @@ def create_app():
     @security.send_mail_task
     def delay_flask_security_mail(msg):
         send_flask_mail.delay(msg)
+
+
+    @security.login_context_processor
+    def login_context_processor():
+
+        # build list of system messages to consider displaying
+        messages = []
+        for message in MessageOfTheDay.query.filter_by(show_login=True).all():
+
+            if message.project_classes.first() is None:
+
+                messages.append(message)
+
+        return dict(messages=messages)
 
 
     # IMPORT BLUEPRINTS

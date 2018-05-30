@@ -1,7 +1,7 @@
 FROM python:3.6-alpine3.7
 
 RUN apk update
-RUN apk add gcc libffi libffi-dev musl-dev linux-headers
+RUN apk add gcc libffi libffi-dev musl-dev linux-headers mariadb-client
 
 RUN adduser -D mpsproject
 

@@ -11,6 +11,12 @@
 
 from celery import Celery
 
+from flask import current_app
+
+from .models import db, User, EmailLog
+
+from datetime import datetime
+
 
 def make_celery(app):
 

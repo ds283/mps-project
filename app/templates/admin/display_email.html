@@ -13,7 +13,14 @@
             <div class="panel panel-primary">
                 <div class="panel-heading">{{ email.subject }}</div>
                 <div class="panel-body email-display">
-                    <p>To: <strong>{{ email.user.build_name() }}</strong> &lt;{{ email.user.email }}&gt;</p>
+                    <p>To:
+                        {% if email.user %}
+                            <strong>{{ email.user.build_name() }}</strong> &lt;{{ email.user.email }}&gt;</p>
+                        {% elif email.recipient %}
+                            <strong>{{ email.recipient }}</strong>
+                        {% else %}
+                            <span class="label label-danger">Invalid</span>
+                        {% endif %}
                     <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
                     <p>Subject: <strong>{{ email.subject }}</strong></p>
                     <hr class="intro-divider">

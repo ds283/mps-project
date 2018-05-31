@@ -58,8 +58,22 @@
                 <tbody>
                 {% for email in emails %}
                     <tr>
-                        <td> {{ email.user.build_name() }} </td>
-                        <td> {{ email.user.email }} </td>
+                        <td>
+                            {% if email.user %}
+                                {{ email.user.build_name() }}
+                            {% else %}
+                                <span class="label label-warning">Not logged</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if email.user %}
+                                {{ email.user.email }}
+                            {% elif email.recipient %}
+                                {{ email.recipient }}
+                            {% else %}
+                                <span class="label label-danger">Invalid</span>
+                            {% endif %}
+                        </td>
                         <td> {{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }} </td>
                         <td> <a href="{{ url_for('admin.display_email', id=email.id) }}"> {{ email.subject }} </a></td>
                         <td>

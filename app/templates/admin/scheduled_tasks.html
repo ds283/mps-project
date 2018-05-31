@@ -22,7 +22,13 @@
 {% endblock %}
 
 {% macro format_interval(data) %}
-    {{ data.every }} {{ data.period }}
+    {{ data.every }}
+    {% if data.every==1 %}
+        {# assume period is plural #}
+        {{ data.period[:-1] }}
+    {% else %}
+        {{ data.period }}
+    {% endif %}
 {% endmacro %}
 
 {% macro format_crontab(data) %}
@@ -81,8 +87,14 @@
 
                         <td> {{ task.last_run_at.strftime("%a %d %b %Y %H:%M:%S") }} </td>
                         <td> {{ task.total_runs_count }}</td>
-                        <td> {{ task.date_changed("%a %d %b %Y %H:%M:%S") }}</td>
-                        <td> {{ task.expires("%a %d %b %Y %H:%M:%S") }}</td>
+                        <td> {{ task.date_changed.strftime("%a %d %b %Y %H:%M:%S") }}</td>
+                        <td>
+                            {% if task.expires %}
+                                {{ task.expires.strftime("%a %d %b %Y %H:%M:%S") }}
+                            {% else %}
+                                <span class="label label-default">No expiry</span>
+                            {% endif %}
+                        </td>
 
                         <td>
                             <div class="dropdown">
@@ -97,7 +109,7 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="{{ url_for('admin.delete_ptask', id=task.id) }}">
+                                        <a href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
                                             <i class="fa fa-trash"></i> Delete
                                         </a>
                                     </li>

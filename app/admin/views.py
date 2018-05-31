@@ -476,6 +476,7 @@ def edit_faculty(id):
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == 'GET':
+
             form.academic_title.data = data.academic_title
             form.use_academic_title.data = data.use_academic_title
             form.sign_off_students.data = data.sign_off_students
@@ -527,6 +528,7 @@ def edit_student(id):
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == 'GET':
+
             form.exam_number.data = data.exam_number
             form.cohort.data = data.cohort
             form.programme.data = data.programme
@@ -1125,6 +1127,7 @@ def add_pclass():
                             creator_id=current_user.id,
                             creation_timestamp=datetime.now())
         db.session.add(data)
+        db.session.flush()
 
         # generate a corresponding configuration record for the current academic year
         current_year = get_current_year()
@@ -1373,6 +1376,7 @@ def faculty_settings():
     else:
 
         if request.method == 'GET':
+
             form.first_name.data = user.first_name
             form.last_name.data = user.last_name
             form.username.data = user.username
@@ -1738,6 +1742,7 @@ def add_interval_task():
             sch = IntervalSchedule(every=form.every.data,
                                    period=form.period.data)
             db.session.add(sch)
+            db.session.flush()
 
         data = DatabaseSchedulerEntry(name=form.name.data,
                                       task='',
@@ -1752,7 +1757,7 @@ def add_interval_task():
                                       enabled=True,
                                       last_run_at=datetime.now(),
                                       total_run_count=0,
-                                      data_changed=datetime.now())
+                                      date_changed=datetime.now())
 
         db.session.add(data)
         db.session.commit()
@@ -1788,6 +1793,7 @@ def add_crontab_task():
                                   day_of_month=form.day_of_month.data,
                                   month_of_year=form.month_of_year.data)
             db.session.add(sch)
+            db.session.flush()
 
         data = DatabaseSchedulerEntry(name=form.name.data,
                                       task='',
@@ -1802,7 +1808,7 @@ def add_crontab_task():
                                       enabled=True,
                                       last_run_at=datetime.now(),
                                       total_run_count=0,
-                                      data_changed=datetime.now())
+                                      date_changed=datetime.now())
 
         db.session.add(data)
         db.session.commit()
@@ -1812,7 +1818,7 @@ def add_crontab_task():
     return render_template('admin/edit_scheduled_task.html', form=form, title='Add new crontab task')
 
 
-@admin.route('/edit_interval_task/<int:id>')
+@admin.route('/edit_interval_task/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
 def edit_interval_task(id):
     """
@@ -1832,6 +1838,7 @@ def edit_interval_task(id):
             sch = IntervalSchedule(every=form.every.data,
                                    period=form.period.data)
             db.session.add(sch)
+            db.session.flush()
 
         data.name = form.name.data
         data.task = ''
@@ -1840,16 +1847,23 @@ def edit_interval_task(id):
         data.arguments = form.arguments.data
         data.keyword_arguments = form.keyword_arguments.data
         data.expires = form.expires.data
-        data.data_changed = datetime.now()
+        data.date_changed = datetime.now()
 
         db.session.commit()
 
         return redirect(url_for('admin.scheduled_tasks'))
 
-    return render_template('admin/edit_scheduled_task.html', form=form, title='Edit fixed-interval task')
+    else:
+
+        if request.method == 'GET':
+
+            form.every.data = data.interval.every
+            form.period.data = data.interval.period
+
+    return render_template('admin/edit_scheduled_task.html', task=data, form=form, title='Edit fixed-interval task')
 
 
-@admin.route('/edit_interval_task/<int:id>')
+@admin.route('/edit_interval_task/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
 def edit_crontab_task(id):
     """
@@ -1876,6 +1890,7 @@ def edit_crontab_task(id):
                                   day_of_month=form.day_of_month.data,
                                   month_of_year=form.month_of_year.data)
             db.session.add(sch)
+            db.session.flush()
 
         data.name = form.name.data
         data.task = ''
@@ -1884,13 +1899,23 @@ def edit_crontab_task(id):
         data.arguments = form.arguments.data
         data.keyword_arguments = form.keyword_arguments.data
         data.expires = form.expires.data
-        data.data_changed = datetime.now()
+        data.date_changed = datetime.now()
 
         db.session.commit()
 
         return redirect(url_for('admin.scheduled_tasks'))
 
-    return render_template('admin/edit_scheduled_task.html', form=form, title='Add new crontab task')
+    else:
+
+        if request.method == 'GET':
+
+            form.minute.data = data.crontab.minute
+            form.hour.data = data.crontab.hour
+            form.day_of_week.data = data.crontab.day_of_week
+            form.day_of_month = data.crontab.day_of_month
+            form.month_of_year = data.crontab.month_of_year
+
+    return render_template('admin/edit_scheduled_task.html', task=data, form=form, title='Add new crontab task')
 
 
 

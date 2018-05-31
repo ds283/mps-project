@@ -1450,10 +1450,13 @@ class EmailLog(db.Model):
     # unique id for this record
     id = db.Column(db.Integer(), primary_key=True)
 
-    # id of owning user
-    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    # id of user to whom email was sent, if it could be determined
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'), nullable=True)
     user = db.relationship('User', uselist=False,
                            backref=db.backref('emails', lazy='dynamic'))
+
+    # recipient as a string, used if user_id could not be determined
+    recipient = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True)
 
     # date of sending attempt
     send_date = db.Column(db.DateTime(), index=True)
@@ -1613,10 +1616,8 @@ class DatabaseSchedulerEntry(db.Model):
     total_run_count = db.Column(db.Integer, default=0)
     date_changed = db.Column(db.DateTime)
 
-    interval = db.relationship(IntervalSchedule,
-                               backref=db.backref('entries', lazy='dynamic', cascade='all, delete-orphan'))
-    crontab = db.relationship(CrontabSchedule,
-                              backref=db.backref('entries', lazy='dynamic', cascade='all, delete-orphan'))
+    interval = db.relationship(IntervalSchedule, backref=db.backref('entries', lazy='dynamic'))
+    crontab = db.relationship(CrontabSchedule, backref=db.backref('entries', lazy='dynamic'))
 
     @property
     def args(self):

@@ -1420,9 +1420,11 @@ class Bookmark(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # id of owning SelectingStudent
+    # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
+    # removed from the database
     user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
     user = db.relationship('SelectingStudent', uselist=False,
-                           backref=db.backref('bookmarks', lazy='dynamic'))
+                           backref=db.backref('bookmarks', lazy='dynamic', cascade='all, delete-orphan'))
 
     # LiveProject we are linking to
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))

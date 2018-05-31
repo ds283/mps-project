@@ -14,7 +14,7 @@ from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, 
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
-    TextAreaField, ValidationError
+    TextAreaField, ValidationError, DateTimeField
 from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
@@ -561,3 +561,75 @@ class EditMessageForm(Form, MessageMixin, EditFormMixin):
         if convenor_editing:
             self.projects.query_factory = GetConvenorProjectClasses
             self.projects.validators = [Optional()]
+
+
+class ScheduleTypeMixin():
+
+    available_types = [('interval', 'Fixed interval'), ('crontab', 'Crontab')]
+    type = SelectField('Type of schedule', choices=available_types)
+
+
+class ScheduleTypeForm(Form, ScheduleTypeMixin):
+
+    submit = SubmitField('Select type')
+
+
+class ScheduledTaskMixin():
+
+    name = StringField('Name', validators=[DataRequired(message='A task name is required')])
+
+    tasks_available = [('prune_email', 'Prune email log'),
+                       ('backup', 'Perform local backup'),
+                       ('thin', 'Thin local backups'),
+                       ('remote_backup', 'Backup to internet location')]
+    task_type = SelectField('Task', choices=tasks_available)
+
+    arguments = StringField('Arguments', validators=[Optional()],
+                            description='Format as a JSON string')
+
+    keyword_arguments = StringField('Keyword arguments', validators=[Optional()],
+                                    description='Format as a JSON string')
+
+    expires = DateTimeField('Expires at', validators=[Optional()],
+                            description='Optional. Format YYYY-mm-dd HH:MM:SS. Leave blank for no expiry.')
+
+
+class IntervalMixin():
+
+    every = IntegerField('Run every', validators=[DataRequired(message='You must enter a nonzero interval')])
+
+    available_periods = [('seconds', 'seconds'), ('minutes', 'minutes'), ('hours', 'hours'), ('days', 'days'), ('weeks', 'weeks')]
+    period = SelectField('Period', choices=available_periods)
+
+
+class CrontabMixin():
+
+    minute = StringField('Minute pattern', validators=[DataRequired(message='You must enter a pattern')])
+
+    hour = StringField('Hour pattern', validators=[DataRequired(message='You must enter a pattern')])
+
+    day_of_week = StringField('Day-of-week pattern', validators=[DataRequired(message='You must enter a pattern')])
+
+    day_of_month = StringField('Day-of-month pattern', validators=[DataRequired(message='You must enter a pattern')])
+
+    month_of_year = StringField('Month-of-year pattern', validators=[DataRequired(message='You must enter a pattern')])
+
+
+class AddIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin):
+
+    submit = SubmitField('Add new task')
+
+
+class EditIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin, EditFormMixin):
+
+    pass
+
+
+class AddCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin):
+
+    submit = SubmitField('Add new task')
+
+
+class EditCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin, EditFormMixin):
+
+    pass

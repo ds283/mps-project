@@ -422,11 +422,11 @@
 
                                             <li>
                                             {% if project.active %}
-                                                <a href="{{ url_for('convenor.make_project_inactive', id=project.id, pclassid=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.deactivate_project', id=project.id, pclassid=pclass.id) }}">
                                                     Make inactive
                                                 </a>
                                             {% else %}
-                                                <a href="{{ url_for('convenor.make_project_active', id=project.id, pclassid=pclass.id) }}">
+                                                <a href="{{ url_for('convenor.activate_project', id=project.id, pclassid=pclass.id) }}">
                                                     Make active
                                                 </a>
                                             {% endif %}

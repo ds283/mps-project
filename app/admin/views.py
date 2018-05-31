@@ -27,16 +27,21 @@ from .forms import RoleSelectForm, \
     AddProjectClassForm, EditProjectClassForm, \
     AddSupervisorForm, EditSupervisorForm, \
     FacultySettingsForm, EmailLogForm, \
-    AddMessageForm, EditMessageForm
+    AddMessageForm, EditMessageForm, \
+    ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
+    EditIntervalScheduledTask, EditCrontabScheduledTask
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project, EmailLog, MessageOfTheDay
+    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project, EmailLog, MessageOfTheDay, \
+    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule
 
 from ..utils import get_main_config, get_current_year, home_dashboard
 
 from . import admin
 
 from datetime import date, datetime, timedelta
+
+from celery import schedules
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -316,9 +321,9 @@ def remove_root(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_active/<int:id>')
+@admin.route('/activate_user/<int:id>')
 @roles_required('admin')
-def make_active(id):
+def activate_user(id):
     """
     Make a user account active
     :param id:
@@ -333,9 +338,9 @@ def make_active(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_inactive/<int:id>')
+@admin.route('/deactivate_user/<int:id>')
 @roles_required('admin')
-def make_inactive(id):
+def deactivate_user(id):
     """
     Make a user account active
     :param id:
@@ -747,9 +752,9 @@ def edit_group(id):
     return render_template('admin/edit_group.html', group_form=form, group=group, title='Edit research group')
 
 
-@admin.route('/make_group_active/<int:id>')
+@admin.route('/activate_group/<int:id>')
 @roles_required('root')
-def make_group_active(id):
+def activate_group(id):
     """
     View to make a research group active
     :param id:
@@ -763,9 +768,9 @@ def make_group_active(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_group_inactive/<int:id>')
+@admin.route('/deactivate_group/<int:id>')
 @roles_required('root')
-def make_group_inactive(id):
+def deactivate_group(id):
     """
     View to make a research group inactive
     :param id:
@@ -844,7 +849,7 @@ def edit_degree_type(id):
 
 @admin.route('/make_type_active/<int:id>')
 @roles_required('root')
-def make_degree_type_active(id):
+def activate_degree_type(id):
     """
     Make a degree type active
     :param id:
@@ -860,7 +865,7 @@ def make_degree_type_active(id):
 
 @admin.route('/make_type_inactive/<int:id>')
 @roles_required('root')
-def make_degree_type_inactive(id):
+def deactivate_degree_type(id):
     """
     Make a degree type inactive
     :param id:
@@ -932,9 +937,9 @@ def edit_degree_programme(id):
                            title='Edit degree programme')
 
 
-@admin.route('/make_programme_active/<int:id>')
+@admin.route('/activate_programme/<int:id>')
 @roles_required('root')
-def make_degree_programme_active(id):
+def activate_degree_programme(id):
     """
     Make a degree programme active
     :param id:
@@ -948,9 +953,9 @@ def make_degree_programme_active(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_programme_inactive/<int:id>')
+@admin.route('/deactivate_programme/<int:id>')
 @roles_required('root')
-def make_degree_programme_inactive(id):
+def deactivate_degree_programme(id):
     """
     Make a degree programme inactive
     :param id:
@@ -1035,9 +1040,9 @@ def edit_skill(id):
     return render_template('admin/edit_skill.html', skill_form=form, skill=skill, title='Edit transferable skill')
 
 
-@admin.route('/make_skill_active/<int:id>')
+@admin.route('/activate_skill/<int:id>')
 @roles_accepted('admin', 'root', 'faculty')
-def make_skill_active(id):
+def activate_skill(id):
     """
     Make a transferable active
     :param id:
@@ -1054,9 +1059,9 @@ def make_skill_active(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_skill_inactive/<int:id>')
+@admin.route('/deactivate_skill/<int:id>')
 @roles_accepted('admin', 'root', 'faculty')
-def make_skill_inactive(id):
+def deactivate_skill(id):
     """
     Make a transferable inactive
     :param id:
@@ -1086,9 +1091,9 @@ def edit_project_classes():
     return render_template('admin/edit_project_classes.html', classes=classes)
 
 
-@admin.route('/add_project_class', methods=['GET', 'POST'])
+@admin.route('/add_pclass', methods=['GET', 'POST'])
 @roles_required('root')
-def add_project_class():
+def add_pclass():
     """
     Create a new project class
     :return:
@@ -1146,9 +1151,9 @@ def add_project_class():
     return render_template('admin/edit_project_class.html', project_form=form, title='Add new project class')
 
 
-@admin.route('/edit_project_class/<int:id>', methods=['GET', 'POST'])
+@admin.route('/edit_pclass/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
-def edit_project_class(id):
+def edit_pclass(id):
     """
     Edit properties for an existing project class
     :param id:
@@ -1192,9 +1197,9 @@ def edit_project_class(id):
                            title='Edit project class')
 
 
-@admin.route('/make_project_class_active/<int:id>')
+@admin.route('/activate_pclass/<int:id>')
 @roles_required('root')
-def make_project_class_active(id):
+def activate_pclass(id):
     """
     Make a project class active
     :param id:
@@ -1208,9 +1213,9 @@ def make_project_class_active(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_project_class_inactive/<int:id>')
+@admin.route('/deactivate_pclass/<int:id>')
 @roles_required('root')
-def make_project_class_inactive(id):
+def deactivate_pclass(id):
     """
     Make a project class inactive
     :param id:
@@ -1293,9 +1298,9 @@ def edit_supervisor(id):
                            title='Edit supervisory role')
 
 
-@admin.route('/make_supervisor_active/<int:id>')
+@admin.route('/activate_supervisor/<int:id>')
 @roles_accepted('admin', 'root', 'faculty')
-def make_supervisor_active(id):
+def activate_supervisor(id):
     """
     Make a supervisor active
     :param id:
@@ -1312,9 +1317,9 @@ def make_supervisor_active(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_supervisor_inactive/<int:id>')
+@admin.route('/deactivate_supervisor/<int:id>')
 @roles_accepted('admin', 'root', 'faculty')
-def make_supervisor_inactive(id):
+def deactivate_supervisor(id):
     """
     Make a supervisor inactive
     :param id:
@@ -1439,7 +1444,7 @@ def email_log():
             EmailLog.query.filter(EmailLog.send_date < limit).delete()
             db.session.commit()
 
-    emails = EmailLog.query.order_by(EmailLog.send_date)
+    emails = db.session.query(EmailLog)
 
     return render_template('admin/email_log.html', form=form, emails=emails)
 
@@ -1666,6 +1671,272 @@ def reset_dismissals(id):
             return home_dashboard()
 
     message.dismissed_by = []
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/scheduled_tasks')
+@roles_required('root')
+def scheduled_tasks():
+    """
+    UI for scheduling period tasks (database backup, prune email log, etc.)
+    :return:
+    """
+
+    tasks = db.session.query(DatabaseSchedulerEntry)
+
+    return render_template('admin/scheduled_tasks.html', tasks=tasks)
+
+
+@admin.route('/add_scheduled_task', methods=['GET', 'POST'])
+@roles_required('root')
+def add_scheduled_task():
+    """
+    Add a new scheduled task
+    :return:
+    """
+
+    form = ScheduleTypeForm(request.form)
+
+    if form.validate_on_submit():
+
+        if form.type.data == 'interval':
+
+            return redirect(url_for('admin.add_interval_task'))
+
+        elif form.type.data == 'crontab':
+
+            return redirect(url_for('admin.add_crontab_task'))
+
+        else:
+
+            flash('The task type was not recognized. If this error persists, please contact '
+                  'the system administrator.')
+
+            return redirect(url_for('admin.scheduled_tasks'))
+
+    return render_template('admin/scheduled_type.html', form=form, title='Select schedule type')
+
+
+@admin.route('/add_interval_task', methods=['GET', 'POST'])
+@roles_required('root')
+def add_interval_task():
+    """
+    Add a new task specified by a simple interval
+    :return:
+    """
+
+    form = AddIntervalScheduledTask(request.form)
+
+    if form.validate_on_submit():
+
+        # build or lookup an appropriate IntervalSchedule record from the database
+        sch = IntervalSchedule.query.filter_by(every=form.every.data, period=form.period.data).first()
+
+        if sch is None:
+            sch = IntervalSchedule(every=form.every.data,
+                                   period=form.period.data)
+            db.session.add(sch)
+
+        data = DatabaseSchedulerEntry(name=form.name.data,
+                                      task='',
+                                      interval_id=sch.id,
+                                      crontab_id=None,
+                                      arguments=form.arguments.data,
+                                      keyword_arguments=form.keyword_arguments.data,
+                                      queue=None,
+                                      exchange=None,
+                                      routing_key=None,
+                                      expires=form.expires.data,
+                                      enabled=True,
+                                      last_run_at=datetime.now(),
+                                      total_run_count=0,
+                                      data_changed=datetime.now())
+
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.scheduled_tasks'))
+
+    return render_template('admin/edit_scheduled_task.html', form=form, title='Add new fixed-interval task')
+
+
+@admin.route('/add_crontab_task', methods=['GET', 'POST'])
+@roles_required('root')
+def add_crontab_task():
+    """
+    Add a new task specified by a crontab
+    :return:
+    """
+
+    form = AddCrontabScheduledTask(request.form)
+
+    if form.validate_on_submit():
+
+        # build or lookup an appropriate IntervalSchedule record from the database
+        sch = CrontabSchedule.query.filter_by(minute=form.minute.data,
+                                              hour=form.hour.data,
+                                              day_of_week=form.day_of_week.data,
+                                              day_of_month=form.day_of_month.data,
+                                              month_of_year=form.month_of_year.data).first()
+
+        if sch is None:
+            sch = CrontabSchedule(minute=form.minute.data,
+                                  hour=form.hour.data,
+                                  day_of_week=form.day_of_week.data,
+                                  day_of_month=form.day_of_month.data,
+                                  month_of_year=form.month_of_year.data)
+            db.session.add(sch)
+
+        data = DatabaseSchedulerEntry(name=form.name.data,
+                                      task='',
+                                      interval_id=None,
+                                      crontab_id=sch.id,
+                                      arguments=form.arguments.data,
+                                      keyword_arguments=form.keyword_arguments.data,
+                                      queue=None,
+                                      exchange=None,
+                                      routing_key=None,
+                                      expires=form.expires.data,
+                                      enabled=True,
+                                      last_run_at=datetime.now(),
+                                      total_run_count=0,
+                                      data_changed=datetime.now())
+
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.scheduled_tasks'))
+
+    return render_template('admin/edit_scheduled_task.html', form=form, title='Add new crontab task')
+
+
+@admin.route('/edit_interval_task/<int:id>')
+@roles_required('root')
+def edit_interval_task(id):
+    """
+    Edit an existing fixed-interval task
+    :return:
+    """
+
+    data = DatabaseSchedulerEntry.query.get_or_404(id)
+    form = EditIntervalScheduledTask(obj=data)
+
+    if form.validate_on_submit():
+
+        # build or lookup an appropriate IntervalSchedule record from the database
+        sch = IntervalSchedule.query.filter_by(every=form.every.data, period=form.period.data).first()
+
+        if sch is None:
+            sch = IntervalSchedule(every=form.every.data,
+                                   period=form.period.data)
+            db.session.add(sch)
+
+        data.name = form.name.data
+        data.task = ''
+        data.interval_id = sch.id
+        data.crontab_id = None
+        data.arguments = form.arguments.data
+        data.keyword_arguments = form.keyword_arguments.data
+        data.expires = form.expires.data
+        data.data_changed = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.scheduled_tasks'))
+
+    return render_template('admin/edit_scheduled_task.html', form=form, title='Edit fixed-interval task')
+
+
+@admin.route('/edit_interval_task/<int:id>')
+@roles_required('root')
+def edit_crontab_task(id):
+    """
+    Edit an existing fixed-interval task
+    :return:
+    """
+
+    data = DatabaseSchedulerEntry.query.get_or_404(id)
+    form = EditCrontabScheduledTask(obj=data)
+
+    if form.validate_on_submit():
+
+        # build or lookup an appropriate IntervalSchedule record from the database
+        sch = CrontabSchedule.query.filter_by(minute=form.minute.data,
+                                              hour=form.hour.data,
+                                              day_of_week=form.day_of_week.data,
+                                              day_of_month=form.day_of_month.data,
+                                              month_of_year=form.month_of_year.data).first()
+
+        if sch is None:
+            sch = CrontabSchedule(minute=form.minute.data,
+                                  hour=form.hour.data,
+                                  day_of_week=form.day_of_week.data,
+                                  day_of_month=form.day_of_month.data,
+                                  month_of_year=form.month_of_year.data)
+            db.session.add(sch)
+
+        data.name = form.name.data
+        data.task = ''
+        data.interval_id = None
+        data.crontab_id = sch.id
+        data.arguments = form.arguments.data
+        data.keyword_arguments = form.keyword_arguments.data
+        data.expires = form.expires.data
+        data.data_changed = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.scheduled_tasks'))
+
+    return render_template('admin/edit_scheduled_task.html', form=form, title='Add new crontab task')
+
+
+
+@admin.route('/delete_scheduled_task/<int:id>')
+@roles_required('root')
+def delete_scheduled_task(id):
+    """
+    Remove an existing scheduled task
+    :return:
+    """
+
+    task = DatabaseSchedulerEntry.query.get_or_404(id)
+
+    db.session.delete(task)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/activate_scheduled_task/<int:id>')
+@roles_required('root')
+def activate_scheduled_task(id):
+    """
+    Mark a scheduled task as active
+    :return:
+    """
+
+    task = DatabaseSchedulerEntry.query.get_or_404(id)
+
+    task.enabled = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/deactivate_scheduled_task/<int:id>')
+@roles_required('root')
+def deactivate_scheduled_task(id):
+    """
+    Mark a scheduled task as inactive
+    :return:
+    """
+
+    task = DatabaseSchedulerEntry.query.get_or_404(id)
+
+    task.enabled = False
     db.session.commit()
 
     return redirect(request.referrer)

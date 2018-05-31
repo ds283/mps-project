@@ -1,0 +1,22 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.add_scheduled_task') }}" method="POST" name="scheduled_type_form">
+
+        {{ form.hidden_tag() }}
+
+        {{ wtf.form_field(form.type) }}
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

@@ -76,11 +76,11 @@
 
                                     <li>
                                         {% if group.active %}
-                                            <a href="{{ url_for('admin.make_group_inactive', id=group.id) }}">
+                                            <a href="{{ url_for('admin.deactivate_group', id=group.id) }}">
                                                 Make inactive
                                             </a>
                                         {% else %}
-                                            <a href="{{ url_for('admin.make_group_active', id=group.id) }}">
+                                            <a href="{{ url_for('admin.activate_group', id=group.id) }}">
                                                 Make active
                                             </a>
                                         {% endif %}

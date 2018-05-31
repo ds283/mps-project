@@ -142,9 +142,9 @@ def edit_project(id):
     return render_template('faculty/edit_project.html', project_form=form, project=data, title='Edit project details')
 
 
-@faculty.route('/make_project_active/<int:id>')
+@faculty.route('/activate_project/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def make_project_active(id):
+def activate_project(id):
 
     # get project details
     data = Project.query.get_or_404(id)
@@ -159,9 +159,9 @@ def make_project_active(id):
     return redirect(request.referrer)
 
 
-@faculty.route('/make_project_inactive/<int:id>')
+@faculty.route('/deactivate_project/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def make_project_inactive(id):
+def deactivate_project(id):
 
     # get project details
     data = Project.query.get_or_404(id)

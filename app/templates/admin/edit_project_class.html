@@ -17,9 +17,9 @@
 
 {% block form_content %}
     {% if project_class %}
-        <form action="{{ url_for('admin.edit_project_class', id=project_class.id) }}" method="POST" name="project_form">
+        <form action="{{ url_for('admin.edit_pclass', id=project_class.id) }}" method="POST" name="project_form">
     {% else %}
-        <form action="{{ url_for('admin.add_project_class') }}" method="POST" name="project_form">
+        <form action="{{ url_for('admin.add_pclass') }}" method="POST" name="project_form">
     {% endif %}
 
         {{ project_form.hidden_tag() }}

@@ -254,9 +254,9 @@ def edit_project(id, pclass_id):
     return render_template('faculty/edit_project.html', project_form=form, project=data, pclass_id=pclass_id, title='Edit project details')
 
 
-@convenor.route('/make_project_active/<int:id>/<int:pclassid>')
+@convenor.route('/activate_project/<int:id>/<int:pclassid>')
 @roles_accepted('faculty', 'admin', 'root')
-def make_project_active(id, pclassid):
+def activate_project(id, pclassid):
 
     # get project details
     data = Project.query.get_or_404(id)
@@ -274,9 +274,9 @@ def make_project_active(id, pclassid):
     return redirect(url_for('convenor.dashboard', id=pclassid, tabid=2))
 
 
-@convenor.route('/make_project_inactive/<int:id>/<int:pclassid>')
+@convenor.route('/deactivate_project/<int:id>/<int:pclassid>')
 @roles_accepted('faculty', 'admin', 'root')
-def make_project_inactive(id, pclassid):
+def deactivate_project(id, pclassid):
 
     # get project details
     data = Project.query.get_or_404(id)

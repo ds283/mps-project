@@ -138,11 +138,11 @@
 
                                     <li>
                                     {% if project.active %}
-                                        <a href="{{ url_for('faculty.make_project_inactive', id=project.id) }}">
+                                        <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
                                             Make inactive
                                         </a>
                                     {% else %}
-                                        <a href="{{ url_for('faculty.make_project_active', id=project.id) }}">
+                                        <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
                                             Make active
                                         </a>
                                     {% endif %}

@@ -65,11 +65,11 @@
                                     </li>
 
                                     {% if type.active %}
-                                        <li><a href="{{ url_for('admin.make_degree_type_inactive', id=type.id) }}">
+                                        <li><a href="{{ url_for('admin.deactivate_degree_type', id=type.id) }}">
                                             Make inactive
                                         </a></li>
                                     {% else %}
-                                        <li><a href="{{ url_for('admin.make_degree_type_active', id=type.id) }}">
+                                        <li><a href="{{ url_for('admin.activate_degree_type', id=type.id) }}">
                                             Make active
                                         </a></li>
                                     {% endif %}
@@ -137,12 +137,12 @@
                                     </li>
 
                                     {% if programme.active %}
-                                        <li><a href="{{ url_for('admin.make_degree_programme_inactive', id=programme.id) }}">
+                                        <li><a href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
                                             Make inactive
                                         </a></li>
                                     {% else %}
                                         {% if programme.available() %}
-                                            <li><a href="{{ url_for('admin.make_degree_programme_active', id=programme.id) }}">
+                                            <li><a href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
                                                 Make active
                                             </a></li>
                                         {% else %}

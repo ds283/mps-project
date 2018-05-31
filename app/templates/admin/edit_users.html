@@ -106,11 +106,11 @@
 
                                     <li {% if user.username == current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
                                         {% if user.is_active %}
-                                            <a {% if user.username != current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.make_inactive', id=user.id) }}"{% endif %}>
+                                            <a {% if user.username != current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.deactivate_user', id=user.id) }}"{% endif %}>
                                                 Make inactive
                                             </a>
                                         {% else %}
-                                            <a href="{{ url_for('admin.make_active', id=user.id) }}">
+                                            <a href="{{ url_for('admin.activate_user', id=user.id) }}">
                                                 Make active
                                             </a>
                                         {% endif %}

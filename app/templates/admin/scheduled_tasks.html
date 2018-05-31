@@ -21,36 +21,69 @@
     </script>
 {% endblock %}
 
+{% macro format_interval(data) %}
+    {{ data.every }} {{ data.period }}
+{% endmacro %}
+
+{% macro format_crontab(data) %}
+    m({{ data.minute }})
+    h({{ data.hour }})
+    wd({{ data.day_of_week }})
+    mo({{ data.day_of_month }})
+    mon({{ data.month_of_year }})
+{% endmacro %}
+
 {% block title %}
-    Edit supervisory team
+    Scheduled tasks
 {% endblock %}
 
 {% block bodyblock %}
-    {% if roles %}
+    {% if tasks and tasks.first() %}
         <div class="panel panel-primary panel-primary-bg">
-            <div class="panel-heading">Edit supervisory team</div>
+            <div class="panel-heading">Scheduled tasks</div>
             <div class="panel-body">
             <table class="table table-striped table-bordered sortable-pageable">
                 <thead>
                 <tr>
-                    <th width="75%"> Role</th>
-                    <th width="10%"> Status</th>
+                    <th width="18%"> Name</th>
+                    <th width="20%"> Schedule</th>
+                    <th width="7%"> Active?</th>
+                    <th width="10%"> Last run</th>
+                    <th width="10%"> Total runs</th>
+                    <th width="10%"> Last changed</th>
+                    <th width="10%"> Expiry</th>
                     <th width="15%"> Actions</th>
                 </tr>
                 </thead>
                 <tbody>
-                {% for role in roles %}
+                {% for task in tasks %}
                     <tr>
-                        <td> {{ role.name }} </td>
+                        <td> {{ task.name }} </td>
+
+                        {# interval #}
                         <td>
-                            {% if role.active %}
-                                Active
+                            {% if task.interval %}
+                                {{ format_interval(task.interval) }}
+                            {% elif task.crontab %}
+                                {{ format_crontab(task.crontab) }}
                             {% else %}
-                                Inactive
+                                <span class="label label-danger">Invalid</span>
                             {% endif %}
                         </td>
 
-                        {# can assume user is admin or higher #}
+                        <td>
+                            {% if task.enabled %}
+                                Yes
+                            {% else %}
+                                No
+                            {% endif %}
+                        </td>
+
+                        <td> {{ task.last_run_at.strftime("%a %d %b %Y %H:%M:%S") }} </td>
+                        <td> {{ task.total_runs_count }}</td>
+                        <td> {{ task.date_changed("%a %d %b %Y %H:%M:%S") }}</td>
+                        <td> {{ task.expires("%a %d %b %Y %H:%M:%S") }}</td>
+
                         <td>
                             <div class="dropdown">
                                 <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
@@ -59,18 +92,22 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li>
-                                        <a href="{{ url_for('admin.edit_supervisor', id=role.id) }}">
-                                            <i class="fa fa-pencil"></i> Edit details
+                                        <a href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
+                                            <i class="fa fa-pencil"></i> Edit task
                                         </a>
                                     </li>
-
                                     <li>
-                                        {% if role.active %}
-                                            <a href="{{ url_for('admin.deactivate_supervisor', id=role.id) }}">
+                                        <a href="{{ url_for('admin.delete_ptask', id=task.id) }}">
+                                            <i class="fa fa-trash"></i> Delete
+                                        </a>
+                                    </li>
+                                    <li>
+                                        {% if task.enabled %}
+                                            <a href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
                                                 Make inactive
                                             </a>
                                         {% else %}
-                                            <a href="{{ url_for('admin.activate_supervisor', id=role.id) }}">
+                                            <a href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
                                                 Make active
                                             </a>
                                         {% endif %}
@@ -87,12 +124,12 @@
         <div style="text-align: center;">
     {% else %}
         <div style="text-align: center;">
-        <h3> No supervisory roles currently registered. </h3>
-        <hr class="intro-divider">
+            <h3> No scheduled tasks </h3>
+            <hr class="intro-divider">
     {% endif %}
-    <a href="{{ url_for('admin.add_supervisor') }}" class="btn btn-default btn-lg">
+    <a href="{{ url_for('admin.add_scheduled_task') }}" class="btn btn-default btn-lg">
         <i class="fa fa-plus"></i>
-        Add new supervisory role
+        Add new scheduled task
     </a>
     </div>
-{%  endblock %}
+{% endblock %}

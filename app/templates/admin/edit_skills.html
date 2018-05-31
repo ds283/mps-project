@@ -66,11 +66,11 @@
 
                                     <li>
                                         {% if skill.active %}
-                                            <a href="{{ url_for('admin.make_skill_inactive', id=skill.id) }}">
+                                            <a href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
                                                 Make inactive
                                             </a>
                                         {% else %}
-                                            <a href="{{ url_for('admin.make_skill_active', id=skill.id) }}">
+                                            <a href="{{ url_for('admin.activate_skill', id=skill.id) }}">
                                                 Make active
                                             </a>
                                         {% endif %}

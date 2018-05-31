@@ -1613,8 +1613,10 @@ class DatabaseSchedulerEntry(db.Model):
     total_run_count = db.Column(db.Integer, default=0)
     date_changed = db.Column(db.DateTime)
 
-    interval = db.relationship(IntervalSchedule)
-    crontab = db.relationship(CrontabSchedule)
+    interval = db.relationship(IntervalSchedule,
+                               backref=db.backref('entries', lazy='dynamic', cascade='all, delete-orphan'))
+    crontab = db.relationship(CrontabSchedule,
+                              backref=db.backref('entries', lazy='dynamic', cascade='all, delete-orphan'))
 
     @property
     def args(self):
@@ -1642,4 +1644,5 @@ class DatabaseSchedulerEntry(db.Model):
 
 @sqlalchemy.event.listens_for(DatabaseSchedulerEntry, 'before_insert')
 def _set_entry_changed_date(mapper, connection, target):
+
     target.date_changed = datetime.utcnow()

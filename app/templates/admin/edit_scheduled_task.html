@@ -1,0 +1,63 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if task and task.name %}
+        Edit task <strong>{{ task.name }}</strong>
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if task %}
+        {% if form.every %}
+            <form action="{{ url_for('admin.edit_interval_task', id=task.id) }}" method="POST" name="edit_scheduled_task_form">
+        {% else %}
+            <form action="{{ url_for('admin.edit_crontab_task', id=task.id) }}" method="POST" name="edit_scheduled_task_form">
+        {% endif %}
+    {% else %}
+        {% if form.every %}
+            <form action="{{ url_for('admin.add_interval_task') }}" method="POST" name="edit_scheduled_task_form">
+        {% else %}
+            <form action="{{ url_for('admin.add_crontab_task') }}" method="POST" name="edit_scheduled_task_form">
+        {% endif %}
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.form_field(form.name) }}
+        {{ wtf.form_field(form.task_type) }}
+        {{ wtf.form_field(form.arguments) }}
+        {{ wtf.form_field(form.keyword_arguments) }}
+        {{ wtf.form_field(form.expires) }}
+
+        {% if form.every %}
+            <div class="well">
+                <p>Frequency</p>
+                {{ wtf.form_field(form.every) }}
+                {{ wtf.form_field(form.period) }}
+            </div>
+        {% else %}
+            <div class="well">
+                <p>Crontab specification</p>
+                {{ wtf.form_field(form.minute) }}
+                {{ wtf.form_field(form.hour) }}
+                {{ wtf.form_field(form.day_of_week) }}
+                {{ wtf.form_field(form.day_of_month) }}
+                {{ wtf.form_field(form.month_of_year) }}
+            </div>
+        {% endif %}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

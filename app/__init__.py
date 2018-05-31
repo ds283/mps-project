@@ -21,7 +21,7 @@ from flaskext.markdown import Markdown
 
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay
-from .tasks import make_celery
+from .task_queue import make_celery
 
 from mdx_smartypants import makeExtension
 

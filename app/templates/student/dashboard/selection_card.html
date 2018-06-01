@@ -59,7 +59,7 @@
                     </div>
                 {% endif %}
 
-                <div class="row vertical-align">
+                <div class="row vertical-bottom">
                     <div class="col-xs-9">
                         {% set num_choices = sel.number_choices %}
                         {% set numpl = 's' %}
@@ -74,7 +74,7 @@
                             to rank them in order of preference.
 
                             Some projects may require the project supervisor to confirm that
-                            a pre-selection meeting has taken place, or least been arranged,
+                            a pre-selection meeting has taken place, or at least been arranged,
                             before the project becomes available.
 
                             If you wish to enroll
@@ -86,7 +86,7 @@
                                 then drag-and-drop to rank them in order of preference.
 
                                 Some projects may require the project supervisor to confirm that
-                                a pre-selection meeting has taken place, or least been arranged,
+                                a pre-selection meeting has taken place, or at least been arranged,
                                 before the project becomes available.
 
                                 You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
@@ -126,18 +126,34 @@
                                         {{ project.owner.build_name() }}
                                     </a>
                                 </div>
-                                <div class="col-xs-3">
+                                <div class="col-xs-4">
                                     {% if not project.is_available(sel) %}
                                         {% if sel in project.confirm_waiting %}
-                                            Confirmation requested
-                                            <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-warning btn-sm">
-                                                Cancel
-                                            </a>
+                                            <div class="row vertical-align">
+                                                <div class="col-xs-8">
+                                                    Confirmation requested
+                                                </div>
+                                                <div class="col-xs-4">
+                                                    <div class="pull-right">
+                                                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-warning btn-sm">
+                                                            Cancel
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         {% else %}
-                                            Requires confirmation
-                                            <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-success btn-sm">
-                                                Request
-                                            </a>
+                                            <div class="row vertical-align">
+                                                <div class="col-xs-8">
+                                                    Requires confirmation
+                                                </div>
+                                                <div class="col-xs-4">
+                                                    <div class="pull-right">
+                                                        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-success btn-sm">
+                                                            Request
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         {% endif %}
                                     {% else %}
                                         {% if sel in project.confirmed_students %}
@@ -147,10 +163,12 @@
                                         {% endif %}
                                     {% endif %}
                                 </div>
-                                <div class="col-xs-3">
-                                    <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">
-                                        Remove bookmark
-                                    </a>
+                                <div class="col-xs-2">
+                                    <div class="pull-right">
+                                        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">
+                                            Remove bookmark
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         {% endfor %}

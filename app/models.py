@@ -1333,11 +1333,13 @@ class SelectingStudent(db.Model):
     @property
     def is_optional(self):
         """
-        Determine whether this selection is optional
+        Determine whether this selection is optional (an example would be to sign-up for a research placement project).
+        Optional means that the individual's degree programme isn't one of the programmes associated with the
+        project class
         :return:
         """
 
-        return self.user.student_data.programme in self.config.project_class.programmes
+        return self.user.student_data.programme not in self.config.project_class.programmes
 
 
     @property

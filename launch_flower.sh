@@ -9,4 +9,4 @@ while true; do
     echo Upgrade command failed, retrying in 5 secs...
     sleep 5
 done
-celery -A celery_node.celery beat --scheduler app.sqlalchemy_scheduler:DatabaseScheduler --loglevel=info
+celery flower -A celery_node.celery --port=5555 --scheduler app.sqlalchemy_scheduler:DatabaseScheduler --loglevel=info

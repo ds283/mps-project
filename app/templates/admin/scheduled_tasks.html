@@ -86,7 +86,7 @@
                         </td>
 
                         <td> {{ task.last_run_at.strftime("%a %d %b %Y %H:%M:%S") }} </td>
-                        <td> {{ task.total_runs_count }}</td>
+                        <td> {{ task.total_run_count }}</td>
                         <td> {{ task.date_changed.strftime("%a %d %b %Y %H:%M:%S") }}</td>
                         <td>
                             {% if task.expires %}

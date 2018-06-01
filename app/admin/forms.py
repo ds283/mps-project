@@ -578,11 +578,11 @@ class ScheduledTaskMixin():
 
     name = StringField('Name', validators=[DataRequired(message='A task name is required')])
 
-    tasks_available = [('prune_email', 'Prune email log'),
-                       ('backup', 'Perform local backup'),
-                       ('thin', 'Thin local backups'),
-                       ('remote_backup', 'Backup to internet location')]
-    task_type = SelectField('Task', choices=tasks_available)
+    tasks_available = [('app.prune_email_log', 'Prune email log (app.prune_email_log)')]
+                       # ('backup', 'Perform local backup'),
+                       # ('thin', 'Thin local backups'),
+                       # ('remote_backup', 'Backup to internet location')]
+    task = SelectField('Task', choices=tasks_available)
 
     arguments = StringField('Arguments', validators=[Optional()],
                             description='Format as a JSON string')

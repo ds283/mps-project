@@ -14,7 +14,7 @@ RUN venv/bin/pip install gunicorn
 
 COPY app app
 COPY migrations migrations
-COPY mpsproject.py config.py boot.sh launch_celery.sh launch_beat.sh ./
+COPY mpsproject.py celery_node.py config.py boot.sh launch_celery.sh launch_beat.sh ./
 RUN chmod +x boot.sh
 RUN chmod +x launch_celery.sh
 RUN chmod +x launch_beat.sh

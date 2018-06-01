@@ -26,6 +26,8 @@ from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
 from usernames import is_safe_username
 from zxcvbn import zxcvbn
 
+import json
+
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -131,6 +133,14 @@ def globally_unique_supervisor(form, field):
 def unique_or_original_supervisor(form, field):
     if field.data != form.supervisor.name and Supervisor.query.filter_by(name=field.data).first():
         raise ValidationError('{name} is already associated with a supervisory role'.format(name=field.data))
+
+def valid_json(form, field):
+    try:
+        json_obj = json.loads(field.data)
+    except TypeError:
+        raise ValidationError('Unexpected text encoding')
+    except json.JSONDecodeError:
+        raise ValidationError('Could not translate to a valid JSON object')
 
 
 def password_strength(form, field):
@@ -591,11 +601,11 @@ class ScheduledTaskMixin():
                        # ('remote_backup', 'Backup to internet location')]
     task = SelectField('Task', choices=tasks_available)
 
-    arguments = StringField('Arguments', validators=[Optional()],
-                            description='Format as a JSON string')
+    arguments = StringField('Arguments', validators=[valid_json],
+                            description='Format as a JSON list')
 
-    keyword_arguments = StringField('Keyword arguments', validators=[Optional()],
-                                    description='Format as a JSON string')
+    keyword_arguments = StringField('Keyword arguments', validators=[valid_json],
+                                    description='Format as a JSON dictionary')
 
     expires = DateTimeField('Expires at', validators=[Optional()],
                             description='Optional. Format YYYY-mm-dd HH:MM:SS. Leave blank for no expiry.')

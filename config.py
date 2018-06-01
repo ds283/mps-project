@@ -40,6 +40,15 @@ class Config(object):
 
     SECURITY_USER_IDENTITY_ATTRIBUTES = ['email', 'username']
 
+    # MPS-Project configuration
+    BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'
+    ASSETS_FOLDER = os.environ.get('ASSETS_FOLDER') or 'assets'
+
+    DATABASE_USER = os.environ.get('DATABASE_USER') or 'mpsproject'
+    DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD') or None
+    DATABASE_ROOT_PASSWORD = os.environ.get('DATABASE_ROOT_PASSWORD') or None
+    DATABASE_HOSTNAME = os.environ.get('DATABASE_HOSTNAME') or 'localhost'
+
 
 class DevelopmentConfig(Config):
     """

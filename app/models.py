@@ -1489,7 +1489,7 @@ class MessageOfTheDay(db.Model):
     user = db.relationship('User', uselist=False,
                            backref=db.backref('messages', lazy='dynamic'))
 
-    # data of issue
+    # date of issue
     issue_date = db.Column(db.DateTime(), index=True)
 
     # show to students?
@@ -1516,6 +1516,34 @@ class MessageOfTheDay(db.Model):
 
     # which users have dismissed this message already?
     dismissed_by = db.relationship('User', secondary=message_dismissals, lazy='dynamic')
+
+
+class BackupRecord(db.Model):
+    """
+    Keep details of a website backup
+    """
+
+    __tablename__ = "backups"
+
+
+    # unique id for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # ID of owner, the user who initiated this backup
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', backref=db.backref('backups', lazy='dynamic'))
+
+    # date of backup
+    date = db.Column(db.DateTime(), index=True)
+
+    # type of backup
+    SCHEDULED_BACKUP = 1
+    PROJECT_ROLLOVER_FALLBACK = 2
+
+    type = db.Column(db.Integer())
+
+    # filename
+    filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
 
 

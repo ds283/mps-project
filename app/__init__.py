@@ -22,12 +22,11 @@ from flaskext.markdown import Markdown
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay
 from .task_queue import make_celery
+import app.tasks as tasks
 
 from mdx_smartypants import makeExtension
 
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
-
-from datetime import datetime, timedelta
 
 
 def create_app():
@@ -64,70 +63,20 @@ def create_app():
     # set up  celery
     celery = make_celery(app)
 
-
-    # set up deferred email sender for Flask-Email; note that Flask-Email's Message object is not
-    # JSON-serializable so we have to pickle instead
-    @celery.task(serializer='pickle')
-    def send_log_mail(msg):
-
-        mail.send(msg)
-        log = None
-
-        # store message in email log
-        if len(msg.recipients) == 1:
-            user = User.query.filter_by(email=msg.recipients[0]).first()
-            if user is not None:
-
-                log = EmailLog(user_id=user.id,
-                               recipient=None,
-                               send_date=datetime.now(),
-                               subject=msg.subject,
-                               body=msg.body,
-                               html=msg.html)
-
-        if log is None:
-
-            log = EmailLog(user_id=None,
-                           recipient=', '.join(msg.recipients),
-                           send_date=datetime.now(),
-                           subject=msg.subject,
-                           body=msg.body,
-                           html=msg.html)
-
-        db.session.add(log)
-        db.session.commit()
-
-
-    @celery.task()
-    def prune_email_log(duration=52, interval='weeks'):
-
-        emails = db.session.query(EmailLog).all()
-
-        for item in emails:
-            prune_email.apply_async(args=(duration, interval, item.id))
-
-
-    @celery.task()
-    def prune_email(interval, duration, id):
-
-        now = datetime.now()
-        delta = timedelta(**{interval: duration})
-
-        record = EmailLog.query.filter_by(id=id).first()
-
-        if record is not None:
-
-            age = now - record.send_date
-
-            if age > delta:
-                db.session.delete(record)
-                db.commit()
+    # register celery tasks
+    # there doesn't seem a good way of doing this using factory functions! Here I compromise by passing hte
+    # celery application instance to a collection of register_*() functions, which use an @celery decorator
+    # to register callables. Then we write the callable into the app, in the 'tasks' dictionary
+    app.tasks = {}
+    send_log_email = tasks.register_send_log_email(celery, mail)
+    tasks.register_prune_email(celery)
+    tasks.register_backup_tasks(celery)
 
 
     # make Flask-Security use deferred email sender
     @security.send_mail_task
     def delay_flask_security_mail(msg):
-        send_log_mail.delay(msg)
+        send_log_email.delay(msg)
 
 
     @security.login_context_processor

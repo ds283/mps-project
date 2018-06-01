@@ -99,11 +99,6 @@
 {% endblock %}
 
 
-{% macro userlist(users, title) %}
-
-
-{% endmacro %}
-
 
 {% block bodyblock %}
     <hr class="intro-divider">
@@ -606,10 +601,14 @@
                                         {# bookmarks #}
                                         <td>
                                             {% for bookmark in student.bookmarks %}
-                                            {% set project = bookmark.liveproject %}
-                                                <a href="{{ url_for('faculty.view_live_project', pid=project.id, classid=pclass.id, tabid=4) }}" class="btn btn-info btn-sm table-button">
-                                                    {{ truncate(project.name) }}
-                                                </a>
+                                                {% if loop.index < 4 %}
+                                                    {% set project = bookmark.liveproject %}
+                                                    <a href="{{ url_for('faculty.view_live_project', pid=project.id, classid=pclass.id, tabid=4) }}" class="btn btn-info btn-sm table-button">
+                                                        {{ truncate(project.name) }}
+                                                    </a>
+                                                {% elif loop.index == 5 %}
+                                                    <span class="label label-default">...</span>
+                                                {% endif %}
                                             {% else %}
                                                 <span class="label label-default">None</span>
                                             {% endfor %}

@@ -1745,6 +1745,7 @@ def add_interval_task():
             db.session.flush()
 
         data = DatabaseSchedulerEntry(name=form.name.data,
+                                      owner_id=form.owner.data.id,
                                       task=form.task.data,
                                       interval_id=sch.id,
                                       crontab_id=None,
@@ -1796,6 +1797,7 @@ def add_crontab_task():
             db.session.flush()
 
         data = DatabaseSchedulerEntry(name=form.name.data,
+                                      owner_id=form.owner.data.id,
                                       task=form.task.data,
                                       interval_id=None,
                                       crontab_id=sch.id,
@@ -1841,6 +1843,7 @@ def edit_interval_task(id):
             db.session.flush()
 
         data.name = form.name.data
+        data.owner_id = form.owner.data.id
         data.task = form.task.data
         data.interval_id = sch.id
         data.crontab_id = None
@@ -1893,6 +1896,7 @@ def edit_crontab_task(id):
             db.session.flush()
 
         data.name = form.name.data
+        data.owner_id = form.owner.data.id
         data.task = form.task.data
         data.interval_id = None
         data.crontab_id = sch.id

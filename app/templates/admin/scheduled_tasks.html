@@ -52,10 +52,11 @@
                 <thead>
                 <tr>
                     <th width="18%"> Name</th>
-                    <th width="20%"> Schedule</th>
+                    <th width="12%"> Schedule</th>
+                    <th width="10%"> Owner</th>
                     <th width="7%"> Active?</th>
                     <th width="10%"> Last run</th>
-                    <th width="10%"> Total runs</th>
+                    <th width="8%"> Total runs</th>
                     <th width="10%"> Last changed</th>
                     <th width="10%"> Expiry</th>
                     <th width="15%"> Actions</th>
@@ -76,6 +77,9 @@
                                 <span class="label label-danger">Invalid</span>
                             {% endif %}
                         </td>
+
+                        {# owner #}
+                        <td>{{ task.owner.build_name() }}</td>
 
                         <td>
                             {% if task.enabled %}

@@ -917,7 +917,7 @@ class ProjectClassConfig(db.Model):
         if not self.project_class.require_confirm:
             return
 
-        active_faculty = FacultyData.query.join(User).filter(User.active)
+        active_faculty = FacultyData.query.join(User, User.id==FacultyData.id).filter(User.active)
 
         for member in active_faculty:
 
@@ -1615,6 +1615,9 @@ class DatabaseSchedulerEntry(db.Model):
     last_run_at = db.Column(db.DateTime)
     total_run_count = db.Column(db.Integer, default=0)
     date_changed = db.Column(db.DateTime)
+
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    owner = db.relationship(User, backref=db.backref('scheduled_tasks', lazy='dynamic'))
 
     interval = db.relationship(IntervalSchedule, backref=db.backref('entries', lazy='dynamic'))
     crontab = db.relationship(CrontabSchedule, backref=db.backref('entries', lazy='dynamic'))

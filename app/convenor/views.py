@@ -455,7 +455,7 @@ def go_live(id):
 
         # going live consists of copying all tables for this project to the live project table,
         # in alphabetical order
-        projects = pclass.projects.filter(Project.active).join(User).order_by(User.last_name, User.first_name)
+        projects = pclass.projects.filter(Project.active).join(User, User.id==Project.owner_id).order_by(User.last_name, User.first_name)
 
         if projects.count() == 0:
 
@@ -472,8 +472,6 @@ def go_live(id):
             # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
             # all project classes need their own LiveProject record
             live_item = LiveProject(config_id=config.id,
-                                    creator_id=current_user.id,
-                                    timestamp=datetime.now(),
                                     number=number,
                                     name=item.name,
                                     keywords=item.keywords,
@@ -904,7 +902,7 @@ def rollover(pid, configid):
     new_config = ProjectClassConfig(year=current_year,
                                     pclass_id=pid,
                                     creator_id=current_user.id,
-                                    timestamp=datetime.now(),
+                                    creation_timestamp=datetime.now(),
                                     requests_issued=False,
                                     request_deadline=None,
                                     live=False,

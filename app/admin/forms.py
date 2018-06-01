@@ -233,6 +233,11 @@ def GetConvenorProjectClasses():
     return ProjectClass.query.filter(ProjectClass.active, ProjectClass.convenor_id==current_user.id)
 
 
+def GetSysadminUsers():
+
+    return User.query.filter(User.active, User.roles.any(Role.name == 'root')).order_by(User.last_name, User.first_name)
+
+
 class UniqueUserNameMixin():
 
     username = StringField('Username', validators=[DataRequired(message='Username is required'),
@@ -577,6 +582,8 @@ class ScheduleTypeForm(Form, ScheduleTypeMixin):
 class ScheduledTaskMixin():
 
     name = StringField('Name', validators=[DataRequired(message='A task name is required')])
+
+    owner = QuerySelectField('Owner', query_factory=GetSysadminUsers, get_label=BuildUserRealName)
 
     tasks_available = [('app.prune_email_log', 'Prune email log (app.prune_email_log)')]
                        # ('backup', 'Perform local backup'),

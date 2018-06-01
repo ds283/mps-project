@@ -20,6 +20,8 @@ from . import faculty
 from .forms import AddProjectForm, EditProjectForm, RolloverForm, GoLiveForm, CloseStudentSelectionsForm, \
     IssueFacultyConfirmRequestForm, ConfirmAllRequestsForm
 
+from ..utils import home_dashboard
+
 import re
 from datetime import date, datetime, timedelta
 

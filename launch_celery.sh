@@ -1,4 +1,4 @@
 #!/bin/sh
 
 source venv/bin/activate
-celery -A mpsproject.celery worker --loglevel=info
+celery -A celery_node.celery worker --loglevel=info

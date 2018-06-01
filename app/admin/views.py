@@ -1745,11 +1745,11 @@ def add_interval_task():
             db.session.flush()
 
         data = DatabaseSchedulerEntry(name=form.name.data,
-                                      task='',
+                                      task=form.task.data,
                                       interval_id=sch.id,
                                       crontab_id=None,
-                                      arguments=form.arguments.data,
-                                      keyword_arguments=form.keyword_arguments.data,
+                                      arguments=_maybe_null(form.arguments.data),
+                                      keyword_arguments=_maybe_null(form.keyword_arguments.data),
                                       queue=None,
                                       exchange=None,
                                       routing_key=None,
@@ -1796,11 +1796,11 @@ def add_crontab_task():
             db.session.flush()
 
         data = DatabaseSchedulerEntry(name=form.name.data,
-                                      task='',
+                                      task=form.task.data,
                                       interval_id=None,
                                       crontab_id=sch.id,
-                                      arguments=form.arguments.data,
-                                      keyword_arguments=form.keyword_arguments.data,
+                                      arguments=_maybe_null(form.arguments.data),
+                                      keyword_arguments=_maybe_null(form.keyword_arguments.data),
                                       queue=None,
                                       exchange=None,
                                       routing_key=None,
@@ -1841,11 +1841,11 @@ def edit_interval_task(id):
             db.session.flush()
 
         data.name = form.name.data
-        data.task = ''
+        data.task = form.task.data
         data.interval_id = sch.id
         data.crontab_id = None
-        data.arguments = form.arguments.data
-        data.keyword_arguments = form.keyword_arguments.data
+        data.arguments = _maybe_null(form.arguments.data)
+        data.keyword_arguments = _maybe_null(form.keyword_arguments.data)
         data.expires = form.expires.data
         data.date_changed = datetime.now()
 
@@ -1893,11 +1893,11 @@ def edit_crontab_task(id):
             db.session.flush()
 
         data.name = form.name.data
-        data.task = ''
+        data.task = form.task.data
         data.interval_id = None
         data.crontab_id = sch.id
-        data.arguments = form.arguments.data
-        data.keyword_arguments = form.keyword_arguments.data
+        data.arguments = _maybe_null(form.arguments.data)
+        data.keyword_arguments = _maybe_null(form.keyword_arguments.data)
         data.expires = form.expires.data
         data.date_changed = datetime.now()
 
@@ -1965,3 +1965,16 @@ def deactivate_scheduled_task(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+def _maybe_null(str):
+    """
+    Convert a null or empty string to JSON null object
+    :param str:
+    :return:
+    """
+
+    if str is None or len(str) == 0:
+        return 'null'
+
+    return str

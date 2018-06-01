@@ -27,7 +27,7 @@ from mdx_smartypants import makeExtension
 
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def create_app():
@@ -98,6 +98,32 @@ def create_app():
         db.session.commit()
 
 
+    @celery.task()
+    def prune_email_log(duration=52, interval='weeks'):
+
+        emails = db.session.query(EmailLog).all()
+
+        for item in emails:
+            prune_email.apply_async(args=(duration, interval, item.id))
+
+
+    @celery.task()
+    def prune_email(interval, duration, id):
+
+        now = datetime.now()
+        delta = timedelta(**{interval: duration})
+
+        record = EmailLog.query.filter_by(id=id).first()
+
+        if record is not None:
+
+            age = now - record.send_date
+
+            if age > delta:
+                db.session.delete(record)
+                db.commit()
+
+
     # make Flask-Security use deferred email sender
     @security.send_mail_task
     def delay_flask_security_mail(msg):
@@ -107,7 +133,7 @@ def create_app():
     @security.login_context_processor
     def login_context_processor():
 
-        # build list of system messages to consider displaying
+        # build list of system messages to consider displaying on login screen
         messages = []
         for message in MessageOfTheDay.query.filter_by(show_login=True).all():
 

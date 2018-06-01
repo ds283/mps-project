@@ -25,7 +25,7 @@ class Entry(ScheduleEntry):
     model_schedules = ((schedules.crontab, CrontabSchedule, 'crontab'),
                        (schedules.schedule, IntervalSchedule, 'interval'))
 
-    def __init__(self, model):
+    def  __init__(self, model):
         self.app = current_app._get_current_object()
         self.name = model.name
         self.task = model.task
@@ -130,6 +130,18 @@ class DatabaseScheduler(Scheduler):
 
     def schedule_changed(self):
         ts = self._get_latest_change()
+
+        # if both timestamps are None, state is indeterminate
+        # probably there are no records in the database
+        if self._last_timestamp is None and ts is None:
+            return False
+
+        # if one or other is None, we may have added or removed a record
+        # from the database
+        if self._last_timestamp is None or ts is None:
+            self._last_timestamp = ts
+            return True
+
         if ts > self._last_timestamp:
             self._last_timestamp = ts
             return True
@@ -166,7 +178,7 @@ class DatabaseScheduler(Scheduler):
     def schedule(self):
         update = False
         if not self._initial_read:
-            self.logger.debug('DatabaseScheduler: intial read')
+            self.logger.debug('DatabaseScheduler: initial read')
             update = True
             self._initial_read = True
         elif self.schedule_changed():

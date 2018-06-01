@@ -1662,10 +1662,18 @@ class DatabaseSchedulerEntry(db.Model):
 
     @property
     def kwargs(self):
-        return json.loads(self.keyword_arguments)
+        kwargs_ = json.loads(self.keyword_arguments)
+        if self.task == 'app.tasks.backup.backup' and isinstance(kwargs_, dict):
+            if 'owner_id' in kwargs_:
+                del kwargs_['owner_id']
+            kwargs_['owner_id'] = self.owner_id
+        return kwargs_
 
     @kwargs.setter
     def kwargs(self, kwargs_):
+        if self.task == 'app.tasks.backup.backup' and isinstance(kwargs_, dict):
+            if 'owner_id' in kwargs_:
+                del kwargs_['owner_id']
         self.keyword_arguments = json.dumps(kwargs_)
 
     @property

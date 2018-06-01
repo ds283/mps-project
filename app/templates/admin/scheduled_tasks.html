@@ -79,7 +79,13 @@
                         </td>
 
                         {# owner #}
-                        <td>{{ task.owner.build_name() }}</td>
+                        <td>
+                            {% if task.owner %}
+                                {{ task.owner.build_name() }}
+                            {% else %}
+                                <span class="label label-default">Nobody</span>
+                            {% endif %}
+                        </td>
 
                         <td>
                             {% if task.enabled %}

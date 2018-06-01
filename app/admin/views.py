@@ -40,6 +40,7 @@ from ..utils import get_main_config, get_current_year, home_dashboard
 from . import admin
 
 from datetime import date, datetime, timedelta
+import json
 
 from celery import schedules
 
@@ -1744,21 +1745,25 @@ def add_interval_task():
             db.session.add(sch)
             db.session.flush()
 
+        args = json.loads(form.arguments.data)
+        kwargs = json.loads(form.keyword_arguments.data)
+        now = datetime.now()
+
         data = DatabaseSchedulerEntry(name=form.name.data,
                                       owner_id=form.owner.data.id,
                                       task=form.task.data,
                                       interval_id=sch.id,
                                       crontab_id=None,
-                                      arguments=_maybe_null(form.arguments.data),
-                                      keyword_arguments=_maybe_null(form.keyword_arguments.data),
+                                      args=args,
+                                      kwargs=kwargs,
                                       queue=None,
                                       exchange=None,
                                       routing_key=None,
                                       expires=form.expires.data,
                                       enabled=True,
-                                      last_run_at=datetime.now(),
+                                      last_run_at=now,
                                       total_run_count=0,
-                                      date_changed=datetime.now())
+                                      date_changed=now)
 
         db.session.add(data)
         db.session.commit()
@@ -1796,21 +1801,25 @@ def add_crontab_task():
             db.session.add(sch)
             db.session.flush()
 
+        args = json.loads(form.arguments.data)
+        kwargs = json.loads(form.keyword_arguments.data)
+        now = datetime.now()
+
         data = DatabaseSchedulerEntry(name=form.name.data,
                                       owner_id=form.owner.data.id,
                                       task=form.task.data,
                                       interval_id=None,
                                       crontab_id=sch.id,
-                                      arguments=_maybe_null(form.arguments.data),
-                                      keyword_arguments=_maybe_null(form.keyword_arguments.data),
+                                      args=args,
+                                      kwargs=kwargs,
                                       queue=None,
                                       exchange=None,
                                       routing_key=None,
                                       expires=form.expires.data,
                                       enabled=True,
-                                      last_run_at=datetime.now(),
+                                      last_run_at=now,
                                       total_run_count=0,
-                                      date_changed=datetime.now())
+                                      date_changed=now)
 
         db.session.add(data)
         db.session.commit()
@@ -1842,13 +1851,16 @@ def edit_interval_task(id):
             db.session.add(sch)
             db.session.flush()
 
+        args = json.loads(form.arguments.data)
+        kwargs = json.loads(form.keyword_arguments.data)
+
         data.name = form.name.data
         data.owner_id = form.owner.data.id
         data.task = form.task.data
         data.interval_id = sch.id
         data.crontab_id = None
-        data.arguments = _maybe_null(form.arguments.data)
-        data.keyword_arguments = _maybe_null(form.keyword_arguments.data)
+        data.args = args
+        data.kwargs = kwargs
         data.expires = form.expires.data
         data.date_changed = datetime.now()
 
@@ -1895,13 +1907,16 @@ def edit_crontab_task(id):
             db.session.add(sch)
             db.session.flush()
 
+        args = json.loads(form.arguments.data)
+        kwargs = json.loads(form.keyword_arguments.data)
+
         data.name = form.name.data
         data.owner_id = form.owner.data.id
         data.task = form.task.data
         data.interval_id = None
         data.crontab_id = sch.id
-        data.arguments = _maybe_null(form.arguments.data)
-        data.keyword_arguments = _maybe_null(form.keyword_arguments.data)
+        data.args = args
+        data.kwargs = kwargs
         data.expires = form.expires.data
         data.date_changed = datetime.now()
 
@@ -1969,16 +1984,3 @@ def deactivate_scheduled_task(id):
     db.session.commit()
 
     return redirect(request.referrer)
-
-
-def _maybe_null(str):
-    """
-    Convert a null or empty string to JSON null object
-    :param str:
-    :return:
-    """
-
-    if str is None or len(str) == 0:
-        return 'null'
-
-    return str

@@ -12,7 +12,7 @@
 from flask import redirect, url_for, flash
 from flask_security import current_user
 
-from .models import MainConfig
+from app.models import MainConfig
 
 
 def get_main_config():

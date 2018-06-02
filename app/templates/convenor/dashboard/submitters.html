@@ -1,0 +1,49 @@
+{% extends "convenor/dashboard/dashboard.html" %}
+
+{% block bodyblock %}
+    {{ closed_panel(config) }}
+    {% if submitters and submitters.first() %}
+        <div class="panel panel-primary panel-primary-bg">
+            <div class="panel-heading">{{ title }}</div>
+            <div class="panel-body">
+                <table class="table table-striped table-bordered sortable-pageable">
+                    <thead>
+                    <tr>
+                        <th width="30%"> Last name</th>
+                        <th width="30%"> First name</th>
+                        <th width="40%"> Programme</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for student in submitters %}
+                        <tr>
+                            {# last name #}
+                            <td>{{ student.user.last_name }}</td>
+
+                            {# first name #}
+                            <td>{{ student.user.first_name }}</td>
+
+                            {# programme and cohort #}
+                            <td>
+                                <span class="label label-default">{{ student.user.student_data.programme.name }}</span>
+                                <span class="label label-info">Y{{ student.get_academic_year }}</span>
+                                <span class="label label-success">Cohort {{ student.user.student_data.cohort }}</span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+    {% else %}
+
+        <div style="text-align: center;">
+            <h3> No students are currently enrolled for submitting work for
+                <span class="label label-default">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</h3>
+        </div>
+        <hr class="intro-divider">
+
+    {% endif %}
+{% endblock %}

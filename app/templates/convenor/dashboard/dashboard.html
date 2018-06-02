@@ -1,0 +1,88 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base_app.html" %}
+
+{% from "macros.html" import truncate %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('[class~="sortable-pageable"]').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    {{ pclass.name }}
+{% endblock %}
+
+{% macro closed_panel(config) %}
+    {% if config.live and config.closed %}
+        <div class="panel panel-warning">
+            <div class="panel-heading"><strong>Student choices are now closed</strong></div>
+            <div class="panel-body">
+                <div class="row vertical-align">
+                    <div class="col-xs-9">
+                        {% set valid, total = config.count_valid_students %}
+                        <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
+                            students have valid selections (<strong>{{ total-valid }}</strong> remaining).</p>
+                    </div>
+                    <div class="col-xs-3">
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endmacro %}
+
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        <li {% if pane == 'overview' %}class="active"{% endif %}><a href="{{ url_for('convenor.overview', id=pclass.id) }}">
+            Overview
+        </a></li>
+        <li {% if pane == 'attached' %}class="active"{% endif %}><a href="{{ url_for('convenor.attached', id=pclass.id) }}">
+            Attached projects
+            {% if proj_count is defined %}
+                <span class="badge">{{ proj_count }}</span>
+            {% endif %}
+        </a></li>
+        <li {% if pane == 'faculty' %}class="active"{% endif %}><a href="{{ url_for('convenor.faculty', id=pclass.id) }}">
+            Faculty enrollment
+            {% if fac_data is defined %}
+                {% set enrolled, total = fac_data %}
+                <span class="badge">{{ enrolled }}/{{ total }}</span>
+            {% else %}
+                <span class="badge">0</span>
+            {% endif %}
+        </a></li>
+        <li {% if pane == 'selectors' %}class="active"{% endif %}><a href="{{ url_for('convenor.selectors', id=pclass.id) }}">
+            Students selecting for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+            {% if sel_count is defined %}
+                <span class="badge">{{ sel_count }}</span>
+            {% endif %}
+        </a></li>
+        <li {% if pane == 'submitters' %}class="active"{% endif %}><a href="{{ url_for('convenor.submitters', id=pclass.id) }}">
+            Students submitting in {{ config.year }}&ndash;{{ config.year+1 }}
+            {% if sub_count is defined %}
+                <span class="badge">{{ sub_count }}</span>
+            {% endif %}
+        </a></li>
+        {% if live_count is defined %}
+            <li {% if pane == 'live' %}class="active"{% endif %}><a href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
+                Live projects for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                <span class="badge">{{ live_count }}</span>
+            </a></li>
+        {% endif %}
+    </ul>
+{% endblock %}

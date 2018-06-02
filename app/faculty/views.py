@@ -8,57 +8,22 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template, redirect, url_for, flash, request
-from flask_security import login_required, roles_required, roles_accepted, current_user
+from flask import render_template, redirect, url_for, flash, request
+from flask_security import roles_required, roles_accepted, current_user
 
-from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
-    Supervisor, Project, MessageOfTheDay
+from ..models import db, DegreeProgramme, \
+    TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay
 
 from . import faculty
 
-from .forms import AddProjectForm, EditProjectForm, RolloverForm, GoLiveForm, CloseStudentSelectionsForm, \
-    IssueFacultyConfirmRequestForm, ConfirmAllRequestsForm
+from .forms import AddProjectForm, EditProjectForm
 
-from ..utils import home_dashboard
+from app.shared.utils import home_dashboard
+from app.shared.validators import validate_user, validate_open
+from app.shared.actions import render_live_project, do_confirm, do_deconfirm
 
 import re
-from datetime import date, datetime, timedelta
-
-
-def _validate_user(project):
-    """
-    Validate that the logged-in user is privileged to edit a project
-    :param project: Project model instance
-    :return: True/False
-    """
-
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if project.owner_id != current_user.id \
-            and not current_user.has_role('admin') \
-            and not current_user.has_role('root') \
-            and not any[project.project_classes.convenor.id == current_user.id]:
-
-        flash('This project belongs to another user. To edit it, you must be a suitable convenor or an administrator.')
-        return False
-
-    return True
-
-
-def _validate_open(config):
-    """
-    Validate that a particular ProjectClassConfig is open for student selections
-    :param config:
-    :return:
-    """
-
-    if not config.open:
-
-        flash('Project "{name}" is not open for student selections'.format(name=config.project_class.name), 'error')
-
-        return False
-
-    return True
+from datetime import datetime
 
 
 @faculty.route('/edit_my_projects')
@@ -113,7 +78,7 @@ def edit_project(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     form = EditProjectForm(obj=data)
@@ -152,7 +117,7 @@ def activate_project(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     data.enable()
@@ -169,7 +134,7 @@ def deactivate_project(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     data.disable()
@@ -186,7 +151,7 @@ def attach_skills(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     # get list of active skills
@@ -203,7 +168,7 @@ def add_skill(projectid, skillid):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     skill = TransferableSkill.query.get_or_404(skillid)
@@ -223,7 +188,7 @@ def remove_skill(projectid, skillid):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     skill = TransferableSkill.query.get_or_404(skillid)
@@ -243,7 +208,7 @@ def attach_programmes(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     q = data.available_degree_programmes
@@ -259,7 +224,7 @@ def add_programme(projectid, progid):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     programme = DegreeProgramme.query.get_or_404(progid)
@@ -279,7 +244,7 @@ def remove_programme(projectid, progid):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
     programme = DegreeProgramme.query.get_or_404(progid)
@@ -299,44 +264,10 @@ def project_preview(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not _validate_user(data):
+    if not validate_user(data):
         return redirect(request.referrer)
 
-    # build list of keywords
-    keywords = [ kw.strip() for kw in re.split(";.", data.keywords) ]
-
-    return render_template('student/show_project.html', title=data.name, project=data, keywords=keywords)
-
-
-
-@faculty.route('/live_project/<int:pid>/<int:classid>/<int:tabid>')
-@roles_accepted('faculty', 'admin', 'root')
-def view_live_project(pid, classid, tabid):
-    """
-    View a specific project on the live system
-    :param tabid:
-    :param classid:
-    :param pid:
-    :return:
-    """
-
-    # pid is the id for a LiveProject
-    data = LiveProject.query.get_or_404(pid)
-
-    # verify the logged-in user is allowed to view this live project
-    if not _validate_user(data):
-
-        if tabid == 0:
-            return home_dashboard()
-        else:
-            return redirect(url_for('convenor.dashboard', id=classid, tabid=tabid))
-
-    # build list of keywords
-    keywords = [ kw.strip() for kw in re.split(";.", data.keywords) ]
-
-    # without the sel variable, won't render any of the student-specific items
-    return render_template('student/show_project.html', title=data.name, project=data, keywords=keywords)
-
+    return render_live_project(data)
 
 
 @faculty.route('/dashboard')
@@ -443,10 +374,10 @@ def confirm(sid, pid):
         return redirect(request.referrer)
 
     # validate that project is open
-    if not _validate_open(sel.config):
+    if not validate_open(sel.config):
         return redirect(url_for(request.referrer))
 
-    if _confirm(sel, project):
+    if do_confirm(sel, project):
         db.session.commit()
 
     return redirect(request.referrer)
@@ -468,60 +399,31 @@ def deconfirm(sid, pid):
         return redirect(request.referrer)
 
     # validate that project is open
-    if not _validate_open(sel.config):
+    if not validate_open(sel.config):
         return redirect(url_for(request.referrer))
 
-    if _deconfirm(sel, project):
+    if do_deconfirm(sel, project):
         db.session.commit()
 
     return redirect(request.referrer)
 
 
-def _confirm(sel, project):
+@faculty.route('/live_project/<int:pid>/<int:classid>')
+@roles_accepted('faculty', 'admin', 'root')
+def live_project(pid):
+    """
+    View a specific project on the live system
+    :param tabid:
+    :param classid:
+    :param pid:
+    :return:
+    """
 
-    if sel not in project.confirm_waiting:
+    # pid is the id for a LiveProject
+    data = LiveProject.query.get_or_404(pid)
 
-        return False
+    # verify the logged-in user is allowed to view this live project
+    if not validate_user(data):
+        return redirect(request.referrer)
 
-    project.confirm_waiting.remove(sel)
-
-    if sel not in project.confirmed_students:
-
-        project.confirmed_students.append(sel)
-
-    return True
-
-
-def _deconfirm(sel, project):
-
-    if sel in project.confirmed_students:
-
-        project.confirmed_students.remove(sel)
-        return True
-
-    return False
-
-
-def _deconfirm_to_pending(sel, project):
-
-    if sel not in project.confirmed_students:
-
-        return False
-
-    project.confirmed_students.remove(sel)
-
-    if sel not in project.confirm_waiting:
-
-        project.confirm_waiting.append(sel)
-
-    return True
-
-
-def _cancel_confirm(sel, project):
-
-    if sel not in project.confirm_waiting:
-
-        return False
-
-    project.confirm_waiting.remove(sel)
-    return True
+    return render_live_project(data)

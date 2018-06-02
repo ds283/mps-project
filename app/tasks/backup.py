@@ -24,7 +24,7 @@ from datetime import datetime
 def register_backup_tasks(celery):
 
     @celery.task()
-    def backup(owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag='backup'):
+    def backup(owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag='backup', description=None):
 
         # get name of backup folder and database root password from app config
         backup_folder = current_app.config['BACKUP_FOLDER']
@@ -95,6 +95,7 @@ def register_backup_tasks(celery):
             data = BackupRecord(owner_id=owner_id,
                                 date=now,
                                 type=type,
+                                description=description,
                                 filename=backup_archive)
             db.session.add(data)
             db.session.commit()

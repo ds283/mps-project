@@ -1,0 +1,99 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base_app.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('[class~="sortable-pageable"]').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Manage backups
+{% endblock %}
+
+{% block bodyblock %}
+    {% if backups and backups.first() %}
+        <div class="panel panel-primary panel-primary-bg">
+            <div class="panel-heading">Manage backups</div>
+            <div class="panel-body">
+            <table class="table table-striped table-bordered sortable-pageable">
+                <thead>
+                <tr>
+                    <th width="20%"> Date</th>
+                    <th width="10%"> Initiated by</th>
+                    <th width="15%"> Type</th>
+                    <th width="20%"> Description</th>
+                    <th width="15%"> Filename</th>
+                    <th width="20%"> Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for backup in backups %}
+                    <tr>
+                        <td> {{ backup.date.strftime("%a %d %b %Y %H:%M:%S") }} </td>
+
+                        {# Initiated by #}
+                        <td>
+                            {% if backup.owner %}
+                                {{ backup.owner.build_name() }}
+                            {% else %}
+                                <span class="label label-default">Nobody</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ backup.type_to_string() }}
+                        </td>
+
+                        <td>
+                            {% if backup.description and backup.description|length > 0 %}
+                                {{ backup.description }}
+                            {% else %}
+                                <span class="label label-default">None</span>
+                            {% endif %}
+                        </td>
+
+                        <td> {{ backup.print_filename }} </td>
+
+                        <td>
+                            <div class="dropdown">
+                                <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                    Actions
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="{{ url_for('admin.confirm_delete_backup', id=backup.id) }}">
+                                            <i class="fa fa-trash"></i> Delete
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+    {% else %}
+        <div style="text-align: center;">
+            <h3> No backups </h3>
+            <hr class="intro-divider">
+        </div>
+    {% endif %}
+{% endblock %}

@@ -33,7 +33,7 @@ from .forms import RoleSelectForm, \
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project, EmailLog, MessageOfTheDay, \
-    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule
+    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord
 
 from ..utils import get_main_config, get_current_year, home_dashboard
 
@@ -42,7 +42,8 @@ from . import admin
 from datetime import date, datetime, timedelta
 import json
 
-from celery import schedules
+from os import path, remove
+
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -1984,3 +1985,52 @@ def deactivate_scheduled_task(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/manage_backups')
+@roles_required('root')
+def manage_backups():
+    """
+    Generate the backup-management deshboard
+    :return:
+    """
+
+    backups = db.session.query(BackupRecord)
+
+    return render_template('admin/backup_dashboard.html', backups=backups)
+
+
+@admin.route('/confirm_delete_backup/<int:id>')
+@roles_required('root')
+def confirm_delete_backup(id):
+    """
+    Show confirmation box to delete a backup
+    :return:
+    """
+
+    backup = BackupRecord.query.get_or_404(id)
+
+    title = 'Confirm delete'
+    panel_title = 'Confirm delete of backup {d}'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
+
+    action_url = url_for('admin.delete_backup', id=id)
+    message = 'Please confirm that you wish to delete the backup {d}'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
+    submit_label = 'Delete'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/delete_backup/<int:id>')
+@roles_required('root')
+def delete_backup(id):
+
+    backup = BackupRecord.query.get_or_404(id)
+
+    if path.exists(backup.filename):
+        remove(backup.filename)
+
+    db.session.delete(backup)
+    db.session.commit()
+
+    return redirect(url_for('admin.manage_backups'))

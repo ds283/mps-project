@@ -1,3 +1,11 @@
+{% macro truncate(name) %}
+    {% if name|length > 20 %}
+        {{ name[0:20] }}...
+    {% else %}
+        {{ name }}
+    {% endif %}
+{% endmacro %}
+
 {% macro edit_data(item) %}
     {% if item and (item.created_by or item.last_edited_by) %}
         <hr class="intro-divider">

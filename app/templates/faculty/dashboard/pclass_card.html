@@ -115,7 +115,7 @@
                         {% for project in live_projects %}
                             <div class="row fac-project-table">
                                 <div class="col-xs-3">
-                                    <a href="{{ url_for('faculty.view_live_project', pid=project.id, classid=config.project_class.id, tabid=0) }}">
+                                    <a href="{{ url_for('faculty.view_live_project', pid=project.id) }}">
                                         {{ project.name }}
                                     </a>
                                 </div>

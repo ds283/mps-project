@@ -8,10 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request
 from werkzeug.local import LocalProxy
-from flask_security import login_required, roles_required, roles_accepted, current_user, logout_user, login_user
-from flask_security.utils import config_value, get_url, find_redirect, validate_redirect_url, get_message, do_flash, \
+from flask_security import login_required, roles_required, roles_accepted, current_user
+from flask_security.utils import config_value, get_message, do_flash, \
     send_mail
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
@@ -32,10 +32,10 @@ from .forms import RoleSelectForm, \
     EditIntervalScheduledTask, EditCrontabScheduledTask
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, Project, EmailLog, MessageOfTheDay, \
+    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
     DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord
 
-from ..utils import get_main_config, get_current_year, home_dashboard
+from app.shared.utils import get_main_config, get_current_year, home_dashboard
 
 from . import admin
 

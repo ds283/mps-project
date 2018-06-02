@@ -9,75 +9,34 @@
 #
 
 
-from flask import current_app, render_template, redirect, url_for, flash, request
-from flask_security import login_required, roles_required, roles_accepted, current_user
+from flask import render_template, redirect, url_for, flash, request
+from flask_security import roles_accepted, current_user
 
-from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
-    Supervisor, Project
+from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
+    Project
 
-from ..utils import get_current_year, home_dashboard
+from ..shared.utils import get_current_year, home_dashboard
+from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
+from ..shared.actions import render_live_project, do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 
 from . import convenor
 
-from ..faculty.forms import AddProjectForm, EditProjectForm, RolloverForm, GoLiveForm, CloseStudentSelectionsForm, \
-    IssueFacultyConfirmRequestForm, ConfirmAllRequestsForm
-from ..faculty.views import _confirm, _cancel_confirm, _deconfirm, _deconfirm_to_pending, _validate_open
+from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFacultyConfirmRequestForm
 
-import re
 from datetime import date, datetime, timedelta
 
-
-_ConvenorDashboardSettingsTab=1
-_ConvenorDashboardProjectsTab=2
-_ConvenorDashboardFacultyTab=3
+from sqlalchemy import func
 
 
-def _validate_administrator():
-    """
-    Ensure that user in an administrator
-    :return:
-    """
-
-    if not current_user.has_role('admin') and not current_user.has_role('root'):
-
-        flash('Only administrative users can view unattached projects.')
-        return False
-
-    return True
-
-
-def _validate_convenor(pclass):
-    """
-    Validate that the logged-in user is privileged to view a convenor dashboard
-    :param pclass: Project class model instance
-    :return: True/False
-    """
-
-    # if logged in user is convenor for this class, or is an admin user, then all is OK
-    if pclass.convenor_id != current_user.id \
-        and not current_user.has_role('admin') \
-        and not current_user.has_role('root'):
-
-        flash('Convenor actions are available only to project convenors and administrative users.')
-        return False
-
-    return True
-
-
-@convenor.route('/dashboard/<int:id>/<int:tabid>', methods=['GET', 'POST'])
+@convenor.route('/overview/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def dashboard(id, tabid):
-
-    if id == 0:
-
-        return _render_unattached()
+def overview(id):
 
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     # get current academic year
@@ -106,31 +65,255 @@ def dashboard(id, tabid):
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
+    fac_query = db.session.query(func.count(User.id)). \
+        filter(User.active).join(FacultyData, FacultyData.id == User.id)
+
+    fac_total = fac_query.scalar()
+    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
+
+    proj_count = db.session.query(func.count(Project.id)). \
+        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
+
+    sel_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    sub_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    live_count = db.session.query(func.count(LiveProject.id)). \
+        filter(LiveProject.config_id==config.id).scalar()
+
+    return render_template('convenor/dashboard/overview.html', pane='overview',
+                           golive_form=golive_form, issue_form=issue_form,
+                           pclass=pclass, config=config, current_year=current_year,
+                           fac_data=(fac_count, fac_total), sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/attached/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def attached(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    fac_query = db.session.query(func.count(User.id)). \
+        filter(User.active).join(FacultyData, FacultyData.id == User.id)
+
+    fac_total = fac_query.scalar()
+    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
+
+    proj_count = db.session.query(func.count(Project.id)). \
+        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
+
+    sel_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    sub_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    live_count = db.session.query(func.count(LiveProject.id)). \
+        filter(LiveProject.config_id==config.id).scalar()
+
+    return render_template('convenor/dashboard/attached.html', pane='attached',
+                           pclass=pclass, config=config, current_year=current_year,
+                           projects=pclass.projects, fac_data=(fac_count, fac_total),
+                           sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/faculty/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def faculty(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
     # build list of all active faculty, together with their FacultyData records
     faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
 
-    # restrict to number of faculty with zero available projects
+    # restrict to faculty enrolled on this project class
     faculty_enrolled = faculty.filter(FacultyData.enrollments.any(id=pclass.id))
 
-    # count number of faculty enrolled on this project
-    fac_count = faculty_enrolled.count()
+    fac_query = db.session.query(func.count(User.id)). \
+        filter(User.active).join(FacultyData, FacultyData.id == User.id)
+
+    fac_total = fac_query.scalar()
+    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
+
+    proj_count = db.session.query(func.count(Project.id)). \
+        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
+
+    sel_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    sub_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    live_count = db.session.query(func.count(LiveProject.id)). \
+        filter(LiveProject.config_id==config.id).scalar()
 
     fac_nooffer = 0
     for item in faculty_enrolled.all():
         if item.FacultyData.projects_offered(pclass) == 0:
             fac_nooffer += 1
 
+    return render_template('convenor/dashboard/faculty.html', pane='faculty',
+                           pclass=pclass, config=config, current_year=current_year,
+                           faculty=faculty, fac_nooffer=fac_nooffer,
+                           fac_data=(fac_count, fac_total), sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/selectors/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selectors(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False)
+
+    fac_query = db.session.query(func.count(User.id)). \
+        filter(User.active).join(FacultyData, FacultyData.id == User.id)
+
+    fac_total = fac_query.scalar()
+    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
+
+    proj_count = db.session.query(func.count(Project.id)). \
+        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
+
+    sel_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    sub_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    live_count = db.session.query(func.count(LiveProject.id)). \
+        filter(LiveProject.config_id==config.id).scalar()
+
+    return render_template('convenor/dashboard/selectors.html', pane='selectors',
+                           pclass=pclass, config=config, fac_data=(fac_count, fac_total),
+                           current_year=current_year, selectors=selectors,
+                           sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/submitters/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def submitters(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     # build a list of live students submitting work for evaluation in this project class
     submitters = config.submitting_students.filter_by(retired=False)
 
-    return render_template('convenor/dashboard.html',
-                           golive_form=golive_form, issue_form=issue_form,
-                           pclass=pclass, config=config, current_year=current_year, tabid=tabid,
-                           projects=pclass.projects, faculty=faculty, fac_count=fac_count, fac_nooffer=fac_nooffer,
-                           selectors=selectors, submitters=submitters)
+    fac_query = db.session.query(func.count(User.id)). \
+        filter(User.active).join(FacultyData, FacultyData.id == User.id)
+
+    fac_total = fac_query.scalar()
+    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
+
+    proj_count = db.session.query(func.count(Project.id)). \
+        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
+
+    sel_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    sub_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    live_count = db.session.query(func.count(LiveProject.id)). \
+        filter(LiveProject.config_id==config.id).scalar()
+
+    return render_template('convenor/dashboard/submitters.html', pane='submitters',
+                           pclass=pclass, config=config, fac_data=(fac_count, fac_total),
+                           current_year=current_year, submitters=submitters,
+                           sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/liveprojects/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def liveprojects(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    fac_query = db.session.query(func.count(User.id)). \
+        filter(User.active).join(FacultyData, FacultyData.id == User.id)
+
+    fac_total = fac_query.scalar()
+    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
+
+    proj_count = db.session.query(func.count(Project.id)). \
+        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
+
+    sel_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    sub_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
+
+    live_count = db.session.query(func.count(LiveProject.id)). \
+        filter(LiveProject.config_id==config.id).scalar()
+
+    return render_template('convenor/dashboard/liveprojects.html', pane='live',
+                           pclass=pclass, config=config, fac_data=(fac_count, fac_total),
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count)
 
 
 @convenor.route('/add_project/<int:pclass_id>', methods=['GET', 'POST'])
@@ -140,7 +323,7 @@ def add_project(pclass_id):
     if pclass_id == 0:
 
         # got here from unattached projects view; reject if user is not administrator
-        if not _validate_administrator():
+        if not validate_administrator():
             return redirect(request.referrer)
 
     else:
@@ -149,7 +332,7 @@ def add_project(pclass_id):
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not _validate_convenor(pclass):
+        if not validate_convenor(pclass):
             return redirect(request.referrer)
 
     # set up form
@@ -189,7 +372,7 @@ def add_project(pclass_id):
         db.session.add(data)
         db.session.commit()
 
-        return redirect(url_for('convenor.dashboard', id=pclass_id, tabid=_ConvenorDashboardProjectsTab))
+        return redirect(url_for('convenor.attached', id=pclass_id))
 
     return render_template('faculty/edit_project.html', project_form=form, pclass_id=pclass_id, title='Add new project')
 
@@ -201,7 +384,7 @@ def edit_project(id, pclass_id):
     if pclass_id == 0:
 
         # got here from unattached projects view; reject if user is not administrator
-        if not _validate_administrator():
+        if not validate_administrator():
             return redirect(request.referrer)
 
     else:
@@ -210,7 +393,7 @@ def edit_project(id, pclass_id):
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not _validate_convenor(pclass):
+        if not validate_convenor(pclass):
             return redirect(request.referrer)
 
     # set up form
@@ -249,49 +432,49 @@ def edit_project(id, pclass_id):
 
         db.session.commit()
 
-        return redirect(url_for('convenor.dashboard', id=pclass_id, tabid=_ConvenorDashboardProjectsTab))
+        return redirect(url_for('convenor.attached', id=pclass_id))
 
     return render_template('faculty/edit_project.html', project_form=form, project=data, pclass_id=pclass_id, title='Edit project details')
 
 
-@convenor.route('/activate_project/<int:id>/<int:pclassid>')
+@convenor.route('/activate_project/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def activate_project(id, pclassid):
+def activate_project(id, pclass_id):
 
     # get project details
     data = Project.query.get_or_404(id)
 
     # get project class details
-    pclass = ProjectClass.query.get_or_404(pclassid)
+    pclass = ProjectClass.query.get_or_404(pclass_id)
 
     # if logged in user is not a suitable convenor, or an administrator, object
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     data.enable()
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclassid, tabid=2))
+    return redirect(request.referrer)
 
 
-@convenor.route('/deactivate_project/<int:id>/<int:pclassid>')
+@convenor.route('/deactivate_project/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def deactivate_project(id, pclassid):
+def deactivate_project(id, pclass_id):
 
     # get project details
     data = Project.query.get_or_404(id)
 
     # get project class details
-    pclass = ProjectClass.query.get_or_404(pclassid)
+    pclass = ProjectClass.query.get_or_404(pclass_id)
 
     # if logged in user is not a suitable convenor, or an administrator, object
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     data.disable()
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclassid, tabid=2))
+    return redirect(request.referrer)
 
 
 @convenor.route('/attach_skills/<int:id>/<int:pclass_id>')
@@ -304,7 +487,7 @@ def attach_skills(id, pclass_id):
     if pclass_id == 0:
 
         # got here from unattached projects view; reject if user is not administrator
-        if not _validate_administrator():
+        if not validate_administrator():
             return redirect(request.referrer)
 
     else:
@@ -313,7 +496,7 @@ def attach_skills(id, pclass_id):
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not _validate_convenor(pclass):
+        if not validate_convenor(pclass):
             return redirect(request.referrer)
 
     # get list of active skills
@@ -332,7 +515,7 @@ def attach_programmes(id, pclass_id):
     if pclass_id == 0:
 
         # got here from unattached projects view; reject if user is not administrator
-        if not _validate_administrator():
+        if not validate_administrator():
             return redirect(request.referrer)
 
     else:
@@ -341,7 +524,7 @@ def attach_programmes(id, pclass_id):
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not _validate_convenor(pclass):
+        if not validate_convenor(pclass):
             return redirect(request.referrer)
 
     q = data.available_degree_programmes
@@ -357,7 +540,7 @@ def issue_confirm_requests(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
@@ -385,13 +568,15 @@ def issue_confirm_requests(id):
 
         db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=1))
+    return redirect(request.referrer)
 
 
-def _render_unattached():
+@convenor.route('/show_unattached')
+@roles_accepted('faculty', 'admin', 'root')
+def show_unattached():
 
     # special-case of unattached projects; reject user if not administrator
-    if not _validate_administrator():
+    if not validate_administrator():
         return redirect(request.referrer)
 
     projects = [proj for proj in Project.query.all() if not proj.offerable]
@@ -407,7 +592,7 @@ def force_confirm_all(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
@@ -421,7 +606,7 @@ def force_confirm_all(id):
 
     flash('All outstanding confirmation requests have been removed.', 'success')
 
-    return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=1))
+    return redirect(request.referrer)
 
 
 @convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])
@@ -432,7 +617,7 @@ def go_live(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
@@ -451,7 +636,7 @@ def go_live(id):
                     name=pclass.name, yeara=config.year, yearb=config.year+1),
                   'error')
 
-            return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=1))
+            return redirect(request.referrer)
 
         # going live consists of copying all tables for this project to the live project table,
         # in alphabetical order
@@ -464,7 +649,7 @@ def go_live(id):
                     name=pclass.name, yeara=config.year, yearb=config.year+1),
                   'error')
 
-            return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=1))
+            return redirect(request.referrer)
 
         number = 1
         for item in projects.all():
@@ -498,7 +683,7 @@ def go_live(id):
 
         flash('{name} {yeara}-{yearb} is now live'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
 
-    return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=1))
+    return redirect(request.referrer)
 
 
 @convenor.route('/close_selections/<int:id>', methods=['GET', 'POST'])
@@ -509,7 +694,7 @@ def close_selections(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
@@ -523,7 +708,7 @@ def close_selections(id):
 
     flash('Student selections for{name} {yeara}-{yearb} have now been closed'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
 
-    return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=1))
+    return redirect(request.referrer)
 
 
 @convenor.route('/enroll/<int:userid>/<int:pclassid>')
@@ -534,14 +719,14 @@ def enroll(userid, pclassid):
     pclass = ProjectClass.query.get_or_404(pclassid)
 
     # reject user if not a suitable convenor or administrator
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
     data.add_enrollment(pclass)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclassid, tabid=_ConvenorDashboardFacultyTab))
+    return redirect(request.referrer)
 
 
 @convenor.route('/unenroll/<int:userid>/<int:pclassid>')
@@ -552,14 +737,14 @@ def unenroll(userid, pclassid):
     pclass = ProjectClass.query.get_or_404(pclassid)
 
     # reject user if not a suitable convenor or administrator
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
     data.remove_enrollment(pclass)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclassid, tabid=_ConvenorDashboardFacultyTab))
+    return redirect(request.referrer)
 
 
 @convenor.route('/confirm/<int:sid>/<int:pid>/<int:tabid>')
@@ -572,17 +757,17 @@ def confirm(sid, pid, tabid):
     # pid is a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
-    if not _validate_convenor(sel.config.project_class):
+    if not validate_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=tabid))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
-    if _confirm(sel, project):
+    if do_confirm(sel, project):
         db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=tabid))
+    return redirect(request.referrer)
 
 
 @convenor.route('/deconfirm/<int:sid>/<int:pid>/<int:tabid>')
@@ -595,22 +780,22 @@ def deconfirm(sid, pid, tabid):
     # pid is a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
-    if not _validate_convenor(sel.config.project_class):
+    if not validate_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=tabid))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
-    if _deconfirm(sel, project):
+    if do_deconfirm(sel, project):
         db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=tabid))
+    return redirect(request.referrer)
 
 
-@convenor.route('/deconfirm_to_pending/<int:sid>/<int:pid>/<int:tabid>')
+@convenor.route('/deconfirm_to_pending/<int:sid>/<int:pid>')
 @roles_accepted('faculty', 'admin', 'route')
-def deconfirm_to_pending(sid, pid, tabid):
+def deconfirm_to_pending(sid, pid):
 
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
@@ -618,22 +803,22 @@ def deconfirm_to_pending(sid, pid, tabid):
     # pid is a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
-    if not _validate_convenor(sel.config.project_class):
+    if not validate_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=tabid))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
-    if _deconfirm_to_pending(sel, project):
+    if do_deconfirm_to_pending(sel, project):
         db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=tabid))
+    return redirect(request.referrer)
 
 
-@convenor.route('/cancel_confirm/<int:sid>/<int:pid>/<int:tabid>')
+@convenor.route('/cancel_confirm/<int:sid>/<int:pid>')
 @roles_accepted('faculty', 'admin', 'route')
-def cancel_confirm(sid, pid, tabid):
+def cancel_confirm(sid, pid):
 
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
@@ -641,17 +826,17 @@ def cancel_confirm(sid, pid, tabid):
     # pid is a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
-    if not _validate_convenor(sel.config.project_class):
+    if not validate_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=tabid))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
-    if _cancel_confirm(sel, project):
+    if do_cancel_confirm(sel, project):
         db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=tabid))
+    return redirect(request.referrer)
 
 
 @convenor.route('/project_confirm_all/<int:pid>')
@@ -664,12 +849,12 @@ def project_confirm_all(pid):
     pclass = project.config.project_class
 
     # validate that logged-in user is allowed to edit this LiveProject
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(project.config):
-        return redirect(url_for('convenor.dashboard', id=project.config.id, tabid=6))
+    if not validate_open(project.config):
+        return redirect(request.referrer)
 
     for item in project.confirm_waiting:
         if item not in project.confirmed_students:
@@ -677,7 +862,7 @@ def project_confirm_all(pid):
         project.confirm_waiting.remove(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=6))
+    return redirect(request.referrer)
 
 
 @convenor.route('/project_clear_requests/<int:pid>')
@@ -690,18 +875,18 @@ def project_clear_requests(pid):
     pclass = project.config.project_class
 
     # validate that logged-in user is allowed to edit this LiveProject
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(project.config):
-        return redirect(url_for('convenor.dashboard', id=project.config.id, tabid=6))
+    if not validate_open(project.config):
+        return redirect(request.referrer)
 
     for item in project.confirm_waiting:
         project.confirm_waiting.remove(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=6))
+    return redirect(request.referrer)
 
 
 @convenor.route('/project_remove_confirms/<int:pid>')
@@ -714,18 +899,18 @@ def project_remove_confirms(pid):
     pclass = project.config.project_class
 
     # validate that logged-in user is allowed to edit this LiveProject
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(project.config):
-        return redirect(url_for('convenor.dashboard', id=project.config.id, tabid=6))
+    if not validate_open(project.config):
+        return redirect(request.referrer)
 
     for item in project.confirmed_students:
         project.confirmed_students.remove(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=6))
+    return redirect(request.referrer)
 
 
 @convenor.route('/project_make_all_confirms_pending/<int:pid>')
@@ -738,12 +923,12 @@ def project_make_all_confirms_pending(pid):
     pclass = project.config.project_class
 
     # validate that logged-in user is allowed to edit this LiveProject
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(project.config):
-        return redirect(url_for('convenor.dashboard', id=project.config.id, tabid=6))
+    if not validate_open(project.config):
+        return redirect(request.referrer)
 
     for item in project.confirmed_students:
         if item not in project.confirm_waiting:
@@ -751,7 +936,7 @@ def project_make_all_confirms_pending(pid):
         project.confirmed_students.remove(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=pclass.id, tabid=6))
+    return redirect(request.referrer)
 
 
 @convenor.route('/student_confirm_all/<int:sid>')
@@ -762,12 +947,12 @@ def student_confirm_all(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not _validate_convenor(sel.config.project_class):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    if not validate_convenor(sel.config.project_class):
+        return redirect(request.referrer)
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
     for item in sel.confirm_requests:
         if item not in sel.confirmed:
@@ -775,7 +960,7 @@ def student_confirm_all(sid):
         sel.confirm_requests.remove(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    return redirect(request.referrer)
 
 
 @convenor.route('/student_remove_confirms/<int:sid>')
@@ -786,18 +971,18 @@ def student_remove_confirms(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not _validate_convenor(sel.config.project_class):
+    if not validate_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
     for item in sel.confirmed:
         sel.confirmed.remove(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    return redirect(request.referrer)
 
 
 @convenor.route('/student_clear_requests/<int:sid>')
@@ -808,18 +993,18 @@ def student_clear_requests(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not _validate_convenor(sel.config.project_class):
+    if not validate_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
     for item in sel.confirm_requests:
         sel.confirm_requests.remove(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    return redirect(request.referrer)
 
 
 @convenor.route('/student_make_all_confirms_pending/<int:sid>')
@@ -830,12 +1015,12 @@ def student_make_all_confirms_pending(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not _validate_convenor(sel.config.project_class):
+    if not validate_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
     for item in sel.confirmed:
         if item not in sel.confirm_requests:
@@ -843,7 +1028,7 @@ def student_make_all_confirms_pending(sid):
         sel.confirmed.remove(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    return redirect(request.referrer)
 
 
 @convenor.route('/student_clear_bookmarks/<int:sid>')
@@ -854,18 +1039,39 @@ def student_clear_bookmarks(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not _validate_convenor(sel.config.project_class):
+    if not validate_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not _validate_open(sel.config):
-        return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    if not validate_open(sel.config):
+        return redirect(request.referrer)
 
     for item in sel.bookmarks:
         db.session.delete(item)
     db.session.commit()
 
-    return redirect(url_for('convenor.dashboard', id=sel.config.id, tabid=4))
+    return redirect(request.referrer)
+
+
+@convenor.route('/live_project/<int:pid>/<int:classid>')
+@roles_accepted('faculty', 'admin', 'root')
+def live_project(pid):
+    """
+    View a specific project on the live system
+    :param tabid:
+    :param classid:
+    :param pid:
+    :return:
+    """
+
+    # pid is the id for a LiveProject
+    data = LiveProject.query.get_or_404(pid)
+
+    # verify the logged-in user is allowed to view this live project
+    if not validate_user(data):
+        return redirect(request.referrer)
+
+    return render_live_project(data)
 
 
 @convenor.route('/rollover/<int:pid>/<int:configid>')
@@ -880,7 +1086,7 @@ def rollover(pid, configid):
         return home_dashboard()
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not _validate_convenor(pclass):
+    if not validate_convenor(pclass):
         return home_dashboard()
 
     # get current config record and retire all IDs
@@ -939,4 +1145,4 @@ def rollover(pid, configid):
     flash('{name} has been rolled over to {yeara}-{yearb}'.format(
         name=pclass.name, yeara=current_year, yearb=current_year+1), 'success')
 
-    return redirect(url_for('convenor.dashboard', id=pid, tabid=1))
+    return redirect(request.referrer)

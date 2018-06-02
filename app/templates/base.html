@@ -18,7 +18,7 @@
             <li class="dropdown-header">Convenorships</li>
         {% endif %}
         {% for project_class in pclasses %}
-            <li><a href="{{ url_for('convenor.dashboard', id=project_class.id, tabid=1) }}">
+            <li><a href="{{ url_for('convenor.overview', id=project_class.id) }}">
                 <i class="fa fa-pencil"></i> {{ project_class.name }}
             </a></li>
         {% endfor %}
@@ -26,7 +26,7 @@
             {% if pclasses and pclasses.first() %}
                 <li role="separator" class="divider"></li>
             {% endif %}
-            <li><a href="{{ url_for('convenor.dashboard', id=0, tabid=0) }}">
+            <li><a href="{{ url_for('convenor.show_unattached', id=0) }}">
                 Unattached projects
             </a></li>
         {% endif %}

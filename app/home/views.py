@@ -8,12 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, redirect, url_for, flash
-from flask_security import login_required, current_user, logout_user
+from flask_security import login_required
 
 from . import home
 
-from ..utils import home_dashboard
+from app.shared.utils import home_dashboard
 
 @home.route('/')
 @login_required

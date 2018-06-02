@@ -1,0 +1,215 @@
+{% extends "convenor/dashboard/dashboard.html" %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
+            <hr class="intro-divider">
+
+            {# offer rollover of academic year if available #}
+            {% if config.year < current_year %}
+                <div class="panel panel-danger">
+                    <div class="panel-heading"><strong>Rollover of academic year available</strong></div>
+                    <div class="panel-body">
+                        <div class="row vertical-align">
+                            <div class="col-xs-9">
+                                Rollover of the academic year to {{ current_year }} is now available.
+                            </div>
+                            <div class="col-xs-3">
+                                <div class="pull-right">
+                                    <a href="{{ url_for('convenor.rollover', pid=pclass.id, configid=config.id) }}"
+                                       class="btn btn-danger">Rollover</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# provide summary #}
+            <div class="panel panel-primary panel-primary-bg">
+                <div class="panel-heading">Status</div>
+                <div class="panel-body">
+                    {% if config.project_class.require_confirm and not config.requests_issued %}
+
+                        <div class="panel panel-danger">
+                            <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
+                            <div class="panel-body">
+                                <form action="{{ url_for('convenor.issue_confirm_requests', id=pclass.id) }}"
+                                      method="POST" name="issue-form">
+                                    <div class="row vertical-top">
+                                        <div class="col-xs-9">
+                                            Confirmation requests have not yet been issued to faculty
+                                        </div>
+                                        <div class="col-xs-3">
+                                            <div class="pull-right">
+                                                {{ wtf.form_field(issue_form.request_deadline) }}
+                                                {{ wtf.form_field(issue_form.requests_issued, button_map={'requests_issued': 'warning'}) }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                    {% else %}
+
+                        {% if config.live and config.closed %}
+                            {{ closed_panel(config) }}
+                        {% elif config.open %}
+                            <div class="panel panel-success">
+                                <div class="panel-heading"><strong>Student choices are currently live</strong></div>
+                                <div class="panel-body">
+                                    <div class="row vertical-align">
+                                        <div class="col-xs-9">
+                                            {% set valid, total = config.count_valid_students %}
+                                            <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
+                                                students have valid selections (<strong>{{ total-valid }}</strong>
+                                                remaining).</p>
+                                            <p>Finalize student selections</p>
+                                        </div>
+                                        <div class="col-xs-3">
+                                            <div class="pull-right">
+                                                <a href="{{ url_for('convenor.close_selections', id=config.id) }}"
+                                                   class="btn btn-success">
+                                                    Close
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% elif not config.live %}
+                            {% if config.project_class.require_confirm %}
+
+                                {# if we get here then we can assume requests have been issued because of the outermost if#}
+                                <div class="panel panel-default">
+                                    <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
+                                    <div class="panel-body">
+
+                                        {% if config.golive_required.count() == 0 %}
+                                            <form action="{{ url_for('convenor.go_live', id=pclass.id) }}" method="POST"
+                                                  name="golive-form">
+                                                <div class="row vertical-top">
+                                                    <div class="col-xs-9">
+                                                        <p>All faculty confirmations have now been received.</p>
+                                                        {% if projects %}
+                                                            <p>
+                                                                <strong>{{ projects.count() }}</strong> projects are
+                                                                currently
+                                                                available to go live.
+                                                                <strong>{{ fac_nooffer }} out
+                                                                    of {{ fac_count }}</strong> eligible faculty
+                                                                do not yet have available projects.
+                                                            </p>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="col-xs-3">
+                                                        <div class="pull-right">
+                                                            {{ wtf.form_field(golive_form.live_deadline) }}
+                                                            {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        {% else %}
+                                            <div class="row vertical-top">
+                                                <div class="col-xs-9">
+                                                    Confirmations are still outstanding from
+                                                    <strong>{{ config.golive_required.count() }} faculty</strong>.
+                                                </div>
+                                                <div class="col-xs-3">
+                                                    <div class="pull-right">
+                                                        <a href="{{ url_for('convenor.force_confirm_all', id=pclass.id) }}"
+                                                           class="btn btn-danger">
+                                                            Force confirm all
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <form action="{{ url_for('convenor.issue_confirm_requests', id=pclass.id) }}"
+                                                  method="POST" name="issue-form">
+                                                <div class="row vertical-align">
+                                                    <div class="col-xs-9">
+                                                        {{ wtf.form_field(issue_form.request_deadline) }}
+                                                    </div>
+                                                    <div class="col-xs-3">
+                                                        <div class="pull-right">
+                                                            {{ wtf.form_field(issue_form.requests_issued, button_map={'requests_issued': 'primary'}) }}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        {% endif %}
+
+                                    </div>
+                                </div>
+
+                                {# display list of faculty with outstanding confirm requests #}
+                                {% if config.golive_required.count() != 0 %}
+                                    <table class="table table-striped table-bordered sortable-pageable">
+                                        <thead>
+                                        <tr>
+                                            <th width="50%"> Name</th>
+                                            <th width="20%"> Email</th>
+                                            <th width="10%"> Project available</th>
+                                            <th width="10%"> Projects not offerable</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {% for faculty in config.golive_required %}
+                                            <tr>
+                                                {# name #}
+                                                <td> {{ faculty.user.build_name() }} </td>
+
+                                                {# email #}
+                                                <td>
+                                                    <a href="mailto:{{ faculty.user.email }}">{{ faculty.user.email }}
+                                                    </a>
+                                                </td>
+
+                                                {# projects available #}
+                                                <td>{{ faculty.projects_offered(pclass) }}</td>
+
+                                                {# projects unofferable #}
+                                                <td>{{ faculty.projects_unofferable() }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                        </tbody>
+                                    </table>
+                                {% endif %}
+
+                            {% else %} {# confirmation not required anyway #}
+
+                                <div class="panel panel-danger">
+                                    <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
+                                    <div class="panel-body">
+                                        <form action="{{ url_for('convenor.go_live', id=pclass.id) }}" method="POST"
+                                              name="golive-form">
+                                            <div class="row vertical-align">
+                                                <div class="col-xs-9">
+                                                    Freeze project descriptions and open student choices.
+                                                </div>
+                                                <div class="col-xs-3">
+                                                    <div class="pull-right">
+                                                        {{ wtf.form_field(golive_form.live_deadline) }}
+                                                        {{ wtf.form_field(golive_form.live, button_map={'live': 'success'}) }}
+                                                    </div>
+                                                </div>
+                                        </form>
+                                    </div>
+                                </div>
+
+                            {% endif %}
+
+                        {% endif %}
+
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

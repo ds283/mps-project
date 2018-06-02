@@ -17,6 +17,7 @@ from celery import schedules
 
 from datetime import date, datetime, timedelta
 import json
+from os import path
 
 
 # make db available as a static variable, so we can import into other parts of the code
@@ -1531,7 +1532,10 @@ class BackupRecord(db.Model):
 
     # ID of owner, the user who initiated this backup
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', backref=db.backref('backups', lazy='dynamic'))
+    owner = db.relationship('User', backref=db.backref('backups', lazy='dynamic'))
+
+    # optional text description
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # date of backup
     date = db.Column(db.DateTime(), index=True)
@@ -1544,6 +1548,22 @@ class BackupRecord(db.Model):
 
     # filename
     filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+
+    def type_to_string(self):
+
+        if self.type == self.SCHEDULED_BACKUP:
+            return 'Scheduled backup'
+        elif self.type == self.PROJECT_ROLLOVER_FALLBACK:
+            return 'Rollover restore point'
+        else:
+            return '<Unknown>'
+
+
+    @property
+    def print_filename(self):
+
+        return path.join("...", path.basename(self.filename))
 
 
 

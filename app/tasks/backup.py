@@ -9,7 +9,7 @@
 #
 
 
-from os import path, makedirs, errno, remove
+from os import path, makedirs, errno, remove, scandir
 from flask import current_app
 import subprocess
 import tarfile
@@ -19,6 +19,21 @@ from celery.exceptions import Ignore
 from ..models import db, User, BackupRecord
 
 from datetime import datetime
+
+
+def _count_dir_size(path):
+
+    size = 0
+
+    for entry in scandir(path):
+
+        if entry.is_dir(follow_symlinks=False):
+            size += _count_dir_size(entry.path)
+
+        else:
+            size += entry.stat(follow_symlinks=False).st_size
+
+    return size
 
 
 def register_backup_tasks(celery):
@@ -39,7 +54,7 @@ def register_backup_tasks(celery):
         now_str = now.strftime("%H_%M_%S")
 
         # set up folder hierarchy
-        backup_dest = path.join(backup_folder, now.strftime("%Y"), now.strftime("%m"))
+        backup_dest = path.join(backup_folder, now.strftime("%Y"), now.strftime("%m"), now.strftime("%d"))
         backup_archive = path.join(backup_dest, "{tag}_{time}.tar.gz".format(tag=tag, time=now_str))
 
         # ensure backup destination exists on disk
@@ -78,6 +93,8 @@ def register_backup_tasks(celery):
 
         if path.exists(temp_SQL_file) and path.isfile(temp_SQL_file):
 
+            db_size = path.getsize(temp_SQL_file)
+
             # embed into tar archive
             with tarfile.open(name=backup_archive, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
 
@@ -91,11 +108,17 @@ def register_backup_tasks(celery):
 
             remove(temp_SQL_file)
 
+            archive_size = path.getsize(backup_archive)
+            backup_size = _count_dir_size(backup_folder)
+
             # store details
             data = BackupRecord(owner_id=owner_id,
                                 date=now,
                                 type=type,
                                 description=description,
-                                filename=backup_archive)
+                                filename=backup_archive,
+                                db_size=db_size,
+                                archive_size=archive_size,
+                                backup_size=backup_size)
             db.session.add(data)
             db.session.commit()

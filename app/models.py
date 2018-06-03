@@ -15,6 +15,8 @@ from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy
 from celery import schedules
 
+from .shared.formatters import format_size
+
 from datetime import date, datetime, timedelta
 import json
 from os import path
@@ -1549,6 +1551,15 @@ class BackupRecord(db.Model):
     # filename
     filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
+    # uncompressed database size, in bytes
+    db_size = db.Column(db.Integer())
+
+    # compressed archive size, in bytes
+    archive_size = db.Column(db.Integer())
+
+    # total size of backups at this time, in bytes
+    backup_size = db.Column(db.Integer())
+
 
     def type_to_string(self):
 
@@ -1564,6 +1575,19 @@ class BackupRecord(db.Model):
     def print_filename(self):
 
         return path.join("...", path.basename(self.filename))
+
+
+
+    @property
+    def readable_db_size(self):
+
+        return format_size(self.db_size)
+
+
+    @property
+    def readable_archive_size(self):
+
+        return format_size(self.archive_size)
 
 
 

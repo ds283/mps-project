@@ -114,20 +114,32 @@
                                     <li><a href="{{ url_for('admin.edit_degree_programmes') }}">
                                         <i class="fa fa-pencil"></i> Degree programmes
                                     </a></li>
-                                    <li role="separator" class="divider"></li>
-                                    <li><a href="{{ url_for('admin.email_log') }}">
-                                        Email log
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.scheduled_tasks') }}">
-                                        Scheduled tasks
-                                    </a></li>
-                                    <li><a href="{{ url_for('admin.manage_backups') }}">
-                                        Manage backups
-                                    </a></li>
-                                    <li><a class="bg-danger" href="{{ url_for('admin.confirm_global_rollover') }}">
-                                        Roll over academic year
-                                    </a></li>
                                 {% endif %}
+                            </ul>
+                        </li>
+                    {% endif %}
+
+                    <!-- add site menu if user is root -->
+                    {% if current_user.has_role('root') %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                Site management
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url_for('admin.email_log') }}">
+                                    Email log
+                                </a></li>
+                                <li><a href="{{ url_for('admin.scheduled_tasks') }}">
+                                    Scheduled tasks
+                                </a></li>
+                                <li><a href="{{ url_for('admin.manage_backups') }}">
+                                    Manage backups
+                                </a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a class="bg-danger" href="{{ url_for('admin.confirm_global_rollover') }}">
+                                    Roll over academic year
+                                </a></li>
                             </ul>
                         </li>
                     {% endif %}

@@ -16,6 +16,8 @@ from flask_security.utils import config_value, get_message, do_flash, \
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
+from sqlalchemy import func
+
 from .actions import register_user
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
@@ -35,7 +37,8 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
     DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord
 
-from app.shared.utils import get_main_config, get_current_year, home_dashboard
+from ..shared.utils import get_main_config, get_current_year, home_dashboard
+from ..shared.formatters import format_size
 
 from . import admin
 
@@ -1987,17 +1990,51 @@ def deactivate_scheduled_task(id):
     return redirect(request.referrer)
 
 
+def _backup_dashboard_data():
+    """
+    Interrogate database to efficiently extract statistics needed for backup dashboard
+    :return:
+    """
+
+    backup_count = db.session.query(func.count(BackupRecord.id)).scalar()
+
+    return backup_count
+
+
+@admin.route('/backups_overview')
+@roles_required('root')
+def backups_overview():
+    """
+    Generate the backup overview
+    :return:
+    """
+
+    backup_count = _backup_dashboard_data()
+
+    backup_size = db.session.query(func.sum(BackupRecord.archive_size)).scalar()
+    if backup_size is None:
+        size = '(no backups currently held)'
+    else:
+        size = format_size(backup_size)
+
+    return render_template('admin/backup_dashboard/overview.html', pane='overview',
+                           backup_size=size, backup_count=backup_count)
+
+
 @admin.route('/manage_backups')
 @roles_required('root')
 def manage_backups():
     """
-    Generate the backup-management deshboard
+    Generate the backup-management view
     :return:
     """
 
     backups = db.session.query(BackupRecord)
 
-    return render_template('admin/backup_dashboard.html', backups=backups)
+    backup_count = _backup_dashboard_data()
+
+    return render_template('admin/backup_dashboard/manage.html', pane='view',
+                           backup_count=backup_count, backups=backups)
 
 
 @admin.route('/confirm_delete_backup/<int:id>')

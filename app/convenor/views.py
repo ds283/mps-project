@@ -28,6 +28,35 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import func
 
 
+def _dashboard_data(pclass, config):
+    """
+    Efficiently retrieve statistics needed to render the convenor dashboard
+    :param pclass:
+    :param config:
+    :return:
+    """
+
+    fac_query = db.session.query(func.count(User.id)). \
+        filter(User.active).join(FacultyData, FacultyData.id == User.id)
+
+    fac_total = fac_query.scalar()
+    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
+
+    proj_count = db.session.query(func.count(Project.id)). \
+        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
+
+    sel_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
+
+    sub_count = db.session.query(func.count(SelectingStudent.id)). \
+        filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
+
+    live_count = db.session.query(func.count(LiveProject.id)). \
+        filter(LiveProject.config_id == config.id).scalar()
+
+    return (fac_count, fac_total), live_count, proj_count, sel_count, sub_count
+
+
 @convenor.route('/overview/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def overview(id):
@@ -65,28 +94,12 @@ def overview(id):
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
-    fac_query = db.session.query(func.count(User.id)). \
-        filter(User.active).join(FacultyData, FacultyData.id == User.id)
-
-    fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
-
-    proj_count = db.session.query(func.count(Project.id)). \
-        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
-
-    sel_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    sub_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    live_count = db.session.query(func.count(LiveProject.id)). \
-        filter(LiveProject.config_id==config.id).scalar()
+    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/overview.html', pane='overview',
                            golive_form=golive_form, issue_form=issue_form,
                            pclass=pclass, config=config, current_year=current_year,
-                           fac_data=(fac_count, fac_total), sel_count=sel_count, sub_count=sub_count,
+                           fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
 
 
@@ -107,27 +120,11 @@ def attached(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    fac_query = db.session.query(func.count(User.id)). \
-        filter(User.active).join(FacultyData, FacultyData.id == User.id)
-
-    fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
-
-    proj_count = db.session.query(func.count(Project.id)). \
-        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
-
-    sel_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    sub_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    live_count = db.session.query(func.count(LiveProject.id)). \
-        filter(LiveProject.config_id==config.id).scalar()
+    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/attached.html', pane='attached',
                            pclass=pclass, config=config, current_year=current_year,
-                           projects=pclass.projects, fac_data=(fac_count, fac_total),
+                           projects=pclass.projects, fac_data=fac_data,
                            sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
 
@@ -152,36 +149,11 @@ def faculty(id):
     # build list of all active faculty, together with their FacultyData records
     faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
 
-    # restrict to faculty enrolled on this project class
-    faculty_enrolled = faculty.filter(FacultyData.enrollments.any(id=pclass.id))
-
-    fac_query = db.session.query(func.count(User.id)). \
-        filter(User.active).join(FacultyData, FacultyData.id == User.id)
-
-    fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
-
-    proj_count = db.session.query(func.count(Project.id)). \
-        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
-
-    sel_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    sub_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    live_count = db.session.query(func.count(LiveProject.id)). \
-        filter(LiveProject.config_id==config.id).scalar()
-
-    fac_nooffer = 0
-    for item in faculty_enrolled.all():
-        if item.FacultyData.projects_offered(pclass) == 0:
-            fac_nooffer += 1
+    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/faculty.html', pane='faculty',
                            pclass=pclass, config=config, current_year=current_year,
-                           faculty=faculty, fac_nooffer=fac_nooffer,
-                           fac_data=(fac_count, fac_total), sel_count=sel_count, sub_count=sub_count,
+                           faculty=faculty, fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
 
 
@@ -205,26 +177,10 @@ def selectors(id):
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False)
 
-    fac_query = db.session.query(func.count(User.id)). \
-        filter(User.active).join(FacultyData, FacultyData.id == User.id)
-
-    fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
-
-    proj_count = db.session.query(func.count(Project.id)). \
-        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
-
-    sel_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    sub_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    live_count = db.session.query(func.count(LiveProject.id)). \
-        filter(LiveProject.config_id==config.id).scalar()
+    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selectors.html', pane='selectors',
-                           pclass=pclass, config=config, fac_data=(fac_count, fac_total),
+                           pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, selectors=selectors,
                            sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
@@ -250,26 +206,10 @@ def submitters(id):
     # build a list of live students submitting work for evaluation in this project class
     submitters = config.submitting_students.filter_by(retired=False)
 
-    fac_query = db.session.query(func.count(User.id)). \
-        filter(User.active).join(FacultyData, FacultyData.id == User.id)
-
-    fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
-
-    proj_count = db.session.query(func.count(Project.id)). \
-        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
-
-    sel_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    sub_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    live_count = db.session.query(func.count(LiveProject.id)). \
-        filter(LiveProject.config_id==config.id).scalar()
+    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/submitters.html', pane='submitters',
-                           pclass=pclass, config=config, fac_data=(fac_count, fac_total),
+                           pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, submitters=submitters,
                            sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
@@ -292,26 +232,10 @@ def liveprojects(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    fac_query = db.session.query(func.count(User.id)). \
-        filter(User.active).join(FacultyData, FacultyData.id == User.id)
-
-    fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
-
-    proj_count = db.session.query(func.count(Project.id)). \
-        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
-
-    sel_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    sub_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id==config.id).scalar()
-
-    live_count = db.session.query(func.count(LiveProject.id)). \
-        filter(LiveProject.config_id==config.id).scalar()
+    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/liveprojects.html', pane='live',
-                           pclass=pclass, config=config, fac_data=(fac_count, fac_total),
+                           pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
 

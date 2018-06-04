@@ -654,46 +654,6 @@ def remove_enrollment(userid, pclassid):
     return redirect(request.referrer)
 
 
-@admin.route('/my_affiliations')
-@roles_required('faculty')
-def my_affiliations():
-    """
-    Allow a faculty member to adjust their own affiliations without admin privileges
-    :return:
-    """
-
-    data = FacultyData.query.get_or_404(current_user.id)
-    research_groups = ResearchGroup.query.all()
-
-    return render_template('admin/my_affiliations.html', user=current_user, data=data, research_groups=research_groups)
-
-
-@admin.route('/add_my_affiliation/<int:groupid>')
-@roles_required('faculty')
-def add_my_affiliation(groupid):
-    data = FacultyData.query.get_or_404(current_user.id)
-    group = ResearchGroup.query.get_or_404(groupid)
-
-    if group not in data.affiliations:
-        data.add_affiliation(group)
-        db.session.commit()
-
-    return redirect(request.referrer)
-
-
-@admin.route('/remove_my_affiliation/<int:groupid>')
-@roles_required('faculty')
-def remove_my_affiliation(groupid):
-    data = FacultyData.query.get_or_404(current_user.id)
-    group = ResearchGroup.query.get_or_404(groupid)
-
-    if group in data.affiliations:
-        data.remove_affiliation(group)
-        db.session.commit()
-
-    return redirect(request.referrer)
-
-
 @admin.route('/edit_groups')
 @roles_required('root')
 def edit_groups():

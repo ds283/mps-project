@@ -2016,7 +2016,9 @@ def backups_overview():
 
     form = EditBackupOptionsForm(request.form)
 
-    keep_hourly, keep_daily, limit, units, last_change = get_backup_config()
+    keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
+    limit, units = lim
+
     backup_count = _backup_dashboard_data()
 
     backup_size = db.session.query(func.sum(BackupRecord.archive_size)).scalar()

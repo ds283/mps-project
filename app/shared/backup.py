@@ -42,7 +42,7 @@ def get_backup_config():
 
     config = db.session.query(BackupConfiguration).one()
 
-    return config.keep_hourly, config.keep_daily, config.limit, config.units, config.last_changed
+    return config.keep_hourly, config.keep_daily, (config.limit, config.units), config.backup_max, config.last_changed
 
 
 def set_backup_config(keep_hourly, keep_daily, limit, units):

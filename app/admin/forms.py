@@ -597,8 +597,8 @@ class ScheduledTaskMixin():
     owner = QuerySelectField('Owner', query_factory=GetSysadminUsers, get_label=BuildUserRealName)
 
     tasks_available = [('app.tasks.prune_email.prune_email', 'Prune email log'),
-                       ('app.tasks.backup.backup', 'Perform local backup')]
-                       # ('thin', 'Thin local backups'),
+                       ('app.tasks.backup.backup', 'Perform local backup'),
+                       ('app.tasks.backup.thin', 'Thin local backups')]
                        # ('remote_backup', 'Backup to internet location')]
     task = SelectField('Task', choices=tasks_available)
 

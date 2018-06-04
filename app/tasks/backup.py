@@ -14,11 +14,18 @@ from flask import current_app
 import subprocess
 import tarfile
 
-from celery.exceptions import Ignore
+from math import floor
+
+from celery import group
 
 from ..models import db, User, BackupRecord
+from ..shared.backup import get_backup_config
 
-from datetime import datetime
+from datetime import datetime, timedelta
+
+import random
+
+from os import path, remove
 
 
 def _count_dir_size(path):
@@ -38,8 +45,8 @@ def _count_dir_size(path):
 
 def register_backup_tasks(celery):
 
-    @celery.task()
-    def backup(owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag='backup', description=None):
+    @celery.task(bind=True, default_retry_delay = 2*60)
+    def backup(self, owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag='backup', description=None):
 
         # get name of backup folder and database root password from app config
         backup_folder = current_app.config['BACKUP_FOLDER']
@@ -63,7 +70,7 @@ def register_backup_tasks(celery):
                 makedirs(backup_dest)
             except OSError as e:
                 if e.errno != errno.EEXIST:
-                    raise Ignore
+                    raise self.retry()
 
         # ensure final archive name is unique
         count = 1
@@ -72,7 +79,7 @@ def register_backup_tasks(celery):
                 backup_archive = path.join(backup_dest, "{tag}_{time}_{ct}.tar.gz".format(tag=tag, time=now_str, ct=count))
                 count += 1
                 if count > 50:
-                    raise Ignore        # fail silently TODO: should we be noisy?
+                    raise self.retry()
 
         # name of temporary SQL dump file
         temp_SQL_file = path.join(backup_dest, 'SQL_temp_{tag}.sql'.format(tag=now_str))
@@ -83,7 +90,7 @@ def register_backup_tasks(celery):
                 temp_SQL_file = path.join(backup_dest, 'SQL_temp_{tag}_{ct}.sql'.format(tag=now_str, ct=count))
                 count += 1
                 if count > 50:
-                    raise Ignore        # fail silently TODO: should we be noisy?
+                    raise self.retry()
 
         # dump database to SQL document
         p = subprocess.Popen(
@@ -122,3 +129,92 @@ def register_backup_tasks(celery):
                                 backup_size=backup_size)
             db.session.add(data)
             db.session.commit()
+
+        else:
+
+            self.update_status(state='FAILED', meta='SQL dump from mysqldump was not generated')
+
+
+    @celery.task(bind=True, default_retry_delay = 2*60)
+    def thin_list(self, l):
+
+        # l should be a list of ids for BackupRecords that need to be thinned down to just 1
+
+        remain = l
+        while len(remain) > 1:
+
+            index= random.randrange(len(remain))
+            thin_id = remain[index]
+            del remain[index]
+
+            # will raise an exception if record does not exist
+            record = db.session.query(BackupRecord).filter_by(id=thin_id).one()
+
+            if path.exists(record.filename):
+
+                remove(record.filename)
+                db.session.remove(record)
+                db.commit()
+
+            else:
+
+                self.update_state(state='FAILED', meta='Could not locate backup file to be thinned')
+
+
+
+    @celery.task(bind=True, default_retry_delay = 2*60)
+    def thin_class(self, records):
+
+        # build group of tasks for each collection of backups we need to thin
+        tasks = group([ thin_list.s(records[k]) for k in records.keys ])
+        tasks.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay = 2*60)
+    def thin(self):
+
+        keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
+
+        max_hourly_age = timedelta(days=keep_hourly)
+        max_daily_age = max_hourly_age + timedelta(weeks=keep_daily)
+
+        # bin backups into hourly, daily, weekly groups depending on age
+        hourly = {}
+        daily = {}
+        weekly = {}
+
+        now = datetime.now()
+
+        for record in db.session.query(BackupRecord).order_by(BackupRecord.date.desc()).all():
+
+            age = now - record.date
+
+            if age < max_hourly_age:
+
+                # work out age in hours
+                age_hours = floor(age.seconds / (60*60))       # floor returns an Integer in Python3
+                if age_hours in hourly:
+                    hourly[age_hours].append(record.id)
+                else:
+                    hourly[age_hours] = [record.id]
+
+            elif age < max_daily_age:
+
+                # work out age in days
+                age_days = floor(age.days)                     # as above, returns an Integer in Python3
+                if age_days in daily:
+                    daily[age_days].append(record.id)
+                else:
+                    daily[age_days] = [record.id]
+
+            else:
+
+                # work out age in weeks
+                age_weeks = floor(age.days / 7)                # as above, returns an Integer in Python3
+                if age_weeks in weekly:
+                    weekly[age_weeks].append(record.id)
+                else:
+                    weekly[age_weeks] = [record.id]
+
+        thinning = group(thin_class.s(hourly), thin_class.s(daily), thin_class.s(weekly))
+        result = thinning.apply_async()

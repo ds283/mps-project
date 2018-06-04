@@ -12,146 +12,59 @@
     <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
 
     <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
         $(document).ready(function () {
-            $('[class~="sortable-pageable"]').DataTable({
+            $('#scheduled').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/scheduled_ajax', dataSrc: '' },
+                columns: [
+                    { data: 'name' },
+                    { data: 'schedule' },
+                    { data: 'owner' },
+                    { data: 'active' },
+                    { data: 'last_run' },
+                    { data: 'total_runs' },
+                    { data: 'last_change' },
+                    { data: 'expires' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
             });
         });
     </script>
 {% endblock %}
-
-{% macro format_interval(data) %}
-    {{ data.every }}
-    {% if data.every==1 %}
-        {# assume period is plural #}
-        {{ data.period[:-1] }}
-    {% else %}
-        {{ data.period }}
-    {% endif %}
-{% endmacro %}
-
-{% macro format_crontab(data) %}
-    m({{ data.minute }})
-    h({{ data.hour }})
-    wd({{ data.day_of_week }})
-    mo({{ data.day_of_month }})
-    mon({{ data.month_of_year }})
-{% endmacro %}
 
 {% block title %}
     Scheduled tasks
 {% endblock %}
 
 {% block bodyblock %}
-    {% if tasks and tasks.first() %}
-        <div class="panel panel-primary panel-primary-bg">
-            <div class="panel-heading">Scheduled tasks</div>
-            <div class="panel-body">
-            <table class="table table-striped table-bordered sortable-pageable">
-                <thead>
-                <tr>
-                    <th width="18%"> Name</th>
-                    <th width="12%"> Schedule</th>
-                    <th width="10%"> Owner</th>
-                    <th width="7%"> Active?</th>
-                    <th width="10%"> Last run</th>
-                    <th width="8%"> Total runs</th>
-                    <th width="10%"> Last changed</th>
-                    <th width="10%"> Expiry</th>
-                    <th width="15%"> Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for task in tasks %}
-                    <tr>
-                        <td> {{ task.name }} </td>
-
-                        {# interval #}
-                        <td>
-                            {% if task.interval %}
-                                {{ format_interval(task.interval) }}
-                            {% elif task.crontab %}
-                                {{ format_crontab(task.crontab) }}
-                            {% else %}
-                                <span class="label label-danger">Invalid</span>
-                            {% endif %}
-                        </td>
-
-                        {# owner #}
-                        <td>
-                            {% if task.owner %}
-                                {{ task.owner.build_name() }}
-                            {% else %}
-                                <span class="label label-default">Nobody</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if task.enabled %}
-                                Yes
-                            {% else %}
-                                No
-                            {% endif %}
-                        </td>
-
-                        <td> {{ task.last_run_at.strftime("%a %d %b %Y %H:%M:%S") }} </td>
-                        <td> {{ task.total_run_count }}</td>
-                        <td> {{ task.date_changed.strftime("%a %d %b %Y %H:%M:%S") }}</td>
-                        <td>
-                            {% if task.expires %}
-                                {{ task.expires.strftime("%a %d %b %Y %H:%M:%S") }}
-                            {% else %}
-                                <span class="label label-default">No expiry</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-                                    Actions
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
-                                            <i class="fa fa-pencil"></i> Edit task
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
-                                            <i class="fa fa-trash"></i> Delete
-                                        </a>
-                                    </li>
-                                    <li>
-                                        {% if task.enabled %}
-                                            <a href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
-                                                Make inactive
-                                            </a>
-                                        {% else %}
-                                            <a href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
-                                                Make active
-                                            </a>
-                                        {% endif %}
-                                    </li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            </div>
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Scheduled tasks</div>
+        <div class="panel-body">
+        <table id="scheduled" class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th width="18%"> Name</th>
+                <th width="12%"> Schedule</th>
+                <th width="10%"> Owner</th>
+                <th width="7%"> Active?</th>
+                <th width="10%"> Last run</th>
+                <th width="8%"> Total runs</th>
+                <th width="10%"> Last changed</th>
+                <th width="10%"> Expiry</th>
+                <th width="15%"> Actions</th>
+            </tr>
+            </thead>
+        </table>
         </div>
-        <div style="text-align: center;">
-    {% else %}
-        <div style="text-align: center;">
-            <h3> No scheduled tasks </h3>
-            <hr class="intro-divider">
-    {% endif %}
-    <a href="{{ url_for('admin.add_scheduled_task') }}" class="btn btn-default btn-lg">
-        <i class="fa fa-plus"></i>
-        Add new scheduled task
-    </a>
+    </div>
+    <div style="text-align: center;">
+        <a href="{{ url_for('admin.add_scheduled_task') }}" class="btn btn-default btn-lg">
+            <i class="fa fa-plus"></i>
+            Add new scheduled task
+        </a>
     </div>
 {% endblock %}

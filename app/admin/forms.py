@@ -598,7 +598,8 @@ class ScheduledTaskMixin():
 
     tasks_available = [('app.tasks.prune_email.prune_email', 'Prune email log'),
                        ('app.tasks.backup.backup', 'Perform local backup'),
-                       ('app.tasks.backup.thin', 'Thin local backups')]
+                       ('app.tasks.backup.thin', 'Thin local backups'),
+                       ('app.tasks.backup.limit_size', 'Enforce limit on size of backup folder')]
                        # ('remote_backup', 'Backup to internet location')]
     task = SelectField('Task', choices=tasks_available)
 

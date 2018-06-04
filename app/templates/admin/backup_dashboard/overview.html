@@ -16,10 +16,10 @@
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.16.min.js"></script>#}
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.12.16.min.js"></script>#}
 
-    {% if archive_div is defined and archive_script is defined %}
+    {% if archive_div is defined and archive_div != None and archive_script is defined and archive_script != None %}
         {{ archive_script|safe }}
     {% endif %}
-    {% if backup_div is defined and backup_script is defined %}
+    {% if backup_div is defined and backup_div != None and backup_script is defined and backup_script != None %}
         {{ backup_script|safe }}
     {% endif %}
 {% endblock %}
@@ -77,10 +77,10 @@
             <div class="row">
                 <div class="col-xs-1"></div>
                 <div class="col-xs-10">
-                    {% if archive_script is defined and archive_div is defined %}
+                    {% if archive_div is defined and archive_div != None and archive_script is defined and archive_script != None %}
                         {{ archive_div|safe }}
                     {% else %}
-                        Too few data points to generate plot
+                        <span class="label label-warning">Too few data points to generate plot for archive file size vs. time</span>
                     {% endif %}
                 </div>
                 <div class="col-xs-1"></div>
@@ -88,10 +88,10 @@
             <div class="row">
                 <div class="col-xs-1"></div>
                 <div class="col-xs-10">
-                    {% if backup_script is defined and backup_div is defined %}
+                    {% if backup_div is defined and backup_div != None and backup_script is defined and backup_script != None %}
                         {{ backup_div|safe }}
                     {% else %}
-                        Too few data points to generate plot
+                        <span class="label label-warning">Too few data points to generate plot for backup size vs. time</span>
                     {% endif %}
                 </div>
                 <div class="col-xs-1"></div>

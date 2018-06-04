@@ -16,7 +16,7 @@ import tarfile
 
 from math import floor
 
-from celery import group
+from celery import group, chain
 
 from ..models import db, User, BackupRecord
 from ..shared.backup import get_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -177,7 +177,7 @@ def register_backup_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay = 2*60)
-    def thin(self):
+    def do_thinning(self):
 
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
@@ -198,7 +198,7 @@ def register_backup_tasks(celery):
             if age < max_hourly_age:
 
                 # work out age in hours
-                age_hours = floor(age.seconds / (60*60))       # floor returns an Integer in Python3
+                age_hours = floor(float(age.seconds) / float(60*60))       # floor returns an Integer in Python3
                 if age_hours in hourly:
                     hourly[age_hours].append(record.id)
                 else:
@@ -207,7 +207,7 @@ def register_backup_tasks(celery):
             elif age < max_daily_age:
 
                 # work out age in days
-                age_days = floor(age.days)                     # as above, returns an Integer in Python3
+                age_days = floor(float(age.seconds) / float(60*60*24))      # as above, returns an Integer in Python3
                 if age_days in daily:
                     daily[age_days].append(record.id)
                 else:
@@ -216,18 +216,25 @@ def register_backup_tasks(celery):
             else:
 
                 # work out age in weeks
-                age_weeks = floor(age.days / 7)                # as above, returns an Integer in Python3
+                age_weeks = floor(float(age.seconds) / float(60*60*24*7))   # as above, returns an Integer in Python3
                 if age_weeks in weekly:
                     weekly[age_weeks].append(record.id)
                 else:
                     weekly[age_weeks] = [record.id]
 
         thinning = group(thin_class.s(hourly), thin_class.s(daily), thin_class.s(weekly))
-        result = thinning.apply_async()
+        thinning.apply_async()
 
 
     @celery.task(bind=True, default_retry_delay = 2*60)
-    def limit_size(self):
+    def thin(self):
+
+        seq = chain(do_thinning.s(), clean_up.s())
+        seq.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay = 2*60)
+    def apply_size_limit(self):
 
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
@@ -244,3 +251,38 @@ def register_backup_tasks(celery):
             else:
 
                 self.update_state(state='FAILED', meta='Database record for oldest backup could not be loaded')
+
+
+    @celery.task(bind=True, default_retry_delay = 2*60)
+    def limit_size(self):
+
+        seq = chain(apply_size_limit.s(), clean_up.s())
+        seq.apply_async()
+
+
+    def prune_empty_folders(path):
+
+        file_count = 0
+
+        for entry in scandir(path):
+
+            if entry.is_dir(follow_symlinks=False):
+                files_inside = prune_empty_folders(entry.path)
+
+                if files_inside == 0:
+                    remove(entry.path)
+
+                else:
+                    file_count += files_inside
+
+            else:
+                file_count += 1
+
+        return file_count
+
+
+    @celery.task(bind=True)
+    def clean_up(self):
+
+        backup_path = current_app.config['BACKUP_FOLDER']
+        prune_empty_folders(backup_path)

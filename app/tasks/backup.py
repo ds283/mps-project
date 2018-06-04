@@ -19,13 +19,11 @@ from math import floor
 from celery import group
 
 from ..models import db, User, BackupRecord
-from ..shared.backup import get_backup_config
+from ..shared.backup import get_backup_config, get_backup_count, get_backup_size, remove_backup
 
 from datetime import datetime, timedelta
 
 import random
-
-from os import path, remove
 
 
 def _count_dir_size(path):
@@ -61,33 +59,41 @@ def register_backup_tasks(celery):
         now_str = now.strftime("%H_%M_%S")
 
         # set up folder hierarchy
-        backup_dest = path.join(backup_folder, now.strftime("%Y"), now.strftime("%m"), now.strftime("%d"))
-        backup_archive = path.join(backup_dest, "{tag}_{time}.tar.gz".format(tag=tag, time=now_str))
+        backup_subfolder = path.join(now.strftime("%Y"), now.strftime("%m"), now.strftime("%d"))
+        backup_absfolder = path.join(backup_folder, backup_subfolder)
+
+        backup_leafname = "{tag}_{time}.tar.gz".format(tag=tag, time=now_str)
+        backup_relpath = path.join(backup_subfolder, backup_leafname)
+        backup_abspath = path.join(backup_absfolder, backup_leafname)
 
         # ensure backup destination exists on disk
-        if not path.exists(backup_dest):
+        if not path.exists(backup_absfolder):
             try:
-                makedirs(backup_dest)
+                makedirs(backup_absfolder)
             except OSError as e:
                 if e.errno != errno.EEXIST:
                     raise self.retry()
 
         # ensure final archive name is unique
         count = 1
-        if path.exists(backup_archive):
-            while path.exists(backup_archive):
-                backup_archive = path.join(backup_dest, "{tag}_{time}_{ct}.tar.gz".format(tag=tag, time=now_str, ct=count))
+        if path.exists(backup_abspath):
+            while path.exists(backup_abspath):
+                backup_leafname = "{tag}_{time}_{ct}.tar.gz".format(tag=tag, time=now_str, ct=count)
+                backup_relpath = path.join(backup_subfolder, backup_leafname)
+                backup_abspath = path.join(backup_absfolder, backup_leafname)
+
                 count += 1
                 if count > 50:
                     raise self.retry()
 
         # name of temporary SQL dump file
-        temp_SQL_file = path.join(backup_dest, 'SQL_temp_{tag}.sql'.format(tag=now_str))
+        temp_SQL_file = path.join(backup_absfolder, 'SQL_temp_{tag}.sql'.format(tag=now_str))
 
         count = 1
         if path.exists(temp_SQL_file):
             while path.exists(temp_SQL_file):
-                temp_SQL_file = path.join(backup_dest, 'SQL_temp_{tag}_{ct}.sql'.format(tag=now_str, ct=count))
+                temp_SQL_file = path.join(backup_absfolder, 'SQL_temp_{tag}_{ct}.sql'.format(tag=now_str, ct=count))
+
                 count += 1
                 if count > 50:
                     raise self.retry()
@@ -103,7 +109,7 @@ def register_backup_tasks(celery):
             db_size = path.getsize(temp_SQL_file)
 
             # embed into tar archive
-            with tarfile.open(name=backup_archive, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
+            with tarfile.open(name=backup_abspath, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
 
                 archive.add(name=temp_SQL_file, arcname="database.sql")
 
@@ -115,7 +121,7 @@ def register_backup_tasks(celery):
 
             remove(temp_SQL_file)
 
-            archive_size = path.getsize(backup_archive)
+            archive_size = path.getsize(backup_abspath)
             backup_size = _count_dir_size(backup_folder)
 
             # store details
@@ -123,7 +129,7 @@ def register_backup_tasks(celery):
                                 date=now,
                                 type=type,
                                 description=description,
-                                filename=backup_archive,
+                                filename=backup_relpath,
                                 db_size=db_size,
                                 archive_size=archive_size,
                                 backup_size=backup_size)
@@ -218,3 +224,23 @@ def register_backup_tasks(celery):
 
         thinning = group(thin_class.s(hourly), thin_class.s(daily), thin_class.s(weekly))
         result = thinning.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay = 2*60)
+    def limit_size(self):
+
+        keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
+
+        while get_backup_size() > backup_max and get_backup_count() > 0:
+
+            oldest_backup = db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()
+
+            if oldest_backup is not None:
+
+                success, msg = remove_backup(oldest_backup[0])
+                if not success:
+                    self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+
+            else:
+
+                self.update_state(state='FAILED', meta='Database record for oldest backup could not be loaded')

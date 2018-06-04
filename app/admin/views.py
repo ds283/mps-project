@@ -16,8 +16,6 @@ from flask_security.utils import config_value, get_message, do_flash, \
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
-from sqlalchemy import func
-
 from .actions import register_user
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
@@ -40,14 +38,12 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
-from ..shared.backup import get_backup_config, set_backup_config
+from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 
 from . import admin
 
 from datetime import date, datetime, timedelta
 import json
-
-from os import path, remove
 
 from bokeh.plotting import figure
 from bokeh.embed import components
@@ -1995,17 +1991,6 @@ def deactivate_scheduled_task(id):
     return redirect(request.referrer)
 
 
-def _backup_dashboard_data():
-    """
-    Interrogate database to efficiently extract statistics needed for backup dashboard
-    :return:
-    """
-
-    backup_count = db.session.query(func.count(BackupRecord.id)).scalar()
-
-    return backup_count
-
-
 @admin.route('/backups_overview', methods=['GET', 'POST'])
 @roles_required('root')
 def backups_overview():
@@ -2019,9 +2004,9 @@ def backups_overview():
     keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
     limit, units = lim
 
-    backup_count = _backup_dashboard_data()
+    backup_count = get_backup_count()
+    backup_size = get_backup_size()
 
-    backup_size = db.session.query(func.sum(BackupRecord.archive_size)).scalar()
     if backup_size is None:
         size = '(no backups currently held)'
     else:
@@ -2102,7 +2087,7 @@ def manage_backups():
 
     backups = db.session.query(BackupRecord)
 
-    backup_count = _backup_dashboard_data()
+    backup_count = get_backup_count()
 
     return render_template('admin/backup_dashboard/manage.html', pane='view',
                            backup_count=backup_count, backups=backups)
@@ -2133,12 +2118,10 @@ def confirm_delete_backup(id):
 @roles_required('root')
 def delete_backup(id):
 
-    backup = BackupRecord.query.get_or_404(id)
+    success, msg = remove_backup(id)
 
-    if path.exists(backup.filename):
-        remove(backup.filename)
+    if not success:
 
-    db.session.delete(backup)
-    db.session.commit()
+        flash('Could not delete backup: {msg}",format(msg=msg)'.format(msg=msg), 'error')
 
     return redirect(url_for('admin.manage_backups'))

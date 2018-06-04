@@ -9,11 +9,13 @@
 #
 
 
+from flask import current_app
 from sqlalchemy import func
 
-from ..models import db, BackupConfiguration
+from ..models import db, BackupConfiguration, BackupRecord
 
 from datetime import datetime
+from os import path, remove
 
 
 def get_backup_config():
@@ -79,3 +81,34 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
     config.units = units
     config.last_changed = datetime.now()
     db.session.commit()
+
+
+def get_backup_count():
+
+    return db.session.query(func.count(BackupRecord.id)).scalar()
+
+
+def get_backup_size():
+
+    return db.session.query(func.sum(BackupRecord.archive_size)).scalar()
+
+
+def remove_backup(id):
+
+    record = db.session.query(BackupRecord).filter_by(id=id).first()
+
+    if record is None:
+        return False, 'database record for backup {id} could not be found'.format(id=id)
+
+    backup_folder = current_app.config['BACKUP_FOLDER']
+    abspath = path.join(backup_folder, record.filename)
+
+    if not path.exists(abspath):
+        return False, 'archive file "{file}" not found'.format(file=abspath)
+
+    remove(abspath)
+
+    db.session.delete(record)
+    db.session.commit()
+
+    return True, ""

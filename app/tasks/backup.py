@@ -184,14 +184,17 @@ def register_backup_tasks(celery):
         max_hourly_age = timedelta(days=keep_hourly)
         max_daily_age = max_hourly_age + timedelta(weeks=keep_daily)
 
-        # bin backups into hourly, daily, weekly groups depending on age
+        # bin backups (but only those tagged as ordinary scheduled backups; ie., we don't thin backps
+        # that have been taken for special purposes, such as snapshots constructed before rolling over
+        # the academic year) into hourly, daily, weekly groups depending on age
         hourly = {}
         daily = {}
         weekly = {}
 
         now = datetime.now()
 
-        for record in db.session.query(BackupRecord).order_by(BackupRecord.date.desc()).all():
+        for record in db.session.query(BackupRecord).filter_by(
+                BackupRecord.type == BackupRecord.SCHEDULED_BACKUP).order_by(BackupRecord.date.desc()).all():
 
             age = now - record.date
 

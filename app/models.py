@@ -1521,6 +1521,48 @@ class MessageOfTheDay(db.Model):
     dismissed_by = db.relationship('User', secondary=message_dismissals, lazy='dynamic')
 
 
+class BackupConfiguration(db.Model):
+    """
+    Set details of the current backup configuration
+    """
+
+    __tablename__ = 'backup_config'
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # how many days to keep hourly backups for
+    keep_hourly = db.Column(db.Integer())
+
+    # how many weeks to keep daily backups for
+    keep_daily = db.Column(db.Integer())
+
+    # backup limit
+    limit = db.Column(db.Integer())
+
+    # backup units
+    KEY_MB = 1
+    _UNIT_MB = 1024 * 1024
+
+    KEY_GB = 2
+    _UNIT_GB = _UNIT_MB * 1024
+
+    KEY_TB = 3
+    _UNIT_TB = _UNIT_GB * 1024
+
+    unit_map = {KEY_MB: _UNIT_MB, KEY_GB: _UNIT_GB, KEY_TB: _UNIT_TB}
+    units = db.Column(db.Integer(), nullable=False, default=1)
+
+    # last changed
+    last_changed = db.Column(db.DateTime())
+
+
+    @property
+    def backup_max(self):
+
+        return self.limit * self.unit_map[self.units]
+
+
 class BackupRecord(db.Model):
     """
     Keep details of a website backup
@@ -1581,14 +1623,13 @@ class BackupRecord(db.Model):
     @property
     def readable_db_size(self):
 
-        return format_size(self.db_size)
+        return format_size(self.db_size) if self.db_size is not None else "<unset>"
 
 
     @property
     def readable_archive_size(self):
 
-        return format_size(self.archive_size)
-
+        return format_size(self.archive_size) if self.archive_size is not None else "<unset>"
 
 
 # ############################

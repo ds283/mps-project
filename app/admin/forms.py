@@ -14,12 +14,13 @@ from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, 
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
-    TextAreaField, ValidationError, DateTimeField
+    TextAreaField, ValidationError, DateTimeField, FloatField
 from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor, submission_choices, academic_titles, extent_choices, year_choices
+    ProjectClass, Supervisor, BackupConfiguration, \
+    submission_choices, academic_titles, extent_choices, year_choices
 
 from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -650,3 +651,48 @@ class AddCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin):
 class EditCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin, EditFormMixin):
 
     pass
+
+
+class BackupOptions():
+
+    hourly_choices = [(1, '1 day'),
+                      (2, '2 days'),
+                      (3, '3 days'),
+                      (4, '4 days'),
+                      (5, '5 days'),
+                      (6, '6 days'),
+                      (7, '7 days'),
+                      (8, '8 days'),
+                      (9, '9 days'),
+                      (10, '10 days'),
+                      (11, '11 days'),
+                      (12, '12 days'),
+                      (13, '13 days'),
+                      (14, '14 days')]
+    keep_hourly = SelectField('Keep hourly backups for', choices=hourly_choices, coerce=int)
+
+    daily_choices = [(1, '1 week'),
+                     (2, '2 weeks'),
+                     (3, '3 weeks'),
+                     (4, '4 weeks'),
+                     (5, '5 weeks'),
+                     (6, '6 weeks'),
+                     (7, '7 weeks'),
+                     (8, '8 weeks')]
+    keep_daily = SelectField('Keep daily backups for', choices=daily_choices, coerce=int,
+                             description='When hourly backups are no longer being kept, daily backups are kept '
+                                         'for an extra period of time. After this, only weekly backups are retained.')
+
+    # field names for limits are blank; to get formatting right they're included directly on the template
+    backup_limit = FloatField('', validators=[Optional()],
+                                description='Leave blank for no limit.')
+
+    units_choices = [(BackupConfiguration.KEY_MB, 'Mb'),
+                     (BackupConfiguration.KEY_GB, 'Gb'),
+                     (BackupConfiguration.KEY_TB, 'Tb')]
+    limit_units = SelectField('', choices=units_choices, coerce=int)
+
+
+class EditBackupOptionsForm(Form, BackupOptions):
+
+    submit = SubmitField('Save changes')

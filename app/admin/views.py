@@ -31,7 +31,8 @@ from .forms import RoleSelectForm, \
     FacultySettingsForm, EmailLogForm, \
     AddMessageForm, EditMessageForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
-    EditIntervalScheduledTask, EditCrontabScheduledTask
+    EditIntervalScheduledTask, EditCrontabScheduledTask, \
+    EditBackupOptionsForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
@@ -39,6 +40,7 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
+from ..shared.backup import get_backup_config, set_backup_config
 
 from . import admin
 
@@ -46,6 +48,9 @@ from datetime import date, datetime, timedelta
 import json
 
 from os import path, remove
+
+from bokeh.plotting import figure
+from bokeh.embed import components
 
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
@@ -2001,7 +2006,7 @@ def _backup_dashboard_data():
     return backup_count
 
 
-@admin.route('/backups_overview')
+@admin.route('/backups_overview', methods=['GET', 'POST'])
 @roles_required('root')
 def backups_overview():
     """
@@ -2009,6 +2014,9 @@ def backups_overview():
     :return:
     """
 
+    form = EditBackupOptionsForm(request.form)
+
+    keep_hourly, keep_daily, limit, units, last_change = get_backup_config()
     backup_count = _backup_dashboard_data()
 
     backup_size = db.session.query(func.sum(BackupRecord.archive_size)).scalar()
@@ -2017,8 +2025,69 @@ def backups_overview():
     else:
         size = format_size(backup_size)
 
-    return render_template('admin/backup_dashboard/overview.html', pane='overview',
-                           backup_size=size, backup_count=backup_count)
+    if form.validate_on_submit():
+
+        set_backup_config(form.keep_hourly.data, form.keep_daily.data, form.backup_limit.data, form.limit_units.data)
+
+        flash('Your new backup configuration has been saved')
+
+    else:
+
+        if request.method == 'GET':
+
+            form.keep_hourly.data = keep_hourly
+            form.keep_daily.data = keep_daily
+            form.backup_limit.data = limit
+            form.limit_units.data = units
+
+    # if there are enough datapoints, generate some plots showing how the backup size is scaling with time
+    if backup_count > 1:
+
+        # extract lists of data points
+        backup_dates = db.session.query(BackupRecord.date).order_by(BackupRecord.date).all()
+        archive_size = db.session.query(BackupRecord.archive_size).order_by(BackupRecord.date).all()
+        backup_size = db.session.query(BackupRecord.backup_size).order_by(BackupRecord.date).all()
+
+        MB_SIZE = 1024*1024
+
+        dates = [ x[0] for x in backup_dates ]
+        arc_size = [ x[0] / MB_SIZE for x in archive_size ]
+        bk_size = [ x[0] / MB_SIZE for x in backup_size ]
+
+        archive_plot = figure(title='Archive size as a function of time',
+                              x_axis_label='date', x_axis_type='datetime',
+                              plot_width=800, plot_height=300)
+        archive_plot.sizing_mode = 'scale_width'
+        archive_plot.line(dates, arc_size, legend='archive size in Mb',
+                          line_color='blue', line_width=2)
+        archive_plot.toolbar.logo = None
+        archive_plot.border_fill_color = None
+        archive_plot.background_fill_color = 'beige'
+
+        backup_plot = figure(title='Total backup size as a function of time',
+                              x_axis_label='date', x_axis_type='datetime',
+                              plot_width=800, plot_height=300)
+        backup_plot.sizing_mode = 'scale_width'
+        backup_plot.line(dates, bk_size, legend='backup size in Mb',
+                          line_color='red', line_width=2)
+        backup_plot.toolbar.logo = None
+        backup_plot.border_fill_color = None
+        backup_plot.background_fill_color = 'beige'
+
+        archive_script, archive_div = components(archive_plot)
+        backup_script, backup_div = components(backup_plot)
+
+    else:
+
+        archive_script = None
+        archive_div = None
+        backup_script = None
+        backup_div = None
+
+    return render_template('admin/backup_dashboard/overview.html', pane='overview', form=form,
+                           backup_size=size, backup_count=backup_count, last_change=last_change,
+                           archive_script=archive_script, archive_div=archive_div,
+                           backup_script=backup_script, backup_div=backup_div)
 
 
 @admin.route('/manage_backups')

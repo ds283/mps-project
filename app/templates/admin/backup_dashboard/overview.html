@@ -1,5 +1,102 @@
 {% extends "admin/backup_dashboard/nav.html" %}
 
+{% block scripts %}
+    {{ super() }}
+    <link
+            href="https://cdn.pydata.org/bokeh/release/bokeh-0.12.16.min.css"
+            rel="stylesheet" type="text/css">
+    {#    <link#}
+    {#        href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.16.min.css"#}
+    {#        rel="stylesheet" type="text/css">#}
+    {#    <link#}
+    {#        href="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.12.16.min.css"#}
+    {#        rel="stylesheet" type="text/css">#}
+
+    <script src="https://cdn.pydata.org/bokeh/release/bokeh-0.12.16.min.js"></script>
+    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.12.16.min.js"></script>#}
+    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.12.16.min.js"></script>#}
+
+    {% if archive_div is defined and archive_script is defined %}
+        {{ archive_script|safe }}
+    {% endif %}
+    {% if backup_div is defined and backup_script is defined %}
+        {{ backup_script|safe }}
+    {% endif %}
+{% endblock %}
+
 {% block bodyblock %}
-    Backup overview: total size {{ backup_size }}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="well">
+                <form action="{{ url_for('admin.backups_overview') }}" method="POST" name="backup_options_form">
+                    {{ form.hidden_tag() }}
+                    <div class="row vertical-top">
+                        <div class="col-xs-10">
+                            Current backup size: <strong>{{ backup_size }}</strong>
+                        </div>
+                        <div class="col-xs-2">
+                            <div class="pull-right" style="margin-bottom: 4%;">
+                                {{ wtf.form_field(form.submit, button_map={'submit': 'default'}) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <div class="pull-right">
+                                Last edited: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="intro-divider">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <strong>Limit total size of backups</strong>
+                        </div>
+                    </div>
+                    <div class="row vertical-top">
+                        <div class="col-xs-4">
+                            {{ wtf.form_field(form.backup_limit) }}
+                        </div>
+                        <div class="col-xs-2">
+                            {{ wtf.form_field(form.limit_units) }}
+                        </div>
+                        <div class="col-xs-6"></div>
+                    </div>
+                    <div class="row vertical-top">
+                        <div class="col-xs-6">
+                            {{ wtf.form_field(form.keep_hourly) }}
+                        </div>
+                        <div class="col-xs-6">
+                            {{ wtf.form_field(form.keep_daily) }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="row">
+                <div class="col-xs-1"></div>
+                <div class="col-xs-10">
+                    {% if archive_script is defined and archive_div is defined %}
+                        {{ archive_div|safe }}
+                    {% else %}
+                        Too few data points to generate plot
+                    {% endif %}
+                </div>
+                <div class="col-xs-1"></div>
+            </div>
+            <div class="row">
+                <div class="col-xs-1"></div>
+                <div class="col-xs-10">
+                    {% if backup_script is defined and backup_div is defined %}
+                        {{ backup_div|safe }}
+                    {% else %}
+                        Too few data points to generate plot
+                    {% endif %}
+                </div>
+                <div class="col-xs-1"></div>
+            </div>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
 {% endblock %}

@@ -1528,9 +1528,52 @@ def email_log():
             EmailLog.query.filter(EmailLog.send_date < limit).delete()
             db.session.commit()
 
-    emails = db.session.query(EmailLog)
+    return render_template('admin/email_log.html', form=form)
 
-    return render_template('admin/email_log.html', form=form, emails=emails)
+
+_email_log_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.delete_email', id=email.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
+        </li>
+    </ul>
+</div>
+"""
+
+
+@admin.route('/email_log_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def email_log_ajax():
+    """
+    Ajax data point for email og
+    :return:
+    """
+
+    emails = db.session.query(EmailLog)
+    data = []
+
+    for email in emails:
+        data.append({ 'recipient': email.user.build_name() if email.user is not None
+                            else '<span class="label label-warning">Not logged</span>',
+                      'address': email.user.email if email.user is not None
+                            else email.recipient if email.recipient is not None
+                            else '<span class="label label-danger">Invalid</span>',
+                      'date': email.send_date.strftime("%a %d %b %Y %H:%M:%S"),
+                      'subject': '<a href="{link}">{sub}</a>'.format(link=url_for('admin.display_email', id=email.id),
+                                                                     sub=email.subject),
+                      'menu': render_template_string(_email_log_menu, email=email)
+                      })
+
+    return jsonify(data)
+
 
 
 @admin.route('/display_email/<int:id>')
@@ -1764,13 +1807,89 @@ def reset_dismissals(id):
 @roles_required('root')
 def scheduled_tasks():
     """
-    UI for scheduling period tasks (database backup, prune email log, etc.)
+    UI for scheduling periodic tasks (database backup, prune email log, etc.)
     :return:
     """
 
-    tasks = db.session.query(DatabaseSchedulerEntry)
+    return render_template('admin/scheduled_tasks.html')
 
-    return render_template('admin/scheduled_tasks.html', tasks=tasks)
+
+def _format_schedule(task):
+
+    if task.interval is not None:
+        data = task.interval
+        return '{d} {i}'.format(d=data.every,
+                                i=data.period[:-1] if data.every == 1 else data.period)
+
+    elif task.crontab is not None:
+        data = task.crontab
+        return 'm({m}) h({h}) wd({wd}) mo({mo}) mon({mon})'.format(
+            m=data.minutes, h=data.hour, wd=data.day_of_week,
+            mo=data.day_of_month, mon=data.month_of_year)
+
+    return '<span class="label label-danger">Invalid</a>'
+
+
+_scheduled_menu_template = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
+                <i class="fa fa-pencil"></i> Edit task
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
+        </li>
+        <li>
+            {% if task.enabled %}
+                <a href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
+                    Make inactive
+                </a>
+            {% else %}
+                <a href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
+                    Make active
+                </a>
+            {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
+@admin.route('/scheduled_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def scheduled_ajax():
+    """
+    Ajax data source for scheduled periodic tasks
+    :return:
+    """
+
+    tasks = db.session.query(DatabaseSchedulerEntry).all()
+    data = []
+
+    for task in tasks:
+        data.append({ 'name': task.name,
+                      'schedule': _format_schedule(task),
+                      'owner': '<a href="mailto:{e}">{name}</a>'.format(e=task.owner.email,
+                                                                        name=task.owner.build_name()) if task.owner is not None
+                          else '<span class="label label-default">Nobody</span>',
+                      'active': 'Yes' if task.enabled else 'No',
+                      'last_run': task.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
+                      'total_runs': task.total_run_count,
+                      'last_change': task.date_changed.strftime("%a %d %b %Y %H:%M:%S"),
+                      'expires': task.expires.strftime("%a %d %b %Y %H:%M:%S") if task.expires is not None
+                          else '<span class="label label-default">No expiry</span>',
+                      'menu': render_template_string(_scheduled_menu_template, task=task)})
+
+    return jsonify(data)
 
 
 @admin.route('/add_scheduled_task', methods=['GET', 'POST'])
@@ -2159,12 +2278,55 @@ def manage_backups():
     :return:
     """
 
-    backups = db.session.query(BackupRecord)
-
     backup_count = get_backup_count()
 
-    return render_template('admin/backup_dashboard/manage.html', pane='view',
-                           backup_count=backup_count, backups=backups)
+    return render_template('admin/backup_dashboard/manage.html', pane='view', backup_count=backup_count)
+
+
+_manage_backups_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.confirm_delete_backup', id=backup.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
+        </li>
+    </ul>
+</div>
+"""
+
+
+@admin.route('/manage_backups_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def manage_backups_ajax():
+    """
+    Ajax data point for backup-management view
+    :return:
+    """
+
+    backups = db.session.query(BackupRecord)
+
+    data = []
+    for backup in backups:
+        data.append({ 'date': backup.date.strftime("%a %d %b %Y %H:%M:%S"),
+                      'initiated': '<a href="mailto:{e}">{name}</a>'.format(e=backup.owner.email,
+                                                        name=backup.owner.build_name()) if backup.owner is not None
+                          else '<span class="label label-default">Nobody</span>',
+                      'type': backup.type_to_string(),
+                      'description': backup.description if backup.description is not None and len(backup.description) > 0
+                          else '<span class="label label-default">None</span>',
+                      'filename': backup.filename,
+                      'db_size': backup.readable_db_size,
+                      'archive_size': backup.readable_archive_size,
+                      'menu': render_template_string(_manage_backups_menu, backup=backup)
+                      })
+
+    return jsonify(data)
 
 
 @admin.route('/confirm_delete_backup/<int:id>')

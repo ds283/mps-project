@@ -12,10 +12,21 @@
     <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
 
     <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
         $(document).ready(function () {
-            $('[class~="sortable-pageable"]').DataTable({
+            $('#email-log').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/email_log_ajax', dataSrc: '' },
+                columns: [
+                    { data: 'recipient' },
+                    { data: 'address' },
+                    { data: 'date' },
+                    { data: 'subject' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
             });
         });
     </script>
@@ -26,81 +37,35 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% if emails and emails.first() %}
-        <form action="{{ url_for('admin.email_log') }}" method="POST">
-            <div class="row vertical-bottom">
-                <div class="col-xs-2">
-                    {{ wtf.form_field(form.days) }}
-                </div>
-                <div class="col-xs-2 email-log-button-pad">
-                    {{ wtf.form_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
-                </div>
-                <div class="col-xs-8 email-log-button-pad">
-                    <div class="pull-right">
-                        <a href="{{ url_for('admin.delete_all_emails') }}" class="btn btn-danger">Delete all</a>
-                    </div>
+    <form action="{{ url_for('admin.email_log') }}" method="POST">
+        <div class="row vertical-bottom">
+            <div class="col-xs-2">
+                {{ wtf.form_field(form.days) }}
+            </div>
+            <div class="col-xs-2 email-log-button-pad">
+                {{ wtf.form_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
+            </div>
+            <div class="col-xs-8 email-log-button-pad">
+                <div class="pull-right">
+                    <a href="{{ url_for('admin.delete_all_emails') }}" class="btn btn-danger">Delete all</a>
                 </div>
             </div>
-        </form>
-        <div class="panel panel-primary panel-primary-bg">
-            <div class="panel-heading">Email log</div>
-            <div class="panel-body">
-            <table class="table table-striped table-bordered sortable-pageable">
-                <thead>
-                <tr>
-                    <th width="20%"> Recipient</th>
-                    <th width="20%"> Email address</th>
-                    <th width="15%"> Send date</th>
-                    <th width="25%"> Subject</th>
-                    <th width="20%"> Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for email in emails %}
-                    <tr>
-                        <td>
-                            {% if email.user %}
-                                {{ email.user.build_name() }}
-                            {% else %}
-                                <span class="label label-warning">Not logged</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if email.user %}
-                                {{ email.user.email }}
-                            {% elif email.recipient %}
-                                {{ email.recipient }}
-                            {% else %}
-                                <span class="label label-danger">Invalid</span>
-                            {% endif %}
-                        </td>
-                        <td> {{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }} </td>
-                        <td> <a href="{{ url_for('admin.display_email', id=email.id) }}"> {{ email.subject }} </a></td>
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-                                    Actions
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="{{ url_for('admin.delete_email', id=email.id) }}">
-                                            <i class="fa fa-trash"></i> Delete
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            </div>
         </div>
-    {% else %}
-        <div style="text-align: center;">
-            <h3> No emails in log </h3>
-            <hr class="intro-divider">
+    </form>
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Email log</div>
+        <div class="panel-body">
+        <table id="email-log" class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th width="20%"> Recipient</th>
+                <th width="20%"> Email address</th>
+                <th width="15%"> Send date</th>
+                <th width="25%"> Subject</th>
+                <th width="20%"> Actions</th>
+            </tr>
+            </thead>
+        </table>
         </div>
-    {% endif %}
+    </div>
 {% endblock %}

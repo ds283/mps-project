@@ -12,10 +12,27 @@
     <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
 
     <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
         $(document).ready(function () {
-            $('[class~="sortable-pageable"]').DataTable({
+            $('#edit-users').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/users_ajax', dataSrc: '' },
+                columns: [
+                    { data: 'last' },
+                    { data: 'first' },
+                    { data: 'user' },
+                    { data: 'email' },
+                    { data: 'confirm' },
+                    { data: 'active' },
+                    { data: 'count' },
+                    { data: 'last_login' },
+                    { data: 'ip' },
+                    { data: 'role' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
             });
         });
     </script>
@@ -26,135 +43,29 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% if users %}
-        <div class="panel panel-primary panel-primary-bg">
-            <div class="panel-heading">Edit users</div>
-            <div class="panel-body">
-            <table class="table table-striped table-bordered sortable-pageable">
-                <thead>
-                <tr>
-                    <th width="8%"> Last name</th>
-                    <th width="8%"> First name</th>
-                    <th width="5%"> userid</th>
-                    <th width="10%"> E-mail</th>
-                    <th width="10%"> Confirmed</th>
-                    <th width="5%"> Status</th>
-                    <th width="5%"> Logins</th>
-                    <th width="12%"> Last login</th>
-                    <th width="9%"> Last IP</th>
-                    <th width="13%"> Roles</th>
-                    <th width="15%"> Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for user in users %}
-                    <tr>
-                        <td> {{ user.last_name }} </td>
-                        <td> {{ user.first_name }} </td>
-                        <td> {{ user.username }} </td>
-                        <td> <a href="mailto:{{ user.email }}">{{ user.email }}</a></td>
-                        <td> {% if user.confirmed_at %}{{ user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") }}{% endif %}</td>
-                        <td>
-                            {% if user.is_active %}
-                                Active
-                            {% else %}
-                                Inactive
-                            {% endif %}
-                        </td>
-                        <td> {{ user.login_count }}</td>
-                        <td> {% if user.last_login_at %}{{ user.last_login_at.strftime("%Y-%m-%d %H:%M:%S") }}{% endif %}</td>
-                        <td> {{ user.last_login_ip }}</td>
-                        <td>
-                            {% if user.has_role('faculty') %}
-                                <span class="label label-default">faculty</span>
-                            {% elif user.has_role('office') %}
-                                <span class="label label-default">office</span>
-                            {% elif user.has_role('student') %}
-                                <span class="label label-default">student</span>
-                            {% endif %}
-                            {% if user.has_role('admin') %}
-                                <span class="label label-warning">admin</span>
-                            {% endif %}
-                            {% if user.has_role('root') %}
-                                <span class="label label-danger">sysadmin</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-                                    Actions
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="{{ url_for('admin.edit_user', id=user.id) }}">
-                                            <i class="fa fa-pencil"></i> Edit account
-                                        </a>
-                                    </li>
-                                    {% if user.has_role('faculty') %}
-                                        <li>
-                                            <a href="{{ url_for('admin.edit_affiliations', id=user.id) }}">
-                                                <i class="fa fa-pencil"></i> Edit affiliations
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a href="{{ url_for('admin.edit_enrollments', id=user.id) }}">
-                                                <i class="fa fa-pencil"></i> Edit enrollments
-                                            </a>
-                                        </li>
-                                    {% endif %}
-
-                                    <li {% if user.username == current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
-                                        {% if user.is_active %}
-                                            <a {% if user.username != current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.deactivate_user', id=user.id) }}"{% endif %}>
-                                                Make inactive
-                                            </a>
-                                        {% else %}
-                                            <a href="{{ url_for('admin.activate_user', id=user.id) }}">
-                                                Make active
-                                            </a>
-                                        {% endif %}
-                                    </li>
-
-                                    {# current user always has role of at least 'admin', so no need to check here #}
-                                    {% if not user.has_role('student') and not user.has_role('root') %}
-                                        {% if user.has_role('admin') %}
-                                            <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
-                                                <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>Remove admin</a>
-                                            </li>
-                                        {% else %}
-                                            <li {% if not user.is_active %}class="disabled"{% endif %}>
-                                                <a {% if user.is_active %}href="{{ url_for('admin.make_admin', id=user.id) }}{% endif %}">Make admin</a>
-                                            </li>
-                                        {% endif %}
-                                    {% endif %}
-
-                                    {% if current_user.has_role('root') and not user.has_role('student') %}
-                                        {% if user.has_role('root') %}
-                                            <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
-                                                <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>Remove sysadmin</a>
-                                            </li>
-                                        {% else %}
-                                            <li {% if not user.is_active %}class="disabled"{% endif %}>
-                                                <a {% if user.is_active %}href="{{ url_for('admin.make_root', id=user.id) }}{% endif %}">Make sysadmin</a>
-                                            </li>
-                                        {% endif %}
-                                    {% endif %}
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            </div>
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Edit users</div>
+        <div class="panel-body">
+        <table id="edit-users" class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th width="8%"> Last name</th>
+                <th width="8%"> First name</th>
+                <th width="5%"> userid</th>
+                <th width="10%"> E-mail</th>
+                <th width="10%"> Confirmed</th>
+                <th width="5%"> Status</th>
+                <th width="5%"> Logins</th>
+                <th width="12%"> Last login</th>
+                <th width="9%"> Last IP</th>
+                <th width="13%"> Roles</th>
+                <th width="15%"> Actions</th>
+            </tr>
+            </thead>
+        </table>
         </div>
-        <div style="text-align: center;">
-    {% else %}
-        <div style="text-align: center;">
-        <h3> No users currently registered. </h3>
-        <hr class="intro-divider">
-    {% endif %}
+    </div>
+    <div style="text-align: center;">
     <a href="{{ url_for('admin.create_user') }}" class="btn btn-default btn-lg">
         <i class="fa fa-plus"></i>
         Add new user

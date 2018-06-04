@@ -65,7 +65,7 @@ def _check_admin_or_convenor():
 
 
 @admin.route('/create_user', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def create_user():
     """
     View function that handles creation of a user account
@@ -106,7 +106,7 @@ def create_user():
 
 
 @admin.route('/create_office/<string:role>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def create_office(role):
     """
     Create an 'office' user
@@ -138,7 +138,7 @@ def create_office(role):
 
 
 @admin.route('/create_faculty/<string:role>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def create_faculty(role):
     """
     Create a 'faculty' user
@@ -181,7 +181,7 @@ def create_faculty(role):
 
 
 @admin.route('/create_student/<string:role>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def create_student(role):
 
     # check whether role is ok
@@ -234,7 +234,7 @@ def create_student(role):
 
 
 @admin.route('/edit_users')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def edit_users():
     """
     View function that handles listing of all registered users
@@ -247,7 +247,7 @@ def edit_users():
 
 
 @admin.route('/make_admin/<int:id>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def make_admin(id):
     """
     View function to add admin role
@@ -268,7 +268,7 @@ def make_admin(id):
 
 
 @admin.route('/remove_admin/<int:id>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def remove_admin(id):
     """
     View function to remove admin role
@@ -328,7 +328,7 @@ def remove_root(id):
 
 
 @admin.route('/activate_user/<int:id>')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def activate_user(id):
     """
     Make a user account active
@@ -345,7 +345,7 @@ def activate_user(id):
 
 
 @admin.route('/deactivate_user/<int:id>')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def deactivate_user(id):
     """
     Make a user account active
@@ -367,7 +367,7 @@ def deactivate_user(id):
 
 
 @admin.route('/edit_user/<int:id>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def edit_user(id):
     """
     View function to edit an individual user account
@@ -406,7 +406,7 @@ def _resend_confirm_email(user):
 
 
 @admin.route('/edit_office/<int:id>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def edit_office(id):
 
     user = User.query.get_or_404(id)
@@ -439,7 +439,7 @@ def edit_office(id):
 
 
 @admin.route('/edit_faculty/<int:id>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def edit_faculty(id):
 
     user = User.query.get_or_404(id)
@@ -492,7 +492,7 @@ def edit_faculty(id):
 
 
 @admin.route('/edit_student/<int:id>', methods=['GET', 'POST'])
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def edit_student(id):
 
     user = User.query.get_or_404(id)
@@ -543,7 +543,7 @@ def edit_student(id):
 
 
 @admin.route('/edit_affiliations/<int:id>')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def edit_affiliations(id):
     """
     View to edit research group affiliations for a faculty member
@@ -559,7 +559,7 @@ def edit_affiliations(id):
 
 
 @admin.route('/edit_enrollments/<int:id>')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def edit_enrollments(id):
     """
     View to edit project class enrollments for a faculty member
@@ -575,7 +575,7 @@ def edit_enrollments(id):
 
 
 @admin.route('/add_affiliation/<int:userid>/<int:groupid>')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def add_affiliation(userid, groupid):
     """
     View to add a research group affiliation to a faculty member
@@ -595,7 +595,7 @@ def add_affiliation(userid, groupid):
 
 
 @admin.route('/remove_affiliation/<int:userid>/<int:groupid>')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def remove_affiliation(userid, groupid):
     """
     View to remove a research group affiliation to a faculty member
@@ -615,7 +615,7 @@ def remove_affiliation(userid, groupid):
 
 
 @admin.route('/add_enrollment/<int:userid>/<int:pclassid>')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def add_enrollment(userid, pclassid):
     """
     View to add a project class enrollment to a faculty member
@@ -635,7 +635,7 @@ def add_enrollment(userid, pclassid):
 
 
 @admin.route('/remove_enrollment/<int:userid>/<int:pclassid>')
-@roles_required('admin')
+@roles_accepted('admin', 'root')
 def remove_enrollment(userid, pclassid):
     """
     View to remove a project class enrollment from a faculty member

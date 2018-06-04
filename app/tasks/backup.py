@@ -193,14 +193,14 @@ def register_backup_tasks(celery):
 
         now = datetime.now()
 
-        for record in db.session.query(BackupRecord).filter_by(
-                BackupRecord.type == BackupRecord.SCHEDULED_BACKUP).order_by(BackupRecord.date.desc()).all():
+        for record in db.session.query(BackupRecord).filter(type=BackupRecord.SCHEDULED_BACKUP).order_by(
+                BackupRecord.date.desc()).all():
 
             age = now - record.date
 
             if age < max_hourly_age:
 
-                # work out age in hours
+                # work out age in hours (as an integer)
                 age_hours = floor(float(age.seconds) / float(60*60))       # floor returns an Integer in Python3
                 if age_hours in hourly:
                     hourly[age_hours].append(record.id)
@@ -209,7 +209,7 @@ def register_backup_tasks(celery):
 
             elif age < max_daily_age:
 
-                # work out age in days
+                # work out age in days (as an integer)
                 age_days = floor(float(age.seconds) / float(60*60*24))      # as above, returns an Integer in Python3
                 if age_days in daily:
                     daily[age_days].append(record.id)
@@ -218,7 +218,7 @@ def register_backup_tasks(celery):
 
             else:
 
-                # work out age in weeks
+                # work out age in weeks (as an integer)
                 age_weeks = floor(float(age.seconds) / float(60*60*24*7))   # as above, returns an Integer in Python3
                 if age_weeks in weekly:
                     weekly[age_weeks].append(record.id)

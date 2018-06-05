@@ -776,10 +776,61 @@ def edit_groups():
     :return:
     """
 
+    return render_template('admin/edit_groups.html')
+
+
+_groups_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.edit_group', id=group.id) }}">
+                <i class="fa fa-pencil"></i> Edit details
+            </a>
+        </li>
+
+        <li>
+            {% if group.active %}
+                <a href="{{ url_for('admin.deactivate_group', id=group.id) }}">
+                    Make inactive
+                </a>
+            {% else %}
+                <a href="{{ url_for('admin.activate_group', id=group.id) }}">
+                    Make active
+                </a>
+            {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
+@admin.route('/groups_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def groups_ajax():
+    """
+    Ajax data point for Edit Groups view
+
+    :return:
+    """
+
     groups = ResearchGroup.query.filter_by(active=True)
+    data = []
 
-    return render_template('admin/edit_groups.html', groups=groups)
+    for group in groups:
+        data.append({ 'abbrv': group.abbreviation,
+                      'active': 'Active' if group.active else 'Inactive',
+                      'name': group.name,
+                      'website': '<a href="http://{web}">{web}</a>'.format(web=group.website) if group.website is not None
+                            else '<span class="label label-default">None</span>',
+                      'menu': render_template_string(_groups_menu, group=group)
+                    })
 
+    return jsonify(data)
 
 @admin.route('/add_group', methods=['GET', 'POST'])
 @roles_required('root')
@@ -874,10 +925,111 @@ def edit_degree_programmes():
     :return:
     """
 
-    types = DegreeType.query.all()
-    programmes = DegreeProgramme.query.all()
+    return render_template('admin/edit_programmes.html')
 
-    return render_template('admin/edit_programmes.html', types=types, programmes=programmes)
+
+_types_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.edit_degree_type', id=type.id) }}">
+                <i class="fa fa-pencil"></i> Edit details
+            </a>
+        </li>
+
+        {% if type.active %}
+            <li><a href="{{ url_for('admin.deactivate_degree_type', id=type.id) }}">
+                Make inactive
+            </a></li>
+        {% else %}
+            <li><a href="{{ url_for('admin.activate_degree_type', id=type.id) }}">
+                Make active
+            </a></li>
+        {% endif %}
+    </ul>
+</div>
+"""
+
+
+@admin.route('/types_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def types_ajax():
+    """
+    Ajax data point for degree type table
+    :return:
+    """
+
+    types = DegreeType.query.all()
+    data = []
+
+    for type in types:
+        data.append({ 'name': type.name,
+                      'active': 'Active' if type.active else 'Inactive',
+                      'menu': render_template_string(_types_menu, type=type)
+                    })
+
+    return jsonify(data)
+
+
+_programmes_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
+                <i class="fa fa-pencil"></i> Edit details
+            </a>
+        </li>
+
+        {% if programme.active %}
+            <li><a href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
+                Make inactive
+            </a></li>
+        {% else %}
+            {% if programme.available() %}
+                <li><a href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
+                    Make active
+                </a></li>
+            {% else %}
+                <li class="disabled"><a>
+                    Degree type inactive
+                </a></li>
+            {% endif %}
+        {% endif %}
+    </ul>
+</div>
+"""
+
+
+@admin.route('/programmes_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def programmes_ajax():
+    """
+    Ajax data point for degree programmes tables
+    :return:
+    """
+
+    programmes = DegreeProgramme.query.all()
+    data = []
+
+    for programme in programmes:
+        data.append({ 'name': programme.name,
+                      'type': programme.degree_type.name,
+                      'active': 'Active' if programme.active else 'Inactive',
+                      'menu': render_template_string(_programmes_menu, programme=programme)
+                    })
+
+    return jsonify(data)
+
 
 
 @admin.route('/add_type', methods=['GET', 'POST'])

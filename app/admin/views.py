@@ -2672,7 +2672,7 @@ def backups_overview():
         backup_div = None
 
     # extract data on last few backups
-    last_batch = BackupRecord.query.order_by(BackupRecord.date.desc()).limit(5).all()
+    last_batch = BackupRecord.query.order_by(BackupRecord.date.desc()).limit(4).all()
 
     if backup_max is not None:
 

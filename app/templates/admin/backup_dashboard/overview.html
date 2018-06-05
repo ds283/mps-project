@@ -87,6 +87,9 @@
                         {% endif %}
                     </div>
                     <div class="col-xs-4">
+                        <div style="text-align: center; margin-bottom: 3%;">
+                            <strong>Recent backups</strong>
+                        </div>
                         <table class="table table-striped table-bordered">
                             <thead>
                                 <tr>
@@ -115,16 +118,21 @@
                             <span class="label label-warning">Too few data points to generate plot for backup size vs. time</span>
                         {% endif %}
                     </div>
-                    <div class="col-xs-1"></div>
-                    <div class="col-xs-3">
-                        {% if gauge_div is defined and gauge_div != None and gauge_script is defined and gauge_script != None %}
-                            <div style="text-align: center;">
-                                <strong>Space used {{ capacity }}</strong>
+                    <div class="col-xs-4">
+                        <div class="row">
+                            <div class="col-xs-2"></div>
+                            <div class="col-xs-8">
+                                {% if gauge_div is defined and gauge_div != None and gauge_script is defined and gauge_script != None %}
+                                    <div style="text-align: center;">
+                                        <strong>Space used {{ capacity }}</strong>
+                                    </div>
+                                    {{ gauge_div|safe }}
+                                {% else %}
+                                    <span class="label label-warning">Capacity gauge could not be generated</span>
+                                {% endif %}
                             </div>
-                            {{ gauge_div|safe }}
-                        {% else %}
-                            <span class="label label-warning">Capacity gauge could not be generated</span>
-                        {% endif %}
+                            <div class="col-xs-2"></div>
+                        </div>
                     </div>
                 </div>
             </div>

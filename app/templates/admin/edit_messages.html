@@ -12,10 +12,25 @@
     <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
 
     <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
         $(document).ready(function () {
-            $('[class~="sortable-pageable"]').DataTable({
+            $('#messages').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/messages_ajax', dataSrc: '' },
+                columns: [
+                    { data: 'poster' },
+                    { data: 'email' },
+                    { data: 'date' },
+                    { data: 'students' },
+                    { data: 'faculty' },
+                    { data: 'login' },
+                    { data: 'pclass' },
+                    { data: 'title' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
             });
         });
     </script>
@@ -26,108 +41,30 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% if messages and messages|length > 0 %}
-        <div class="panel panel-primary panel-primary-bg">
-            <div class="panel-heading">Edit broadcast messages</div>
-            <div class="panel-body">
-            <table class="table table-striped table-bordered sortable-pageable">
-                <thead>
-                <tr>
-                    <th width="15%"> Issuing user</th>
-                    <th width="15%"> Email</th>
-                    <th width="10%"> Issue date</th>
-                    <th width="5%"> Show students?</th>
-                    <th width="5%"> Show faculty?</th>
-                    <th width="5%"> Show on login?</th>
-                    <th width="12%"> Show for projects</th>
-                    <th width="15%"> Title</th>
-                    <th width="18%"> Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for message in messages %}
-                    <tr>
-                        <td> {{ message.user.build_name() }} </td>
-                        <td> <a href="mailto:{{ message.user.email }}">{{ message.user.email }}</a> </td>
-                        <td> {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}</td>
-                        <td> {% if message.show_students %}Yes{% else %}No{% endif %}</td>
-                        <td> {% if message.show_faculty %}Yes{% else %}No{% endif %}</td>
-                        <td> {% if message.show_login %}Yes{% else %}No{% endif %}</td>
-
-                        <td>
-                            {% for pclass in message.project_classes %}
-                                <span class="label label-info">{{ pclass.name }}</span>
-                            {% else %}
-                                <span class="label label-default">Broadcast</span>
-                            {% endfor %}
-                        </td>
-
-                        <td>
-                            {% if message.title|length > 0 %}
-                                {{ message.title }}
-                            {% else %}
-                                <span class="label label-default">No title</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-                                    Actions
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="{{ url_for('admin.edit_message', id=message.id) }}">
-                                            <i class="fa fa-pencil"></i> Edit message
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a href="{{ url_for('admin.delete_message', id=message.id) }}">
-                                            <i class="fa fa-trash"></i> Delete message
-                                        </a>
-                                    </li>
-                                    <li role="separator" class="divider"></li>
-                                    {% if message.dismissible %}
-                                        {% set dismiss_count = message.dismissed_by.count() %}
-                                        {% set dpl = 's' %}
-                                        {% if dismiss_count == 1 %}
-                                            {% set dpl = '' %}
-                                        {% endif %}
-                                        {% if dismiss_count > 0 %}
-                                            <li>
-                                                <a href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
-                                                    Reset {{ dismiss_count }} dismissal{{ dpl }}
-                                                </a>
-                                            </li>
-                                        {% else %}
-                                            <li class="disabled">
-                                                <a>No dismissals</a>
-                                            </li>
-                                        {% endif %}
-                                    {% else %}
-                                        <li class="disabled">
-                                            <a>Not dismissible</a>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            </div>
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Edit broadcast messages</div>
+        <div class="panel-body">
+        <table id="messages" class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th width="15%"> Poster</th>
+                <th width="15%"> Email</th>
+                <th width="10%"> Issue date</th>
+                <th width="5%"> Show students?</th>
+                <th width="5%"> Show faculty?</th>
+                <th width="5%"> Show on login?</th>
+                <th width="12%"> Show for projects</th>
+                <th width="15%"> Title</th>
+                <th width="18%"> Actions</th>
+            </tr>
+            </thead>
+        </table>
         </div>
-        <div style="text-align: center;">
-    {% else %}
-        <div style="text-align: center;">
-        <h3> No current messages. </h3>
-        <hr class="intro-divider">
-    {% endif %}
-    <a href="{{ url_for('admin.add_message') }}" class="btn btn-default btn-lg">
+    </div>
+    <div style="text-align: center;">
+        <a href="{{ url_for('admin.add_message') }}" class="btn btn-default btn-lg">
         <i class="fa fa-plus"></i>
         Add new message
-    </a>
+      </a>
     </div>
 {%  endblock %}

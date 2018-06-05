@@ -1064,7 +1064,60 @@ def edit_skills():
 
     skills = TransferableSkill.query.all()
 
-    return render_template('admin/edit_skills.html', skills=skills)
+    return render_template('admin/edit_skills.html')
+
+
+_skills_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.edit_skill', id=skill.id) }}">
+                <i class="fa fa-pencil"></i> Edit details
+            </a>
+        </li>
+
+        <li>
+            {% if skill.active %}
+                <a href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
+                    Make inactive
+                </a>
+            {% else %}
+                <a href="{{ url_for('admin.activate_skill', id=skill.id) }}">
+                    Make active
+                </a>
+            {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
+@admin.route('/skills_ajax', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty')
+def skills_ajax():
+    """
+    Ajax data point for transferable skills table
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return jsonify({})
+
+    skills = TransferableSkill.query.all()
+    data = []
+
+    for skill in skills:
+        data.append({ 'name': skill.name,
+                      'active': 'Active' if skill.active else 'Inactive',
+                      'menu': render_template_string(_skills_menu, skill=skill)
+                    })
+
+    return jsonify(data)
 
 
 @admin.route('/add_skill', methods=['GET', 'POST'])
@@ -1168,9 +1221,75 @@ def edit_project_classes():
     :return:
     """
 
-    classes = ProjectClass.query.all()
+    return render_template('admin/edit_project_classes.html')
 
-    return render_template('admin/edit_project_classes.html', classes=classes)
+
+_pclasses_programmes = \
+"""
+{% for programme in pcl.programmes %}
+    <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
+{% endfor %}
+"""
+
+_pclasses_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
+                <i class="fa fa-pencil"></i> Edit project class
+            </a>
+        </li>
+
+        {% if pcl.active %}
+            <li><a href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
+                Make inactive
+            </a></li>
+        {% else %}
+            {% if pcl.available() %}
+                <li><a href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
+                    Make active
+                </a></li>
+            {% else %}
+                <li class="disabled"><a>
+                    Programmes inactive
+                </a>
+                </li>
+            {% endif %}
+        {% endif %}
+    </ul>
+</div>
+"""
+
+
+@admin.route('/pclasses_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def pclasses_ajax():
+    """
+    Ajax data point for project class tables
+    :return:
+    """
+
+    classes = ProjectClass.query.all()
+    data = []
+
+    for pcl in classes:
+        data.append({ 'name': '{name} ({ab})'.format(name=pcl.name, ab=pcl.abbreviation),
+                      'active': 'Active' if pcl.active else 'Inactive',
+                      'year': 'Y{yr}'.format(yr=pcl.year),
+                      'extent': '{ex}'.format(ex=pcl.extent),
+                      'submissions': '{sub}'.format(sub=pcl.submissions),
+                      'convenor': '{n} <a href="mailto:{em}>{em}</a>'.format(n=pcl.convenor.build_name(),
+                                                                             em=pcl.convenor.email),
+                      'programmes': render_template_string(_pclasses_programmes, pcl=pcl),
+                      'menu': render_template_string(_pclasses_menu, pcl=pcl)
+                    })
+
+    return jsonify(data)
 
 
 @admin.route('/add_pclass', methods=['GET', 'POST'])
@@ -1312,7 +1431,7 @@ def deactivate_pclass(id):
     return redirect(request.referrer)
 
 
-@admin.route('/edit_supervisors', methods=['GET', 'POST'])
+@admin.route('/edit_supervisors')
 @roles_accepted('admin', 'root', 'faculty')
 def edit_supervisors():
     """
@@ -1320,9 +1439,57 @@ def edit_supervisors():
     :return:
     """
 
-    roles = Supervisor.query.all()
+    return render_template('admin/edit_supervisors.html')
 
-    return render_template('admin/edit_supervisors.html', roles=roles)
+
+_supervisors_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.edit_supervisor', id=role.id) }}">
+                <i class="fa fa-pencil"></i> Edit details
+            </a>
+        </li>
+
+        <li>
+            {% if role.active %}
+                <a href="{{ url_for('admin.deactivate_supervisor', id=role.id) }}">
+                    Make inactive
+                </a>
+            {% else %}
+                <a href="{{ url_for('admin.activate_supervisor', id=role.id) }}">
+                    Make active
+                </a>
+            {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
+@admin.route('/supervisors_ajax', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty')
+def supervisors_ajax():
+    """
+    Ajax datapoint for supervisors table
+    :return:
+    """
+
+    roles = Supervisor.query.all()
+    data = []
+
+    for role in roles:
+        data.append({ 'role': role.name,
+                      'active': 'Active' if role.active else 'Inactive',
+                      'menu': render_template_string(_supervisors_menu, role=role)
+                    })
+
+    return jsonify(data)
 
 
 @admin.route('/add_supervisor', methods=['GET', 'POST'])
@@ -1630,6 +1797,76 @@ def edit_messages():
     if not _check_admin_or_convenor():
         return home_dashboard()
 
+    return render_template('admin/edit_messages.html')
+
+
+_messages_pclasses = \
+"""
+{% for pclass in message.project_classes %}
+    <span class="label label-info">{{ pclass.name }}</span>
+{% else %}
+    <span class="label label-default">Broadcast</span>
+{% endfor %}
+"""
+
+_messages_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('admin.edit_message', id=message.id) }}">
+                <i class="fa fa-pencil"></i> Edit message
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.delete_message', id=message.id) }}">
+                <i class="fa fa-trash"></i> Delete message
+            </a>
+        </li>
+        <li role="separator" class="divider"></li>
+        {% if message.dismissible %}
+            {% set dismiss_count = message.dismissed_by.count() %}
+            {% set dpl = 's' %}
+            {% if dismiss_count == 1 %}
+                {% set dpl = '' %}
+            {% endif %}
+            {% if dismiss_count > 0 %}
+                <li>
+                    <a href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
+                        Reset {{ dismiss_count }} dismissal{{ dpl }}
+                    </a>
+                </li>
+            {% else %}
+                <li class="disabled">
+                    <a>No dismissals</a>
+                </li>
+            {% endif %}
+        {% else %}
+            <li class="disabled">
+                <a>Not dismissible</a>
+            </li>
+        {% endif %}
+    </ul>
+</div>
+"""
+
+
+@admin.route('/messages_ajax', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def messages_ajax():
+    """
+    Ajax data point for message-of-the-day list
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return jsonify({})
+
+
     if current_user.has_role('admin') or current_user.has_role('root'):
 
         # admin users can edit all messages
@@ -1640,7 +1877,22 @@ def edit_messages():
         # convenors can only see their own messages
         messages = MessageOfTheDay.query.filter_by(user_id=current_user.id).all()
 
-    return render_template('admin/edit_messages.html', messages=messages)
+    data = []
+
+    for message in messages:
+        data.append({ 'poster': message.user.build_name(),
+                      'email': '<a href="{email}">{email}</a>'.format(email=message.user.email),
+                      'date': message.issue_date.strftime("%a %d %b %Y %H:%M:%S"),
+                      'students': 'Yes' if message.show_students else 'No',
+                      'faculty': 'Yes' if message.show_faculty else 'No',
+                      'login': 'Yes' if message.show_login else 'No',
+                      'pclass': render_template_string(_messages_pclasses, message=message),
+                      'title': message.title if message.title is not None and len(message.title) > 0
+                            else '<span class="label label-default">No title</span>',
+                      'menu': render_template_string(_messages_menu, message=message)
+                    })
+
+    return jsonify(data)
 
 
 @admin.route('/add_message', methods=['GET', 'POST'])

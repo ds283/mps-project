@@ -12,10 +12,24 @@
     <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
 
     <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
         $(document).ready(function () {
-            $('[class~="sortable-pageable"]').DataTable({
+            $('#pclasses').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/pclasses_ajax', dataSrc: '' },
+                columns: [
+                    { data: 'name'},
+                    { data: 'active' },
+                    { data: 'year' },
+                    { data: 'extent' },
+                    { data: 'submissions' },
+                    { data: 'convenor' },
+                    { data: 'programmes' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
             });
         });
     </script>
@@ -26,90 +40,29 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {% if classes %}
-        <div class="panel panel-primary panel-primary-bg">
-            <div class="panel-heading">Edit project classes</div>
-            <div class="panel-body">
-            <table class="table table-striped table-bordered sortable-pageable">
-                <thead>
-                <tr>
-                    <th width="19%"> Name</th>
-                    <th width="5%"> Status</th>
-                    <th width="7%"> Runs in</th>
-                    <th width="7%"> Extent</th>
-                    <th width="7%"> Reports per year</th>
-                    <th width="15%"> Convenor</th>
-                    <th width="25%"> Degree programmes</th>
-                    <th width="15%"> Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for class in classes %}
-                    <tr>
-                        <td> {{ class.name }} ({{ class.abbreviation }}) </td>
-                        <td>
-                            {% if class.active %}
-                                Active
-                            {% else %}
-                                Inactive
-                            {% endif %}
-                        </td>
-                        <td> Y{{ class.year }} </td>
-                        <td> {{ class.extent }}yr </td>
-                        <td> {{ class.submissions }} </td>
-                        <td> {{ class.convenor.build_name() }} <a href="mailto:{{ class.convenor.email }}">{{ class.convenor.email }}</a></td>
-                        <td>
-                            {% for programme in class.programmes %}
-                                <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
-                            {% endfor %}
-                        </td>
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-                                    Actions
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="{{ url_for('admin.edit_pclass', id=class.id) }}">
-                                            <i class="fa fa-pencil"></i> Edit project class
-                                        </a>
-                                    </li>
-
-                                    {% if class.active %}
-                                        <li><a href="{{ url_for('admin.deactivate_pclass', id=class.id) }}">
-                                            Make inactive
-                                        </a></li>
-                                    {% else %}
-                                        {% if class.available() %}
-                                            <li><a href="{{ url_for('admin.activate_pclass', id=class.id) }}">
-                                                Make active
-                                            </a></li>
-                                        {% else %}
-                                            <li class="disabled"><a>
-                                                Programmes inactive
-                                            </a>
-                                            </li>
-                                        {% endif %}
-                                    {% endif %}
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-            </div>
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Edit project classes</div>
+        <div class="panel-body">
+        <table id="pclasses" class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th width="19%"> Name</th>
+                <th width="5%"> Status</th>
+                <th width="7%"> Runs in</th>
+                <th width="7%"> Extent</th>
+                <th width="7%"> Reports per year</th>
+                <th width="15%"> Convenor</th>
+                <th width="25%"> Degree programmes</th>
+                <th width="15%"> Actions</th>
+            </tr>
+            </thead>
+        </table>
         </div>
-        <div style="text-align: center;">
-    {% else %}
-        <div style="text-align: center;">
-        <h3> No project classes currently registered. </h3>
-        <hr class="intro-divider">
-    {% endif %}
-    <a href="{{ url_for('admin.add_pclass') }}" class="btn btn-default btn-lg">
-        <i class="fa fa-plus"></i>
-        Add new project class
-    </a>
+    </div>
+    <div style="text-align: center;">
+        <a href="{{ url_for('admin.add_pclass') }}" class="btn btn-default btn-lg">
+            <i class="fa fa-plus"></i>
+            Add new project class
+        </a>
     </div>
 {% endblock %}

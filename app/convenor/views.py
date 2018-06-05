@@ -643,6 +643,28 @@ def issue_confirm_requests(id):
     return redirect(request.referrer)
 
 
+@convenor.route('/golive_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def golive_ajax(id):
+    """
+    Ajax data point for waiting-to-go-live faculty list on dashboard
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    return ajax.convenor.golive_data(config)
+
+
 @convenor.route('/show_unattached')
 @roles_accepted('faculty', 'admin', 'root')
 def show_unattached():

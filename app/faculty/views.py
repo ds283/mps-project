@@ -14,13 +14,15 @@ from flask_security import roles_required, roles_accepted, current_user
 from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay
 
+import app.ajax as ajax
+
 from . import faculty
 
 from .forms import AddProjectForm, EditProjectForm
 
-from app.shared.utils import home_dashboard
-from app.shared.validators import validate_user, validate_open
-from app.shared.actions import render_live_project, do_confirm, do_deconfirm
+from ..shared.utils import home_dashboard
+from ..shared.validators import validate_user, validate_open
+from ..shared.actions import render_live_project, do_confirm, do_deconfirm
 
 from datetime import datetime
 
@@ -75,72 +77,6 @@ def edit_projects():
 
     return render_template('faculty/edit_projects.html')
 
-
-_project_name = \
-"""
-{% set offerable = project.offerable %}
-<div class="{% if not offerable %}has-error{% endif %}">
-    <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
-        <strong>{{ project.name }}</strong>
-    </a>
-    {% if not offerable and project.error %}
-        <p class="help-block">Warning: {{ project.error }}</p>
-    {% endif %}
-</div>
-"""
-
-_project_status = \
-"""
-{% if project.offerable %}
-    {% if project.active %}
-        <span class="label label-success">Active</span>
-    {% else %}
-        <span class="label label-warning">Inactive</span>
-    {% endif %}
-{% else %}
-    <span class="label label-danger">Not available</span>
-{% endif %}
-"""
-
-_project_pclasses = \
-"""
-{% for pclass in project.project_classes %}
-    <a class="btn btn-info btn-block btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}" href="mailto:{{ pclass.convenor.email }}">
-        {{ pclass.abbreviation }} ({{ pclass.convenor.build_name() }})
-    </a>
-{% endfor %}
-"""
-
-_project_meetingreqd = \
-"""
-{% if project.meeting_reqd == 1 %}
-    Required
-{% elif project.meeting_reqd == 2 %}
-    Optional
-{% elif project.meeting_reqd == 3 %}
-    No
-{% else %}
-    Unknown
-{% endif %}
-"""
-
-_project_prefer = \
-"""
-{% for programme in project.programmes %}
-    {% if programme.active %}
-        <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
-    {% endif %}
-{% endfor %}
-"""
-
-_project_skills = \
-"""
-{% for skill in project.skills %}
-    {% if skill.active %}
-        <span class="label label-default">{{ skill.name }}</span>
-    {% endif %}
-{% endfor %}
-"""
 
 _project_menu = \
 """
@@ -197,23 +133,9 @@ def projects_ajax():
     :return:
     """
 
-    # filter list of projects for current user
     projects = Project.query.filter_by(owner_id=current_user.id).all()
-    data = []
 
-    for project in projects:
-        data.append({ 'name': render_template_string(_project_name, project=project),
-                      'status': render_template_string(_project_status, project=project),
-                      'pclasses': render_template_string(_project_pclasses, project=project),
-                      'meeting': render_template_string(_project_meetingreqd, project=project),
-                      'group': '<span class="label label-success">{gp}</span>'.format(gp=project.group.abbreviation),
-                      'prefer': render_template_string(_project_prefer, project=project),
-                      'skills': render_template_string(_project_skills, project=project),
-                      'menu': render_template_string(_project_menu, project=project)
-                    })
-
-    return jsonify(data)
-
+    return ajax.project.build_data(projects, _project_menu)
 
 
 @faculty.route('/add_project', methods=['GET', 'POST'])

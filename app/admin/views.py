@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template, render_template_string, redirect, url_for, flash, request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
 from werkzeug.local import LocalProxy
 from flask_security import login_required, roles_required, roles_accepted, current_user
 from flask_security.utils import config_value, get_message, do_flash, \
@@ -39,6 +39,8 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
+
+import app.ajax as ajax
 
 from . import admin
 
@@ -245,90 +247,6 @@ def edit_users():
     return render_template("admin/edit_users.html")
 
 
-_user_role_template = \
-"""
-{% if user.has_role('faculty') %}
-   <span class="label label-info">faculty</span>
-{% elif user.has_role('office') %}
-   <span class="label label-info">office</span>
-{% elif user.has_role('student') %}
-   <span class="label label-info">student</span>
-{% endif %}
-{% if user.has_role('admin') %}
-   <span class="label label-warning">admin</span>
-{% endif %}
-{% if user.has_role('root') %}
-   <span class="label label-danger">sysadmin</span>
-{% endif %}
-"""
-
-_user_menu_template = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.edit_user', id=user.id) }}">
-                <i class="fa fa-pencil"></i> Edit account
-            </a>
-        </li>
-        {% if user.has_role('faculty') %}
-            <li>
-                <a href="{{ url_for('admin.edit_affiliations', id=user.id) }}">
-                    <i class="fa fa-pencil"></i> Edit affiliations
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('admin.edit_enrollments', id=user.id) }}">
-                    <i class="fa fa-pencil"></i> Edit enrollments
-                </a>
-            </li>
-        {% endif %}
-
-        <li {% if user.username == current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
-            {% if user.is_active %}
-                <a {% if user.username != current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.deactivate_user', id=user.id) }}"{% endif %}>
-                    Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('admin.activate_user', id=user.id) }}">
-                    Make active
-                </a>
-            {% endif %}
-        </li>
-
-        {# current user always has role of at least 'admin', so no need to check here #}
-        {% if not user.has_role('student') and not user.has_role('root') %}
-            {% if user.has_role('admin') %}
-                <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
-                    <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>Remove admin</a>
-                </li>
-            {% else %}
-                <li {% if not user.is_active %}class="disabled"{% endif %}>
-                    <a {% if user.is_active %}href="{{ url_for('admin.make_admin', id=user.id) }}{% endif %}">Make admin</a>
-                </li>
-            {% endif %}
-        {% endif %}
-
-        {% if current_user.has_role('root') and not user.has_role('student') %}
-            {% if user.has_role('root') %}
-                <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
-                    <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>Remove sysadmin</a>
-                </li>
-            {% else %}
-                <li {% if not user.is_active %}class="disabled"{% endif %}>
-                    <a {% if user.is_active %}href="{{ url_for('admin.make_root', id=user.id) }}{% endif %}">Make sysadmin</a>
-                </li>
-            {% endif %}
-        {% endif %}
-    </ul>
-</div>
-"""
-
-
 @admin.route('/users_ajax', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root')
 def users_ajax():
@@ -338,27 +256,7 @@ def users_ajax():
     """
 
     users = User.query.all()
-    data = []
-
-    for user in users:
-        data.append({'last': user.last_name,
-                     'first': user.first_name,
-                     'user': user.username,
-                     'email': '<a href="mailto:{m}">{m}</a>'.format(m=user.email),
-                     'confirm': user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if user.confirmed_at is not None
-                         else '<span class="label label-warning">Not confirmed</span>',
-                     'active': '<span class="label label-success">Active</a>' if user.is_active
-                         else '<span class="label label-default">Inactive</a>',
-                     'count': '{c}'.format(c=user.login_count),
-                     'last_login': user.last_login_at.strftime("%Y-%m-%d %H:%M:%S") if user.last_login_at is not None
-                         else '<span class="label label-default">None</a>',
-                     'ip': user.last_login_ip if user.last_login_ip is not None and len(user.last_login_ip) > 0
-                         else '<span class="label label-default">None</a>',
-                     'role': render_template_string(_user_role_template, user=user),
-                     'menu': render_template_string(_user_menu_template, user=user)}
-                    )
-
-    return jsonify(data)
+    return ajax.users.build_data(users)
 
 
 @admin.route('/make_admin/<int:id>', methods=['GET', 'POST'])
@@ -780,36 +678,6 @@ def edit_groups():
     return render_template('admin/edit_groups.html')
 
 
-_groups_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.edit_group', id=group.id) }}">
-                <i class="fa fa-pencil"></i> Edit details
-            </a>
-        </li>
-
-        <li>
-            {% if group.active %}
-                <a href="{{ url_for('admin.deactivate_group', id=group.id) }}">
-                    Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('admin.activate_group', id=group.id) }}">
-                    Make active
-                </a>
-            {% endif %}
-        </li>
-    </ul>
-</div>
-"""
-
-
 @admin.route('/groups_ajax', methods=['GET', 'POST'])
 @roles_required('root')
 def groups_ajax():
@@ -819,19 +687,9 @@ def groups_ajax():
     :return:
     """
 
-    groups = ResearchGroup.query.filter_by(active=True)
-    data = []
+    groups = ResearchGroup.query.all()
+    return ajax.admin.groups_data(groups)
 
-    for group in groups:
-        data.append({ 'abbrv': group.abbreviation,
-                      'active': 'Active' if group.active else 'Inactive',
-                      'name': group.name,
-                      'website': '<a href="http://{web}">{web}</a>'.format(web=group.website) if group.website is not None
-                            else '<span class="label label-default">None</span>',
-                      'menu': render_template_string(_groups_menu, group=group)
-                    })
-
-    return jsonify(data)
 
 @admin.route('/add_group', methods=['GET', 'POST'])
 @roles_required('root')
@@ -929,34 +787,6 @@ def edit_degree_programmes():
     return render_template('admin/edit_programmes.html')
 
 
-_types_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.edit_degree_type', id=type.id) }}">
-                <i class="fa fa-pencil"></i> Edit details
-            </a>
-        </li>
-
-        {% if type.active %}
-            <li><a href="{{ url_for('admin.deactivate_degree_type', id=type.id) }}">
-                Make inactive
-            </a></li>
-        {% else %}
-            <li><a href="{{ url_for('admin.activate_degree_type', id=type.id) }}">
-                Make active
-            </a></li>
-        {% endif %}
-    </ul>
-</div>
-"""
-
-
 @admin.route('/types_ajax', methods=['GET', 'POST'])
 @roles_required('root')
 def types_ajax():
@@ -966,49 +796,7 @@ def types_ajax():
     """
 
     types = DegreeType.query.all()
-    data = []
-
-    for type in types:
-        data.append({ 'name': type.name,
-                      'active': 'Active' if type.active else 'Inactive',
-                      'menu': render_template_string(_types_menu, type=type)
-                    })
-
-    return jsonify(data)
-
-
-_programmes_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
-                <i class="fa fa-pencil"></i> Edit details
-            </a>
-        </li>
-
-        {% if programme.active %}
-            <li><a href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
-                Make inactive
-            </a></li>
-        {% else %}
-            {% if programme.available() %}
-                <li><a href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
-                    Make active
-                </a></li>
-            {% else %}
-                <li class="disabled"><a>
-                    Degree type inactive
-                </a></li>
-            {% endif %}
-        {% endif %}
-    </ul>
-</div>
-"""
+    return ajax.admin.degree_types_data(types)
 
 
 @admin.route('/programmes_ajax', methods=['GET', 'POST'])
@@ -1020,16 +808,7 @@ def programmes_ajax():
     """
 
     programmes = DegreeProgramme.query.all()
-    data = []
-
-    for programme in programmes:
-        data.append({ 'name': programme.name,
-                      'type': programme.degree_type.name,
-                      'active': 'Active' if programme.active else 'Inactive',
-                      'menu': render_template_string(_programmes_menu, programme=programme)
-                    })
-
-    return jsonify(data)
+    return ajax.admin.degree_programmes_data(programmes)
 
 
 
@@ -1220,36 +999,6 @@ def edit_skills():
     return render_template('admin/edit_skills.html')
 
 
-_skills_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.edit_skill', id=skill.id) }}">
-                <i class="fa fa-pencil"></i> Edit details
-            </a>
-        </li>
-
-        <li>
-            {% if skill.active %}
-                <a href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
-                    Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('admin.activate_skill', id=skill.id) }}">
-                    Make active
-                </a>
-            {% endif %}
-        </li>
-    </ul>
-</div>
-"""
-
-
 @admin.route('/skills_ajax', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root', 'faculty')
 def skills_ajax():
@@ -1262,15 +1011,7 @@ def skills_ajax():
         return jsonify({})
 
     skills = TransferableSkill.query.all()
-    data = []
-
-    for skill in skills:
-        data.append({ 'name': skill.name,
-                      'active': 'Active' if skill.active else 'Inactive',
-                      'menu': render_template_string(_skills_menu, skill=skill)
-                    })
-
-    return jsonify(data)
+    return ajax.admin.skills_data(skills)
 
 
 @admin.route('/add_skill', methods=['GET', 'POST'])
@@ -1377,48 +1118,6 @@ def edit_project_classes():
     return render_template('admin/edit_project_classes.html')
 
 
-_pclasses_programmes = \
-"""
-{% for programme in pcl.programmes %}
-    <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
-{% endfor %}
-"""
-
-_pclasses_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
-                <i class="fa fa-pencil"></i> Edit project class
-            </a>
-        </li>
-
-        {% if pcl.active %}
-            <li><a href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
-                Make inactive
-            </a></li>
-        {% else %}
-            {% if pcl.available() %}
-                <li><a href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
-                    Make active
-                </a></li>
-            {% else %}
-                <li class="disabled"><a>
-                    Programmes inactive
-                </a>
-                </li>
-            {% endif %}
-        {% endif %}
-    </ul>
-</div>
-"""
-
-
 @admin.route('/pclasses_ajax', methods=['GET', 'POST'])
 @roles_required('root')
 def pclasses_ajax():
@@ -1428,21 +1127,7 @@ def pclasses_ajax():
     """
 
     classes = ProjectClass.query.all()
-    data = []
-
-    for pcl in classes:
-        data.append({ 'name': '{name} ({ab})'.format(name=pcl.name, ab=pcl.abbreviation),
-                      'active': 'Active' if pcl.active else 'Inactive',
-                      'year': 'Y{yr}'.format(yr=pcl.year),
-                      'extent': '{ex}'.format(ex=pcl.extent),
-                      'submissions': '{sub}'.format(sub=pcl.submissions),
-                      'convenor': '{n} <a href="mailto:{em}>{em}</a>'.format(n=pcl.convenor.build_name(),
-                                                                             em=pcl.convenor.email),
-                      'programmes': render_template_string(_pclasses_programmes, pcl=pcl),
-                      'menu': render_template_string(_pclasses_menu, pcl=pcl)
-                    })
-
-    return jsonify(data)
+    return ajax.admin.pclasses_data(classes)
 
 
 @admin.route('/add_pclass', methods=['GET', 'POST'])
@@ -1595,36 +1280,6 @@ def edit_supervisors():
     return render_template('admin/edit_supervisors.html')
 
 
-_supervisors_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.edit_supervisor', id=role.id) }}">
-                <i class="fa fa-pencil"></i> Edit details
-            </a>
-        </li>
-
-        <li>
-            {% if role.active %}
-                <a href="{{ url_for('admin.deactivate_supervisor', id=role.id) }}">
-                    Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('admin.activate_supervisor', id=role.id) }}">
-                    Make active
-                </a>
-            {% endif %}
-        </li>
-    </ul>
-</div>
-"""
-
-
 @admin.route('/supervisors_ajax', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root', 'faculty')
 def supervisors_ajax():
@@ -1634,15 +1289,7 @@ def supervisors_ajax():
     """
 
     roles = Supervisor.query.all()
-    data = []
-
-    for role in roles:
-        data.append({ 'role': role.name,
-                      'active': 'Active' if role.active else 'Inactive',
-                      'menu': render_template_string(_supervisors_menu, role=role)
-                    })
-
-    return jsonify(data)
+    return ajax.admin.supervisors_data(roles)
 
 
 @admin.route('/add_supervisor', methods=['GET', 'POST'])
@@ -1851,24 +1498,6 @@ def email_log():
     return render_template('admin/email_log.html', form=form)
 
 
-_email_log_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.delete_email', id=email.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
-    </ul>
-</div>
-"""
-
-
 @admin.route('/email_log_ajax', methods=['GET', 'POST'])
 @roles_required('root')
 def email_log_ajax():
@@ -1878,22 +1507,7 @@ def email_log_ajax():
     """
 
     emails = db.session.query(EmailLog)
-    data = []
-
-    for email in emails:
-        data.append({ 'recipient': email.user.build_name() if email.user is not None
-                            else '<span class="label label-warning">Not logged</span>',
-                      'address': email.user.email if email.user is not None
-                            else email.recipient if email.recipient is not None
-                            else '<span class="label label-danger">Invalid</span>',
-                      'date': email.send_date.strftime("%a %d %b %Y %H:%M:%S"),
-                      'subject': '<a href="{link}">{sub}</a>'.format(link=url_for('admin.display_email', id=email.id),
-                                                                     sub=email.subject),
-                      'menu': render_template_string(_email_log_menu, email=email)
-                      })
-
-    return jsonify(data)
-
+    return ajax.site.email_log_data(emails)
 
 
 @admin.route('/display_email/<int:id>')
@@ -1953,61 +1567,6 @@ def edit_messages():
     return render_template('admin/edit_messages.html')
 
 
-_messages_pclasses = \
-"""
-{% for pclass in message.project_classes %}
-    <span class="label label-info">{{ pclass.name }}</span>
-{% else %}
-    <span class="label label-default">Broadcast</span>
-{% endfor %}
-"""
-
-_messages_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.edit_message', id=message.id) }}">
-                <i class="fa fa-pencil"></i> Edit message
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.delete_message', id=message.id) }}">
-                <i class="fa fa-trash"></i> Delete message
-            </a>
-        </li>
-        <li role="separator" class="divider"></li>
-        {% if message.dismissible %}
-            {% set dismiss_count = message.dismissed_by.count() %}
-            {% set dpl = 's' %}
-            {% if dismiss_count == 1 %}
-                {% set dpl = '' %}
-            {% endif %}
-            {% if dismiss_count > 0 %}
-                <li>
-                    <a href="{{ url_for('admin.reset_dismissals', id=message.id) }}">
-                        Reset {{ dismiss_count }} dismissal{{ dpl }}
-                    </a>
-                </li>
-            {% else %}
-                <li class="disabled">
-                    <a>No dismissals</a>
-                </li>
-            {% endif %}
-        {% else %}
-            <li class="disabled">
-                <a>Not dismissible</a>
-            </li>
-        {% endif %}
-    </ul>
-</div>
-"""
-
-
 @admin.route('/messages_ajax', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def messages_ajax():
@@ -2019,7 +1578,6 @@ def messages_ajax():
     if not _check_admin_or_convenor():
         return jsonify({})
 
-
     if current_user.has_role('admin') or current_user.has_role('root'):
 
         # admin users can edit all messages
@@ -2030,22 +1588,7 @@ def messages_ajax():
         # convenors can only see their own messages
         messages = MessageOfTheDay.query.filter_by(user_id=current_user.id).all()
 
-    data = []
-
-    for message in messages:
-        data.append({ 'poster': message.user.build_name(),
-                      'email': '<a href="{email}">{email}</a>'.format(email=message.user.email),
-                      'date': message.issue_date.strftime("%a %d %b %Y %H:%M:%S"),
-                      'students': 'Yes' if message.show_students else 'No',
-                      'faculty': 'Yes' if message.show_faculty else 'No',
-                      'login': 'Yes' if message.show_login else 'No',
-                      'pclass': render_template_string(_messages_pclasses, message=message),
-                      'title': message.title if message.title is not None and len(message.title) > 0
-                            else '<span class="label label-default">No title</span>',
-                      'menu': render_template_string(_messages_menu, message=message)
-                    })
-
-    return jsonify(data)
+    return ajax.admin.messages_data(messages)
 
 
 @admin.route('/add_message', methods=['GET', 'POST'])
@@ -2219,56 +1762,6 @@ def scheduled_tasks():
     return render_template('admin/scheduled_tasks.html')
 
 
-def _format_schedule(task):
-
-    if task.interval is not None:
-        data = task.interval
-        return '{d} {i}'.format(d=data.every,
-                                i=data.period[:-1] if data.every == 1 else data.period)
-
-    elif task.crontab is not None:
-        data = task.crontab
-        return 'm({m}) h({h}) wd({wd}) mo({mo}) mon({mon})'.format(
-            m=data.minutes, h=data.hour, wd=data.day_of_week,
-            mo=data.day_of_month, mon=data.month_of_year)
-
-    return '<span class="label label-danger">Invalid</a>'
-
-
-_scheduled_menu_template = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
-                <i class="fa fa-pencil"></i> Edit task
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
-        <li>
-            {% if task.enabled %}
-                <a href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
-                    Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
-                    Make active
-                </a>
-            {% endif %}
-        </li>
-    </ul>
-</div>
-"""
-
-
 @admin.route('/scheduled_ajax', methods=['GET', 'POST'])
 @roles_required('root')
 def scheduled_ajax():
@@ -2278,23 +1771,7 @@ def scheduled_ajax():
     """
 
     tasks = db.session.query(DatabaseSchedulerEntry).all()
-    data = []
-
-    for task in tasks:
-        data.append({ 'name': task.name,
-                      'schedule': _format_schedule(task),
-                      'owner': '<a href="mailto:{e}">{name}</a>'.format(e=task.owner.email,
-                                                                        name=task.owner.build_name()) if task.owner is not None
-                          else '<span class="label label-default">Nobody</span>',
-                      'active': 'Yes' if task.enabled else 'No',
-                      'last_run': task.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
-                      'total_runs': task.total_run_count,
-                      'last_change': task.date_changed.strftime("%a %d %b %Y %H:%M:%S"),
-                      'expires': task.expires.strftime("%a %d %b %Y %H:%M:%S") if task.expires is not None
-                          else '<span class="label label-default">No expiry</span>',
-                      'menu': render_template_string(_scheduled_menu_template, task=task)})
-
-    return jsonify(data)
+    return ajax.site.scheduled_task_data(tasks)
 
 
 @admin.route('/add_scheduled_task', methods=['GET', 'POST'])
@@ -2725,24 +2202,6 @@ def manage_backups():
     return render_template('admin/backup_dashboard/manage.html', pane='view', backup_count=backup_count)
 
 
-_manage_backups_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('admin.confirm_delete_backup', id=backup.id) }}">
-                <i class="fa fa-trash"></i> Delete
-            </a>
-        </li>
-    </ul>
-</div>
-"""
-
-
 @admin.route('/manage_backups_ajax', methods=['GET', 'POST'])
 @roles_required('root')
 def manage_backups_ajax():
@@ -2752,23 +2211,7 @@ def manage_backups_ajax():
     """
 
     backups = db.session.query(BackupRecord)
-
-    data = []
-    for backup in backups:
-        data.append({ 'date': backup.date.strftime("%a %d %b %Y %H:%M:%S"),
-                      'initiated': '<a href="mailto:{e}">{name}</a>'.format(e=backup.owner.email,
-                                                        name=backup.owner.build_name()) if backup.owner is not None
-                          else '<span class="label label-default">Nobody</span>',
-                      'type': backup.type_to_string(),
-                      'description': backup.description if backup.description is not None and len(backup.description) > 0
-                          else '<span class="label label-default">None</span>',
-                      'filename': backup.filename,
-                      'db_size': backup.readable_db_size,
-                      'archive_size': backup.readable_archive_size,
-                      'menu': render_template_string(_manage_backups_menu, backup=backup)
-                      })
-
-    return jsonify(data)
+    return ajax.site.backups_data(backups)
 
 
 @admin.route('/confirm_delete_backup/<int:id>')

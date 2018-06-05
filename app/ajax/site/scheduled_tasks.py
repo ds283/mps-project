@@ -1,0 +1,82 @@
+#
+# Created by David Seery on 05/06/2018.
+# Copyright (c) 2018 University of Sussex. All rights reserved.
+#
+# This file is part of the MPS-Project platform developed in
+# the School of Mathematics & Physical Sciences, University of Sussex.
+#
+# Contributors: David Seery <D.Seery@sussex.ac.uk>
+#
+
+from flask import render_template_string, jsonify
+
+
+_scheduled_menu_template = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
+                <i class="fa fa-pencil"></i> Edit task
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.delete_scheduled_task', id=task.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
+        </li>
+        <li>
+            {% if task.enabled %}
+                <a href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
+                    Make inactive
+                </a>
+            {% else %}
+                <a href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
+                    Make active
+                </a>
+            {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
+def _format_schedule(task):
+
+    if task.interval is not None:
+        data = task.interval
+        return '{d} {i}'.format(d=data.every,
+                                i=data.period[:-1] if data.every == 1 else data.period)
+
+    elif task.crontab is not None:
+        data = task.crontab
+        return 'm({m}) h({h}) wd({wd}) mo({mo}) mon({mon})'.format(
+            m=data.minutes, h=data.hour, wd=data.day_of_week,
+            mo=data.day_of_month, mon=data.month_of_year)
+
+    return '<span class="label label-danger">Invalid</a>'
+
+
+def scheduled_task_data(tasks):
+
+    data = []
+
+    for task in tasks:
+        data.append({ 'name': task.name,
+                      'schedule': _format_schedule(task),
+                      'owner': '<a href="mailto:{e}">{name}</a>'.format(e=task.owner.email,
+                                                                        name=task.owner.build_name()) if task.owner is not None
+                          else '<span class="label label-default">Nobody</span>',
+                      'active': 'Yes' if task.enabled else 'No',
+                      'last_run': task.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
+                      'total_runs': task.total_run_count,
+                      'last_change': task.date_changed.strftime("%a %d %b %Y %H:%M:%S"),
+                      'expires': task.expires.strftime("%a %d %b %Y %H:%M:%S") if task.expires is not None
+                          else '<span class="label label-default">No expiry</span>',
+                      'menu': render_template_string(_scheduled_menu_template, task=task)})
+
+    return jsonify(data)

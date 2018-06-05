@@ -9,7 +9,7 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_security import roles_accepted, current_user
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
@@ -18,6 +18,8 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
 from ..shared.actions import render_live_project, do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
+
+import app.ajax as ajax
 
 from . import convenor
 
@@ -503,9 +505,71 @@ def show_unattached():
     if not validate_administrator():
         return redirect(request.referrer)
 
+    return render_template('convenor/unattached_dashboard.html')
+
+
+_unattached_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> Edit project
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+                Preview web page
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> Transferable skills
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> Degree programmes
+            </a>
+        </li>
+
+        <li>
+        {% if project.active %}
+            <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
+                Make inactive
+            </a>
+        {% else %}
+            <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
+                Make active
+            </a>
+        {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
+@convenor.route('/unattached_ajax')
+@roles_accepted('faculty', 'admin', 'root')
+def unattached_ajax():
+    """
+    Ajax data point for show-unattached view
+    :return:
+    """
+
+    if not validate_administrator():
+        return jsonify({})
+
     projects = [proj for proj in Project.query.all() if not proj.offerable]
 
-    return render_template('convenor/unattached_dashboard.html', projects=projects)
+    return ajax.project.build_data(projects, _unattached_menu)
+
 
 
 @convenor.route('/force_confirm_all/<int:id>')

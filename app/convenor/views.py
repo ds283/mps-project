@@ -30,6 +30,53 @@ from datetime import date, datetime, timedelta
 from sqlalchemy import func
 
 
+_project_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> Edit project
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+                Preview web page
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> Transferable skills
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> Degree programmes
+            </a>
+        </li>
+
+        <li>
+        {% if project.active %}
+            <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
+                Make inactive
+            </a>
+        {% else %}
+            <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
+                Make active
+            </a>
+        {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
 def _dashboard_data(pclass, config):
     """
     Efficiently retrieve statistics needed to render the convenor dashboard
@@ -109,6 +156,9 @@ def overview(id):
 @roles_accepted('faculty', 'admin', 'root')
 def attached(id):
 
+    if id == 0:
+        return redirect(url_for('convenor.show_unattached'))
+
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -126,9 +176,26 @@ def attached(id):
 
     return render_template('convenor/dashboard/attached.html', pane='attached',
                            pclass=pclass, config=config, current_year=current_year,
-                           projects=pclass.projects, fac_data=fac_data,
-                           sel_count=sel_count, sub_count=sub_count,
+                           fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/attached_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def attached_ajax(id):
+    """
+    Ajax data point for attached projects view
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return jsonify({})
+
+    return ajax.project.build_data(pclass.projects, _project_menu)
 
 
 @convenor.route('/faculty/<int:id>')
@@ -148,15 +215,32 @@ def faculty(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    # build list of all active faculty, together with their FacultyData records
-    faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
-
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/faculty.html', pane='faculty',
                            pclass=pclass, config=config, current_year=current_year,
                            faculty=faculty, fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('faculty_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def faculty_ajax(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    # build list of all active faculty, together with their FacultyData records
+    faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
+
+    return ajax.convenor.faculty_data(faculty, pclass, config)
 
 
 @convenor.route('/selectors/<int:id>')
@@ -176,16 +260,37 @@ def selectors(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    # build a list of live students selecting from this project class
-    selectors = config.selecting_students.filter_by(retired=False)
-
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selectors.html', pane='selectors',
                            pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, selectors=selectors,
-                           sel_count=sel_count, sub_count=sub_count,
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/selectors_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def selectors_ajax(id):
+    """
+    Ajax data point for selectors view
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    # build a list of live students selecting from this project class
+    selectors = config.selecting_students.filter_by(retired=False)
+
+    return ajax.convenor.selectors_data(selectors, config)
 
 
 @convenor.route('/submitters/<int:id>')
@@ -205,16 +310,35 @@ def submitters(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    # build a list of live students submitting work for evaluation in this project class
-    submitters = config.submitting_students.filter_by(retired=False)
-
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/submitters.html', pane='submitters',
                            pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, submitters=submitters,
-                           sel_count=sel_count, sub_count=sub_count,
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/submitters_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def submitters_ajax(id):
+    """
+    Ajax data point for submitters view
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    # build a list of live students submitting work for evaluation in this project class
+    submitters = config.submitting_students.filter_by(retired=False)
+
+    return ajax.convenor.submitters_data(submitters, config)
 
 
 @convenor.route('/liveprojects/<int:id>')
@@ -240,6 +364,28 @@ def liveprojects(id):
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/liveprojects_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def liveprojects_ajax(id):
+    """
+    Ajax data point for liveprojects fiew
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    return ajax.convenor.liveprojects_data(config)
 
 
 @convenor.route('/add_project/<int:pclass_id>', methods=['GET', 'POST'])
@@ -505,54 +651,7 @@ def show_unattached():
     if not validate_administrator():
         return redirect(request.referrer)
 
-    return render_template('convenor/unattached_dashboard.html')
-
-
-_unattached_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Edit project
-            </a>
-        </li>
-        <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
-                Preview web page
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Transferable skills
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Degree programmes
-            </a>
-        </li>
-
-        <li>
-        {% if project.active %}
-            <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
-                Make inactive
-            </a>
-        {% else %}
-            <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
-                Make active
-            </a>
-        {% endif %}
-        </li>
-    </ul>
-</div>
-"""
+    return render_template('convenor/unattached.html')
 
 
 @convenor.route('/unattached_ajax')
@@ -568,7 +667,7 @@ def unattached_ajax():
 
     projects = [proj for proj in Project.query.all() if not proj.offerable]
 
-    return ajax.project.build_data(projects, _unattached_menu)
+    return ajax.project.build_data(projects, _project_menu)
 
 
 
@@ -735,9 +834,9 @@ def unenroll(userid, pclassid):
     return redirect(request.referrer)
 
 
-@convenor.route('/confirm/<int:sid>/<int:pid>/<int:tabid>')
+@convenor.route('/confirm/<int:sid>/<int:pid>')
 @roles_accepted('faculty', 'admin', 'route')
-def confirm(sid, pid, tabid):
+def confirm(sid, pid):
 
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
@@ -758,9 +857,9 @@ def confirm(sid, pid, tabid):
     return redirect(request.referrer)
 
 
-@convenor.route('/deconfirm/<int:sid>/<int:pid>/<int:tabid>')
+@convenor.route('/deconfirm/<int:sid>/<int:pid>')
 @roles_accepted('faculty', 'admin', 'route')
-def deconfirm(sid, pid, tabid):
+def deconfirm(sid, pid):
 
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)

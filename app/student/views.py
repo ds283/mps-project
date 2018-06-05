@@ -17,6 +17,8 @@ from . import student
 from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
     Bookmark, MessageOfTheDay
 
+import app.ajax as ajax
+
 import re
 from datetime import date, datetime
 import parse
@@ -165,8 +167,27 @@ def browse_projects(id):
     if not _verify_selector(sel):
         return redirect(url_for('student.dashboard'))
 
-    return render_template('student/browse_projects.html', sel=sel, config=sel.config,
-                           projects=sel.config.live_projects)
+    return render_template('student/browse_projects.html', sel=sel, config=sel.config)
+
+
+@student.route('/projects_ajax/<int:id>')
+@roles_accepted('student', 'admin', 'root')
+def projects_ajax(id):
+    """
+    Ajax data point for live projects table
+
+    :param id:
+    :return:
+    """
+
+    # id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(id)
+
+    # verify the logged-in user is allowed to view this SelectingStudent
+    if not _verify_selector(sel):
+        return jsonify({})
+
+    return ajax.student.liveprojects_data(sel)
 
 
 @student.route('/view_project/<int:sid>/<int:pid>')

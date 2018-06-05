@@ -1,4 +1,31 @@
-{% extends "convenor/dashboard/dashboard.html" %}
+{% extends "convenor/dashboard/nav.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#liveprojects-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/convenor/liveprojects_ajax/{{ pclass.id }}', dataSrc: '' },
+                columns: [
+                    { data: 'number' },
+                    { data: 'name' },
+                    { data: 'owner' },
+                    { data: 'group' },
+                    { data: 'bookmarks' },
+                    { data: 'pending' },
+                    { data: 'confirmed' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block bodyblock %}
     {{ closed_panel(config) }}
@@ -6,7 +33,7 @@
         <div class="panel-heading">Live projects for selection: <strong>{{ pclass.name }}
             {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
         <div class="panel-body">
-            <table class="table table-striped table-bordered sortable-pageable">
+            <table id="liveprojects-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
                     <th width="2%"> No.</th>
@@ -19,159 +46,7 @@
                     <th width="10%"> Actions</th>
                 </tr>
                 </thead>
-                <tbody>
-                {% for project in config.live_projects %}
-                    <tr>
-                        {# number #}
-                        <td><strong>{{ project.number }}</strong></td>
-
-                        {# name #}
-                        <td><strong>
-                            <a href="{{ url_for('convenor.live_project', pid=project.id) }}">
-                                {{ project.name }}
-                            </a>
-                        </strong></td>
-
-                        {# owner #}
-                        <td><a href="mailto:{{ project.owner.email }}">{{ project.owner.build_name() }}</a></td>
-
-                        {# affiliation #}
-                        <td><span class="label label-success">{{ project.group.abbreviation }}</span></td>
-
-                        {# bookmarks #}
-                        <td>
-                            {% for bookmark in project.bookmarks %}
-                                {% set student = bookmark.user %}
-                                <span class="label label-default">{{ student.user.build_name() }}</span>
-                            {% endfor %}
-                        </td>
-
-                        {# confirm pending #}
-                        <td>
-                            {% for student in project.confirm_waiting %}
-                                <div class="dropdown">
-                                    <button class="btn btn-success btn-sm dropdown-toggle" type="button"
-                                            data-toggle="dropdown">
-                                        <i class="fa fa-plus"></i> {{ student.user.build_name() }}
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        {% if config.open %}
-                                            <li>
-                                                <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id, tabid=6) }}">
-                                                    Confirm
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="{{ url_for('convenor.cancel_confirm', sid=student.id, pid=project.id, tabid=6) }}">
-                                                    Remove
-                                                </a>
-                                            </li>
-                                        {% else %}
-                                            <li class="disabled">
-                                                <a>Confirm</a>
-                                            </li>
-                                            <li class="disabled">
-                                                <a>Remove</a>
-                                            </li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
-                            {% else %}
-                                <span class="label label-default">None</span>
-                            {% endfor %}
-                        </td>
-
-                        {# confirmation granted #}
-                        <td>
-                            {% for student in project.confirmed_students %}
-                                <div class="dropdown">
-                                    <button class="btn btn-warning btn-sm dropdown-toggle table-button" type="button"
-                                            data-toggle="dropdown">
-                                        <i class="fa fa-plus"></i> {{ student.user.build_name() }}
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        {% if config.open %}
-                                            <li>
-                                                <a href="{{ url_for('convenor.deconfirm', sid=student.id, pid=project.id, tabid=6) }}">
-                                                    Remove
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="{{ url_for('convenor.deconfirm_to_pending', sid=student.id, pid=project.id, tabid=6) }}">
-                                                    Make pending
-                                                </a>
-                                            </li>
-                                        {% else %}
-                                            <li class="disabled">
-                                                <a>Remove</a>
-                                            </li>
-                                            <li class="disabled">
-                                                <a>Make pending</a>
-                                            </li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
-                            {% else %}
-                                <span class="label label-default">None</span>
-                            {% endfor %}
-                        </td>
-
-                        {# actions #}
-                        <td>
-                            <div class="dropdown">
-                                <button class="btn btn-success btn-sm btn-block dropdown-toggle table-button"
-                                        type="button" data-toggle="dropdown">
-                                    Actions
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a href="{{ url_for('convenor.live_project', pid=project.id) }}">
-                                            Preview web page
-                                        </a>
-                                    </li>
-                                    {% if config.open and project.confirm_waiting and project.confirm_waiting.first() %}
-                                        <li>
-                                            <a href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
-                                                Confirm all requests
-                                            </a>
-                                            <a href="{{ url_for('convenor.project_clear_requests', pid=project.id) }}">
-                                                Clear all requests
-                                            </a>
-                                        </li>
-                                    {% else %}
-                                        <li class="disabled">
-                                            <a>Confirm all requests</a>
-                                        </li>
-                                        <li class="disabled">
-                                            <a>Clear all requests</a>
-                                        </li>
-                                    {% endif %}
-
-                                    {% if config.open and project.confirmed_students and project.confirmed_students.first() %}
-                                        <li>
-                                            <a href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
-                                                Remove confirmations
-                                            </a>
-                                            <a href="{{ url_for('convenor.project_make_all_confirms_pending', pid=project.id) }}">
-                                                Make all pending
-                                            </a>
-                                        </li>
-                                    {% else %}
-                                        <li class="disabled">
-                                            <a>Remove confirmations</a>
-                                        </li>
-                                        <li class="disabled">
-                                            <a>Make all pending</a>
-                                        </li>
-                                    {% endif %}
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+           </table>
         </div>
     </div>
 {% endblock %}

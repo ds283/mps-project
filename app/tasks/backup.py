@@ -149,7 +149,7 @@ def register_backup_tasks(celery):
         remain = l
         while len(remain) > 1:
 
-            index= random.randrange(len(remain))
+            index = random.randrange(len(remain))
             thin_id = remain[index]
             del remain[index]
 
@@ -172,7 +172,7 @@ def register_backup_tasks(celery):
     def thin_class(self, records):
 
         # build group of tasks for each collection of backups we need to thin
-        tasks = group([ thin_list.s(records[k]) for k in records.keys ])
+        tasks = group([ thin_list.s(records[k]) for k in records.keys() ])
         tasks.apply_async()
 
 

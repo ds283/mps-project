@@ -12,3 +12,4 @@ from .faculty import faculty_data
 from .selectors import selectors_data
 from .submitters import submitters_data
 from .liveprojects import liveprojects_data
+from .golive import golive_data

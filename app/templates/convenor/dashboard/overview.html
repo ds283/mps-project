@@ -1,5 +1,28 @@
 {% extends "convenor/dashboard/nav.html" %}
 
+{% block scripts %}
+    {{ super() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#golive-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/convenor/golive_ajax/{{ pclass.id }}', dataSrc: '' },
+                columns: [
+                    { data: 'name' },
+                    { data: 'email' },
+                    { data: 'available' },
+                    { data: 'unoffer' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
+
 {% block bodyblock %}
     <div class="row">
         <div class="col-xs-1"></div>
@@ -147,8 +170,8 @@
                                 </div>
 
                                 {# display list of faculty with outstanding confirm requests #}
-                                {% if config.golive_required.count() != 0 %}
-                                    <table class="table table-striped table-bordered sortable-pageable">
+                                {% if config.golive_required.first() %}
+                                    <table id="golive-table" class="table table-striped table-bordered">
                                         <thead>
                                         <tr>
                                             <th width="50%"> Name</th>
@@ -157,26 +180,6 @@
                                             <th width="10%"> Projects not offerable</th>
                                         </tr>
                                         </thead>
-                                        <tbody>
-                                        {% for faculty in config.golive_required %}
-                                            <tr>
-                                                {# name #}
-                                                <td> {{ faculty.user.build_name() }} </td>
-
-                                                {# email #}
-                                                <td>
-                                                    <a href="mailto:{{ faculty.user.email }}">{{ faculty.user.email }}
-                                                    </a>
-                                                </td>
-
-                                                {# projects available #}
-                                                <td>{{ faculty.projects_offered(pclass) }}</td>
-
-                                                {# projects unofferable #}
-                                                <td>{{ faculty.projects_unofferable() }}</td>
-                                            </tr>
-                                        {% endfor %}
-                                        </tbody>
                                     </table>
                                 {% endif %}
 

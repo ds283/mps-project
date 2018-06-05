@@ -8,9 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from . import admin
-from . import convenor
-from . import project
-from . import site
-from . import student
-from . import users
+from .faculty import faculty_data
+from .selectors import selectors_data
+from .submitters import submitters_data
+from .liveprojects import liveprojects_data

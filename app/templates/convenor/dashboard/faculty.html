@@ -1,111 +1,51 @@
-{% extends "convenor/dashboard/dashboard.html" %}
+{% extends "convenor/dashboard/nav.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#faculty-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_ajax/{{ pclass.id }}', dataSrc: '' },
+                columns: [
+                    { data: 'last' },
+                    { data: 'first' },
+                    { data: 'email' },
+                    { data: 'enrolled' },
+                    { data: 'offered' },
+                    { data: 'unoffer' },
+                    { data: 'golive' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block bodyblock %}
     {{ closed_panel(config) }}
-    {% if faculty and faculty.first() %}
-        <div class="panel panel-primary panel-primary-bg">
-            <div class="panel-heading">Faculty enrolled in <strong>{{ pclass.name }}</strong></div>
-            <div class="panel-body">
-                <table class="table table-striped table-bordered sortable-pageable">
-                    <thead>
-                    <tr>
-                        <th width="8%"> Last name</th>
-                        <th width="8%"> First name</th>
-                        <th width="14%"> Email</th>
-                        <th width="10%"> Username</th>
-                        <th width="10%"> Enrolled?</th>
-                        <th width="10%"> Projects available</th>
-                        <th width="10%"> Projects not offerable</th>
-                        <th width="10%"> Go-live?</th>
-                        <th width="20%"> Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for user, userdata in faculty %}
-                        <tr>
-                            {# last name #}
-                            <td>{{ user.last_name }}</td>
-
-                            {# first name #}
-                            <td>{{ user.first_name }}</td>
-
-                            {# email #}
-                            <td>
-                                <a href="mailto:{{ user.email }}">{{ user.email }}</a>
-                            </td>
-
-                            {# username #}
-                            <td>{{ user.username }}</td>
-
-                            {# enrolled #}
-                            <td>
-                                {% if pclass in userdata.enrollments %}
-                                    Yes
-                                {% else %}
-                                    No
-                                {% endif %}
-                            </td>
-
-                            {# number of projects offered #}
-                            <td>
-                                {{ userdata.projects_offered(pclass) }}
-                            </td>
-
-                            {# number of unofferable projects #}
-                            <td>
-                                {{ userdata.projects_unofferable() }}
-                            </td>
-
-                            {# go-live confirmation received? #}
-                            <td>
-                                {% if config.project_class.require_confirm %}
-                                    {% if config.requests_issued %}
-                                        {% if current_user.faculty_data in config.golive_required %}
-                                            <span class="label label-warning">Outstanding</span>
-                                        {% else %}
-                                            <span class="label label-success">Confirmed</span>
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="label label-danger">Not yet issued</span>
-                                    {% endif %}
-                                {% else %}
-                                    <span class="label label-default">Disabled</span>
-                                {% endif %}
-                            </td>
-
-                            {# actions #}
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button"
-                                            data-toggle="dropdown">
-                                        Actions
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu">
-                                        <li>
-                                            {% if pclass in userdata.enrollments %}
-                                                <a href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
-                                                    Remove enrollment
-                                                </a>
-                                            {% else %}
-                                                <a href="{{ url_for('convenor.enroll', userid=user.id, pclassid=pclass.id) }}">
-                                                    Enroll
-                                                </a>
-                                            {% endif %}
-                                        </li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Faculty enrolled in <strong>{{ pclass.name }}</strong></div>
+        <div class="panel-body">
+            <table id="faculty-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="12%"> Last name</th>
+                    <th width="12%"> First name</th>
+                    <th width="16%"> Email</th>
+                    <th width="10%"> Enrolled?</th>
+                    <th width="10%"> Projects available</th>
+                    <th width="10%"> Projects not offerable</th>
+                    <th width="10%"> Go-live?</th>
+                    <th width="20%"> Actions</th>
+                </tr>
+                </thead>
+            </table>
         </div>
-    {% else %}
-        <div style="text-align: center;">
-            <h3> No faculty data
-                <hr class="intro-divider">
-        </div>
-    {% endif %}
+    </div>
 {% endblock %}

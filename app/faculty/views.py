@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, render_template_string, redirect, url_for, flash, request, jsonify
 from flask_security import roles_required, roles_accepted, current_user
 
 from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
@@ -22,7 +22,6 @@ from app.shared.utils import home_dashboard
 from app.shared.validators import validate_user, validate_open
 from app.shared.actions import render_live_project, do_confirm, do_deconfirm
 
-import re
 from datetime import datetime
 
 
@@ -70,14 +69,151 @@ def remove_affiliation(groupid):
     return redirect(request.referrer)
 
 
-@faculty.route('/edit_my_projects')
+@faculty.route('/edit_projects')
 @roles_accepted('faculty', 'admin', 'root')
-def edit_my_projects():
+def edit_projects():
+
+    return render_template('faculty/edit_projects.html')
+
+
+_project_name = \
+"""
+{% set offerable = project.offerable %}
+<div class="{% if not offerable %}has-error{% endif %}">
+    <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+        <strong>{{ project.name }}</strong>
+    </a>
+    {% if not offerable and project.error %}
+        <p class="help-block">Warning: {{ project.error }}</p>
+    {% endif %}
+</div>
+"""
+
+_project_status = \
+"""
+{% if project.offerable %}
+    {% if project.active %}
+        <span class="label label-success">Active</span>
+    {% else %}
+        <span class="label label-warning">Inactive</span>
+    {% endif %}
+{% else %}
+    <span class="label label-danger">Not available</span>
+{% endif %}
+"""
+
+_project_pclasses = \
+"""
+{% for pclass in project.project_classes %}
+    <a class="btn btn-info btn-block btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}" href="mailto:{{ pclass.convenor.email }}">
+        {{ pclass.abbreviation }} ({{ pclass.convenor.build_name() }})
+    </a>
+{% endfor %}
+"""
+
+_project_meetingreqd = \
+"""
+{% if project.meeting_reqd == 1 %}
+    Required
+{% elif project.meeting_reqd == 2 %}
+    Optional
+{% elif project.meeting_reqd == 3 %}
+    No
+{% else %}
+    Unknown
+{% endif %}
+"""
+
+_project_prefer = \
+"""
+{% for programme in project.programmes %}
+    {% if programme.active %}
+        <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
+    {% endif %}
+{% endfor %}
+"""
+
+_project_skills = \
+"""
+{% for skill in project.skills %}
+    {% if skill.active %}
+        <span class="label label-default">{{ skill.name }}</span>
+    {% endif %}
+{% endfor %}
+"""
+
+_project_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('faculty.edit_project', id=project.id) }}">
+                <i class="fa fa-pencil"></i> Edit project
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+                Preview web page
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('faculty.attach_skills', id=project.id) }}">
+                <i class="fa fa-pencil"></i> Transferable skills
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('faculty.attach_programmes', id=project.id) }}">
+                <i class="fa fa-pencil"></i> Degree programmes
+            </a>
+        </li>
+
+        <li>
+        {% if project.active %}
+            <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
+                Make inactive
+            </a>
+        {% else %}
+            <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
+                Make active
+            </a>
+        {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
+@faculty.route('/projects_ajax', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def projects_ajax():
+    """
+    Ajax data point for Edit Projects view
+    :return:
+    """
 
     # filter list of projects for current user
     projects = Project.query.filter_by(owner_id=current_user.id).all()
+    data = []
 
-    return render_template('faculty/edit_my_projects.html', projects=projects)
+    for project in projects:
+        data.append({ 'name': render_template_string(_project_name, project=project),
+                      'status': render_template_string(_project_status, project=project),
+                      'pclasses': render_template_string(_project_pclasses, project=project),
+                      'meeting': render_template_string(_project_meetingreqd, project=project),
+                      'group': '<span class="label label-success">{gp}</span>'.format(gp=project.group.abbreviation),
+                      'prefer': render_template_string(_project_prefer, project=project),
+                      'skills': render_template_string(_project_skills, project=project),
+                      'menu': render_template_string(_project_menu, project=project)
+                    })
+
+    return jsonify(data)
+
 
 
 @faculty.route('/add_project', methods=['GET', 'POST'])
@@ -109,7 +245,7 @@ def add_project():
         db.session.add(data)
         db.session.commit()
 
-        return redirect(url_for('faculty.edit_my_projects'))
+        return redirect(url_for('faculty.edit_projects'))
 
     return render_template('faculty/edit_project.html', project_form=form, title='Add new project')
 
@@ -148,7 +284,7 @@ def edit_project(id):
 
         db.session.commit()
 
-        return redirect(url_for('faculty.edit_my_projects'))
+        return redirect(url_for('faculty.edit_projects'))
 
     return render_template('faculty/edit_project.html', project_form=form, project=data, title='Edit project details')
 

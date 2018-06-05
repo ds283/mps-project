@@ -45,6 +45,7 @@ from . import admin
 from datetime import date, datetime, timedelta
 import json
 
+from math import pi
 from bokeh.plotting import figure
 from bokeh.embed import components
 
@@ -2602,12 +2603,12 @@ def backups_overview():
     limit, units = lim
 
     backup_count = get_backup_count()
-    backup_size = get_backup_size()
+    backup_total_size = get_backup_size()
 
-    if backup_size is None:
+    if backup_total_size is None:
         size = '(no backups currently held)'
     else:
-        size = format_size(backup_size)
+        size = format_size(backup_total_size)
 
     if form.validate_on_submit():
 
@@ -2639,24 +2640,26 @@ def backups_overview():
         bk_size = [ x[0] / MB_SIZE for x in backup_size ]
 
         archive_plot = figure(title='Archive size as a function of time',
-                              x_axis_label='date', x_axis_type='datetime',
+                              x_axis_label='Time of backup', x_axis_type='datetime',
                               plot_width=800, plot_height=300)
         archive_plot.sizing_mode = 'scale_width'
         archive_plot.line(dates, arc_size, legend='archive size in Mb',
                           line_color='blue', line_width=2)
         archive_plot.toolbar.logo = None
         archive_plot.border_fill_color = None
-        archive_plot.background_fill_color = 'beige'
+        archive_plot.background_fill_color = 'lightgrey'
+        archive_plot.legend.location = 'bottom_right'
 
         backup_plot = figure(title='Total backup size as a function of time',
-                              x_axis_label='date', x_axis_type='datetime',
-                              plot_width=800, plot_height=300)
+                             x_axis_label='Time of backup', x_axis_type='datetime',
+                             plot_width=800, plot_height=300)
         backup_plot.sizing_mode = 'scale_width'
         backup_plot.line(dates, bk_size, legend='backup size in Mb',
                           line_color='red', line_width=2)
         backup_plot.toolbar.logo = None
         backup_plot.border_fill_color = None
-        backup_plot.background_fill_color = 'beige'
+        backup_plot.background_fill_color = 'lightgrey'
+        backup_plot.legend.location = 'bottom_right'
 
         archive_script, archive_div = components(archive_plot)
         backup_script, backup_div = components(backup_plot)
@@ -2668,10 +2671,45 @@ def backups_overview():
         backup_script = None
         backup_div = None
 
+    # extract data on last few backups
+    last_batch = BackupRecord.query.order_by(BackupRecord.date.desc()).limit(5).all()
+
+    if backup_max is not None:
+
+        # construct empty/full gauge
+        how_full = float(backup_total_size) / float(backup_max)
+        angle = 2*pi * how_full
+        start_angle = pi/2.0
+        end_angle = pi/2.0 - angle if angle < pi/2.0 else 5.0*pi/2.0 - angle
+
+        gauge = figure(width=250, height=250, toolbar_location=None)
+        gauge.sizing_mode = 'scale_width'
+        gauge.annular_wedge(x=0, y=0, inner_radius=0.6, outer_radius=1, direction='clock', line_color=None,
+                            start_angle=start_angle, end_angle=end_angle, fill_color='red')
+        gauge.annular_wedge(x=0, y=0, inner_radius=0.6, outer_radius=1, direction='clock', line_color=None,
+                            start_angle=end_angle, end_angle=start_angle, fill_color='grey')
+        gauge.axis.visible = False
+        gauge.xgrid.visible = False
+        gauge.ygrid.visible = False
+        gauge.border_fill_color = None
+        gauge.toolbar.logo = None
+        gauge.background_fill_color = None
+        gauge.outline_line_color = None
+        gauge.toolbar.active_drag = None
+
+        gauge_script, gauge_div = components(gauge)
+
+    else:
+
+        gauge_script = None
+        gauge_div = None
+
     return render_template('admin/backup_dashboard/overview.html', pane='overview', form=form,
                            backup_size=size, backup_count=backup_count, last_change=last_change,
                            archive_script=archive_script, archive_div=archive_div,
-                           backup_script=backup_script, backup_div=backup_div)
+                           backup_script=backup_script, backup_div=backup_div,
+                           capacity='{p:.2g}%'.format(p=how_full*100),
+                           last_batch=last_batch, gauge_script=gauge_script, gauge_div=gauge_div)
 
 
 @admin.route('/manage_backups')

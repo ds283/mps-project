@@ -193,7 +193,7 @@ def register_backup_tasks(celery):
 
         now = datetime.now()
 
-        for record in db.session.query(BackupRecord).filter(type=BackupRecord.SCHEDULED_BACKUP).order_by(
+        for record in db.session.query(BackupRecord).filter_by(type=BackupRecord.SCHEDULED_BACKUP).order_by(
                 BackupRecord.date.desc()).all():
 
             age = now - record.date

@@ -1560,6 +1560,9 @@ class BackupConfiguration(db.Model):
     @property
     def backup_max(self):
 
+        if self.limit is None or self.limit == 0:
+            return None
+        
         return self.limit * self.unit_map[self.units]
 
 
@@ -1630,6 +1633,12 @@ class BackupRecord(db.Model):
     def readable_archive_size(self):
 
         return format_size(self.archive_size) if self.archive_size is not None else "<unset>"
+
+
+    @property
+    def readable_total_backup_size(self):
+
+        return format_size(self.backup_size) if self.backup_size is not None else "<unset>"
 
 
 # ############################

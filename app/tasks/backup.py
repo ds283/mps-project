@@ -241,6 +241,10 @@ def register_backup_tasks(celery):
 
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
 
+        # exit if we are not currently applying a backup limit
+        if backup_max is None:
+            return
+
         while get_backup_size() > backup_max and get_backup_count() > 0:
 
             oldest_backup = db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()

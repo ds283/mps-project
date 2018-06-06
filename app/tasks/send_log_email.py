@@ -11,6 +11,9 @@
 
 from ..models import db, User, EmailLog
 
+from celery import chain
+from sqlalchemy.exc import SQLAlchemyError
+
 from datetime import datetime
 
 
@@ -18,34 +21,50 @@ def register_send_log_email(celery, mail):
 
     # set up deferred email sender for Flask-Email; note that Flask-Email's Message object is not
     # JSON-serializable so we have to pickle instead
-    @celery.task(serializer='pickle')
-    def send_log_mail(msg):
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=10)
+    def send_email(self, msg):
 
         mail.send(msg)
-        log = None
 
-        # store message in email log
-        if len(msg.recipients) == 1:
-            user = User.query.filter_by(email=msg.recipients[0]).first()
-            if user is not None:
 
-                log = EmailLog(user_id=user.id,
-                               recipient=None,
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=10)
+    def log_email(self, send_result, msg):
+
+        try:
+
+            log = None
+
+            # store message in email log
+            if len(msg.recipients) == 1:
+                user = User.query.filter_by(email=msg.recipients[0]).first()
+                if user is not None:
+
+                    log = EmailLog(user_id=user.id,
+                                   recipient=None,
+                                   send_date=datetime.now(),
+                                   subject=msg.subject,
+                                   body=msg.body,
+                                   html=msg.html)
+
+            if log is None:
+
+                log = EmailLog(user_id=None,
+                               recipient=', '.join(msg.recipients),
                                send_date=datetime.now(),
                                subject=msg.subject,
                                body=msg.body,
                                html=msg.html)
 
-        if log is None:
+            db.session.add(log)
+            db.session.commit()
 
-            log = EmailLog(user_id=None,
-                           recipient=', '.join(msg.recipients),
-                           send_date=datetime.now(),
-                           subject=msg.subject,
-                           body=msg.body,
-                           html=msg.html)
+        except SQLAlchemyError:
 
-        db.session.add(log)
-        db.session.commit()
+            raise self.retry()
 
-    return send_log_mail
+
+    @celery.task(bind=True, serializer='pickle')
+    def send_log_email(self, msg):
+
+        seq = chain(send_email.s(msg), log_email.s(msg))
+        seq.apply_async()

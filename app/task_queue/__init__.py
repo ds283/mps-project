@@ -1,5 +1,5 @@
 #
-# Created by David Seery on 05/06/2018.
+# Created by David Seery on 06/06/2018.
 # Copyright (c) 2018 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
@@ -8,7 +8,5 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from .email_log import email_log_data
-from .scheduled_tasks import scheduled_task_data
-from .backups import backups_data
-from .background_tasks import background_task_data
+from .make_celery import make_celery
+from .background_task import queue_task

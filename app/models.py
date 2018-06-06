@@ -1562,7 +1562,7 @@ class BackupConfiguration(db.Model):
 
         if self.limit is None or self.limit == 0:
             return None
-        
+
         return self.limit * self.unit_map[self.units]
 
 
@@ -1639,6 +1639,31 @@ class BackupRecord(db.Model):
     def readable_total_backup_size(self):
 
         return format_size(self.backup_size) if self.backup_size is not None else "<unset>"
+
+
+class TaskRecord(db.Model):
+
+    __tablename__ = 'tasks'
+
+
+    # unique identifier used by task queue
+    id = db.Column(db.String(DEFAULT_STRING_LENGTH), primary_key=True)
+
+    # task owner
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    owner = db.relationship('User', uselist=False, backref=db.backref('tasks', lazy='dynamic'))
+
+    # launch date
+    start_date = db.Column(db.DateTime())
+
+    # task name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+
+    # optional task description
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # completion flag
+    complete = db.Column(db.Boolean())
 
 
 # ############################

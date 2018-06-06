@@ -1662,8 +1662,24 @@ class TaskRecord(db.Model):
     # optional task description
     description = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
-    # completion flag
-    complete = db.Column(db.Boolean())
+    # status flag
+    PENDING = 0
+    RUNNING = 1
+    SUCCESS = 2
+    FAILURE = 3
+    status = db.Column(db.Integer())
+
+    # percentage complete (if used)
+    progress = db.Column(db.Integer())
+
+    # progress message
+    message = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # has this task been shown on the web UI?
+    shown = db.Column(db.Boolean())
+
+    # has this task been dismissed on the web UI?
+    dismissed = db.Column(db.Boolean())
 
 
 # ############################

@@ -14,14 +14,14 @@ from celery.result import AsyncResult
 
 _state = \
 """
-{% if state == 'FAILURE' %}
-    <span class="label label-danger">FAILURE</span>
-{% elif state == 'PENDING' %}
+{% if state == 0 %}
     <span class="label label-info">PENDING</span>
-{% elif state == 'SUCCESS' %}
+{% elif state == 1 %}
+    <span class="label label-info">RUNNING</span>
+{% elif state == 2 %}
     <span class="label label-success">SUCCESS</span>
 {% else %}
-    <span class="label label-default">{{ state }}</span>
+    <span class="label label-danger">FAILED</span>
 {% endif %}
 """
 
@@ -29,10 +29,8 @@ _state = \
 def background_task_data(tasks):
 
     data = []
-    celery = current_app.extensions['celery']
 
     for task in tasks:
-        handle = AsyncResult(task.id, app=celery)
         data.append({ 'id': task.id,
                       'owner': '<a href="mailto:{em}">{nm}</a>'.format(nm=task.owner.build_name(),
                                                                        em=task.owner.email) if task.owner is not None
@@ -40,10 +38,11 @@ def background_task_data(tasks):
                       'name': task.name,
                       'description': task.description,
                       'start_at': task.start_date.strftime("%a %d %b %Y %H:%M:%S"),
-                      'complete': '<span class="label label-success">Complete</a>' if task.complete
-                            else '<span class="label label-info">Pending</a>',
-                      'task': '<unknown>',
-                      'backend': render_template_string(_state, state=handle.state)
+                      'status': render_template_string(_state, state=task.status),
+                      'progress': '{c}%'.format(c=task.progress),
+                      'message': task.message,
+                      'shown': 'Yes' if task.shown else 'No',
+                      'dismissed': 'Yes' if task.dismissed else 'No'
                     })
 
     return jsonify(data)

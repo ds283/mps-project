@@ -1540,6 +1540,25 @@ def delete_email(id):
     return redirect(url_for('admin.email_log'))
 
 
+@admin.route('/confirm_delete_all_emails')
+@roles_required('root')
+def confirm_delete_all_emails():
+    """
+    Show confirmation box to delete all emails
+    :return:
+    """
+
+    title = 'Confirm delete'
+    panel_title = 'Confirm delete of all emails retained in log'
+
+    action_url = url_for('admin.delete_all_emails')
+    message = 'Please confirm that you wish to delete all emails retained in the log.'
+    submit_label = 'Delete'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
 @admin.route('/delete_all_emails')
 @roles_required('root')
 def delete_all_emails():
@@ -1551,7 +1570,7 @@ def delete_all_emails():
     db.session.query(EmailLog).delete()
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(url_for('admin.email_log'))
 
 
 @admin.route('/edit_messages')
@@ -2243,7 +2262,7 @@ def delete_backup(id):
 
     if not success:
 
-        flash('Could not delete backup: {msg}",format(msg=msg)'.format(msg=msg), 'error')
+        flash('Could not delete backup: {msg}'.format(msg=msg), 'error')
 
     return redirect(url_for('admin.manage_backups'))
 

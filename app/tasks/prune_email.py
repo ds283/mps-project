@@ -9,6 +9,8 @@
 #
 
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from ..models import db, EmailLog
 
 from datetime import datetime, timedelta
@@ -25,13 +27,16 @@ def register_prune_email(celery):
             prune_email.apply_async(args=(duration, interval, item.id))
 
 
-    @celery.task()
-    def prune_email(interval, duration, id):
+    @celery.task(bind=True)
+    def prune_email(self, interval, duration, id):
 
         now = datetime.now()
         delta = timedelta(**{interval: duration})
 
-        record = EmailLog.query.filter_by(id=id).first()
+        try:
+            record = EmailLog.query.filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
 
         if record is not None:
 

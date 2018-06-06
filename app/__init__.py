@@ -10,7 +10,7 @@
 
 import os
 
-from flask import Flask
+from flask import Flask, current_app
 from flask_migrate import Migrate
 from flask_security import SQLAlchemyUserDatastore, Security
 from flask_bootstrap import Bootstrap
@@ -21,7 +21,8 @@ from flaskext.markdown import Markdown
 
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay
-from .task_queue import make_celery
+from .task_queue import make_celery, queue_task
+from app.task_queue import background_task
 import app.tasks as tasks
 
 from mdx_smartypants import makeExtension
@@ -60,15 +61,16 @@ def create_app():
     # that automatically uses our own replacements
     security = Security(app, user_datastore)
 
-    # set up  celery
+    # set up celery and store in extensions dictionary
     celery = make_celery(app)
+    app.extensions['celery'] = celery
 
     # register celery tasks
     # there doesn't seem a good way of doing this using factory functions! Here I compromise by passing hte
     # celery application instance to a collection of register_*() functions, which use an @celery decorator
     # to register callables. Then we write the callable into the app, in the 'tasks' dictionary
     app.tasks = {}
-    send_log_email = tasks.register_send_log_email(celery, mail)
+    tasks.register_send_log_email(celery, mail)
     tasks.register_prune_email(celery)
     tasks.register_backup_tasks(celery)
 
@@ -76,7 +78,17 @@ def create_app():
     # make Flask-Security use deferred email sender
     @security.send_mail_task
     def delay_flask_security_mail(msg):
-        send_log_email.delay(msg)
+
+        # get send-log-email celery task
+        celery = current_app.extensions['celery']
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+
+        # queue Celery task to send the email
+        task = send_log_email.delay(msg)
+
+        # tag the task in the database
+        queue_task(task, "Flask-Security automated email {id}".format(id=task.id),
+                   description='Email to {r}'.format(r=', '.join(msg.recipients)))
 
 
     @security.login_context_processor

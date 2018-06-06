@@ -9,8 +9,14 @@
 #
 
 from app import create_app
+from app.models import db, TaskRecord
 
 app, celery = create_app()
+
+# drop all transient task records
+with app.app_context():
+    TaskRecord.query.delete()
+    db.session.commit()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

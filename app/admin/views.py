@@ -34,7 +34,7 @@ from .forms import RoleSelectForm, \
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
-    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord
+    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord, TaskRecord
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
@@ -2246,3 +2246,26 @@ def delete_backup(id):
         flash('Could not delete backup: {msg}",format(msg=msg)'.format(msg=msg), 'error')
 
     return redirect(url_for('admin.manage_backups'))
+
+
+@admin.route('/background_tasks')
+@roles_required('root')
+def background_tasks():
+    """
+    List all background tasks
+    :return:
+    """
+
+    return render_template("admin/background_tasks.html")
+
+
+@admin.route('/background_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def background_ajax():
+    """
+    Ajax data point for background tasks view
+    :return:
+    """
+
+    tasks = TaskRecord.query.all()
+    return ajax.site.background_task_data(tasks)

@@ -21,7 +21,7 @@ from flaskext.markdown import Markdown
 
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay
-from .task_queue import make_celery, queue_task
+from .task_queue import make_celery, register_task
 from app.task_queue import background_task
 import app.tasks as tasks
 
@@ -83,12 +83,13 @@ def create_app():
         celery = current_app.extensions['celery']
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-        # queue Celery task to send the email
-        task = send_log_email.delay(msg)
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
 
-        # tag the task in the database
-        queue_task(task, "Flask-Security automated email {id}".format(id=task.id),
-                   description='Email to {r}'.format(r=', '.join(msg.recipients)))
+        print('REGISTERED NEW TASK WITH UUID={id}'.format(id=task_id))
+
+        # queue Celery task to send the email
+        task = send_log_email.delay(task_id, msg)
 
 
     @security.login_context_processor

@@ -24,8 +24,10 @@
                     { data: 'name' },
                     { data: 'owner' },
                     { data: 'start_at' },
-                    { data: 'complete' },
-                    { data: 'backend' }
+                    { data: 'status' },
+                    { data: 'message' },
+                    { data: 'shown' },
+                    { data: 'dismissed' }
                 ],
                 deferRender: true
             });
@@ -48,8 +50,10 @@
                 <th width="15%"> Task</th>
                 <th width="15%"> Owner</th>
                 <th width="15%"> Start time</th>
-                <th width="10%"> Complete</th>
-                <th width="30%"> Backend status</th>
+                <th width="10%"> Status</th>
+                <th width="20%"> Last message</th>
+                <th width="5%"> Shown</th>
+                <th width="5%"> Dismissed</th>
             </tr>
             </thead>
         </table>

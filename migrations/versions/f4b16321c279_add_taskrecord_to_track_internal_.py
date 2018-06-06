@@ -1,8 +1,8 @@
-"""Add TaskRecord model to store details of queued tasks
+"""Add TaskRecord to track internal background tasks
 
-Revision ID: 854e20227b2b
+Revision ID: f4b16321c279
 Revises: 6256d1a12bc3
-Create Date: 2018-06-06 00:09:42.507016
+Create Date: 2018-06-06 23:34:15.286375
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '854e20227b2b'
+revision = 'f4b16321c279'
 down_revision = '6256d1a12bc3'
 branch_labels = None
 depends_on = None
@@ -24,7 +24,11 @@ def upgrade():
     sa.Column('start_date', sa.DateTime(), nullable=True),
     sa.Column('name', sa.String(length=255), nullable=True),
     sa.Column('description', sa.String(length=255), nullable=True),
-    sa.Column('complete', sa.Boolean(), nullable=True),
+    sa.Column('status', sa.Integer(), nullable=True),
+    sa.Column('progress', sa.Integer(), nullable=True),
+    sa.Column('message', sa.String(length=255), nullable=True),
+    sa.Column('shown', sa.Boolean(), nullable=True),
+    sa.Column('dismissed', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

@@ -9,4 +9,4 @@
 #
 
 from .make_celery import make_celery
-from .background_task import queue_task
+from .background_task import register_task, progress_update

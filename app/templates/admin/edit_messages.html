@@ -22,7 +22,14 @@
                 columns: [
                     { data: 'poster' },
                     { data: 'email' },
-                    { data: 'date' },
+                    {
+                        data: 'date',
+                        render:
+                            {
+                                _: 'display',
+                                sort: 'timestamp'
+                            }
+                    },
                     { data: 'students' },
                     { data: 'faculty' },
                     { data: 'login' },

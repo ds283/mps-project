@@ -67,17 +67,19 @@ _messages_menu = \
 
 
 def messages_data(messages):
-
     data = [{'poster': m.user.build_name(),
              'email': '<a href="{email}">{email}</a>'.format(email=m.user.email),
-             'date': m.issue_date.strftime("%a %d %b %Y %H:%M:%S"),
+             'date': {
+                 'display': m.issue_date.strftime("%a %d %b %Y %H:%M:%S"),
+                 'timestamp': m.issue_date.timestamp()
+             },
              'students': 'Yes' if m.show_students else 'No',
              'faculty': 'Yes' if m.show_faculty else 'No',
              'login': 'Yes' if m.show_login else 'No',
              'pclass': render_template_string(_messages_pclasses, message=m),
              'title': '<a href="{url}">{msg}</a>'.format(msg=m.title,
                                                          url=url_for('admin.edit_message', id=m.id))
-                if m.title is not None and len(m.title) > 0 else '<span class="label label-default">No title</span>',
+                 if m.title is not None and len(m.title) > 0 else '<span class="label label-default">No title</span>',
              'menu': render_template_string(_messages_menu, message=m)} for m in messages]
 
     return jsonify(data)

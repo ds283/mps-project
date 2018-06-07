@@ -18,17 +18,23 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/manage_backups_ajax', dataSrc: '' },
                 columns: [
-                    { data: 'date' },
-                    { data: 'initiated' },
-                    { data: 'type' },
-                    { data: 'description' },
-                    { data: 'filename' },
-                    { data: 'db_size' },
-                    { data: 'archive_size' },
-                    { data: 'menu' }
+                    {
+                        data: 'date',
+                        render: {
+                            _: 'display',
+                            sort: 'timestamp'
+                        }
+                    },
+                    {data: 'initiated'},
+                    {data: 'type'},
+                    {data: 'description'},
+                    {data: 'filename'},
+                    {data: 'db_size'},
+                    {data: 'archive_size'},
+                    {data: 'menu'}
                 ],
                 deferRender: true,
-                aaSorting: [[1,'desc'], [3,'asc']]
+                aaSorting: [[1,'desc']]
             });
         });
     </script>

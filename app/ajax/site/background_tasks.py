@@ -32,7 +32,10 @@ def background_task_data(tasks):
                 else '<span class="label label-default">Nobody</span>',
              'name': t.name,
              'description': t.description,
-             'start_at': t.start_date.strftime("%a %d %b %Y %H:%M:%S"),
+             'start_at': {
+                 'display': t.start_date.strftime("%a %d %b %Y %H:%M:%S"),
+                 'timestamp': t.start_date.timestamp()
+             },
              'status': render_template_string(_state, state=t.status),
              'progress': '{c}%'.format(c=t.progress),
              'message': t.message} for t in tasks]

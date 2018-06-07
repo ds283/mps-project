@@ -22,7 +22,14 @@
                 columns: [
                     { data: 'recipient' },
                     { data: 'address' },
-                    { data: 'date' },
+                    {
+                        data: 'date',
+                        render:
+                            {
+                                _: 'display',
+                                sort: 'timestamp'
+                            }
+                    },
                     { data: 'subject' },
                     { data: 'menu' }
                 ],

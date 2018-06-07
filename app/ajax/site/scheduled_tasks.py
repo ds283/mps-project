@@ -68,11 +68,22 @@ def scheduled_task_data(tasks):
                                                                name=t.owner.build_name()) if t.owner is not None
                 else '<span class="label label-default">Nobody</span>',
              'active': 'Yes' if t.enabled else 'No',
-             'last_run': t.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
+             'last_run': {
+                 'display': t.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
+                 'timestamp': t.last_run_at.timestamp()
+             },
              'total_runs': t.total_run_count,
-             'last_change': t.date_changed.strftime("%a %d %b %Y %H:%M:%S"),
-             'expires': t.expires.strftime("%a %d %b %Y %H:%M:%S") if t.expires is not None
-                else '<span class="label label-default">No expiry</span>',
+             'last_change': {
+                 'display': t.date_changed.strftime("%a %d %b %Y %H:%M:%S"),
+                 'timestamp': t.date_changed.timestamp()
+             },
+             'expires': {
+                 'display': t.expires.strftime("%a %d %b %Y %H:%M:%S"),
+                 'timestamp': t.expires.timestamp()
+             } if t.expires is not None else {
+                 'display': '<span class="label label-default">No expiry</span>',
+                 'timestamp': None
+             },
              'menu': render_template_string(_scheduled_menu_template, task=t)} for t in tasks]
 
     return jsonify(data)

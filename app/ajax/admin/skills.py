@@ -43,12 +43,8 @@ _skills_menu = \
 
 def skills_data(skills):
 
-    data = []
-
-    for skill in skills:
-        data.append({ 'name': skill.name,
-                      'active': 'Active' if skill.active else 'Inactive',
-                      'menu': render_template_string(_skills_menu, skill=skill)
-                    })
+    data = [{'name': s.name,
+             'active': 'Active' if s.active else 'Inactive',
+             'menu': render_template_string(_skills_menu, skill=s)} for s in skills]
 
     return jsonify(data)

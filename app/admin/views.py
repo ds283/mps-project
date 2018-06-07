@@ -34,11 +34,13 @@ from .forms import RoleSelectForm, \
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
-    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord, TaskRecord
+    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord, TaskRecord, Notification
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
+
+from ..task_queue import register_task
 
 import app.ajax as ajax
 
@@ -2288,3 +2290,34 @@ def background_ajax():
 
     tasks = TaskRecord.query.all()
     return ajax.site.background_task_data(tasks)
+
+
+@admin.route('/notifications_ajax', methods=['GET', 'POST'])
+@login_required
+def notifications_ajax():
+    """
+    Retrieve all notifications for the current user
+    :return:
+    """
+
+    # get timestamp that client wants messages from, if provided
+    since = request.args.get('since', 0.0, type=float)
+
+    # query for all tasks associated with the current user
+    tasks = current_user.notifications.filter(Notification.timestamp > since).order_by(Notification.timestamp.asc())
+
+    return ajax.polling.notifications_payload(tasks)
+
+
+@admin.route('/launch_test_task')
+@roles_required('root')
+def launch_test_task():
+
+    task_id = register_task('Test task', owner=current_user, description="Long-running test task")
+
+    celery = current_app.extensions['celery']
+    test_task = celery.tasks['app.tasks.test.test_task']
+
+    test_task.delay(task_id)
+
+    return 'success'

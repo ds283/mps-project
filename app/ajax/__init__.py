@@ -14,3 +14,4 @@ from . import project
 from . import site
 from . import student
 from . import users
+from . import polling

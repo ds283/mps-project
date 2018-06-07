@@ -41,12 +41,8 @@ _types_menu = \
 
 def degree_types_data(types):
 
-    data = []
-
-    for type in types:
-        data.append({ 'name': type.name,
-                      'active': 'Active' if type.active else 'Inactive',
-                      'menu': render_template_string(_types_menu, type=type)
-                    })
+    data = [{'name': t.name,
+             'active': 'Active' if t.active else 'Inactive',
+             'menu': render_template_string(_types_menu, type=t)} for t in types]
 
     return jsonify(data)

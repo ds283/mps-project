@@ -55,19 +55,15 @@ _golive = \
 
 def faculty_data(faculty, pclass, config):
 
-    data = []
-
-    for user, userdata in faculty:
-        data.append({ 'last': user.last_name,
-                      'first': user.first_name,
-                      'email': '<a href="mailto:{em}">{em}</a>'.format(em=user.email),
-                      'user': user.username,
-                      'enrolled': '<span class="label label-success">Yes</span>' if pclass in userdata.enrollments
-                            else '<span class="label label-warning">No</span>',
-                      'offered': '{c}'.format(c=userdata.projects_offered(pclass)),
-                      'unoffer': '{c}'.format(c=userdata.projects_unofferable()),
-                      'golive': render_template_string(_golive, config=config),
-                      'menu': render_template_string(_faculty_menu, pclass=pclass, user=user, userdata=userdata)
-                    })
+    data = [{'last': u.last_name,
+             'first': u.first_name,
+             'email': '<a href="mailto:{em}">{em}</a>'.format(em=u.email),
+             'user': u.username,
+             'enrolled': '<span class="label label-success">Yes</span>' if pclass in d.enrollments
+                 else '<span class="label label-warning">No</span>',
+             'offered': '{c}'.format(c=d.projects_offered(pclass)),
+             'unoffer': '{c}'.format(c=d.projects_unofferable()),
+             'golive': render_template_string(_golive, config=config),
+             'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in faculty]
 
     return jsonify(data)

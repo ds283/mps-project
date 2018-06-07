@@ -20,6 +20,7 @@ from .shared.formatters import format_size
 from datetime import date, datetime, timedelta
 import json
 from os import path
+from time import time
 
 
 # make db available as a static variable, so we can import into other parts of the code
@@ -307,6 +308,24 @@ class User(db.Model, UserMixin):
         db.session.commit()
 
         flash('Removed {name} as convenor of {title}'.format(name=self.build_name(), title=pclass.name))
+
+
+    def post_notification(self, tag, payload, remove_on_load=False):
+        """
+        Add a notification to this user
+        :param user_id:
+        :param payload:
+        :return:
+        """
+
+        # remove any previous notifications intended for this user with this tag
+        self.notifications.filter_by(tag=tag).delete()
+
+        data = Notification(user_id=self.id,
+                            tag=tag,
+                            payload=payload,
+                            remove_on_pageload=remove_on_load)
+        db.session.add(data)
 
 
 class ResearchGroup(db.Model):
@@ -1653,7 +1672,7 @@ class TaskRecord(db.Model):
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     owner = db.relationship('User', uselist=False, backref=db.backref('tasks', lazy='dynamic'))
 
-    # launch date
+    # task launch date
     start_date = db.Column(db.DateTime())
 
     # task name
@@ -1667,6 +1686,10 @@ class TaskRecord(db.Model):
     RUNNING = 1
     SUCCESS = 2
     FAILURE = 3
+    STATES = { PENDING: 'PENDING',
+               RUNNING: 'RUNNING',
+               SUCCESS: 'SUCCESS',
+               FAILURE: 'FAILURE' }
     status = db.Column(db.Integer())
 
     # percentage complete (if used)
@@ -1675,11 +1698,40 @@ class TaskRecord(db.Model):
     # progress message
     message = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
-    # has this task been shown on the web UI?
-    shown = db.Column(db.Boolean())
 
-    # has this task been dismissed on the web UI?
-    dismissed = db.Column(db.Boolean())
+class Notification(db.Model):
+
+    __tablename__ = 'notifications'
+
+
+    # unique id for this notificatgion
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # notifications are identified by the user they are intended for, plus a tag identifying
+    # the source of the notification (eg. a task UUID)
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', uselist=False, backref=db.backref('notifications', lazy='dynamic'))
+
+    tag = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+
+    # timestamp
+    timestamp = db.Column(db.Integer(), index=True, default=time)
+
+    # should this notification be removed on the next page request?
+    remove_on_pageload = db.Column(db.Boolean())
+
+    # payload as a JSON-serialized string
+    payload_json = db.Column(db.Text())
+
+
+    @property
+    def payload(self):
+        return json.loads(str(self.payload_json))
+
+
+    @payload.setter
+    def payload(self, obj):
+        self.payload_json = json.dumps(obj)
 
 
 # ############################

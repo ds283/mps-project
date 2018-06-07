@@ -8,9 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, current_app, jsonify
-
-from celery.result import AsyncResult
+from flask import render_template_string, jsonify
 
 _state = \
 """
@@ -28,21 +26,15 @@ _state = \
 
 def background_task_data(tasks):
 
-    data = []
-
-    for task in tasks:
-        data.append({ 'id': task.id,
-                      'owner': '<a href="mailto:{em}">{nm}</a>'.format(nm=task.owner.build_name(),
-                                                                       em=task.owner.email) if task.owner is not None
-                            else '<span class="label label-default">Nobody</span>',
-                      'name': task.name,
-                      'description': task.description,
-                      'start_at': task.start_date.strftime("%a %d %b %Y %H:%M:%S"),
-                      'status': render_template_string(_state, state=task.status),
-                      'progress': '{c}%'.format(c=task.progress),
-                      'message': task.message,
-                      'shown': 'Yes' if task.shown else 'No',
-                      'dismissed': 'Yes' if task.dismissed else 'No'
-                    })
+    data = [{'id': t.id,
+             'owner': '<a href="mailto:{em}">{nm}</a>'.format(nm=t.owner.build_name(),
+                                                              em=t.owner.email) if t.owner is not None
+                else '<span class="label label-default">Nobody</span>',
+             'name': t.name,
+             'description': t.description,
+             'start_at': t.start_date.strftime("%a %d %b %Y %H:%M:%S"),
+             'status': render_template_string(_state, state=t.status),
+             'progress': '{c}%'.format(c=t.progress),
+             'message': t.message} for t in tasks]
 
     return jsonify(data)

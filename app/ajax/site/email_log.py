@@ -30,18 +30,14 @@ _email_log_menu = \
 
 def email_log_data(emails):
 
-    data = []
-
-    for email in emails:
-        data.append({ 'recipient': email.user.build_name() if email.user is not None
-                            else '<span class="label label-warning">Not logged</span>',
-                      'address': email.user.email if email.user is not None
-                            else email.recipient if email.recipient is not None
-                            else '<span class="label label-danger">Invalid</span>',
-                      'date': email.send_date.strftime("%a %d %b %Y %H:%M:%S"),
-                      'subject': '<a href="{link}">{sub}</a>'.format(link=url_for('admin.display_email', id=email.id),
-                                                                     sub=email.subject),
-                      'menu': render_template_string(_email_log_menu, email=email)
-                      })
+    data = [{'recipient': e.user.build_name() if e.user is not None
+                else '<span class="label label-warning">Not logged</span>',
+             'address': e.user.email if e.user is not None
+                else e.recipient if e.recipient is not None
+                else '<span class="label label-danger">Invalid</span>',
+             'date': e.send_date.strftime("%a %d %b %Y %H:%M:%S"),
+             'subject': '<a href="{link}">{sub}</a>'.format(link=url_for('admin.display_email', id=e.id),
+                                                            sub=e.subject),
+             'menu': render_template_string(_email_log_menu, email=e)} for e in emails]
 
     return jsonify(data)

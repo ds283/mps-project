@@ -145,19 +145,15 @@ _menu = \
 
 def liveprojects_data(config):
 
-    data = []
-
-    for project in config.live_projects:
-        data.append({ 'number': '{c}'.format(c=project.number),
-                      'name': '<a href="{url}">{name}</a>'.format(name=project.name,
-                                                                  url=url_for('convenor.live_project', pid=project.id)),
-                      'owner': '<a href="mailto:{em}">{name}</a>'.format(em=project.owner.email,
-                                                                         name=project.owner.build_name()),
-                      'group': '<span class="label label-success">{abrv}</span>'.format(abrv=project.group.abbreviation),
-                      'bookmarks': render_template_string(_bookmarks, project=project),
-                      'pending': render_template_string(_pending, project=project, config=config),
-                      'confirmed': render_template_string(_confirmed, project=project, config=config),
-                      'menu': render_template_string(_menu, project=project, config=config)
-                    })
+    data = [{'number': '{c}'.format(c=p.number),
+             'name': '<a href="{url}">{name}</a>'.format(name=p.name,
+                                                         url=url_for('convenor.live_project', pid=p.id)),
+             'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.email,
+                                                                name=p.owner.build_name()),
+             'group': '<span class="label label-success">{abrv}</span>'.format(abrv=p.group.abbreviation),
+             'bookmarks': render_template_string(_bookmarks, project=p),
+             'pending': render_template_string(_pending, project=p, config=config),
+             'confirmed': render_template_string(_confirmed, project=p, config=config),
+             'menu': render_template_string(_menu, project=p, config=config)} for p in config.live_projects]
 
     return jsonify(data)

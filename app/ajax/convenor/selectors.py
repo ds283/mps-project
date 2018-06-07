@@ -170,18 +170,14 @@ _confirmed = \
 
 def selectors_data(students, config):
 
-    data = []
-
-    for student in students:
-        data.append({ 'last': student.user.last_name,
-                      'first': student.user.first_name,
-                      'cohort': render_template_string(_cohort, student=student),
-                      'bookmarks': render_template_string(_bookmarks, student=student),
-                      'pending': render_template_string(_pending, student=student, config=config),
-                      'confirmed': render_template_string(_confirmed, student=student, config=config),
-                      'ok': '<span class="label label-success">OK</span>' if student.is_valid_selection
-                            else '<span class="label label-danger">No</span>',
-                      'menu': render_template_string(_menu, student=student, config=config)
-                    })
+    data = [{'last': s.user.last_name,
+             'first': s.user.first_name,
+             'cohort': render_template_string(_cohort, student=s),
+             'bookmarks': render_template_string(_bookmarks, student=s),
+             'pending': render_template_string(_pending, student=s, config=config),
+             'confirmed': render_template_string(_confirmed, student=s, config=config),
+             'ok': '<span class="label label-success">OK</span>' if s.is_valid_selection
+             else '<span class="label label-danger">No</span>',
+             'menu': render_template_string(_menu, student=s, config=config)} for s in students]
 
     return jsonify(data)

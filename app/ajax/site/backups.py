@@ -31,20 +31,16 @@ _manage_backups_menu = \
 
 def backups_data(backups):
 
-    data = []
-
-    for backup in backups:
-        data.append({ 'date': backup.date.strftime("%a %d %b %Y %H:%M:%S"),
-                      'initiated': '<a href="mailto:{e}">{name}</a>'.format(e=backup.owner.email,
-                                                        name=backup.owner.build_name()) if backup.owner is not None
-                          else '<span class="label label-default">Nobody</span>',
-                      'type': backup.type_to_string(),
-                      'description': backup.description if backup.description is not None and len(backup.description) > 0
-                          else '<span class="label label-default">None</span>',
-                      'filename': backup.filename,
-                      'db_size': backup.readable_db_size,
-                      'archive_size': backup.readable_archive_size,
-                      'menu': render_template_string(_manage_backups_menu, backup=backup)
-                      })
+    data = [{'date': b.date.strftime("%a %d %b %Y %H:%M:%S"),
+             'initiated': '<a href="mailto:{e}">{name}</a>'.format(e=b.owner.email,
+                                                                   name=b.owner.build_name()) if b.owner is not None
+                else '<span class="label label-default">Nobody</span>',
+             'type': b.type_to_string(),
+             'description': b.description if b.description is not None and len(b.description) > 0
+                else '<span class="label label-default">None</span>',
+             'filename': b.filename,
+             'db_size': b.readable_db_size,
+             'archive_size': b.readable_archive_size,
+             'menu': render_template_string(_manage_backups_menu, backup=b)} for b in backups]
 
     return jsonify(data)

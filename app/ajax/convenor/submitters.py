@@ -21,12 +21,8 @@ _cohort = \
 
 def submitters_data(students, config):
 
-    data = []
-
-    for student in students:
-        data.append({ 'last', student.user.last,
-                      'first', student.user.first,
-                      'cohort', render_template_string(_cohort, student=student)
-                    })
+    data = [{'last', student.user.last,
+             'first', student.user.first,
+             'cohort', render_template_string(_cohort, student=student)} for student in students]
 
     return jsonify(data)

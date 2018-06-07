@@ -9,13 +9,14 @@
 #
 
 from app import create_app
-from app.models import db, TaskRecord
+from app.models import db, TaskRecord, Notification
 
 app, celery = create_app()
 
-# drop all transient task records
+# drop all transient task records and notifications
 with app.app_context():
     TaskRecord.query.delete()
+    Notification.query.delete()
     db.session.commit()
 
 # pass control to application entry point if we are the controlling script

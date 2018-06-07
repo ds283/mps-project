@@ -62,21 +62,17 @@ def _format_schedule(task):
 
 
 def scheduled_task_data(tasks):
-
-    data = []
-
-    for task in tasks:
-        data.append({ 'name': task.name,
-                      'schedule': _format_schedule(task),
-                      'owner': '<a href="mailto:{e}">{name}</a>'.format(e=task.owner.email,
-                                                                        name=task.owner.build_name()) if task.owner is not None
-                          else '<span class="label label-default">Nobody</span>',
-                      'active': 'Yes' if task.enabled else 'No',
-                      'last_run': task.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
-                      'total_runs': task.total_run_count,
-                      'last_change': task.date_changed.strftime("%a %d %b %Y %H:%M:%S"),
-                      'expires': task.expires.strftime("%a %d %b %Y %H:%M:%S") if task.expires is not None
-                          else '<span class="label label-default">No expiry</span>',
-                      'menu': render_template_string(_scheduled_menu_template, task=task)})
+    data = [{'name': t.name,
+             'schedule': _format_schedule(t),
+             'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
+                                                               name=t.owner.build_name()) if t.owner is not None
+                else '<span class="label label-default">Nobody</span>',
+             'active': 'Yes' if t.enabled else 'No',
+             'last_run': t.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
+             'total_runs': t.total_run_count,
+             'last_change': t.date_changed.strftime("%a %d %b %Y %H:%M:%S"),
+             'expires': t.expires.strftime("%a %d %b %Y %H:%M:%S") if t.expires is not None
+                else '<span class="label label-default">No expiry</span>',
+             'menu': render_template_string(_scheduled_menu_template, task=t)} for t in tasks]
 
     return jsonify(data)

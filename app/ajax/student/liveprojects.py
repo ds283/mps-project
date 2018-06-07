@@ -113,19 +113,15 @@ _menu = \
 """
 
 def liveprojects_data(sel):
-
-    data = []
-
-    for project in sel.config.live_projects:
-        data.append({ 'number': '{c}'.format(c=project.number),
-                      'name': '<a href="{url}">{name}</strong></a>'.format(name=project.name,
-                                                                           url=url_for('student.view_project', sid=sel.id, pid=project.id)),
-                      'supervisor': '{name} <a href="mailto:{em}>{em}</a>'.format(name=project.owner.build_name(),
-                                                                                  em=project.owner.email),
-                      'group': '<span class="label label-success">{abrv}</span>'.format(abrv=project.group.name),
-                      'available': render_template_string(_available, sel=sel, project=project),
-                      'bookmarks': render_template_string(_bookmarks, sel=sel, project=project),
-                      'menu': render_template_string(_menu, sel=sel, project=project)
-                    })
+    data = [{'number': '{c}'.format(c=p.number),
+             'name': '<a href="{url}">{name}</strong></a>'.format(name=p.name,
+                                                                  url=url_for('student.view_project', sid=sel.id,
+                                                                              pid=p.id)),
+             'supervisor': '{name} <a href="mailto:{em}>{em}</a>'.format(name=p.owner.build_name(),
+                                                                         em=p.owner.email),
+             'group': '<span class="label label-success">{abrv}</span>'.format(abrv=p.group.name),
+             'available': render_template_string(_available, sel=sel, project=p),
+             'bookmarks': render_template_string(_bookmarks, sel=sel, project=p),
+             'menu': render_template_string(_menu, sel=sel, project=p)} for p in sel.config.live_projects]
 
     return jsonify(data)

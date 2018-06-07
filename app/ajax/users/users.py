@@ -101,13 +101,23 @@ def build_data(users):
              'first': u.first_name,
              'user': u.username,
              'email': '<a href="mailto:{m}">{m}</a>'.format(m=u.email),
-             'confirm': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if u.confirmed_at is not None
-                 else '<span class="label label-warning">Not confirmed</span>',
+             'confirm': {
+                 'display': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S"),
+                 'timestamp': u.confirmed_at.timestamp()
+             } if u.confirmed_at is not None else {
+                 'display': '<span class="label label-warning">Not confirmed</span>',
+                 'timestamp': None
+             },
              'active': '<span class="label label-success">Active</a>' if u.is_active
                  else '<span class="label label-default">Inactive</a>',
              'count': '{c}'.format(c=u.login_count),
-             'last_login': u.last_login_at.strftime("%Y-%m-%d %H:%M:%S") if u.last_login_at is not None
-                 else '<span class="label label-default">None</a>',
+             'last_login': {
+                 'display': u.last_login_at.strftime("%Y-%m-%d %H:%M:%S"),
+                 'timestamp': u.last_login_at.timestamp()
+             } if u.last_login_at is not None else {
+                 'display': '<span class="label label-default">None</a>',
+                 'timestamp': None
+             },
              'ip': u.last_login_ip if u.last_login_ip is not None and len(u.last_login_ip) > 0
                  else '<span class="label label-default">None</a>',
              'role': render_template_string(_user_role_template, user=u),

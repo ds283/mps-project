@@ -24,10 +24,24 @@
                     { data: 'first' },
                     { data: 'user' },
                     { data: 'email' },
-                    { data: 'confirm' },
+                    {
+                        data: 'confirm',
+                        render:
+                            {
+                                _: 'display',
+                                sort: 'timestamp'
+                            }
+                    },
                     { data: 'active' },
                     { data: 'count' },
-                    { data: 'last_login' },
+                    {
+                        data: 'last_login',
+                        render:
+                            {
+                                _: 'display',
+                                sort: 'timestamp'
+                            }
+                    },
                     { data: 'ip' },
                     { data: 'role' },
                     { data: 'menu' }

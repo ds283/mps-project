@@ -23,7 +23,14 @@
                     { data: 'id' },
                     { data: 'name' },
                     { data: 'owner' },
-                    { data: 'start_at' },
+                    {
+                        data: 'start_at',
+                        render:
+                            {
+                                _: 'display',
+                                sort: 'timestamp'
+                            }
+                    },
                     { data: 'status' },
                     { data: 'progress' },
                     { data: 'message' }

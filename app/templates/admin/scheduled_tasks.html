@@ -24,10 +24,31 @@
                     { data: 'schedule' },
                     { data: 'owner' },
                     { data: 'active' },
-                    { data: 'last_run' },
+                    {
+                        data: 'last_run',
+                        render:
+                            {
+                                _: 'display',
+                                sort: 'timestamp'
+                            }
+                    },
                     { data: 'total_runs' },
-                    { data: 'last_change' },
-                    { data: 'expires' },
+                    {
+                        data: 'last_change',
+                        render:
+                            {
+                                _: 'display',
+                                sort: 'timestamp'
+                            }
+                    },
+                    {
+                        data: 'expires',
+                        render:
+                            {
+                                _: 'display',
+                                sort: 'timestamp'
+                            }
+                    },
                     { data: 'menu' }
                 ],
                 deferRender: true

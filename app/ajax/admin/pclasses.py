@@ -55,18 +55,13 @@ _pclasses_menu = \
 
 def pclasses_data(classes):
 
-    data = []
-
-    for pcl in classes:
-        data.append({ 'name': '{name} ({ab})'.format(name=pcl.name, ab=pcl.abbreviation),
-                      'active': 'Active' if pcl.active else 'Inactive',
-                      'year': 'Y{yr}'.format(yr=pcl.year),
-                      'extent': '{ex}'.format(ex=pcl.extent),
-                      'submissions': '{sub}'.format(sub=pcl.submissions),
-                      'convenor': '{n} <a href="mailto:{em}>{em}</a>'.format(n=pcl.convenor.build_name(),
-                                                                             em=pcl.convenor.email),
-                      'programmes': render_template_string(_pclasses_programmes, pcl=pcl),
-                      'menu': render_template_string(_pclasses_menu, pcl=pcl)
-                    })
+    data = [{'name': '{name} ({ab})'.format(name=p.name, ab=p.abbreviation),
+             'active': 'Active' if p.active else 'Inactive',
+             'year': 'Y{yr}'.format(yr=p.year),
+             'extent': '{ex}'.format(ex=p.extent),
+             'submissions': '{sub}'.format(sub=p.submissions),
+             'convenor': '{n} <a href="mailto:{em}>{em}</a>'.format(n=p.convenor.build_name(), em=p.convenor.email),
+             'programmes': render_template_string(_pclasses_programmes, pcl=p),
+             'menu': render_template_string(_pclasses_menu, pcl=p)} for p in classes]
 
     return jsonify(data)

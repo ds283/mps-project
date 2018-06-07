@@ -43,15 +43,11 @@ _groups_menu = \
 
 def groups_data(groups):
 
-    data = []
-
-    for group in groups:
-        data.append({ 'abbrv': group.abbreviation,
-                      'active': 'Active' if group.active else 'Inactive',
-                      'name': group.name,
-                      'website': '<a href="http://{web}">{web}</a>'.format(web=group.website) if group.website is not None
-                            else '<span class="label label-default">None</span>',
-                      'menu': render_template_string(_groups_menu, group=group)
-                    })
+    data = [{'abbrv': g.abbreviation,
+             'active': 'Active' if g.active else 'Inactive',
+             'name': g.name,
+             'website': '<a href="http://{web}">{web}</a>'.format(web=g.website) if g.website is not None
+                 else '<span class="label label-default">None</span>',
+             'menu': render_template_string(_groups_menu, group=g)} for g in groups]
 
     return jsonify(data)

@@ -4,6 +4,108 @@
 {% block scripts %}
     {{ super() }}
     <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    {% if current_user.is_authenticated %}
+    <script>
+
+        $(function() {
+            let since = 0;
+            let task_area = $('#tasks-progress');
+
+            $('#close-tasks-progress').click(function() {
+                task_area.collapse('hide');
+                localStorage.setItem('mps-project-close-task-preference', 'true')
+            });
+
+            function get_notifications(first_pass) {
+                $.ajax('{{ url_for('admin.notifications_ajax') }}?since=' + since).done(
+                    function(notifications) {
+
+                        let closure_preference_item = localStorage.getItem('mps-project-close-task-preference');
+                        let closure_preference = (closure_preference_item === 'true');
+
+                        // if first pass, show or hide task area based on whether or not
+                        if (first_pass && !closure_preference && notifications.length > 0) {
+                            task_area.addClass('in')
+                            task_area.attr('aria-expanded', 'true')
+                        }
+
+                        // determine whether task area is expanded
+                        let expanded = task_area.attr("aria-expanded");
+
+                        // notifications arrive in ascending order of timestamp
+                        for (let i = 0; i < notifications.length; i++) {
+
+                            let payload = notifications[i].payload;
+
+                            // check whether a progress block for this task already exists
+                            let data_block = $('[data-uuid='+notifications[i].name+']');
+
+                            // if not, insert one
+                            if (data_block.length === 0) {
+
+                                let progress = 0;
+                                if(payload.progress) { progress = payload.progress; }
+                                task_area.append('<div class="task-progress-block" data-uuid="'+notifications[i].name+'">' +
+                                                 '<p><strong>'+payload.task+'</strong></p>' +
+                                                 '<div class="progress">' +
+                                                 '<div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="'+progress+'" aria-valuemin="0" aria-valuemax="100" style="min-width: 2em;">' +
+                                                 '</div>' +
+                                                 '</div>' +
+                                                 '<div class="task-status-message"><em>'+payload.message+'</em></div>' +
+                                                 '</div>');
+
+                                // if we've create a new task bar and the task area is closed, then open it
+                                if (!first_pass && expanded === 'false') {
+                                    task_area.collapse('show');
+                                    expanded = 'true';
+                                    localStorage.setItem('mps-project-close-task-preference', 'false');
+                                }
+
+                                data_block = $('[data-uuid='+notifications[i].name+']');
+                            }
+
+                            // update message
+                            let status_div = data_block.find(".task-status-message");
+                            let em_node = status_div.get(0).firstChild;
+                            em_node.textContent = payload.message;
+
+                            // update progress bar
+                            let progress_bar = data_block.find(".progress-bar");
+                            if (payload.progress) {
+                                let progress = payload.progress;
+                                let percent = progress.toString() + '%';
+
+                                progress_bar.attr('aria-valuenow', progress).css('width', percent);
+                                progress_bar.text(percent);
+                            } else {
+                                progress_bar.text('');
+                            }
+
+                            if (payload.state === 2) {
+                                progress_bar.removeClass('progress-bar-striped');
+                                progress_bar.removeClass('progress-bar-active');
+                                progress_bar.addClass('progress-bar-success');
+                            }
+
+                            if (payload.state === 3) {
+                                progress_bar.removeClass('progress-bar-striped');
+                                progress_bar.removeClass('progress-bar-active');
+                                progress_bar.addClass('progress-bar-danger');
+                            }
+
+                            // set 'last seen' timestamp to be the timestamp of this message
+                            since=notifications[i].timestamp
+                        }
+                    }
+                );
+            }
+
+            setInterval(function() { get_notifications(false) }, 10000);
+            get_notifications(true);
+        });
+    </script>
+    {% endif %}
 {% endblock %}
 
 {% macro convenor_menu(pclasses) %}
@@ -200,6 +302,15 @@
         {% block pillblock %}
         {% endblock %}
         {{ utils.flashed_messages() }}
+        <div id="tasks-progress" class="well collapse" aria-expanded="false">
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="pull-right">
+                        <div id="close-tasks-progress"><i class="fa fa-times"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>

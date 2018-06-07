@@ -81,19 +81,14 @@ _project_skills = \
 def build_data(projects, menu_template):
 
     # filter list of projects for current user
-    data = []
-
-    for project in projects:
-        data.append({ 'name': render_template_string(_project_name, project=project),
-                      'owner': '<a href="mailto:{em}">{nm}</a>'.format(em=project.owner.email,
-                                                                       nm=project.owner.build_name()),
-                      'status': render_template_string(_project_status, project=project),
-                      'pclasses': render_template_string(_project_pclasses, project=project),
-                      'meeting': render_template_string(_project_meetingreqd, project=project),
-                      'group': '<span class="label label-success">{gp}</span>'.format(gp=project.group.abbreviation),
-                      'prefer': render_template_string(_project_prefer, project=project),
-                      'skills': render_template_string(_project_skills, project=project),
-                      'menu': render_template_string(menu_template, project=project)
-                    })
+    data = [{'name': render_template_string(_project_name, project=p),
+             'owner': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.email, nm=p.owner.build_name()),
+             'status': render_template_string(_project_status, project=p),
+             'pclasses': render_template_string(_project_pclasses, project=p),
+             'meeting': render_template_string(_project_meetingreqd, project=p),
+             'group': '<span class="label label-success">{gp}</span>'.format(gp=p.group.abbreviation),
+             'prefer': render_template_string(_project_prefer, project=p),
+             'skills': render_template_string(_project_skills, project=p),
+             'menu': render_template_string(menu_template, project=p)} for p in projects]
 
     return jsonify(data)

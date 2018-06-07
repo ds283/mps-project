@@ -12,13 +12,9 @@ from flask import jsonify
 
 def golive_data(config):
 
-    data = []
-
-    for faculty in config.golive_required:
-        data.append({ 'name': faculty.user.build_name(),
-                      'email': '<a href="mailto:{em}">{em}</a>'.format(em=faculty.user.email),
-                      'available': '{c}'.format(c=faculty.projects_offered(config.project_class)),
-                      'unoffer': '{c}'.format(c=faculty.projects_unofferable())
-                      })
+    data = [{'name': f.user.build_name(),
+             'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
+             'available': '{c}'.format(c=f.projects_offered(config.project_class)),
+             'unoffer': '{c}'.format(c=f.projects_unofferable())} for f in config.golive_required]
 
     return jsonify(data)

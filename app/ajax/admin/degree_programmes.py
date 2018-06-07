@@ -47,13 +47,9 @@ _programmes_menu = \
 
 def degree_programmes_data(programmes):
 
-    data = []
-
-    for programme in programmes:
-        data.append({ 'name': programme.name,
-                      'type': programme.degree_type.name,
-                      'active': 'Active' if programme.active else 'Inactive',
-                      'menu': render_template_string(_programmes_menu, programme=programme)
-                    })
+    data = [{'name': p.name,
+             'type': p.degree_type.name,
+             'active': 'Active' if p.active else 'Inactive',
+             'menu': render_template_string(_programmes_menu, programme=p)} for p in programmes]
 
     return jsonify(data)

@@ -10,9 +10,9 @@
 
 import os
 
-from flask import Flask, current_app
+from flask import Flask, current_app, request
 from flask_migrate import Migrate
-from flask_security import SQLAlchemyUserDatastore, Security
+from flask_security import current_user, SQLAlchemyUserDatastore, Security
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
 from flask_assets import Environment
@@ -20,7 +20,7 @@ from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 
 from config import app_config
-from .models import db, User, EmailLog, MessageOfTheDay
+from .models import db, User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task
 from app.task_queue import background_task
 import app.tasks as tasks
@@ -73,6 +73,7 @@ def create_app():
     tasks.register_send_log_email(celery, mail)
     tasks.register_prune_email(celery)
     tasks.register_backup_tasks(celery)
+    tasks.register_test_tasks(celery)
 
 
     # make Flask-Security use deferred email sender
@@ -104,6 +105,14 @@ def create_app():
                 messages.append(message)
 
         return dict(messages=messages)
+
+
+    @app.before_request
+    def remove_stale_notifications():
+
+        if current_user.is_authenticated and 'ajax' not in request.endpoint:
+            Notification.query.filter_by(remove_on_pageload=True).delete()
+            db.session.commit()
 
 
     # IMPORT BLUEPRINTS

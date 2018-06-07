@@ -15,7 +15,7 @@ from uuid import uuid4
 from datetime import datetime
 
 
-def register_task(name, owner_id=None, description=None):
+def register_task(name, owner=None, description=None):
     """
     Register a task using our internal task-tracking system
     (this allows progress reports to be tracked consistently across multiple Celery tasks)
@@ -30,7 +30,7 @@ def register_task(name, owner_id=None, description=None):
 
     data = TaskRecord(id=uuid,
                       name=name,
-                      owner_id=owner_id,
+                      owner_id=owner.id if owner is not None else None,
                       description=description,
                       start_date=datetime.now(),
                       status=TaskRecord.PENDING,
@@ -38,6 +38,13 @@ def register_task(name, owner_id=None, description=None):
                       message=None)
 
     db.session.add(data)
+    db.session.flush()
+
+    if data.owner is not None:
+
+        data.owner.post_notification(data.id, {'task': data.name, 'state': TaskRecord.PENDING,
+                                               'progress': 0, 'message': 'Awaiting scheduling...'})
+
     db.session.commit()
 
     return uuid
@@ -49,8 +56,21 @@ def progress_update(task_id, state, progress, message):
 
     if data is not None:
 
+        # update data for task record
         data.status = state
         data.progress = progress
         data.message = message
 
+        # push a notification to owning user, if there is one
+        if data.owner is not None:
+
+            remove_on_load = False
+            if data.status == TaskRecord.SUCCESS or data.status == TaskRecord.FAILURE:
+                remove_on_load = True
+
+            data.owner.post_notification(data.id, {'task': data.name, 'state': state,
+                                                   'progress': progress, 'message': message},
+                                         remove_on_load=remove_on_load)
+
+        # commit all changes
         db.session.commit()

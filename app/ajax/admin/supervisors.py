@@ -43,12 +43,8 @@ _supervisors_menu = \
 
 def supervisors_data(roles):
 
-    data = []
-
-    for role in roles:
-        data.append({ 'role': role.name,
-                      'active': 'Active' if role.active else 'Inactive',
-                      'menu': render_template_string(_supervisors_menu, role=role)
-                    })
+    data = [{'role': r.name,
+             'active': 'Active' if r.active else 'Inactive',
+             'menu': render_template_string(_supervisors_menu, role=r)} for r in roles]
 
     return jsonify(data)

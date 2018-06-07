@@ -97,24 +97,20 @@ _user_menu_template = \
 
 def build_data(users):
 
-    data = []
-
-    for user in users:
-        data.append({'last': user.last_name,
-                     'first': user.first_name,
-                     'user': user.username,
-                     'email': '<a href="mailto:{m}">{m}</a>'.format(m=user.email),
-                     'confirm': user.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if user.confirmed_at is not None
-                         else '<span class="label label-warning">Not confirmed</span>',
-                     'active': '<span class="label label-success">Active</a>' if user.is_active
-                         else '<span class="label label-default">Inactive</a>',
-                     'count': '{c}'.format(c=user.login_count),
-                     'last_login': user.last_login_at.strftime("%Y-%m-%d %H:%M:%S") if user.last_login_at is not None
-                         else '<span class="label label-default">None</a>',
-                     'ip': user.last_login_ip if user.last_login_ip is not None and len(user.last_login_ip) > 0
-                         else '<span class="label label-default">None</a>',
-                     'role': render_template_string(_user_role_template, user=user),
-                     'menu': render_template_string(_user_menu_template, user=user)}
-                    )
+    data = [{'last': u.last_name,
+             'first': u.first_name,
+             'user': u.username,
+             'email': '<a href="mailto:{m}">{m}</a>'.format(m=u.email),
+             'confirm': u.confirmed_at.strftime("%Y-%m-%d %H:%M:%S") if u.confirmed_at is not None
+                 else '<span class="label label-warning">Not confirmed</span>',
+             'active': '<span class="label label-success">Active</a>' if u.is_active
+                 else '<span class="label label-default">Inactive</a>',
+             'count': '{c}'.format(c=u.login_count),
+             'last_login': u.last_login_at.strftime("%Y-%m-%d %H:%M:%S") if u.last_login_at is not None
+                 else '<span class="label label-default">None</a>',
+             'ip': u.last_login_ip if u.last_login_ip is not None and len(u.last_login_ip) > 0
+                 else '<span class="label label-default">None</a>',
+             'role': render_template_string(_user_role_template, user=u),
+             'menu': render_template_string(_user_menu_template, user=u)} for u in users]
 
     return jsonify(data)

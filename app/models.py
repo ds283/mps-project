@@ -21,6 +21,7 @@ from datetime import date, datetime, timedelta
 import json
 from os import path
 from time import time
+from uuid import uuid4
 
 
 # make db available as a static variable, so we can import into other parts of the code
@@ -310,7 +311,7 @@ class User(db.Model, UserMixin):
         flash('Removed {name} as convenor of {title}'.format(name=self.build_name(), title=pclass.name))
 
 
-    def post_notification(self, tag, payload, remove_on_load=False):
+    def post_task_update(self, uuid, payload, remove_on_load=False, autocommit=False):
         """
         Add a notification to this user
         :param user_id:
@@ -318,14 +319,68 @@ class User(db.Model, UserMixin):
         :return:
         """
 
-        # remove any previous notifications intended for this user with this tag
-        self.notifications.filter_by(tag=tag).delete()
+        # remove any previous notifications intended for this user with this uuid
+        self.notifications.filter_by(uuid=uuid).delete()
 
         data = Notification(user_id=self.id,
-                            tag=tag,
+                            type=Notification.TASK_PROGRESS,
+                            uuid=uuid,
                             payload=payload,
                             remove_on_pageload=remove_on_load)
         db.session.add(data)
+
+        if autocommit:
+            db.session.commit()
+
+
+    CLASSES = {'success': 'alert-success',
+               'info': 'alert-info',
+               'warning': 'alert-warning',
+               'danger': 'alert-danger'}
+
+
+    def post_message(self, message, cls, remove_on_load=False, autocommit=False):
+        """
+        Add a notification to this user
+        :param user_id:
+        :param payload:
+        :return:
+        """
+
+        if cls in self.CLASSES:
+            cls = self.CLASSES[cls]
+        else:
+            cls = None
+
+        data = Notification(user_id=self.id,
+                            type=Notification.USER_MESSAGE,
+                            uuid=str(uuid4()),
+                            payload={'message': message, 'type': cls},
+                            remove_on_pageload=remove_on_load)
+        db.session.add(data)
+
+        if autocommit:
+            db.session.commit()
+
+
+    def send_showhide(self, html_id, action, autocommit=False):
+        """
+        Send a show/hide request for a specific HTML node
+        :param html_id:
+        :param action:
+        :param autocommit:
+        :return:
+        """
+
+        data = Notification(user_id=self.id,
+                            type=Notification.SHOW_HIDE_REQUEST,
+                            uuid=str(uuid4()),
+                            payload={'html_id': html_id, 'action': action},
+                            remove_on_pageload=False)
+        db.session.add(data)
+
+        if autocommit:
+            db.session.commit()
 
 
 class ResearchGroup(db.Model):
@@ -1707,12 +1762,18 @@ class Notification(db.Model):
     # unique id for this notificatgion
     id = db.Column(db.Integer(), primary_key=True)
 
+    TASK_PROGRESS = 1
+    USER_MESSAGE = 2
+    SHOW_HIDE_REQUEST = 100
+    type = db.Column(db.Integer())
+
     # notifications are identified by the user they are intended for, plus a tag identifying
     # the source of the notification (eg. a task UUID)
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     user = db.relationship('User', uselist=False, backref=db.backref('notifications', lazy='dynamic'))
 
-    tag = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    # uuid identifies a set of notifications (eg. task progress updates for the same task, or messages for the same subject)
+    uuid = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
 
     # timestamp
     timestamp = db.Column(db.Integer(), index=True, default=time)

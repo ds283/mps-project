@@ -2304,9 +2304,20 @@ def notifications_ajax():
     since = request.args.get('since', 0.0, type=float)
 
     # query for all tasks associated with the current user
-    tasks = current_user.notifications.filter(Notification.timestamp > since).order_by(Notification.timestamp.asc())
+    notifications = current_user.notifications.filter(Notification.timestamp > since).order_by(
+        Notification.timestamp.asc()).all()
 
-    return ajax.polling.notifications_payload(tasks)
+    # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
+    modified = False
+    for n in notifications:
+        if n.type == Notification.USER_MESSAGE or n.type == Notification.SHOW_HIDE_REQUEST:
+            n.remove_on_pageload = True
+            modified = True
+
+    if modified:
+        db.session.commit()
+
+    return ajax.polling.notifications_payload(notifications)
 
 
 @admin.route('/launch_test_task')

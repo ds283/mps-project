@@ -73,6 +73,7 @@ def create_app():
     tasks.register_send_log_email(celery, mail)
     tasks.register_prune_email(celery)
     tasks.register_backup_tasks(celery)
+    tasks.register_rollover_tasks(celery)
     tasks.register_test_tasks(celery)
 
 
@@ -86,8 +87,6 @@ def create_app():
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
-
-        print('REGISTERED NEW TASK WITH UUID={id}'.format(id=task_id))
 
         # queue Celery task to send the email
         task = send_log_email.delay(task_id, msg)
@@ -110,7 +109,7 @@ def create_app():
     @app.before_request
     def remove_stale_notifications():
 
-        if current_user.is_authenticated and 'ajax' not in request.endpoint:
+        if current_user.is_authenticated and request.endpoint is not None and 'ajax' not in request.endpoint:
             Notification.query.filter_by(remove_on_pageload=True).delete()
             db.session.commit()
 

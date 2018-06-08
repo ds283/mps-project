@@ -42,15 +42,16 @@ def register_task(name, owner=None, description=None):
 
     if data.owner is not None:
 
-        data.owner.post_notification(data.id, {'task': data.name, 'state': TaskRecord.PENDING,
-                                               'progress': 0, 'message': 'Awaiting scheduling...'})
+        data.owner.post_task_update(data.id, {'task': data.name, 'state': TaskRecord.PENDING,
+                                               'progress': 0, 'message': 'Awaiting scheduling...'},
+                                    autocommit=False)
 
     db.session.commit()
 
     return uuid
 
 
-def progress_update(task_id, state, progress, message):
+def progress_update(task_id, state, progress, message, autocommit=False):
 
     data = TaskRecord.query.filter_by(id=task_id).first()
 
@@ -68,9 +69,10 @@ def progress_update(task_id, state, progress, message):
             if data.status == TaskRecord.SUCCESS or data.status == TaskRecord.FAILURE:
                 remove_on_load = True
 
-            data.owner.post_notification(data.id, {'task': data.name, 'state': state,
+            data.owner.post_task_update(data.id, {'task': data.name, 'state': state,
                                                    'progress': progress, 'message': message},
-                                         remove_on_load=remove_on_load)
+                                        remove_on_load=remove_on_load, autocommit=False)
 
         # commit all changes
-        db.session.commit()
+        if autocommit:
+            db.session.commit()

@@ -27,7 +27,7 @@ def register_test_tasks(celery):
         noun = ['solar array', 'particle reshaper', 'cosmic ray', 'orbiter', 'bit']
 
         message = ''
-        progress_update(task_id, TaskRecord.RUNNING, 0, "Test task initializing")
+        progress_update(task_id, TaskRecord.RUNNING, 0, "Test task initializing", autocommit=True)
 
         total = random.randint(50, 100)
 
@@ -41,11 +41,11 @@ def register_test_tasks(celery):
                               meta={'current': i, 'total': total,
                                     'status': message})
 
-            progress_update(task_id, TaskRecord.RUNNING, round(100.0*float(i)/float(total)), message)
+            progress_update(task_id, TaskRecord.RUNNING, round(100.0*float(i)/float(total)), message, autocommit=True)
 
             time.sleep(1)
 
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Test task finalized")
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Test task finalized", autocommit=True)
 
         return {'current': 100, 'total': 100, 'status': 'Task completed!',
                 'result': 42}

@@ -11,5 +11,6 @@
 from .send_log_email import register_send_log_email
 from .prune_email import register_prune_email
 from .backup import register_backup_tasks
+from .rollover import register_rollover_tasks
 
 from .test import register_test_tasks

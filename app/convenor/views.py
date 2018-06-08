@@ -9,7 +9,7 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_security import roles_accepted, current_user
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
@@ -18,6 +18,8 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
 from ..shared.actions import render_live_project, do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
+
+from ..task_queue import register_task
 
 import app.ajax as ajax
 
@@ -1183,6 +1185,28 @@ def live_project(pid):
     return render_live_project(data)
 
 
+@convenor.route('/confirm_rollover/<int:pid>/<int:configid>')
+@roles_accepted('faculty', 'admin', 'route')
+def confirm_rollover(pid, configid):
+
+    year = get_current_year()
+
+    # do nothing if a rollover has already been performed (try to make action idempotent in case
+    # accidentally invoked twice)
+    config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
+
+    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.project_class.name,
+                                                                   yeara=year, yearb=year + 1)
+    action_url = url_for('convenor.rollover', pid=pid, configid=configid)
+    message = 'Please confirm that you wish to rollover project class "{proj}" to ' \
+              '{yeara}&ndash;{yearb}'.format(proj=config.project_class.name,
+                                             yeara=year, yearb=year + 1)
+    submit_label = 'Rollover to {yr}'.format(yr=year)
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
 @convenor.route('/rollover/<int:pid>/<int:configid>')
 @roles_accepted('faculty', 'admin', 'route')
 def rollover(pid, configid):
@@ -1198,60 +1222,25 @@ def rollover(pid, configid):
     if not validate_convenor(pclass):
         return home_dashboard()
 
-    # get current config record and retire all IDs
-    current_config = ProjectClassConfig.query.get_or_404(configid)
+    year = get_current_year()
 
-    for item in current_config.selecting_students:
+    # do nothing if a rollover has already been performed (try to make action idempotent in case
+    # accidentally invoked twice)
+    config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
 
-        item.retired = True
+    if config.id != configid or config.year == year:
+        flash('A rollover request was ignored. If you are attempting to rollover the academic year and '
+              'have not managed to do so, please contact a system administrator', 'error')
+        return redirect(request.referrer)
 
-    for item in current_config.submitting_students:
+    # get rollover instance
+    celery = current_app.extensions['celery']
+    rollover = celery.tasks['app.tasks.rollover.pclass_rollover']
 
-        item.retired = True
+    # register rollover as a new background task and push it to the celery scheduler
+    task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
+                            owner=current_user,
+                            description='Perform rollover of "{proj}" to new academic year'.format(proj=pclass.name))
+    rollover.delay(task_id, pid, configid, current_user.id)
 
-
-    # get new, rolled-over academic year
-    current_year = get_current_year()
-
-    # generate a new ProjectClassConfig for this year
-    new_config = ProjectClassConfig(year=current_year,
-                                    pclass_id=pid,
-                                    creator_id=current_user.id,
-                                    creation_timestamp=datetime.now(),
-                                    requests_issued=False,
-                                    request_deadline=None,
-                                    live=False,
-                                    live_deadline=None,
-                                    closed=False,
-                                    submission_period=1)
-    db.session.add(new_config)
-
-    # generate SubmittingStudent records for each student who will be in the correct submitting year
-    for student in StudentData.query.all():
-
-        academic_year = current_year - student.cohort + 1
-
-        if pclass.year - 1 <= academic_year < pclass.year + pclass.extent - 1 \
-                and (pclass.selection_open_to_all or student.programme in pclass.programmes):
-
-            # will be a selecting student
-            selector = SelectingStudent(config_id=new_config.id,
-                                        user_id=student.user.id,
-                                        retired=False)
-            db.session.add(selector)
-
-        if pclass.year <= academic_year < pclass.year + pclass.extent \
-                and student.programme in pclass.programmes:
-
-            # will be a submitting student
-            submittor = SubmittingStudent(config_id=new_config.id,
-                                          user_id=student.user.id,
-                                          retired=False)
-            db.session.add(submittor)
-
-    db.session.commit()
-
-    flash('{name} has been rolled over to {yeara}-{yearb}'.format(
-        name=pclass.name, yeara=current_year, yearb=current_year+1), 'success')
-
-    return redirect(request.referrer)
+    return redirect(url_for('convenor.overview', id=pid))

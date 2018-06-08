@@ -25,7 +25,7 @@ def register_send_log_email(celery, mail):
     @celery.task(serializer='pickle', default_retry_delay=10)
     def send_email(task_id, msg):
 
-        progress_update(task_id, TaskRecord.RUNNING, 40, "Sending email")
+        progress_update(task_id, TaskRecord.RUNNING, 40, "Sending email", autocommit=True)
 
         mail.send(msg)
 
@@ -33,7 +33,7 @@ def register_send_log_email(celery, mail):
     @celery.task(bind=True, serializer='pickle', default_retry_delay=10)
     def log_email(self, task_id, msg):
 
-        progress_update(task_id, TaskRecord.RUNNING, 80, "Logging email in database")
+        progress_update(task_id, TaskRecord.RUNNING, 80, "Logging email in database", autocommit=True)
 
         try:
 
@@ -71,21 +71,19 @@ def register_send_log_email(celery, mail):
     @celery.task()
     def email_success(task_id):
 
-        progress_update(task_id, TaskRecord.SUCCESS, 100, "Task complete")
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Task complete", autocommit=True)
 
 
     @celery.task()
     def email_failure(task_id):
 
-        progress_update(task_id, TaskRecord.FAILURE, 0, "Task failed")
+        progress_update(task_id, TaskRecord.FAILURE, 0, "Task failed", autocommit=True)
 
 
     @celery.task(serializer='pickle')
     def send_log_email(task_id, msg):
 
-        print('WORKER STARTING SEND_LOG_EMAIL TASK WITH UUID={id}'.format(id=task_id))
-
-        progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to send email")
+        progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to send email", autocommit=True)
 
         seq = chain(send_email.si(task_id, msg), log_email.si(task_id, msg), email_success.si(task_id)).on_error(
             email_failure.si(task_id))

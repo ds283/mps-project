@@ -14,7 +14,8 @@ from flask import jsonify
 
 def notifications_payload(notifications):
 
-    data = [{'name': n.tag,
+    data = [{'uuid': n.uuid,
+             'type': n.type,
              'payload': n.payload,
              'timestamp': n.timestamp} for n in notifications]
 

@@ -1127,7 +1127,7 @@ def student_clear_bookmarks(sid):
     return redirect(request.referrer)
 
 
-@convenor.route('/live_project/<int:pid>/<int:classid>')
+@convenor.route('/live_project/<int:pid>')
 @roles_accepted('faculty', 'admin', 'root')
 def live_project(pid):
     """

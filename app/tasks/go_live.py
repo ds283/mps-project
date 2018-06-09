@@ -70,7 +70,7 @@ def register_golive_tasks(celery):
         backup = celery.tasks['app.tasks.backup.backup']
 
         seq = chain(golive_initialize.si(task_id),
-                    backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='golive',
+                    backup.si(convenor_id, type=BackupRecord.PROJECT_GOLIVE_FALLBACK, tag='golive',
                               description='Rollback snapshot for {proj} Go Live {yr}'.format(proj=pcl.name, yr=year)),
                     projects_group,
                     golive_finalize.si(task_id, current_id, convenor_id, deadline)).on_error(golive_fail.si(task_id, convenor_id))

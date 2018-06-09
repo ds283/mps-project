@@ -146,8 +146,9 @@ _menu = \
 def liveprojects_data(config):
 
     data = [{'number': '{c}'.format(c=p.number),
-             'name': '<a href="{url}">{name}</a>'.format(name=p.name,
-                                                         url=url_for('convenor.live_project', pid=p.id)),
+             'name': '<a href="{url}"><strong>{name}</strong></a>'.format(name=p.name,
+                                                                          url=url_for('convenor.live_project',
+                                                                                      pid=p.id)),
              'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.email,
                                                                 name=p.owner.build_name()),
              'group': '<span class="label label-success">{abrv}</span>'.format(abrv=p.group.abbreviation),

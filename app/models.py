@@ -1664,6 +1664,7 @@ class BackupRecord(db.Model):
     # type of backup
     SCHEDULED_BACKUP = 1
     PROJECT_ROLLOVER_FALLBACK = 2
+    PROJECT_GOLIVE_FALLBACK = 3
 
     type = db.Column(db.Integer())
 
@@ -1686,6 +1687,8 @@ class BackupRecord(db.Model):
             return 'Scheduled backup'
         elif self.type == self.PROJECT_ROLLOVER_FALLBACK:
             return 'Rollover restore point'
+        elif self.type == self.PROJECT_GOLIVE_FALLBACK:
+            return 'Go Live restore point'
         else:
             return '<Unknown>'
 

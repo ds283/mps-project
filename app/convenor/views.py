@@ -720,79 +720,42 @@ def force_confirm_all(id):
     return redirect(request.referrer)
 
 
-@convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/go_live/<pid>/<int:configid>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'route')
-def go_live(id):
+def go_live(pid, configid):
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass = ProjectClass.query.get_or_404(pid)
 
     # reject user if not entitled to perform dashboard functions
     if not validate_convenor(pclass):
         return redirect(request.referrer)
 
+    year = get_current_year()
+
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
+
+    if config.id != configid or config.year != year:
+        flash('A "Go Live" request was ignored. If you are attempting to go live with this project class, '
+              'please contact a system administrator.', 'error')
+        return redirect(url_for('convenor.overview', id=pid))
 
     form = GoLiveForm(request.form)
 
     if form.is_submitted():
 
-        # ensure there are no outstanding confirm requests
-        if config.golive_required.first() is not None:
+        # get rollover instance
+        celery = current_app.extensions['celery']
+        golive = celery.tasks['app.tasks.go_live.pclass_golive']
+        golive_fail = celery.tasks['app.tasks.go_live.golive_fail']
 
-            flash('Cannot yet go live for {name} {yeara}-{yearb}'
-                  ' because some confirmation requests are outstanding. '
-                  'If needed, force all confirmations and try again.'.format(
-                    name=pclass.name, yeara=config.year, yearb=config.year+1),
-                  'error')
-
-            return redirect(request.referrer)
-
-        # going live consists of copying all tables for this project to the live project table,
-        # in alphabetical order
-        projects = pclass.projects.filter(Project.active).join(User, User.id==Project.owner_id).order_by(User.last_name, User.first_name)
-
-        if projects.count() == 0:
-
-            flash('Cannot yet go live for {name} {yeara}-{yearb} '
-                  'because there are no available projects.'.format(
-                    name=pclass.name, yeara=config.year, yearb=config.year+1),
-                  'error')
-
-            return redirect(request.referrer)
-
-        number = 1
-        for item in projects.all():
-
-            # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
-            # all project classes need their own LiveProject record
-            live_item = LiveProject(config_id=config.id,
-                                    number=number,
-                                    name=item.name,
-                                    keywords=item.keywords,
-                                    owner_id=item.owner_id,
-                                    group_id=item.group_id,
-                                    skills=item.skills,
-                                    capacity=item.capacity,
-                                    enforce_capacity=item.enforce_capacity,
-                                    meeting_reqd=item.meeting_reqd,
-                                    team=item.team,
-                                    description=item.description,
-                                    reading=item.reading,
-                                    page_views=0,
-                                    last_view=None)
-            db.session.add(live_item)
-            number += 1
-
-        config.live = True
-        config.live_deadline = form.live_deadline.data
-        config.golive_id = current_user.id
-        config.golive_timestamp = datetime.now()
-
-        db.session.commit()
-
-        flash('{name} {yeara}-{yearb} is now live'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
+        # register Go Live as a new background task and push it to the celery scheduler
+        task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
+                                owner=current_user,
+                                description='Perform Go Live of "{proj}"'.format(proj=pclass.name))
+        golive.apply_async((task_id, pid, configid, current_user.id, form.live_deadline.data),
+                           link_error=golive_fail.si(task_id, current_user.id))
 
     return redirect(request.referrer)
 
@@ -1231,16 +1194,18 @@ def rollover(pid, configid):
     if config.id != configid or config.year == year:
         flash('A rollover request was ignored. If you are attempting to rollover the academic year and '
               'have not managed to do so, please contact a system administrator', 'error')
-        return redirect(request.referrer)
+        return redirect(url_for('convenor.overview', id=pid))
 
     # get rollover instance
     celery = current_app.extensions['celery']
     rollover = celery.tasks['app.tasks.rollover.pclass_rollover']
+    rollover_fail = celery.tasks['app.tasks.rollover.rollover_fail']
 
     # register rollover as a new background task and push it to the celery scheduler
     task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
                             owner=current_user,
                             description='Perform rollover of "{proj}" to new academic year'.format(proj=pclass.name))
-    rollover.delay(task_id, pid, configid, current_user.id)
+    rollover.apply_async((task_id, pid, configid, current_user.id),
+                         link_error=rollover_fail.si(task_id, current_user.id))
 
     return redirect(url_for('convenor.overview', id=pid))

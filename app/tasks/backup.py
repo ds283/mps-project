@@ -250,20 +250,14 @@ def register_backup_tasks(celery):
             thin_id = remain[index]
             del remain[index]
 
-            # will raise an exception if record does not exist
-            record = db.session.query(BackupRecord).filter_by(id=thin_id).one()
+            try:
+                success, msg = remove_backup(thin_id)
 
-            if path.exists(record.filename):
-
-                remove(record.filename)
-                db.session.remove(record)
-                db.commit()
-
-            else:
-
-                db.session.rollback()
-                self.update_state(state='FAILED', meta='Could not locate backup file to be thinned')
-
+                if not success:
+                    self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+                    return
+            except SQLAlchemyError:
+                raise self.retry()
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -272,7 +266,7 @@ def register_backup_tasks(celery):
         self.update_state(state='STARTED', meta='Thinning {n} backups'.format(n=name))
 
         # build group of tasks for each collection of backups we need to thin
-        tasks = group([ thin_list.s(records[k]) for k in records.keys() ])
+        tasks = group(thin_list.s(records[k]) for k in records.keys())
         tasks.apply_async()
 
 
@@ -286,10 +280,9 @@ def register_backup_tasks(celery):
         max_hourly_age = timedelta(days=keep_hourly)
         max_daily_age = max_hourly_age + timedelta(weeks=keep_daily)
 
-        # bin backups (but only those tagged as ordinary scheduled backups; ie., we don't thin backps
+        # bin backups into categories (but only those tagged as ordinary scheduled backups; ie., we don't thin backps
         # that have been taken for special purposes, such as snapshots constructed before rolling over
         # the academic year) into hourly, daily, weekly groups depending on age
-        hourly = {}
         daily = {}
         weekly = {}
 
@@ -308,33 +301,26 @@ def register_backup_tasks(celery):
 
             if age < max_hourly_age:
 
-                # work out age in hours (as an integer)
-                age_hours = floor(float(age.seconds) / float(60*60))       # floor returns an Integer in Python3
-                if age_hours in hourly:
-                    hourly[age_hours].append(record.id)
-                else:
-                    hourly[age_hours] = [record.id]
+                # do nothing; we just keep the backups in this period
+                pass
 
             elif age < max_daily_age:
 
-                # work out age in days (as an integer)
-                age_days = floor(float(age.seconds) / float(60*60*24))      # as above, returns an Integer in Python3
-                if age_days in daily:
-                    daily[age_days].append(record.id)
+                if age.days in daily:
+                    daily[age.days].append(record.id)
                 else:
-                    daily[age_days] = [record.id]
+                    daily[age.days] = [record.id]
 
             else:
 
                 # work out age in weeks (as an integer)
-                age_weeks = floor(float(age.seconds) / float(60*60*24*7))   # as above, returns an Integer in Python3
+                age_weeks = floor(float(age.days) / float(7))   # returns an Integer in Python3
                 if age_weeks in weekly:
                     weekly[age_weeks].append(record.id)
                 else:
                     weekly[age_weeks] = [record.id]
 
-        thinning = group(thin_class.s(hourly, 'hourly'), thin_class.s(daily, 'daily'),
-                         thin_class.s(weekly, 'weekly'))
+        thinning = group(thin_class.si(daily, 'daily'), thin_class.si(weekly, 'weekly'))
         thinning.apply_async()
 
 

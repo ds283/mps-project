@@ -112,7 +112,7 @@
                                     <div class="panel-body">
 
                                         {% if config.golive_required.count() == 0 %}
-                                            <form action="{{ url_for('convenor.go_live', id=pclass.id) }}" method="POST"
+                                            <form action="{{ url_for('convenor.go_live', pid=pclass.id, configid=config.id) }}" method="POST"
                                                   name="golive-form">
                                                 <div class="row vertical-top">
                                                     <div class="col-xs-9">
@@ -188,7 +188,7 @@
                                 <div class="panel panel-danger">
                                     <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
                                     <div class="panel-body">
-                                        <form action="{{ url_for('convenor.go_live', id=pclass.id) }}" method="POST"
+                                        <form action="{{ url_for('convenor.go_live', pid=pclass.id, configid=config.id) }}" method="POST"
                                               name="golive-form">
                                             <div class="row vertical-align">
                                                 <div class="col-xs-9">

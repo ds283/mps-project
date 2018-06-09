@@ -26,12 +26,12 @@ def register_rollover_tasks(celery):
     @celery.task(bind=True)
     def pclass_rollover(self, task_id, pclass_id, current_id, convenor_id):
 
-        progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to rollover', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to rollover...', autocommit=True)
 
         # get new academic year
         year = get_current_year()
 
-        # get database record for this project class
+        # get database records for this project class
         try:
             pcl = ProjectClass.query.filter_by(id=pclass_id).first()
             current_config = ProjectClassConfig.query.filter_by(id=current_id).first()
@@ -54,9 +54,8 @@ def register_rollover_tasks(celery):
         backup = celery.tasks['app.tasks.backup.backup']
 
         seq = chain(rollover_initialize.si(task_id),
-                    backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK,
-                              tag='snapshot', description='Rollback snapshot for {proj} rollover to {yr}'.format(proj=pcl.name,
-                                                                                                                 yr=year)),
+                    backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
+                              description='Rollback snapshot for {proj} rollover to {yr}'.format(proj=pcl.name, yr=year)),
                     rollover_retire.si(task_id),
                     retire_group,
                     build_new_pclass_config.si(task_id, pclass_id, convenor_id, current_id),
@@ -69,7 +68,7 @@ def register_rollover_tasks(celery):
     @celery.task()
     def rollover_initialize(task_id):
 
-        progress_update(task_id, TaskRecord.RUNNING, 5, 'Building rollback snapshot', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 5, 'Building rollback snapshot...', autocommit=True)
 
 
     @celery.task(bind=True)
@@ -234,9 +233,9 @@ def register_rollover_tasks(celery):
                 and student.programme in pclass.programmes:
 
             # will be a submitting student
-            submittor = SubmittingStudent(config_id=new_config_id,
+            submitter = SubmittingStudent(config_id=new_config_id,
                                           user_id=student.user.id,
                                           retired=False)
-            db.session.add(submittor)
+            db.session.add(submitter)
 
         db.session.commit()

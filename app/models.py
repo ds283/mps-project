@@ -383,6 +383,26 @@ class User(db.Model, UserMixin):
             db.session.commit()
 
 
+    def send_replacetext(self, html_id, new_text, autocommit=False):
+        """
+        Send an instruction to replace the text in a specific HTML node
+        :param html_id:
+        :param new_text:
+        :param autocommit:
+        :return:
+        """
+
+        data = Notification(user_id=self.id,
+                            type=Notification.REPLACE_TEXT_REQUEST,
+                            uuid=str(uuid4()),
+                            payload={'html_id': html_id, 'text': new_text},
+                            remove_on_pageload=False)
+        db.session.add(data)
+
+        if autocommit:
+            db.session.commit()
+
+
 class ResearchGroup(db.Model):
     """
     Model a row from the research group table
@@ -1768,6 +1788,7 @@ class Notification(db.Model):
     TASK_PROGRESS = 1
     USER_MESSAGE = 2
     SHOW_HIDE_REQUEST = 100
+    REPLACE_TEXT_REQUEST = 101
     type = db.Column(db.Integer())
 
     # notifications are identified by the user they are intended for, plus a tag identifying

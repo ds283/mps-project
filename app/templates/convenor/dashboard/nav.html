@@ -72,7 +72,7 @@
         {% if live_count is defined %}
             <li {% if pane == 'live' %}class="active"{% endif %}><a href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
                 Live projects for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                <span class="badge">{{ live_count }}</span>
+                <span id="live-project-count" class="badge">{{ live_count }}</span>
             </a></li>
         {% endif %}
     </ul>

@@ -111,4 +111,4 @@ def remove_backup(id):
     db.session.delete(record)
     db.session.commit()
 
-    return True, ""
+    return True, ''

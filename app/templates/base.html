@@ -1,6 +1,6 @@
 {% extends "bootstrap/base.html" %}
 
-{% macro flashed_messages(messages=None, container=True, transform={
+{% macro flashed_messages(messages=None, transform={
   'critical': 'danger',
   'error': 'danger',
   'info': 'info',
@@ -12,26 +12,14 @@
     {% with messages = messages or get_flashed_messages(with_categories=True) -%}
         {% if messages -%} {# don't output anything if there are no messages #}
 
-            {% if container -%}
-                <!-- begin message block -->
-                <div class="container flashed-messages">
-            {% endif -%}
-
-        {% for cat, msg in messages %}
-            <div class="alert alert-
-                    {{ transform.get(cat.lower(), default_category or cat) }}{% if dismissible %} alert-dismissible{% endif %}"
-                 role="alert">
-                {% if dismissible %}
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span
-                            aria-hidden="true">&times;</span></button>{% endif %}
-                {{ msg }}
-            </div>
-        {%- endfor -%}
-
-        {% if container %}
-            </div>
-            <!-- end message block -->
-        {% endif -%}
+            {% for cat, msg in messages %}
+                <div class="alert alert-{{ transform.get(cat.lower(), default_category or cat) }}{% if dismissible %} alert-dismissible{% endif %}" role="alert">
+                    {% if dismissible %}
+                        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    {% endif %}
+                    {{ msg }}
+                </div>
+            {%- endfor -%}
 
         {% endif -%}
     {% endwith -%}
@@ -145,6 +133,11 @@
                 $('#'+payload.html_id).collapse(payload.action);
             }
 
+            function replace_text(notification) {
+                let payload = notification.payload;
+                $('#'+payload.html_id).text(payload.text);
+            }
+
             function get_notifications(first_pass) {
                 $.ajax('{{ url_for('admin.notifications_ajax') }}?since=' + since).done(
                     function(notifications) {
@@ -166,6 +159,10 @@
 
                                 case 100:   // SHOW_HIDE_REQUEST
                                     show_hide(notifications[i])
+                                    break;
+
+                                case 101:   // REPLACE_TEXT_REQUEST
+                                    replace_text(notifications[i])
                                     break;
                             }
 
@@ -412,7 +409,9 @@
         <div class="row">
             <div class="col-xs-1"></div>
             <div class="col-xs-10">
-                {{ flashed_messages() }}
+                <div id="flashed-messages" class="collapse in" aria-expanded="true">
+                    {{ flashed_messages() }}
+                </div>
                 <div id="messages-area" class="collapse" aria-expanded="false">
                 </div>
                 <div id="tasks-area" class="well collapse" aria-expanded="false">

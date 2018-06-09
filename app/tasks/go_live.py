@@ -109,6 +109,7 @@ def register_golive_tasks(celery):
             # send direct message to user announcing successful rollover
             convenor.post_message('Go Live "{proj}" for {yra}-{yrb} is now complete'.format(
                 proj=config.project_class.name, yra=config.year, yrb=config.year+1), 'success', autocommit=False)
+            convenor.send_replacetext('live-project-count', '{c}'.format(c=config.live_projects.count()))
 
             commit = True
 

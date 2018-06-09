@@ -2310,7 +2310,11 @@ def notifications_ajax():
     # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
     modified = False
     for n in notifications:
-        if n.type == Notification.USER_MESSAGE or n.type == Notification.SHOW_HIDE_REQUEST:
+
+        if n.type == Notification.USER_MESSAGE \
+            or n.type == Notification.SHOW_HIDE_REQUEST \
+                or n.type == Notification.REPLACE_TEXT_REQUEST:
+
             n.remove_on_pageload = True
             modified = True
 

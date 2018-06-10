@@ -11,7 +11,7 @@
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import User, TaskRecord
+from ..models import db, User, TaskRecord
 from ..task_queue import progress_update
 
 
@@ -25,17 +25,19 @@ def register_user_launch_tasks(celery):
 
 
     @celery.task(bind=True)
-    def mark_user_task_ended(self, task_id, name, user_id):
+    def mark_user_task_ended(self, task_id, name, user_id, notify=False):
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Task "{name}" complete'.format(name=name),
-                        autocommit=False)
+                        autocommit=not notify)
 
         try:
             owner = User.query.filter_by(id=user_id).first()
         except SQLAlchemyError:
+            db.session.commit()
             raise self.retry()
 
-        owner.post_message('Task "{name}" completed successfully'.format(name=name), 'success', autocommit=True)
+        if notify:
+            owner.post_message('Task "{name}" completed successfully'.format(name=name), 'success', autocommit=True)
 
 
     @celery.task(bind=True)
@@ -46,6 +48,7 @@ def register_user_launch_tasks(celery):
         try:
             owner = User.query.filter_by(id=user_id).first()
         except SQLAlchemyError:
+            db.session.commit()
             raise self.retry()
 
         owner.post_message('Task "{name}" failed to complete'.format(name=name), 'danger', autocommit=True)

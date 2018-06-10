@@ -23,6 +23,7 @@ from ..models import db, User, BackupRecord
 from ..shared.backup import get_backup_config, get_backup_count, get_backup_size, remove_backup
 
 from datetime import datetime, timedelta
+from dateutil import parser
 
 import random
 
@@ -418,3 +419,43 @@ def register_backup_tasks(celery):
 
         backup_path = current_app.config['BACKUP_FOLDER']
         _prune_empty_folders(backup_path)
+
+
+    @celery.task(bind=True, serializer='pickle')
+    def prune_backup_cutoff(self, id, limit):
+        """
+        Delete all backups older than the specified date
+        :param duration:
+        :param interval:
+        :return:
+        """
+
+        if isinstance(limit, str):
+            limit = parser.parse(limit)
+
+        try:
+            record = BackupRecord.query.filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record.date < limit:
+            success, msg = remove_backup(id)
+
+            if not success:
+                self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
+
+
+    @celery.task(bind=True)
+    def delete_backup(self, id):
+        """
+        Delete a specified backup; just hand off to remove_backup() method.
+        Designed to be called as part of a group constructed by the front end.
+        :param self:
+        :param id:
+        :return:
+        """
+
+        success, msg = remove_backup(id)
+
+        if not success:
+            self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))

@@ -16,7 +16,7 @@ from flask_security.utils import config_value, get_message, do_flash, \
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
-from celery import chain
+from celery import chain, group
 
 from .actions import register_user
 from .forms import RoleSelectForm, \
@@ -32,7 +32,7 @@ from .forms import RoleSelectForm, \
     AddMessageForm, EditMessageForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
-    EditBackupOptionsForm
+    EditBackupOptionsForm, BackupManageForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
@@ -1451,7 +1451,8 @@ def confirm_global_rollover():
                                                                                      yearb=next_year + 1)
     action_url = url_for('admin.perform_global_rollover')
     message = 'Please confirm that you wish to advance the global academic year to ' \
-              '{yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year + 1)
+              '{yeara}&ndash;{yearb}. ' \
+              'This action cannot be undone.'.format(yeara=next_year, yearb=next_year + 1)
     submit_label = 'Rollover to {yr}'.format(yr=next_year)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -1490,14 +1491,7 @@ def email_log():
     if form.validate_on_submit():
 
         if form.delete_age.data is True:
-            cutoff = form.days.data
-
-            now = datetime.now()
-            delta = timedelta(days=cutoff)
-            limit = now - delta
-
-            EmailLog.query.filter(EmailLog.send_date < limit).delete()
-            db.session.commit()
+            return redirect(url_for('admin.confirm_delete_email_cutoff', cutoff=(form.weeks.data)))
 
     return render_template('admin/email_log.html', form=form)
 
@@ -1556,8 +1550,9 @@ def confirm_delete_all_emails():
     panel_title = 'Confirm delete of all emails retained in log'
 
     action_url = url_for('admin.delete_all_emails')
-    message = 'Please confirm that you wish to delete all emails retained in the log.'
-    submit_label = 'Delete'
+    message = 'Please confirm that you wish to delete all emails retained in the log. ' \
+              'This action cannot be undone.'
+    submit_label = 'Delete all'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
                            message=message, submit_label=submit_label)
@@ -1571,8 +1566,80 @@ def delete_all_emails():
     :return:
     """
 
-    db.session.query(EmailLog).delete()
-    db.session.commit()
+    # hand off job to asynchronous task backend since potentially long-running on a big database
+    celery = current_app.extensions['celery']
+    delete_email = celery.tasks['app.tasks.prune_email.delete_all_email']
+
+    tk_name = 'Manual delete email'
+    tk_description = 'Manually delete all email'
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                delete_email.si(),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async()
+
+    return redirect(url_for('admin.email_log'))
+
+
+
+@admin.route('/confirm_delete_email_cutoff/<int:cutoff>')
+@roles_required('root')
+def confirm_delete_email_cutoff(cutoff):
+    """
+    Show confirmation box to delete emails with a cutoff
+    :return:
+    """
+
+    pl = 's'
+    if cutoff == 1:
+        pl = ''
+
+    title = 'Confirm delete'
+    panel_title = 'Confirm delete all emails older than {c} week{pl}'.format(c=cutoff, pl=pl)
+
+    action_url = url_for('admin.delete_email_cutoff', cutoff=cutoff)
+    message = 'Please confirm that you wish to delete all emails older than {c} week{pl}. ' \
+              'This action cannot be undone.'.format(c=cutoff, pl=pl)
+    submit_label = 'Delete'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/delete_email_cutoff/<int:cutoff>')
+@roles_required('root')
+def delete_email_cutoff(cutoff):
+    """
+    Delete all emails older than the given cutoff
+    :param cutoff:
+    :return:
+    """
+
+    pl = 's'
+    if cutoff == 1:
+        pl = ''
+
+    # hand off job to asynchronous task backend since potentially long-running on a big database
+    celery = current_app.extensions['celery']
+    prune_email = celery.tasks['app.tasks.prune_email.prune_email_log']
+
+    tk_name = 'Manual delete email'
+    tk_description = 'Manually delete email older than {c} week{pl}'.format(c=cutoff, pl=pl)
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                prune_email.si(duration=cutoff, interval='weeks'),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async()
 
     return redirect(url_for('admin.email_log'))
 
@@ -2111,7 +2178,7 @@ def launch_scheduled_task(id):
 
     seq = chain(init.si(task_id, record.name),
                 tk.signature(record.args, record.kwargs, immutable=True),
-                final.si(task_id, record.name, current_user.id)).on_error(
+                final.si(task_id, record.name, current_user.id, notify=True)).on_error(
         error.si(task_id, record.name, current_user.id))
     seq.apply_async()
 
@@ -2241,7 +2308,7 @@ def backups_overview():
                            last_batch=last_batch, gauge_script=gauge_script, gauge_div=gauge_div)
 
 
-@admin.route('/manage_backups')
+@admin.route('/manage_backups', methods=['GET', 'POST'])
 @roles_required('root')
 def manage_backups():
     """
@@ -2251,7 +2318,14 @@ def manage_backups():
 
     backup_count = get_backup_count()
 
-    return render_template('admin/backup_dashboard/manage.html', pane='view', backup_count=backup_count)
+    form = BackupManageForm(request.form)
+
+    if form.validate_on_submit():
+
+        if form.delete_age.data is True:
+            return redirect(url_for('admin.confirm_delete_backup_cutoff', cutoff=(form.weeks.data)))
+
+    return render_template('admin/backup_dashboard/manage.html', pane='view', backup_count=backup_count, form=form)
 
 
 @admin.route('/manage_backups_ajax', methods=['GET', 'POST'])
@@ -2264,6 +2338,120 @@ def manage_backups_ajax():
 
     backups = db.session.query(BackupRecord)
     return ajax.site.backups_data(backups)
+
+
+@admin.route('/confirm_delete_all_backups')
+@roles_required('root')
+def confirm_delete_all_backups():
+    """
+    Show confirmation box to delete all backups
+    :return:
+    """
+
+    title = 'Confirm delete'
+    panel_title = 'Confirm delete all backups'
+
+    action_url = url_for('admin.delete_all_backups')
+    message = 'Please confirm that you wish to delete all backups. ' \
+              'This action cannot be undone.'
+    submit_label = 'Delete all'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/delete_all_backups')
+@roles_required('root')
+def delete_all_backups():
+    """
+    Delete all backups
+    :return:
+    """
+
+    # hand off job to asynchronous task backend since potentially long-running on a big database
+    celery = current_app.extensions['celery']
+    del_backup = celery.tasks['app.tasks.backup.delete_backup']
+
+    tk_name = 'Manual delete backups'
+    tk_description = 'Manually delete all backups'
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    backups = db.session.query(BackupRecord.id).all()
+    work_group = group(del_backup.si(id) for id in backups)
+
+    seq = chain(init.si(task_id, tk_name), work_group,
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async()
+
+    return redirect(url_for('admin.manage_backups'))
+
+
+@admin.route('/confirm_delete_backup_cutoff/<int:cutoff>')
+@roles_required('root')
+def confirm_delete_backup_cutoff(cutoff):
+    """
+    Show confirmation box to delete all backups older than a given cutoff
+    :param cutoff:
+    :return:
+    """
+
+    pl = 's'
+    if cutoff == 1:
+        pl = ''
+
+    title = 'Confirm delete'
+    panel_title = 'Confirm delete all backups older than {c} week{pl}'.format(c=cutoff, pl=pl)
+
+    action_url = url_for('admin.delete_backup_cutoff', cutoff=cutoff)
+    message = 'Please confirm that you wish to delete all backups older than {c} week{pl}. ' \
+              'This action cannot be undone.'.format(c=cutoff, pl=pl)
+    submit_label = 'Delete'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/delete_backup_cutoff/<int:cutoff>')
+@roles_required('root')
+def delete_backup_cutoff(cutoff):
+    """
+    Delete all backups older than the given cutoff
+    :param cutoff:
+    :return:
+    """
+
+    pl = 's'
+    if cutoff == 1:
+        pl = ''
+
+    # hand off job to asynchronous task backend since potentially long-running on a big database
+    celery = current_app.extensions['celery']
+    del_backup = celery.tasks['app.tasks.backup.prune_backup_cutoff']
+
+    tk_name = 'Manual delete backups'
+    tk_description = 'Manually delete backupos older than {c} week{pl}'.format(c=cutoff, pl=pl)
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    now = datetime.now()
+    delta = timedelta(weeks=cutoff)
+    limit = now - delta
+
+    backups = db.session.query(BackupRecord.id).all()
+    work_group = group(del_backup.si(id, limit) for id in backups)
+
+    seq = chain(init.si(task_id, tk_name), work_group,
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async()
+
+    return redirect(url_for('admin.manage_backups'))
 
 
 @admin.route('/confirm_delete_backup/<int:id>')
@@ -2280,7 +2468,8 @@ def confirm_delete_backup(id):
     panel_title = 'Confirm delete of backup {d}'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
 
     action_url = url_for('admin.delete_backup', id=id)
-    message = 'Please confirm that you wish to delete the backup {d}'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
+    message = 'Please confirm that you wish to delete the backup {d}. ' \
+              'This action cannot be undone.'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
     submit_label = 'Delete'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,

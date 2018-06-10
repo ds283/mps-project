@@ -40,6 +40,11 @@ _scheduled_menu_template = \
                 </a>
             {% endif %}
         </li>
+        <li>
+            <a href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">
+                Run now
+            </a>
+        </li>
     </ul>
 </div>
 """

@@ -16,6 +16,8 @@ from flask_security.utils import config_value, get_message, do_flash, \
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
+from celery import chain
+
 from .actions import register_user
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
@@ -2083,6 +2085,35 @@ def deactivate_scheduled_task(id):
 
     task.enabled = False
     db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/launch_scheduled_task/<int:id>')
+@roles_required('root')
+def launch_scheduled_task(id):
+    """
+    Launch a specified task as a background task
+    :param id:
+    :return:
+    """
+
+    record = DatabaseSchedulerEntry.query.get_or_404(id)
+
+    task_id = register_task(record.name, current_user, 'Scheduled task launched from web user interface')
+
+    celery = current_app.extensions['celery']
+    tk = celery.tasks[record.task]
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, record.name),
+                tk.signature(record.args, record.kwargs, immutable=True),
+                final.si(task_id, record.name, current_user.id)).on_error(
+        error.si(task_id, record.name, current_user.id))
+    seq.apply_async()
 
     return redirect(request.referrer)
 

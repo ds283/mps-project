@@ -1126,10 +1126,10 @@ class Project(db.Model):
                            backref=db.backref('projects', lazy='dynamic'))
 
     # project description
-    description = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+    description = db.Column(db.Text())
 
     # recommended reading
-    reading = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+    reading = db.Column(db.Text())
 
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -1316,10 +1316,10 @@ class LiveProject(db.Model):
                            backref=db.backref('live_projects', lazy='dynamic'))
 
     # project description
-    description = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+    description = db.Column(db.Text())
 
     # recommended reading
-    reading = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+    reading = db.Column(db.Text())
 
 
     # METADATA
@@ -1564,10 +1564,10 @@ class EmailLog(db.Model):
     subject = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # message body (text)
-    body = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+    body = db.Column(db.Text())
 
     # message body (HTML)
-    html = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+    html = db.Column(db.Text())
 
 
 class MessageOfTheDay(db.Model):
@@ -1605,7 +1605,7 @@ class MessageOfTheDay(db.Model):
     title = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # message text
-    body = db.Column(db.String(DESCRIPTION_STRING_LENGTH))
+    body = db.Column(db.Text())
 
     # associate with which projects?
     project_classes = db.relationship('ProjectClass', secondary=pclass_message_associations, lazy='dynamic',

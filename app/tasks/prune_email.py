@@ -18,30 +18,27 @@ from datetime import datetime, timedelta
 
 def register_prune_email(celery):
 
-    @celery.task()
-    def prune_email_log(duration=52, interval='weeks'):
-
-        emails = db.session.query(EmailLog).all()
-
-        for item in emails:
-            prune_email.apply_async(args=(duration, interval, item.id))
-
-
     @celery.task(bind=True)
-    def prune_email(self, interval, duration, id):
+    def prune_email_log(self, duration=52, interval='weeks'):
 
         now = datetime.now()
         delta = timedelta(**{interval: duration})
+        limit = now - delta
 
         try:
-            record = EmailLog.query.filter_by(id=id).first()
+            EmailLog.query.filter(EmailLog.send_date < limit).delete()
+            db.session.commit()
         except SQLAlchemyError:
+            db.rollback()
             raise self.retry()
 
-        if record is not None:
 
-            age = now - record.send_date
+    @celery.task(bind=True)
+    def delete_all_email(self):
 
-            if age > delta:
-                db.session.delete(record)
-                db.commit()
+        try:
+            EmailLog.query.delete()
+            db.session.commit()
+        except SQLAlchemyError:
+            db.rollback()
+            raise self.retry()

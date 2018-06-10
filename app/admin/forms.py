@@ -500,7 +500,7 @@ class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
                                           unique_or_original_project_class])
-    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is rqwuired'),
+    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
                                                            unique_or_original_project_class_abbrev])
 
 
@@ -520,9 +520,18 @@ class EditSupervisorForm(Form, EditFormMixin):
 
 class EmailLogForm(Form):
 
-    days = IntegerField('Age cutoff in days', validators=[DataRequired(message='Cutoff is required')])
+    weeks = IntegerField('Age cutoff in weeks', validators=[DataRequired(message='Cutoff is required. Emails older '
+                                                                                 'than the limit will be removed.')])
 
     delete_age = SubmitField('Delete emails older than cutoff')
+
+
+class BackupManageForm(Form):
+
+    weeks = IntegerField('Age cutoff in weeks', validators=[DataRequired(message='Cutoff is required. Backups older '
+                                                                                 'than the limit will be removed.')])
+
+    delete_age = SubmitField('Delete backups older than cutoff')
 
 
 class MessageMixin():

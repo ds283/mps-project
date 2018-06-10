@@ -280,7 +280,7 @@ def register_backup_tasks(celery):
         max_hourly_age = timedelta(days=keep_hourly)
         max_daily_age = max_hourly_age + timedelta(weeks=keep_daily)
 
-        # bin backups into categories (but only those tagged as ordinary scheduled backups; ie., we don't thin backps
+        # bin backups into categories (but only those tagged as ordinary scheduled backups; ie., we don't thin backups
         # that have been taken for special purposes, such as snapshots constructed before rolling over
         # the academic year) into hourly, daily, weekly groups depending on age
         daily = {}
@@ -301,7 +301,7 @@ def register_backup_tasks(celery):
 
             if age < max_hourly_age:
 
-                # do nothing; we just keep the backups in this period
+                # do nothing; in this period we just keep all backups
                 pass
 
             elif age < max_daily_age:
@@ -327,8 +327,42 @@ def register_backup_tasks(celery):
     @celery.task(default_retry_delay=30)
     def thin():
 
-        seq = chain(do_thinning.s(), clean_up.si())
+        seq = chain(drop_absent_backups.si(), do_thinning.si(), clean_up.si())
         seq.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def drop_absent_backups(self):
+
+        # query database for backup records, and queue a retry if it fails
+        try:
+            records = db.session.query(BackupRecord.id).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        # build a group of tasks, one for each backup
+        seq = group(drop_backup_if_absent.si(id) for id in records)
+        seq.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def drop_backup_if_absent(self, id):
+
+        # query database for backup records, and queue a retry if it fails
+        try:
+            record = db.session.query(BackupRecord).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Database record could not be loaded')
+
+        backup_folder = current_app.config['BACKUP_FOLDER']
+        abspath = path.join(backup_folder, record.filename)
+
+        if not path.exists(abspath):
+            db.session.delete(record)
+            db.session.commit()
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -367,7 +401,7 @@ def register_backup_tasks(celery):
     @celery.task(default_retry_delay=30)
     def limit_size():
 
-        seq = chain(apply_size_limit.si(), clean_up.si())
+        seq = chain(drop_absent_backups.si(), apply_size_limit.si(), clean_up.si())
         seq.apply_async()
 
 

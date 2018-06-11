@@ -28,7 +28,6 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {{ closed_panel(config) }}
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Faculty enrolled in <strong>{{ pclass.name }}</strong></div>
         <div class="panel-body">
@@ -37,12 +36,12 @@
                 <tr>
                     <th width="12%"> Last name</th>
                     <th width="12%"> First name</th>
-                    <th width="16%"> Email</th>
+                    <th width="21%"> Email</th>
                     <th width="10%"> Enrolled?</th>
                     <th width="10%"> Projects available</th>
                     <th width="10%"> Projects not offerable</th>
                     <th width="10%"> Go-live?</th>
-                    <th width="20%"> Actions</th>
+                    <th width="15%"> Actions</th>
                 </tr>
                 </thead>
             </table>

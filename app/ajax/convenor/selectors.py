@@ -181,3 +181,21 @@ def selectors_data(students, config):
              'menu': render_template_string(_menu, student=s, config=config)} for s in students]
 
     return jsonify(data)
+
+
+_enroll_action = \
+"""
+<a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id) }}" class="btn btn-success btn-sm">Enroll</a>
+"""
+
+
+def enroll_selectors_data(students, config):
+
+    data = [{'last': s.user.last_name,
+             'first': s.user.first_name,
+             'programme': '<span class="label label-default">{prog}</span>'.format(prog=s.programme.name),
+             'admitted': '<span class="label label-info">{yra}-{yrb}</span>'.format(yra=s.cohort, yrb=s.cohort+1),
+             'acadyear': '<span class="label label-info">Y{yr}</span>'.format(yr=config.year-s.cohort+1),
+             'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
+
+    return jsonify(data)

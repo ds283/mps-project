@@ -2433,7 +2433,7 @@ def delete_backup_cutoff(cutoff):
     del_backup = celery.tasks['app.tasks.backup.prune_backup_cutoff']
 
     tk_name = 'Manual delete backups'
-    tk_description = 'Manually delete backupos older than {c} week{pl}'.format(c=cutoff, pl=pl)
+    tk_description = 'Manually delete backups older than {c} week{pl}'.format(c=cutoff, pl=pl)
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks['app.tasks.user_launch.mark_user_task_started']

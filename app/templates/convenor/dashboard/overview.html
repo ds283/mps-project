@@ -78,9 +78,8 @@
 
                     {% else %}
 
-                        {% if config.live and config.closed %}
-                            {{ closed_panel(config) }}
-                        {% elif config.open %}
+                        {% if config.open %}
+
                             <div class="panel panel-success">
                                 <div class="panel-heading"><strong>Student choices are currently live</strong></div>
                                 <div class="panel-body">
@@ -103,7 +102,9 @@
                                     </div>
                                 </div>
                             </div>
+
                         {% elif not config.live %}
+
                             {% if config.project_class.require_confirm %}
 
                                 {# if we get here then we can assume requests have been issued because of the outermost if#}

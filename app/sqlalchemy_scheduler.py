@@ -21,6 +21,10 @@ from celery.utils.time import is_naive
 from .models import db, DatabaseSchedulerEntry, CrontabSchedule, IntervalSchedule
 
 
+# set default sleep interval to be 10 minutes
+_sleep_interval = 5
+
+
 class Entry(ScheduleEntry):
     model_schedules = ((schedules.crontab, CrontabSchedule, 'crontab'),
                        (schedules.schedule, IntervalSchedule, 'interval'))
@@ -160,7 +164,7 @@ class DatabaseScheduler(Scheduler):
         Scheduler.tick(self)
         if self.should_sync():
             self.sync()
-        return 5  # sleep time until next tick
+        return _sleep_interval  # sleep time until next tick
 
     def should_sync(self):
         sync_reason_time = (time.time() - self._last_sync) > self.sync_every

@@ -8,13 +8,18 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..models import db, User, TaskRecord, BackupRecord, ProjectClass, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData
+
 from ..task_queue import progress_update
+
 from ..shared.utils import get_current_year
+
+from ..shared.convenor import add_selector, add_submitter
 
 from celery import chain, group
 
@@ -224,18 +229,12 @@ def register_rollover_tasks(celery):
                 and (pclass.selection_open_to_all or student.programme in pclass.programmes):
 
             # will be a selecting student
-            selector = SelectingStudent(config_id=new_config_id,
-                                        user_id=student.user.id,
-                                        retired=False)
-            db.session.add(selector)
+            add_selector(student, new_config_id, autocommit=False)
 
         if pclass.year <= academic_year < pclass.year + pclass.extent \
                 and student.programme in pclass.programmes:
 
             # will be a submitting student
-            submitter = SubmittingStudent(config_id=new_config_id,
-                                          user_id=student.user.id,
-                                          retired=False)
-            db.session.add(submitter)
+            add_submitter(student, new_config_id, autocommit=False)
 
         db.session.commit()

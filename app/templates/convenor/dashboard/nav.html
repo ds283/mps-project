@@ -2,8 +2,6 @@
 
 {% extends "base_app.html" %}
 
-{% from "macros.html" import truncate %}
-
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
@@ -76,4 +74,7 @@
             </a></li>
         {% endif %}
     </ul>
+    {{ closed_panel(config) }}
+    {% block tabblock %}
+    {% endblock %}
 {% endblock %}

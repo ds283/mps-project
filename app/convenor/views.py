@@ -18,6 +18,7 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
 from ..shared.actions import render_live_project, do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
+from ..shared.convenor import add_selector, add_submitter, add_liveproject
 
 from ..task_queue import register_task
 
@@ -29,7 +30,7 @@ from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFa
 
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import func
+from sqlalchemy import func, and_
 
 
 _project_menu = \
@@ -99,7 +100,7 @@ def _dashboard_data(pclass, config):
     sel_count = db.session.query(func.count(SelectingStudent.id)). \
         filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
 
-    sub_count = db.session.query(func.count(SelectingStudent.id)). \
+    sub_count = db.session.query(func.count(SubmittingStudent.id)). \
         filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
 
     live_count = db.session.query(func.count(LiveProject.id)). \
@@ -264,7 +265,7 @@ def selectors(id):
 
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
-    return render_template('convenor/dashboard/selectors.html', pane='selectors',
+    return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
@@ -293,6 +294,88 @@ def selectors_ajax(id):
     selectors = config.selecting_students.filter_by(retired=False)
 
     return ajax.convenor.selectors_data(selectors, config)
+
+
+@convenor.route('/enroll_selectors/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_selectors(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/enroll_selectors.html', pane='selectors', subpane='enroll',
+                           pclass=pclass, config=config, fac_data=fac_data,
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count)
+
+
+@convenor.route('/enroll_selectors_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_selectors_ajax(id):
+    """
+    Ajax data point for selectors view
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    # which year does the project run in, and for how long?
+    year = config.project_class.year
+    extent = config.project_class.extent
+
+    # earliest year: academic year in which students can be selectors
+    first_selector_year = year - 1
+    # latest year: last academic year in which students can be a selector
+    last_selector_year = year + (extent - 1) - 1
+
+    # build a list of eligible students who are not already attached as selectors
+    candidates = db.session.query(StudentData).filter(StudentData.cohort >= config.year - first_selector_year + 1,
+                                                      StudentData.cohort <= config.year - last_selector_year + 1)
+
+    # build a list of existing selecting students
+    selectors = db.session.query(SelectingStudent.user_id).filter(SelectingStudent.config_id == config.id,
+                                                                  ~SelectingStudent.retired).subquery()
+
+    # find students in candidates who are not also in selectors
+    missing = candidates.join(selectors, selectors.c.user_id==StudentData.id, isouter=True).filter(selectors.c.user_id==None)
+
+    return ajax.convenor.enroll_selectors_data(missing, config)
+
+
+@convenor.route('/enroll_selector/<int:sid>/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_selector(sid, configid):
+    """
+    Manually enroll a student as a selector
+    :param sid:
+    :param configid:
+    :return:
+    """
+
+    add_selector(sid, configid, autocommit=True)
+
+    return redirect(request.referrer)
 
 
 @convenor.route('/submitters/<int:id>')

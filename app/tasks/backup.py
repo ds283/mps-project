@@ -455,7 +455,11 @@ def register_backup_tasks(celery):
         :return:
         """
 
-        success, msg = remove_backup(id)
+        try:
+            success, msg = remove_backup(id)
+        except SQLAlchemyError:
+            db.rollback()
+            raise self.retry()
 
         if not success:
             self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))

@@ -13,8 +13,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..models import db, User, TaskRecord, BackupRecord, ProjectClass, ProjectClassConfig, \
     Project, LiveProject
+
 from ..task_queue import progress_update
+
 from ..shared.utils import get_current_year
+from ..shared.convenor import add_liveproject
 
 from celery import chain, group
 
@@ -135,33 +138,11 @@ def register_golive_tasks(celery):
     @celery.task(bind=True)
     def project_golive(self, number, pid, config_id):
 
-        # extract this project
         try:
-            item = Project.query.filter_by(id=pid).first()
+            add_liveproject(number, pid, config_id, autocommit=True)
         except SQLAlchemyError:
+            db.session.rollback()
             raise self.retry()
-
-        if item is None:
-            self.update_state('FAILURE', meta='Could not load database record for Project')
-            return
-
-        # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
-        # all project classes need their own LiveProject record
-        live_item = LiveProject(config_id=config_id,
-                                number=number,
-                                name=item.name,
-                                keywords=item.keywords,
-                                owner_id=item.owner_id,
-                                group_id=item.group_id,
-                                skills=item.skills,
-                                capacity=item.capacity,
-                                enforce_capacity=item.enforce_capacity,
-                                meeting_reqd=item.meeting_reqd,
-                                team=item.team,
-                                description=item.description,
-                                reading=item.reading,
-                                page_views=0,
-                                last_view=None)
-
-        db.session.add(live_item)
-        db.session.commit()
+        except KeyError as e:
+            db.session.rollback()
+            self.update_state(state='FAILURE', meta='Database error: {msg}'.format(msg=str(e)))

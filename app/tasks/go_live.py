@@ -66,7 +66,7 @@ def register_golive_tasks(celery):
             self.update_state('FAILURE', meta='No attached projects')
 
         # build group of tasks to automatically take attached projects live
-        projects_group = group(project_golive.si(n, p.id, current_id) for n, p in enumerate(attached_projects))
+        projects_group = group(project_golive.si(n+1, p.id, current_id) for n, p in enumerate(attached_projects))
 
         # get backup task from Celery instance
         celery = current_app.extensions['celery']

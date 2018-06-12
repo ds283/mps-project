@@ -1437,27 +1437,6 @@ def student_clear_bookmarks(sid):
     return redirect(request.referrer)
 
 
-@convenor.route('/live_project/<int:pid>')
-@roles_accepted('faculty', 'admin', 'root')
-def live_project(pid):
-    """
-    View a specific project on the live system
-    :param tabid:
-    :param classid:
-    :param pid:
-    :return:
-    """
-
-    # pid is the id for a LiveProject
-    data = LiveProject.query.get_or_404(pid)
-
-    # verify the logged-in user is allowed to view this live project
-    if not validate_user(data):
-        return redirect(request.referrer)
-
-    return render_live_project(data)
-
-
 @convenor.route('/confirm_rollover/<int:pid>/<int:configid>')
 @roles_accepted('faculty', 'admin', 'route')
 def confirm_rollover(pid, configid):

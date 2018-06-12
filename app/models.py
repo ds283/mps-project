@@ -1105,7 +1105,7 @@ class Project(db.Model):
     skills = db.relationship('TransferableSkill', secondary=project_skills, lazy='dynamic',
                              backref=db.backref('projects', lazy='dynamic'))
 
-    # which degree programmes are associated with this project?
+    # which degree programmes are preferred for this project?
     programmes = db.relationship('DegreeProgramme', secondary=project_programmes, lazy='dynamic',
                                  backref=db.backref('projects', lazy='dynamic'))
 
@@ -1301,7 +1301,7 @@ class LiveProject(db.Model):
     skills = db.relationship('TransferableSkill', secondary=live_project_skills, lazy='dynamic',
                              backref=db.backref('live_projects', lazy='dynamic'))
 
-    # which degree programmes are associated with this project?
+    # which degree programmes are preferred for this project?
     programmes = db.relationship('DegreeProgramme', secondary=live_project_programmes, lazy='dynamic',
                                  backref=db.backref('live_projects', lazy='dynamic'))
 

@@ -529,3 +529,27 @@ def live_project(pid):
         return redirect(request.referrer)
 
     return render_live_project(data)
+
+
+@faculty.route('/past_projects')
+@roles_accepted('faculty', 'admin', 'root')
+def past_projects():
+    """
+    Show list of previously offered projects, extracted from live table
+    :return:
+    """
+
+    return render_template('faculty/past_projects.html')
+
+
+@faculty.route('/past_projects_ajax')
+@roles_accepted('faculty', 'admin', 'root')
+def past_projects_ajax():
+    """
+    Ajax data point for list of previously offered projects
+    :return:
+    """
+
+    past_projects = LiveProject.query.filter_by(owner_id=current_user.id)
+
+    return ajax.faculty.pastproject_data(past_projects)

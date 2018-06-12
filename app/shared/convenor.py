@@ -38,6 +38,7 @@ def add_liveproject(number, project, config_id, autocommit=False):
                             enforce_capacity=item.enforce_capacity,
                             meeting_reqd=item.meeting_reqd,
                             team=item.team,
+                            programmes=item.programmes,
                             description=item.description,
                             reading=item.reading,
                             page_views=0,

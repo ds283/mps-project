@@ -99,8 +99,8 @@ _menu = \
     </button>
     <ul class="dropdown-menu">
         <li>
-            <a href="{{ url_for('convenor.live_project', pid=project.id) }}">
-                Preview web page
+            <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+                View web page
             </a>
         </li>
         {% if config.open and project.confirm_waiting and project.confirm_waiting.first() %}
@@ -147,7 +147,7 @@ def liveprojects_data(config):
 
     data = [{'number': '{c}'.format(c=p.number),
              'name': '<a href="{url}"><strong>{name}</strong></a>'.format(name=p.name,
-                                                                          url=url_for('convenor.live_project',
+                                                                          url=url_for('faculty.live_project',
                                                                                       pid=p.id)),
              'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.email,
                                                                 name=p.owner.build_name()),

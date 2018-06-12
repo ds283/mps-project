@@ -7,8 +7,8 @@
                 Show enrolled
             </a>
         </li>
-        <li {% if subpane=='enroll' %}class="active"{% endif %}>
-            <a href="{{ url_for('convenor.enroll_selectors', id=pclass.id) }}">
+        <li {% if not config.closed %}{% if subpane=='enroll' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
+            <a {% if not config.closed %}href="{{ url_for('convenor.enroll_selectors', id=pclass.id) }}"{% endif %}>
                 Manual enrollment
             </a>
         </li>

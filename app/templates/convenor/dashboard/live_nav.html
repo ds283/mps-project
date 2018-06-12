@@ -7,8 +7,8 @@
                 Currently live projects
             </a>
         </li>
-        <li {% if config.live %}{% if subpane=='attach' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
-            <a {% if config.live %}href="{{ url_for('convenor.attach_liveproject', id=pclass.id) }}"{% endif %}>
+        <li {% if config.live and not config.closed %}{% if subpane=='attach' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
+            <a {% if config.live and not config.closed %}href="{{ url_for('convenor.attach_liveproject', id=pclass.id) }}"{% endif %}>
                 Manually attach a project
             </a>
         </li>

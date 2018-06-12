@@ -12,7 +12,8 @@ from flask import render_template, render_template_string, redirect, url_for, fl
 from flask_security import roles_required, roles_accepted, current_user
 
 from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
-    TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay
+    TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
+    EnrollmentRecord
 
 import app.ajax as ajax
 
@@ -25,8 +26,6 @@ from ..shared.validators import validate_user, validate_open
 from ..shared.actions import render_live_project, do_confirm, do_deconfirm
 
 from datetime import datetime
-
-
 
 
 @faculty.route('/affiliations')
@@ -51,8 +50,7 @@ def add_affiliation(groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group not in data.affiliations:
-        data.add_affiliation(group)
-        db.session.commit()
+        data.add_affiliation(group, autocommit=True)
 
     return redirect(request.referrer)
 
@@ -65,8 +63,7 @@ def remove_affiliation(groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group in data.affiliations:
-        data.remove_affiliation(group)
-        db.session.commit()
+        data.remove_affiliation(group, autocommit=True)
 
     return redirect(request.referrer)
 
@@ -396,11 +393,11 @@ def dashboard():
 
     # build list of current configuration records for all enrolled project classes
     enrollments = []
-    for item in current_user.faculty_data.enrollments:
+    for record in current_user.faculty_data.enrollments:
 
-        if item.active:
-
-            config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
+        if (record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED \
+                or record.marker_state == EnrollmentRecord.MARKER_ENROLLED) and record.pclass.active:
+            config = record.pclass.configs.order_by(ProjectClassConfig.year.desc()).first()
 
             # get live projects belonging to both this config item and the active user
             live_projects = config.live_projects.filter_by(owner_id=current_user.id)
@@ -415,7 +412,7 @@ def dashboard():
         include = message.project_classes.first() is None
         if not include:
             for pcl in message.project_classes:
-                if pcl in current_user.faculty_data.enrollments:
+                if current_user.faculty_data.is_enrolled(pcl):
                     include = True
                     break
 

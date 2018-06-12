@@ -92,7 +92,7 @@ def _dashboard_data(pclass, config):
         filter(User.active).join(FacultyData, FacultyData.id == User.id)
 
     fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(id=pclass.id)).scalar()
+    fac_count = fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)).scalar()
 
     proj_count = db.session.query(func.count(Project.id)). \
         filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
@@ -750,7 +750,7 @@ def add_project(pclass_id):
 
             if owner not in pclass.enrolled_faculty.all():
 
-                owner.enrollments.append(pclass)
+                owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.build_name(), pclass=pclass.name))
 
         db.session.add(data)
@@ -811,7 +811,7 @@ def edit_project(id, pclass_id):
 
             if owner not in pclass.enrolled_faculty.all():
 
-                owner.enrollments.append(pclass)
+                owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.build_name(), pclass=pclass.name))
 
         db.session.commit()
@@ -1107,8 +1107,7 @@ def enroll(userid, pclassid):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
-    data.add_enrollment(pclass)
-    db.session.commit()
+    data.add_enrollment(pclass, autocommit=True)
 
     return redirect(request.referrer)
 
@@ -1125,8 +1124,7 @@ def unenroll(userid, pclassid):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
-    data.remove_enrollment(pclass)
-    db.session.commit()
+    data.remove_enrollment(pclass, autocommit=True)
 
     return redirect(request.referrer)
 

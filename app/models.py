@@ -74,12 +74,6 @@ faculty_affiliations = db.Table('faculty_affiliations',
 # PROJECT CLASS ASSOCIATIONS
 
 
-# association table giving faculty enrollment on project classes
-faculty_enrollments = db.Table('faculty_enrollments',
-                               db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
-                               db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True)
-                               )
-
 # association table giving association between project classes and degree programmes
 pclass_programme_associations = db.Table('project_class_to_programmes',
                                          db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
@@ -477,10 +471,6 @@ class FacultyData(db.Model):
     affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations, lazy='dynamic',
                                    backref=db.backref('faculty', lazy='dynamic'))
 
-    # project class enrollments for this faculty member
-    enrollments = db.relationship('ProjectClass', secondary=faculty_enrollments, lazy='dynamic',
-                                  backref=db.backref('enrolled_faculty', lazy='dynamic'))
-
     # academic title (Prof, Dr)
     academic_title = db.Column(db.Integer())
 
@@ -525,7 +515,7 @@ class FacultyData(db.Model):
         return unofferable
 
 
-    def remove_affiliation(self, group):
+    def remove_affiliation(self, group, autocommit=False):
         """
         Remove an affiliation from a faculty member
         :param group:
@@ -540,8 +530,11 @@ class FacultyData(db.Model):
         for proj in ps.all():
             proj.group = None
 
+        if autocommit:
+            db.session.commit()
 
-    def add_affiliation(self, group):
+
+    def add_affiliation(self, group, autocommit=False):
         """
         Add an affiliation to this faculty member
         :param group:
@@ -550,31 +543,69 @@ class FacultyData(db.Model):
 
         self.affiliations.append(group)
 
+        if autocommit:
+            db.session.commit()
 
-    def remove_enrollment(self, pclass):
+
+    def is_enrolled(self, pclass):
+        """
+        Check whether this FacultyData record has an enrollment for a given project class
+        :param pclass:
+        :return:
+        """
+
+        # test whether an EnrollmentRecord exists for this project class
+        record = self.enrollments.filter_by(pclass_id=pclass.id).first()
+
+        if record is None:
+            return False
+
+        return True
+
+
+    def remove_enrollment(self, pclass, autocommit=False):
         """
         Remove an enrollment from a faculty member
         :param pclass:
         :return:
         """
 
-        self.enrollments.remove(pclass)
+        # find enrollment record for this project class
+        record = self.enrollments.filter_by(pclass_id=pclass.id).first()
+        if record is not None:
+            db.session.delete(record)
 
         # remove this project class from any projects owned by this faculty member
-        ps = Project.query.filter(Project.owner_id==self.id, Project.project_classes.any(id=pclass.id))
+        ps = Project.query.filter(Project.owner_id == self.id, Project.project_classes.any(id=pclass.id))
 
         for proj in ps.all():
             proj.remove_project_class(pclass)
 
+        if autocommit:
+            db.session.commit()
 
-    def add_enrollment(self, pclass):
+
+    def add_enrollment(self, pclass, autocommit=False):
         """
         Add an enrollment to this faculty member
         :param pclass:
         :return:
         """
 
-        self.enrollments.append(pclass)
+        record = EnrollmentRecord(pclass_id=pclass.id,
+                                  owner_id=self.id,
+                                  supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED,
+                                  supervisor_comment=None,
+                                  supervisor_reenroll=None,
+                                  marker_state=EnrollmentRecord.MARKER_ENROLLED,
+                                  marker_comment=None,
+                                  marker_reenroll=None)
+
+        db.session.add(record)
+        db.session.commit()
+
+        if autocommit:
+            db.session.commit()
 
 
 class StudentData(db.Model):
@@ -1021,6 +1052,49 @@ class ProjectClassConfig(db.Model):
             if member not in self.golive_required:      # don't object if we are generating a duplicate request
 
                 self.golive_required.append(member)
+
+
+class EnrollmentRecord(db.Model):
+    """
+    Capture details about a faculty member's enrollment
+    """
+
+    __tablename__ = 'enrollment_record'
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # pointer to project class for which this is an enrollment record
+    pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
+    pclass = db.relationship('ProjectClass', uselist=False, foreign_keys=[pclass_id])
+
+    # pointer to faculty member this record is associated with
+    owner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    owner = db.relationship('FacultyData', uselist=False, foreign_keys=[owner_id],
+                            backref=db.backref('enrollments', lazy='dynamic', cascade='all, delete-orphan'))
+
+    # enrollment for supervision
+    SUPERVISOR_ENROLLED = 0
+    SUPERVISOR_SABBATICAL = 1
+    SUPERVISOR_EXEMPT = 2
+    supervisor_state = db.Column(db.Integer())
+
+    # comment (eg. can be used to note circumstances of exemptions)
+    supervisor_comment = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # sabbatical auto re-enroll year (after sabbatical)
+    supervisor_reenroll = db.Column(db.Integer())
+
+    # enrollment for 2nd marking
+    MARKER_ENROLLED = 0
+    MARKER_SABBATICAL = 1
+    MARKER_EXEMPT = 2
+    marker_state = db.Column(db.Integer())
+
+    # comment (eg. can be used to note circumstances of exemption)
+    marker_comment = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # marker auto re-enroll year (after sabbatical)
+    marker_reenroll = db.Column(db.Integer())
 
 
 class Supervisor(db.Model):

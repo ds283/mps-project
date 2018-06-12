@@ -16,8 +16,8 @@
             {% if data and data.enrollments and project_classes %}
                 <h4>
                 {% for pclass in project_classes %}
-                    {% if pclass in data.enrollments %}
-                        <a class="btn btn-success btn-sm selection-label" href="{{ url_for('admin.remove_enrollment', userid=user.id, pclassid=pclass.id) }}"><i class="fa fa-times"></i> {{ pclass.name }}</a>
+                    {% if data.is_enrolled(pclass) %}
+                        <a class="btn btn-success selection-label" href="{{ url_for('admin.remove_enrollment', userid=user.id, pclassid=pclass.id) }}"><i class="fa fa-times"></i> {{ pclass.name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>
@@ -29,8 +29,8 @@
             {% if data and project_classes %}
                 <h4>
                 {% for pclass in project_classes %}
-                    {% if pclass not in data.enrollments %}
-                        <a class="btn btn-info selection-label" href="{{ url_for('admin.add_enrollment', userid=user.id, pclassid=pclass.id) }}"><i class="fa fa-plus"></i> {{ pclass.name }}</a>
+                    {% if not data.is_enrolled(pclass) %}
+                        <a class="btn btn-default selection-label" href="{{ url_for('admin.add_enrollment', userid=user.id, pclassid=pclass.id) }}"><i class="fa fa-plus"></i> {{ pclass.name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>

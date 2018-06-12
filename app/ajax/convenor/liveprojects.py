@@ -92,7 +92,7 @@ _confirmed = \
 _menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle table-button"
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle table-button"
             type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>

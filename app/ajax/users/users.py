@@ -31,7 +31,7 @@ _user_role_template = \
 _user_menu_template = \
 """
 <div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>

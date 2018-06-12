@@ -14,7 +14,7 @@ from flask import render_template_string, jsonify
 _supervisors_menu = \
 """
 <div class="dropdown">
-    <button class="btn btn-success btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>

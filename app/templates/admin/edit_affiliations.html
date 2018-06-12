@@ -17,7 +17,7 @@
                 <h4>
                 {% for group in research_groups %}
                     {% if group in data.affiliations %}
-                        <a class="btn btn-success btn-sm selection-label" href="{{ url_for('admin.remove_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-times"></i> {{ group.name }}</a>
+                        <a class="btn btn-success selection-label" href="{{ url_for('admin.remove_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-times"></i> {{ group.name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>
@@ -30,7 +30,7 @@
                 <h4>
                 {% for group in research_groups %}
                     {% if group not in data.affiliations %}
-                        <a class="btn btn-info selection-label" href="{{ url_for('admin.add_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-plus"></i> {{ group.name }}</a>
+                        <a class="btn btn-default selection-label" href="{{ url_for('admin.add_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-plus"></i> {{ group.name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>

@@ -17,7 +17,7 @@
                 <h4>
                 {% for skill in skills %}
                     {% if skill in data.skills %}
-                        <a class="btn btn-success btn-sm selection-label" href="{{ url_for('faculty.remove_skill', projectid=data.id, skillid=skill.id) }}"><i class="fa fa-times"></i> {{ skill.name }}</a>
+                        <a class="btn btn-success selection-label" href="{{ url_for('faculty.remove_skill', projectid=data.id, skillid=skill.id) }}"><i class="fa fa-times"></i> {{ skill.name }}</a>
                     {% endif %}
                 {% else %}
                     No skills currently attached.
@@ -32,7 +32,7 @@
                 <h4>
                 {% for skill in skills %}
                     {% if skill not in data.skills %}
-                        <a class="btn btn-info selection-label" href="{{ url_for('faculty.add_skill', projectid=data.id, skillid=skill.id) }}"><i class="fa fa-plus"></i> {{ skill.name }}</a>
+                        <a class="btn btn-default selection-label" href="{{ url_for('faculty.add_skill', projectid=data.id, skillid=skill.id) }}"><i class="fa fa-plus"></i> {{ skill.name }}</a>
                     {% endif %}
                 {% else %}
                     No skills available.

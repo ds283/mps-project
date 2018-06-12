@@ -22,7 +22,8 @@
         {% if data and data.enrollments and data.enrollments.first() %}
             <p>You are currently enrolled for the following project classes</p>
             <h3>
-                {% for pclass in data.enrollments %}
+                {% for record in data.enrollments %}
+                    {% set pclass = record.pclass %}
                     <a class="btn btn-info btn-table-block" href="mailto:{{ pclass.convenor.email }}">
                         {{ pclass.name }} ({{ pclass.convenor.build_name() }})
                     </a>
@@ -33,7 +34,7 @@
                 <p>You are not currently enrolled for the following project classes</p>
                 <h3>
                     {% for pclass in current_user.get_project_classes() %}
-                        {% if pclass not in data.enrollments %}
+                        {% if not data.is_enrolled(pclass) %}
                             <a class="btn btn-default btn-table-block" href="mailto:{{ pclass.convenor.email }}">
                                 {{ pclass.name }} ({{ pclass.convenor.build_name() }})
                             </a>

@@ -21,7 +21,7 @@ _faculty_menu = \
     </button>
     <ul class="dropdown-menu">
         <li>
-            {% if pclass in userdata.enrollments %}
+            {% if userdata.is_enrolled(pclass) %}
                 <a href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
                     Remove enrollment
                 </a>
@@ -59,7 +59,7 @@ def faculty_data(faculty, pclass, config):
              'first': u.first_name,
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
-             'enrolled': '<span class="label label-success">Yes</span>' if pclass in d.enrollments
+             'enrolled': '<span class="label label-success">Yes</span>' if d.is_enrolled(pclass)
                  else '<span class="label label-warning">No</span>',
              'offered': '{c}'.format(c=d.projects_offered(pclass)),
              'unoffer': '{c}'.format(c=d.projects_unofferable()),

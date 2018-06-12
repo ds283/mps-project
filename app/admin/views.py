@@ -605,8 +605,7 @@ def add_affiliation(userid, groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group not in data.affiliations:
-        data.add_affiliation(group)
-        db.session.commit()
+        data.add_affiliation(group, autocommit=True)
 
     return redirect(request.referrer)
 
@@ -625,8 +624,7 @@ def remove_affiliation(userid, groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group in data.affiliations:
-        data.remove_affiliation(group)
-        db.session.commit()
+        data.remove_affiliation(group, autocommit=True)
 
     return redirect(request.referrer)
 
@@ -644,9 +642,8 @@ def add_enrollment(userid, pclassid):
     data = FacultyData.query.get_or_404(userid)
     pclass = ProjectClass.query.get_or_404(pclassid)
 
-    if pclass not in data.enrollments:
-        data.add_enrollment(pclass)
-        db.session.commit()
+    if not data.is_enrolled(pclass):
+        data.add_enrollment(pclass, autocommit=True)
 
     return redirect(request.referrer)
 
@@ -664,9 +661,8 @@ def remove_enrollment(userid, pclassid):
     data = FacultyData.query.get_or_404(userid)
     pclass = ProjectClass.query.get_or_404(pclassid)
 
-    if pclass in data.enrollments:
-        data.remove_enrollment(pclass)
-        db.session.commit()
+    if data.is_enrolled(pclass):
+        data.remove_enrollment(pclass, autocommit=True)
 
     return redirect(request.referrer)
 

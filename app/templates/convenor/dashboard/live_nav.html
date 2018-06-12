@@ -1,0 +1,16 @@
+{% extends "convenor/dashboard/nav.html" %}
+
+{% block tabblock %}
+    <ul class="nav nav-tabs dashboard-nav">
+        <li {% if subpane=='list' %}class="active"{% endif %}>
+            <a href="{{ url_for('convenor.liveprojects', id=pclass.id) }}">
+                Currently live projects
+            </a>
+        </li>
+        <li {% if config.live %}{% if subpane=='attach' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
+            <a {% if config.live %}href="{{ url_for('convenor.attach_liveproject', id=pclass.id) }}"{% endif %}>
+                Manually attach a project
+            </a>
+        </li>
+    </ul>
+{% endblock %}

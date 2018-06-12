@@ -27,6 +27,7 @@ def add_liveproject(number, project, config_id, autocommit=False):
     # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
     # all project classes need their own LiveProject record
     live_item = LiveProject(config_id=config_id,
+                            parent_id=item.id,
                             number=number,
                             name=item.name,
                             keywords=item.keywords,

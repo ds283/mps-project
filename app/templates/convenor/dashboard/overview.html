@@ -78,7 +78,24 @@
 
                     {% else %}
 
-                        {% if config.open %}
+                        {% if config.live and config.closed %}
+
+                            <div class="panel panel-warning">
+                                <div class="panel-heading"><strong>Student choices are now closed</strong></div>
+                                <div class="panel-body">
+                                    <div class="row vertical-align">
+                                        <div class="col-xs-9">
+                                            {% set valid, total = config.count_valid_students %}
+                                            <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
+                                                students have valid selections (<strong>{{ total-valid }}</strong> remaining).</p>
+                                        </div>
+                                        <div class="col-xs-3">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        {% elif config.open %}
 
                             <div class="panel panel-success">
                                 <div class="panel-heading"><strong>Student choices are currently live</strong></div>
@@ -107,7 +124,7 @@
 
                             {% if config.project_class.require_confirm %}
 
-                                {# if we get here then we can assume requests have been issued because of the outermost if#}
+                                {# if we get here then we can assume requests have been issued because of the outermost if #}
                                 <div class="panel panel-default">
                                     <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
                                     <div class="panel-body">

@@ -16,25 +16,6 @@
     {{ pclass.name }}
 {% endblock %}
 
-{% macro closed_panel(config) %}
-    {% if config.live and config.closed %}
-        <div class="panel panel-warning">
-            <div class="panel-heading"><strong>Student choices are now closed</strong></div>
-            <div class="panel-body">
-                <div class="row vertical-align">
-                    <div class="col-xs-9">
-                        {% set valid, total = config.count_valid_students %}
-                        <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
-                            students have valid selections (<strong>{{ total-valid }}</strong> remaining).</p>
-                    </div>
-                    <div class="col-xs-3">
-                    </div>
-                </div>
-            </div>
-        </div>
-    {% endif %}
-{% endmacro %}
-
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li {% if pane == 'overview' %}class="active"{% endif %}><a href="{{ url_for('convenor.overview', id=pclass.id) }}">
@@ -74,7 +55,6 @@
             </a></li>
         {% endif %}
     </ul>
-    {{ closed_panel(config) }}
     {% block tabblock %}
     {% endblock %}
 {% endblock %}

@@ -350,15 +350,19 @@ def enroll_selectors_ajax(id):
     last_selector_year = year + (extent - 1) - 1
 
     # build a list of eligible students who are not already attached as selectors
-    candidates = db.session.query(StudentData).filter(StudentData.cohort >= config.year - first_selector_year + 1,
-                                                      StudentData.cohort <= config.year - last_selector_year + 1)
+    candidates = db.session.query(StudentData) \
+        .filter(StudentData.cohort >= config.year - first_selector_year + 1,
+               StudentData.cohort <= config.year - last_selector_year + 1) \
+        .join(User, StudentData.id == User.id).filter(User.active == True)
 
     # build a list of existing selecting students
-    selectors = db.session.query(SelectingStudent.user_id).filter(SelectingStudent.config_id == config.id,
-                                                                  ~SelectingStudent.retired).subquery()
+    selectors = db.session.query(SelectingStudent.user_id) \
+        .filter(SelectingStudent.config_id == config.id,
+                ~SelectingStudent.retired).subquery()
 
     # find students in candidates who are not also in selectors
-    missing = candidates.join(selectors, selectors.c.user_id==StudentData.id, isouter=True).filter(selectors.c.user_id==None)
+    missing = candidates.join(selectors, selectors.c.user_id==StudentData.id, isouter=True) \
+        .filter(selectors.c.user_id==None)
 
     return ajax.convenor.enroll_selectors_data(missing, config)
 
@@ -445,7 +449,7 @@ def liveprojects(id):
 
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
-    return render_template('convenor/dashboard/liveprojects.html', pane='live',
+    return render_template('convenor/dashboard/liveprojects.html', pane='live', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count)
@@ -471,6 +475,204 @@ def liveprojects_ajax(id):
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     return ajax.convenor.liveprojects_data(config)
+
+
+@convenor.route('/attach_liveproject/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def attach_liveproject(id):
+    """
+    Allow manual attachment of projects
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    # reject if project class is not live
+    if not config.live:
+        flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
+        return redirect(request.referrer)
+
+    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/attach_liveproject.html', pane='live', subpane='attach',
+                           pclass=pclass, config=config, fac_data=fac_data,
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count)
+
+
+_attach_liveproject_action = \
+"""
+<a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config.id) }}" class="btn btn-success btn-sm">
+    Attach
+</a>
+"""
+
+
+@convenor.route('/attach_liveproject_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def attach_liveproject_ajax(id):
+    """
+    Ajax datapoint for attach_liveproject view
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    if not config.live:
+        return jsonify({})
+
+    # get existing liveprojects
+    current_projects = config.live_projects.subquery()
+
+    # get all projects attached to this class
+    attached = pclass.projects.subquery()
+
+    # compute all  active attached projects that do not have a LiveProject equivalent
+    missing = db.session.query(attached) \
+        .filter(attached.c.active) \
+        .join(current_projects, current_projects.c.parent_id == attached.c.id, isouter=True) \
+        .filter(current_projects.c.id == None)
+
+    return ajax.project.build_data(missing, _attach_liveproject_action, config=config)
+
+
+@convenor.route('/manual_attach_project/<int:id>/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def manual_attach_project(id, configid):
+    """
+    Manually attach a project
+    :param id:
+    :param configid:
+    :return:
+    """
+
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # reject user if not entitled to act as convenor
+    if not validate_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class is not live
+    if not config.live:
+        flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
+        return redirect(request.referrer)
+
+    # reject if desired project is not attachable
+    project = Project.query.get_or_404(id)
+
+    if not config.project_class in project.project_classes:
+        flash('Project "{p}" is not attached to "{c}". You do not have sufficient privileges to manually attached it; '
+              'please consult with an administrator.'.format(p=project.name, c=config.project_class.name), 'error')
+        return redirect(request.referrer)
+
+    # get number for this project
+    number = config.live_projects.count() + 1
+
+    add_liveproject(number, project, configid, autocommit=True)
+
+    return redirect(request.referrer)
+
+
+_attach_liveproject_other_action = \
+"""
+<a href="{{ url_for('convenor.manual_attach_other_project', id=project.id, configid=config.id) }}" class="btn btn-success btn-sm">
+    Attach
+</a>
+"""
+
+
+@convenor.route('/attach_liveproject_other_ajax/<int:id>')
+@roles_accepted('admin', 'root')
+def attach_liveproject_other_ajax(id):
+    """
+    Ajax datapoint for attach_liveproject view
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    if not config.live:
+        return jsonify({})
+
+    # find all projects that do not have a LiveProject equivalent
+
+    # get existing liveprojects
+    current_projects = config.live_projects.subquery()
+
+    # this time the SQL is a bit harder
+    # we want to find all active projects that do not have a LiveProject equivalent and are *not*
+    # attached to this pclass
+
+    # first compute all projects that *are* attached to this pclass
+    attached = pclass.projects.subquery()
+
+    # join this sublist back to the main Projects table to determine projects that *are not* attached to this pclass;
+    # we keep only the project IDs since we will requery later to build complete Project records including all
+    # relationship data
+    active_not_attached = db.session.query(Project.id) \
+        .join(attached, attached.c.id == Project.id, isouter=True) \
+        .filter(Project.active, attached.c.id == None).subquery()
+
+    # finally join against list of current projects to find those that do not have a LiveProject equivalent
+    missing_ids = db.session.query(active_not_attached) \
+        .join(current_projects, current_projects.c.parent_id == active_not_attached.c.id, isouter=True) \
+        .filter(current_projects.c.id == None).subquery()
+
+    missing = db.session.query(Project).join(missing_ids, Project.id == missing_ids.c.id)
+
+    return ajax.project.build_data(missing, _attach_liveproject_other_action, config=config)
+
+
+@convenor.route('/manual_attach_other_project/<int:id>/<int:configid>')
+@roles_accepted('admin', 'root')
+def manual_attach_other_project(id, configid):
+    """
+    Manually attach a project
+    :param id:
+    :param configid:
+    :return:
+    """
+
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # reject if project class is not live
+    if not config.live:
+        flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
+        return redirect(request.referrer)
+
+    # get number for this project
+    project = Project.query.get_or_404(id)
+    number = config.live_projects.count() + 1
+
+    add_liveproject(number, project, configid, autocommit=True)
+
+    return redirect(request.referrer)
 
 
 @convenor.route('/add_project/<int:pclass_id>', methods=['GET', 'POST'])

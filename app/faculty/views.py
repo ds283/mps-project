@@ -510,7 +510,7 @@ def deconfirm(sid, pid):
     return redirect(request.referrer)
 
 
-@faculty.route('/live_project/<int:pid>/<int:classid>')
+@faculty.route('/live_project/<int:pid>')
 @roles_accepted('faculty', 'admin', 'root')
 def live_project(pid):
     """

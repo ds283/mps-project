@@ -85,7 +85,7 @@ _bookmarks = \
 {% for bookmark in student.bookmarks %}
     {% if loop.index < 4 %}
         {% set project = bookmark.liveproject %}
-        <a href="{{ url_for('convenor.live_project', pid=project.id) }}"
+        <a href="{{ url_for('faculty.live_project', pid=project.id) }}"
            class="btn btn-info btn-sm table-button">
             {% if project.name|length > 20 %}{{ project.name[0:20] }}...{% else %}{{ project.name }}{% endif %}
         </a>

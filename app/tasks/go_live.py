@@ -98,26 +98,19 @@ def register_golive_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        commit = False
-
         if config is not None:
             config.live = True
             config.live_deadline = deadline
             config.golive_id = convenor_id
             config.golive_timestamp = datetime.now()
 
-            commit = True
-
         if convenor is not None:
             # send direct message to user announcing successful rollover
             convenor.post_message('Go Live "{proj}" for {yra}-{yrb} is now complete'.format(
                 proj=config.project_class.name, yra=config.year, yrb=config.year+1), 'success', autocommit=False)
-            convenor.send_replacetext('live-project-count', '{c}'.format(c=config.live_projects.count()))
+            convenor.send_replacetext('live-project-count', '{c}'.format(c=config.live_projects.count()), autocommit=False)
 
-            commit = True
-
-        if commit:
-            db.session.commit()
+        db.session.commit()
 
 
     @celery.task(bind=True)
@@ -132,7 +125,9 @@ def register_golive_tasks(celery):
 
         if convenor is not None:
             convenor.post_message('Go Live failed. Please contact a system administrator', 'danger',
-                                  autocommit=True)
+                                  autocommit=False)
+
+        db.session.commit()
 
 
     @celery.task(bind=True)

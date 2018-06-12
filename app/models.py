@@ -1274,6 +1274,11 @@ class LiveProject(db.Model):
     config = db.relationship('ProjectClassConfig', uselist=False,
                              backref=db.backref('live_projects', lazy='dynamic'))
 
+    # key linking to parent project
+    parent_id = db.Column(db.Integer(), db.ForeignKey('projects.id'))
+    parent = db.relationship('Project', uselist=False,
+                             backref=db.backref('live_projects', lazy='dynamic'))
+
     # definitive project number in this year
     number = db.Column(db.Integer())
 

@@ -1,0 +1,88 @@
+{% extends "convenor/dashboard/live_nav.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#add-liveproject-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_ajax/{{ pclass.id }}', dataSrc: '' },
+                columns: [
+                    { data: 'name' },
+                    { data: 'owner' },
+                    { data: 'meeting' },
+                    { data: 'group' },
+                    { data: 'prefer' },
+                    { data: 'skills' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+
+            {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                $('#other-pclasses-table').DataTable({
+                    responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                    buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                    ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_other_ajax/{{ pclass.id }}', dataSrc: '' },
+                    columns: [
+                        { data: 'name' },
+                        { data: 'owner' },
+                        { data: 'meeting' },
+                        { data: 'group' },
+                        { data: 'prefer' },
+                        { data: 'skills' },
+                        { data: 'menu' }
+                    ],
+                    deferRender: true
+                });
+            {% endif %}
+        });
+    </script>
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Projects available to be attached to <strong>{{ pclass.name }}
+            {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
+        <div class="panel-body">
+            <table id="add-liveproject-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="15%"> Name</th>
+                    <th width="12%"> Owner</th>
+                    <th width="10%"> Meeting required?</th>
+                    <th width="10%"> Affiliation</th>
+                    <th width="17%"> Prefer degree programmes</th>
+                    <th width="22%"> Transferable skills</th>
+                    <th width="14%"> Actions</th>
+                </tr>
+                </thead>
+           </table>
+        </div>
+    </div>
+
+    {% if current_user.has_role('admin') or current_user.has_role('admin') %}
+        <div class="panel panel-primary panel-primary-bg">
+            <div class="panel-heading">Projects attached to other project classes</div>
+            <div class="panel-body">
+                <table id="other-pclasses-table" class="table table-striped table-bordered">
+                    <thead>
+                    <tr>
+                    <th width="15%"> Name</th>
+                    <th width="12%"> Owner</th>
+                    <th width="10%"> Meeting required?</th>
+                    <th width="10%"> Affiliation</th>
+                    <th width="17%"> Prefer degree programmes</th>
+                    <th width="22%"> Transferable skills</th>
+                    <th width="14%"> Actions</th>
+                    </tr>
+                    </thead>
+               </table>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

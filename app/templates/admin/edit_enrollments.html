@@ -15,11 +15,29 @@
         <div class="panel-body">
             {% if data and data.enrollments and project_classes %}
                 <h4>
-                {% for pclass in project_classes %}
-                    {% if data.is_enrolled(pclass) %}
-                        <a class="btn btn-success selection-label" href="{{ url_for('admin.remove_enrollment', userid=user.id, pclassid=pclass.id) }}"><i class="fa fa-times"></i> {{ pclass.name }}</a>
-                    {% endif %}
-                {% endfor %}
+                <div style="display: flex; flex-wrap: wrap;">
+                    {% for pclass in project_classes %}
+                        {% if data.is_enrolled(pclass) %}
+                            <div class="dropdown">
+                                <button class="btn btn-success selection-label dropdown-toggle" type="button" data-toggle="dropdown">
+                                    {{ pclass.name }} <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="{{ url_for('admin.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
+                                            <i class="fa fa-trash"></i> Remove enrollment
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('admin.edit_enrollment', id=data.get_enrollment_record(pclass).id, returnid=0) }}">
+                                            <i class="fa fa-pencil"></i> Edit enrollment
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
                 </h4>
             {% else %}
                 <p>No current enrollments</p>

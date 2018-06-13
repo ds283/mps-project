@@ -9,7 +9,7 @@
 #
 
 from flask import flash
-from flask_security import UserMixin, RoleMixin
+from flask_security import current_user, UserMixin, RoleMixin
 from flask_sqlalchemy import SQLAlchemy
 
 import sqlalchemy
@@ -555,7 +555,7 @@ class FacultyData(db.Model):
         """
 
         # test whether an EnrollmentRecord exists for this project class
-        record = self.enrollments.filter_by(pclass_id=pclass.id).first()
+        record = self.get_enrollment_record(pclass)
 
         if record is None:
             return False
@@ -571,7 +571,7 @@ class FacultyData(db.Model):
         """
 
         # find enrollment record for this project class
-        record = self.enrollments.filter_by(pclass_id=pclass.id).first()
+        record = self.get_enrollment_record(pclass)
         if record is not None:
             db.session.delete(record)
 
@@ -599,13 +599,32 @@ class FacultyData(db.Model):
                                   supervisor_reenroll=None,
                                   marker_state=EnrollmentRecord.MARKER_ENROLLED,
                                   marker_comment=None,
-                                  marker_reenroll=None)
+                                  marker_reenroll=None,
+                                  creator_id=current_user.id,
+                                  creation_timestamp=datetime.now(),
+                                  last_edit_id=None,
+                                  last_edit_timestamp=None)
 
         db.session.add(record)
         db.session.commit()
 
         if autocommit:
             db.session.commit()
+
+
+    def enrolled_labels(self, pclass):
+
+        record = self.get_enrollment_record(pclass)
+
+        if record is None:
+            return '<span class="label label-warning">Not enrolled</span>'
+
+        return record.enrolled_labels()
+
+
+    def get_enrollment_record(self, pclass):
+
+        return self.enrollments.filter_by(pclass_id=pclass.id).first()
 
 
 class StudentData(db.Model):
@@ -1073,9 +1092,12 @@ class EnrollmentRecord(db.Model):
                             backref=db.backref('enrollments', lazy='dynamic', cascade='all, delete-orphan'))
 
     # enrollment for supervision
-    SUPERVISOR_ENROLLED = 0
-    SUPERVISOR_SABBATICAL = 1
-    SUPERVISOR_EXEMPT = 2
+    SUPERVISOR_ENROLLED = 1
+    SUPERVISOR_SABBATICAL = 2
+    SUPERVISOR_EXEMPT = 3
+    supervisor_choices = {(SUPERVISOR_ENROLLED, 'Normally enrolled'),
+                          (SUPERVISOR_SABBATICAL, 'On sabbatical or buy-out'),
+                          (SUPERVISOR_EXEMPT, 'Exempt')}
     supervisor_state = db.Column(db.Integer())
 
     # comment (eg. can be used to note circumstances of exemptions)
@@ -1085,9 +1107,12 @@ class EnrollmentRecord(db.Model):
     supervisor_reenroll = db.Column(db.Integer())
 
     # enrollment for 2nd marking
-    MARKER_ENROLLED = 0
-    MARKER_SABBATICAL = 1
-    MARKER_EXEMPT = 2
+    MARKER_ENROLLED = 1
+    MARKER_SABBATICAL = 2
+    MARKER_EXEMPT = 3
+    marker_choices = {(MARKER_ENROLLED, 'Normally enrolled'),
+                      (MARKER_SABBATICAL, 'On sabbatical or buy-out'),
+                      (MARKER_EXEMPT, 'Exempt')}
     marker_state = db.Column(db.Integer())
 
     # comment (eg. can be used to note circumstances of exemption)
@@ -1095,6 +1120,53 @@ class EnrollmentRecord(db.Model):
 
     # marker auto re-enroll year (after sabbatical)
     marker_reenroll = db.Column(db.Integer())
+
+    # METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def supervisor_label(self):
+
+        if self.supervisor_state == self.SUPERVISOR_ENROLLED:
+            return '<span class="label label-success"><i class="fa fa-check"></i> Supv active</span>'
+        elif self.supervisor_state == self.SUPERVISOR_SABBATICAL:
+            return '<span class="label label-warning"><i class="fa fa-times"></i> Supv sabbat{year}</span>'.format(
+                year='' if self.supervisor_reenroll is None else ' ({yr})'.format(yr=self.supervisor_reenroll))
+        elif self.supervisor_state == self.SUPERVISOR_EXEMPT:
+            return '<span class="label label-danger"><i class="fa fa-times"></i> Supv exempt</span>'
+
+        return ''
+
+
+    def marker_label(self):
+
+        if self.marker_state == self.MARKER_ENROLLED:
+            return '<span class="label label-success"><i class="fa fa-check"></i> 2nd mk active</span>'
+        elif self.marker_state == self.MARKER_SABBATICAL:
+            return '<span class="label label-warning"><i class="fa fa-times"></i> 2nd mk sabbat{year}</span>'.format(
+                year='' if self.marker_reenroll is None else ' ({yr})'.format(yr=self.marker_reenroll))
+        elif self.marker_state == self.MARKER_EXEMPT:
+            return '<span class="label label-danger"><i class="fa fa-times"></i> 2nd mk exempt</span>'
+
+        return ''
+
+
+    def enrolled_labels(self):
+
+        return self.supervisor_label() + ' ' + self.marker_label()
 
 
 class Supervisor(db.Model):

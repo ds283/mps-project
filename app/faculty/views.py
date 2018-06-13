@@ -130,9 +130,11 @@ def projects_ajax():
     :return:
     """
 
-    projects = Project.query.filter_by(owner_id=current_user.id).all()
+    pq = Project.query.filter_by(owner_id=current_user.id)
 
-    return ajax.project.build_data(projects, _project_menu)
+    data = [(p, None) for p in pq.all()]
+
+    return ajax.project.build_data(data, _project_menu)
 
 
 @faculty.route('/add_project', methods=['GET', 'POST'])

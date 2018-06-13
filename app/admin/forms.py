@@ -14,12 +14,12 @@ from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, 
 from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
-    TextAreaField, ValidationError, DateTimeField, FloatField
+    TextAreaField, ValidationError, DateTimeField, FloatField, RadioField
 from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor, BackupConfiguration, \
+    ProjectClass, Supervisor, BackupConfiguration, EnrollmentRecord, \
     submission_choices, academic_titles, extent_choices, year_choices
 
 from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
@@ -708,3 +708,32 @@ class BackupOptions():
 class EditBackupOptionsForm(Form, BackupOptions):
 
     submit = SubmitField('Save changes')
+
+
+class EnrollmentRecordMixin():
+
+    supervisor_state = RadioField('Project supervision status', choices=EnrollmentRecord.supervisor_choices, coerce=int)
+
+    supervisor_reenroll = IntegerField('Re-enroll in academic year',
+                                   description='Optional. For faculty on sabbatical or buy-outs, enter a year in which '
+                                               'automatical re-enrollment should occur.',
+                                   validators=[Optional()])
+
+    supervisor_comment = StringField('Comment',
+                                     description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
+                                     validators=[Optional()])
+
+    marker_state = RadioField('2nd marker status', choices=EnrollmentRecord.marker_choices, coerce=int)
+
+    marker_reenroll = IntegerField('Re-enroll in academic year',
+                                   description='Optional. For faculty on sabbatical or buy-outs, enter a year in which '
+                                               'automatical re-enrollment should occur.',
+                                   validators=[Optional()])
+
+    marker_comment = StringField('Comment',
+                                     description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
+                                     validators=[Optional()])
+
+class EnrollmentRecordForm(Form, EnrollmentRecordMixin, EditFormMixin):
+
+    pass

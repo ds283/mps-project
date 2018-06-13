@@ -9,10 +9,11 @@
 #
 
 from flask import current_app
+from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..models import db, User, TaskRecord, BackupRecord, ProjectClass, ProjectClassConfig, \
-    Project, LiveProject
+    Project, LiveProject, FacultyData, EnrollmentRecord
 
 from ..task_queue import progress_update
 
@@ -55,14 +56,24 @@ def register_golive_tasks(celery):
             self.update_state('FAILURE', meta='Some Go Live confirmations were still outstanding')
             return
 
-        attached_projects = \
-            db.session.query(Project.id).filter(Project.active,
-                                                Project.project_classes.any(id=pclass_id)).join(
-                User, User.id == Project.owner_id).order_by(User.last_name, User.first_name).all()
+        # build list of projects to be attached when we go live
+        # note that we exclude any projects where the supervisor is not normally enrolled
+        attached_projects = db.session.query(Project.id) \
+            .filter(Project.active,
+                    Project.project_classes.any(id=pclass_id)) \
+            .join(User, User.id == Project.owner_id) \
+            .join(FacultyData, FacultyData.id == Project.owner_id) \
+            .join(EnrollmentRecord,
+                  and_(EnrollmentRecord.pclass_id == pclass_id, EnrollmentRecord.owner_id == Project.owner_id)) \
+            .filter(User.active) \
+            .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
+            .order_by(User.last_name, User.first_name).all()
 
         if len(attached_projects) == 0:
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
-                                  'because there are no attached projects'.format(name=pcl.name, yra=year, yrb=year+1))
+                                  'because there would be no attached projects. If this is not what you expect, '
+                                  'check active flags and sabbatical/exemption status for all enrolled faculty.'
+                                  ''.format(name=pcl.name, yra=year, yrb=year+1))
             self.update_state('FAILURE', meta='No attached projects')
 
         # build group of tasks to automatically take attached projects live

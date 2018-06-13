@@ -15,8 +15,8 @@ from wtforms import StringField, IntegerField, SelectField, PasswordField, Submi
 from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor, Project
+from ..models import db, User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
+    ProjectClass, Supervisor, Project, EnrollmentRecord
 
 from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -46,7 +46,11 @@ def AllResearchGroups():
 
 def CurrentUserProjectClasses():
 
-    return ProjectClass.query.filter(ProjectClass.active, ProjectClass.enrolled_faculty.any(id=current_user.id))
+    # build list of enrollment records for the current user
+    sq = EnrollmentRecord.query.filter_by(owner_id=current_user.id).subquery()
+
+    # join to project class table
+    return db.session.query(ProjectClass).join(sq, sq.c.pclass_id == ProjectClass.id)
 
 
 def AllProjectClasses():
@@ -72,7 +76,7 @@ class ProjectMixin():
 
     group = QuerySelectField('Research group', query_factory=CurrentUserResearchGroups, get_label='name')
 
-    # allow the project_class list to be empty (byt then the project is not offered)
+    # allow the project_class list to be empty (but then the project is not offered)
     project_classes = CheckboxQuerySelectMultipleField('Project classes',
                                                        query_factory=CurrentUserProjectClasses, get_label='name')
 

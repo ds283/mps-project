@@ -28,9 +28,12 @@ _project_status = \
 """
 {% if project.offerable %}
     {% if project.active %}
-        <span class="label label-success">Active</span>
+        <span class="label label-success">Project active</span>
     {% else %}
-        <span class="label label-warning">Inactive</span>
+        <span class="label label-warning">Project active</span>
+    {% endif %}
+    {% if enrollment and enrollment is not none %}
+        {{ enrollment.supervisor_label()|safe }}
     {% endif %}
 {% else %}
     <span class="label label-danger">Not available</span>
@@ -83,12 +86,12 @@ def build_data(projects, menu_template, config=None):
     # filter list of projects for current user
     data = [{'name': render_template_string(_project_name, project=p),
              'owner': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.email, nm=p.owner.build_name()),
-             'status': render_template_string(_project_status, project=p),
+             'status': render_template_string(_project_status, project=p, enrollment=e),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),
              'group': '<span class="label label-success">{gp}</span>'.format(gp=p.group.abbreviation),
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, project=p),
-             'menu': render_template_string(menu_template, project=p, config=config)} for p in projects]
+             'menu': render_template_string(menu_template, project=p, config=config)} for p, e in projects]
 
     return jsonify(data)

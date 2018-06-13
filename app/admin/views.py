@@ -28,7 +28,7 @@ from .forms import RoleSelectForm, \
     AddTransferrableSkillForm, EditTransferableSkillForm, \
     AddProjectClassForm, EditProjectClassForm, \
     AddSupervisorForm, EditSupervisorForm, \
-    FacultySettingsForm, EmailLogForm, \
+    FacultySettingsForm, EnrollmentRecordForm, EmailLogForm, \
     AddMessageForm, EditMessageForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
@@ -36,11 +36,13 @@ from .forms import RoleSelectForm, \
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
-    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord, TaskRecord, Notification
+    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord, TaskRecord, Notification, \
+    EnrollmentRecord
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
+from ..shared.validators import validate_convenor
 
 from ..task_queue import register_task
 
@@ -64,7 +66,7 @@ def _check_admin_or_convenor():
     if current_user.has_role('admin') or current_user.has_role('root'):
         return True
 
-    if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.first() is not Null:
+    if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.first() is not None:
         return True
 
     flash('This operation is only available to administrative users and project class convenors')
@@ -591,6 +593,50 @@ def edit_enrollments(id):
     return render_template('admin/edit_enrollments.html', user=user, data=data, project_classes=project_classes)
 
 
+@admin.route('/edit_enrollment/<int:id>/<int:returnid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_enrollment(id, returnid):
+    """
+    Edit enrollment details
+    :param id:
+    :return:
+    """
+
+    # check logged-in user is administrator or a convenor for the project
+    record = EnrollmentRecord.query.get_or_404(id)
+
+    if not validate_convenor(record.pclass):
+        return redirect(request.referrer)
+
+    form = EnrollmentRecordForm(obj=record)
+
+    if form.validate_on_submit():
+
+        record.supervisor_state = form.supervisor_state.data
+        record.supervisor_reenroll = None if record.supervisor_state != EnrollmentRecord.SUPERVISOR_SABBATICAL \
+            else form.supervisor_reenroll.data
+        record.supervisor_comment = form.supervisor_comment.data
+
+        record.marker_state = form.marker_state.data
+        record.marker_reenroll = None if record.marker_state != EnrollmentRecord.MARKER_SABBATICAL \
+            else form.marker_reenroll.data
+        record.marker_comment = form.marker_comment.data
+
+        record.last_edit_id = current_user.id
+        record.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        if returnid==0:
+            return redirect(url_for('admin.edit_enrollments', id=record.owner_id))
+        elif returnid==1:
+            return redirect(url_for('convenor.faculty', id=record.pclass.id))
+        else:
+            return home_dashboard()
+
+    return render_template('admin/edit_enrollment.html', record=record, form=form, returnid=returnid)
+
+
 @admin.route('/add_affiliation/<int:userid>/<int:groupid>')
 @roles_accepted('admin', 'root')
 def add_affiliation(userid, groupid):
@@ -605,7 +651,7 @@ def add_affiliation(userid, groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group not in data.affiliations:
-        data.add_affiliation(group, autocommit=True)
+        data.add_eaffiliation(group, autocommit=True)
 
     return redirect(request.referrer)
 

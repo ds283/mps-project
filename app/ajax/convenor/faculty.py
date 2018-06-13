@@ -31,6 +31,12 @@ _faculty_menu = \
                 </a>
             {% endif %}
         </li>
+        {% set record = userdata.get_enrollment_record(pclass) %}
+        <li {% if record is none %}class="disabled"{% endif %}>
+            <a {% if record is not none %}href="{{ url_for('admin.edit_enrollment', id=record.id, returnid=1) }}"{% endif %}>
+                <i class="fa fa-pencil"></i> Edit enrollment
+            </a>
+        </li>
     </ul>
 </div>
 """
@@ -40,9 +46,9 @@ _golive = \
 {% if config.project_class.require_confirm %}
     {% if config.requests_issued %}
         {% if current_user.faculty_data in config.golive_required %}
-            <span class="label label-warning">Outstanding</span>
+            <span class="label label-warning"><i class="fa fa-times"></i> Outstanding</span>
         {% else %}
-            <span class="label label-success">Confirmed</span>
+            <span class="label label-success"><i class="fa fa-check"></i> Confirmed</span>
         {% endif %}
     {% else %}
         <span class="label label-danger">Not yet issued</span>
@@ -59,8 +65,7 @@ def faculty_data(faculty, pclass, config):
              'first': u.first_name,
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
-             'enrolled': '<span class="label label-success">Yes</span>' if d.is_enrolled(pclass)
-                 else '<span class="label label-warning">No</span>',
+             'enrolled': d.enrolled_labels(pclass),
              'offered': '{c}'.format(c=d.projects_offered(pclass)),
              'unoffer': '{c}'.format(c=d.projects_unofferable()),
              'golive': render_template_string(_golive, config=config),

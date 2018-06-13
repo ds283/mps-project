@@ -12,8 +12,8 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_security import roles_accepted, current_user
 
-from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, SubmittingStudent, \
-    Project
+from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
+    LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord
 
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
@@ -94,17 +94,17 @@ def _dashboard_data(pclass, config):
     fac_total = fac_query.scalar()
     fac_count = fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)).scalar()
 
-    proj_count = db.session.query(func.count(Project.id)). \
-        filter(Project.active, Project.project_classes.any(id=pclass.id)).scalar()
+    proj_count = db.session.query(func.count(Project.id)) \
+        .filter(Project.project_classes.any(id=pclass.id)).scalar()
 
-    sel_count = db.session.query(func.count(SelectingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
+    sel_count = db.session.query(func.count(SelectingStudent.id)) \
+        .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
 
-    sub_count = db.session.query(func.count(SubmittingStudent.id)). \
-        filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
+    sub_count = db.session.query(func.count(SubmittingStudent.id)) \
+        .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
 
-    live_count = db.session.query(func.count(LiveProject.id)). \
-        filter(LiveProject.config_id == config.id).scalar()
+    live_count = db.session.query(func.count(LiveProject.id)) \
+        .filter(LiveProject.config_id == config.id).scalar()
 
     return (fac_count, fac_total), live_count, proj_count, sel_count, sub_count
 
@@ -198,7 +198,27 @@ def attached_ajax(id):
     if not validate_convenor(pclass):
         return jsonify({})
 
-    return ajax.project.build_data(pclass.projects, _project_menu)
+    pq = db.session.query(Project.id, Project.owner_id).filter(Project.project_classes.any(id=id)).subquery()
+    eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
+    jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
+
+    # can't find a better way of getting the ORM to construct a tuple of mapped objects here.
+    # in principle we want something like
+    #
+    # projects = db.session.query(Project, EnrollmentRecord). \
+    #     join(jq, and_(Project.id == jq.c.pid, EnrollmentRecord.id == jq.c.eid))
+    #
+    # The ORM implements this as a CROSS JOIN constrained by an INNER JOIN which causes at least MariaDB
+    # to fail
+
+    # match original tables to these primary keys
+    pq2 = db.session.query(jq.c.pid, Project).join(Project, Project.id == jq.c.pid)
+    eq2 = db.session.query(jq.c.pid, EnrollmentRecord).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
+
+    ps = [ x[1] for x in pq2.all() ]
+    es = [ x[1] for x in eq2.all() ]
+
+    return ajax.project.build_data(zip(ps, es), _project_menu)
 
 
 @convenor.route('/faculty/<int:id>')
@@ -531,8 +551,8 @@ def attach_liveproject(id):
 
 _attach_liveproject_action = \
 """
-<a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config.id) }}" class="btn btn-success btn-sm">
-    Attach
+<a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config.id) }}" class="btn btn-warning btn-sm">
+    Force attach
 </a>
 """
 
@@ -565,13 +585,23 @@ def attach_liveproject_ajax(id):
     # get all projects attached to this class
     attached = pclass.projects.subquery()
 
-    # compute all  active attached projects that do not have a LiveProject equivalent
-    missing = db.session.query(attached) \
+    # compute all active attached projects that do not have a LiveProject equivalent
+    pq = db.session.query(attached.c.id, attached.c.owner_id) \
         .filter(attached.c.active) \
         .join(current_projects, current_projects.c.parent_id == attached.c.id, isouter=True) \
-        .filter(current_projects.c.id == None)
+        .filter(current_projects.c.id == None).subquery()
 
-    return ajax.project.build_data(missing, _attach_liveproject_action, config=config)
+    eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
+    jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
+
+    # match original tables to these primary keys
+    pq2 = db.session.query(jq.c.pid, Project).join(Project, Project.id == jq.c.pid)
+    eq2 = db.session.query(jq.c.pid, EnrollmentRecord).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
+
+    ps = [ x[1] for x in pq2.all() ]
+    es = [ x[1] for x in eq2.all() ]
+
+    return ajax.project.build_data(zip(ps, es), _attach_liveproject_action, config=config)
 
 
 @convenor.route('/manual_attach_project/<int:id>/<int:configid>')
@@ -617,8 +647,8 @@ def manual_attach_project(id, configid):
 
 _attach_liveproject_other_action = \
 """
-<a href="{{ url_for('convenor.manual_attach_other_project', id=project.id, configid=config.id) }}" class="btn btn-success btn-sm">
-    Attach
+<a href="{{ url_for('convenor.manual_attach_other_project', id=project.id, configid=config.id) }}" class="btn btn-warning btn-sm">
+    Force attach
 </a>
 """
 
@@ -656,18 +686,25 @@ def attach_liveproject_other_ajax(id):
     # join this sublist back to the main Projects table to determine projects that *are not* attached to this pclass;
     # we keep only the project IDs since we will requery later to build complete Project records including all
     # relationship data
-    active_not_attached = db.session.query(Project.id) \
+    active_not_attached = db.session.query(Project.id, Project.owner_id) \
         .join(attached, attached.c.id == Project.id, isouter=True) \
         .filter(Project.active, attached.c.id == None).subquery()
 
     # finally join against list of current projects to find those that do not have a LiveProject equivalent
-    missing_ids = db.session.query(active_not_attached) \
+    pq = db.session.query(active_not_attached) \
         .join(current_projects, current_projects.c.parent_id == active_not_attached.c.id, isouter=True) \
         .filter(current_projects.c.id == None).subquery()
 
-    missing = db.session.query(Project).join(missing_ids, Project.id == missing_ids.c.id)
+    eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
+    jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
 
-    return ajax.project.build_data(missing, _attach_liveproject_other_action, config=config)
+    pq2 = db.session.query(jq.c.pid, Project).join(Project, Project.id == jq.c.pid)
+    eq2 = db.session.query(jq.c.pid, EnrollmentRecord).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
+
+    ps = [ x[1] for x in pq2.all() ]
+    es = [ x[1] for x in eq2.all() ]
+
+    return ajax.project.build_data(zip(ps, es), _attach_liveproject_other_action, config=config)
 
 
 @convenor.route('/manual_attach_other_project/<int:id>/<int:configid>')
@@ -748,7 +785,7 @@ def add_project(pclass_id):
         owner = data.owner.faculty_data
         for pclass in data.project_classes:
 
-            if owner not in pclass.enrolled_faculty.all():
+            if not owner.is_enrolled(pclass):
 
                 owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.build_name(), pclass=pclass.name))
@@ -809,7 +846,7 @@ def edit_project(id, pclass_id):
         owner = data.owner.faculty_data
         for pclass in data.project_classes:
 
-            if owner not in pclass.enrolled_faculty.all():
+            if not owner.is_enrolled(pclass):
 
                 owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.build_name(), pclass=pclass.name))
@@ -999,7 +1036,7 @@ def unattached_ajax():
     if not validate_administrator():
         return jsonify({})
 
-    projects = [proj for proj in Project.query.all() if not proj.offerable]
+    projects = [(p, None) for p in Project.query.all() if not p.offerable]
 
     return ajax.project.build_data(projects, _project_menu)
 

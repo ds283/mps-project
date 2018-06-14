@@ -1,6 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
-
-{% extends "base_app.html" %}
+{% extends "admin/degree_types/degree_nav.html" %}
 
 {% block scripts %}
     {{ super() }}
@@ -18,22 +16,9 @@
             $('#type-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/types_ajax', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/admin/degree_types_ajax', dataSrc: '' },
                 columns: [
                     { data: 'name' },
-                    { data: 'active' },
-                    { data: 'menu' }
-                ],
-                deferRender: true
-            });
-
-            $('#programme-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/programmes_ajax', dataSrc: '' },
-                columns: [
-                    { data: 'name' },
-                    { data: 'type' },
                     { data: 'active' },
                     { data: 'menu' }
                 ],
@@ -44,7 +29,7 @@
 {% endblock %}
 
 {% block title %}
-    Edit degree programmes
+    Edit degree types
 {% endblock %}
 
 {% block bodyblock %}
@@ -66,30 +51,6 @@
         <a href="{{ url_for('admin.add_degree_type') }}" class="btn btn-default btn-lg">
             <i class="fa fa-plus"></i>
             Add new degree type
-        </a>
-    </div>
-
-    <hr class="intro-divider">
-
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Edit degree programmes</div>
-        <div class="panel-body">
-        <table id="programme-table" class="table table-striped table-bordered">
-            <thead>
-            <tr>
-                <th width="50%"> Programme title</th>
-                <th width="15%"> Degree type</th>
-                <th width="10%"> Status</th>
-                <th width="15%"> Actions</th>
-            </tr>
-            </thead>
-        </table>
-        </div>
-    </div>
-    <div style="text-align: center;">
-        <a href="{{ url_for('admin.add_degree_programme') }}" class="btn btn-default btn-lg">
-            <i class="fa fa-plus"></i>
-            Add new degree programme
         </a>
     </div>
 {%  endblock %}

@@ -822,20 +822,31 @@ def deactivate_group(id):
     return redirect(request.referrer)
 
 
-@admin.route('/edit_programmes')
+@admin.route('/edit_degrees_types')
 @roles_required('root')
-def edit_degree_programmes():
+def edit_degree_types():
     """
-    View for edit programmes
+    View for editing degree types
     :return:
     """
 
-    return render_template('admin/edit_programmes.html')
+    return render_template('admin/degree_types/edit_degrees.html', subpane='degrees')
 
 
-@admin.route('/types_ajax', methods=['GET', 'POST'])
+@admin.route('/edit_degree_programmes')
 @roles_required('root')
-def types_ajax():
+def edit_degree_programmes():
+    """
+    View for editing degree programmes
+    :return:
+    """
+
+    return render_template('admin/degree_types/edit_programmes.html', subpane='programmes')
+
+
+@admin.route('/degree_types_ajax', methods=['GET', 'POST'])
+@roles_required('root')
+def degree_types_ajax():
     """
     Ajax data point for degree type table
     :return:
@@ -845,9 +856,9 @@ def types_ajax():
     return ajax.admin.degree_types_data(types)
 
 
-@admin.route('/programmes_ajax', methods=['GET', 'POST'])
+@admin.route('/degree_programmes_ajax', methods=['GET', 'POST'])
 @roles_required('root')
-def programmes_ajax():
+def degree_programmes_ajax():
     """
     Ajax data point for degree programmes tables
     :return:
@@ -876,9 +887,9 @@ def add_degree_type():
         db.session.add(degree_type)
         db.session.commit()
 
-        return redirect(url_for('admin.edit_degree_programmes'))
+        return redirect(url_for('admin.edit_degree_types'))
 
-    return render_template('admin/edit_type.html', type_form=form, title='Add new degree type')
+    return render_template('admin/degree_types/edit_degree.html', type_form=form, title='Add new degree type')
 
 
 @admin.route('/edit_type/<int:id>', methods=['GET', 'POST'])
@@ -902,9 +913,9 @@ def edit_degree_type(id):
 
         db.session.commit()
 
-        return redirect(url_for('admin.edit_degree_programmes'))
+        return redirect(url_for('admin.edit_degree_types'))
 
-    return render_template('admin/edit_type.html', type_form=form, type=degree_type, title='Edit degree type')
+    return render_template('admin/degree_types/edit_degree.html', type_form=form, type=degree_type, title='Edit degree type')
 
 
 @admin.route('/make_type_active/<int:id>')
@@ -966,7 +977,7 @@ def add_degree_programme():
 
         return redirect(url_for('admin.edit_degree_programmes'))
 
-    return render_template('admin/edit_programme.html', programme_form=form, title='Add new degree programme')
+    return render_template('admin/degree_types/edit_programme.html', programme_form=form, title='Add new degree programme')
 
 
 @admin.route('/edit_programme/<int:id>', methods=['GET', 'POST'])
@@ -993,7 +1004,7 @@ def edit_degree_programme(id):
 
         return redirect(url_for('admin.edit_degree_programmes'))
 
-    return render_template('admin/edit_programme.html', programme_form=form, programme=programme,
+    return render_template('admin/degree_types/edit_programme.html', programme_form=form, programme=programme,
                            title='Edit degree programme')
 
 

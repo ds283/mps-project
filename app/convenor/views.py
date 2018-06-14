@@ -552,7 +552,7 @@ def attach_liveproject(id):
 _attach_liveproject_action = \
 """
 <a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    Force attach
+    Manually attach
 </a>
 """
 
@@ -648,7 +648,7 @@ def manual_attach_project(id, configid):
 _attach_liveproject_other_action = \
 """
 <a href="{{ url_for('convenor.manual_attach_other_project', id=project.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    Force attach
+    Manually attach
 </a>
 """
 

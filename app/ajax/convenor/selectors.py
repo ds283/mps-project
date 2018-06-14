@@ -185,7 +185,7 @@ def selectors_data(students, config):
 
 _enroll_action = \
 """
-<a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id) }}" class="btn btn-success btn-sm">Enroll</a>
+<a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">Manually enroll</a>
 """
 
 

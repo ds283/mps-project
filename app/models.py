@@ -16,6 +16,7 @@ import sqlalchemy
 from celery import schedules
 
 from .shared.formatters import format_size
+from .shared.colours import get_text_colour
 
 from datetime import date, datetime, timedelta
 import json
@@ -419,6 +420,9 @@ class ResearchGroup(db.Model):
     # active flag
     active = db.Column(db.Boolean())
 
+    # colour string
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
@@ -454,6 +458,23 @@ class ResearchGroup(db.Model):
         """
 
         self.active = True
+
+
+    def make_label(self, text=None):
+        """
+        Make approriately coloured label
+        :param text:
+        :return:
+        """
+
+        if text is None:
+            text = self.abbreviation
+
+        if self.colour is None:
+            return '<span class="label label-default">{msg}</span>'.format(msg=text)
+
+        return '<span class="label label-default" style="background-color:{bg}; color:{fg};">{msg}</span>'.format(
+            bg=self.colour, fg=get_text_colour(self.colour), msg=text)
 
 
 class FacultyData(db.Model):

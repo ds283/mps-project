@@ -89,7 +89,7 @@ def build_data(projects, menu_template, config=None):
              'status': render_template_string(_project_status, project=p, enrollment=e),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),
-             'group': '<span class="label label-success">{gp}</span>'.format(gp=p.group.abbreviation),
+             'group': p.group.make_label(),
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, project=p),
              'menu': render_template_string(menu_template, project=p, config=config)} for p, e in projects]

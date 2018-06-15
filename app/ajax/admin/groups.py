@@ -46,7 +46,8 @@ def groups_data(groups):
     data = [{'abbrv': g.abbreviation,
              'active': 'Active' if g.active else 'Inactive',
              'name': g.name,
-             'website': '<a href="http://{web}">{web}</a>'.format(web=g.website) if g.website is not None
+             'colour': '<span class="label label-default">None</span>' if g.colour is None else g.make_label(g.colour),
+             'website': '<a href="{web}">{web}</a>'.format(web=g.website) if g.website is not None
                  else '<span class="label label-default">None</span>',
              'menu': render_template_string(_groups_menu, group=g)} for g in groups]
 

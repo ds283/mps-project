@@ -31,7 +31,7 @@
                             {% if project.group  %}
                                 <div class="research-group-banner">{{ project.group.name }}</div>
                                 {% if project.group.website and project.group.website is not none %}
-                                    <a class="research-group-webpage" href="http://{{ project.group.website }}">
+                                    <a class="research-group-webpage" href="{{ project.group.website }}">
                                         Research group website <i class="fa fa-external-link"></i>
                                     </a>
                                 {% endif %}

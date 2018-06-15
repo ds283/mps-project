@@ -394,7 +394,9 @@ class ResearchGroupForm():
 
     name = StringField('Name', validators=[DataRequired(message='Name is required')])
 
-    website = StringField('Website', description='Optional. Do not include http://')
+    website = StringField('Website', description='Optional')
+
+    colour = StringField('Colour', description='Assign a colour to help students identify this research group')
 
 
 class AddResearchGroupForm(Form, ResearchGroupForm):

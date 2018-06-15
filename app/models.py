@@ -460,6 +460,14 @@ class ResearchGroup(db.Model):
         self.active = True
 
 
+    def make_CSS_style(self):
+
+        if self.colour is None:
+            return None
+
+        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+
+
     def make_label(self, text=None):
         """
         Make approriately coloured label
@@ -470,11 +478,12 @@ class ResearchGroup(db.Model):
         if text is None:
             text = self.abbreviation
 
-        if self.colour is None:
+        style = self.make_CSS_style()
+        if style is None:
             return '<span class="label label-default">{msg}</span>'.format(msg=text)
 
-        return '<span class="label label-default" style="background-color:{bg}; color:{fg};">{msg}</span>'.format(
-            bg=self.colour, fg=get_text_colour(self.colour), msg=text)
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text,
+                                                                                     sty=self.make_CSS_style())
 
 
 class FacultyData(db.Model):

@@ -653,7 +653,7 @@ def add_affiliation(userid, groupid):
     group = ResearchGroup.query.get_or_404(groupid)
 
     if group not in data.affiliations:
-        data.add_eaffiliation(group, autocommit=True)
+        data.add_affiliation(group, autocommit=True)
 
     return redirect(request.referrer)
 

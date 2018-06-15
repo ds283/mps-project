@@ -32,8 +32,54 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, and_
 
-
 _project_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        <li>
+            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=config.pclass_id) }}">
+                <i class="fa fa-pencil"></i> Edit project
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+                Preview web page
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=config.pclass_id) }}">
+                <i class="fa fa-pencil"></i> Transferable skills
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=config.pclass_id) }}">
+                <i class="fa fa-pencil"></i> Degree programmes
+            </a>
+        </li>
+
+        <li>
+        {% if project.active %}
+            <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
+                Make inactive
+            </a>
+        {% else %}
+            <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
+                Make active
+            </a>
+        {% endif %}
+        </li>
+    </ul>
+</div>
+"""
+
+
+_unattached_project_menu = \
 """
 <div class="dropdown">
     <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
@@ -198,6 +244,9 @@ def attached_ajax(id):
     if not validate_convenor(pclass):
         return jsonify({})
 
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
     pq = db.session.query(Project.id, Project.owner_id).filter(Project.project_classes.any(id=id)).subquery()
     eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
     jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
@@ -215,10 +264,10 @@ def attached_ajax(id):
     pq2 = db.session.query(jq.c.pid, Project).join(Project, Project.id == jq.c.pid)
     eq2 = db.session.query(jq.c.pid, EnrollmentRecord).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
 
-    ps = [ x[1] for x in pq2.all() ]
-    es = [ x[1] for x in eq2.all() ]
+    ps = [x[1] for x in pq2.all()]
+    es = [x[1] for x in eq2.all()]
 
-    return ajax.project.build_data(zip(ps, es), _project_menu)
+    return ajax.project.build_data(zip(ps, es), _project_menu, config=config)
 
 
 @convenor.route('/faculty/<int:id>')
@@ -1038,7 +1087,7 @@ def unattached_ajax():
 
     projects = [(p, None) for p in Project.query.all() if not p.offerable]
 
-    return ajax.project.build_data(projects, _project_menu)
+    return ajax.project.build_data(projects, _unattached_project_menu)
 
 
 

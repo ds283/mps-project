@@ -17,7 +17,12 @@
                 <h4>
                 {% for group in research_groups %}
                     {% if group in data.affiliations %}
-                        <a class="btn btn-success selection-label" href="{{ url_for('admin.remove_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-times"></i> {{ group.name }}</a>
+                        {% set style = group.make_CSS_style() %}
+                        <a class="btn {% if style %}btn-default{% else %}btn-success{% endif %} selection-label"
+                           {% if style %}style="{{ style }}"{% endif %}
+                           href="{{ url_for('admin.remove_affiliation', userid=user.id, groupid=group.id) }}">
+                            <i class="fa fa-times"></i> {{ group.name }}
+                        </a>
                     {% endif %}
                 {% endfor %}
                 </h4>

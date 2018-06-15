@@ -33,6 +33,7 @@ infinity==1.4
 intervals==0.8.1
 itsdangerous==0.24
 Jinja2==2.10
+jsmin==2.2.2
 kombu==4.2.1
 Mako==1.0.7
 Markdown==2.6.11

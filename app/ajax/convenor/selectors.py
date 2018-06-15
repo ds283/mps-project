@@ -103,10 +103,10 @@ _pending = \
 """
 {% for project in student.confirm_requests %}
     <div class="dropdown">
-        <button class="btn btn-success btn-sm dropdown-toggle table-button"
+        <a class="label label-success dropdown-toggle table-button"
                 type="button" data-toggle="dropdown">
             <i class="fa fa-plus"></i> {% if project.name|length > 20 %}{{ project.name[0:20] }}...{% else %}{{ project.name }}{% endif %}
-        </button>
+        </a>
         <ul class="dropdown-menu">
             {% if config.open %}
                 <li>
@@ -138,10 +138,10 @@ _confirmed = \
 """
 {% for liveproject in student.confirmed %}
     <div class="dropdown">
-        <button class="btn btn-warning btn-sm dropdown-toggle table-button"
+        <a class="label label-warning dropdown-toggle table-button"
                 type="button" data-toggle="dropdown">
-            <i class="fa fa-plus"></i> {% if liveproject.name|length > 20 %}{{ liveproject.name[0:20] }}...{% else %}{{ liveproject.name }}{% endif %}
-        </button>
+            <i class="fa fa-times"></i> {% if liveproject.name|length > 20 %}{{ liveproject.name[0:20] }}...{% else %}{{ liveproject.name }}{% endif %}
+        </a>
         <ul class="dropdown-menu">
             {% if config.open %}
                 <li>

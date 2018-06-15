@@ -23,10 +23,10 @@ _pending = \
 """
 {% for student in project.confirm_waiting %}
     <div class="dropdown">
-        <button class="btn btn-success btn-sm dropdown-toggle" type="button"
+        <a class="label label-success dropdown-toggle" type="button"
                 data-toggle="dropdown">
             <i class="fa fa-plus"></i> {{ student.user.build_name() }}
-        </button>
+        </a>
         <ul class="dropdown-menu">
             {% if config.open %}
                 <li>
@@ -58,10 +58,10 @@ _confirmed = \
 """
 {% for student in project.confirmed_students %}
     <div class="dropdown">
-        <button class="btn btn-warning btn-sm dropdown-toggle table-button" type="button"
+        <a class="label label-warning dropdown-toggle table-button" type="button"
                 data-toggle="dropdown">
-            <i class="fa fa-plus"></i> {{ student.user.build_name() }}
-        </button>
+            <i class="fa fa-times"></i> {{ student.user.build_name() }}
+        </a>
         <ul class="dropdown-menu">
             {% if config.open %}
                 <li>

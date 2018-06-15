@@ -10,6 +10,7 @@ bokeh==0.12.16
 celery==4.2.0rc4
 cffi==1.11.5
 click==6.7
+colour==0.1.5
 cssmin==0.2.0
 decorator==4.3.0
 dominate==2.3.1

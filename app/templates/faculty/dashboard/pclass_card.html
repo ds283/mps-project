@@ -142,14 +142,14 @@
                                 </div>
                                 <div class="col-xs-3">
                                     {% for student in project.confirm_waiting %}
-                                        <a href="{{ url_for('faculty.confirm', sid=student.id, pid=project.id) }}" class="btn btn-success btn-sm">
+                                        <a href="{{ url_for('faculty.confirm', sid=student.id, pid=project.id) }}" class="label label-success">
                                             <i class="fa fa-plus"></i> {{ student.user.build_name() }}
                                         </a>
                                     {% endfor %}
                                 </div>
                                 <div class="col-xs-3">
                                     {% for student in project.confirmed_students %}
-                                        <a href="{{ url_for('faculty.deconfirm', sid=student.id, pid=project.id) }}" class="btn btn-warning btn-sm">
+                                        <a href="{{ url_for('faculty.deconfirm', sid=student.id, pid=project.id) }}" class="label label-warning">
                                             <i class="fa fa-times"></i> {{ student.user.build_name() }}
                                         </a>
                                     {% endfor %}

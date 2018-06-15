@@ -335,7 +335,7 @@ def selectors(id):
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     # get all research groups for key
-    groups = ResearchGroup.query.all()
+    groups = ResearchGroup.query.order_by(ResearchGroup.name.asc()).all()
 
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,

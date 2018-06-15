@@ -47,4 +47,13 @@
             </table>
         </div>
     </div>
+    <div class="well">
+        <p>Research groups colour key</p>
+        <hr class="intro-divider">
+        <h4>
+            {% for group in groups %}
+                <span class="label label-default" style="{{ group.make_CSS_style() }} display:inline-block; font-size: 80%; margin-bottom: 4px;">{{ group.name }}</span>
+            {% endfor %}
+        </h4>
+    </div>
 {% endblock %}

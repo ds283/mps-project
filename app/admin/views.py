@@ -1221,6 +1221,7 @@ def add_pclass():
         # insert a record for this project class
         data = ProjectClass(name=form.name.data,
                             abbreviation=form.abbreviation.data,
+                            colour=form.colour.data,
                             year=form.year.data,
                             extent=form.extent.data,
                             require_confirm=form.require_confirm.data,
@@ -1283,6 +1284,7 @@ def edit_pclass(id):
 
         data.name = form.name.data
         data.year = form.year.data
+        data.colour = form.colour.data
         data.extent = form.extent.data
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data

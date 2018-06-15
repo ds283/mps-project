@@ -43,7 +43,8 @@ _project_status = \
 _project_pclasses = \
 """
 {% for pclass in project.project_classes %}
-    <a class="btn btn-info btn-block btn-sm {% if loop.index > 1 %}btn-table-block{% endif %}" href="mailto:{{ pclass.convenor.email }}">
+    {% set style = pclass.make_CSS_style() %}
+    <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor.email }}">
         {{ pclass.abbreviation }} ({{ pclass.convenor.build_name() }})
     </a>
 {% endfor %}

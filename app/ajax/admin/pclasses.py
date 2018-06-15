@@ -57,6 +57,7 @@ def pclasses_data(classes):
 
     data = [{'name': '{name} ({ab})'.format(name=p.name, ab=p.abbreviation),
              'active': 'Active' if p.active else 'Inactive',
+             'colour': '<span class="label label-default">None</span>' if p.colour is None else p.make_label(p.colour),
              'year': 'Y{yr}'.format(yr=p.year),
              'extent': '{ex}'.format(ex=p.extent),
              'submissions': '{sub}'.format(sub=p.submissions),

@@ -1,7 +1,27 @@
 {% import "bootstrap/wtf.html" as wtf %}
-{% from "macros.html" import edit_data %}
+{% from "macros.html" import edit_data, colour_field %}
 
 {% extends "security/index.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {% assets filters="cssmin", output="gen/bootstrap-colorpicker-packed.css", "css/bootstrap-colorpicker.css" -%}
+        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-colorpicker-packed.js", "js/bootstrap-colorpicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $(function () {
+            $('#colour-group').colorpicker({
+                format: 'hex',
+                useAlpha: false
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     {{ title }}
@@ -28,6 +48,8 @@
 
         {{ wtf.form_field(project_form.name) }}
         {{ wtf.form_field(project_form.abbreviation) }}
+
+        {{ colour_field(project_form.colour, 'colour-group') }}
 
         <div class="well {% if project_form.programmes.errors %}has-error{% endif %}">
             <p>Select degree programmes to which this project class applies</p>

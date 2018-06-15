@@ -83,13 +83,15 @@ _cohort = \
 _bookmarks = \
 """
 {% for bookmark in student.bookmarks %}
-    {% if loop.index < 4 %}
+    {% if loop.index < 7 %}
         {% set project = bookmark.liveproject %}
+        {% set style = project.group.make_CSS_style() %}
         <a href="{{ url_for('faculty.live_project', pid=project.id) }}"
-           class="btn btn-info btn-sm table-button">
+           class="label label-info table-button"
+           {% if style is not none %}style="{{ style }}"{% endif %}>
             {% if project.name|length > 20 %}{{ project.name[0:20] }}...{% else %}{{ project.name }}{% endif %}
         </a>
-    {% elif loop.index == 5 %}
+    {% elif loop.index == 7 %}
         <span class="label label-default">...</span>
     {% endif %}
 {% else %}

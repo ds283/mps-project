@@ -13,7 +13,7 @@ from flask import render_template, redirect, url_for, flash, request, jsonify, c
 from flask_security import roles_accepted, current_user
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
-    LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord
+    LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord, ResearchGroup
 
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
@@ -334,10 +334,14 @@ def selectors(id):
 
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
+    # get all research groups for key
+    groups = ResearchGroup.query.all()
+
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           live_count=live_count, proj_count=proj_count,
+                           groups=groups)
 
 
 @convenor.route('/selectors_ajax/<int:id>', methods=['GET', 'POST'])

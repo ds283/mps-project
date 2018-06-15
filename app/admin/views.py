@@ -51,7 +51,9 @@ import app.ajax as ajax
 from . import admin
 
 from datetime import date, datetime, timedelta
+from urllib.parse import urlsplit
 import json
+import re
 
 from math import pi
 from bokeh.plotting import figure
@@ -748,9 +750,15 @@ def add_group():
     form = AddResearchGroupForm(request.form)
 
     if form.validate_on_submit():
+        url = form.website.data
+        if not re.match(r'http(s?)\:', url):
+            url = 'http://' + url
+        r = urlsplit(url)     # canonicalize
+
         group = ResearchGroup(abbreviation=form.abbreviation.data,
                               name=form.name.data,
-                              website=form.website.data,
+                              colour=form.colour.data,
+                              website=r.geturl(),
                               active=True,
                               creator_id=current_user.id,
                               creation_timestamp=datetime.now());
@@ -777,9 +785,15 @@ def edit_group(id):
     form.group = group
 
     if form.validate_on_submit():
+        url = form.website.data
+        if not re.match(r'http(s?)\:', url):
+            url = 'http://' + url
+        r = urlsplit(url)     # canonicalize
+
         group.abbreviation = form.abbreviation.data
         group.name = form.name.data
-        group.website = form.website.data
+        group.colour = form.colour.data
+        group.website = r.geturl()
         group.last_edit_id = current_user.id
         group.last_edit_timestamp = datetime.now()
 

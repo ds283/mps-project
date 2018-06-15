@@ -20,11 +20,11 @@
             $('#liveprojects-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/student/projects_ajax/{{ pclass.id }}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/student/projects_ajax/{{ config.pclass_id }}', dataSrc: '' },
                 columns: [
                     { data: 'number' },
                     { data: 'name' },
-                    { data: 'owner' },
+                    { data: 'supervisor' },
                     { data: 'group' },
                     { data: 'available' },
                     { data: 'bookmarks' },

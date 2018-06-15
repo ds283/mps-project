@@ -119,7 +119,7 @@ def liveprojects_data(sel):
                                                                               pid=p.id)),
              'supervisor': '{name} <a href="mailto:{em}>{em}</a>'.format(name=p.owner.build_name(),
                                                                          em=p.owner.email),
-             'group': '<span class="label label-success">{abrv}</span>'.format(abrv=p.group.name),
+             'group': p.group.make_label(p.group_name),
              'available': render_template_string(_available, sel=sel, project=p),
              'bookmarks': render_template_string(_bookmarks, sel=sel, project=p),
              'menu': render_template_string(_menu, sel=sel, project=p)} for p in sel.config.live_projects]

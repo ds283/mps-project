@@ -18,8 +18,11 @@
                 <div style="display: flex; flex-wrap: wrap;">
                     {% for pclass in project_classes %}
                         {% if data.is_enrolled(pclass) %}
+                            {% set style = pclass.make_CSS_style() %}
                             <div class="dropdown">
-                                <button class="btn btn-success selection-label dropdown-toggle" type="button" data-toggle="dropdown">
+                                <button class="btn {% if style %}btn-default{% else %}btn-success{% endif %} selection-label dropdown-toggle"
+                                        {% if style %}style="{{ style }}"{% endif %}
+                                        type="button" data-toggle="dropdown">
                                     {{ pclass.name }} <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu">
@@ -48,7 +51,10 @@
                 <h4>
                 {% for pclass in project_classes %}
                     {% if not data.is_enrolled(pclass) %}
-                        <a class="btn btn-default selection-label" href="{{ url_for('admin.add_enrollment', userid=user.id, pclassid=pclass.id) }}"><i class="fa fa-plus"></i> {{ pclass.name }}</a>
+                        <a class="btn btn-default selection-label"
+                           href="{{ url_for('admin.add_enrollment', userid=user.id, pclassid=pclass.id) }}">
+                            <i class="fa fa-plus"></i> {{ pclass.name }}
+                        </a>
                     {% endif %}
                 {% endfor %}
                 </h4>

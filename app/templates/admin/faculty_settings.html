@@ -24,7 +24,10 @@
             <h3>
                 {% for record in data.enrollments %}
                     {% set pclass = record.pclass %}
-                    <a class="btn btn-info btn-table-block" href="mailto:{{ pclass.convenor.email }}">
+                    {% set style = pclass.make_CSS_style() %}
+                    <a class="btn {% if style %}btn-default{% else %}btn-info{% endif %} btn-table-block"
+                       {% if style %}style="{{ style }}"{% endif %}
+                       href="mailto:{{ pclass.convenor.email }}">
                         {{ pclass.name }} ({{ pclass.convenor.build_name() }})
                     </a>
                 {% endfor %}

@@ -394,9 +394,9 @@ class ResearchGroupForm():
 
     name = StringField('Name', validators=[DataRequired(message='Name is required')])
 
-    website = StringField('Website', description='Optional')
+    website = StringField('Website', description='Optional.')
 
-    colour = StringField('Colour', description='Assign a colour to help students identify this research group')
+    colour = StringField('Colour', description='Assign a colour to help students identify this research group.')
 
 
 class AddResearchGroupForm(Form, ResearchGroupForm):
@@ -459,6 +459,8 @@ class EditTransferableSkillForm(Form, EditFormMixin):
 
 
 class ProjectClassMixin():
+
+    colour = StringField('Colour', description='Assign a colour to help students identify this project class.')
 
     year = SelectField('Runs in year', choices=year_choices, coerce=int,
                        description='Select the academic year in which students join the project')

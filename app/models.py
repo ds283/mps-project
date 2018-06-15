@@ -876,6 +876,9 @@ class ProjectClass(db.Model):
     # active?
     active = db.Column(db.Boolean())
 
+    # colour to use to identify this project
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
     # which year does this project class run for?
     year = db.Column(db.Integer(), index=True)
 
@@ -960,6 +963,32 @@ class ProjectClass(db.Model):
             return False
 
         return True
+
+
+    def make_CSS_style(self):
+
+        if self.colour is None:
+            return None
+
+        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+
+
+    def make_label(self, text=None):
+        """
+        Make approriately coloured label
+        :param text:
+        :return:
+        """
+
+        if text is None:
+            text = self.name
+
+        style = self.make_CSS_style()
+        if style is None:
+            return '<span class="label label-default">{msg}</span>'.format(msg=text)
+
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text,
+                                                                                     sty=self.make_CSS_style())
 
 
 class ProjectClassConfig(db.Model):

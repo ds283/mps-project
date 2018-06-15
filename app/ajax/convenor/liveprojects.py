@@ -151,7 +151,7 @@ def liveprojects_data(config):
                                                                                       pid=p.id)),
              'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.email,
                                                                 name=p.owner.build_name()),
-             'group': '<span class="label label-success">{abrv}</span>'.format(abrv=p.group.abbreviation),
+             'group': p.group.make_label(),
              'bookmarks': render_template_string(_bookmarks, project=p),
              'pending': render_template_string(_pending, project=p, config=config),
              'confirmed': render_template_string(_confirmed, project=p, config=config),

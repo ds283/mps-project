@@ -1283,6 +1283,7 @@ def edit_pclass(id):
     if form.validate_on_submit():
 
         data.name = form.name.data
+        data.abbreviation = form.abbreviation.data
         data.year = form.year.data
         data.colour = form.colour.data
         data.extent = form.extent.data

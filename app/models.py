@@ -807,6 +807,69 @@ class DegreeProgramme(db.Model):
         return self.degree_type.active
 
 
+class SkillGroup(db.Model):
+    """
+    Model a group of transferable skills
+    """
+
+    # make table name plural
+    __tablename__ = "skill_groups"
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # name of skill group
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # active?
+    active = db.Column(db.Boolean())
+
+    # tag with a colour for easy recognition
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # add group name to lables
+    add_group = db.Column(db.Boolean())
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def make_CSS_style(self):
+
+        if self.colour is None:
+            return None
+
+        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+
+
+    def make_label(self, text=None):
+        """
+        Make approriately coloured label
+        :param text:
+        :return:
+        """
+
+        if text is None:
+            text = self.name
+
+        style = self.make_CSS_style()
+        if style is None:
+            return '<span class="label label-default">{msg}</span>'.format(msg=text)
+
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text,
+                                                                                     sty=self.make_CSS_style())
+
+
 class TransferableSkill(db.Model):
     """
     Model a transferable skill
@@ -817,7 +880,14 @@ class TransferableSkill(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
+    # name of skill
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # skill group
+    group_id = db.Column(db.Integer(), db.ForeignKey('skill_groups.id'))
+    group = db.relationship('SkillGroup', foreign_keys=[group_id], uselist=False)
+
+    # active?
     active = db.Column(db.Boolean())
 
     # created by

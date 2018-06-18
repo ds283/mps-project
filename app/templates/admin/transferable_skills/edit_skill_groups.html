@@ -1,4 +1,6 @@
-{% extends "admin/degree_types/nav.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "admin/transferable_skills/nav.html" %}
 
 {% block scripts %}
     {{ super() }}
@@ -13,12 +15,14 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#type-table').DataTable({
+            $('#skills').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/degree_types_ajax', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/skill_groups_ajax', dataSrc: '' },
                 columns: [
                     { data: 'name' },
+                    { data: 'colour' },
+                    { data: 'include' },
                     { data: 'active' },
                     { data: 'menu' }
                 ],
@@ -29,17 +33,19 @@
 {% endblock %}
 
 {% block title %}
-    Edit degree types
+    Edit transferable skills
 {% endblock %}
 
 {% block bodyblock %}
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Edit degree types</div>
+        <div class="panel-heading">Edit transferable skills</div>
         <div class="panel-body">
-        <table id="type-table" class="table table-striped table-bordered">
+        <table id="skills" class="table table-striped table-bordered">
             <thead>
             <tr>
-                <th width="75%"> Degree type</th>
+                <th width="55%"> Group</th>
+                <th width="10%"> Color</th>
+                <th width="10%"> Use group name</th>
                 <th width="10%"> Status</th>
                 <th width="15%"> Actions</th>
             </tr>
@@ -48,9 +54,9 @@
         </div>
     </div>
     <div style="text-align: center;">
-        <a href="{{ url_for('admin.add_degree_type') }}" class="btn btn-default btn-lg">
+        <a href="#" class="btn btn-default btn-lg">
             <i class="fa fa-plus"></i>
-            Add new degree type
+            Add new skills group
         </a>
     </div>
 {%  endblock %}

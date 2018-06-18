@@ -25,7 +25,7 @@ from .forms import RoleSelectForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
-    AddTransferrableSkillForm, EditTransferableSkillForm, \
+    AddTransferableSkillForm, EditTransferableSkillForm, \
     AddProjectClassForm, EditProjectClassForm, \
     AddSupervisorForm, EditSupervisorForm, \
     FacultySettingsForm, EnrollmentRecordForm, EmailLogForm, \
@@ -35,7 +35,7 @@ from .forms import RoleSelectForm, \
     EditBackupOptionsForm, BackupManageForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
+    SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
     DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord, TaskRecord, Notification, \
     EnrollmentRecord
 
@@ -1065,9 +1065,7 @@ def edit_skills():
     if not _check_admin_or_convenor():
         return home_dashboard()
 
-    skills = TransferableSkill.query.all()
-
-    return render_template('admin/edit_skills.html')
+    return render_template('admin/transferable_skills/edit_skills.html', subpane='skills')
 
 
 @admin.route('/skills_ajax', methods=['GET', 'POST'])
@@ -1096,7 +1094,7 @@ def add_skill():
     if not _check_admin_or_convenor():
         return home_dashboard()
 
-    form = AddTransferrableSkillForm(request.form)
+    form = AddTransferableSkillForm(request.form)
 
     if form.validate_on_submit():
         skill = TransferableSkill(name=form.name.data,
@@ -1108,7 +1106,8 @@ def add_skill():
 
         return redirect(url_for('admin.edit_skills'))
 
-    return render_template('admin/edit_skill.html', skill_form=form, title='Add new transferable skill')
+    return render_template('admin/transferable_skills/edit_skill.html',
+                           skill_form=form, title='Add new transferable skill')
 
 
 @admin.route('/edit_skill/<int:id>', methods=['GET', 'POST'])
@@ -1137,7 +1136,8 @@ def edit_skill(id):
 
         return redirect(url_for('admin.edit_skills'))
 
-    return render_template('admin/edit_skill.html', skill_form=form, skill=skill, title='Edit transferable skill')
+    return render_template('admin/transferable_skills/edit_skill.html',
+                           skill_form=form, skill=skill, title='Edit transferable skill')
 
 
 @admin.route('/activate_skill/<int:id>')
@@ -1176,6 +1176,35 @@ def deactivate_skill(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/edit_skill_groups')
+@roles_accepted('admin', 'root', 'faculty')
+def edit_skill_groups():
+    """
+    View for editing skill groups
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    return render_template('admin/transferable_skills/edit_skill_groups.html', subpane='groups')
+
+
+@admin.route('/skill_groups_ajax', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty')
+def skill_groups_ajax():
+    """
+    Ajax data point for skill groups table
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return jsonify({})
+
+    groups = SkillGroup.query.all()
+    return ajax.admin.skills_data(groups)
 
 
 @admin.route('/edit_project_classes')

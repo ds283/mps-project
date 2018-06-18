@@ -48,3 +48,14 @@ def skills_data(skills):
              'menu': render_template_string(_skills_menu, skill=s)} for s in skills]
 
     return jsonify(data)
+
+
+def skill_groups_data(groups):
+
+    data = [{'name': g.name,
+             'colour': g.make_label(g.colour),
+             'active': 'Active' if g.active else 'Inactive',
+             'include': 'Yes' if g.add_group else 'No',
+             'menu': '<None>'} for g in groups]
+
+    return jsonify(data)

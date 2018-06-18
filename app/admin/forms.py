@@ -444,7 +444,7 @@ class EditDegreeProgrammeForm(Form, EditFormMixin):
                                            unique_or_original_degree_programme])
 
 
-class AddTransferrableSkillForm(Form):
+class AddTransferableSkillForm(Form):
 
     name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
                                             globally_unique_transferable_skill])

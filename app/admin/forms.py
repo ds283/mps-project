@@ -494,7 +494,7 @@ class AddProjectClassForm(Form, ProjectClassMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
                                            globally_unique_project_class])
-    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is rqwuired'),
+    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
                                                            globally_unique_project_class_abbrev])
 
     submit = SubmitField('Add new project class')

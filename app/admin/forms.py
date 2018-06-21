@@ -317,10 +317,10 @@ class FacultyDataMixin():
     academic_title = SelectField('Academic title', choices=academic_titles, coerce=int)
 
     use_academic_title = BooleanField('Use academic title', default=True,
-                                      description='User Dr, Professor or similar in student-facing web pages')
+                                      description='Prefix your name with Dr, Professor or similar in student-facing web pages.')
     sign_off_students = BooleanField('Ask to confirm student meetings', default=True,
                                      description='If meetings are required before project selection, '
-                                                 'confirmation is needed before allowing students to sign up ')
+                                                 'confirmation is needed before allowing students to sign up.')
 
     office = StringField('Office', validators=[DataRequired(message='Please enter your office details to help '
                                                                     'students find you')])
@@ -463,7 +463,7 @@ class ProjectClassMixin():
     colour = StringField('Colour', description='Assign a colour to help students identify this project class.')
 
     year = SelectField('Runs in year', choices=year_choices, coerce=int,
-                       description='Select the academic year in which students join the project')
+                       description='Select the academic year in which students join the project.')
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
                          description='For how many academic years do students participate in the project?')
 
@@ -472,13 +472,13 @@ class ProjectClassMixin():
     supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')
 
     submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
-                              description='Select number of marked reports submitted per academic year')
+                              description='Select number of marked reports submitted per academic year.')
 
     initial_choices = IntegerField('Number of initial project preferences',
-                                   description='Select number of preferences students should list before joining')
+                                   description='Select number of preferences students should list before joining.')
 
     switch_choices = IntegerField('Number of subsequent project preferences',
-                                      description='Number of preferences to allow in subsequent years, if switching is allowed')
+                                  description='Number of preferences to allow in subsequent years, if switching is allowed.')
 
     convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
@@ -619,10 +619,10 @@ class ScheduledTaskMixin():
     task = SelectField('Task', choices=tasks_available)
 
     arguments = StringField('Arguments', validators=[valid_json],
-                            description='Format as a JSON list')
+                            description='Format as a JSON list.')
 
     keyword_arguments = StringField('Keyword arguments', validators=[valid_json],
-                                    description='Format as a JSON dictionary')
+                                    description='Format as a JSON dictionary.')
 
     expires = DateTimeField('Expires at', validators=[Optional()],
                             description='Optional. Format YYYY-mm-dd HH:MM:SS. Leave blank for no expiry.')
@@ -720,7 +720,7 @@ class EnrollmentRecordMixin():
 
     supervisor_reenroll = IntegerField('Re-enroll in academic year',
                                    description='Optional. For faculty on sabbatical or buy-outs, enter a year in which '
-                                               'automatical re-enrollment should occur.',
+                                               'automatic re-enrollment should occur.',
                                    validators=[Optional()])
 
     supervisor_comment = StringField('Comment',
@@ -731,7 +731,7 @@ class EnrollmentRecordMixin():
 
     marker_reenroll = IntegerField('Re-enroll in academic year',
                                    description='Optional. For faculty on sabbatical or buy-outs, enter a year in which '
-                                               'automatical re-enrollment should occur.',
+                                               'automatic re-enrollment should occur.',
                                    validators=[Optional()])
 
     marker_comment = StringField('Comment',

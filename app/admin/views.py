@@ -974,7 +974,8 @@ def add_degree_programme():
 
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
-        flash('No degree types are available. Set up at least one active degree type before adding a degree programme.')
+        flash('No degree types are available. Set up at least one active degree type before adding a '
+              'degree programme.', 'error')
         return redirect(request.referrer)
 
     form = AddDegreeProgrammeForm(request.form)
@@ -1093,6 +1094,12 @@ def add_skill():
 
     if not _check_admin_or_convenor():
         return home_dashboard()
+
+    # check whether any skill groups exist, and raise an error if not
+    if not SkillGroup.query.filter_by(active=True).first():
+        flash('No skill groups are available. Set up at least one active skill group before adding a '
+              'transferable skill.', 'error')
+        return redirect(request.referrer)
 
     form = AddTransferableSkillForm(request.form)
 

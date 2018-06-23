@@ -777,7 +777,7 @@ class SkillGroupMixin():
 
 class AddSkillGroupForm(Form, SkillGroupMixin):
 
-    name = StringField('Name of skill group', validators=[DataRequired(message='A name for the group is required'),
+    name = StringField('Name', validators=[DataRequired(message='A name for the group is required'),
                                                           globally_unique_skill_group])
 
     submit = SubmitField('Add new skill')
@@ -785,5 +785,5 @@ class AddSkillGroupForm(Form, SkillGroupMixin):
 
 class EditSkillGroupForm(Form, SkillGroupMixin, EditFormMixin):
 
-    name = StringField('Name of skill group', validators=[DataRequired(message='A name for the group is required'),
+    name = StringField('Name', validators=[DataRequired(message='A name for the group is required'),
                                                           unique_or_original_skill_group])

@@ -19,7 +19,7 @@ from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor, BackupConfiguration, EnrollmentRecord, \
+    ProjectClass, Supervisor, BackupConfiguration, EnrollmentRecord, SkillGroup, \
     submission_choices, academic_titles, extent_choices, year_choices
 
 from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
@@ -97,13 +97,26 @@ def unique_or_original_degree_programme(form, field):
 
 
 def globally_unique_transferable_skill(form, field):
-    if TransferableSkill.query.filter_by(name=field.data).first():
+    if TransferableSkill.query.filter(TransferableSkill.name == field.data,
+                                      TransferableSkill.group_id == form.group.data.id).first():
         raise ValidationError('{name} is already associated with a transferable skill'.format(name=field.data))
 
 
 def unique_or_original_transferable_skill(form, field):
-    if field.data != form.skill.name and TransferableSkill.query.filter_by(name=field.data).first():
+    if field.data != form.skill.name and \
+            TransferableSkill.query.filter(TransferableSkill.name == field.data,
+                                           TransferableSkill.group_id == form.group.data.id).first():
         raise ValidationError('{name} is already associated with a transferable skill'.format(name=field.data))
+
+
+def globally_unique_skill_group(form, field):
+    if SkillGroup.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a skill group'.format(name=field.data))
+
+
+def unique_or_original_skill_group(form, field):
+    if field.data != form.group.name and SkillGroup.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a skill group'.format(name=field.data))
 
 
 def globally_unique_project_class(form, field):
@@ -217,6 +230,11 @@ def GetActiveDegreeTypes():
 def GetActiveDegreeProgrammes():
 
     return DegreeProgramme.query.filter_by(active=True)
+
+
+def GetActiveSkillGroups():
+
+    return SkillGroup.query.filter_by(active=True)
 
 
 def BuildDegreeProgrammeName(programme):
@@ -444,7 +462,12 @@ class EditDegreeProgrammeForm(Form, EditFormMixin):
                                            unique_or_original_degree_programme])
 
 
-class AddTransferableSkillForm(Form):
+class TransferableSkillMixin():
+
+    group = QuerySelectField('Skill group', query_factory=GetActiveSkillGroups, get_label='name')
+
+
+class AddTransferableSkillForm(Form, TransferableSkillMixin):
 
     name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
                                             globally_unique_transferable_skill])
@@ -452,7 +475,7 @@ class AddTransferableSkillForm(Form):
     submit = SubmitField('Add new transferable skill')
 
 
-class EditTransferableSkillForm(Form, EditFormMixin):
+class EditTransferableSkillForm(Form, TransferableSkillMixin, EditFormMixin):
 
     name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
                                             unique_or_original_transferable_skill])
@@ -669,7 +692,7 @@ class EditCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin, EditFormM
     pass
 
 
-class BackupOptions():
+class BackupOptionsMixin():
 
     hourly_choices = [(1, '1 day'),
                       (2, '2 days'),
@@ -709,7 +732,7 @@ class BackupOptions():
     limit_units = SelectField('', choices=units_choices, coerce=int)
 
 
-class EditBackupOptionsForm(Form, BackupOptions):
+class EditBackupOptionsForm(Form, BackupOptionsMixin):
 
     submit = SubmitField('Save changes')
 
@@ -735,9 +758,32 @@ class EnrollmentRecordMixin():
                                    validators=[Optional()])
 
     marker_comment = StringField('Comment',
-                                     description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
-                                     validators=[Optional()])
+                                 description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
+                                 validators=[Optional()])
 
 class EnrollmentRecordForm(Form, EnrollmentRecordMixin, EditFormMixin):
 
     pass
+
+
+class SkillGroupMixin():
+
+    colour = StringField('Colour',
+                         description='Assign a colour to help students identify skills belonging to this group')
+
+    add_group = BooleanField('Add group name to skill labels',
+                             description='Select if you wish skills in this group to be labelled as <group name>: <skill name>')
+
+
+class AddSkillGroupForm(Form, SkillGroupMixin):
+
+    name = StringField('Name of skill group', validators=[DataRequired(message='A name for the group is required'),
+                                                          globally_unique_skill_group])
+
+    submit = SubmitField('Add new skill')
+
+
+class EditSkillGroupForm(Form, SkillGroupMixin, EditFormMixin):
+
+    name = StringField('Name of skill group', validators=[DataRequired(message='A name for the group is required'),
+                                                          unique_or_original_skill_group])

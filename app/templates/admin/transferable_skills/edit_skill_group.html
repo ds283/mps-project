@@ -5,7 +5,6 @@
 
 {% block scripts %}
     {{ super() }}
-
     {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
         <link rel="stylesheet" href="{{ ASSET_URL }}"/>
     {% endassets %}
@@ -34,21 +33,20 @@
 
 {% block form_content %}
     {% if group %}
-        <form action="{{ url_for('admin.edit_group', id=group.id) }}" method="POST" name="group_form">
+        <form action="{{ url_for('admin.edit_skill_group', id=group.id) }}" method="POST" name="group_form">
     {% else %}
-        <form action="{{ url_for('admin.add_group') }}" method="POST" name="group_form">
+        <form action="{{ url_for('admin.add_skill_group') }}" method="POST" name="group_form">
     {% endif %}
 
         {{ group_form.hidden_tag() }}
 
 {#        {{ wtf.form_errors(group_form) }}#}
 
-        {{ wtf.form_field(group_form.abbreviation) }}
         {{ wtf.form_field(group_form.name) }}
 
         {{ colour_field(group_form.colour, 'colour-group') }}
 
-        {{ wtf.form_field(group_form.website) }}
+        {{ wtf.form_field(group_form.add_group) }}
 
         {{ wtf.form_field(group_form.submit, button_map={'submit': 'primary'}) }}
 

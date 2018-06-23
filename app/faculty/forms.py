@@ -16,7 +16,7 @@ from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..models import db, User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor, Project, EnrollmentRecord
+    ProjectClass, Supervisor, Project, EnrollmentRecord, SkillGroup
 
 from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -66,6 +66,11 @@ def GetProjectClasses():
 def GetSupervisorRoles():
 
     return Supervisor.query.filter_by(active=True)
+
+
+def GetSkillGroups():
+
+    return SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc())
 
 
 class ProjectMixin():
@@ -175,3 +180,15 @@ class IssueFacultyConfirmRequestForm(Form):
 class ConfirmAllRequestsForm(Form):
 
     confirm_all = SubmitField('Confirm all outstanding projects')
+
+
+class SkillSelectorMixin():
+
+    selector = QuerySelectField('Skill group', query_factory=GetSkillGroups, get_label='name')
+
+    submit = SubmitField('Change')
+
+
+class SkillSelectorForm(Form, SkillSelectorMixin):
+
+    pass

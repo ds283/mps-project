@@ -116,8 +116,10 @@
                                         <div class="row sm-gap-below vertical-top">
                                             <div class="col-xs-3">Transferable skills</div>
                                             <div class="col-xs-9">
-                                                {% for skill in project.skills %}
-                                                    <span class="label label-info project-label">{{ skill.name }}</span>
+                                                {% for skill in project.ordered_skills %}
+                                                    {% if skill.is_active %}
+                                                        {{  skill.make_label(user_classes="project-label")|safe }}
+                                                    {% endif %}
                                                 {% endfor %}
                                             </div>
                                         </div>

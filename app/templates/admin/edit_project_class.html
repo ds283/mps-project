@@ -5,11 +5,11 @@
 
 {% block scripts %}
     {{ super() }}
-    {% assets filters="cssmin", output="gen/bootstrap-colorpicker-packed.css", "css/bootstrap-colorpicker.css" -%}
+    {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
         <link rel="stylesheet" href="{{ ASSET_URL }}"/>
     {% endassets %}
 
-    {% assets filters="jsmin", output="gen/bootstrap-colorpicker-packed.js", "js/bootstrap-colorpicker.js" -%}
+    {% assets filters="jsmin", output="gen/bootstrap-colorpicker-min.js", "js/bootstrap-colorpicker.js" -%}
         <script src="{{ ASSET_URL }}"></script>
     {% endassets %}
 

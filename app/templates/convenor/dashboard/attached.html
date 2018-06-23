@@ -1,4 +1,5 @@
 {% extends "convenor/dashboard/nav.html" %}
+{% from "macros.html" import skill_groups_key %}
 
 {% block scripts %}
     {{ super() }}
@@ -47,6 +48,7 @@
             </table>
         </div>
     </div>
+    {{ skill_groups_key(groups) }}
     <div style="text-align: center;">
         <a href="{{ url_for('convenor.add_project', pclass_id=pclass.id) }}" class="btn btn-default btn-lg">
             <i class="fa fa-plus"></i>

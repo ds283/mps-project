@@ -844,6 +844,30 @@ class SkillGroup(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    def enable(self):
+        """
+        Enable this skill group and cascade, ie. enable any transferable skills associated with this group
+        :return:
+        """
+
+        self.active = True
+
+        for skill in self.skills:
+            skill.enable()
+
+
+    def disable(self):
+        """
+        Disable this skill group and cascade, ie. disable any transferable skills associated with this group
+        :return:
+        """
+
+        self.active = False
+
+        for skill in self.skills:
+            skill.disable()
+
+
     def make_CSS_style(self):
 
         if self.colour is None:
@@ -852,9 +876,10 @@ class SkillGroup(db.Model):
         return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
 
 
-    def make_label(self, text=None):
+
+    def make_label(self, text=None, user_classes=None):
         """
-        Make approriately coloured label
+        Make appropriately coloured label
         :param text:
         :return:
         """
@@ -862,12 +887,33 @@ class SkillGroup(db.Model):
         if text is None:
             text = self.name
 
-        style = self.make_CSS_style()
-        if style is None:
-            return '<span class="label label-default">{msg}</span>'.format(msg=text)
+        css_style = self.make_CSS_style()
+        if user_classes is None:
+            classes = 'label label-default'
+        else:
+            classes = 'label label-default {cls}'.format(cls=user_classes)
 
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text,
-                                                                                     sty=self.make_CSS_style())
+        if css_style is None:
+                return '<span class="{cls}">{msg}</span>'.format(msg=text, cls=classes)
+
+        return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=css_style)
+
+
+    def make_skill_label(self, skill, user_classes=None):
+        """
+        Make an appropriately formatted, coloured label for a transferable skill
+        :param skill:
+        :return:
+        """
+
+        if self.add_group:
+            label = self.name + ': '
+        else:
+            label = ''
+
+        label += skill
+
+        return self.make_label(text=label, user_classes=user_classes)
 
 
 class TransferableSkill(db.Model):
@@ -881,11 +927,12 @@ class TransferableSkill(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of skill
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
 
     # skill group
     group_id = db.Column(db.Integer(), db.ForeignKey('skill_groups.id'))
-    group = db.relationship('SkillGroup', foreign_keys=[group_id], uselist=False)
+    group = db.relationship('SkillGroup', foreign_keys=[group_id], uselist=False,
+                            backref=db.backref('skills', lazy='dynamic'))
 
     # active?
     active = db.Column(db.Boolean())
@@ -903,6 +950,15 @@ class TransferableSkill(db.Model):
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def is_active(self):
+
+        if self.group is None:
+            return self.active
+
+        return self.active and self.group.active
 
 
     def disable(self):
@@ -925,6 +981,23 @@ class TransferableSkill(db.Model):
         """
 
         self.active = True
+
+
+    def make_label(self, user_classes=None):
+        """
+        Make a label
+        :return:
+        """
+
+        if self.group is None:
+            if user_classes is None:
+                classes = 'label label-default'
+            else:
+                classes = 'label label-default {cls}'.format(cls=user_classes)
+
+            return '<span class="{cls}">{name}</span>'.format(name=self.name, cls=classes)
+
+        return self.group.make_skill_label(self.name, user_classes=user_classes)
 
 
 class ProjectClass(db.Model):
@@ -1476,6 +1549,15 @@ class Project(db.Model):
         self.skills.remove(skill)
 
 
+    @property
+    def ordered_skills(self):
+
+        return self.skills \
+            .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
+            .order_by(SkillGroup.name.asc(),
+                      TransferableSkill.name.asc())
+
+
     def add_programme(self, prog):
 
         self.programmes.append(prog)
@@ -1630,6 +1712,15 @@ class LiveProject(db.Model):
             return True
 
         return False
+
+
+    @property
+    def ordered_skills(self):
+
+        return self.skills \
+            .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
+            .order_by(SkillGroup.name.asc(),
+                      TransferableSkill.name.asc())
 
 
 

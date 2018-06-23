@@ -23,6 +23,7 @@
 {#        {{ wtf.form_errors(skill_form) }}#}
 
         {{ wtf.form_field(skill_form.name) }}
+        {{ wtf.form_field(skill_form.group) }}
 
         {{ wtf.form_field(skill_form.submit, button_map={'submit': 'primary'}) }}
 

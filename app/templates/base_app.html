@@ -2,7 +2,7 @@
 
 {% block styles %}
     {{ super() }}
-    {% assets filters="cssmin", output="gen/site_packed.css", "css/site.css" -%}
+    {% assets filters="cssmin", output="gen/site-min.css", "css/site.css" -%}
         <link rel="stylesheet" href="{{ ASSET_URL }}"/>
     {% endassets %}
 {%- endblock %}

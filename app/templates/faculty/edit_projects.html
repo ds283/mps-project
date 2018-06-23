@@ -1,4 +1,5 @@
 {% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import skill_groups_key %}
 
 {% extends "base_app.html" %}
 
@@ -59,6 +60,7 @@
         </table>
         </div>
     </div>
+    {{ skill_groups_key(groups) }}
     <div style="text-align: center;">
         <a href="{{ url_for('faculty.add_project') }}" class="btn btn-default btn-lg">
             <i class="fa fa-plus"></i>

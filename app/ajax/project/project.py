@@ -10,6 +10,8 @@
 
 from flask import render_template_string, jsonify
 
+from ...models import TransferableSkill
+
 
 _project_name = \
 """
@@ -74,9 +76,9 @@ _project_prefer = \
 
 _project_skills = \
 """
-{% for skill in project.skills %}
-    {% if skill.active %}
-        <span class="label label-default">{{ skill.name }}</span>
+{% for skill in skills %}
+    {% if skill.is_active %}
+      {{ skill.make_label()|safe }}
     {% endif %}
 {% endfor %}
 """
@@ -92,7 +94,7 @@ def build_data(projects, menu_template, config=None):
              'meeting': render_template_string(_project_meetingreqd, project=p),
              'group': p.group.make_label(),
              'prefer': render_template_string(_project_prefer, project=p),
-             'skills': render_template_string(_project_skills, project=p),
+             'skills': render_template_string(_project_skills, skills=p.ordered_skills),
              'menu': render_template_string(menu_template, project=p, config=config)} for p, e in projects]
 
     return jsonify(data)

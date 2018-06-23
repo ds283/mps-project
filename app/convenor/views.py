@@ -13,7 +13,7 @@ from flask import render_template, redirect, url_for, flash, request, jsonify, c
 from flask_security import roles_accepted, current_user
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
-    LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord, ResearchGroup
+    LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup
 
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
@@ -26,7 +26,8 @@ import app.ajax as ajax
 
 from . import convenor
 
-from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFacultyConfirmRequestForm
+from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFacultyConfirmRequestForm, \
+    SkillSelectorForm
 
 from datetime import date, datetime, timedelta
 
@@ -223,10 +224,12 @@ def attached(id):
 
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
+    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+
     return render_template('convenor/dashboard/attached.html', pane='attached',
                            pclass=pclass, config=config, current_year=current_year,
                            fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           live_count=live_count, proj_count=proj_count, groups=groups)
 
 
 @convenor.route('/attached_ajax/<int:id>', methods=['GET', 'POST'])
@@ -335,7 +338,7 @@ def selectors(id):
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
     # get all research groups for key
-    groups = ResearchGroup.query.order_by(ResearchGroup.name.asc()).all()
+    groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
 
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
@@ -951,9 +954,10 @@ def deactivate_project(id, pclass_id):
     return redirect(request.referrer)
 
 
-@convenor.route('/attach_skills/<int:id>/<int:pclass_id>')
+@convenor.route('/attach_skills/<int:id>/<int:pclass_id>/<int:sel_id>')
+@convenor.route('/attach_skills/<int:id>/<int:pclass_id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def attach_skills(id, pclass_id):
+def attach_skills(id, pclass_id, sel_id=None):
 
     # get project details
     data = Project.query.get_or_404(id)
@@ -973,10 +977,68 @@ def attach_skills(id, pclass_id):
         if not validate_convenor(pclass):
             return redirect(request.referrer)
 
-    # get list of active skills
-    skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name)
+    form = SkillSelectorForm(request.form)
 
-    return render_template('convenor/attach_skills.html', data=data, skills=skills, pclass_id=pclass_id)
+    if not form.validate_on_submit() and request.method == 'GET':
+        if sel_id is None:
+            form.selector.data = SkillGroup.query \
+                .filter(SkillGroup.active == True) \
+                .order_by(SkillGroup.name.asc()).first()
+        else:
+            form.selector.data = SkillGroup.query \
+                .filter(SkillGroup.active == True, SkillGroup.id == sel_id).first()
+
+    # get list of active skills matching selector
+    if form.selector.data is not None:
+        skills = TransferableSkill.query \
+            .filter(TransferableSkill.active == True,
+                    TransferableSkill.group_id == form.selector.data.id) \
+            .order_by(TransferableSkill.name.asc())
+    else:
+        skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
+
+    return render_template('convenor/attach_skills.html', data=data, skills=skills, pclass_id=pclass_id,
+                           form=form, sel_id=form.selector.data.id)
+
+
+@convenor.route('/add_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def add_skill(projectid, skillid, pclass_id, sel_id):
+
+    # get project details
+    data = Project.query.get_or_404(projectid)
+
+    # if project owner is not logged in user or a suitable convenor, or an administrator, object
+    if not validate_user(data):
+        return redirect(request.referrer)
+
+    skill = TransferableSkill.query.get_or_404(skillid)
+
+    if skill not in data.skills:
+        data.add_skill(skill)
+        db.session.commit()
+
+    return redirect(url_for('convenor.attach_skills', id=projectid, pclass_id=pclass_id, sel_id=sel_id))
+
+
+@convenor.route('/remove_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def remove_skill(projectid, skillid, pclass_id, sel_id):
+
+    # get project details
+    data = Project.query.get_or_404(projectid)
+
+    # if project owner is not logged in user or a suitable convenor, or an administrator, object
+    if not validate_user(data):
+        return redirect(request.referrer)
+
+    skill = TransferableSkill.query.get_or_404(skillid)
+
+    if skill in data.skills:
+        data.remove_skill(skill)
+        db.session.commit()
+
+    return redirect(url_for('convenor.attach_skills', id=projectid, pclass_id=pclass_id, sel_id=sel_id))
 
 
 @convenor.route('/attach_programmes/<int:id>/<int:pclass_id>')

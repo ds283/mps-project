@@ -25,7 +25,7 @@ from .forms import RoleSelectForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
-    AddTransferableSkillForm, EditTransferableSkillForm, \
+    AddTransferableSkillForm, EditTransferableSkillForm, AddSkillGroupForm, EditSkillGroupForm, \
     AddProjectClassForm, EditProjectClassForm, \
     AddSupervisorForm, EditSupervisorForm, \
     FacultySettingsForm, EnrollmentRecordForm, EmailLogForm, \
@@ -1098,6 +1098,7 @@ def add_skill():
 
     if form.validate_on_submit():
         skill = TransferableSkill(name=form.name.data,
+                                  group=form.group.data,
                                   active=True,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
@@ -1129,6 +1130,7 @@ def edit_skill(id):
 
     if form.validate_on_submit():
         skill.name = form.name.data
+        skill.group = form.group.data
         skill.last_edit_id = current_user.id
         skill.last_edit_timestamp = datetime.now()
 
@@ -1144,7 +1146,7 @@ def edit_skill(id):
 @roles_accepted('admin', 'root', 'faculty')
 def activate_skill(id):
     """
-    Make a transferable active
+    Make a transferable skill active
     :param id:
     :return:
     """
@@ -1163,7 +1165,7 @@ def activate_skill(id):
 @roles_accepted('admin', 'root', 'faculty')
 def deactivate_skill(id):
     """
-    Make a transferable inactive
+    Make a transferable skill inactive
     :param id:
     :return:
     """
@@ -1204,7 +1206,105 @@ def skill_groups_ajax():
         return jsonify({})
 
     groups = SkillGroup.query.all()
-    return ajax.admin.skills_data(groups)
+    return ajax.admin.skill_groups_data(groups)
+
+
+@admin.route('/add_skill_group', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty')
+def add_skill_group():
+    """
+    Add a new skill group
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    form = AddSkillGroupForm(request.form)
+
+    if form.validate_on_submit():
+        skill = SkillGroup(name=form.name.data,
+                           colour=form.colour.data,
+                           add_group=form.add_group.data,
+                           active=True,
+                           creator_id=current_user.id,
+                           creation_timestamp=datetime.now())
+        db.session.add(skill)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_skill_groups'))
+
+    return render_template('admin/transferable_skills/edit_skill_group.html',
+                           group_form=form, title='Add new transferable skill group')
+
+
+@admin.route('/edit_skill_group/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root', 'faculty')
+def edit_skill_group(id):
+    """
+    Edit an existing skill group
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    group = SkillGroup.query.get_or_404(id)
+    form = EditSkillGroupForm(obj=group)
+
+    form.group = group
+
+    if form.validate_on_submit():
+        group.name = form.name.data
+        group.colour = form.colour.data
+        group.add_group = form.add_group.data
+        group.last_edit_id = current_user.id
+        group.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_skill_groups'))
+
+    return render_template('admin/transferable_skills/edit_skill_group.html', group=group,
+                           group_form=form, title='Edit transferable skill group')
+
+
+@admin.route('/activate_skill_group/<int:id>')
+@roles_accepted('admin', 'root', 'faculty')
+def activate_skill_group(id):
+    """
+    Make a transferable skill group active
+    :param id:
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    group = SkillGroup.query.get_or_404(id)
+    group.enable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/deactivate_skill_group/<int:id>')
+@roles_accepted('admin', 'root', 'faculty')
+def deactivate_skill_group(id):
+    """
+    Make a transferable skill group inactive
+    :param id:
+    :return:
+    """
+
+    if not _check_admin_or_convenor():
+        return home_dashboard()
+
+    group = SkillGroup.query.get_or_404(id)
+    group.disable()
+    db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @admin.route('/edit_project_classes')

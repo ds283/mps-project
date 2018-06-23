@@ -13,13 +13,13 @@ from flask_security import roles_required, roles_accepted, current_user
 
 from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
-    EnrollmentRecord
+    EnrollmentRecord, SkillGroup
 
 import app.ajax as ajax
 
 from . import faculty
 
-from .forms import AddProjectForm, EditProjectForm
+from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm
 
 from ..shared.utils import home_dashboard
 from ..shared.validators import validate_user, validate_open
@@ -72,7 +72,9 @@ def remove_affiliation(groupid):
 @roles_accepted('faculty', 'admin', 'root')
 def edit_projects():
 
-    return render_template('faculty/edit_projects.html')
+    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+
+    return render_template('faculty/edit_projects.html', groups=groups)
 
 
 _project_menu = \
@@ -244,9 +246,10 @@ def deactivate_project(id):
     return redirect(request.referrer)
 
 
-@faculty.route('/attach_skills/<int:id>')
+@faculty.route('/attach_skills/<int:id>/<int:sel_id>')
+@faculty.route('/attach_skills/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def attach_skills(id):
+def attach_skills(id, sel_id=None):
 
     # get project details
     data = Project.query.get_or_404(id)
@@ -255,15 +258,33 @@ def attach_skills(id):
     if not validate_user(data):
         return redirect(request.referrer)
 
-    # get list of active skills
-    skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name)
+    form = SkillSelectorForm(request.form)
 
-    return render_template('faculty/attach_skills.html', data=data, skills=skills)
+    if not form.validate_on_submit() and request.method == 'GET':
+        if sel_id is None:
+            form.selector.data = SkillGroup.query \
+                .filter(SkillGroup.active == True) \
+                .order_by(SkillGroup.name.asc()).first()
+        else:
+            form.selector.data = SkillGroup.query \
+                .filter(SkillGroup.active == True, SkillGroup.id == sel_id).first()
+
+    # get list of active skills matching selector
+    if form.selector.data is not None:
+        skills = TransferableSkill.query \
+            .filter(TransferableSkill.active == True,
+                    TransferableSkill.group_id == form.selector.data.id) \
+            .order_by(TransferableSkill.name.asc())
+    else:
+        skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
+
+    return render_template('faculty/attach_skills.html', data=data, skills=skills,
+                           form=form, sel_id=form.selector.data.id)
 
 
-@faculty.route('/add_skill/<int:projectid>/<int:skillid>')
+@faculty.route('/add_skill/<int:projectid>/<int:skillid>/<int:sel_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def add_skill(projectid, skillid):
+def add_skill(projectid, skillid, sel_id):
 
     # get project details
     data = Project.query.get_or_404(projectid)
@@ -278,12 +299,12 @@ def add_skill(projectid, skillid):
         data.add_skill(skill)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(url_for('faculty.attach_skills', id=projectid, sel_id=sel_id))
 
 
-@faculty.route('/remove_skill/<int:projectid>/<int:skillid>')
+@faculty.route('/remove_skill/<int:projectid>/<int:skillid>/<int:sel_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def remove_skill(projectid, skillid):
+def remove_skill(projectid, skillid, sel_id):
 
     # get project details
     data = Project.query.get_or_404(projectid)
@@ -298,7 +319,7 @@ def remove_skill(projectid, skillid):
         data.remove_skill(skill)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(url_for('faculty.attach_skills', id=projectid, sel_id=sel_id))
 
 
 @faculty.route('/attach_programmes/<int:id>')

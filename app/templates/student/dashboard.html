@@ -65,29 +65,52 @@
 
                     {% set pclass = config.project_class %}
                     <div class="well">
-                        <p><span
-                                class="dashboard-project-title">{{ pclass.name }}</span>
-                        </p>
-                        <p><span>
-                            Convenor:
-                            <a class="btn btn-link" href="mailto:{{ pclass.convenor.email }}">
-                                {{ pclass.convenor.build_name() }}
-                            </a>
-                        </span></p>
-                        <p><span>
-                            Commences in academic year
-                            <strong>Y{{ pclass.year }}</strong>.
-                            You are part of the
-                            {% if sel %}
-                                <strong>{{ sel.user.student_data.cohort }} cohort</strong>
-                                and are currently in
-                                <strong>Y{{ sel.get_academic_year }}</strong>.
-                            {% elif sub %}
-                                <strong>{{ sub.user.student_data.cohort }} cohort</strong>
-                                and are currently in
-                                <strong>Y{{ sub.get_academic_year }}</strong>.
-                            {% endif %}
-                        </span></p>
+                        <div class="row vertical-align">
+                            <div class="col-xs-10">
+                                <span class="dashboard-project-title">{{ pclass.name }}</span>
+                            </div>
+                            <div class="col-xs-2">
+                                {% if pclass.programmes %}
+                                    {% for programme in pclass.programmes %}
+                                        {{ programme.label()|safe }}
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row vertical-align">
+                            <div class="col-xs-6">
+                                Convenor:
+                                <a class="btn btn-link" href="mailto:{{ pclass.convenor.email }}">
+                                    {{ pclass.convenor.build_name() }}
+                                </a>
+                            </div>
+                            <div class="col-xs-6">
+                                <div class="pull-right">
+                                    Commences in
+                                    <span class="label label-info">Y{{ pclass.year }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-xs-12">
+                                You are part of the
+                                {% set sdata = none %}
+                                {% if sel %}
+                                    {% set sdata = sel %}
+                                {% elif sub %}
+                                    {% set sdata = sub %}
+                                {% endif %}
+                                {% if data is not none %}
+                                    {{ sdata.user.student_data.cohort_label()|safe }}
+                                    on programme
+                                    {{ sdata.user.student_data.programme.label()|safe }}
+                                    and are currently in
+                                    {{ sdata.academic_year_label()|safe }}
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <hr class="intro-divider">
 
                         {% if sel %}
                             {{ selection_card(config, sel) }}

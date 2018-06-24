@@ -13,9 +13,9 @@ from flask import render_template_string, jsonify
 
 _cohort = \
 """
-<span class="label label-default">{{ student.user.student_data.programme.name }}</span>
-<span class="label label-info">Y{{ student.get_academic_year }}</span>
-<span class="label label-success">Cohort {{ student.user.student_data.cohort }}</span>
+{{ student.user.student_data.programme.label()|safe }}
+{{ student.academic_year_label()|safe }}
+{{ student.user.student_data.cohort_label()|safe }}
 """
 
 

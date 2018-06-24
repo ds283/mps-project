@@ -67,35 +67,39 @@
                             {% set numpl = '' %}
                         {% endif %}
                         {% if sel.is_optional %}
-                            This project is <strong>optional</strong> for your degree programme.
+                            <p>This project is <strong>optional</strong> for your degree programme.
                             If you wish to participate, add bookmarks to keep track of the projects
-                            in which you are interested.
-                            Drag-and-drop your bookmarks using the drag handle
-                            to rank them in order of preference.
+                            in which you are interested. Drag-and-drop your bookmarks using the drag handle
+                            to rank them in order of preference. Submit your selection when you are done.</p>
 
-                            Some projects may require the project supervisor to confirm that
+                            <p>You can continue to edit your selection after you submit.</p>
+
+                            <p>Some projects may require the project supervisor to confirm that
                             a pre-selection meeting has taken place, or at least been arranged,
-                            before the project becomes available.
+                            before the project becomes available.</p>
 
-                            If you wish to enroll
-                            you should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                            <p>If you wish to enroll
+                            you should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
                         {% else %}
                             {% if sel.is_initial_selection %}
-                                This project is <strong>mandatory</strong> for your degree programme.
+                                <p>This project is <strong>mandatory</strong> for your degree programme.
                                 Add bookmarks to keep track of the projects in which you are interested,
                                 then drag-and-drop to rank them in order of preference.
+                                Submit your selection when you are done.</p>
 
-                                Some projects may require the project supervisor to confirm that
+                                <p>You can continue to edit your selection after you submit.</p>
+
+                                <p>Some projects may require the project supervisor to confirm that
                                 a pre-selection meeting has taken place, or at least been arranged,
-                                before the project becomes available.
+                                before the project becomes available.</p>
 
-                                You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                <p>You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
                             {% else %}
-                                If you wish to <strong>switch supervisors</strong>,
+                                <p>If you wish to <strong>switch supervisors</strong>,
                                 then add bookmarks for each project of interest.
-                                Drag-and-drop your bookmarks to indicate your order of preference.
+                                Drag-and-drop your bookmarks to indicate your order of preference.</p>
 
-                                You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                <p>You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
                             {% endif %}
                         {% endif %}
                     </div>

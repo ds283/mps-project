@@ -32,9 +32,8 @@ _project_menu = \
 def pastproject_data(projects):
 
     data = [{'year': '{c}'.format(c=p.config.year),
-             'name': '<a href="{url}"><strong>{name}</strong></a>'.format(name=p.name,
-                                                                          url=url_for('faculty.live_project',
-                                                                                      pid=p.id)),
+             'name': '<a href="{url}">{name}</a>'.format(name=p.name, url=url_for('faculty.live_project',
+                                                                                  pid=p.id)),
              'pclass': '<span class="label label-default">{name}</span>'.format(name=p.config.project_class.name),
              'group': '<span class="label label-success">{name}</span>'.format(name=p.group.abbreviation),
              'pageviews': '{c}'.format(c=p.page_views),

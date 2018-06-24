@@ -15,7 +15,7 @@ from flask_security import login_required, current_user, logout_user, roles_requ
 from . import student
 
 from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
-    Bookmark, MessageOfTheDay
+    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup
 
 import app.ajax as ajax
 
@@ -167,7 +167,11 @@ def browse_projects(id):
     if not _verify_selector(sel):
         return redirect(url_for('student.dashboard'))
 
-    return render_template('student/browse_projects.html', sel=sel, config=sel.config)
+    groups = ResearchGroup.query.order_by(ResearchGroup.name.asc())
+    skills = SkillGroup.query.order_by(SkillGroup.name.asc())
+
+    return render_template('student/browse_projects.html', sel=sel, config=sel.config,
+                           groups=groups, skills=skills)
 
 
 @student.route('/projects_ajax/<int:id>')
@@ -175,7 +179,6 @@ def browse_projects(id):
 def projects_ajax(id):
     """
     Ajax data point for live projects table
-
     :param id:
     :return:
     """
@@ -187,7 +190,107 @@ def projects_ajax(id):
     if not _verify_selector(sel):
         return jsonify({})
 
-    return ajax.student.liveprojects_data(sel)
+    projects = []
+
+    for item in sel.config.live_projects:
+
+        append = True
+
+        if sel.group_filters is not None and sel.group_filters.first() is not None:
+
+            # check if any of the items in the filter list matches this project's group affiliation
+            match = False
+
+            for group in sel.group_filters:
+                if item.group_id == group.id:
+                    match = True
+                    break
+
+            # nothing matched, kill append
+            if not match:
+                append = False
+
+        if append and sel.skill_filters is not None and sel.skill_filters.first() is not None:
+
+            # check if any of the items in the skill list matches one of this project's transferable skills
+            match = False
+
+            for skill in sel.skill_filters:
+                inner_match = False
+
+                for sk in item.skills:
+                    if sk.group_id == skill.id:
+                        inner_match = True
+                        break
+
+                if inner_match:
+                    match = True
+                    break
+
+            if not match:
+                append = False
+
+        if append:
+            projects.append(item)
+
+
+    return ajax.student.liveprojects_data(sel, projects)
+
+
+@student.route('/add_group_filter/<int:sel_id>/<int:id>')
+@roles_accepted('student')
+def add_group_filter(sel_id, id):
+
+    group = ResearchGroup.query.get_or_404(id)
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    if group not in sel.group_filters:
+        sel.group_filters.append(group)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@student.route('/remove_group_filter/<int:sel_id>/<int:id>')
+@roles_accepted('student')
+def remove_group_filter(sel_id, id):
+
+    group = ResearchGroup.query.get_or_404(id)
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    if group in sel.group_filters:
+        sel.group_filters.remove(group)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@student.route('/add_skill_filter/<int:sel_id>/<int:id>')
+@roles_accepted('student')
+def add_skill_filter(sel_id, id):
+
+    skilll = SkillGroup.query.get_or_404(id)
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    if skilll not in sel.skill_filters:
+        sel.skill_filters.append(skilll)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@student.route('/remove_skill_filter/<int:sel_id>/<int:id>')
+@roles_accepted('student')
+def remove_skill_filter(sel_id, id):
+
+    skill = SkillGroup.query.get_or_404(id)
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    if skill in sel.skill_filters:
+        sel.skill_filters.remove(skill)
+        db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @student.route('/view_project/<int:sid>/<int:pid>')

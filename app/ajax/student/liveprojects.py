@@ -50,7 +50,7 @@ _bookmarks = \
     {% set bookmarked = true %}
     <div class="row vertical-align">
         <div class="col-xs-4">
-            Yes
+            <span class="label label-primary">Yes</span>
         </div>
         <div class="col-xs-8">
             <div class="pull-right">
@@ -63,7 +63,7 @@ _bookmarks = \
 {% else %}
     <div class="row vertical-align">
         <div class="col-xs-5">
-            No
+            <span class="label label-default">No</span>
         </div>
         <div class="col-xs-7">
             <div class="pull-right">
@@ -138,7 +138,7 @@ _project_skills = \
 {% endfor %}
 """
 
-def liveprojects_data(sel):
+def liveprojects_data(sel, projects):
     data = [{'number': '{c}'.format(c=p.number),
              'name': '<a href="{url}">{name}</strong></a>'.format(name=p.name,
                                                                   url=url_for('student.view_project', sid=sel.id,
@@ -150,6 +150,6 @@ def liveprojects_data(sel):
              'prefer': render_template_string(_project_prefer, project=p),
              'available': render_template_string(_available, sel=sel, project=p),
              'bookmarks': render_template_string(_bookmarks, sel=sel, project=p),
-             'menu': render_template_string(_menu, sel=sel, project=p)} for p in sel.config.live_projects]
+             'menu': render_template_string(_menu, sel=sel, project=p)} for p in projects]
 
     return jsonify(data)

@@ -45,10 +45,14 @@ _golive = \
 """
 {% if config.project_class.require_confirm %}
     {% if config.requests_issued %}
-        {% if current_user.faculty_data in config.golive_required %}
+        {% if userdata in config.golive_required %}
             <span class="label label-warning"><i class="fa fa-times"></i> Outstanding</span>
         {% else %}
-            <span class="label label-success"><i class="fa fa-check"></i> Confirmed</span>
+            {% if userdata.is_enrolled(pclass) %}
+                <span class="label label-success"><i class="fa fa-check"></i> Confirmed</span>
+            {% else %}
+                <span class="label label-default">Not enrolled</span>
+            {% endif %}
         {% endif %}
     {% else %}
         <span class="label label-danger">Not yet issued</span>
@@ -68,7 +72,7 @@ def faculty_data(faculty, pclass, config):
              'enrolled': d.enrolled_labels(pclass),
              'offered': '{c}'.format(c=d.projects_offered(pclass)),
              'unoffer': '{c}'.format(c=d.projects_unofferable()),
-             'golive': render_template_string(_golive, config=config),
+             'golive': render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
              'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in faculty]
 
     return jsonify(data)

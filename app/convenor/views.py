@@ -1207,7 +1207,7 @@ def go_live(pid, configid):
 
     if form.is_submitted():
 
-        # get rollover instance
+        # get golive task instance
         celery = current_app.extensions['celery']
         golive = celery.tasks['app.tasks.go_live.pclass_golive']
         golive_fail = celery.tasks['app.tasks.go_live.golive_fail']
@@ -1635,7 +1635,7 @@ def rollover(pid, configid):
               'have not managed to do so, please contact a system administrator', 'error')
         return redirect(url_for('convenor.overview', id=pid))
 
-    # get rollover instance
+    # get rollover task instance
     celery = current_app.extensions['celery']
     rollover = celery.tasks['app.tasks.rollover.pclass_rollover']
     rollover_fail = celery.tasks['app.tasks.rollover.rollover_fail']

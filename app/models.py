@@ -56,7 +56,7 @@ year_choices = [(2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
 extent_choices = [(1, '1 year'), (2, '2 years')]
 
 # labels and keys for 'academic titles' field
-academic_titles = [(1, 'Dr'), (2, 'Professor')]
+academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss')]
 
 
 # association table holding mapping from roles to users
@@ -501,7 +501,7 @@ class FacultyData(db.Model):
     affiliations = db.relationship('ResearchGroup', secondary=faculty_affiliations, lazy='dynamic',
                                    backref=db.backref('faculty', lazy='dynamic'))
 
-    # academic title (Prof, Dr)
+    # academic title (Prof, Dr, etc.)
     academic_title = db.Column(db.Integer())
 
     # use academic title?

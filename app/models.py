@@ -59,6 +59,10 @@ extent_choices = [(1, '1 year'), (2, '2 years')]
 academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss')]
 
 
+####################
+# ASSOCIATION TABLES
+####################
+
 # association table holding mapping from roles to users
 roles_to_users = db.Table('roles_users',
                           db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True),
@@ -175,6 +179,21 @@ faculty_confirmations = db.Table('faculty_confirmations',
                                  db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                                  db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True)
                                  )
+
+
+# STUDENT FILTERS
+
+# association table: selector research group filters
+group_filter_table = db.Table('group_filters',
+                              db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
+                              db.Column('research_group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
+                              )
+
+# association table: selector skill group filters
+skill_filter_table = db.Table('skill_filters',
+                              db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
+                              db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True)
+                              )
 
 
 class MainConfig(db.Model):
@@ -1754,6 +1773,14 @@ class SelectingStudent(db.Model):
     # confirmation requests granted
     confirmed = db.relationship('LiveProject', secondary=faculty_confirmations, lazy='dynamic',
                                 backref=db.backref('confirmed_students', lazy='dynamic'))
+
+    # research group filters applied
+    group_filters = db.relationship('ResearchGroup', secondary=group_filter_table, lazy='dynamic',
+                                    backref=db.backref('filtering_students', lazy='dynamic'))
+
+    # transferable skill group filters applied
+    skill_filters = db.relationship('SkillGroup', secondary=skill_filter_table, lazy='dynamic',
+                                    backref=db.backref('filtering_students', lazy='dynamic'))
 
 
     @property

@@ -86,14 +86,13 @@
                             </div>
                             <div class="col-xs-6">
                                 <div class="pull-right">
-                                    Commences in
+                                    Commences
                                     <span class="label label-info">Y{{ pclass.year }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-xs-12">
-                                You are part of the
                                 {% set sdata = none %}
                                 {% if sel %}
                                     {% set sdata = sel %}
@@ -101,10 +100,9 @@
                                     {% set sdata = sub %}
                                 {% endif %}
                                 {% if data is not none %}
+                                    Your details:
                                     {{ sdata.user.student_data.cohort_label()|safe }}
-                                    on programme
                                     {{ sdata.user.student_data.programme.label()|safe }}
-                                    and are currently in
                                     {{ sdata.academic_year_label()|safe }}
                                 {% endif %}
                             </div>

@@ -70,8 +70,8 @@ def faculty_data(faculty, pclass, config):
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
              'enrolled': d.enrolled_labels(pclass),
-             'offered': '{c}'.format(c=d.projects_offered(pclass)),
-             'unoffer': '{c}'.format(c=d.projects_unofferable()),
+             'offered': d.projects_offered_label(pclass),
+             'unoffer': d.projects_unofferable_label(),
              'golive': render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
              'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in faculty]
 

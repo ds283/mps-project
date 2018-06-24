@@ -1285,13 +1285,19 @@ class ProjectClassConfig(db.Model):
         if not self.project_class.require_confirm:
             return
 
-        active_faculty = FacultyData.query.join(User, User.id==FacultyData.id).filter(User.active)
+        # select faculty that are enrolled on this particular project class
+        eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id) \
+            .filter_by(pclass_id=self.pclass_id).subquery()
+        fd = db.session.query(eq.c.owner_id, User, FacultyData) \
+            .join(User, User.id == eq.c.owner_id) \
+            .join(FacultyData, FacultyData.id == eq.c.owner_id) \
+            .filter(User.active == True)
 
-        for member in active_faculty:
+        for id, user, data in fd:
 
-            if member not in self.golive_required:      # don't object if we are generating a duplicate request
+            if data not in self.golive_required:      # don't object if we are generating a duplicate request
 
-                self.golive_required.append(member)
+                self.golive_required.append(data)
 
 
 class EnrollmentRecord(db.Model):

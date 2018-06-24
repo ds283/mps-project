@@ -69,7 +69,7 @@ _project_prefer = \
 """
 {% for programme in project.programmes %}
     {% if programme.active %}
-        <span class="label label-default">{{ programme.name }} {{ programme.degree_type.name }}</span>
+        {{ programme.label()|safe }}
     {% endif %}
 {% endfor %}
 """

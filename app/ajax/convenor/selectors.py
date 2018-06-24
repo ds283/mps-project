@@ -75,9 +75,9 @@ _menu = \
 
 _cohort = \
 """
-<span class="label label-default">{{ student.user.student_data.programme.name }}</span>
-<span class="label label-info">Y{{ student.get_academic_year }}</span>
-<span class="label label-success">Cohort {{ student.user.student_data.cohort }}</span>
+{{ student.user.student_data.programme.label()|safe }}
+{{ student.academic_year_label()|safe }}
+{{ student.user.student_data.cohort_label()|safe }}
 """
 
 _bookmarks = \
@@ -195,8 +195,8 @@ def enroll_selectors_data(students, config):
 
     data = [{'last': s.user.last_name,
              'first': s.user.first_name,
-             'programme': '<span class="label label-default">{prog}</span>'.format(prog=s.programme.name),
-             'admitted': '<span class="label label-info">{yra}-{yrb}</span>'.format(yra=s.cohort, yrb=s.cohort+1),
+             'programme': s.programme.label(),
+             'admitted': s.cohort_label(),
              'acadyear': '<span class="label label-info">Y{yr}</span>'.format(yr=config.year-s.cohort+1),
              'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
 

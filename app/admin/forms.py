@@ -239,7 +239,7 @@ def GetActiveSkillGroups():
 
 def BuildDegreeProgrammeName(programme):
 
-    return programme.name + ' ' + programme.degree_type.name
+    return programme.full_name
 
 
 def GetActiveFaculty():

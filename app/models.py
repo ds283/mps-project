@@ -732,6 +732,11 @@ class StudentData(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    def cohort_label(self):
+
+        return '<span class="label label-primary">{c} cohort</span>'.format(c=self.cohort)
+
+
 class DegreeType(db.Model):
     """
     Model a degree type
@@ -844,6 +849,17 @@ class DegreeProgramme(db.Model):
 
         # ensure degree type is active
         return self.degree_type.active
+
+
+    @property
+    def full_name(self):
+
+        return '{p} {t}'.format(p=self.name, t=self.degree_type.name)
+
+
+    def label(self):
+
+        return '<span class="label label-default">{n}</span>'.format(n=self.full_name)
 
 
 class SkillGroup(db.Model):
@@ -1839,6 +1855,11 @@ class SelectingStudent(db.Model):
         return self.config.year - self.user.student_data.cohort + 1
 
 
+    def academic_year_label(self):
+
+        return '<span class="label label-info">Y{y}</span>'.format(y=self.get_academic_year)
+
+
     @property
     def is_initial_selection(self):
         """
@@ -1935,6 +1956,11 @@ class SubmittingStudent(db.Model):
         return self.config.year - self.user.student_data.cohort + 1
 
 
+    def academic_year_label(self):
+
+        return '<span class="label label-info">Y{y}</span>'.format(y=self.get_academic_year)
+
+
 class Bookmark(db.Model):
     """
     Model an (orderable) bookmark
@@ -1975,8 +2001,7 @@ class EmailLog(db.Model):
 
     # id of user to whom email was sent, if it could be determined
     user_id = db.Column(db.Integer(), db.ForeignKey('users.id'), nullable=True)
-    user = db.relationship('User', uselist=False,
-                           backref=db.backref('emails', lazy='dynamic'))
+    user = db.relationship('User', uselist=False, backref=db.backref('emails', lazy='dynamic'))
 
     # recipient as a string, used if user_id could not be determined
     recipient = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True)

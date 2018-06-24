@@ -14,7 +14,7 @@ def golive_data(config):
 
     data = [{'name': f.user.build_name(),
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
-             'available': '{c}'.format(c=f.projects_offered(config.project_class)),
-             'unoffer': '{c}'.format(c=f.projects_unofferable())} for f in config.golive_required]
+             'available': f.projects_offered_label(config.project_class),
+             'unoffer': f.projects_unofferable_label()} for f in config.golive_required]
 
     return jsonify(data)

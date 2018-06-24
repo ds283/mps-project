@@ -554,6 +554,16 @@ class FacultyData(db.Model):
                                     Project.project_classes.any(id=pclass.id)).count()
 
 
+    def projects_offered_label(self, pclass):
+
+        n = self.projects_offered(pclass)
+
+        if n == 0:
+            return '<span class="label label-warning">{n}</span>'.format(n=n)
+
+        return '<span class="label label-info">{n}</span>'.format(n=n)
+
+
     def projects_unofferable(self):
 
         unofferable = 0
@@ -562,6 +572,16 @@ class FacultyData(db.Model):
                 unofferable += 1
 
         return unofferable
+
+
+    def projects_unofferable_label(self):
+
+        n = self.projects_unofferable()
+
+        if n == 0:
+            return '<span class="label label-info">{n}</span>'.format(n=n)
+
+        return '<span class="label label-warning">{n}</span>'.format(n=n)
 
 
     def remove_affiliation(self, group, autocommit=False):

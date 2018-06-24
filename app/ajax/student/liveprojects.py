@@ -120,6 +120,24 @@ _menu = \
 </div>
 """
 
+_project_prefer = \
+"""
+{% for programme in project.programmes %}
+    {% if programme.active %}
+        {{ programme.label()|safe }}
+    {% endif %}
+{% endfor %}
+"""
+
+_project_skills = \
+"""
+{% for skill in skills %}
+    {% if skill.is_active %}
+      {{ skill.make_label()|safe }}
+    {% endif %}
+{% endfor %}
+"""
+
 def liveprojects_data(sel):
     data = [{'number': '{c}'.format(c=p.number),
              'name': '<a href="{url}">{name}</strong></a>'.format(name=p.name,
@@ -128,6 +146,8 @@ def liveprojects_data(sel):
              'supervisor': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.build_name(),
                                                                          em=p.owner.email),
              'group': p.group.make_label(p.group.name),
+             'skills': render_template_string(_project_skills, skills=p.ordered_skills),
+             'prefer': render_template_string(_project_prefer, project=p),
              'available': render_template_string(_available, sel=sel, project=p),
              'bookmarks': render_template_string(_bookmarks, sel=sel, project=p),
              'menu': render_template_string(_menu, sel=sel, project=p)} for p in sel.config.live_projects]

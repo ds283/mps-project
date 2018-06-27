@@ -28,7 +28,7 @@
             {% endif %}
         </a></li>
         <li {% if pane == 'faculty' %}class="active"{% endif %}><a href="{{ url_for('convenor.faculty', id=pclass.id) }}">
-            Faculty enrollment
+            Faculty
             {% if fac_data is defined %}
                 {% set enrolled, total = fac_data %}
                 <span class="badge">{{ enrolled }}/{{ total }}</span>

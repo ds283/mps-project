@@ -30,9 +30,9 @@ _project_status = \
 """
 {% if project.offerable %}
     {% if project.active %}
-        <span class="label label-success">Project active</span>
+        <span class="label label-success"><i class="fa fa-check"></i> Project active</span>
     {% else %}
-        <span class="label label-warning">Project active</span>
+        <span class="label label-warning"><i class="fa fa-times"></i> Project inactive</span>
     {% endif %}
     {% if enrollment and enrollment is not none %}
         {{ enrollment.supervisor_label()|safe }}

@@ -185,6 +185,7 @@ def register_rollover_tasks(celery):
         # generate a new ProjectClassConfig for this year
         new_config = ProjectClassConfig(year=current_year,
                                         pclass_id=pclass_id,
+                                        convenor_id=convenor_id,
                                         creator_id=convenor_id,
                                         creation_timestamp=datetime.now(),
                                         requests_issued=False,

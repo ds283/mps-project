@@ -746,9 +746,9 @@ class EnrollmentRecordMixin():
                                                'automatic re-enrollment should occur.',
                                    validators=[Optional()])
 
-    supervisor_comment = StringField('Comment',
-                                     description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
-                                     validators=[Optional()])
+    supervisor_comment = TextAreaField('Comment', render_kw={"rows": 3},
+                                       description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
+                                       validators=[Optional()])
 
     marker_state = RadioField('2nd marker status', choices=EnrollmentRecord.marker_choices, coerce=int)
 
@@ -757,9 +757,9 @@ class EnrollmentRecordMixin():
                                                'automatic re-enrollment should occur.',
                                    validators=[Optional()])
 
-    marker_comment = StringField('Comment',
-                                 description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
-                                 validators=[Optional()])
+    marker_comment = TextAreaField('Comment', render_kw={"rows": 3},
+                                   description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
+                                   validators=[Optional()])
 
 class EnrollmentRecordForm(Form, EnrollmentRecordMixin, EditFormMixin):
 

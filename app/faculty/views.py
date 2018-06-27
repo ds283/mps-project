@@ -412,14 +412,14 @@ def dashboard():
 
         flash('You have {n} project{plural} that {isare} active but cannot be offered to students. '
               'Please check your project list.'.format(n=unofferable, plural=plural, isare=isare),
-              'error')
+              'warning')
 
     # build list of current configuration records for all enrolled project classes
     enrollments = []
     for record in current_user.faculty_data.enrollments:
 
-        if (record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED \
-                or record.marker_state == EnrollmentRecord.MARKER_ENROLLED) and record.pclass.active:
+        if (record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+            or record.marker_state == EnrollmentRecord.MARKER_ENROLLED) and record.pclass.active:
             config = record.pclass.configs.order_by(ProjectClassConfig.year.desc()).first()
 
             # get live projects belonging to both this config item and the active user
@@ -442,7 +442,7 @@ def dashboard():
         if include:
             messages.append(message)
 
-    return render_template('faculty/dashboard.html',
+    return render_template('faculty/dashboard/dashboard.html',
                            enrolled_classes=current_user.faculty_data.enrollments,
                            enrollments=enrollments,
                            messages=messages)

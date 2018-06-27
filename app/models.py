@@ -1208,6 +1208,10 @@ class ProjectClassConfig(db.Model):
     pclass_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
     project_class = db.relationship('ProjectClass', uselist=False, backref=db.backref('configs', lazy='dynamic'))
 
+    # who was convenor in this year?
+    convenor_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    convenor = db.relationship('FacultyData', uselist=False, backref=db.backref('past_convenorships', lazy='dynamic'))
+
     # who created this record, ie. initiated the rollover of the academic year?
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     created_by = db.relationship('User', uselist=False, foreign_keys=[creator_id])

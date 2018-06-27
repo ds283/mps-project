@@ -28,6 +28,13 @@ _project_menu = \
 </div>
 """
 
+_pclass = \
+"""
+{% set style = config.project_class.make_CSS_style() %}
+<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor.email }}">
+    {{ config.project_class.abbreviation }} ({{ config.convenor.build_name() }})
+</a>
+"""
 
 
 def pastproject_data(projects):
@@ -35,7 +42,7 @@ def pastproject_data(projects):
     data = [{'year': '{c}'.format(c=p.config.year),
              'name': '<a href="{url}">{name}</a>'.format(name=p.name, url=url_for('faculty.live_project',
                                                                                   pid=p.id)),
-             'pclass': p.config.project_class.make_label(),
+             'pclass': render_template_string(_pclass, config=p.config),
              'group': p.group.make_label(),
              'pageviews': '{c}'.format(c=p.page_views),
              'bookmarks': '{c}'.format(c=p.bookmarks.count()),

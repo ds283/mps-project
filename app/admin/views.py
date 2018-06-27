@@ -1379,6 +1379,7 @@ def add_pclass():
 
         config = ProjectClassConfig(year=current_year,
                                     pclass_id=data.id,
+                                    convenor_id=data.convenor_id,
                                     requests_issued=False,
                                     live=False,
                                     closed=False,

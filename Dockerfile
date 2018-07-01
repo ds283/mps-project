@@ -25,8 +25,7 @@ ENV FLASK_APP mpsproject.py
 RUN chown -R mpsproject:mpsproject ./
 USER mpsproject
 
-# web app itself runs on port 5000
+# web app and flower monitoring tool both run on port 5000
 EXPOSE 5000
-# flower monitor tool for celery runs on port 5555
-EXPOSE 5555
+
 ENTRYPOINT ["./boot.sh"]

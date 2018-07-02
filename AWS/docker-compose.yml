@@ -13,13 +13,13 @@ services:
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
       - /data/mpsproject/backups:/home/mpsproject/backups
-    depends_on:
+    links:
       - mariadb
     logging:
       driver: awslogs
       options:
         awslogs-group: mps-project
-        awslogs-region: eu-west-2
+        awslogs-region: eu-west-1
         awslogs-stream-prefix: web
 
   nginx:
@@ -28,14 +28,14 @@ services:
     ports:
       - '80:8000'
       - '443:443'
-    depends_on:
+    links:
       - web
       - flower
     logging:
       driver: awslogs
       options:
         awslogs-group: mps-project
-        awslogs-region: eu-west-2
+        awslogs-region: eu-west-1
         awslogs-stream-prefix: nginx
 
   worker:
@@ -55,14 +55,14 @@ services:
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
       - /data/mpsproject/backups:/home/mpsproject/backups
-    depends_on:
+    links:
       - mariadb
       - redis
     logging:
       driver: awslogs
       options:
         awslogs-group: mps-project
-        awslogs-region: eu-west-2
+        awslogs-region: eu-west-1
         awslogs-stream-prefix: worker
 
   scheduler:
@@ -76,14 +76,14 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
-    depends_on:
+    links:
       - mariadb
       - redis
     logging:
       driver: awslogs
       options:
         awslogs-group: mps-project
-        awslogs-region: eu-west-2
+        awslogs-region: eu-west-1
         awslogs-stream-prefix: scheduler
 
   flower:
@@ -97,15 +97,14 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379
     volumes:
      - /data/mpsproject/instance:/home/mpsproject/instance
-    depends_on:
+    links:
       - mariadb
       - redis
-      - worker
     logging:
       driver: awslogs
       options:
         awslogs-group: mps-project
-        awslogs-region: eu-west-2
+        awslogs-region: eu-west-1
         awslogs-stream-prefix: flower
 
   mariadb:
@@ -130,7 +129,7 @@ services:
       driver: awslogs
       options:
         awslogs-group: mps-project
-        awslogs-region: eu-west-2
+        awslogs-region: eu-west-1
         awslogs-stream-prefix: mariadb
 
   redis:
@@ -140,5 +139,5 @@ services:
       driver: awslogs
       options:
         awslogs-group: mps-project
-        awslogs-region: eu-west-2
+        awslogs-region: eu-west-1
         awslogs-stream-prefix: redis

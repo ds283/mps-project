@@ -1,0 +1,24 @@
+version: 1
+task_definition:
+  services:
+    web:
+      cpu_shares: 256
+      mem_limit: 524288000
+    nginx:
+      cpu_shares: 256
+      mem_limit: 524288000
+    worker:
+      cpu_shares: 256
+      mem_limit: 524288000
+    scheduler:
+      cpu_shares: 256
+      mem_limit: 524288000
+    flower:
+      cpu_shares: 256
+      mem_limit: 524288000
+    mariadb:
+      cpu_shares: 256
+      mem_limit: 524288000
+    redis:
+      cpu_shares: 256
+      mem_limit: 524288000

@@ -1,0 +1,144 @@
+version: '3'
+
+services:
+
+  web:
+
+    image: 801384587375.dkr.ecr.eu-west-2.amazonaws.com/mpsproject:latest
+    environment:
+      - DATABASE_URL=mysql+pymysql://mpsproject:Bridle12Way2007@mariadb/mpsproject
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379
+      - BACKUP_FOLDER=/home/mpsproject/backup
+    volumes:
+      - /data/mpsproject/instance:/home/mpsproject/instance
+      - /data/mpsproject/backups:/home/mpsproject/backups
+    depends_on:
+      - mariadb
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: mps-project
+        awslogs-region: eu-west-2
+        awslogs-stream-prefix: web
+
+  nginx:
+
+    image: 801384587375.dkr.ecr.eu-west-2.amazonaws.com/nginx
+    ports:
+      - '80:8000'
+      - '443:443'
+    depends_on:
+      - web
+      - flower
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: mps-project
+        awslogs-region: eu-west-2
+        awslogs-stream-prefix: nginx
+
+  worker:
+
+    image: 801384587375.dkr.ecr.eu-west-2.amazonaws.com/mpsproject:latest
+    entrypoint: "./launch_celery.sh"
+    user: mpsproject
+    environment:
+      - DATABASE_URL=mysql+pymysql://mpsproject:Bridle12Way2007@mariadb/mpsproject
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379
+      - BACKUP_FOLDER=/home/mpsproject/backups
+      - DATABASE_USER=mpsproject
+      - DATABASE_PASSWORD=Bridle12Way2007
+      - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
+      - DATABASE_HOSTNAME=mariadb
+    volumes:
+      - /data/mpsproject/instance:/home/mpsproject/instance
+      - /data/mpsproject/backups:/home/mpsproject/backups
+    depends_on:
+      - mariadb
+      - redis
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: mps-project
+        awslogs-region: eu-west-2
+        awslogs-stream-prefix: worker
+
+  scheduler:
+
+    image: 801384587375.dkr.ecr.eu-west-2.amazonaws.com/mpsproject:latest
+    entrypoint: "./launch_beat.sh"
+    user: mpsproject
+    environment:
+      - DATABASE_URL=mysql+pymysql://mpsproject:Bridle12Way2007@mariadb/mpsproject
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379
+    volumes:
+      - /data/mpsproject/instance:/home/mpsproject/instance
+    depends_on:
+      - mariadb
+      - redis
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: mps-project
+        awslogs-region: eu-west-2
+        awslogs-stream-prefix: scheduler
+
+  flower:
+
+    image: 801384587375.dkr.ecr.eu-west-2.amazonaws.com/mpsproject:latest
+    entrypoint: "./launch_flower.sh"
+    user: mpsproject
+    environment:
+      - DATABASE_URL=mysql+pymysql://mpsproject:Bridle12Way2007@mariadb/mpsproject
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379
+    volumes:
+     - /data/mpsproject/instance:/home/mpsproject/instance
+    depends_on:
+      - mariadb
+      - redis
+      - worker
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: mps-project
+        awslogs-region: eu-west-2
+        awslogs-stream-prefix: flower
+
+  mariadb:
+
+    # MySQL 8.0 uses a default authentication method that isn't supported by PyMySQLyet;
+    # see https://github.com/PyMySQL/PyMySQL/issues/532, https://github.com/PyMySQL/PyMySQL/issues/651
+    # this means we need to use 5.7 for the foreseeable future
+
+    # use MariaDB 10.2 as a drop-in replacement for MySQL 5.2
+    # we prefer MariaDB because there's better support for the client tools in the Linux
+    # ecosystem; eg. we can install mysqldump in Alpine linux
+    image: mariadb:10.2
+    environment:
+      - MYSQL_DATABASE=mpsproject
+      - MYSQL_USER=mpsproject
+      - MYSQL_PASSWORD=Bridle12Way2007
+      - MYSQL_ROOT_PASSWORD=Wilberforce2008Road
+    volumes:
+      - /data/mpsproject/mysql/data:/var/lib/mysql
+      - /data/mpsproject/mysql/conf.d:/etc/mysql
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: mps-project
+        awslogs-region: eu-west-2
+        awslogs-stream-prefix: mariadb
+
+  redis:
+
+    image: redis:latest
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: mps-project
+        awslogs-region: eu-west-2
+        awslogs-stream-prefix: redis

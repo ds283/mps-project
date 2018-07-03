@@ -37,7 +37,7 @@ def email_log_data(emails):
                 else '<span class="label label-danger">Invalid</span>',
              'date': {
                  'display': e.send_date.strftime("%a %d %b %Y %H:%M:%S"),
-                 'timestmap': e.send_date.timestmap()
+                 'timestmap': e.send_date.timestamp()
              },
              'subject': '<a href="{link}">{sub}</a>'.format(link=url_for('admin.display_email', id=e.id),
                                                             sub=e.subject),

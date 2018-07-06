@@ -291,8 +291,9 @@ def register_backup_tasks(celery):
 
         # query database for backup records, and queue a retry if it fails
         try:
-            records = db.session.query(BackupRecord).filter_by(type=BackupRecord.SCHEDULED_BACKUP).order_by(
-                BackupRecord.date.desc()).all()
+            records = db.session.query(BackupRecord) \
+                .filter_by(type=BackupRecord.SCHEDULED_BACKUP) \
+                .order_by(BackupRecord.date.desc()).all()
         except SQLAlchemyError:
             raise self.retry()
 

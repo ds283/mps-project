@@ -10,7 +10,7 @@
             $('#faculty-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_ajax/{{ pclass.id }}{% if filter is not none %}filter={{ filter }}{% endif %}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_ajax/{{ pclass.id }}{% if filter is not none %}?filter={{ filter }}{% endif %}', dataSrc: '' },
                 columns: [
                     { data: 'last' },
                     { data: 'first' },

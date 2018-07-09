@@ -37,7 +37,7 @@ from .forms import RoleSelectForm, \
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
     SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
     DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord, TaskRecord, Notification, \
-    EnrollmentRecord
+    EnrollmentRecord, Role
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
@@ -252,7 +252,9 @@ def edit_users():
     :return: HTML string
     """
 
-    return render_template("admin/edit_users.html")
+    filter = request.args.get('filter')
+
+    return render_template("admin/edit_users.html", filter=filter)
 
 
 @admin.route('/users_ajax', methods=['GET', 'POST'])
@@ -263,7 +265,23 @@ def users_ajax():
     :return:
     """
 
-    users = User.query.all()
+    filter = request.args.get('filter')
+
+    if filter == 'active':
+        users = User.query.filter_by(active=True).all()
+    elif filter == 'inactive':
+        users = User.query.filter_by(active=False).all()
+    elif filter == 'student':
+        users = User.query.filter(User.roles.any(Role.name == 'student')).all()
+    elif filter == 'faculty':
+        users = User.query.filter(User.roles.any(Role.name == 'faculty')).all()
+    elif filter == 'admin':
+        users = User.query.filter(User.roles.any(Role.name == 'admin')).all()
+    elif filter == 'root':
+        users = User.query.filter(User.roles.any(Role.name == 'root')).all()
+    else:
+        users = User.query.all()
+
     return ajax.users.build_data(users)
 
 

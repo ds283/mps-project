@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template, redirect, url_for, flash, request, jsonify
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session
 from werkzeug.local import LocalProxy
 from flask_security import login_required, roles_required, roles_accepted, current_user
 from flask_security.utils import config_value, get_message, do_flash, \
@@ -253,6 +253,12 @@ def edit_users():
     """
 
     filter = request.args.get('filter')
+
+    if filter is None and session.get('edit_user_filter'):
+        filter = session['edit_user_filter']
+
+    if filter is not None:
+        session['edit_user_filter'] = filter
 
     return render_template("admin/edit_users.html", filter=filter)
 

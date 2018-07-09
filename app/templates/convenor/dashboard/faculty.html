@@ -10,7 +10,7 @@
             $('#faculty-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_ajax/{{ pclass.id }}{% if filter == 'enrolled' %}?filter=enrolled{% elif filter == 'not-enrolled' %}?filter=not-enrolled{% endif %}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_ajax/{{ pclass.id }}{% if filter is not none %}filter={{ filter }}{% endif %}', dataSrc: '' },
                 columns: [
                     { data: 'last' },
                     { data: 'first' },
@@ -31,7 +31,7 @@
     <div class="well">
         Filter:
         <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='all') }}"
-           class="btn btn-sm {% if filter is none or (filter != 'enrolled' and filter != 'not-enrolled') %}btn-primary{% else %}btn-default{% endif %}">
+           class="btn btn-sm {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
             All
         </a>
         <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='enrolled') }}"

@@ -18,7 +18,7 @@
             $('#edit-users').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/users_ajax', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/admin/users_ajax{% if filter is not none %}?filter={{ filter }}{% endif %}', dataSrc: '' },
                 columns: [
                     { data: 'last' },
                     { data: 'first' },
@@ -57,6 +57,37 @@
 {% endblock %}
 
 {% block bodyblock %}
+    <div class="well">
+        Filter:
+        <a href="{{ url_for('admin.edit_users', filter='all') }}"
+           class="btn btn-sm {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+           All
+        </a>
+        <a href="{{ url_for('admin.edit_users', filter='active') }}"
+           class="btn btn-sm {% if filter == 'active' %}btn-primary{% else %}btn-default{% endif %}">
+           Active
+        </a>
+        <a href="{{ url_for('admin.edit_users', filter='inactive') }}"
+           class="btn btn-sm {% if filter == 'inactive' %}btn-primary{% else %}btn-default{% endif %}">
+           Inactive
+        </a>
+        <a href="{{ url_for('admin.edit_users', filter='student') }}"
+           class="btn btn-sm {% if filter == 'student' %}btn-primary{% else %}btn-default{% endif %}">
+           Students
+        </a>
+        <a href="{{ url_for('admin.edit_users', filter='faculty') }}"
+           class="btn btn-sm {% if filter == 'faculty' %}btn-primary{% else %}btn-default{% endif %}">
+           Faculty
+        </a>
+        <a href="{{ url_for('admin.edit_users', filter='admin') }}"
+           class="btn btn-sm {% if filter == 'admin' %}btn-primary{% else %}btn-default{% endif %}">
+           Admin
+        </a>
+        <a href="{{ url_for('admin.edit_users', filter='root') }}"
+           class="btn btn-sm {% if filter == 'root' %}btn-primary{% else %}btn-default{% endif %}">
+           Sysadmin
+        </a>
+    </div>
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Edit users</div>
         <div class="panel-body">

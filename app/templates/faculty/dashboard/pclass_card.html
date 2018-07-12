@@ -126,7 +126,7 @@
                                     {% else %}
                                         {% set bmplural = 's' %}
                                     {% endif %}
-                                    {{ bookmarks }} bookmark{{ bmplural }},
+                                    <span class="label label-info">{{ bookmarks }} bookmark{{ bmplural }}</span>
 
                                     {% set pageviews = project.page_views %}
                                     {% if pageviews == 1 %}
@@ -134,7 +134,7 @@
                                     {% else %}
                                         {% set pvplural = 's' %}
                                     {% endif %}
-                                    {{ pageviews }} view{{ pvplural }}
+                                    <span class="label label-info">{{ pageviews }} view{{ pvplural }}</span>
 
                                     {% if project.last_view %}
                                         (last {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }})

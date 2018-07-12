@@ -12,10 +12,14 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_security import login_required, current_user, logout_user, roles_required, roles_accepted
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from . import student
 
 from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
-    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup
+    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord
+
+from ..shared.utils import home_dashboard
 
 import app.ajax as ajax
 
@@ -505,7 +509,7 @@ def _demap_project(item_id):
     return int(result['pid'])
 
 
-@student.route('update_ranking', methods=['GET', 'POST'])
+@student.route('/update_ranking', methods=['GET', 'POST'])
 @roles_accepted('student', 'admin', 'root')
 def update_ranking():
 
@@ -547,10 +551,119 @@ def update_ranking():
 
     # work out which HTML elements to make visible and which to hide, based on validity of this selection
     if sel.is_valid_selection:
-        hide_elt = 'P{config}-invalid-message'.format(config=config.id)
-        reveal_elt = 'P{config}-valid-message'.format(config=config.id)
+        hide_elt = 'P{config}-invalid-button'.format(config=config.id)
+        reveal_elt = 'P{config}-valid-button'.format(config=config.id)
     else:
-        hide_elt = 'P{config}-valid-message'.format(config=config.id)
-        reveal_elt = 'P{config}-invalid-message'.format(config=config.id)
+        hide_elt = 'P{config}-valid-button'.format(config=config.id)
+        reveal_elt = 'P{config}-invalid-button'.format(config=config.id)
 
     return jsonify({'status': 'success', 'hide': hide_elt, 'reveal': reveal_elt})
+
+
+@student.route('/submit/<int:sid>')
+@roles_required('student')
+def submit(sid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # verify logged-in user is the selector
+    if current_user.id != sel.user_id:
+
+        flash('You do not have permission to submit project preferences for this selector.', 'error')
+        return redirect(request.referrer)
+
+    if not sel.is_valid_selection:
+
+        flash('The current bookmark list is not a valid set of project preferences. This is an internal error; '
+              'please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    try:
+
+        sel.selections = []
+
+        # iterate through bookmarks, converting them to a selection set
+        for bookmark in sel.bookmarks:
+
+            # rank is based on 1
+            if bookmark.rank <= sel.number_choices:
+                rec = SelectionRecord(user_id=sel.user_id,
+                                      liveproject_id=bookmark.liveproject_id,
+                                      rank=bookmark.rank)
+                sel.selections.append(rec)
+
+        sel.submission_time = datetime.now()
+        sel.submission_IP = current_user.current_login_ip
+
+        db.session.commit()
+
+    except SQLAlchemyError:
+
+        db.session.rollback()
+
+        flash('An database error occurred during submission. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    flash('Your project preferences were submitted successfully.', 'info')
+    return redirect(request.referrer)
+
+
+@student.route('/clear_submission/<int:sid>')
+@roles_required('student')
+def clear_submission(sid):
+
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # verify logged-in user is the selector
+    if current_user.id != sel.user_id:
+
+        flash('You do not have permission to clear project preferences for this selector.', 'error')
+        return redirect(request.referrer)
+
+    title = 'Clear submitted preferences'
+    panel_title = 'Clear submitted preferences for {name}'.format(name=sel.config.project_class.name)
+
+    action_url = url_for('student.do_clear_submission', sid=sid)
+    message = 'Please confirm that you wish to clear your submitted preferences for ' \
+              '<strong>{name} {yeara}&ndash;{yearb}</strong>. ' \
+              'This action cannot be undone.'.format(name=sel.config.project_class.name,
+                                                     yeara=sel.config.year, yearb=sel.config.year+1)
+    submit_label = 'Clear submitted preferences'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@student.route('/do_clear_submission/<int:sid>')
+@roles_required('student')
+def do_clear_submission(sid):
+
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # verify logged-in user is the selector
+    if current_user.id != sel.user_id:
+
+        flash('You do not have permission to clear project preferences for this selector.', 'error')
+        return home_dashboard()
+
+    sel.selections = []
+    sel.submission_time = None
+    sel.submission_IP = None
+
+    db.session.commit()
+    flash('Your project preferences have been cleared successfully.', 'info')
+
+    return home_dashboard()
+
+@student.route('/view_selection/<int:sid>')
+@roles_accepted('student', 'admin', 'root')
+def view_selection(sid):
+
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # verify the logged-in user is allowed to perform operations for this SelectingStudent
+    if not _verify_selector(sel):
+        return redirect(request.referrer)
+
+    return render_template('student/submission.html', sel=sel, )

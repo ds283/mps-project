@@ -44,8 +44,7 @@ def pastproject_data(projects):
                                                                                   pid=p.id)),
              'pclass': render_template_string(_pclass, config=p.config),
              'group': p.group.make_label(),
-             'pageviews': '{c}'.format(c=p.page_views),
-             'bookmarks': '{c}'.format(c=p.bookmarks.count()),
+             'metadata': render_template_string('{% from "faculty/macros.html" import project_metadata %}{{ project_metadata(p) }}', p=p),
              'students': 'Not yet implemented',
              'menu': render_template_string(_project_menu, project=p)} for p in projects]
 

@@ -17,7 +17,7 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
 
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
-from ..shared.actions import render_live_project, do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
+from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_submitter, add_liveproject
 
 from ..task_queue import register_task

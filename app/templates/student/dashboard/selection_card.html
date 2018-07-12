@@ -34,30 +34,32 @@
                 {# MAIN FUNCTIONS ALL HERE -- SELECTIONS ARE OPEN #}
 
                 {# head -- inform selections are available #}
-                <div class="row vertical-align">
-                    <div class="col-xs-9">
-                        <p>Project selection for <strong>{{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
-                            is now available.</p>
-                    </div>
-                    <div class="col-xs-3">
-                        <span class="pull-right">
-                            <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-default">Browse projects</a>
-                        </span>
-                    </div>
-                </div>
-
-                {# add data about deadline, if present #}
-                {% if config.live_deadline %}
+                <div class="well">
                     <div class="row vertical-align">
                         <div class="col-xs-9">
-                            <p>You can adjust your selection until the deadline
-                                <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-                                <strong>{{ config.time_to_live_deadline }} from now.</strong>
-                            </p>
+                            <p>Project selection for <strong>{{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
+                                is now available.</p>
                         </div>
-                        <div class="col-xs-3"></div>
+                        <div class="col-xs-3">
+                            <span class="pull-right">
+                                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-default">Browse projects</a>
+                            </span>
+                        </div>
                     </div>
-                {% endif %}
+
+                    {# add data about deadline, if present #}
+                    {% if config.live_deadline %}
+                        <div class="row vertical-align">
+                            <div class="col-xs-9">
+                                <p>You can adjust your selection until the deadline
+                                    <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                    <strong>{{ config.time_to_live_deadline }} from now.</strong>
+                                </p>
+                            </div>
+                            <div class="col-xs-3"></div>
+                        </div>
+                    {% endif %}
+                </div>
 
                 <div class="row vertical-bottom">
                     <div class="col-xs-9">

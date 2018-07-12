@@ -167,8 +167,9 @@ def browse_projects(id):
     if not _verify_selector(sel):
         return redirect(url_for('student.dashboard'))
 
-    groups = ResearchGroup.query.order_by(ResearchGroup.name.asc())
-    skills = SkillGroup.query.order_by(SkillGroup.name.asc())
+    # supply list of transferable skill groups and research groups that can be filtered against
+    groups = ResearchGroup.query.order_by(ResearchGroup.name.asc()).all()
+    skills = SkillGroup.query.order_by(SkillGroup.name.asc()).all()
 
     return render_template('student/browse_projects.html', sel=sel, config=sel.config,
                            groups=groups, skills=skills)
@@ -265,6 +266,18 @@ def remove_group_filter(sel_id, id):
     return redirect(request.referrer)
 
 
+@student.route('/clear_group_filters/<int:sel_id>')
+@roles_accepted('student')
+def clear_group_filters(sel_id):
+
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    sel.group_filters = []
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @student.route('/add_skill_filter/<int:sel_id>/<int:id>')
 @roles_accepted('student')
 def add_skill_filter(sel_id, id):
@@ -289,6 +302,18 @@ def remove_skill_filter(sel_id, id):
     if skill in sel.skill_filters:
         sel.skill_filters.remove(skill)
         db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@student.route('/clear_skill_filters/<int:sel_id>')
+@roles_accepted('student')
+def clear_skill_filters(sel_id):
+
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    sel.skill_filters = []
+    db.session.commit()
 
     return redirect(request.referrer)
 

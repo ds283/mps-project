@@ -1173,7 +1173,7 @@ class ProjectClass(db.Model):
 
     def make_label(self, text=None):
         """
-        Make approriately coloured label
+        Make appropriately coloured label
         :param text:
         :return:
         """
@@ -1847,6 +1847,12 @@ class SelectingStudent(db.Model):
         """
 
         return self.bookmarks.order_by(Bookmark.rank)
+
+
+    @property
+    def get_num_bookmarks(self):
+
+        return db.session.query(sqlalchemy.func.count(Bookmark.id)).with_parent(self).scalar()
 
 
     @property

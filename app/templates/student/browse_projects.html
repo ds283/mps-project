@@ -26,7 +26,8 @@
                     { data: 'supervisor' },
                     { data: 'group' },
                     { data: 'skills' },
-                    { data: 'available' },
+                    { data: 'meeting' },
+                    { data: 'availability' },
                     { data: 'bookmarks' },
                     { data: 'menu' }
                 ],
@@ -41,10 +42,28 @@
 {% endblock %}
 
 {% block bodyblock %}
+    <div style="padding-bottom: 6px;">
+        <a href="{{ url_for('student.dashboard') }}">
+            <i class="fa fa-backward"></i> Return to dashboard
+        </a>
+    </div>
+
     <div class="well">
-        <div><strong>Research groups</strong></div>
         <div class="panel panel-default">
             <div class="panel-body">
+                <div class="row">
+                    <div class="col-xs-9"><strong>Research group filters</strong></div>
+                    <div class="col-xs-3">
+                        {% set enabled = true %}
+                        {% if not sel.group_filters.first() %}{% set enabled = false %}{% endif %}
+                        <div class="pull-right">
+                            <a class="btn btn-sm btn-default {% if not enabled %}disabled{% endif %}"
+                               {% if enabled %}href="{{ url_for('student.clear_group_filters', sel_id=sel.id) }}"{% endif %}>
+                                Clear all
+                            </a>
+                        </div>
+                    </div>
+                </div>
                 {% for group in groups %}
                     {% if group in sel.group_filters %}
                         <a href="{{ url_for('student.remove_group_filter', sel_id=sel.id, id=group.id) }}" class="label label-default selection-label" style="{{ group.make_CSS_style()|safe }}">
@@ -65,10 +84,21 @@
                 {% endfor %}
             </div>
         </div>
-        <hr class="intro-divider">
-        <div><strong>Transferable skills</strong></div>
         <div class="panel panel-default">
             <div class="panel-body">
+                <div class="row">
+                    <div class="col-xs-9"><strong>Transferable skill filters</strong></div>
+                    <div class="col-xs-3">
+                        {% set enabled = true %}
+                        {% if not sel.skill_filters.first() %}{% set enabled = false %}{% endif %}
+                        <div class="pull-right">
+                            <a class="btn btn-sm btn-default {% if not enabled %}disabled{% endif %}"
+                               {% if enabled %}href="{{ url_for('student.clear_skill_filters', sel_id=sel.id) }}"{% endif %}>
+                                Clear all
+                            </a>
+                        </div>
+                    </div>
+                </div>
                 {% for skill in skills %}
                     {% if skill in sel.skill_filters %}
                         <a href="{{ url_for('student.remove_skill_filter', sel_id=sel.id, id=skill.id) }}" class="label label-default selection-label" style="{{ skill.make_CSS_style()|safe }}">
@@ -93,8 +123,20 @@
 
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">
-            Projects available for
-            <strong>{{ config.project_class.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
+            <div class="row">
+                <div class="col-xs-8">
+                    Projects available for
+                    <strong>{{ config.project_class.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
+                </div>
+                <div class="col-xs-4">
+                    <div class="pull-right">
+                        {% set bookmarks = sel.get_num_bookmarks %}
+                        {% set bmpl = 's' %}
+                        {% if bookmarks == 1 %}{% set bmpl = '' %}{% endif %}
+                        <span class="label label-success">{{ bookmarks }} bookmark{{ bmpl }}; {{ sel.number_choices }} selections required</span>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="panel-body">
             <table id="liveprojects-table" class="table table-striped table-bordered">
@@ -104,12 +146,19 @@
                     <th width="15%"> Supervisor</th>
                     <th width="15%"> Research group</th>
                     <th width="15%"> Transferable skills</th>
-                    <th width="17%"> Availability</th>
-                    <th width="5%"> Bookmarked</th>
+                    <th width="7%"> Meeting</th>
+                    <th width="10%"> Availability</th>
+                    <th width="5%"> Bookmark</th>
                     <th width="15%"> Actions</th>
                 </tr>
                 </thead>
             </table>
         </div>
+    </div>
+
+    <div>
+        <a href="{{ url_for('student.dashboard') }}">
+            <i class="fa fa-backward"></i> Return to dashboard
+        </a>
     </div>
 {% endblock %}

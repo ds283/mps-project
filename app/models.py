@@ -1309,6 +1309,16 @@ class ProjectClassConfig(db.Model):
         delta = self.live_deadline.date() - date.today()
         days = delta.days
 
+        if days > 7:
+
+            weeks = int(days/7)
+            str = '{weeks} week'.format(weeks=weeks)
+
+            if weeks != 1:
+                str += 's'
+
+            return str
+
         str = '{days} day'.format(days=days)
 
         if days != 1:
@@ -1318,13 +1328,13 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def count_valid_students(self):
+    def count_submitted_students(self):
 
         total_students = self.selecting_students.count()
 
         count = 0
         for student in self.selecting_students:
-            if student.is_valid_selection:
+            if student.has_submitted:
                 count += 1
 
         return count, total_students
@@ -1844,6 +1854,17 @@ class SelectingStudent(db.Model):
                                     backref=db.backref('filtering_students', lazy='dynamic'))
 
 
+    # SELECTION METADATA
+
+    # 'selections' field is added by backreference from SelectionRecord
+
+    # record time of last selection submission
+    submission_time = db.Column(db.DateTime())
+
+    # record IP address of selection request
+    submission_IP = db.Column(db.String(IP_LENGTH))
+
+
     @property
     def has_bookmarks(self):
         """
@@ -1947,6 +1968,22 @@ class SelectingStudent(db.Model):
         return True
 
 
+    @property
+    def has_submitted(self):
+        """
+        Determine whether a submission has been made
+        :return:
+        """
+
+        return self.selections.first() is not None
+
+
+    @property
+    def get_ordered_selection(self):
+
+        return self.selections.order_by(SelectionRecord.rank)
+
+
 class SubmittingStudent(db.Model):
     """
     Model a student who is submitting work for evaluation in the current cycle
@@ -2008,6 +2045,35 @@ class Bookmark(db.Model):
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
     liveproject = db.relationship('LiveProject', uselist=False,
                                   backref=db.backref('bookmarks', lazy='dynamic'))
+
+    # rank in owner's list
+    rank = db.Column(db.Integer())
+
+
+class SelectionRecord(db.Model):
+    """
+    Model an ordered list of project selections
+    """
+
+    __tablename__ = "selections"
+
+
+    # unique ID for this preference record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # id of owning SelectingStudent
+
+    # id of owning SelectingStudent
+    # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
+    # removed from the database
+    user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+    user = db.relationship('SelectingStudent', uselist=False,
+                           backref=db.backref('selections', lazy='dynamic', cascade='all, delete-orphan'))
+
+    # LiveProject we are linking to
+    liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    liveproject = db.relationship('LiveProject', uselist=False,
+                                  backref=db.backref('selections', lazy='dynamic'))
 
     # rank in owner's list
     rank = db.Column(db.Integer())

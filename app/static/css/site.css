@@ -59,11 +59,6 @@ p.copyright {
     align-items: flex-end;
 }
 
-.bookmark-table {
-    border-collapse: collapse;
-    border-width: 0px;
-}
-
 .final-selection-table {
     margin-bottom: 1%;
 }

@@ -34,7 +34,7 @@
                 {# MAIN FUNCTIONS ALL HERE -- SELECTIONS ARE OPEN #}
 
                 {# head -- inform selections are available #}
-                <div class="well">
+                <div class="alert alert-success">
                     <div class="row vertical-align">
                         <div class="col-xs-9">
                             <p>Project selection for <strong>{{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
@@ -42,7 +42,7 @@
                         </div>
                         <div class="col-xs-3">
                             <span class="pull-right">
-                                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-default">Browse projects</a>
+                                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-primary">Browse projects</a>
                             </span>
                         </div>
                     </div>
@@ -61,68 +61,83 @@
                     {% endif %}
                 </div>
 
-                <div class="row vertical-bottom">
-                    <div class="col-xs-9">
+                {% if sel.is_optional %}
+                    <div class="alert alert-info">
+                        This project is <strong>optional</strong> for your degree programme.
+                        If you wish to participate, add bookmarks to keep track of the projects
+                        in which you are interested. Drag-and-drop your bookmarks using the drag handle
+                        to rank them in order of preference. Submit your selection when you are finished.
+                    </div>
+
+                    <div class="alert alert-info">
+                        Some projects require the project supervisor to confirm that
+                        a pre-selection meeting has taken place, or at least been arranged,
+                        before the project becomes available.
+                    </div>
+                {% else %}
+                    {% if sel.is_initial_selection %}
+                        <div class="alert alert-primary">
+                            This project is <strong>mandatory</strong> for your degree programme.
+                            Add bookmarks to keep track of the projects in which you are interested,
+                            then drag-and-drop to rank them in order of preference.
+                            Submit your selection when you are finished.
+                        </div>
+
+                        <div class="alert alert-info">
+                            Some projects require the project supervisor to confirm that
+                            a pre-selection meeting has taken place, or at least been arranged,
+                            before the project becomes available.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            If you wish to <strong>switch supervisors</strong>,
+                            then add bookmarks for each project of interest.
+                            Drag-and-drop your bookmarks to indicate your order of preference.
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                {# render bookmarks #}
+                {% if sel.has_bookmarks %}
+                    <hr class="intro-divider">
+                    <div class="well">
                         {% set num_choices = sel.number_choices %}
                         {% set numpl = 's' %}
                         {% if num_choices == 1 %}
                             {% set numpl = '' %}
                         {% endif %}
                         {% if sel.is_optional %}
-                            <p>This project is <strong>optional</strong> for your degree programme.
-                            If you wish to participate, add bookmarks to keep track of the projects
-                            in which you are interested. Drag-and-drop your bookmarks using the drag handle
-                            to rank them in order of preference. Submit your selection when you are done.</p>
-
-                            <p>You can continue to edit your selection after you submit.</p>
-
-                            <p>Some projects may require the project supervisor to confirm that
-                            a pre-selection meeting has taken place, or at least been arranged,
-                            before the project becomes available.</p>
-
-                            <p>If you wish to enroll
-                            you should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
-                        {% else %}
+                            <p>To enroll, select up to <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                It is not possible to guarantee that you will be assigned your highest-priority choices.</p>
+                          {% else %}
                             {% if sel.is_initial_selection %}
-                                <p>This project is <strong>mandatory</strong> for your degree programme.
-                                Add bookmarks to keep track of the projects in which you are interested,
-                                then drag-and-drop to rank them in order of preference.
-                                Submit your selection when you are done.</p>
-
-                                <p>You can continue to edit your selection after you submit.</p>
-
-                                <p>Some projects may require the project supervisor to confirm that
-                                a pre-selection meeting has taken place, or at least been arranged,
-                                before the project becomes available.</p>
-
-                                <p>You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
-                            {% else %}
-                                <p>If you wish to <strong>switch supervisors</strong>,
-                                then add bookmarks for each project of interest.
-                                Drag-and-drop your bookmarks to indicate your order of preference.</p>
-
-                                <p>You should select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
+                                <p>Select up to <strong>{{ num_choices }}</strong> projects.
+                                    It is not possible to guarantee that you will be assigned your highest-priority choices.</p>
+                             {% else %}
+                                <p>To change supervisor, select up to <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
                             {% endif %}
                         {% endif %}
-                    </div>
-                    <div class="col-xs-3">
-                        <div class="pull-right">
-                            {% set is_valid = sel.is_valid_selection %}
-                            <span id="P{{ config.id }}-valid-message" class="label label-primary validity-label {% if not is_valid %}hidden{% endif %}">Valid selection</span>
-                            <span id="P{{ config.id }}-invalid-message" class="label label-danger validity-label {% if is_valid %}hidden{% endif %}">Invalid or incomplete selection</span>
+                        <p>Bookmarks highlighted in <span class="label label-success">green</span> will be included in your selection.
+                           Bookmarks highlighted in <span class="label label-danger">red</span> will not be included.</p>
+
+                        <div class="row vertical-bottom">
+                            <div class="col-xs-12">
+                                <div class="pull-right">
+                                    {% set is_valid = sel.is_valid_selection %}
+                                    <span id="P{{ config.id }}-valid-message" class="label label-primary validity-label {% if not is_valid %}hidden{% endif %}">Valid selection</span>
+                                    <span id="P{{ config.id }}-invalid-message" class="label label-danger validity-label {% if is_valid %}hidden{% endif %}">Invalid or incomplete selection</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                {# render bookmarks #}
-                {% if sel.has_bookmarks %}
-                    <hr class="intro-divider">
                     <div class="container-fluid list-group" id="P{{ config.id }}-bookmarks" >
                         {% for bookmark in sel.get_ordered_bookmarks %}
                         {% set project = bookmark.liveproject %}
-                            <div id="P{{ config.id }}-{{ project.id }}" class="row vertical-align bookmark-table list-group-item">
+                            <div id="P{{ config.id }}-{{ project.id }}"
+                                 class="row vertical-align bookmark-table list-group-item {% if loop.index <= sel.number_choices %}selected-project{% else %}deselected-project{% endif %}">
                                 <div class="col-xs-1">
                                     <i class="fa fa-bars drag-handle"></i>
+                                    <span id="ranking" class="label {% if loop.index <= sel.number_choices %}label-success{% else %}label-danger{% endif %}">#{{ loop.index }}</span>
                                 </div>
                                 <div class="col-xs-3">
                                     <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
@@ -139,11 +154,11 @@
                                         {% if sel in project.confirm_waiting %}
                                             <div class="row vertical-align">
                                                 <div class="col-xs-8">
-                                                    Confirmation requested
+                                                    <span class="label label-info"><i class="fa fa-clock-o"></i> Meeting confirmation requested</span>
                                                 </div>
                                                 <div class="col-xs-4">
                                                     <div class="pull-right">
-                                                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-warning btn-sm">
+                                                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="label label-warning">
                                                             Cancel request
                                                         </a>
                                                     </div>
@@ -152,11 +167,11 @@
                                         {% else %}
                                             <div class="row vertical-align">
                                                 <div class="col-xs-8">
-                                                    Requires confirmation
+                                                    <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Requires meeting confirmation</span>
                                                 </div>
                                                 <div class="col-xs-4">
                                                     <div class="pull-right">
-                                                        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="btn btn-success btn-sm">
+                                                        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="label label-primary">
                                                             Request
                                                         </a>
                                                     </div>
@@ -165,16 +180,17 @@
                                         {% endif %}
                                     {% else %}
                                         {% if sel in project.confirmed_students %}
-                                            Available (confirmation received)
+                                            <span class="label label-success"><i class="fa fa-check"></i> Available for selection</span>
+                                            <span class="label label-primary">Meeting confirmed</span>
                                         {% else %}
-                                            Available
+                                            <span class="label label-success"><i class="fa fa-check"></i> Available for selection</span>
                                         {% endif %}
                                     {% endif %}
                                 </div>
                                 <div class="col-xs-2">
                                     <div class="pull-right">
-                                        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">
-                                            Remove bookmark
+                                        <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="label label-default">
+                                            <i class="fa fa-times"></i> Remove bookmark
                                         </a>
                                     </div>
                                 </div>
@@ -184,8 +200,10 @@
                 {% endif %}
 
             {% elif config.closed %}
-                <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                    is now closed.</p>
+                <div class="alert alert-warning">
+                    Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                    is now closed.
+                </div>
 
                 {% if not sel.is_valid_selection %}
                     <p>You did not submit a valid selection before the deadline.</p>
@@ -221,8 +239,10 @@
                 {% endif %}
 
             {% else %}
-                <p>Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
-                    is not yet available.</p></p>
+                <div class="alert alert-info">
+                    Project selection for {{ config.year+1 }}&ndash;{{ config.year+2 }}
+                    is not yet available.
+                </div>
             {% endif %}
         </div>
     </div>

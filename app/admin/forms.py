@@ -643,7 +643,8 @@ class ScheduledTaskMixin():
                        ('app.tasks.backup.thin', 'Thin local backups'),
                        ('app.tasks.backup.limit_size', 'Enforce limit on size of backup folder'),
                        ('app.tasks.backup.clean_up', 'Clean up backup folder'),
-                       ('app.tasks.backup.drop_absent_backups', 'Drop absent backups')]
+                       ('app.tasks.backup.drop_absent_backups', 'Drop absent backups'),
+                       ('app.tasks.popularity.update_popularity_indices', 'Update LiveProject popularity indices')]
                        # ('remote_backup', 'Backup to internet location')]
     task = SelectField('Task', choices=tasks_available)
 

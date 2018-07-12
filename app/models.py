@@ -1783,6 +1783,18 @@ class LiveProject(db.Model):
     last_view = db.Column(db.DateTime())
 
 
+    # POPULARITY DATA (UPDATED BY SCHEDULED TASKS)
+
+    # popularity index
+    popularity_index = db.Column(db.Integer())
+
+    # popularity rank
+    popularity_rank = db.Column(db.Integer())
+
+    # popularity percentile
+    popularity_percentile = db.Column(db.Integer())
+
+
     def is_available(self, sel):
         """
         determine whether a this LiveProject is available for selection to a particular SelectingStudent
@@ -2060,8 +2072,6 @@ class SelectionRecord(db.Model):
 
     # unique ID for this preference record
     id = db.Column(db.Integer(), primary_key=True)
-
-    # id of owning SelectingStudent
 
     # id of owning SelectingStudent
     # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically

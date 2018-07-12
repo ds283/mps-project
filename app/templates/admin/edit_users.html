@@ -79,6 +79,10 @@
            class="btn btn-sm {% if filter == 'faculty' %}btn-primary{% else %}btn-default{% endif %}">
            Faculty
         </a>
+        <a href="{{ url_for('admin.edit_users', filter='exec') }}"
+           class="btn btn-sm {% if filter == 'exec' %}btn-primary{% else %}btn-default{% endif %}">
+           Executive
+        </a>
         <a href="{{ url_for('admin.edit_users', filter='admin') }}"
            class="btn btn-sm {% if filter == 'admin' %}btn-primary{% else %}btn-default{% endif %}">
            Admin

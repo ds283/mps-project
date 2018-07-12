@@ -1101,6 +1101,12 @@ class ProjectClass(db.Model):
     # is project selection open to all students?
     selection_open_to_all = db.Column(db.Boolean())
 
+    # CATS awarded for supervising
+    CATS_supervision = db.Column(db.Integer())
+
+    # CATS awarded for 2nd marking
+    CATS_marking = db.Column(db.Integer())
+
     # project convenor; must be a faculty member, so might be pereferable to link to faculty_data table,
     # but to generate eg. tables we will need to extract usernames and emails
     # For that purpose, it's better to link to the User table directly
@@ -1260,6 +1266,15 @@ class ProjectClassConfig(db.Model):
 
     # submission period
     submission_period = db.Column(db.Integer())
+
+
+    # WORKLOAD MODEL
+
+    # CATS awarded for supervising
+    CATS_supervision = db.Column(db.Integer())
+
+    # CATS awarded for 2nd marking
+    CATS_marking = db.Column(db.Integer())
 
 
     @property

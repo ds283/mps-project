@@ -51,6 +51,11 @@
 
         {{ colour_field(project_form.colour, 'colour-group') }}
 
+        {{ wtf.form_field(project_form.convenor) }}
+
+        {{ wtf.form_field(project_form.require_confirm) }}
+        {{ wtf.form_field(project_form.supervisor_carryover) }}
+
         <div class="well {% if project_form.programmes.errors %}has-error{% endif %}">
             <p>Select degree programmes to which this project class applies</p>
             {% for widget in project_form.programmes %}
@@ -73,16 +78,23 @@
             </div>
         </div>
 
-        {{ wtf.form_field(project_form.year) }}
-        {{ wtf.form_field(project_form.extent) }}
-        {{ wtf.form_field(project_form.submissions) }}
-        {{ wtf.form_field(project_form.initial_choices) }}
-        {{ wtf.form_field(project_form.switch_choices) }}
+        <div class="well">
+            {{ wtf.form_field(project_form.year) }}
+            {{ wtf.form_field(project_form.extent) }}
+            {{ wtf.form_field(project_form.submissions) }}
+        </div>
 
-        {{ wtf.form_field(project_form.convenor) }}
+        <div class="well">
+            <p><strong>Student selections</strong></p>
+            {{ wtf.form_field(project_form.initial_choices) }}
+            {{ wtf.form_field(project_form.switch_choices) }}
+        </div>
 
-        {{ wtf.form_field(project_form.require_confirm) }}
-        {{ wtf.form_field(project_form.supervisor_carryover) }}
+        <div class="well">
+            <p><strong>Workload model support</strong></p>
+            {{ wtf.form_field(project_form.CATS_supervision) }}
+            {{ wtf.form_field(project_form.CATS_marking) }}
+        </div>
 
         {{ wtf.form_field(project_form.submit, button_map={'submit': 'primary'}) }}
 

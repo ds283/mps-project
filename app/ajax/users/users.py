@@ -20,6 +20,9 @@ _user_role_template = \
 {% elif user.has_role('student') %}
    <span class="label label-info">student</span>
 {% endif %}
+{% if user.has_role('exec') %}
+   <span class="label label-primary">exec</span>
+{% endif %}
 {% if user.has_role('admin') %}
    <span class="label label-warning">admin</span>
 {% endif %}
@@ -87,6 +90,19 @@ _user_menu_template = \
             {% else %}
                 <li {% if not user.is_active %}class="disabled"{% endif %}>
                     <a {% if user.is_active %}href="{{ url_for('admin.make_root', id=user.id) }}{% endif %}">Make sysadmin</a>
+                </li>
+            {% endif %}
+        {% endif %}
+        
+        {# check whether we should offer executive role #}
+        {% if not user.has_role('student') %}
+            {% if user.has_role('exec') %}
+                <li>
+                    <a href="{{ url_for('admin.remove_exec', id=user.id) }}">Remove executive</a>
+                </li>
+            {% else %}
+                <li>
+                    <a href="{{ url_for('admin.make_exec', id=user.id) }}">Make executive</a>
                 </li>
             {% endif %}
         {% endif %}

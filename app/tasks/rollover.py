@@ -193,6 +193,8 @@ def register_rollover_tasks(celery):
                                         live=False,
                                         live_deadline=None,
                                         closed=False,
+                                        CATS_supervision=current_config.project_class.CATS_supervision,
+                                        CATS_marking=current_config.project_class.CATS_marking,
                                         submission_period=1)
 
         try:

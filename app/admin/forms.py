@@ -503,6 +503,12 @@ class ProjectClassMixin():
     switch_choices = IntegerField('Number of subsequent project preferences',
                                   description='Number of preferences to allow in subsequent years, if switching is allowed.')
 
+    CATS_supervision = IntegerField('CATS awarded for project supervision',
+                                    validators=[DataRequired(message='Please enter an integer value')])
+
+    CATS_marking = IntegerField('CATS awarded for project 2nd marking',
+                                validators=[Optional()])
+
     convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
     selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',

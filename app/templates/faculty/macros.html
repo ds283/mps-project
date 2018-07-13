@@ -1,0 +1,29 @@
+{% macro project_metadata(project) %}
+    {% set selections = project.selections.count() %}
+    {% if selections == 1 %}
+        {% set slplural = '' %}
+    {% else %}
+        {% set slplural = 's' %}
+    {% endif %}
+    <span class="label label-primary">{{ selections }} selection{{ slplural }}</span>
+
+    {% set bookmarks = project.bookmarks.count() %}
+    {% if bookmarks == 1 %}
+        {% set bmplural = '' %}
+    {% else %}
+        {% set bmplural = 's' %}
+    {% endif %}
+    <span class="label label-info">{{ bookmarks }} bookmark{{ bmplural }}</span>
+
+    {% set pageviews = project.page_views %}
+    {% if pageviews == 1 %}
+        {% set pvplural = '' %}
+    {% else %}
+        {% set pvplural = 's' %}
+    {% endif %}
+    <span class="label label-info">{{ pageviews }} view{{ pvplural }}</span>
+
+    {% if project.last_view %}
+        <span class="label label-default">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+    {% endif %}
+{% endmacro %}

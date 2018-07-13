@@ -9,7 +9,7 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
 from flask_security import roles_accepted, current_user
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
@@ -17,7 +17,7 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
 
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
-from ..shared.actions import render_live_project, do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
+from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_submitter, add_liveproject
 
 from ..task_queue import register_task
@@ -285,6 +285,12 @@ def faculty(id):
         return redirect(request.referrer)
 
     filter = request.args.get('filter')
+
+    if filter is None and session.get('conv_faculty_filter'):
+        filter = session['conv_faculty_filter']
+
+    if filter is not None:
+        session['conv_faculty_filter'] = filter
 
     # get current academic year
     current_year = get_current_year()

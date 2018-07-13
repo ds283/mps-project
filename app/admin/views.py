@@ -263,7 +263,7 @@ def edit_users():
     return render_template("admin/edit_users.html", filter=filter)
 
 
-@admin.route('/users_ajax', methods=['GET', 'POST'])
+@admin.route('/users_ajax')
 @roles_accepted('admin', 'root')
 def users_ajax():
     """
@@ -281,6 +281,8 @@ def users_ajax():
         users = User.query.filter(User.roles.any(Role.name == 'student')).all()
     elif filter == 'faculty':
         users = User.query.filter(User.roles.any(Role.name == 'faculty')).all()
+    elif filter == 'exec':
+        users = User.query.filter(User.roles.any(Role.name == 'exec')).all()
     elif filter == 'admin':
         users = User.query.filter(User.roles.any(Role.name == 'admin')).all()
     elif filter == 'root':
@@ -291,7 +293,7 @@ def users_ajax():
     return ajax.users.build_data(users)
 
 
-@admin.route('/make_admin/<int:id>', methods=['GET', 'POST'])
+@admin.route('/make_admin/<int:id>')
 @roles_accepted('admin', 'root')
 def make_admin(id):
     """
@@ -312,7 +314,7 @@ def make_admin(id):
     return redirect(request.referrer)
 
 
-@admin.route('/remove_admin/<int:id>', methods=['GET', 'POST'])
+@admin.route('/remove_admin/<int:id>')
 @roles_accepted('admin', 'root')
 def remove_admin(id):
     """
@@ -333,7 +335,7 @@ def remove_admin(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_root/<int:id>', methods=['GET', 'POST'])
+@admin.route('/make_root/<int:id>')
 @roles_required('root')
 def make_root(id):
     """
@@ -355,7 +357,7 @@ def make_root(id):
     return redirect(request.referrer)
 
 
-@admin.route('/remove_root/<int:id>', methods=['GET', 'POST'])
+@admin.route('/remove_root/<int:id>')
 @roles_required('root')
 def remove_root(id):
     """
@@ -367,6 +369,30 @@ def remove_root(id):
     user = User.query.get_or_404(id)
 
     _datastore.remove_role_from_user(user, 'root')
+    _datastore.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/make_exec/<int:id>')
+@roles_required('admin', 'root')
+def make_exec(id):
+
+    user = User.query.get_or_404(id)
+
+    _datastore.add_role_to_user(user, 'exec')
+    _datastore.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/remove_exec/<int:id>')
+@roles_required('admin', 'root')
+def remove_exec(id):
+
+    user = User.query.get_or_404(id)
+
+    _datastore.remove_role_from_user(user, 'exec')
     _datastore.commit()
 
     return redirect(request.referrer)
@@ -1393,6 +1419,8 @@ def add_pclass():
                             initial_choices=form.initial_choices.data,
                             switch_choices=form.switch_choices.data,
                             active=True,
+                            CATS_supervision=form.CATS_supervision.data,
+                            CATS_marking=form.CATS_marking.data,
                             creator_id=current_user.id,
                             creation_timestamp=datetime.now())
         db.session.add(data)
@@ -1407,6 +1435,8 @@ def add_pclass():
                                     requests_issued=False,
                                     live=False,
                                     closed=False,
+                                    CATS_supervision=data.CATS_supervision,
+                                    CATS_marking=data.CATS_marking,
                                     creator_id=current_user.id,
                                     creation_timestamp=datetime.now(),
                                     submission_period=1)
@@ -1456,6 +1486,8 @@ def edit_pclass(id):
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data
         data.switch_choices = form.switch_choices.data
+        data.CATS_supervision = form.CATS_supervision.data
+        data.CATS_marking = form.CATS_marking.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 

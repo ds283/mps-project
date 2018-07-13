@@ -59,17 +59,24 @@ p.copyright {
     align-items: flex-end;
 }
 
-.bookmark-table {
-    border-collapse: collapse;
-    border-width: 0px;
-}
-
 .final-selection-table {
     margin-bottom: 1%;
 }
 
 .fac-project-table {
     margin-bottom: 1%;
+}
+
+.selected-project {
+    border-color: #dff0d8;
+    border-width: 3px;
+    margin: 3px;
+}
+
+.deselected-project {
+    border-color: #f2dede;
+    border-width: 3px;
+    margin: 3px;
 }
 
 .table-button {

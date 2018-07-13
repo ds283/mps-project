@@ -76,6 +76,7 @@ def create_app():
     tasks.register_rollover_tasks(celery)
     tasks.register_golive_tasks(celery)
     tasks.register_user_launch_tasks(celery)
+    tasks.register_popularity_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

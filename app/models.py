@@ -1783,18 +1783,6 @@ class LiveProject(db.Model):
     last_view = db.Column(db.DateTime())
 
 
-    # POPULARITY DATA (UPDATED BY SCHEDULED TASKS)
-
-    # popularity index
-    popularity_index = db.Column(db.Integer())
-
-    # popularity rank
-    popularity_rank = db.Column(db.Integer())
-
-    # popularity percentile
-    popularity_percentile = db.Column(db.Integer())
-
-
     def is_available(self, sel):
         """
         determine whether a this LiveProject is available for selection to a particular SelectingStudent
@@ -2367,6 +2355,38 @@ class Notification(db.Model):
     @payload.setter
     def payload(self, obj):
         self.payload_json = json.dumps(obj)
+
+
+class PopularityRecord(db.Model):
+
+    __tablename = 'popularity'
+
+
+    # unique id for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # tag LiveProject to which this record applies
+    liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    liveproject = db.relationship('LiveProject', uselist=False,
+                                  backref=db.backref('popularity_data', lazy='dynamic', cascade='all, delete-orphan'))
+
+    # tag ProjectClassConfig to which this record applies
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', uselist=False,
+                             backref=db.backref('popularity_data', lazy='dynamic', cascade='all, delete-orphan'))
+
+    # date stamp for this calculation
+    datestamp = db.Column(db.DateTime(), index=True)
+
+    # popularity index
+    index = db.Column(db.Integer())
+
+    # popularity rank
+    rank = db.Column(db.Integer())
+
+    # total number of LiveProjects included in ranking
+    total_number = db.Column(db.Integer())
+
 
 
 # ############################

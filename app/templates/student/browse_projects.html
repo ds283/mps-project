@@ -135,7 +135,7 @@
                         {% if bookmarks == 1 %}{% set bmpl = '' %}{% endif %}
                         {% set ncpl = 's' %}
                         {% if sel.number_choices == 1 %}{% set ncpl = '' %}{% endif %}
-                        <span class="label label-success">{{ bookmarks }} bookmark{{ bmpl }}; {{ sel.number_choices }} selection{{ ncpl }} required</span>
+                        <span class="label label-success">{{ bookmarks }} bookmark{{ bmpl }} &ndash; {{ sel.number_choices }} selection{{ ncpl }} required</span>
                     </div>
                 </div>
             </div>

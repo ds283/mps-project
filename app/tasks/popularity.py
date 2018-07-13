@@ -11,15 +11,17 @@
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import db, LiveProject, ProjectClass, ProjectClassConfig
+from ..models import db, LiveProject, ProjectClass, ProjectClassConfig, PopularityRecord
 
 from celery import chain, group
+
+from datetime import datetime
 
 
 def register_popularity_tasks(celery):
 
     @celery.task(bind=True)
-    def compute_popularity_index(self, liveid):
+    def compute_popularity_index(self, liveid, num_live):
 
         self.update_state(state='STARTED', meta='Computing popularity index')
 
@@ -38,7 +40,14 @@ def register_popularity_tasks(celery):
                 item_score = max_selections - item.rank + 1
                 score += 10*item_score
 
-            data.popularity_index = score
+            rec = PopularityRecord(liveproject_id=data.id,
+                                   config_id=data.config_id,
+                                   datestamp=datetime.now(),
+                                   index=score,
+                                   rank=None,
+                                   total_number=num_live)
+            data.popularity_data.append(rec)
+
             db.session.commit()
 
         except SQLAlchemyError:
@@ -63,8 +72,13 @@ def register_popularity_tasks(celery):
             raise self.retry()
 
         # set up group of tasks to update popularity index of each LiveProject on this configuration
-        tasks = group(compute_popularity_index.si(p.id) for p in config.live_projects)
-        tasks.apply_async()
+        # only need to work with projects that are open for student selections
+
+        num_live = config.live_projects.count()
+
+        if config.open:
+            tasks = group(compute_popularity_index.si(p.id, num_live) for p in config.live_projects)
+            tasks.apply_async()
 
         self.update_state(state='SUCCESS')
 

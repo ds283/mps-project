@@ -38,6 +38,10 @@ class Config(object):
     SECURITY_CHANGEABLE = True
     SECURITY_REGISTERABLE = False
 
+    SECURITY_PASSWORDLESS = False     # disable passwordless login
+
+    SECURITY_EMAIL_HTML = False       # disable HTML emails
+
     SECURITY_USER_IDENTITY_ATTRIBUTES = ['email', 'username']
 
     # MPS-Project configuration
@@ -57,14 +61,6 @@ class DevelopmentConfig(Config):
 
     DEBUG = True                    # enable Flask debugger
     SQLALCHEMY_ECHO = True          # enable SQLAlchemy logging
-
-    # turn off Flask-Security emails
-    SECURITY_EMAIL_SUBJECT_REGISTER = False
-    SECURITY_EMAIL_SUBJECT_PASSWORDLESS = False
-    SECURITY_EMAIL_SUBJECT_PASSWORD_NOTICE = False
-    SECURITY_EMAIL_SUBJECT_PASSWORD_RESET = False
-    SECURITY_EMAIL_SUBJECT_PASSWORD_CHANGE_NOTICE = False
-    SECURITY_EMAIL_SUBJECT_CONFIRM = False
 
 
 class ProductionConfig(Config):

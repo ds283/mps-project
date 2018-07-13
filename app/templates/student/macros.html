@@ -1,0 +1,29 @@
+{% macro ranked_selection(sel, list) %}
+    <div class="container-fluid">
+        <div class="row vertical-align final-selection-table">
+            <div class="col-xs-1"><strong>Rank</strong></div>
+            <div class="col-xs-8"><strong>Project title</strong></div>
+            <div class="col-xs-3"><strong>Supervisor</strong></div>
+        </div>
+        {% for item in list %}
+            {% if item.rank <= sel.number_choices %}
+                {% set project = item.liveproject %}
+                <div class="row vertical-align final-selection-table">
+                    <div class="col-xs-1">
+                        <span class="label label-success">#{{ item.rank }}</span>
+                    </div>
+                    <div class="col-xs-8">
+                        <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
+                            <strong>{{ project.name }}</strong>
+                        </a>
+                    </div>
+                    <div class="col-xs-3">
+                        <a href="mailto:{{ project.owner.email }}">
+                            {{ project.owner.build_name() }}
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endmacro %}

@@ -85,7 +85,7 @@
                                 <div class="panel-body">
                                     <div class="row vertical-align">
                                         <div class="col-xs-9">
-                                            {% set valid, total = config.count_valid_students %}
+                                            {% set valid, total = config.count_submitted_students %}
                                             <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
                                                 students have valid selections (<strong>{{ total-valid }}</strong> remaining).</p>
                                         </div>
@@ -102,7 +102,7 @@
                                 <div class="panel-body">
                                     <div class="row vertical-align">
                                         <div class="col-xs-9">
-                                            {% set valid, total = config.count_valid_students %}
+                                            {% set valid, total = config.count_submitted_students %}
                                             <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
                                                 students have valid selections (<strong>{{ total-valid }}</strong>
                                                 remaining).</p>

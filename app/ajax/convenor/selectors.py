@@ -178,7 +178,7 @@ def selectors_data(students, config):
              'bookmarks': render_template_string(_bookmarks, student=s),
              'pending': render_template_string(_pending, student=s, config=config),
              'confirmed': render_template_string(_confirmed, student=s, config=config),
-             'ok': '<span class="label label-success">OK</span>' if s.is_valid_selection
+             'submitted': '<span class="label label-success">Yes</span>' if s.has_submitted
              else '<span class="label label-danger">No</span>',
              'menu': render_template_string(_menu, student=s, config=config)} for s in students]
 

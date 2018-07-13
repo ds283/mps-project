@@ -1101,6 +1101,12 @@ class ProjectClass(db.Model):
     # is project selection open to all students?
     selection_open_to_all = db.Column(db.Boolean())
 
+    # CATS awarded for supervising
+    CATS_supervision = db.Column(db.Integer())
+
+    # CATS awarded for 2nd marking
+    CATS_marking = db.Column(db.Integer())
+
     # project convenor; must be a faculty member, so might be pereferable to link to faculty_data table,
     # but to generate eg. tables we will need to extract usernames and emails
     # For that purpose, it's better to link to the User table directly
@@ -1173,7 +1179,7 @@ class ProjectClass(db.Model):
 
     def make_label(self, text=None):
         """
-        Make approriately coloured label
+        Make appropriately coloured label
         :param text:
         :return:
         """
@@ -1262,6 +1268,15 @@ class ProjectClassConfig(db.Model):
     submission_period = db.Column(db.Integer())
 
 
+    # WORKLOAD MODEL
+
+    # CATS awarded for supervising
+    CATS_supervision = db.Column(db.Integer())
+
+    # CATS awarded for 2nd marking
+    CATS_marking = db.Column(db.Integer())
+
+
     @property
     def open(self):
 
@@ -1294,6 +1309,16 @@ class ProjectClassConfig(db.Model):
         delta = self.live_deadline.date() - date.today()
         days = delta.days
 
+        if days > 7:
+
+            weeks = int(days/7)
+            str = '{weeks} week'.format(weeks=weeks)
+
+            if weeks != 1:
+                str += 's'
+
+            return str
+
         str = '{days} day'.format(days=days)
 
         if days != 1:
@@ -1303,13 +1328,13 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def count_valid_students(self):
+    def count_submitted_students(self):
 
         total_students = self.selecting_students.count()
 
         count = 0
         for student in self.selecting_students:
-            if student.is_valid_selection:
+            if student.has_submitted:
                 count += 1
 
         return count, total_students
@@ -1758,6 +1783,18 @@ class LiveProject(db.Model):
     last_view = db.Column(db.DateTime())
 
 
+    # POPULARITY DATA (UPDATED BY SCHEDULED TASKS)
+
+    # popularity index
+    popularity_index = db.Column(db.Integer())
+
+    # popularity rank
+    popularity_rank = db.Column(db.Integer())
+
+    # popularity percentile
+    popularity_percentile = db.Column(db.Integer())
+
+
     def is_available(self, sel):
         """
         determine whether a this LiveProject is available for selection to a particular SelectingStudent
@@ -1829,6 +1866,17 @@ class SelectingStudent(db.Model):
                                     backref=db.backref('filtering_students', lazy='dynamic'))
 
 
+    # SELECTION METADATA
+
+    # 'selections' field is added by backreference from SelectionRecord
+
+    # record time of last selection submission
+    submission_time = db.Column(db.DateTime())
+
+    # record IP address of selection request
+    submission_IP = db.Column(db.String(IP_LENGTH))
+
+
     @property
     def has_bookmarks(self):
         """
@@ -1847,6 +1895,12 @@ class SelectingStudent(db.Model):
         """
 
         return self.bookmarks.order_by(Bookmark.rank)
+
+
+    @property
+    def get_num_bookmarks(self):
+
+        return db.session.query(sqlalchemy.func.count(Bookmark.id)).with_parent(self).scalar()
 
 
     @property
@@ -1926,6 +1980,22 @@ class SelectingStudent(db.Model):
         return True
 
 
+    @property
+    def has_submitted(self):
+        """
+        Determine whether a submission has been made
+        :return:
+        """
+
+        return self.selections.first() is not None
+
+
+    @property
+    def get_ordered_selection(self):
+
+        return self.selections.order_by(SelectionRecord.rank)
+
+
 class SubmittingStudent(db.Model):
     """
     Model a student who is submitting work for evaluation in the current cycle
@@ -1987,6 +2057,33 @@ class Bookmark(db.Model):
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
     liveproject = db.relationship('LiveProject', uselist=False,
                                   backref=db.backref('bookmarks', lazy='dynamic'))
+
+    # rank in owner's list
+    rank = db.Column(db.Integer())
+
+
+class SelectionRecord(db.Model):
+    """
+    Model an ordered list of project selections
+    """
+
+    __tablename__ = "selections"
+
+
+    # unique ID for this preference record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # id of owning SelectingStudent
+    # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
+    # removed from the database
+    user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+    user = db.relationship('SelectingStudent', uselist=False,
+                           backref=db.backref('selections', lazy='dynamic', cascade='all, delete-orphan'))
+
+    # LiveProject we are linking to
+    liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    liveproject = db.relationship('LiveProject', uselist=False,
+                                  backref=db.backref('selections', lazy='dynamic'))
 
     # rank in owner's list
     rank = db.Column(db.Integer())

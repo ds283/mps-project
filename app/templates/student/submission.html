@@ -1,0 +1,41 @@
+{% extends "base_app.html" %}
+
+{% from "student/macros.html" import ranked_selection %}
+
+{% block title %}
+    View submitted project preferences
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    Submitted project preferences for
+                    <strong>{{ sel.config.project_class.name }} {{ sel.config.year }}&ndash;{{ sel.config.year+1 }}</strong>
+                </div>
+                <div class="panel-body">
+                    {% if sel.has_submitted %}
+                        <div class="well">
+                            Last submission received at
+                            <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
+                            from IP address
+                            <strong>{{ sel.submission_IP }}</strong>
+                        </div>
+                        {{ ranked_selection(sel, sel.get_ordered_selection) }}
+                    {% else %}
+                        <strong>Error.</strong> No preferences have been received for this project class.
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ url_for('student.dashboard') }}">
+                    <i class="fa fa-backward"></i> Return to dashboard
+                </a>
+            </div>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

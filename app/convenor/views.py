@@ -1702,9 +1702,11 @@ def reset_popularity_data(id):
         .format(name=config.project_class.name, yra=config.year+1, yrb=config.year+2)
 
     action_url = url_for('convenor.perform_reset_popularity_data', id=id)
-    message = 'Please confirm that you wish to delete all popularity data for ' \
+    message = '<p>Please confirm that you wish to delete all popularity data for ' \
               '<strong>{name} {yra}&ndash;{yrb}</strong>. ' \
-              'This action cannot be undone'\
+              'This action cannot be undone.</p>' \
+              '<p>Afterwards, it will not be possible to analyse ' \
+              'historical popularity trends for individual projects offered in this cycle.</p>' \
         .format(name=config.project_class.name, yra=config.year+1, yrb=config.year+2)
     submit_label = 'Delete data'
 

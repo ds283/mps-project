@@ -23,7 +23,7 @@ def upgrade():
     sa.Column('liveproject_id', sa.Integer(), nullable=True),
     sa.Column('config_id', sa.Integer(), nullable=True),
     sa.Column('datestamp', sa.DateTime(), nullable=True),
-    sa.Column('index', sa.Integer(), nullable=True),
+    sa.Column('score', sa.Integer(), nullable=True),
     sa.Column('rank', sa.Integer(), nullable=True),
     sa.Column('total_number', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['config_id'], ['project_class_config.id'], ),

@@ -1421,6 +1421,8 @@ def add_pclass():
                             active=True,
                             CATS_supervision=form.CATS_supervision.data,
                             CATS_marking=form.CATS_marking.data,
+                            keep_hourly_popularity=form.keep_hourly_popularity.data,
+                            keep_daily_popularity=form.keep_daily_popularity.data,
                             creator_id=current_user.id,
                             creation_timestamp=datetime.now())
         db.session.add(data)
@@ -1451,7 +1453,7 @@ def add_pclass():
 
         return redirect(url_for('admin.edit_project_classes'))
 
-    return render_template('admin/edit_project_class.html', project_form=form, title='Add new project class')
+    return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
 
 
 @admin.route('/edit_pclass/<int:id>', methods=['GET', 'POST'])
@@ -1488,6 +1490,8 @@ def edit_pclass(id):
         data.switch_choices = form.switch_choices.data
         data.CATS_supervision = form.CATS_supervision.data
         data.CATS_marking = form.CATS_marking.data
+        data.keep_hourly_popularity = form.keep_hourly_popularity.data
+        data.keep_daily_popularity = form.keep_daily_popularity.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 
@@ -1500,7 +1504,7 @@ def edit_pclass(id):
 
         return redirect(url_for('admin.edit_project_classes'))
 
-    return render_template('admin/edit_project_class.html', project_form=form, project_class=data,
+    return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')
 
 

@@ -41,6 +41,9 @@ def add_liveproject(number, project, config_id, autocommit=False):
                             programmes=item.programmes,
                             description=item.description,
                             reading=item.reading,
+                            show_popularity=item.show_popularity,
+                            show_bookmarks=item.show_bookmarks,
+                            show_selections=item.show_selections,
                             page_views=0,
                             last_view=None)
 

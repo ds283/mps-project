@@ -28,79 +28,85 @@
 {% endblock %}
 
 {% block formtitle %}
-    {% if project_class %}
-        Edit properties for project class '{{ project_class.name }}'
+    {% if pclass %}
+        Edit properties for project class '{{ pclass.name }}'
     {% else %}
         {{ title }}
     {% endif %}
 {% endblock %}
 
 {% block form_content %}
-    {% if project_class %}
-        <form action="{{ url_for('admin.edit_pclass', id=project_class.id) }}" method="POST" name="project_form">
+    {% if pclass %}
+        <form action="{{ url_for('admin.edit_pclass', id=pclass.id) }}" method="POST" name="pclass_form">
     {% else %}
-        <form action="{{ url_for('admin.add_pclass') }}" method="POST" name="project_form">
+        <form action="{{ url_for('admin.add_pclass') }}" method="POST" name="pclass_form">
     {% endif %}
 
-        {{ project_form.hidden_tag() }}
+        {{ pclass_form.hidden_tag() }}
 
-{#        {{ wtf.form_errors(project_form) }}#}
+{#        {{ wtf.form_errors(pclass_form) }}#}
 
-        {{ wtf.form_field(project_form.name) }}
-        {{ wtf.form_field(project_form.abbreviation) }}
+        {{ wtf.form_field(pclass_form.name) }}
+        {{ wtf.form_field(pclass_form.abbreviation) }}
 
-        {{ colour_field(project_form.colour, 'colour-group') }}
+        {{ colour_field(pclass_form.colour, 'colour-group') }}
 
-        {{ wtf.form_field(project_form.convenor) }}
+        {{ wtf.form_field(pclass_form.convenor) }}
 
-        {{ wtf.form_field(project_form.require_confirm) }}
-        {{ wtf.form_field(project_form.supervisor_carryover) }}
+        {{ wtf.form_field(pclass_form.require_confirm) }}
+        {{ wtf.form_field(pclass_form.supervisor_carryover) }}
 
-        <div class="well {% if project_form.programmes.errors %}has-error{% endif %}">
+        <div class="well {% if pclass_form.programmes.errors %}has-error{% endif %}">
             <p>Select degree programmes to which this project class applies</p>
-            {% for widget in project_form.programmes %}
+            {% for widget in pclass_form.programmes %}
                 {{ wtf.form_field(widget) }}
             {% endfor %}
-            {% if project_form.programmes.errors %}
-                {% for error in project_form.programmes.errors %}
+            {% if pclass_form.programmes.errors %}
+                {% for error in pclass_form.programmes.errors %}
                     <p class="help-block">{{ error }}</p>
                 {% endfor %}
             {% endif %}
 
             <hr class="intro-divider">
-            {% if project_form.selection_open_to_all.description %}
-                <div>{{ project_form.selection_open_to_all.description }}</div>
+            {% if pclass_form.selection_open_to_all.description %}
+                <div>{{ pclass_form.selection_open_to_all.description }}</div>
             {% endif %}
             <div class="checkbox">
                 <label>
-                    {{ project_form.selection_open_to_all()|safe }} {{ project_form.selection_open_to_all.label.text|safe }}
+                    {{ pclass_form.selection_open_to_all()|safe }} {{ pclass_form.selection_open_to_all.label.text|safe }}
                 </label>
             </div>
         </div>
 
         <div class="well">
-            {{ wtf.form_field(project_form.year) }}
-            {{ wtf.form_field(project_form.extent) }}
-            {{ wtf.form_field(project_form.submissions) }}
+            {{ wtf.form_field(pclass_form.year) }}
+            {{ wtf.form_field(pclass_form.extent) }}
+            {{ wtf.form_field(pclass_form.submissions) }}
         </div>
 
         <div class="well">
-            <p><strong>Student selections</strong></p>
-            {{ wtf.form_field(project_form.initial_choices) }}
-            {{ wtf.form_field(project_form.switch_choices) }}
+            <p>Student selections</p>
+            {{ wtf.form_field(pclass_form.initial_choices) }}
+            {{ wtf.form_field(pclass_form.switch_choices) }}
         </div>
 
         <div class="well">
-            <p><strong>Workload model support</strong></p>
-            {{ wtf.form_field(project_form.CATS_supervision) }}
-            {{ wtf.form_field(project_form.CATS_marking) }}
+            <p>Workload model support</p>
+            {{ wtf.form_field(pclass_form.CATS_supervision) }}
+            {{ wtf.form_field(pclass_form.CATS_marking) }}
         </div>
 
-        {{ wtf.form_field(project_form.submit, button_map={'submit': 'primary'}) }}
+        <div class="well">
+            <p>Popularity data</p>
+            {{ wtf.form_field(pclass_form.keep_hourly_popularity) }}
+            {{ wtf.form_field(pclass_form.keep_daily_popularity) }}
+        </div>
+
+        {{ wtf.form_field(pclass_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>
 {% endblock %}
 
 {% block footer %}
-    {{ edit_data(project_class) }}
+    {{ edit_data(pclass_form) }}
 {% endblock %}

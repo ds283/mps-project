@@ -161,6 +161,9 @@ def add_project():
                        programmes=[],
                        meeting_reqd=form.meeting.data,
                        team=form.team.data,
+                       show_popularity=form.show_popularity.data,
+                       show_bookmarks=form.show_bookmarks.data,
+                       show_selections=form.show_selections.data,
                        description=form.description.data,
                        reading=form.reading.data,
                        creator_id=current_user.id,
@@ -198,6 +201,9 @@ def edit_project(id):
         data.project_classes = form.project_classes.data
         data.meeting_reqd = form.meeting.data
         data.team = form.team.data
+        data.show_popularity = form.show_popularity.data
+        data.show_bookmarks = form.show_bookmarks.data
+        data.show_selections = form.show_selections.data
         data.description = form.description.data
         data.reading = form.reading.data
         data.last_edit_id = current_user.id

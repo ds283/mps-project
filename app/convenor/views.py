@@ -13,7 +13,8 @@ from flask import render_template, redirect, url_for, flash, request, jsonify, c
 from flask_security import roles_accepted, current_user
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
-    LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup
+    LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
+    PopularityRecord
 
 from ..shared.utils import get_current_year, home_dashboard
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
@@ -1218,7 +1219,7 @@ def force_confirm_all(id):
 
 
 @convenor.route('/go_live/<pid>/<int:configid>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def go_live(pid, configid):
 
     # get details for project class
@@ -1258,7 +1259,7 @@ def go_live(pid, configid):
 
 
 @convenor.route('/close_selections/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def close_selections(id):
 
     # get details for project class
@@ -1317,7 +1318,7 @@ def unenroll(userid, pclassid):
 
 
 @convenor.route('/confirm/<int:sid>/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def confirm(sid, pid):
 
     # sid is a SelectingStudent
@@ -1340,7 +1341,7 @@ def confirm(sid, pid):
 
 
 @convenor.route('/deconfirm/<int:sid>/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def deconfirm(sid, pid):
 
     # sid is a SelectingStudent
@@ -1363,7 +1364,7 @@ def deconfirm(sid, pid):
 
 
 @convenor.route('/deconfirm_to_pending/<int:sid>/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def deconfirm_to_pending(sid, pid):
 
     # sid is a SelectingStudent
@@ -1386,7 +1387,7 @@ def deconfirm_to_pending(sid, pid):
 
 
 @convenor.route('/cancel_confirm/<int:sid>/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def cancel_confirm(sid, pid):
 
     # sid is a SelectingStudent
@@ -1409,7 +1410,7 @@ def cancel_confirm(sid, pid):
 
 
 @convenor.route('/project_confirm_all/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def project_confirm_all(pid):
 
     # pid is a LiveProject
@@ -1435,7 +1436,7 @@ def project_confirm_all(pid):
 
 
 @convenor.route('/project_clear_requests/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def project_clear_requests(pid):
 
     # pid is a LiveProject
@@ -1459,7 +1460,7 @@ def project_clear_requests(pid):
 
 
 @convenor.route('/project_remove_confirms/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def project_remove_confirms(pid):
 
     # pid is a LiveProject
@@ -1483,7 +1484,7 @@ def project_remove_confirms(pid):
 
 
 @convenor.route('/project_make_all_confirms_pending/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def project_make_all_confirms_pending(pid):
 
     # pid is a LiveProject
@@ -1509,7 +1510,7 @@ def project_make_all_confirms_pending(pid):
 
 
 @convenor.route('/student_confirm_all/<int:sid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def student_confirm_all(sid):
 
     # sid is a SelectingStudent
@@ -1533,7 +1534,7 @@ def student_confirm_all(sid):
 
 
 @convenor.route('/student_remove_confirms/<int:sid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def student_remove_confirms(sid):
 
     # sid is a SelectingStudent
@@ -1555,7 +1556,7 @@ def student_remove_confirms(sid):
 
 
 @convenor.route('/student_clear_requests/<int:sid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def student_clear_requests(sid):
 
     # sid is a SelectingStudent
@@ -1577,7 +1578,7 @@ def student_clear_requests(sid):
 
 
 @convenor.route('/student_make_all_confirms_pending/<int:sid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def student_make_all_confirms_pending(sid):
 
     # sid is a SelectingStudent
@@ -1601,7 +1602,7 @@ def student_make_all_confirms_pending(sid):
 
 
 @convenor.route('/student_clear_bookmarks/<int:sid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def student_clear_bookmarks(sid):
 
     # sid is a SelectingStudent
@@ -1623,7 +1624,7 @@ def student_clear_bookmarks(sid):
 
 
 @convenor.route('/confirm_rollover/<int:pid>/<int:configid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def confirm_rollover(pid, configid):
 
     year = get_current_year()
@@ -1645,7 +1646,7 @@ def confirm_rollover(pid, configid):
 
 
 @convenor.route('/rollover/<int:pid>/<int:configid>')
-@roles_accepted('faculty', 'admin', 'route')
+@roles_accepted('faculty', 'admin', 'root')
 def rollover(pid, configid):
 
     # pid is a ProjectClass
@@ -1683,3 +1684,46 @@ def rollover(pid, configid):
                          link_error=rollover_fail.si(task_id, current_user.id))
 
     return redirect(url_for('convenor.overview', id=pid))
+
+
+@convenor.route('/reset_popularity_data/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def reset_popularity_data(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_convenor(config.project_class):
+        return home_dashboard()
+
+    title = 'Delete popularity data'
+    panel_title = 'Delete selection popularity data for <strong>{name} {yra}&ndash;{yrb}</strong>'\
+        .format(name=config.project_class.name, yra=config.year+1, yrb=config.year+2)
+
+    action_url = url_for('convenor.perform_reset_popularity_data', id=id)
+    message = 'Please confirm that you wish to delete all popularity data for ' \
+              '<strong>{name} {yra}&ndash;{yrb}</strong>. ' \
+              'This action cannot be undone'\
+        .format(name=config.project_class.name, yra=config.year+1, yrb=config.year+2)
+    submit_label = 'Delete data'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/perform_reset_popularity_data/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_reset_popularity_data(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_convenor(config.project_class):
+        return home_dashboard()
+
+    db.session.query(PopularityRecord).filter_by(config_id=id).delete()
+    db.session.commit()
+
+    return redirect(url_for('convenor.liveprojects', id=config.project_class.id))

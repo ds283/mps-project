@@ -40,11 +40,20 @@ _supervisors_menu = \
 </div>
 """
 
+_active = \
+"""
+{% if r.active %}
+    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+{% endif %}
+"""
+
 
 def supervisors_data(roles):
 
     data = [{'role': r.name,
-             'active': 'Active' if r.active else 'Inactive',
+             'active': render_template_string(_active, r=r),
              'menu': render_template_string(_supervisors_menu, role=r)} for r in roles]
 
     return jsonify(data)

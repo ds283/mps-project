@@ -44,12 +44,21 @@ _programmes_menu = \
 </div>
 """
 
+_active = \
+"""
+{% if p.active %}
+    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+{% endif %}
+"""
+
 
 def degree_programmes_data(programmes):
 
     data = [{'name': p.name,
              'type': p.degree_type.name,
-             'active': 'Active' if p.active else 'Inactive',
+             'active': render_template_string(_active, p=p),
              'menu': render_template_string(_programmes_menu, programme=p)} for p in programmes]
 
     return jsonify(data)

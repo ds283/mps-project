@@ -2421,8 +2421,11 @@ class PopularityRecord(db.Model):
     # date stamp for this calculation
     datestamp = db.Column(db.DateTime(), index=True)
 
-    # popularity index
-    index = db.Column(db.Integer())
+    # UUID identifying all popularity records in a group
+    uuid = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+
+    # popularity score
+    score = db.Column(db.Integer())
 
     # page views
     views = db.Column(db.Integer())
@@ -2433,8 +2436,8 @@ class PopularityRecord(db.Model):
     # number of selections
     selections = db.Column(db.Integer())
 
-    # rank on popularity index
-    index_rank = db.Column(db.Integer())
+    # rank on popularity score
+    score_rank = db.Column(db.Integer())
 
     # rank on page views
     views_rank = db.Column(db.Integer())

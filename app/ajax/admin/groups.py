@@ -40,11 +40,20 @@ _groups_menu = \
 </div>
 """
 
+_active = \
+"""
+{% if g.active %}
+    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+{% endif %}
+"""
+
 
 def groups_data(groups):
 
     data = [{'abbrv': g.abbreviation,
-             'active': 'Active' if g.active else 'Inactive',
+             'active': render_template_string(_active, g=g),
              'name': g.name,
              'colour': '<span class="label label-default">None</span>' if g.colour is None else g.make_label(g.colour),
              'website': '<a href="{web}">{web}</a>'.format(web=g.website) if g.website is not None

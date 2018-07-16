@@ -78,12 +78,21 @@ _skill_group_menu = \
 </div>
 """
 
+_active = \
+"""
+{% if a.active %}
+    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+{% endif %}
+"""
+
 
 def skills_data(skills):
 
     data = [{'name': s.name,
              'group': s.group.make_label() if s.group is not None else '<span class="label label-default">None</span>',
-             'active': 'Active' if s.active else 'Inactive',
+             'active': render_template_string(_active, a=s),
              'menu': render_template_string(_skills_menu, skill=s)} for s in skills]
 
     return jsonify(data)
@@ -93,7 +102,7 @@ def skill_groups_data(groups):
 
     data = [{'name': g.name,
              'colour': g.make_label(g.colour),
-             'active': 'Active' if g.active else 'Inactive',
+             'active': render_template_string(_active, a=g),
              'include': 'Yes' if g.add_group else 'No',
              'menu': render_template_string(_skill_group_menu, group=g)} for g in groups]
 

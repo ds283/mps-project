@@ -52,16 +52,53 @@ _pclasses_menu = \
 </div>
 """
 
+_active = \
+"""
+{% if p.active %}
+    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+{% endif %}
+"""
+
+_workload = \
+"""
+<span class="label label-info">{{ p.CATS_supervision }}</span>
+/
+<span class="label label-default">{{ p.CATS_marking }}</span>
+"""
+
+_popularity = \
+"""
+{% set hourly_pl = 's' %}
+{% if p.keep_hourly_popularity == 1 %}{% set hourly_pl = '' %}{% endif %}
+{% set daily_pl = 's' %}
+{% if p.keep_daily_popularity == 1 %}{% set daily_pl = '' %}{% endif %}
+<span class="label label-info">{{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
+/
+<span class="label label-info">{{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
+"""
+
+_convenor = \
+"""
+{% set style = p.make_CSS_style() %}
+<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor.email }}">
+    {{ p.convenor.build_name() }}
+</a>
+"""
+
 
 def pclasses_data(classes):
 
     data = [{'name': '{name} ({ab})'.format(name=p.name, ab=p.abbreviation),
-             'active': 'Active' if p.active else 'Inactive',
+             'active': render_template_string(_active, p=p),
              'colour': '<span class="label label-default">None</span>' if p.colour is None else p.make_label(p.colour),
-             'year': 'Y{yr}'.format(yr=p.year),
-             'extent': '{ex}'.format(ex=p.extent),
-             'submissions': '{sub}'.format(sub=p.submissions),
-             'convenor': '{n} <a href="mailto:{em}>{em}</a>'.format(n=p.convenor.build_name(), em=p.convenor.email),
+             'year': '<span class="label label-info">Y{yr}</span>'.format(yr=p.year),
+             'extent': '<span class="label label-info">{ex}</span>'.format(ex=p.extent),
+             'cats': render_template_string(_workload, p=p),
+             'submissions': '<span class="label label-primary">{sub}</span>'.format(sub=p.submissions),
+             'popularity': render_template_string(_popularity, p=p),
+             'convenor': render_template_string(_convenor, p=p),
              'programmes': render_template_string(_pclasses_programmes, pcl=p),
              'menu': render_template_string(_pclasses_menu, pcl=p)} for p in classes]
 

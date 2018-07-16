@@ -72,6 +72,13 @@
 
         </div>
 
+        <div class="well">
+            <p>Should the project page include popularity information?</p>
+            {{ wtf.form_field(project_form.show_popularity) }}
+            {{ wtf.form_field(project_form.show_bookmarks) }}
+            {{ wtf.form_field(project_form.show_selections) }}
+        </div>
+
         {{ wtf.form_field(project_form.description) }}
         {{ wtf.form_field(project_form.reading) }}
 

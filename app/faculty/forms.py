@@ -98,6 +98,15 @@ class ProjectMixin():
     team = CheckboxQuerySelectMultipleField('Supervisory team',
                                             query_factory=GetSupervisorRoles, get_label='name')
 
+    # popularity display
+
+    show_popularity = BooleanField('Show popularity estimate')
+
+    show_bookmarks = BooleanField('Show number of bookmarks')
+
+    show_selections = BooleanField('Show number of selections')
+
+
     description = TextAreaField('Project description', render_kw={"rows": 20},
                                 description=r'Enter a description of your project. '
                                             r'You can use Markdown to add bold and italic, to generate lists, or to embed links. '

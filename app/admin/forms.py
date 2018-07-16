@@ -509,6 +509,32 @@ class ProjectClassMixin():
     CATS_marking = IntegerField('CATS awarded for project 2nd marking',
                                 validators=[Optional()])
 
+    hourly_choices = [(1, '1 day'),
+                      (2, '2 days'),
+                      (3, '3 days'),
+                      (4, '4 days'),
+                      (5, '5 days'),
+                      (6, '6 days'),
+                      (7, '7 days'),
+                      (8, '8 days'),
+                      (9, '9 days'),
+                      (10, '10 days'),
+                      (11, '11 days'),
+                      (12, '12 days'),
+                      (13, '13 days'),
+                      (14, '14 days')]
+    keep_hourly_popularity = SelectField('Keep hourly popularity data for', choices=hourly_choices, coerce=int)
+
+    daily_choices = [(1, '1 week'),
+                     (2, '2 weeks'),
+                     (3, '3 weeks'),
+                     (4, '4 weeks'),
+                     (5, '5 weeks'),
+                     (6, '6 weeks'),
+                     (7, '7 weeks'),
+                     (8, '8 weeks')]
+    keep_daily_popularity = SelectField('Keep daily popularity data for', choices=daily_choices, coerce=int)
+
     convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
 
     selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',

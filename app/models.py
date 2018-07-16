@@ -1101,11 +1101,26 @@ class ProjectClass(db.Model):
     # is project selection open to all students?
     selection_open_to_all = db.Column(db.Boolean())
 
+
+    # POPULARITY DISPLAY
+
+    # how many days to keep hourly popularity data for
+    keep_hourly_popularity = db.Column(db.Integer())
+
+    # how many weeks to keep daily popularity data for
+    keep_daily_popularity = db.Column(db.Integer())
+
+
+    # WORKLOAD MODEL
+
     # CATS awarded for supervising
     CATS_supervision = db.Column(db.Integer())
 
     # CATS awarded for 2nd marking
     CATS_marking = db.Column(db.Integer())
+
+
+    # PERSONNEL
 
     # project convenor; must be a faculty member, so might be pereferable to link to faculty_data table,
     # but to generate eg. tables we will need to extract usernames and emails
@@ -1117,6 +1132,9 @@ class ProjectClass(db.Model):
     # associate this project class with a set of degree programmes
     programmes = db.relationship('DegreeProgramme', secondary=pclass_programme_associations, lazy='dynamic',
                                  backref=db.backref('project_classes', lazy='dynamic'))
+
+
+    # EDITING METADATA
 
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -1569,6 +1587,19 @@ class Project(db.Model):
     # recommended reading
     reading = db.Column(db.Text())
 
+
+    # POPULARITY DISPLAY
+
+    # show popularity estimate
+    show_popularity = db.Column(db.Boolean())
+
+    # show number of selections
+    show_selections = db.Column(db.Boolean())
+
+    # show number of bookmarks
+    show_bookmarks = db.Column(db.Boolean())
+
+
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
@@ -1772,6 +1803,18 @@ class LiveProject(db.Model):
 
     # recommended reading
     reading = db.Column(db.Text())
+
+
+    # POPULARITY DISPLAY
+
+    # show popularity estimate
+    show_popularity = db.Column(db.Boolean())
+
+    # show number of selections
+    show_selections = db.Column(db.Boolean())
+
+    # show number of bookmarks
+    show_bookmarks = db.Column(db.Boolean())
 
 
     # METADATA
@@ -2381,8 +2424,26 @@ class PopularityRecord(db.Model):
     # popularity index
     index = db.Column(db.Integer())
 
-    # popularity rank
-    rank = db.Column(db.Integer())
+    # page views
+    views = db.Column(db.Integer())
+
+    # number of bookmarks
+    bookmarks = db.Column(db.Integer())
+
+    # number of selections
+    selections = db.Column(db.Integer())
+
+    # rank on popularity index
+    index_rank = db.Column(db.Integer())
+
+    # rank on page views
+    views_rank = db.Column(db.Integer())
+
+    # rank on bookmarks
+    bookmarks_rank = db.Column(db.Integer())
+
+    # rank of number of selections
+    selections_rank = db.Column(db.Integer())
 
     # total number of LiveProjects included in ranking
     total_number = db.Column(db.Integer())

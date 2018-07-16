@@ -1,0 +1,58 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "base_app.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#roles-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/roles_ajax', dataSrc: '' },
+                columns: [
+                    { data: 'name' },
+                    { data: 'description' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit user roles
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Edit research groups</div>
+        <div class="panel-body">
+        <table id="roles-table" class="table table-striped table-bordered">
+            <thead>
+            <tr>
+                <th width="20%"> Name</th>
+                <th width="65%"> Description</th>
+                <th width="15%"> Actions</th>
+            </tr>
+            </thead>
+        </table>
+        </div>
+    </div>
+    <div style="text-align: center;">
+        <a href="{{ url_for('admin.add_role') }}" class="btn btn-default btn-lg">
+            <i class="fa fa-plus"></i>
+            Add new role
+        </a>
+    </div>
+{%  endblock %}

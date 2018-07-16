@@ -32,12 +32,13 @@ from .forms import RoleSelectForm, \
     AddMessageForm, EditMessageForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
-    EditBackupOptionsForm, BackupManageForm
+    EditBackupOptionsForm, BackupManageForm, \
+    AddRoleForm, EditRoleForm
 
-from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup, DegreeType, DegreeProgramme, \
-    SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, EmailLog, MessageOfTheDay, \
-    DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, BackupRecord, TaskRecord, Notification, \
-    EnrollmentRecord, Role
+from ..models import db, MainConfig, User, Role, FacultyData, StudentData, ResearchGroup,\
+    DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
+    EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
+    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
@@ -1745,6 +1746,76 @@ def perform_global_rollover():
     return redirect(url_for('home.homepage'))
 
 
+@admin.route('/edit_roles')
+@roles_required('root')
+def edit_roles():
+    """
+    Display list of roles
+    :return:
+    """
+
+    return render_template('admin/edit_roles.html')
+
+
+@admin.route('/roles_ajax')
+@roles_required('root')
+def roles_ajax():
+    """
+    Ajax data point for roles list
+    :return:
+    """
+
+    roles = db.session.query(Role)
+    return ajax.admin.roles_data(roles)
+
+
+@admin.route('/add_role', methods=['GET', 'POST'])
+@roles_required('root')
+def add_role():
+    """
+    Add a new user role
+    :return:
+    """
+
+    form = AddRoleForm(request.form)
+
+    if form.validate_on_submit():
+
+        data = Role(name=form.name.data,
+                    description=form.description.data)
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_roles'))
+
+    return render_template('admin/edit_role.html', title='Edit role', role_form=form)
+
+
+@admin.route('/edit_role/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_role(id):
+    """
+    Edit an existing role
+    :param id:
+    :return:
+    """
+
+    data = Role.query.get_or_404(id)
+
+    form = EditRoleForm(obj=data)
+    form.role = data
+
+    if form.validate_on_submit():
+
+        data.name = form.name.data
+        data.description = form.description.data
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_roles'))
+
+    return render_template('admin/edit_role.html', role=data, title='Edit role', role_form=form)
+
+
 @admin.route('/email_log', methods=['GET', 'POST'])
 @roles_required('root')
 def email_log():
@@ -1767,7 +1838,7 @@ def email_log():
 @roles_required('root')
 def email_log_ajax():
     """
-    Ajax data point for email og
+    Ajax data point for email log
     :return:
     """
 

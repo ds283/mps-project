@@ -15,3 +15,4 @@ from .degree_programmes import degree_programmes_data
 from .supervisors import supervisors_data
 from .pclasses import pclasses_data
 from .groups import groups_data
+from .roles import roles_data

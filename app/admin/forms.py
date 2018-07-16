@@ -148,6 +148,17 @@ def unique_or_original_supervisor(form, field):
     if field.data != form.supervisor.name and Supervisor.query.filter_by(name=field.data).first():
         raise ValidationError('{name} is already associated with a supervisory role'.format(name=field.data))
 
+
+def globally_unique_role(form, field):
+    if Role.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a user role'.format(name=field.data))
+
+
+def unique_or_original_role(form, field):
+    if field.data != form.role.name and Role.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a user role'.format(name=field.data))
+
+
 def valid_json(form, field):
     try:
         json_obj = json.loads(field.data)
@@ -811,7 +822,7 @@ class SkillGroupMixin():
 class AddSkillGroupForm(Form, SkillGroupMixin):
 
     name = StringField('Name', validators=[DataRequired(message='A name for the group is required'),
-                                                          globally_unique_skill_group])
+                                           globally_unique_skill_group])
 
     submit = SubmitField('Add new skill')
 
@@ -819,4 +830,23 @@ class AddSkillGroupForm(Form, SkillGroupMixin):
 class EditSkillGroupForm(Form, SkillGroupMixin, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='A name for the group is required'),
-                                                          unique_or_original_skill_group])
+                                           unique_or_original_skill_group])
+
+
+class RoleMixin():
+
+    description = StringField('Description')
+
+
+class AddRoleForm(Form, RoleMixin):
+
+    name = StringField('Name', validators=[DataRequired(message='A name for the role is required'),
+                                           globally_unique_role])
+
+    submit = SubmitField('Add new role')
+
+
+class EditRoleForm(Form, RoleMixin, EditFormMixin):
+
+    name = StringField('Name', validators=[DataRequired(message='A name for the role is required'),
+                                           unique_or_original_role])

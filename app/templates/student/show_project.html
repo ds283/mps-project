@@ -87,16 +87,34 @@
                                             <div class="col-xs-9">
                                                 <div class="sm-gap-below">
                                                     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                                        <span class="label label-danger project-label">Meeting required</span>
+                                                        {% if project.meeting_confirmed(sel) %}
+                                                            <span class="label label-primary project-label"><i class="fa fa-check"></i> Meeting confirmed</span>
+                                                        {% else %}
+                                                            <span class="label label-danger project-label"><i class="fa fa-times"></i> Meeting required</span>
+                                                        {% endif %}
                                                     {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
                                                         <span class="label label-warning project-label">Meeting optional</span>
                                                     {% else %}
-                                                        <span class="label label-default project-label">Meeting not required</span>
+                                                        <span class="label label-default project-label"><i class="fa fa-check"></i> Meeting not required</span>
                                                     {% endif %}
                                                     {% if project.is_available(sel) %}
-                                                        <span class="label label-success project-label">Available</span>
+                                                        <span class="label label-success project-label"><i class="fa fa-check"></i> Available</span>
                                                     {% endif %}
                                                 </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if project.show_popularity_data %}
+                                        <div class="row sm-gap-below vertical-top">
+                                            <div class="col-xs-3">Popularity</div>
+                                            <div class="col-xs-9">
+                                                {% set lab = project.format_popularity_label(['project-label']) %}
+                                                {% if lab is not none %}{{ lab|safe }}{% endif %}
+                                                {% set lab = project.format_bookmarks_label(['project-label']) %}
+                                                {% if lab is not none %}{{ lab|safe }}{% endif %}
+                                                {% set lab = project.format_selections_label(['project-label']) %}
+                                                {% if lab is not none %}{{ lab|safe }}{% endif %}
                                             </div>
                                         </div>
                                     {% endif %}

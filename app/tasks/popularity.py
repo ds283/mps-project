@@ -266,7 +266,8 @@ def register_popularity_tasks(celery):
 
         if config.open:
 
-            compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live) for proj in config.live_projects)
+            compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live)
+                            for proj in config.live_projects)
 
             job = chain([compute, compute_popularity_score_rank.si(config.id, uuid, num_live),
                                   store_lowest_popularity_score_rank.s(config.id, uuid, num_live),

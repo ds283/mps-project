@@ -1620,6 +1620,11 @@ class Project(db.Model):
         self.error = None
 
 
+    @property
+    def show_popularity_data(self):
+        return False
+
+
     def disable(self):
         """
         Disable this project
@@ -1836,15 +1841,19 @@ class LiveProject(db.Model):
         # if project doesn't require sign off, is always available
         # if project owner doesn't require confirmation, is always available
         if self.meeting_reqd != self.MEETING_REQUIRED or self.owner.faculty_data.sign_off_students is False:
-
             return True
 
-        # otherwise, check is sel is in list of confirmed students
-        if sel in self.confirmed_students:
-
+        # otherwise, check if sel is in list of confirmed students
+        if self.meeting_confirmed(sel):
             return True
 
         return False
+
+
+    def meeting_confirmed(self, sel):
+
+        if sel in self.confirmed_students:
+            return True
 
 
     @property
@@ -1888,7 +1897,16 @@ class LiveProject(db.Model):
 
         value = self._get_popularity_attr(getter)
 
-        print('POPULARITY RANK = {rk}\n'.format(rk=value))
+        return value
+
+
+    @property
+    def lowest_popularity_rank(self):
+
+        def getter(record):
+            return record.lowest_score_rank
+
+        value = self._get_popularity_attr(getter)
 
         return value
 
@@ -1918,6 +1936,96 @@ class LiveProject(db.Model):
             return record.selections_rank, record.total_number
 
         return self._get_popularity_attr(getter)
+
+
+    @property
+    def show_popularity_data(self):
+
+        return self.parent.show_popularity or self.parent.show_bookmarks or self.parent.show_selections
+
+
+    @property
+    def number_bookmarks(self):
+
+        return db.session.query(sqlalchemy.func.count(Bookmark.id)).filter_by(liveproject_id=self.id).scalar()
+
+
+    @property
+    def number_selections(self):
+
+        return db.session.query(sqlalchemy.func.count(SelectionRecord.id)).filter_by(liveproject_id=self.id).scalar()
+
+
+    def format_popularity_label(self, css_classes=None):
+
+        if not self.parent.show_popularity:
+            return None
+
+        return self.popularity_label(css_classes)
+
+
+    def popularity_label(self, css_classes=None):
+
+        cls = '' if css_classes is None else ' '.join(css_classes)
+
+        score = self.popularity_rank
+        if score is None:
+            return '<span class="label label-default {cls}">Popularity unavailable</span>'.format(cls=cls)
+
+        rank, total = score
+        lowest_rank = self.lowest_popularity_rank
+
+        frac = float(rank)/float(total)
+        lowest_frac = float(lowest_rank)/float(total)
+
+        if lowest_frac > 0.4:
+            return '<span class="label label-default {cls}">Popularity available soon</span>'.format(cls=cls)
+
+        label='Low'
+        if frac > 0.9:
+            label = 'Very high'
+        elif frac > 0.7:
+            label = 'High'
+        elif frac > 0.4:
+            label = 'Medium'
+
+        return '<span class="label label-success {cls}">Popularity: {{ label }}</span>'.format(cls=cls, label=label)
+
+
+    def format_bookmarks_label(self, css_classes=None):
+
+        if not self.parent.show_bookmarks:
+            return None
+
+        return self.bookmarks_label(css_classes)
+
+
+    def bookmarks_label(self, css_classes=None):
+
+        pl = 's' if self.number_bookmarks != 1 else ''
+        cls = '' if css_classes is None else ' '.join(css_classes)
+        return '<span class="label label-info {cls}">{n} bookmark{pl}</span>'.format(cls=cls, n=self.number_bookmarks, pl=pl)
+
+
+    def views_label(self, css_classes=None):
+
+        pl = 's' if self.page_views != 1 else ''
+        return '<span class="label label-info">{n} view{pl}</span>'.format(n=self.page_views, pl=pl)
+
+
+    def format_selections_label(self, css_classes=None):
+
+        if not self.parent.show_selections:
+            return None
+
+        return self.selections_label(css_classes)
+
+
+    def selections_label(self, css_classes=None):
+
+        pl = 's' if self.number_selections != 1 else ''
+        cls = '' if css_classes is None else ' '.join(css_classes)
+        return '<span class="label label-primary {cls}">{n} selection{pl}</span>'.format(cls=cls, n=self.number_selections, pl=pl)
 
 
 class SelectingStudent(db.Model):

@@ -15,9 +15,9 @@ _meeting = \
 """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
     {% if project.meeting_confirmed(sel) %}
-        <span class="label label-primary"><i class="fa fa-check"></i> Meeting confirmed</span>
+        <span class="label label-primary"><i class="fa fa-check"></i> Confirmed</span>
     {% else %}
-        <span class="label label-danger"><i class="fa fa-times"></i> Meeting required</span>
+        <span class="label label-danger"><i class="fa fa-times"></i> Required</span>
     {% endif %}
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
     <span class="label label-warning">Optional</span>

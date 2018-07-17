@@ -87,7 +87,7 @@ class ProjectMixin():
 
     meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
                        (Project.MEETING_NONE, "Prefer not to meet")]
-    meeting = SelectField('Meeting required?', choices=meeting_options, coerce=int)
+    meeting_reqd = SelectField('Meeting required?', choices=meeting_options, coerce=int)
 
     capacity = IntegerField('Maximum capacity', description='Optional. Used only if enforce option is selected',
                             validators=[Optional()])

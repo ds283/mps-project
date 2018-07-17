@@ -37,13 +37,14 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
                       meta='Update {type} ranking for project class "{name}"'.format(type=rank_type,
                                                                                      name=config.project_class.name))
 
+    lowest_rank = None
+
     try:
 
         # dig out PopularityRecords with given datestamp and config_id
         if query.count() != num_live:
-            raise RuntimeError(
-                'Number of records in group is incorrect: '
-                'expected {exp}, found {obs}'.format(exp=num_live, obs=query.count()))
+            raise RuntimeError('Number of records in group is incorrect: '
+                               'expected {exp}, found {obs}'.format(exp=num_live, obs=query.count()))
 
         current_rank = 1
         current_record = 1
@@ -61,6 +62,10 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
                     current_value = this_value
 
                 writer(record, current_rank)
+
+                if lowest_rank is None or current_rank > lowest_rank:
+                    lowest_rank = current_rank
+
                 current_record += 1
 
             db.session.commit()
@@ -79,6 +84,8 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
         raise self.retry()
 
     self.update_state(state='SUCCESS')
+
+    return lowest_rank
 
 
 def register_popularity_tasks(celery):
@@ -141,6 +148,44 @@ def register_popularity_tasks(celery):
             x.score_rank = r
 
         return compute_rank(self, num_live, "popularity score", cid, query, accessor, writer)
+
+
+    @celery.task(bind=True)
+    def store_lowest_popularity_score_rank(self, lowest_rank, cid, uuid, num_live):
+
+        self.update_state(state='STARTED', meta='Storing lowest-rank for popularity score')
+
+        query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid)
+
+        try:
+
+            if query.count() != num_live:
+                raise RuntimeError('Number of records in group is incorrect: '
+                                   'expected {exp}, found {obs}'.format(exp=num_live, obs=query.count()))
+
+            try:
+
+                records = query.all()
+
+                for record in records:
+                    record.lowest_score_rank = lowest_rank
+
+                db.session.commit()
+
+            except SQLAlchemyError:
+
+                db.session.rollback()
+                raise
+
+        except SQLAlchemyError:
+
+            raise self.retry()
+
+        except RuntimeError:
+
+            raise self.retry()
+
+        self.update_state(state='SUCCESS')
 
 
     @celery.task(bind=True)
@@ -224,6 +269,7 @@ def register_popularity_tasks(celery):
             compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live) for proj in config.live_projects)
 
             job = chain([compute, compute_popularity_score_rank.si(config.id, uuid, num_live),
+                                  store_lowest_popularity_score_rank.s(config.id, uuid, num_live),
                                   compute_views_rank.si(config.id, uuid, num_live),
                                   compute_bookmarks_rank.si(config.id, uuid, num_live),
                                   compute_selections_rank.si(config.id, uuid, num_live)])

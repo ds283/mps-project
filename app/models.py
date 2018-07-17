@@ -2487,32 +2487,50 @@ class PopularityRecord(db.Model):
     # UUID identifying all popularity records in a group
     uuid = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
 
+
+    # COMMON DATA
+
+    # total number of LiveProjects included in ranking
+    total_number = db.Column(db.Integer())
+
+
+    # POPULARITY SCORE
+
     # popularity score
     score = db.Column(db.Integer())
-
-    # page views
-    views = db.Column(db.Integer())
-
-    # number of bookmarks
-    bookmarks = db.Column(db.Integer())
-
-    # number of selections
-    selections = db.Column(db.Integer())
 
     # rank on popularity score
     score_rank = db.Column(db.Integer())
 
+    # track lowest rank so we have an estimate of whether the popularity score is meaningful
+    lowest_score_rank = db.Column(db.Integer())
+
+
+    # PAGE VIEWS
+
+    # page views
+    views = db.Column(db.Integer())
+
     # rank on page views
     views_rank = db.Column(db.Integer())
+
+
+    # BOOKMARKS
+
+    # number of bookmarks
+    bookmarks = db.Column(db.Integer())
 
     # rank on bookmarks
     bookmarks_rank = db.Column(db.Integer())
 
+
+    # SELECTIONS
+
+    # number of selections
+    selections = db.Column(db.Integer())
+
     # rank of number of selections
     selections_rank = db.Column(db.Integer())
-
-    # total number of LiveProjects included in ranking
-    total_number = db.Column(db.Integer())
 
 
 

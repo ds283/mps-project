@@ -26,4 +26,28 @@
     {% if project.last_view %}
         <span class="label label-default">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
     {% endif %}
+
+    {% set R = project.popularity_rank %}
+    {% if R is not none %}
+        {% set rank, total = R %}
+        <span class="label label-primary">PopRank {{ rank }}/{{ total }}</span>
+    {% endif %}
+
+    {% set R = project.views_rank %}
+    {% if R is not none %}
+        {% set rank, total = R %}
+        <span class="label label-info">ViewRank {{ rank }}/{{ total }}</span>
+    {% endif %}
+
+    {% set R = project.bookmarks_rank %}
+    {% if R is not none %}
+        {% set rank, total = R %}
+        <span class="label label-info">BookmarkRank {{ rank }}/{{ total }}</span>
+    {% endif %}
+
+    {% set R = project.selections_rank %}
+    {% if R is not none %}
+        {% set rank, total = R %}
+        <span class="label label-success">SelRank {{ rank }}/{{ total }}</span>
+    {% endif %}
 {% endmacro %}

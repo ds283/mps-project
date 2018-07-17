@@ -1856,6 +1856,69 @@ class LiveProject(db.Model):
                       TransferableSkill.name.asc())
 
 
+    def _get_popularity_attr(self, getter):
+
+        record = PopularityRecord.query \
+            .filter_by(liveproject_id=self.id) \
+            .order_by(PopularityRecord.datestamp.desc()).first()
+
+        now = datetime.now()
+
+        # return None if no value stored, or if stored value is too stale (> 1 day old)
+        if record is None or (now - record.datestamp) > timedelta(days=1):
+            return None
+
+        return getter(record)
+
+
+    @property
+    def popularity_score(self):
+
+        def getter(record):
+            return record.score
+
+        return self._get_popularity_attr(getter)
+
+
+    @property
+    def popularity_rank(self):
+
+        def getter(record):
+            return record.score_rank, record.total_number
+
+        value = self._get_popularity_attr(getter)
+
+        print('POPULARITY RANK = {rk}\n'.format(rk=value))
+
+        return value
+
+
+    @property
+    def views_rank(self):
+
+        def getter(record):
+            return record.views_rank, record.total_number
+
+        return self._get_popularity_attr(getter)
+
+
+    @property
+    def bookmarks_rank(self):
+
+        def getter(record):
+            return record.bookmarks_rank, record.total_number
+
+        return self._get_popularity_attr(getter)
+
+
+    @property
+    def selections_rank(self):
+
+        def getter(record):
+            return record.selections_rank, record.total_number
+
+        return self._get_popularity_attr(getter)
+
 
 class SelectingStudent(db.Model):
     """

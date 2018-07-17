@@ -55,13 +55,13 @@ _project_pclasses = \
 _project_meetingreqd = \
 """
 {% if project.meeting_reqd == 1 %}
-    Required
+    <span class="label label-danger">Required</span>
 {% elif project.meeting_reqd == 2 %}
-    Optional
+    <span class="label label-warning">Optional</span>
 {% elif project.meeting_reqd == 3 %}
-    No
+    <span class="label label-success">Not required</span>
 {% else %}
-    Unknown
+    <span class="label label-default">Unknown</span>
 {% endif %}
 """
 

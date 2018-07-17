@@ -159,7 +159,9 @@ def add_project():
                        project_classes=form.project_classes.data,
                        skills=[],
                        programmes=[],
-                       meeting_reqd=form.meeting.data,
+                       meeting_reqd=form.meeting_reqd.data,
+                       capacity=form.capacity.data,
+                       enforce_capacity=form.enforce_capacity.data,
                        team=form.team.data,
                        show_popularity=form.show_popularity.data,
                        show_bookmarks=form.show_bookmarks.data,
@@ -199,7 +201,9 @@ def edit_project(id):
         data.keywords = form.keywords.data
         data.group = form.group.data
         data.project_classes = form.project_classes.data
-        data.meeting_reqd = form.meeting.data
+        data.meeting_reqd = form.meeting_reqd.data
+        data.capacity = form.capacity.data
+        data.enforce_capacity = form.enforce_capacity.data
         data.team = form.team.data
         data.show_popularity = form.show_popularity.data
         data.show_bookmarks = form.show_bookmarks.data

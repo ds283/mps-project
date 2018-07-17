@@ -14,11 +14,15 @@ from flask import render_template_string, jsonify, url_for
 _meeting = \
 """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-    <span class="label label-danger">Required</span>
+    {% if project.meeting_confirmed(sel) %}
+        <span class="label label-primary"><i class="fa fa-check"></i> Meeting confirmed</span>
+    {% else %}
+        <span class="label label-danger"><i class="fa fa-times"></i> Meeting required</span>
+    {% endif %}
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
     <span class="label label-warning">Optional</span>
 {% else %}
-    <span class="label label-default">Not required</span>
+    <span class="label label-default"><i class="fa fa-check"> Not required</span>
 {% endif %}
 """
 

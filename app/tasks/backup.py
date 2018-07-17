@@ -238,13 +238,13 @@ def register_backup_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def thin_list(self, l):
+    def thin_bin(self, bin):
 
-        self.update_state(state='STARTED', meta='Thinning backups')
+        self.update_state(state='STARTED', meta='Thinning backup bin')
 
         # l should be a list of ids for BackupRecords that need to be thinned down to just 1
 
-        remain = l
+        remain = bin
         while len(remain) > 1:
 
             index = random.randrange(len(remain))
@@ -262,13 +262,15 @@ def register_backup_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def thin_class(self, records, name):
+    def thin_bins(self, bins, name):
 
-        self.update_state(state='STARTED', meta='Thinning {n} backups'.format(n=name))
+        self.update_state(state='STARTED', meta='Thinning {n} backup bins'.format(n=name))
 
         # build group of tasks for each collection of backups we need to thin
-        tasks = group(thin_list.s(records[k]) for k in records.keys())
+        tasks = group(thin_bin.s(bins[k]) for k in bins.keys())
         tasks.apply_async()
+
+        self.update_state(state='SUCCESS')
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -322,9 +324,10 @@ def register_backup_tasks(celery):
                 else:
                     weekly[age_weeks] = [record.id]
 
-        thinning = group(thin_class.si(daily, 'daily'), thin_class.si(weekly, 'weekly'))
+        thinning = group(thin_bins.si(daily, 'daily'), thin_bins.si(weekly, 'weekly'))
         thinning.apply_async()
 
+        self.update_state(state='SUCCESS')
 
     @celery.task(default_retry_delay=30)
     def thin():
@@ -336,6 +339,8 @@ def register_backup_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def drop_absent_backups(self):
 
+        self.update_state(state='STARTED', meta='Building list of backups')
+
         # query database for backup records, and queue a retry if it fails
         try:
             records = db.session.query(BackupRecord.id).all()
@@ -346,9 +351,13 @@ def register_backup_tasks(celery):
         seq = group(drop_backup_if_absent.si(id) for id in records)
         seq.apply_async()
 
+        self.update_state(state='SUCCESS')
+
 
     @celery.task(bind=True, default_retry_delay=30)
     def drop_backup_if_absent(self, id):
+
+        self.update_state(state='STARTED', meta='Testing whether backup is available')
 
         # query database for backup records, and queue a retry if it fails
         try:
@@ -366,6 +375,7 @@ def register_backup_tasks(celery):
             db.session.delete(record)
             db.session.commit()
 
+        self.update_state(state='SUCCESS')
 
     @celery.task(bind=True, default_retry_delay=30)
     def apply_size_limit(self):
@@ -420,6 +430,8 @@ def register_backup_tasks(celery):
 
         backup_path = current_app.config['BACKUP_FOLDER']
         _prune_empty_folders(backup_path)
+
+        self.update_state(state='SUCCESS')
 
 
     @celery.task(bind=True, serializer='pickle')

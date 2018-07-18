@@ -1,8 +1,7 @@
-{% import "bootstrap/wtf.html" as wtf %}
-
 {% extends "base_app.html" %}
 
 {% from "faculty/dashboard/pclass_card.html" import pclass_card with context %}
+{% from "admin/root_dashboard/dashboard_card.html" import root_dashboard_card %}
 {% from "macros.html" import message_card %}
 
 {% block title %}
@@ -18,6 +17,10 @@
                 {% for message in messages %}
                     {{ message_card(message, enrolled_classes) }}
                 {% endfor %}
+            {% endif %}
+
+            {% if current_user.has_role('root') %}
+                {{ root_dashboard_card(root_dash_data) }}
             {% endif %}
 
             {% if enrollments and enrollments|length > 0 %}

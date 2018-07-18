@@ -1,0 +1,82 @@
+{% macro root_dashboard_card(root_dash_data) %}
+
+    {% set config_list, current_year, rollover_ready = root_dash_data %}
+
+    <div class="well">
+        <p><span class="dashboard-project-title">System administrator dashboard</span></p>
+
+        <div class="panel panel-info">
+            <div class="panel-heading">Status overview</div>
+            <div class="panel-body">
+                <div class="row vertical-top root-dashboard-table">
+                    <div class="col-xs-3"><strong>Name</strong></div>
+                    <div class="col-xs-2"><strong>Convenor</strong></div>
+                    <div class="col-xs-2"><strong>Academic year</strong></div>
+                    <div class="col-xs-5"><strong>Status</strong></div>
+                </div>
+                {% for config in config_list %}
+                    {% set pclass = config.project_class %}
+                    <div class="row vertical-top root-dashboard-table">
+                        <div class="col-xs-3"><a href="{{ url_for('convenor.overview', id=pclass.id) }}">{{ pclass.name }}</a></div>
+                        <div class="col-xs-2"><a href="mailto:{{ pclass.convenor.email }}">{{ pclass.convenor.build_name() }}</a></div>
+                        <div class="col-xs-2">{{ config.year }}&ndash;{{ config.year+1 }}</div>
+                        <div class="col-xs-5">
+                            {% if config.year < current_year %}
+                                <span class="label label-danger"><i class="fa fa-check"></i> Rollover available</span>
+                            {% endif %}
+                            {% if pclass.require_confirm and not config.requests_issued %}
+                                <span class="label label-default">Confirmations not issued</span>
+                            {% else %}
+                                {% if config.live and config.closed %}
+                                    <span class="label label-primary">Choices closed</span>
+                                    <span class="label label-success">Rollover ready</span>
+                                {% elif config.open %}
+                                    <span class="label label-success"><i class="fa fa-check"></i> Choices open</span>
+                                {% elif not config.live %}
+                                    <span class="label label-default">Choices not live</span>
+                                    {% if pclass.require_confirm %}
+                                        {% if config.golive_required.count() == 0 %}
+                                            <span class="label label-primary"><i class="fa fa-check"></i> Confirmations received</span>
+                                        {% else %}
+                                            <span class="label label-warning"><i class="fa fa-times"></i> Confirmations outstanding</span>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                            {% endif %}
+
+                            {% set n = config.number_selectors %}
+                            {% set pl = 's' %}
+                            {% if n == 1 %}{% set pl = '' %}{% endif %}
+                            <span class="label label-primary">{{ n }} selector{{ pl }}</span>
+
+                            {% set n = config.number_submitters %}
+                            {% set pl = 's' %}
+                            {% if n == 1 %}{% set pl = '' %}{% endif %}
+                            <span class="label label-primary">{{ n }} submitter{{ pl }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if rollover_ready %}
+            <div class="panel panel-danger">
+                <div class="panel-heading">Rollover academic year</div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-xs-8">
+                            All projects are now in a rollover state
+                        </div>
+                        <div class="col-xs-4">
+                            <a href="{{ url_for('admin.confirm_global_rollover') }}"
+                               class="btn btn-danger">
+                                Rollover academic year
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+{% endmacro %}

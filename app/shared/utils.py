@@ -12,12 +12,12 @@
 from flask import redirect, url_for, flash
 from flask_security import current_user
 
-from app.models import MainConfig
+from app.models import db, MainConfig, ProjectClass, ProjectClassConfig
 
 
 def get_main_config():
 
-    return MainConfig.query.order_by(MainConfig.year.desc()).first()
+    return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
 
 
 def get_current_year():
@@ -43,3 +43,27 @@ def home_dashboard():
 
         flash('Your role could not be identified. Please contact the system administrator.')
         return redirect(url_for('auth.logged_out'))
+
+
+def get_root_dashboard_data():
+
+    current_year = get_current_year()
+
+    pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()
+
+    config_list = []
+
+    rollover_ready = True
+
+    for id in pclass_ids:
+
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=id[0]) \
+            .order_by(ProjectClassConfig.year.desc()).first()
+
+        if config is not None:
+            config_list.append(config)
+            if not config.closed:
+                rollover_ready = False
+
+    return config_list, current_year, rollover_ready

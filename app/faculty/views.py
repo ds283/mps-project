@@ -21,7 +21,7 @@ from . import faculty
 
 from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm
 
-from ..shared.utils import home_dashboard
+from ..shared.utils import home_dashboard, get_root_dashboard_data
 from ..shared.validators import validate_user, validate_open
 from ..shared.actions import render_live_project, do_confirm, do_deconfirm
 
@@ -452,10 +452,13 @@ def dashboard():
         if include:
             messages.append(message)
 
+    root_dash_data = get_root_dashboard_data()
+
     return render_template('faculty/dashboard/dashboard.html',
                            enrolled_classes=current_user.faculty_data.enrollments,
                            enrollments=enrollments,
-                           messages=messages)
+                           messages=messages,
+                           root_dash_data=root_dash_data)
 
 
 @faculty.route('/confirm_pclass/<int:id>')

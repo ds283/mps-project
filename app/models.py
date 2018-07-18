@@ -1346,6 +1346,18 @@ class ProjectClassConfig(db.Model):
 
 
     @property
+    def number_selectors(self):
+
+        return db.session.query(sqlalchemy.func.count(SelectingStudent.id)).with_parent(self).scalar()
+
+
+    @property
+    def number_submitters(self):
+
+        return db.session.query(sqlalchemy.func.count(SubmittingStudent.id)).with_parent(self).scalar()
+
+
+    @property
     def count_submitted_students(self):
 
         total_students = self.selecting_students.count()

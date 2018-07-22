@@ -351,6 +351,24 @@ class FacultyDataMixin():
                                      description='If meetings are required before project selection, '
                                                  'confirmation is needed before allowing students to sign up.')
 
+    project_capacity = IntegerField('Default project capacity', default=3,
+                                    description='Default number of students that can be assigned to a project',
+                                    validators=[Optional()])
+
+    enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
+                                    description='By default, enforce limits on project capacity during assignment')
+
+    show_popularity = BooleanField('Show popularity indicators', default=True,
+                                   description='By default, show popularity indicators on project webpages')
+
+    CATS_supervision = IntegerField('Guideline number of CATS available for project supervision',
+                                    description='Leave blank for default assignment',
+                                    validators=[Optional()])
+
+    CATS_marking = IntegerField('Guidline number of CATS available for marking',
+                                description='Leave blank for default assignment',
+                                validators=[Optional()])
+
     office = StringField('Office', validators=[DataRequired(message='Please enter your office details to help '
                                                                     'students find you')])
 

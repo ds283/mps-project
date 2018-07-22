@@ -179,6 +179,11 @@ def create_faculty(role):
                            academic_title=form.academic_title.data,
                            use_academic_title=form.use_academic_title.data,
                            sign_off_students=form.sign_off_students.data,
+                           project_capacity=form.project_capacity.data,
+                           enforce_capacity=form.enforce_capacity.data,
+                           show_popularity=form.show_popularity.data,
+                           CATS_supervision=form.CATS_supervision.data,
+                           CATS_marking=form.CATS_marking.data,
                            office=form.office.data,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now())
@@ -536,6 +541,11 @@ def edit_faculty(id):
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
         data.sign_off_students = form.sign_off_students.data
+        data.project_capacity = form.project_capacity.data
+        data.enforce_capacity = form.enforce_capacity.data
+        data.show_popularity = form.show_popularity.data
+        data.CATS_supervision = form.CATS_supervision.data
+        data.CATS_marking = form.CATS_marking.data
         data.office = form.office.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
@@ -1672,6 +1682,9 @@ def faculty_settings():
     form = FacultySettingsForm(obj=data)
     form.user = user
 
+    del form.CATS_supervision
+    del form.CATS_marking
+
     if form.validate_on_submit():
 
         user.first_name = form.first_name.data
@@ -1681,6 +1694,9 @@ def faculty_settings():
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
         data.sign_off_students = form.sign_off_students.data
+        data.project_capacity = form.project_capacity.data
+        data.enforce_capacity = form.enforce_capacity.data
+        data.show_popularity = form.show_popularity.data
         data.office = form.office.data
 
         data.last_edit_id = current_user.id
@@ -1694,6 +1710,7 @@ def faculty_settings():
 
     else:
 
+        # fill in fields that need data from 'User' and won't have been initialized from obj=data
         if request.method == 'GET':
 
             form.first_name.data = user.first_name

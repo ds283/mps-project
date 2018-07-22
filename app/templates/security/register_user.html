@@ -73,14 +73,47 @@
         {% if user_form.office %}
             {{ wtf.form_field(user_form.office) }}
         {% endif %}
-        {% if user_form.academic_title %}
-            {{ wtf.form_field(user_form.academic_title) }}
+
+        {% if user_form.academic_title or user_form.use_academic_title %}
+            <div class="well">
+                <p>Titles</p>
+                {% if user_form.academic_title %}
+                    {{ wtf.form_field(user_form.academic_title) }}
+                {% endif %}
+                {% if user_form.use_academic_title %}
+                    {{ wtf.form_field(user_form.use_academic_title) }}
+                {% endif %}
+            </div>
         {% endif %}
-        {% if user_form.use_academic_title %}
-            {{ wtf.form_field(user_form.use_academic_title) }}
+
+        {% if user_form.sign_off_students or user_form.project_capacity or user_form.enforce_capacity or user_form.show_popularity %}
+            <div class="well">
+                <p>Project defaults</p>
+                {% if user_form.sign_off_students %}
+                    {{ wtf.form_field(user_form.sign_off_students) }}
+                {% endif %}
+                {% if user_form.project_capacity %}
+                    {{ wtf.form_field(user_form.project_capacity) }}
+                {% endif %}
+                {% if user_form.enforce_capacity %}
+                    {{ wtf.form_field(user_form.enforce_capacity) }}
+                {% endif %}
+                {% if user_form.show_popularity %}
+                    {{ wtf.form_field(user_form.show_popularity) }}
+                {% endif %}
+            </div>
         {% endif %}
-        {% if user_form.sign_off_students %}
-            {{ wtf.form_field(user_form.sign_off_students) }}
+
+        {% if user_form.CATS_supervision or user_form.CATS_marking %}
+            <div class="well">
+                <p>Workload model</p>
+                {% if user_form.CATS_supervision %}
+                    {{ wtf.form_field(user_form.CATS_supervision) }}
+                {% endif %}
+                {% if user_form.CATS_marking %}
+                    {{ wtf.form_field(user_form.CATS_marking) }}
+                {% endif %}
+            </div>
         {% endif %}
 
         {{ wtf.form_field(user_form.submit, button_map={'submit': 'primary'}) }}

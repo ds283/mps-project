@@ -27,7 +27,7 @@
                 {% endif %}
                 {% set pclass = record.pclass %}
                 {% set style = pclass.make_CSS_style() %}
-                <div class="row vertical-top">
+                <div class="row vertical-align">
                     <div class="col-xs-6">
                         <a class="btn {% if style %}btn-default{% else %}btn-info{% endif %} btn-table-block"
                            {% if style %}style="{{ style }}"{% endif %}
@@ -35,41 +35,39 @@
                             {{ pclass.name }} ({{ pclass.convenor.build_name() }})
                         </a>
                     </div>
-                    <div class="col-xs-6">
-                        <p>
-                            <strong>Supervising:</strong>
-                            {% if record.supervisor_state == 1  %}
-                                enrolled
-                            {% elif record.supervisor_state == 2 %}
-                                sabbatical/buyout
-                                {% if record.supervisor_reenroll is not none %}
-                                    until {{ record.supervisor_reenroll }}
-                                {% else %}
-                                    (no specified end date)
-                                {% endif %}
-                            {% elif record.supervisor_state == 3 %}
-                                exempt
+                    <div class="col-xs-3">
+                        <strong>Supervising:</strong>
+                        {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
+                            <span class="label label-primary">enrolled</span>
+                        {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                            <span class="label label-info">sabbatical/buyout</span>
+                            {% if record.supervisor_reenroll is not none %}
+                                <span class="label label-info">ends {{ record.supervisor_reenroll }}</span>
                             {% else %}
-                                unknown state
+                                <span class="label label-warning">no end date</span>
                             {% endif %}
-                        </p>
-                        <p>
-                            <strong>2nd-marking:</strong>
-                            {% if record.marker_state == 1 %}
-                                enrolled
-                            {% elif record.marker_state == 2 %}
-                                sabbatical/buyout
-                                {% if record.marker_reenroll is not none %}
-                                    until {{ record.marker_reenroll }}
-                                {% else %}
-                                    (no specified end date)
-                                {% endif %}
-                            {% elif record.marker_state == 3 %}
-                                exempt
+                        {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                            <span class="label label-warning">exempt</span>
+                        {% else %}
+                            <span class="label label-danger">error</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-xs-3">
+                        <strong>2nd-marking:</strong>
+                        {% if record.marker_state == record.MARKER_ENROLLED %}
+                            <span class="label label-primary">enrolled</span>
+                        {% elif record.marker_state == record.MARKER_SABBATICAL %}
+                            <span class="label label-info">sabbatical/buyout</span>
+                            {% if record.marker_reenroll is not none %}
+                                <span class="label label-info">ends {{ record.marker_reenroll }}</span>
                             {% else %}
-                                unknown state
+                                <span class="label label-warning">no end date</span>
                             {% endif %}
-                        </p>
+                        {% elif record.marker_state == record.MARKER_EXEMPT %}
+                            <span class="label label-warning">exempt</span>
+                        {% else %}
+                            <span class="label label-danger">error</span>
+                        {% endif %}
                     </div>
                 </div>
             {% endfor %}
@@ -104,9 +102,43 @@
     {{ wtf.form_field(settings_form.last_name) }}
 
     {{ wtf.form_field(settings_form.office) }}
-    {{ wtf.form_field(settings_form.academic_title) }}
-    {{ wtf.form_field(settings_form.use_academic_title) }}
-    {{ wtf.form_field(settings_form.sign_off_students) }}
+
+    <div class="well">
+        <p>Titles</p>
+        {{ wtf.form_field(settings_form.academic_title) }}
+        {{ wtf.form_field(settings_form.use_academic_title) }}
+    </div>
+
+    <div class="well">
+        <p>Project defaults</p>
+        {{ wtf.form_field(settings_form.sign_off_students) }}
+        {{ wtf.form_field(settings_form.project_capacity) }}
+        {{ wtf.form_field(settings_form.enforce_capacity) }}
+        {{ wtf.form_field(settings_form.show_popularity) }}
+    </div>
+
+    <div class="well">
+        <p>Workload model</p>
+
+        <div class="row vertical-align">
+            <div class="col-xs-6">
+                <strong>Guideline CATS for supervision:</strong>
+                {% if data.CATS_supervision is none or data.CATS_supervision == 0 %}
+                    <span class="label label-default">Default</span>
+                {% else %}
+                    <span class="label label-info">{{ data.CATS_supervision }} CATS</span>
+                {% endif %}
+            </div>
+            <div class="col-xs-6">
+            <strong>Guideline CATS for marking:</strong>
+                {% if data.CATS_marking is none or data.CATS_marking == 0 %}
+                    <span class="label label-default">Default</span>
+                {% else %}
+                    <span class="label label-info">{{ data.CATS_marking }} CATS</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 
     {{ wtf.form_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 

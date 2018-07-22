@@ -890,6 +890,18 @@ def add_project(pclass_id):
 
         return redirect(url_for('convenor.attached', id=pclass_id))
 
+    else:
+
+        if request.method == 'GET':
+
+            # can't use any individual user's preferences to set defaults, so pick a standard set
+            form.show_popularity.data = True
+            form.show_bookmarks.data = True
+            form.show_selections.data = True
+
+            form.capacity.data = 3
+            form.enforce_capacity.data = True
+
     return render_template('faculty/edit_project.html', project_form=form, pclass_id=pclass_id, title='Add new project')
 
 

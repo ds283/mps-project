@@ -175,6 +175,24 @@ def add_project():
 
         return redirect(url_for('faculty.edit_projects'))
 
+    else:
+
+        if request.method == 'GET':
+
+            owner = current_user.faculty_data
+
+            if owner.show_popularity:
+                form.show_popularity.data = True
+                form.show_bookmarks.data = True
+                form.show_selections.data = True
+            else:
+                form.show_popularity.data = False
+                form.show_bookmarks.data = False
+                form.show_selections.data = False
+
+            form.capacity.data = owner.project_capacity
+            form.enforce_capacity.data = owner.enforce_capacity
+
     return render_template('faculty/edit_project.html', project_form=form, title='Add new project')
 
 

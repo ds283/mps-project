@@ -526,11 +526,35 @@ class FacultyData(db.Model):
     # use academic title?
     use_academic_title = db.Column(db.Boolean())
 
+    # office location
+    office = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+
+    # PROJECT SETTINGS
+
     # does this faculty want to sign off on students before they can apply?
     sign_off_students = db.Column(db.Boolean())
 
-    # office
-    office = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    # default capacity
+    project_capacity = db.Column(db.Integer())
+
+    # enforce capacity limits by default?
+    enforce_capacity = db.Column(db.Boolean())
+
+    # enable popularity display by default?
+    show_popularity = db.Column(db.Boolean())
+
+
+    # CAPACITY
+
+    # supervision CATS capacity
+    CATS_supervision = db.Column(db.Integer())
+
+    # 2nd-marking CATS capacity
+    CATS_marking = db.Column(db.Integer())
+
+
+    # METADATA
 
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))

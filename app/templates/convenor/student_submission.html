@@ -3,17 +3,16 @@
 {% from "student/macros.html" import ranked_selection %}
 
 {% block title %}
-    View my submitted project preferences
+    View submitted choices for student <strong>{{ sel.user.build_name() }}</strong>
 {% endblock %}
 
 {% block bodyblock %}
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
-            <div class="panel panel-success">
+            <div class="panel panel-default">
                 <div class="panel-heading">
-                    Submitted project preferences for
-                    <strong>{{ sel.config.project_class.name }} {{ sel.config.year }}&ndash;{{ sel.config.year+1 }}</strong>
+                    View submitted choices for student <strong>{{ sel.user.build_name() }}</strong>
                 </div>
                 <div class="panel-body">
                     {% if sel.has_submitted %}
@@ -25,13 +24,13 @@
                         </div>
                         {{ ranked_selection(sel, sel.get_ordered_selection) }}
                     {% else %}
-                        <strong>Error.</strong> No preferences have been received for this project class.
+                        No preferences have been received for this student.
                     {% endif %}
                 </div>
             </div>
 
             <div>
-                <a href="{{ url_for('student.dashboard') }}">
+                <a href="{{ url_for('convenor.selectors', id=sel.config.project_class.id) }}">
                     <i class="fa fa-backward"></i> Return to dashboard
                 </a>
             </div>

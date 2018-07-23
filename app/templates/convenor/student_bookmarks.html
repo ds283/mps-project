@@ -1,0 +1,30 @@
+{% extends "base_app.html" %}
+
+{% from "convenor/macros.html" import bookmark_list %}
+
+{% block title %}
+    View bookmarks for student <strong>{{ sel.user.build_name() }}</strong>
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    View bookmarks for student <strong>{{ sel.user.build_name() }}</strong>
+                </div>
+                <div class="panel-body">
+                    {{ bookmark_list(sel, sel.get_ordered_bookmarks) }}
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ url_for('convenor.selectors', id=sel.config.project_class.id) }}">
+                    <i class="fa fa-backward"></i> Return to dashboard
+                </a>
+            </div>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

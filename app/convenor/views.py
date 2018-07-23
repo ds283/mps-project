@@ -373,14 +373,10 @@ def selectors(id):
 
     fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
 
-    # get all research groups for key
-    groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
-
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count,
-                           groups=groups)
+                           live_count=live_count, proj_count=proj_count)
 
 
 @convenor.route('/selectors_ajax/<int:id>', methods=['GET', 'POST'])
@@ -1747,3 +1743,31 @@ def perform_reset_popularity_data(id):
     db.session.commit()
 
     return redirect(url_for('convenor.liveprojects', id=config.project_class.id))
+
+
+@convenor.route('/student_bookmarks/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def student_bookmarks(id):
+
+    # id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/student_bookmarks.html', sel=sel)
+
+
+@convenor.route('/student_submission/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def student_submission(id):
+
+    # id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/student_submission.html', sel=sel)

@@ -2,7 +2,8 @@
     <div class="container-fluid">
         <div class="row vertical-align final-selection-table">
             <div class="col-xs-1"><strong>Rank</strong></div>
-            <div class="col-xs-8"><strong>Project title</strong></div>
+            <div class="col-xs-5"><strong>Project title</strong></div>
+            <div class="col-xs-3"><strong>Research group</strong></div>
             <div class="col-xs-3"><strong>Supervisor</strong></div>
         </div>
         {% for item in list %}
@@ -12,10 +13,13 @@
                     <div class="col-xs-1">
                         <span class="label label-success">#{{ item.rank }}</span>
                     </div>
-                    <div class="col-xs-8">
+                    <div class="col-xs-5">
                         <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
                             <strong>{{ project.name }}</strong>
                         </a>
+                    </div>
+                    <div class="col-xs-3">
+                        {{ project.group.make_label(project.group.name)|safe }}
                     </div>
                     <div class="col-xs-3">
                         <a href="mailto:{{ project.owner.email }}">

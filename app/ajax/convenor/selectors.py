@@ -69,6 +69,30 @@ _menu = \
                 <a>Make all pending</a>
             </li>
         {% endif %}
+        
+        {% if student.get_num_bookmarks > 0 %}
+            <li>
+                <a href="{{ url_for('convenor.student_bookmarks', id=student.id) }}">
+                    Show bookmarks
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>Show bookmarks</a>
+            </li>
+        {% endif %}
+        
+        {% if student.has_submitted %}
+            <li>
+                <a href="{{ url_for('convenor.student_submission', id=student.id) }}">
+                    Show submission
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>Show submission</s>
+            </li>
+        {% endif %}
     </ul>
 </div>
 """
@@ -82,21 +106,13 @@ _cohort = \
 
 _bookmarks = \
 """
-{% for bookmark in student.bookmarks %}
-    {% if loop.index < 7 %}
-        {% set project = bookmark.liveproject %}
-        {% set style = project.group.make_CSS_style() %}
-        <a href="{{ url_for('faculty.live_project', pid=project.id) }}"
-           class="label label-info table-button"
-           {% if style is not none %}style="{{ style }}"{% endif %}>
-            {% if project.name|length > 20 %}{{ project.name[0:20] }}...{% else %}{{ project.name }}{% endif %}
-        </a>
-    {% elif loop.index == 7 %}
-        <span class="label label-default">...</span>
-    {% endif %}
-{% else %}
-    <span class="label label-default">None</span>
-{% endfor %}
+{% set count = sel.get_num_bookmarks %}
+<span class="badge">{{ count }}</span>
+{% if count > 0 %}
+    <a href="{{ url_for('convenor.student_bookmarks', id=sel.id) }}">
+        Show ...
+    </a>
+{% endif %}
 """
 
 _pending = \
@@ -169,17 +185,28 @@ _confirmed = \
 {% endfor %}
 """
 
+_submitted = \
+"""
+{% if sel.has_submitted %}
+    <span class="label label-success">Yes</span>
+    <a href="{{ url_for('convenor.student_submission', id=sel.id) }}">
+        Show ...
+    </a>
+{% else %}
+    <span class="label label-danger">No</span>
+{% endif %}
+"""
+
 
 def selectors_data(students, config):
 
     data = [{'last': s.user.last_name,
              'first': s.user.first_name,
              'cohort': render_template_string(_cohort, student=s),
-             'bookmarks': render_template_string(_bookmarks, student=s),
+             'bookmarks': render_template_string(_bookmarks, sel=s),
              'pending': render_template_string(_pending, student=s, config=config),
              'confirmed': render_template_string(_confirmed, student=s, config=config),
-             'submitted': '<span class="label label-success">Yes</span>' if s.has_submitted
-             else '<span class="label label-danger">No</span>',
+             'submitted': render_template_string(_submitted, sel=s),
              'menu': render_template_string(_menu, student=s, config=config)} for s in students]
 
     return jsonify(data)

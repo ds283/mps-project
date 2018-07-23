@@ -23,50 +23,60 @@ _menu = \
         {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.bookmarks and student.bookmarks.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
-                    Clear bookmarks
+                    <i class="fa fa-trash"></i> Clear bookmarks
                 </a>
             </li>
         {% else %}
             <li class="disabled">
-                <a>Clear bookmarks</a>
+                <a>
+                    <i class="fa fa-times"></i> Clear bookmarks
+                </a>
             </li>
         {% endif %}
 
         {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirm_requests and student.confirm_requests.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
-                    Confirm all requests
+                    <i class="fa fa-check"></i> Confirm all requests
                 </a>
             </li>
             <li>
                 <a href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
-                    Clear all requests
+                    <i class="fa fa-times"></i> Clear all requests
                 </a>
             </li>
         {% else %}
             <li class="disabled">
-                <a>Confirm all requests</a>
+                <a>
+                    <i class="fa fa-check"></i> Confirm all requests
+                </a>
             </li>
             <li class="disabled">
-                <a>Clear all requests</a>
+                <a>
+                    <i class="fa fa-times"></i> Clear all requests
+                </a>
             </li>
         {% endif %}
 
         {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirmed and student.confirmed.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
-                    Remove confirmations
+                    <i class="fa fa-trash"></i> Remove confirmations
                 </a>
                 <a href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
-                    Make all pending
+                    <i class="fa fa-clock-o"></i> Make all pending
                 </a>
             </li>
         {% else %}
             <li class="disabled">
-                <a>Remove confirmations</a>
+                <a>
+                    <i class="fa fa-trash"></i> Remove confirmations
+                </a>
             </li>
             <li class="disabled">
-                <a>Make all pending</a>
+                <a>
+                    <i class="fa fa-clock-o"></i> Make all pending
+                </a>
             </li>
         {% endif %}
         
@@ -85,12 +95,12 @@ _menu = \
         {% if student.has_submitted %}
             <li>
                 <a href="{{ url_for('convenor.selector_submission', id=student.id) }}">
-                    Show submission
+                    Show submitted choices
                 </a>
             </li>
         {% else %}
             <li class="disabled">
-                <a>Show submission</s>
+                <a>Show submitted choices</s>
             </li>
         {% endif %}
     </ul>
@@ -121,8 +131,8 @@ _confirmations = \
 """
 {% set pending = sel.number_pending %}
 {% set confirmed = sel.number_confirmed %}
-{% if confirmed > 0 %}<span class="label label-primary">Confirmed {{ confirmed }}</span>{% endif %}
-{% if pending > 0 %}<span class="label label-warning">Pending {{ pending }}</span>{% endif %}
+{% if confirmed > 0 %}<span class="label label-success"><i class="fa fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
+{% if pending > 0 %}<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending {{ pending }}</span>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
     <a href="{{ url_for('convenor.selector_student_confirmations', id=sel.id) }}">
         Show ...
@@ -154,7 +164,10 @@ def selectors_data(students, config):
                  'display': render_template_string(_bookmarks, sel=s),
                  'value': s.get_num_bookmarks
              },
-             'confirmations': render_template_string(_confirmations, sel=s),
+             'confirmations': {
+                 'display': render_template_string(_confirmations, sel=s),
+                 'value': s.number_pending + s.number_confirmed
+             },
              'submitted': render_template_string(_submitted, sel=s),
              'menu': render_template_string(_menu, student=s, config=config)} for s in students]
 

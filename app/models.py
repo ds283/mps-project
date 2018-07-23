@@ -2149,13 +2149,13 @@ class SelectingStudent(db.Model):
     @property
     def number_pending(self):
 
-        return db.session.query(sqlalchemy.func.count(self.confirm_requests.c.id)).scalar()
+        return db.session.query(sqlalchemy.func.count(self.confirm_requests.subquery().c.id)).scalar()
 
 
     @property
     def number_confirmed(self):
 
-        return db.session.query(sqlalchemy.func.count(self.confirmed.c.id)).scalar()
+        return db.session.query(sqlalchemy.func.count(self.confirmed.subquery().c.id)).scalar()
 
 
     @property

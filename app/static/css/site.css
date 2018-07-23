@@ -75,6 +75,10 @@ p.copyright {
     margin-bottom: 1%;
 }
 
+.confirmation-table {
+    margin-bottom: 1%;
+}
+
 .selected-project {
     border-color: #dff0d8;
     border-width: 3px;

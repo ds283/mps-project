@@ -14,75 +14,112 @@
                 </div>
 
                 <div class="panel-body">
-                    <h4>
-                        <div style="display: flex; flex-wrap: wrap;">
-                            {% for project in sel.confirmed %}
-                                <div class="dropdown">
-                                    <a class="btn btn-primary selection-label dropdown-toggle"
-                                            type="button" data-toggle="dropdown">
-                                        <i class="fa fa-times"></i> {% if project.name|length > 40 %}{{ project.name[0:40] }}...{% else %}{{ project.name }}{% endif %}
-                                    </a>
-                                    <ul class="dropdown-menu">
-                                        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
-                                            <li>
-                                                <a href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                    Remove
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                    Make pending
-                                                </a>
-                                            </li>
-                                        {% else %}
-                                            <li class="disabled">
-                                                <a>Remove</a>
-                                            </li>
-                                            <li class="disabled">
-                                                <a>Make pending</a>
-                                            </li>
-                                        {% endif %}
-                                    </ul>
-                                </div>
-                            {% endfor %}
+                    <div class="container-fluid">
+                        <div class="row vertical-align confirmation-table">
+                            <div class="col-xs-4"><strong>Project title</strong></div>
+                            <div class="col-xs-3"><strong>Research group</strong></div>
+                            <div class="col-xs-3"><strong>Supervisor</strong></div>
+                            <div class="col-xs-2"></div>
                         </div>
-                    </h4>
-                </div>
 
-                <div class="panel-footer">
-                    <h4>
-                        <div class="display: flex; flex-wrap: wrap;">
-                            {% for project in sel.confirm_requests %}
-                                <div class="dropdown">
-                                    <a class="btn btn-default selection-label dropdown-toggle"
-                                            type="button" data-toggle="dropdown">
-                                        <i class="fa fa-plus"></i> {% if project.name|length > 40 %}{{ project.name[0:40] }}...{% else %}{{ project.name }}{% endif %}
+                        <hr class="intro-divider">
+
+                        {% for project in sel.confirmed %}
+                            <div class="row vertical-align confirmation-table">
+                                <div class="col-xs-4">
+                                    <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+                                        <strong>{{ project.name }}</strong>
                                     </a>
-                                    <ul class="dropdown-menu">
-                                        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
-                                            <li>
-                                                <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
-                                                    Confirm
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <a href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                    Remove
-                                                </a>
-                                            </li>
-                                        {% else %}
-                                            <li class="disabled">
-                                                <a>Confirm</a>
-                                            </li>
-                                            <li class="disabled">
-                                                <a>Remove</a>
-                                            </li>
-                                        {% endif %}
-                                    </ul>
                                 </div>
-                            {% endfor %}
-                        </div>
-                    </h4>
+                                <div class="col-xs-3">
+                                    {{ project.group.make_label(project.group.name)|safe }}
+                                </div>
+                                <div class="col-xs-3">
+                                    <a href="mailto:{{ project.owner.email }}">
+                                        {{ project.owner.build_name() }}
+                                    </a>
+                                </div>
+                                <div class="col-xs-2">
+                                    <div class="dropdown">
+                                        <a class="btn btn-warning selection-label dropdown-toggle"
+                                                type="button" data-toggle="dropdown">
+                                            <i class="fa fa-times"></i> Deconfirm
+                                        </a>
+                                        <ul class="dropdown-menu">
+                                            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                                                <li>
+                                                    <a href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                        Remove
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                                        Make pending
+                                                    </a>
+                                                </li>
+                                            {% else %}
+                                                <li class="disabled">
+                                                    <a>Remove</a>
+                                                </li>
+                                                <li class="disabled">
+                                                    <a>Make pending</a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                        <hr class="intro-divider">
+
+                        {% for project in sel.confirm_requests %}
+                            <div class="row vertical-align confirmation-table">
+                                <div class="col-xs-4">
+                                    <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+                                        <strong>{{ project.name }}</strong>
+                                    </a>
+                                </div>
+                                <div class="col-xs-3">
+                                    {{ project.group.make_label(project.group.name)|safe }}
+                                </div>
+                                <div class="col-xs-3">
+                                    <a href="mailto:{{ project.owner.email }}">
+                                        {{ project.owner.build_name() }}
+                                    </a>
+                                </div>
+                                <div class="col-xs-2">
+                                    <div class="dropdown">
+                                        <a class="btn btn-success selection-label dropdown-toggle"
+                                                type="button" data-toggle="dropdown">
+                                            <i class="fa fa-plus"></i> Confirm
+                                        </a>
+                                        <ul class="dropdown-menu">
+                                            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                                                <li>
+                                                    <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
+                                                        Confirm
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <a href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                        Remove
+                                                    </a>
+                                                </li>
+                                            {% else %}
+                                                <li class="disabled">
+                                                    <a>Confirm</a>
+                                                </li>
+                                                <li class="disabled">
+                                                    <a>Remove</a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
 

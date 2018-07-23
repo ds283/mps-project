@@ -107,21 +107,23 @@ _cohort = \
 _bookmarks = \
 """
 {% set count = sel.get_num_bookmarks %}
-<span class="badge">{{ count }}</span>
 {% if count > 0 %}
+    <span class="label label-primary">{{ count }}</span>
     <a href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
         Show ...
     </a>
+{% else %}
+    <span class="label label-default">None</span>
 {% endif %}
 """
 
 _confirmations = \
 """
-{% set pending = sel.get_num_bookmarks %}
+{% set pending = sel.number_pending %}
 {% set confirmed = sel.number_confirmed %}
+{% if confirmed > 0 %}<span class="label label-primary">Confirmed {{ confirmed }}</span>{% endif %}
+{% if pending > 0 %}<span class="label label-warning">Pending {{ pending }}</span>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
-    Confirmed <span class="badge">{{ confirmed }}</span>
-    Pending <span class="badge">{{ pending }}</span>
     <a href="{{ url_for('convenor.selector_student_confirmations', id=sel.id) }}">
         Show ...
     </a>

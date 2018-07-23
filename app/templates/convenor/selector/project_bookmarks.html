@@ -1,9 +1,9 @@
 {% extends "base_app.html" %}
 
-{% from "convenor/macros.html" import bookmark_projects %}
+{% from "convenor/macros.html" import bookmark_students %}
 
 {% block title %}
-    View bookmarks for {{ sel.user.build_name() }}
+    View bookmarking students for {{ project.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -12,15 +12,15 @@
         <div class="col-xs-10">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    View bookmarks for <strong>{{ sel.user.build_name() }}</strong>
+                    Viewing bookmarking students for <strong>{{ project.name }}</strong>
                 </div>
                 <div class="panel-body">
-                    {{ bookmark_projects(sel, sel.get_ordered_bookmarks) }}
+                    {{ bookmark_students(project, project.bookmarks) }}
                 </div>
             </div>
 
             <div>
-                <a href="{{ url_for('convenor.selectors', id=sel.config.project_class.id) }}">
+                <a href="{{ url_for('convenor.liveprojects', id=project.config.project_class.id) }}">
                     <i class="fa fa-backward"></i> Return to dashboard
                 </a>
             </div>

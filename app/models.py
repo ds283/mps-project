@@ -2023,6 +2023,18 @@ class LiveProject(db.Model):
         return db.session.query(sqlalchemy.func.count(SelectionRecord.id)).filter_by(liveproject_id=self.id).scalar()
 
 
+    @property
+    def number_pending(self):
+
+        return db.session.query(sqlalchemy.func.count(self.confirm_waiting.subquery().c.id)).scalar()
+
+
+    @property
+    def number_confirmed(self):
+
+        return db.session.query(sqlalchemy.func.count(self.confirmed_students.subquery().c.id)).scalar()
+
+
     def format_popularity_label(self, css_classes=None):
 
         if not self.parent.show_popularity:
@@ -2254,7 +2266,7 @@ class SelectingStudent(db.Model):
             if not item.liveproject.is_available(self):
                 return False
 
-            count +=1
+            count += 1
             if count >= num_choices:
                 break
 
@@ -2269,6 +2281,18 @@ class SelectingStudent(db.Model):
         """
 
         return self.selections.first() is not None
+
+
+    def is_project_submitted(self, proj):
+
+        if not self.has_submitted:
+            return False
+
+        for item in self.selections:
+            if item.liveproject_id == proj.id:
+                return True
+
+        return False
 
 
     @property

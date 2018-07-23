@@ -13,80 +13,54 @@ from flask import render_template_string, jsonify, url_for
 
 _bookmarks = \
 """
-{% for bookmark in project.bookmarks %}
-    {% set student = bookmark.user %}
-    <span class="label label-default">{{ student.user.build_name() }}</span>
-{% endfor %}
-"""
-
-_pending = \
-"""
-{% for student in project.confirm_waiting %}
-    <div class="dropdown">
-        <a class="label label-success dropdown-toggle" type="button"
-                data-toggle="dropdown">
-            <i class="fa fa-plus"></i> {{ student.user.build_name() }}
-        </a>
-        <ul class="dropdown-menu">
-            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
-                <li>
-                    <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id) }}">
-                        Confirm
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.cancel_confirm', sid=student.id, pid=project.id) }}">
-                        Remove
-                    </a>
-                </li>
-            {% else %}
-                <li class="disabled">
-                    <a>Confirm</a>
-                </li>
-                <li class="disabled">
-                    <a>Remove</a>
-                </li>
-            {% endif %}
-        </ul>
-    </div>
+{% set bookmarks = project.number_bookmarks %}
+{% if bookmarks > 0 %}
+    <span class="label label-info">{{ bookmarks }}</span>
+    <a href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
+       Show ...
+   </a>
 {% else %}
     <span class="label label-default">None</span>
-{% endfor %}
+{% endif %}
 """
 
-_confirmed = \
+_selections = \
 """
-{% for student in project.confirmed_students %}
-    <div class="dropdown">
-        <a class="label label-warning dropdown-toggle table-button" type="button"
-                data-toggle="dropdown">
-            <i class="fa fa-times"></i> {{ student.user.build_name() }}
-        </a>
-        <ul class="dropdown-menu">
-            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
-                <li>
-                    <a href="{{ url_for('convenor.deconfirm', sid=student.id, pid=project.id) }}">
-                        Remove
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=student.id, pid=project.id) }}">
-                        Make pending
-                    </a>
-                </li>
-            {% else %}
-                <li class="disabled">
-                    <a>Remove</a>
-                </li>
-                <li class="disabled">
-                    <a>Make pending</a>
-                </li>
-            {% endif %}
-        </ul>
-    </div>
+{% set selections = project.number_selections %}
+{% if selections > 0 %}
+    <span class="label label-primary">{{ selections }}</span>
+    <a href="{{ url_for('convenor.project_choices', id=project.id) }}">
+        Show ...
+    </a>
 {% else %}
     <span class="label label-default">None</span>
-{% endfor %}
+{% endif %}
+"""
+
+_confirmations = \
+"""
+{% set pending = project.number_pending %}
+{% set confirmed = project.number_confirmed %}
+{% if confirmed > 0 %}<span class="label label-success"><i class="fa fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
+{% if pending > 0 %}<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending {{ pending }}</span>{% endif %}
+{% if pending > 0 or confirmed > 0 %}
+    <a href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
+        Show ...
+    </a>
+{% else %}
+    <span class="label label-default">None</span>
+{% endif %}
+"""
+
+_popularity = \
+"""
+{% set R = project.popularity_rank %}
+{% if R is not none %}
+    {% set rank, total = R %}
+    <span class="label label-success">Rank {{ rank }}/{{ total }}</span>
+{% else %}
+    <span class="label label-default">Not available</span>>
+{% endif %}
 """
 
 _menu = \
@@ -151,9 +125,22 @@ def liveprojects_data(config):
              'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.email,
                                                                 name=p.owner.build_name()),
              'group': p.group.make_label(),
-             'bookmarks': render_template_string(_bookmarks, project=p),
-             'pending': render_template_string(_pending, project=p, config=config),
-             'confirmed': render_template_string(_confirmed, project=p, config=config),
+             'bookmarks': {
+                 'display': render_template_string(_bookmarks, project=p),
+                 'value': p.number_bookmarks
+             },
+             'selections': {
+                 'display': render_template_string(_selections, project=p),
+                 'value': p.number_selections
+             },
+             'confirmations': {
+                 'display': render_template_string(_confirmations, project=p),
+                 'value': p.number_pending + p.number_confirmed
+             },
+             'popularity': {
+                 'display': render_template_string(_popularity, project=p),
+                 'value': p.popularity_rank[0] if p.popularity_rank is not None else 0
+             },
              'menu': render_template_string(_menu, project=p, config=config)} for p in config.live_projects]
 
     return jsonify(data)

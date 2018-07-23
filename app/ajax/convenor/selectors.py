@@ -94,7 +94,7 @@ _menu = \
         
         {% if student.has_submitted %}
             <li>
-                <a href="{{ url_for('convenor.selector_submission', id=student.id) }}">
+                <a href="{{ url_for('convenor.selector_choices', id=student.id) }}">
                     Show submitted choices
                 </a>
             </li>
@@ -127,6 +127,18 @@ _bookmarks = \
 {% endif %}
 """
 
+_submitted = \
+"""
+{% if sel.has_submitted %}
+    <span class="label label-success">Yes</span>
+    <a href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
+        Show ...
+    </a>
+{% else %}
+    <span class="label label-danger">No</span>
+{% endif %}
+"""
+
 _confirmations = \
 """
 {% set pending = sel.number_pending %}
@@ -134,23 +146,11 @@ _confirmations = \
 {% if confirmed > 0 %}<span class="label label-success"><i class="fa fa-check"></i> Confirmed {{ confirmed }}</span>{% endif %}
 {% if pending > 0 %}<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending {{ pending }}</span>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
-    <a href="{{ url_for('convenor.selector_student_confirmations', id=sel.id) }}">
+    <a href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
         Show ...
     </a>
 {% else %}
     <span class="label label-default">None</span>
-{% endif %}
-"""
-
-_submitted = \
-"""
-{% if sel.has_submitted %}
-    <span class="label label-success">Yes</span>
-    <a href="{{ url_for('convenor.selector_submission', id=sel.id) }}">
-        Show ...
-    </a>
-{% else %}
-    <span class="label label-danger">No</span>
 {% endif %}
 """
 

@@ -666,4 +666,4 @@ def view_selection(sid):
     if not _verify_selector(sel):
         return redirect(request.referrer)
 
-    return render_template('student/submission.html', sel=sel, )
+    return render_template('student/choices.html', sel=sel, )

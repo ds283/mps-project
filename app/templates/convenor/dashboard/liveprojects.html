@@ -16,9 +16,30 @@
                     { data: 'name' },
                     { data: 'owner' },
                     { data: 'group' },
-                    { data: 'bookmarks' },
-                    { data: 'pending' },
-                    { data: 'confirmed' },
+                    { data: 'bookmarks',
+                      render: {
+                        _: 'display',
+                        sort: 'value',
+                        type: 'value'
+                    } },
+                    { data: 'selections',
+                      render: {
+                        _: 'display',
+                        sort: 'value',
+                        type: 'value'
+                    } },
+                    { data: 'confirmations',
+                      render: {
+                        _: 'display',
+                       sort: 'value',
+                       type: 'value'
+                    } },
+                    { data: 'popularity',
+                      render: {
+                        _: 'display',
+                        sort: 'value',
+                        type: 'value'
+                    } },
                     { data: 'menu' }
                 ],
                 deferRender: true
@@ -46,12 +67,13 @@
                 <thead>
                 <tr>
                     <th width="2%"> No.</th>
-                    <th width="17%"> Name</th>
-                    <th width="12%"> Owner</th>
+                    <th width="14%"> Name</th>
+                    <th width="11%"> Owner</th>
                     <th width="8%"> Affiliation</th>
-                    <th width="12%"> Bookmarks</th>
-                    <th width="12%"> Pending</th>
-                    <th width="12%"> Confirmed</th>
+                    <th width="8%"> Bookmarks</th>
+                    <th width="8%"> Selections</th>
+                    <th width="15%"> Confirmations</th>
+                    <th width="10%"> Popularity</th>
                     <th width="15%"> Actions</th>
                 </tr>
                 </thead>

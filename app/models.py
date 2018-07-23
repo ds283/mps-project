@@ -1321,7 +1321,7 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def open(self):
+    def _open(self):
 
         return self.live and not self.closed
 
@@ -1339,7 +1339,7 @@ class ProjectClassConfig(db.Model):
         if self.live and self.closed:
             return self.LIFECYCLE_SELECTIONS_CLOSED
 
-        if self.open:
+        if self._open:
             return self.LIFECYCLE_SELECTIONS_OPEN
 
         # if we get here, project is not open

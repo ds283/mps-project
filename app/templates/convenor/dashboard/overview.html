@@ -1,7 +1,17 @@
 {% extends "convenor/dashboard/nav.html" %}
 
+{% from "macros.html" import date_field %}
+
 {% block scripts %}
     {{ super() }}
+
+    {% assets filters="cssmin", output="gen/bootstrap-datepicker3-min.css", "css/bootstrap-datepicker3.css" -%}
+        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-datepicker-min.js", "js/bootstrap-datepicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
 
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
@@ -18,6 +28,11 @@
                     { data: 'unoffer' }
                 ],
                 deferRender: true
+            });
+
+            $('.date').datepicker({
+                format: 'dd/mm/yyyy',
+                todayHighlight: true
             });
         });
     </script>
@@ -68,7 +83,7 @@
                                         </div>
                                         <div class="col-xs-3">
                                             <div class="pull-right">
-                                                {{ wtf.form_field(issue_form.request_deadline) }}
+                                                {{ date_field(issue_form.request_deadline) }}
                                                 {{ wtf.form_field(issue_form.requests_issued, button_map={'requests_issued': 'warning'}) }}
                                             </div>
                                         </div>
@@ -102,7 +117,7 @@
                                       method="POST" name="issue-form">
                                     <div class="row vertical-align">
                                         <div class="col-xs-9">
-                                            {{ wtf.form_field(issue_form.request_deadline) }}
+                                            {{ date_field(issue_form.request_deadline) }}
                                         </div>
                                         <div class="col-xs-3">
                                             <div class="pull-right">
@@ -151,7 +166,7 @@
                                         </div>
                                         <div class="col-xs-3">
                                             <div class="pull-right">
-                                                {{ wtf.form_field(golive_form.live_deadline) }}
+                                                {{ date_field(golive_form.live_deadline) }}
                                                 {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
                                             </div>
                                         </div>

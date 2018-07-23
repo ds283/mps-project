@@ -1756,7 +1756,7 @@ def selector_bookmarks(id):
     if not validate_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    return render_template('convenor/selector/bookmarks.html', sel=sel)
+    return render_template('convenor/selector/student_bookmarks.html', sel=sel)
 
 
 @convenor.route('/selector_submission/<int:id>')

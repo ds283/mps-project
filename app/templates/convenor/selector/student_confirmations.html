@@ -48,21 +48,25 @@
                                         <ul class="dropdown-menu">
                                             {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
-                                                    <a href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                        Remove
+                                                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                                        <i class="fa fa-times"></i> Make pending
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                        Make pending
+                                                    <a href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                        <i class="fa fa-trash"></i> Delete
                                                     </a>
                                                 </li>
                                             {% else %}
                                                 <li class="disabled">
-                                                    <a>Remove</a>
+                                                    <a>
+                                                        <i class="fa fa-times"></i> Make pending
+                                                    </a>
                                                 </li>
                                                 <li class="disabled">
-                                                    <a>Make pending</a>
+                                                    <a>
+                                                        <i class="fa fa-trash"></i> Delete
+                                                    </a>
                                                 </li>
                                             {% endif %}
                                         </ul>
@@ -98,20 +102,24 @@
                                             {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
-                                                        Confirm
+                                                        <i class="fa fa-check"></i> Confirm
                                                     </a>
                                                 </li>
                                                 <li>
                                                     <a href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                        Remove
+                                                        <i class="fa fa-trash"></i> Delete
                                                     </a>
                                                 </li>
                                             {% else %}
                                                 <li class="disabled">
-                                                    <a>Confirm</a>
+                                                    <a>
+                                                        <i class="fa fa-check"></i> Confirm
+                                                    </a>
                                                 </li>
                                                 <li class="disabled">
-                                                    <a>Remove</a>
+                                                    <a>
+                                                        <i class="fa fa-trash"></i> Delete
+                                                    </a>
                                                 </li>
                                             {% endif %}
                                         </ul>

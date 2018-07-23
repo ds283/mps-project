@@ -21,23 +21,22 @@
         <div class="panel
             {% if nproj == 0 %}
                 panel-danger
-            {% elif config.open %}
+            {% elif config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                 panel-success
-            {% elif config.closed %}
+            {% elif config.state == config.LIFECYCLE_SELECTIONS_CLOSED %}
+                panel-primary
+            {% elif config.state == config.LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
                 panel-warning
-            {% elif config.requests_issued and current_user.faculty_data in config.golive_required %}
-                {# panel-primary #}
-                panel-info
             {% else %}
                 panel-info
             {% endif %}
             ">
 
             <div class="panel-heading">
-                {% if config.open %}
+                {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                     <strong>Status</strong>
                     <div class="pull-right">
-                        <span class="label label-success">Student choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                        <span class="label label-success">Selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
                         {% if config.live_deadline %}
                             <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}
@@ -45,7 +44,7 @@
                 {% else %}
                     Status
                     <div class="pull-right">
-                        <span class="label label-default">Student choices not open</span>
+                        <span class="label label-default">Selection closed</span>
                     </div>
                 {% endif %}
             </div>
@@ -53,7 +52,7 @@
             <div class="panel-body">
 
                 {# show confirmation request if one is active #}
-                {% if config.project_class.require_confirm and config.requests_issued and current_user.faculty_data in config.golive_required %}
+                {% if config.state == config.LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
                     <div class="panel panel-danger">
                         <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
                         <div class="panel-body">
@@ -103,7 +102,7 @@
                 {% else %}
                     {% set number_live_plural = 's' %}
                 {% endif %}
-                {% if config.open and live_projects.first() %}
+                {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and live_projects.first() %}
                     <hr class="intro-divider">
                     <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
                         on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>

@@ -1759,9 +1759,23 @@ def selector_bookmarks(id):
     return render_template('convenor/selector/student_bookmarks.html', sel=sel)
 
 
-@convenor.route('/selector_submission/<int:id>')
+@convenor.route('/project_bookmarks/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def selector_submission(id):
+def project_bookmarks(id):
+
+    # id is a LiveProject
+    proj = LiveProject.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(proj.config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/selector/project_bookmarks.html', project=proj)
+
+
+@convenor.route('/selector_choices/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selector_choices(id):
 
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
@@ -1770,12 +1784,26 @@ def selector_submission(id):
     if not validate_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    return render_template('convenor/selector/submission.html', sel=sel)
+    return render_template('convenor/selector/student_choices.html', sel=sel)
 
 
-@convenor.route('/selector_student_confirmations/<int:id>')
+@convenor.route('/project_choices/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def selector_student_confirmations(id):
+def project_choices(id):
+
+    # id is a LiveProject
+    proj = LiveProject.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(proj.config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/selector/project_choices.html', project=proj)
+
+
+@convenor.route('/selector_confirmations/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selector_confirmations(id):
 
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
@@ -1785,3 +1813,17 @@ def selector_student_confirmations(id):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_confirmations.html', sel=sel)
+
+
+@convenor.route('/project_confirmations/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def project_confirmations(id):
+
+    # id is a LiveProject
+    proj = LiveProject.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(proj.config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/selector/project_confirmations.html', project=proj)

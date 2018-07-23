@@ -15,15 +15,17 @@
                     { data: 'last' },
                     { data: 'first' },
                     { data: 'cohort' },
-                    { data: 'bookmarks',
-                      render: {
-                          _: 'display',
-                          sort: 'value'
-                      } },
                     { data: 'confirmations',
                       render: {
                           _: 'display',
-                          sort: 'value'
+                          sort: 'value',
+                          type: 'value'
+                      } },
+                    { data: 'bookmarks',
+                      render: {
+                          _: 'display',
+                          sort: 'value',
+                          type: 'value'
                       } },
                     { data: 'submitted' },
                     { data: 'menu' }
@@ -44,9 +46,9 @@
                     <th width="12%"> Last name</th>
                     <th width="12%"> First name</th>
                     <th width="23%"> Programme</th>
-                    <th width="10%"> Bookmarks</th>
-                    <th width="18%"> Confirmations</th>
-                    <th width="10%"> Submitted</th>
+                    <th width="22%"> Confirmations</th>
+                    <th width="8%"> Bookmarks</th>
+                    <th width="8%"> Submitted</th>
                     <th width="15%"> Actions</th>
                 </tr>
                 </thead>

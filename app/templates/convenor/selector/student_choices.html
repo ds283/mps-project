@@ -3,7 +3,7 @@
 {% from "convenor/macros.html" import ranked_selection %}
 
 {% block title %}
-    View submitted choices for student <strong>{{ sel.user.build_name() }}</strong>
+    View submitted choices for {{ sel.user.build_name() }}
 {% endblock %}
 
 {% block bodyblock %}

@@ -203,7 +203,10 @@ def selectors_data(students, config):
     data = [{'last': s.user.last_name,
              'first': s.user.first_name,
              'cohort': render_template_string(_cohort, student=s),
-             'bookmarks': render_template_string(_bookmarks, sel=s),
+             'bookmarks': {
+                 'display': render_template_string(_bookmarks, sel=s),
+                 'value': s.get_num_bookmarks
+             },
              'pending': render_template_string(_pending, student=s, config=config),
              'confirmed': render_template_string(_confirmed, student=s, config=config),
              'submitted': render_template_string(_submitted, sel=s),

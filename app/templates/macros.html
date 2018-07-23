@@ -77,11 +77,31 @@
 
 {% macro colour_field(field, id) %}
     <div class="form-group {% if field.errors %} has-error{% endif -%}
-                               {%- if field.flags.required %} required{% endif -%}">
+                           {%- if field.flags.required %} required{% endif -%}">
         {{ field.label(class="control-label")|safe }}
         <div id="{{ id }}" class="input-group colorpicker-component">
             {{ field(class="form-control")|safe }}
             <span class="input-group-addon"><i></i></span>
+        </div>
+        {% if field.errors %}
+            {% for error in field.errors %}
+                <p class="help-block">{{ error }}</p>
+            {% endfor %}
+        {% elif field.description %}
+            <p class="help-block">{{ field.description|safe }}</p>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% macro date_field(field) %}
+    <div class="form-group {% if field.errors %} has-error{% endif -%}
+                           {% if field.flags_required %} require{% endif -%}">
+        {{ field.label(class="control-label")|safe }}
+        <div class="input-group date" data-provide="datepicker">
+            {{ field(class="form-control")|safe }}
+            <div class="input-group-addon">
+                <span class="glyphicon glyphicon-th"></span>
+            </div>
         </div>
         {% if field.errors %}
             {% for error in field.errors %}

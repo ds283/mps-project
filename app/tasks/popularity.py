@@ -266,7 +266,7 @@ def register_popularity_tasks(celery):
         datestamp = datetime.now()
         uuid = uuid1()
 
-        if config.open:
+        if config.state == config.LIFECYCLE_SELECTIONS_OPEN:
 
             compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live)
                             for proj in config.live_projects)
@@ -432,7 +432,7 @@ def register_popularity_tasks(celery):
                           meta='Thin out popularity data for project class "{name}"'.format(
                               name=config.project_class.name))
 
-        if config.open:
+        if config.state == config.LIFECYCLE_SELECTIONS_OPEN:
 
             job = group(thin_popularity_data.si(proj.id) for proj in config.live_projects)
             job.apply_async()

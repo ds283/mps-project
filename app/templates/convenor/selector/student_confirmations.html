@@ -1,0 +1,97 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    Project confirmations for <strong>{{ sel.user.build_name() }}</strong>
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    Project confirmations for <strong>{{ sel.user.build_name() }}</strong>
+                </div>
+
+                <div class="panel-body">
+                    <h4>
+                        <div style="display: flex; flex-wrap: wrap;">
+                            {% for project in sel.confirmed %}
+                                <div class="dropdown">
+                                    <a class="btn btn-primary selection-label dropdown-toggle"
+                                            type="button" data-toggle="dropdown">
+                                        <i class="fa fa-times"></i> {% if project.name|length > 40 %}{{ project.name[0:40] }}...{% else %}{{ project.name }}{% endif %}
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                                            <li>
+                                                <a href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
+                                                    Remove
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
+                                                    Make pending
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="disabled">
+                                                <a>Remove</a>
+                                            </li>
+                                            <li class="disabled">
+                                                <a>Make pending</a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </h4>
+                </div>
+
+                <div class="panel-footer">
+                    <h4>
+                        <div class="display: flex; flex-wrap: wrap;">
+                            {% for project in sel.confirm_requests %}
+                                <div class="dropdown">
+                                    <a class="btn btn-default selection-label dropdown-toggle"
+                                            type="button" data-toggle="dropdown">
+                                        <i class="fa fa-plus"></i> {% if project.name|length > 40 %}{{ project.name[0:40] }}...{% else %}{{ project.name }}{% endif %}
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                                            <li>
+                                                <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
+                                                    Confirm
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
+                                                    Remove
+                                                </a>
+                                            </li>
+                                        {% else %}
+                                            <li class="disabled">
+                                                <a>Confirm</a>
+                                            </li>
+                                            <li class="disabled">
+                                                <a>Remove</a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </h4>
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ url_for('convenor.selectors', id=sel.config.project_class.id) }}">
+                    <i class="fa fa-backward"></i> Return to dashboard
+                </a>
+            </div>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

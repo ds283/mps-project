@@ -1745,9 +1745,9 @@ def perform_reset_popularity_data(id):
     return redirect(url_for('convenor.liveprojects', id=config.project_class.id))
 
 
-@convenor.route('/student_bookmarks/<int:id>')
+@convenor.route('/selector_bookmarks/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def student_bookmarks(id):
+def selector_bookmarks(id):
 
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
@@ -1759,9 +1759,9 @@ def student_bookmarks(id):
     return render_template('convenor/selector/bookmarks.html', sel=sel)
 
 
-@convenor.route('/student_submission/<int:id>')
+@convenor.route('/selector_submission/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def student_submission(id):
+def selector_submission(id):
 
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
@@ -1771,3 +1771,17 @@ def student_submission(id):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/submission.html', sel=sel)
+
+
+@convenor.route('/selector_student_confirmations/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selector_student_confirmations(id):
+
+    # id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/selector/student_confirmations.html', sel=sel)

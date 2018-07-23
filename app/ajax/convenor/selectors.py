@@ -72,7 +72,7 @@ _menu = \
         
         {% if student.get_num_bookmarks > 0 %}
             <li>
-                <a href="{{ url_for('convenor.student_bookmarks', id=student.id) }}">
+                <a href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
                     Show bookmarks
                 </a>
             </li>
@@ -84,7 +84,7 @@ _menu = \
         
         {% if student.has_submitted %}
             <li>
-                <a href="{{ url_for('convenor.student_submission', id=student.id) }}">
+                <a href="{{ url_for('convenor.selector_submission', id=student.id) }}">
                     Show submission
                 </a>
             </li>
@@ -109,87 +109,32 @@ _bookmarks = \
 {% set count = sel.get_num_bookmarks %}
 <span class="badge">{{ count }}</span>
 {% if count > 0 %}
-    <a href="{{ url_for('convenor.student_bookmarks', id=sel.id) }}">
+    <a href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
         Show ...
     </a>
 {% endif %}
 """
 
-_pending = \
+_confirmations = \
 """
-{% for project in student.confirm_requests %}
-    <div class="dropdown">
-        <a class="label label-success dropdown-toggle table-button"
-                type="button" data-toggle="dropdown">
-            <i class="fa fa-plus"></i> {% if project.name|length > 20 %}{{ project.name[0:20] }}...{% else %}{{ project.name }}{% endif %}
-        </a>
-        <ul class="dropdown-menu">
-            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
-                <li>
-                    <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id) }}">
-                        Confirm
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.cancel_confirm', sid=student.id, pid=project.id) }}">
-                        Remove
-                    </a>
-                </li>
-            {% else %}
-                <li class="disabled">
-                    <a>Confirm</a>
-                </li>
-                <li class="disabled">
-                    <a>Remove</a>
-                </li>
-            {% endif %}
-        </ul>
-    </div>
+{% set pending = sel.get_num_bookmarks %}
+{% set confirmed = sel.number_confirmed %}
+{% if pending > 0 or confirmed > 0 %}
+    Confirmed <span class="badge">{{ confirmed }}</span>
+    Pending <span class="badge">{{ pending }}</span>
+    <a href="{{ url_for('convenor.selector_student_confirmations', id=sel.id) }}">
+        Show ...
+    </a>
 {% else %}
     <span class="label label-default">None</span>
-{% endfor %}
-"""
-
-_confirmed = \
-"""
-{% for liveproject in student.confirmed %}
-    <div class="dropdown">
-        <a class="label label-warning dropdown-toggle table-button"
-                type="button" data-toggle="dropdown">
-            <i class="fa fa-times"></i> {% if liveproject.name|length > 20 %}{{ liveproject.name[0:20] }}...{% else %}{{ liveproject.name }}{% endif %}
-        </a>
-        <ul class="dropdown-menu">
-            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
-                <li>
-                    <a href="{{ url_for('convenor.deconfirm', sid=student.id, pid=liveproject.id, tabid=4) }}">
-                        Remove
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=student.id, pid=liveproject.id, tabid=4) }}">
-                        Make pending
-                    </a>
-                </li>
-            {% else %}
-                <li class="disabled">
-                    <a>Remove</a>
-                </li>
-                <li class="disabled">
-                    <a>Make pending</a>
-                </li>
-            {% endif %}
-        </ul>
-    </div>
-{% else %}
-    <span class="label label-default">None</span>
-{% endfor %}
+{% endif %}
 """
 
 _submitted = \
 """
 {% if sel.has_submitted %}
     <span class="label label-success">Yes</span>
-    <a href="{{ url_for('convenor.student_submission', id=sel.id) }}">
+    <a href="{{ url_for('convenor.selector_submission', id=sel.id) }}">
         Show ...
     </a>
 {% else %}
@@ -207,8 +152,7 @@ def selectors_data(students, config):
                  'display': render_template_string(_bookmarks, sel=s),
                  'value': s.get_num_bookmarks
              },
-             'pending': render_template_string(_pending, student=s, config=config),
-             'confirmed': render_template_string(_confirmed, student=s, config=config),
+             'confirmations': render_template_string(_confirmations, sel=s),
              'submitted': render_template_string(_submitted, sel=s),
              'menu': render_template_string(_menu, student=s, config=config)} for s in students]
 

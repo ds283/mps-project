@@ -2147,6 +2147,18 @@ class SelectingStudent(db.Model):
 
 
     @property
+    def number_pending(self):
+
+        return db.session.query(sqlalchemy.func.count(self.confirm_requests.c.id)).scalar()
+
+
+    @property
+    def number_confirmed(self):
+
+        return db.session.query(sqlalchemy.func.count(self.confirmed.c.id)).scalar()
+
+
+    @property
     def has_bookmarks(self):
         """
         determine whether this SelectingStudent has bookmarks

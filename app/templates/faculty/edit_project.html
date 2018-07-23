@@ -54,8 +54,11 @@
 
         {{ wtf.form_field(project_form.meeting_reqd) }}
 
-        {{ wtf.form_field(project_form.enforce_capacity) }}
-        {{ wtf.form_field(project_form.capacity) }}
+        <div class="well">
+            <p>Capacity</p>
+            {{ wtf.form_field(project_form.enforce_capacity) }}
+            {{ wtf.form_field(project_form.capacity) }}
+        </div>
 
         <div class="well {% if project_form.team.errors %}has-error{% endif %}">
             <p>Who will be part of the supervisory team?</p>

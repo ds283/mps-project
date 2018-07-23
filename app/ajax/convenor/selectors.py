@@ -20,7 +20,7 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu">
-        {% if config.open and student.bookmarks and student.bookmarks.first() %}
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.bookmarks and student.bookmarks.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
                     Clear bookmarks
@@ -32,7 +32,7 @@ _menu = \
             </li>
         {% endif %}
 
-        {% if config.open and student.confirm_requests and student.confirm_requests.first() %}
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirm_requests and student.confirm_requests.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
                     Confirm all requests
@@ -52,7 +52,7 @@ _menu = \
             </li>
         {% endif %}
 
-        {% if config.open and student.confirmed and student.confirmed.first() %}
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirmed and student.confirmed.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
                     Remove confirmations
@@ -108,7 +108,7 @@ _pending = \
             <i class="fa fa-plus"></i> {% if project.name|length > 20 %}{{ project.name[0:20] }}...{% else %}{{ project.name }}{% endif %}
         </a>
         <ul class="dropdown-menu">
-            {% if config.open %}
+            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                 <li>
                     <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id) }}">
                         Confirm
@@ -143,7 +143,7 @@ _confirmed = \
             <i class="fa fa-times"></i> {% if liveproject.name|length > 20 %}{{ liveproject.name[0:20] }}...{% else %}{{ liveproject.name }}{% endif %}
         </a>
         <ul class="dropdown-menu">
-            {% if config.open %}
+            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                 <li>
                     <a href="{{ url_for('convenor.deconfirm', sid=student.id, pid=liveproject.id, tabid=4) }}">
                         Remove

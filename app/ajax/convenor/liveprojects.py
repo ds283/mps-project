@@ -28,7 +28,7 @@ _pending = \
             <i class="fa fa-plus"></i> {{ student.user.build_name() }}
         </a>
         <ul class="dropdown-menu">
-            {% if config.open %}
+            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                 <li>
                     <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id) }}">
                         Confirm
@@ -63,7 +63,7 @@ _confirmed = \
             <i class="fa fa-times"></i> {{ student.user.build_name() }}
         </a>
         <ul class="dropdown-menu">
-            {% if config.open %}
+            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                 <li>
                     <a href="{{ url_for('convenor.deconfirm', sid=student.id, pid=project.id) }}">
                         Remove
@@ -103,7 +103,7 @@ _menu = \
                 View web page
             </a>
         </li>
-        {% if config.open and project.confirm_waiting and project.confirm_waiting.first() %}
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and project.confirm_waiting and project.confirm_waiting.first() %}
             <li>
                 <a href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
                     Confirm all requests
@@ -121,7 +121,7 @@ _menu = \
             </li>
         {% endif %}
 
-        {% if config.open and project.confirmed_students and project.confirmed_students.first() %}
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and project.confirmed_students and project.confirmed_students.first() %}
             <li>
                 <a href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
                     Remove confirmations

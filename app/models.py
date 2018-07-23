@@ -1268,7 +1268,7 @@ class ProjectClassConfig(db.Model):
     creation_timestamp = db.Column(db.DateTime())
 
 
-    # SELECTION MANAGEMENT
+    # LIFECYCLE MANAGEMENT
 
     # are faculty requests to confirm projects open?
     requests_issued = db.Column(db.Boolean())
@@ -1304,6 +1304,7 @@ class ProjectClassConfig(db.Model):
     golive_required = db.relationship('FacultyData', secondary=golive_confirmation, lazy='dynamic',
                                       backref=db.backref('live', lazy='dynamic'))
 
+
     # SUBMISSION MANAGEMENT
 
     # submission period
@@ -1323,6 +1324,36 @@ class ProjectClassConfig(db.Model):
     def open(self):
 
         return self.live and not self.closed
+
+
+    LIFECYCLE_CONFIRMATIONS_NOT_ISSUED = 1
+    LIFECYCLE_WAITING_CONFIRMATIONS = 2
+    LIFECYCLE_READY_GOLIVE = 3
+    LIFECYCLE_SELECTIONS_OPEN = 4
+    LIFECYCLE_SELECTIONS_CLOSED = 5
+
+
+    @property
+    def state(self):
+
+        if self.live and self.closed:
+            return self.LIFECYCLE_SELECTIONS_CLOSED
+
+        if self.open:
+            return self.LIFECYCLE_SELECTIONS_OPEN
+
+        # if we get here, project is not open
+
+        if self.project_class.require_confirm:
+            if self.requests_issued:
+                if self.golive_required.count() > 0:
+                    return self.LIFECYCLE_WAITING_CONFIRMATIONS
+                else:
+                    return self.LIFECYCLE_READY_GOLIVE
+            else:
+                return self.LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
+
+        return self.LIFECYCLE_READY_GOLIVE
 
 
     @property

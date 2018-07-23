@@ -1756,7 +1756,7 @@ def student_bookmarks(id):
     if not validate_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    return render_template('convenor/student_bookmarks.html', sel=sel)
+    return render_template('convenor/selector/bookmarks.html', sel=sel)
 
 
 @convenor.route('/student_submission/<int:id>')
@@ -1770,4 +1770,4 @@ def student_submission(id):
     if not validate_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    return render_template('convenor/student_submission.html', sel=sel)
+    return render_template('convenor/selector/submission.html', sel=sel)

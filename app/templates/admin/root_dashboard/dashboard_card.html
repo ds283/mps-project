@@ -29,7 +29,7 @@
                             {% if state == config.LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
                                 <span class="label label-default">Confirmations not issued</span>
                             {% elif state == config.LIFECYCLE_WAITING_CONFIRMATIONS %}
-                                <span class="label label-default">Not live</span>
+                                <span class="label label-default"><i class="fa fa-times"></i> Not live</span>
                                 <span class="label label-primary"><i class="fa fa-clock-o"></i> Confirmations outstanding</span>
                             {% elif state == config.LIFECYCLE_READY_GOLIVE %}
                                 <span class="label label-default">Not live</span>
@@ -38,7 +38,7 @@
                                 <span class="label label-primary"><i class="fa fa-check"></i> Selection open</span>
                             {% elif state == config.LIFECYCLE_SELECTIONS_CLOSED %}
                                 <span class="label label-primary">Selection closed</span>
-                                <span class="label label-success">Rollover ready</span>
+                                <span class="label label-success"><i class="fa fa-check"></i> Rollover ready</span>
                             {% endif %}
 
                             {% set n = config.number_selectors %}

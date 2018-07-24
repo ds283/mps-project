@@ -20,7 +20,7 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu">
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.bookmarks and student.bookmarks.first() %}
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.has_bookmarks %}
             <li>
                 <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
                     <i class="fa fa-trash"></i> Delete bookmarks

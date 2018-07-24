@@ -50,11 +50,11 @@ def _compute_group_capacity_data(pclass, group):
         .filter(Project.active == True, Project.project_classes.any(id=pclass.id),
                 Project.group_id == group.id)
 
-    # get number of such projects
-    project_count = db.session.query(func.count(projects.subquery().c.id)).scalar()
-
     # set of faculty members offering projects
     faculty = set()
+
+    # number of offerable projects
+    project_count = 0
 
     # total capacity of projects
     # the flag 'capacity_bounded' is used to track whether any projects have quota enforcement turned off,
@@ -65,6 +65,8 @@ def _compute_group_capacity_data(pclass, group):
     for project in projects:
 
         if project.offerable:
+
+            project_count += 1
 
             # add owner to list of faculty offering projects
             if project.owner.id not in faculty:
@@ -83,7 +85,7 @@ def _compute_group_capacity_data(pclass, group):
         .filter(FacultyData.affiliations.any(id=group.id),
                 User.active == True).scalar()
 
-    # get total number of faculty belonging to this research grop
+    # get total number of faculty belonging to this research group
     total = db.session.query(func.count(FacultyData.id)) \
         .join(User, User.id == FacultyData.id) \
         .filter(FacultyData.affiliations.any(id=group.id),

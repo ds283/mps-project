@@ -67,11 +67,11 @@
                     {% elif state == config.LIFECYCLE_WAITING_CONFIRMATIONS %}
 
                         {# if we get here then we can assume requests have been issued because of the outermost if #}
-                        {{ waiting_confirmations(pclass, config, issue_form) }}
+                        {{ waiting_confirmations(pclass, config, issue_form, capacity_data, sel_count) }}
 
                     {% elif state == config.LIFECYCLE_READY_GOLIVE %}
 
-                        {{ golive(pclass, config, golive_form, proj_count) }}
+                        {{ golive(pclass, config, golive_form, capacity_data, sel_count) }}
 
                     {% elif state == config.LIFECYCLE_SELECTIONS_OPEN %}
 

@@ -1,7 +1,9 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% from "macros.html" import date_field %}
 
-{% macro golive(pclass, config, golive_form, proj_count) %}
+{% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
+
+{% macro golive(pclass, config, golive_form, capacity_data, sel_count) %}
     <div class="panel panel-danger">
         <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
         <div class="panel-body">
@@ -10,13 +12,12 @@
                 <div class="row vertical-align">
                     <div class="col-xs-9">
                         Freeze project descriptions and open student choices.
-                        {% if proj_count %}
-                            <p>
-                                <strong>{{ proj_count }}</strong> projects are
-                                currently
-                                available to go live.
-                            </p>
-                        {% endif %}
+                        {% set group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = capacity_data %}
+                        <p>
+                            <strong>{{ total_projects }}</strong> projects are
+                            currently
+                            available to go live.
+                        </p>
                     </div>
                     <div class="col-xs-3">
                         <div class="pull-right">
@@ -24,7 +25,11 @@
                             {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
                         </div>
                     </div>
+                </div>
             </form>
+
+            <hr class="intro-divider">
+            {{ prelive_capacity(capacity_data, sel_count) }}
         </div>
     </div>
 {% endmacro %}

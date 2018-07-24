@@ -14,7 +14,7 @@
                     <div class="col-xs-2"><strong>Academic year</strong></div>
                     <div class="col-xs-5"><strong>Status</strong></div>
                 </div>
-                {% for config in config_list %}
+                {% for config, capacity, bounded in config_list %}
                     {% set pclass = config.project_class %}
                     <div class="row vertical-top root-dashboard-table">
                         <div class="col-xs-3"><a href="{{ url_for('convenor.overview', id=pclass.id) }}">{{ pclass.name }}</a></div>
@@ -43,15 +43,25 @@
                                 <span class="label label-danger">Unknown lifecycle state</span>
                             {% endif %}
 
-                            {% set n = config.number_selectors %}
+                            {% set num_sel = config.number_selectors %}
                             {% set pl = 's' %}
-                            {% if n == 1 %}{% set pl = '' %}{% endif %}
-                            <span class="label label-info">{{ n }} selector{{ pl }}</span>
+                            {% if num_sel == 1 %}{% set pl = '' %}{% endif %}
+                            <span class="label label-info">{{ num_sel }} selector{{ pl }}</span>
 
-                            {% set n = config.number_submitters %}
+                            {% set num_sub = config.number_submitters %}
                             {% set pl = 's' %}
-                            {% if n == 1 %}{% set pl = '' %}{% endif %}
-                            <span class="label label-info">{{ n }} submitter{{ pl }}</span>
+                            {% if num_sub == 1 %}{% set pl = '' %}{% endif %}
+                            <span class="label label-info">{{ num_sub }} submitter{{ pl }}</span>
+
+                            {% if state <= config.LIFECYCLE_READY_GOLIVE %}
+                                {% if capacity < num_sel %}
+                                    <span class="label label-danger">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                {% elif capacity < 1.15*num_sel %}
+                                    <span class="label label-warning">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                {% else %}
+                                    <span class="label label-success">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </div>
                 {% endfor %}

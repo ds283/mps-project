@@ -1,0 +1,24 @@
+{% macro selection_open(config) %}
+    <div class="panel panel-success">
+        <div class="panel-heading"><strong>Student choices are currently live</strong></div>
+        <div class="panel-body">
+            <div class="row vertical-align">
+                <div class="col-xs-9">
+                    {% set valid, total = config.count_submitted_students %}
+                    <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
+                        students have valid submissions (<strong>{{ total-valid }}</strong>
+                        remaining).</p>
+                    <p>Finalize student selections</p>
+                </div>
+                <div class="col-xs-3">
+                    <div class="pull-right">
+                        <a href="{{ url_for('convenor.close_selections', id=config.id) }}"
+                           class="btn btn-success">
+                            Close
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}

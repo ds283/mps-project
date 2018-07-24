@@ -1,0 +1,30 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import date_field %}
+
+{% macro golive(pclass, config, golive_form, proj_count) %}
+    <div class="panel panel-danger">
+        <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
+        <div class="panel-body">
+            <form action="{{ url_for('convenor.go_live', pid=pclass.id, configid=config.id) }}" method="POST"
+                  name="golive-form">
+                <div class="row vertical-align">
+                    <div class="col-xs-9">
+                        Freeze project descriptions and open student choices.
+                        {% if proj_count %}
+                            <p>
+                                <strong>{{ proj_count }}</strong> projects are
+                                currently
+                                available to go live.
+                            </p>
+                        {% endif %}
+                    </div>
+                    <div class="col-xs-3">
+                        <div class="pull-right">
+                            {{ date_field(golive_form.live_deadline) }}
+                            {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
+                        </div>
+                    </div>
+            </form>
+        </div>
+    </div>
+{% endmacro %}

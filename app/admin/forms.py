@@ -233,6 +233,28 @@ class OptionalIf(Optional):
             super(OptionalIf, self).__call__(form, field)
 
 
+class NotOptionalIf(Optional):
+    """
+    Makes a field optional if another field is set false
+    """
+
+    def __init__(self, other_field_name, *args, **kwargs):
+
+        self.other_field_name = other_field_name
+        super(NotOptionalIf, self).__init__(*args, **kwargs)
+
+
+    def __call__(self, form, field):
+
+        other_field = form._fields.get(self.other_field_name)
+
+        if other_field is None:
+            return
+
+        if not bool(other_field.data):
+            super(NotOptionalIf, self).__call__(form, field)
+
+
 def GetActiveDegreeTypes():
 
     return DegreeType.query.filter_by(active=True)
@@ -351,12 +373,12 @@ class FacultyDataMixin():
                                      description='If meetings are required before project selection, '
                                                  'confirmation is needed before allowing students to sign up.')
 
-    project_capacity = IntegerField('Default project capacity', default=3,
-                                    description='Default number of students that can be assigned to a project',
-                                    validators=[Optional()])
-
     enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
                                     description='By default, enforce limits on project capacity during assignment')
+
+    project_capacity = IntegerField('Default project capacity',
+                                    description='Default number of students that can be assigned to a project',
+                                    validators=[NotOptionalIf(enforce_capacity)])
 
     show_popularity = BooleanField('Show popularity indicators', default=True,
                                    description='By default, show popularity indicators on project webpages')

@@ -1729,6 +1729,10 @@ class Project(db.Model):
             self.error = "No active research group affiliated with project"
             return False
 
+        if (self.capacity is None or self.capacity == 0) and self.enforce_capacity:
+            self.error = "Capacity is zero or unset, but enforcement is enabled"
+            return False
+
         return True
 
 

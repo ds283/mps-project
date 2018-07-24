@@ -1,7 +1,9 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% from "macros.html" import date_field %}
 
-{% macro issue_confirmations(pclass, issue_form) %}
+{% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
+
+{% macro issue_confirmations(pclass, issue_form, capacity_data, sel_count) %}
     <div class="panel panel-danger">
         <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
         <div class="panel-body">
@@ -18,6 +20,8 @@
                         </div>
                     </div>
                 </div>
+                <hr class="intro-divider">
+                {{ prelive_capacity(capacity_data, sel_count) }}
             </form>
         </div>
     </div>

@@ -30,6 +30,8 @@ from . import convenor
 from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFacultyConfirmRequestForm, \
     SkillSelectorForm
 
+from .actions import compute_capacity_data, dashboard_data
+
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, and_
@@ -128,35 +130,6 @@ _unattached_project_menu = \
 """
 
 
-def _dashboard_data(pclass, config):
-    """
-    Efficiently retrieve statistics needed to render the convenor dashboard
-    :param pclass:
-    :param config:
-    :return:
-    """
-
-    fac_query = db.session.query(func.count(User.id)). \
-        filter(User.active).join(FacultyData, FacultyData.id == User.id)
-
-    fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)).scalar()
-
-    proj_count = db.session.query(func.count(Project.id)) \
-        .filter(Project.project_classes.any(id=pclass.id)).scalar()
-
-    sel_count = db.session.query(func.count(SelectingStudent.id)) \
-        .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
-
-    sub_count = db.session.query(func.count(SubmittingStudent.id)) \
-        .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
-
-    live_count = db.session.query(func.count(LiveProject.id)) \
-        .filter(LiveProject.config_id == config.id).scalar()
-
-    return (fac_count, fac_total), live_count, proj_count, sel_count, sub_count
-
-
 @convenor.route('/overview/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def overview(id):
@@ -194,13 +167,14 @@ def overview(id):
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+    fac_data, live_count, proj_count, sel_count, sub_count = dashboard_data(pclass, config)
+    capacity_data = compute_capacity_data(pclass)
 
     return render_template('convenor/dashboard/overview.html', pane='overview',
                            golive_form=golive_form, issue_form=issue_form,
                            pclass=pclass, config=config, current_year=current_year,
                            fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           live_count=live_count, proj_count=proj_count, capacity_data=capacity_data)
 
 
 @convenor.route('/attached/<int:id>')
@@ -223,7 +197,7 @@ def attached(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+    fac_data, live_count, proj_count, sel_count, sub_count = dashboard_data(pclass, config)
 
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
@@ -299,7 +273,7 @@ def faculty(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+    fac_data, live_count, proj_count, sel_count, sub_count = dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/faculty.html', pane='faculty',
                            pclass=pclass, config=config, current_year=current_year,
@@ -371,7 +345,7 @@ def selectors(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+    fac_data, live_count, proj_count, sel_count, sub_count = dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
@@ -425,7 +399,7 @@ def enroll_selectors(id):
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+    fac_data, live_count, proj_count, sel_count, sub_count = dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/enroll_selectors.html', pane='selectors', subpane='enroll',
                            pclass=pclass, config=config, fac_data=fac_data,
@@ -520,7 +494,7 @@ def submitters(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+    fac_data, live_count, proj_count, sel_count, sub_count = dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/submitters.html', pane='submitters',
                            pclass=pclass, config=config, fac_data=fac_data,
@@ -568,7 +542,7 @@ def liveprojects(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+    fac_data, live_count, proj_count, sel_count, sub_count = dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/liveprojects.html', pane='live', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
@@ -629,7 +603,7 @@ def attach_liveproject(id):
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = _dashboard_data(pclass, config)
+    fac_data, live_count, proj_count, sel_count, sub_count = dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/attach_liveproject.html', pane='live', subpane='attach',
                            pclass=pclass, config=config, fac_data=fac_data,
@@ -895,7 +869,7 @@ def add_project(pclass_id):
             form.show_bookmarks.data = True
             form.show_selections.data = True
 
-            form.capacity.data = 3
+            form.capacity.data = current_app.config['DEFAULT_PROJECT_CAPACITY']
             form.enforce_capacity.data = True
 
     return render_template('faculty/edit_project.html', project_form=form, pclass_id=pclass_id, title='Add new project')
@@ -1201,7 +1175,7 @@ def unattached_ajax():
     if not validate_administrator():
         return jsonify({})
 
-    projects = [(p, None) for p in Project.query.all() if not p.offerable]
+    projects = [(p, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.offerable]
 
     return ajax.project.build_data(projects, _unattached_project_menu)
 

@@ -62,7 +62,7 @@
                     {% set state = config.state %}
                     {% if state == config.LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
 
-                        {{ issue_confirmations(pclass, issue_form) }}
+                        {{ issue_confirmations(pclass, issue_form, capacity_data, sel_count) }}
 
                     {% elif state == config.LIFECYCLE_WAITING_CONFIRMATIONS %}
 

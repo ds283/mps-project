@@ -39,6 +39,8 @@
                             {% elif state == config.LIFECYCLE_SELECTIONS_CLOSED %}
                                 <span class="label label-primary">Selection closed</span>
                                 <span class="label label-success"><i class="fa fa-check"></i> Rollover ready</span>
+                            {% else %}
+                                <span class="label label-danger">Unknown lifecycle state</span>
                             {% endif %}
 
                             {% set n = config.number_selectors %}

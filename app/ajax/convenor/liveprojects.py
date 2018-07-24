@@ -59,7 +59,7 @@ _popularity = \
     {% set rank, total = R %}
     <span class="label label-success">Rank {{ rank }}/{{ total }}</span>
 {% else %}
-    <span class="label label-default">Not available</span>>
+    <span class="label label-default">Not available</span>
 {% endif %}
 """
 

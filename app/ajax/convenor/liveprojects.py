@@ -77,39 +77,90 @@ _menu = \
                 View web page
             </a>
         </li>
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and project.confirm_waiting and project.confirm_waiting.first() %}
+
+        {% if project.number_bookmarks > 0 %}
             <li>
-                <a href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
-                    Confirm all requests
-                </a>
-                <a href="{{ url_for('convenor.project_clear_requests', pid=project.id) }}">
-                    Clear all requests
+                <a href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
+                    Bookmarking students
                 </a>
             </li>
         {% else %}
             <li class="disabled">
-                <a>Confirm all requests</a>
+                <a>Bookmarking students</a>
             </li>
+        {% endif %}
+        
+        {% if project.number_selections > 0 %}
+            <li>
+                <a href="{{ url_for('convenor.project_choices', id=project.id) }}">
+                    Selecting students
+                </a>
+            </li>
+        {% else %}
             <li class="disabled">
-                <a>Clear all requests</a>
+                <a>Selecting students</s>
             </li>
         {% endif %}
 
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and project.confirmed_students and project.confirmed_students.first() %}
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Meeting requests</li>
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and project.number_pending > 0 %}
             <li>
-                <a href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
-                    Remove confirmations
+                <a href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
+                    <i class="fa fa-check"></i> Confirm all requests
                 </a>
-                <a href="{{ url_for('convenor.project_make_all_confirms_pending', pid=project.id) }}">
-                    Make all pending
+                <a href="{{ url_for('convenor.project_clear_requests', pid=project.id) }}">
+                    <i class="fa fa-trash"></i> Delete all requests
                 </a>
             </li>
         {% else %}
             <li class="disabled">
-                <a>Remove confirmations</a>
+                <a>
+                    <i class="fa fa-check"></i> Confirm all requests
+                </a>
             </li>
             <li class="disabled">
-                <a>Make all pending</a>
+                <a>
+                    <i class="fa fa-trash"></i> Delete all requests
+                </a>
+            </li>
+        {% endif %}
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Meeting confirmations</li>
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and project.number_confirmed > 0 %}
+            <li>
+                <a href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
+                    <i class="fa fa-trash"></i> Delete confirmations
+                </a>
+                <a href="{{ url_for('convenor.project_make_all_confirms_pending', pid=project.id) }}">
+                    <i class="fa fa-clock-o"></i> Make all pending
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>
+                    <i class="fa fa-trash"></i> Delete confirmations
+                </a>
+            </li>
+            <li class="disabled">
+                <a>
+                    <i class="fa fa-clock-o"></i> Make all pending
+                </a>
+            </li>
+        {% endif %}
+        
+        {% if project.number_pending > 0 or project.number_confirmed > 0 %}
+            <li>
+                <a href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
+                    <i class="fa fa-pencil"></i> Show confirmations
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>
+                    <i class="fa fa-pencil"></i> Show confirmations
+                </a>
             </li>
         {% endif %}
     </ul>

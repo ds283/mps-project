@@ -440,7 +440,7 @@ def dashboard():
 
         flash('You have {n} project{plural} that {isare} active but cannot be offered to students. '
               'Please check your project list.'.format(n=unofferable, plural=plural, isare=isare),
-              'warning')
+              'error')
 
     # build list of current configuration records for all enrolled project classes
     enrollments = []

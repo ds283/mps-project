@@ -179,7 +179,7 @@ def create_faculty(role):
                            academic_title=form.academic_title.data,
                            use_academic_title=form.use_academic_title.data,
                            sign_off_students=form.sign_off_students.data,
-                           project_capacity=form.project_capacity.data,
+                           project_capacity=form.project_capacity.data if form.enforce_capacity.data else None,
                            enforce_capacity=form.enforce_capacity.data,
                            show_popularity=form.show_popularity.data,
                            CATS_supervision=form.CATS_supervision.data,
@@ -192,6 +192,13 @@ def create_faculty(role):
         db.session.commit()
 
         return redirect(url_for('admin.edit_users'))
+
+    else:
+
+        if request.method == 'GET':
+
+            # dynamically set default project capacity
+            form.project_capacity.data = current_app.config['DEFAULT_PROJECT_CAPACITY']
 
     return render_template('security/register_user.html', user_form=form, role=role,
                            title='Register a new {r} user account'.format(r=role))
@@ -541,7 +548,7 @@ def edit_faculty(id):
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
         data.sign_off_students = form.sign_off_students.data
-        data.project_capacity = form.project_capacity.data
+        data.project_capacity = form.project_capacity.data if form.enforce_capacity.data else None
         data.enforce_capacity = form.enforce_capacity.data
         data.show_popularity = form.show_popularity.data
         data.CATS_supervision = form.CATS_supervision.data
@@ -568,7 +575,15 @@ def edit_faculty(id):
             form.academic_title.data = data.academic_title
             form.use_academic_title.data = data.use_academic_title
             form.sign_off_students.data = data.sign_off_students
+            form.project_capacity.data = data.project_capacity
+            form.enforce_capacity.data = data.enforce_capacity
+            form.show_popularity.data = data.show_popularity
+            form.CATS_supervision.data = data.CATS_supervision
+            form.CATS_marking.data = data.CATS_marking
             form.office.data = data.office
+
+            if form.project_capacity.data is None and form.enforce_capacity.data:
+                form.project_capacity.data = current_app.config['DEFAULT_PROJECT_CAPACITY']
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
 

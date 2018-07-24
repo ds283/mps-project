@@ -53,6 +53,8 @@ class Config(object):
     DATABASE_ROOT_PASSWORD = os.environ.get('DATABASE_ROOT_PASSWORD') or None
     DATABASE_HOSTNAME = os.environ.get('DATABASE_HOSTNAME') or 'localhost'
 
+    DEFAULT_PROJECT_CAPACITY = 2
+
 
 class DevelopmentConfig(Config):
     """

@@ -1,7 +1,9 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% from "macros.html" import date_field %}
 
-{% macro waiting_confirmations(pclass, config, issue_form) %}
+{% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
+
+{% macro waiting_confirmations(pclass, config, issue_form, capacity_data, sel_count) %}
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
         <div class="panel-body">
@@ -47,6 +49,9 @@
                     </thead>
                 </table>
             {% endif %}
+
+            <hr class="intro-divider">
+            {{ prelive_capacity(capacity_data, sel_count) }}
         </div>
     </div>
 {% endmacro %}

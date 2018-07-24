@@ -1,0 +1,16 @@
+{% macro selection_closed(config) %}
+    <div class="panel panel-warning">
+        <div class="panel-heading"><strong>Student choices are now closed</strong></div>
+        <div class="panel-body">
+            <div class="row vertical-align">
+                <div class="col-xs-9">
+                    {% set valid, total = config.count_submitted_students %}
+                    <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
+                        students have valid selections (<strong>{{ total-valid }}</strong> remaining).</p>
+                </div>
+                <div class="col-xs-3">
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}

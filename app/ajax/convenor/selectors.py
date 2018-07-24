@@ -23,63 +23,17 @@ _menu = \
         {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.bookmarks and student.bookmarks.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
-                    <i class="fa fa-trash"></i> Clear bookmarks
+                    <i class="fa fa-trash"></i> Delete bookmarks
                 </a>
             </li>
         {% else %}
             <li class="disabled">
                 <a>
-                    <i class="fa fa-times"></i> Clear bookmarks
+                    <i class="fa fa-trash"></i> Delete bookmarks
                 </a>
             </li>
         {% endif %}
 
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirm_requests and student.confirm_requests.first() %}
-            <li>
-                <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
-                    <i class="fa fa-check"></i> Confirm all requests
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
-                    <i class="fa fa-times"></i> Clear all requests
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-check"></i> Confirm all requests
-                </a>
-            </li>
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-times"></i> Clear all requests
-                </a>
-            </li>
-        {% endif %}
-
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirmed and student.confirmed.first() %}
-            <li>
-                <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
-                    <i class="fa fa-trash"></i> Remove confirmations
-                </a>
-                <a href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
-                    <i class="fa fa-clock-o"></i> Make all pending
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-trash"></i> Remove confirmations
-                </a>
-            </li>
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-clock-o"></i> Make all pending
-                </a>
-            </li>
-        {% endif %}
-        
         {% if student.get_num_bookmarks > 0 %}
             <li>
                 <a href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
@@ -101,6 +55,70 @@ _menu = \
         {% else %}
             <li class="disabled">
                 <a>Show submitted choices</s>
+            </li>
+        {% endif %}
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Meeting requests</li>
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirm_requests and student.confirm_requests.first() %}
+            <li>
+                <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
+                    <i class="fa fa-check"></i> Confirm all requests
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
+                    <i class="fa fa-trash"></i> Delete all requests
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>
+                    <i class="fa fa-check"></i> Confirm all requests
+                </a>
+            </li>
+            <li class="disabled">
+                <a>
+                    <i class="fa fa-trash"></i> Delete all requests
+                </a>
+            </li>
+        {% endif %}
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Meeting confirmations</li>
+        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirmed and student.confirmed.first() %}
+            <li>
+                <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
+                    <i class="fa fa-trash"></i> Delete confirmations
+                </a>
+                <a href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
+                    <i class="fa fa-clock-o"></i> Make all pending
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>
+                    <i class="fa fa-trash"></i> Delete confirmations
+                </a>
+            </li>
+            <li class="disabled">
+                <a>
+                    <i class="fa fa-clock-o"></i> Make all pending
+                </a>
+            </li>
+        {% endif %}
+                
+        {% if student.number_pending > 0 or student.number_confirmed > 0 %}
+            <li>
+                <a href="{{ url_for('convenor.selector_confirmations', id=student.id) }}">
+                    <i class="fa fa-pencil"></i> Show confirmations
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>
+                    <i class="fa fa-pencil"></i> Show confirmations
+                </a>
             </li>
         {% endif %}
     </ul>

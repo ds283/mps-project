@@ -36,7 +36,7 @@
                                             {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.deconfirm_to_pending', sid=student.id, pid=project.id) }}">
-                                                        <i class="fa fa-times"></i> Make pending
+                                                        <i class="fa fa-clock-o"></i> Make pending
                                                     </a>
                                                 </li>
                                                 <li>
@@ -47,7 +47,7 @@
                                             {% else %}
                                                 <li class="disabled">
                                                     <a>
-                                                        <i class="fa fa-times"></i> Make pending
+                                                        <i class="fa fa-clock-o"></i> Make pending
                                                     </a>
                                                 </li>
                                                 <li class="disabled">

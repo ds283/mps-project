@@ -37,7 +37,7 @@ def affiliations():
     """
 
     data = FacultyData.query.get_or_404(current_user.id)
-    research_groups = ResearchGroup.query.all()
+    research_groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name).all()
 
     return render_template('faculty/affiliations.html', user=current_user, data=data, research_groups=research_groups)
 

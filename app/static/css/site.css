@@ -44,6 +44,12 @@ p.copyright {
     font-weight: lighter;
 }
 
+.filter-title {
+    font-size: 20px;
+    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+    font-weight: lighter;
+}
+
 .vertical-align {
     display: flex;
     align-items: center;

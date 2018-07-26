@@ -184,3 +184,56 @@ def get_capacity_data(pclass):
         data.append( (group.make_label(group.name), proj_count, fac_count, enrolled, total, capacity, capacity_bounded) )
 
     return data, total_projects, total_faculty, total_capacity, total_capacity_bounded
+
+
+def filter_projects(plist, groups, skills, getter=None):
+
+    projects = []
+
+    for item in plist:
+
+        if getter is not None:
+            proj = getter(item)
+        else:
+            proj = item
+
+        append = True
+
+        if len(groups) > 0:
+
+            # check if any of the items in the filter list matches this project's group affiliation
+            match = False
+
+            for group in groups:
+                if proj.group_id == group.id:
+                    match = True
+                    break
+
+            # nothing matched, kill append
+            if not match:
+                append = False
+
+        if append and len(skills) > 0:
+
+            # check if any of the items in the skill list matches one of this project's transferable skills
+            match = False
+
+            for skill in skills:
+                inner_match = False
+
+                for sk in proj.skills:
+                    if sk.group_id == skill.id:
+                        inner_match = True
+                        break
+
+                if inner_match:
+                    match = True
+                    break
+
+            if not match:
+                append = False
+
+        if append:
+            projects.append(item)
+
+    return projects

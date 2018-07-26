@@ -168,7 +168,7 @@ _menu = \
 """
 
 
-def liveprojects_data(config):
+def liveprojects_data(config, projects):
 
     data = [{'number': '{c}'.format(c=p.number),
              'name': '<a href="{url}">{name}</a>'.format(name=p.name,
@@ -192,6 +192,6 @@ def liveprojects_data(config):
                  'display': render_template_string(_popularity, project=p),
                  'value': p.popularity_rank[0] if p.popularity_rank is not None else 0
              },
-             'menu': render_template_string(_menu, project=p, config=config)} for p in config.live_projects]
+             'menu': render_template_string(_menu, project=p, config=config)} for p in projects]
 
     return jsonify(data)

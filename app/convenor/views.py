@@ -16,7 +16,8 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
     LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord
 
-from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data
+from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
+    filter_projects
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_submitter, add_liveproject
@@ -197,12 +198,14 @@ def attached(id):
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
-    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    # supply list of transferable skill groups and research groups that can be filtered against
+    groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    skills = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
     return render_template('convenor/dashboard/attached.html', pane='attached',
                            pclass=pclass, config=config, current_year=current_year,
                            fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, groups=groups)
+                           live_count=live_count, proj_count=proj_count, groups=groups, skills=skills)
 
 
 @convenor.route('/attached_ajax/<int:id>', methods=['GET', 'POST'])
@@ -223,8 +226,13 @@ def attached_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
+    # build list of projects attached to this project class
     pq = db.session.query(Project.id, Project.owner_id).filter(Project.project_classes.any(id=id)).subquery()
+
+    # build list of enrollments attached to this project class
     eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
+
+    # pair up projects with the corresponding enrollment records
     jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
 
     # can't find a better way of getting the ORM to construct a tuple of mapped objects here.
@@ -236,14 +244,17 @@ def attached_ajax(id):
     # The ORM implements this as a CROSS JOIN constrained by an INNER JOIN which causes at least MariaDB
     # to fail
 
-    # match original tables to these primary keys
+    # extract list of Project and Enrollment objects
     pq2 = db.session.query(jq.c.pid, Project).join(Project, Project.id == jq.c.pid)
     eq2 = db.session.query(jq.c.pid, EnrollmentRecord).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
 
     ps = [x[1] for x in pq2.all()]
     es = [x[1] for x in eq2.all()]
 
-    return ajax.project.build_data(zip(ps, es), _project_menu, config=config)
+    plist = zip(ps, es)
+    projects = filter_projects(plist, config.group_filters.all(), config.skill_filters.all(), lambda x: x[0])
+
+    return ajax.project.build_data(projects, _project_menu, config=config)
 
 
 @convenor.route('/faculty/<int:id>')
@@ -542,10 +553,15 @@ def liveprojects(id):
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
+    # supply list of transferable skill groups and research groups that can be filtered against
+    groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    skills = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+
     return render_template('convenor/dashboard/liveprojects.html', pane='live', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           live_count=live_count, proj_count=proj_count,
+                           groups=groups, skills=skills)
 
 
 @convenor.route('/liveprojects_ajax/<int:id>', methods=['GET', 'POST'])
@@ -567,7 +583,9 @@ def liveprojects_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    return ajax.convenor.liveprojects_data(config)
+    projects = filter_projects(config.live_projects.all(), config.group_filters.all(), config.skill_filters.all())
+
+    return ajax.convenor.liveprojects_data(config, projects)
 
 
 @convenor.route('/attach_liveproject/<int:id>')
@@ -1681,7 +1699,7 @@ def reset_popularity_data(id):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_convenor(config.project_class):
-        return home_dashboard()
+        return redirect(request.referrer)
 
     title = 'Delete popularity data'
     panel_title = 'Delete selection popularity data for <strong>{name} {yra}&ndash;{yrb}</strong>'\
@@ -1709,7 +1727,7 @@ def perform_reset_popularity_data(id):
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_convenor(config.project_class):
-        return home_dashboard()
+        return redirect(request.referrer)
 
     db.session.query(PopularityRecord).filter_by(config_id=id).delete()
     db.session.commit()
@@ -1796,6 +1814,120 @@ def project_confirmations(id):
 
     # reject user if not entitled to view this dashboard
     if not validate_convenor(proj.config.project_class):
-        return redirect(request.referrer)
+        return home_dashboard()
 
     return render_template('convenor/selector/project_confirmations.html', project=proj)
+
+
+@convenor.route('/add_group_filter/<id>/<gid>')
+@roles_accepted('faculty', 'admin', 'root')
+def add_group_filter(id, gid):
+
+    group = ResearchGroup.query.get_or_404(gid)
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if group not in config.group_filters:
+        config.group_filters.append(group)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/remove_group_filter/<id>/<gid>')
+@roles_accepted('faculty', 'admin', 'root')
+def remove_group_filter(id, gid):
+
+    group = ResearchGroup.query.get_or_404(gid)
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if group in config.group_filters:
+        config.group_filters.remove(group)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/clear_group_filters/<id>')
+@roles_accepted('faculty', 'admin', 'root')
+def clear_group_filters(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    config.group_filters = []
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/add_skill_filter/<id>/<gid>')
+@roles_accepted('faculty', 'admin', 'root')
+def add_skill_filter(id, gid):
+
+    skill = SkillGroup.query.get_or_404(gid)
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if skill not in config.skill_filters:
+        config.skill_filters.append(skill)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/remove_skill_filter/<id>/<gid>')
+@roles_accepted('faculty', 'admin', 'root')
+def remove_skill_filter(id, gid):
+
+    skill = SkillGroup.query.get_or_404(gid)
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if skill in config.skill_filters:
+        config.skill_filters.remove(skill)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/clear_skill_filters/<id>')
+@roles_accepted('faculty', 'admin', 'root')
+def clear_skill_filters(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    config.skill_filters = []
+    db.session.commit()
+
+    return redirect(request.referrer)

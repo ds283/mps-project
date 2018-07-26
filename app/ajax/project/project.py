@@ -86,7 +86,6 @@ _project_skills = \
 
 def build_data(projects, menu_template, config=None):
 
-    # filter list of projects for current user
     data = [{'name': render_template_string(_project_name, project=p),
              'owner': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.email, nm=p.owner.build_name()),
              'status': render_template_string(_project_status, project=p, enrollment=e),

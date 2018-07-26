@@ -145,6 +145,9 @@
                 <h4 class="panel-title">
                     <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseFilter">
                         Filters
+                        {% if config.group_filters.first() or config.skill_filters.first() %}
+                            [active]
+                        {% endif %}
                     </a>
                     <i class="indicator glyphicon glyphicon-chevron-up pull-right"></i>
                 </h4>

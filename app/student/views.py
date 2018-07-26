@@ -19,7 +19,7 @@ from . import student
 from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord
 
-from ..shared.utils import home_dashboard
+from ..shared.utils import home_dashboard, filter_projects
 
 import app.ajax as ajax
 
@@ -172,8 +172,8 @@ def browse_projects(id):
         return redirect(url_for('student.dashboard'))
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    groups = ResearchGroup.query.order_by(ResearchGroup.name.asc()).all()
-    skills = SkillGroup.query.order_by(SkillGroup.name.asc()).all()
+    groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    skills = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
     return render_template('student/browse_projects.html', sel=sel, config=sel.config,
                            groups=groups, skills=skills)
@@ -195,59 +195,18 @@ def projects_ajax(id):
     if not _verify_selector(sel):
         return jsonify({})
 
-    projects = []
-
-    for item in sel.config.live_projects:
-
-        append = True
-
-        if sel.group_filters is not None and sel.group_filters.first() is not None:
-
-            # check if any of the items in the filter list matches this project's group affiliation
-            match = False
-
-            for group in sel.group_filters:
-                if item.group_id == group.id:
-                    match = True
-                    break
-
-            # nothing matched, kill append
-            if not match:
-                append = False
-
-        if append and sel.skill_filters is not None and sel.skill_filters.first() is not None:
-
-            # check if any of the items in the skill list matches one of this project's transferable skills
-            match = False
-
-            for skill in sel.skill_filters:
-                inner_match = False
-
-                for sk in item.skills:
-                    if sk.group_id == skill.id:
-                        inner_match = True
-                        break
-
-                if inner_match:
-                    match = True
-                    break
-
-            if not match:
-                append = False
-
-        if append:
-            projects.append(item)
-
+    projects = filter_projects(sel.config.live_projects.all(),
+                               sel.group_filters().all(), sel.skill_filters.all())
 
     return ajax.student.liveprojects_data(sel, projects)
 
 
-@student.route('/add_group_filter/<int:sel_id>/<int:id>')
+@student.route('/add_group_filter/<id>/<gid>')
 @roles_accepted('student')
-def add_group_filter(sel_id, id):
+def add_group_filter(id, gid):
 
-    group = ResearchGroup.query.get_or_404(id)
-    sel = SelectingStudent.query.get_or_404(sel_id)
+    group = ResearchGroup.query.get_or_404(gid)
+    sel = SelectingStudent.query.get_or_404(id)
 
     if group not in sel.group_filters:
         sel.group_filters.append(group)
@@ -256,12 +215,12 @@ def add_group_filter(sel_id, id):
     return redirect(request.referrer)
 
 
-@student.route('/remove_group_filter/<int:sel_id>/<int:id>')
+@student.route('/remove_group_filter/<id>/<gid>')
 @roles_accepted('student')
-def remove_group_filter(sel_id, id):
+def remove_group_filter(id, gid):
 
-    group = ResearchGroup.query.get_or_404(id)
-    sel = SelectingStudent.query.get_or_404(sel_id)
+    group = ResearchGroup.query.get_or_404(gid)
+    sel = SelectingStudent.query.get_or_404(id)
 
     if group in sel.group_filters:
         sel.group_filters.remove(group)
@@ -270,11 +229,11 @@ def remove_group_filter(sel_id, id):
     return redirect(request.referrer)
 
 
-@student.route('/clear_group_filters/<int:sel_id>')
+@student.route('/clear_group_filters/<id>')
 @roles_accepted('student')
-def clear_group_filters(sel_id):
+def clear_group_filters(id):
 
-    sel = SelectingStudent.query.get_or_404(sel_id)
+    sel = SelectingStudent.query.get_or_404(id)
 
     sel.group_filters = []
     db.session.commit()
@@ -282,26 +241,26 @@ def clear_group_filters(sel_id):
     return redirect(request.referrer)
 
 
-@student.route('/add_skill_filter/<int:sel_id>/<int:id>')
+@student.route('/add_skill_filter/<id>/<gid>')
 @roles_accepted('student')
-def add_skill_filter(sel_id, id):
+def add_skill_filter(id, gid):
 
-    skilll = SkillGroup.query.get_or_404(id)
-    sel = SelectingStudent.query.get_or_404(sel_id)
+    skill = SkillGroup.query.get_or_404(gid)
+    sel = SelectingStudent.query.get_or_404(id)
 
-    if skilll not in sel.skill_filters:
-        sel.skill_filters.append(skilll)
+    if skill not in sel.skill_filters:
+        sel.skill_filters.append(skill)
         db.session.commit()
 
     return redirect(request.referrer)
 
 
-@student.route('/remove_skill_filter/<int:sel_id>/<int:id>')
+@student.route('/remove_skill_filter/<id>/<gid>')
 @roles_accepted('student')
-def remove_skill_filter(sel_id, id):
+def remove_skill_filter(id, gid):
 
-    skill = SkillGroup.query.get_or_404(id)
-    sel = SelectingStudent.query.get_or_404(sel_id)
+    skill = SkillGroup.query.get_or_404(gid)
+    sel = SelectingStudent.query.get_or_404(id)
 
     if skill in sel.skill_filters:
         sel.skill_filters.remove(skill)
@@ -310,11 +269,11 @@ def remove_skill_filter(sel_id, id):
     return redirect(request.referrer)
 
 
-@student.route('/clear_skill_filters/<int:sel_id>')
+@student.route('/clear_skill_filters/<id>')
 @roles_accepted('student')
-def clear_skill_filters(sel_id):
+def clear_skill_filters(id):
 
-    sel = SelectingStudent.query.get_or_404(sel_id)
+    sel = SelectingStudent.query.get_or_404(id)
 
     sel.skill_filters = []
     db.session.commit()

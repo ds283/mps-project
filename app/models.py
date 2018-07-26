@@ -66,14 +66,12 @@ academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs')
 # association table holding mapping from roles to users
 roles_to_users = db.Table('roles_users',
                           db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True),
-                          db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True)
-                          )
+                          db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
 
 # association table giving faculty research group affiliations
 faculty_affiliations = db.Table('faculty_affiliations',
                                 db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
-                                db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
-                                )
+                                db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True))
 
 
 # PROJECT CLASS ASSOCIATIONS
@@ -82,8 +80,7 @@ faculty_affiliations = db.Table('faculty_affiliations',
 # association table giving association between project classes and degree programmes
 pclass_programme_associations = db.Table('project_class_to_programmes',
                                          db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
-                                         db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
-                                         )
+                                         db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
 
 # SYSTEM MESSAGES
@@ -92,22 +89,19 @@ pclass_programme_associations = db.Table('project_class_to_programmes',
 # association between project classes and messages
 pclass_message_associations = db.Table('project_class_to_messages',
                                        db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
-                                       db.Column('message_id', db.Integer(), db.ForeignKey('messages.id'), primary_key=True)
-                                       )
+                                       db.Column('message_id', db.Integer(), db.ForeignKey('messages.id'), primary_key=True))
 
 # associate dismissals with messages
 message_dismissals = db.Table('message_dismissals',
                               db.Column('message_id', db.Integer(), db.ForeignKey('messages.id'), primary_key=True),
-                              db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True)
-                              )
+                              db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
 
 # GO-LIVE CONFIRMATIONS FROM FACULTY
 
 golive_confirmation = db.Table('go_live_confirmation',
                                db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
-                               db.Column('pclass_config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True)
-                               )
+                               db.Column('pclass_config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True))
 
 
 # PROJECT ASSOCIATIONS (NOT LIVE)
@@ -116,26 +110,22 @@ golive_confirmation = db.Table('go_live_confirmation',
 # association table giving association between projects and project classes
 project_classes = db.Table('project_to_classes',
                            db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
-                           db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True)
-                           )
+                           db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
 
 # association table giving association between projects and transferable skills
 project_skills = db.Table('project_to_skills',
                           db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
-                          db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True)
-                          )
+                          db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True))
 
 # association table giving association between projects and degree programmes
 project_programmes = db.Table('project_to_programmes',
                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
-                              db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
-                              )
+                              db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
 # association table giving association between projects and supervision tram
 project_supervision = db.Table('project_to_supervision',
                                db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
-                               db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True)
-                               )
+                               db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
 
 
 # PROJECT ASSOCIATIONS (LIVE)
@@ -144,26 +134,22 @@ project_supervision = db.Table('project_to_supervision',
 # association table giving association between projects and project classes
 live_project_classes = db.Table('live_project_to_classes',
                                 db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True)
-                                )
+                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
 
 # association table giving association between projects and transferable skills
 live_project_skills = db.Table('live_project_to_skills',
                                db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                               db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True)
-                               )
+                               db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True))
 
 # association table giving association between projects and degree programmes
 live_project_programmes = db.Table('live_project_to_programmes',
                                    db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                   db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True)
-                                   )
+                                   db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
 # association table giving association between projects and supervision tram
 live_project_supervision = db.Table('live_project_to_supervision',
                                     db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                    db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True)
-                                    )
+                                    db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
 
 
 # LIVE STUDENT ASSOCIATIONS
@@ -177,23 +163,33 @@ confirmation_requests = db.Table('confirmation_requests',
 # association table: faculty confirmed meetings
 faculty_confirmations = db.Table('faculty_confirmations',
                                  db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                 db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True)
-                                 )
+                                 db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True))
+
+
+# CONVENOR FILTERS
+
+# association table : active research group filters
+conv_group_filter_table = db.Table('conv_group_filters',
+                                   db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
+                                   db.Column('research_group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True))
+
+# assocation table: active skill group filters
+conv_skill_filter_table = db.Table('conv_skill_filters',
+                                   db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
+                                   db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True))
 
 
 # STUDENT FILTERS
 
-# association table: selector research group filters
-group_filter_table = db.Table('group_filters',
-                              db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
-                              db.Column('research_group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True)
-                              )
+# association table: active research group filters for selectors
+sel_group_filter_table = db.Table('sel_group_filters',
+                                  db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
+                                  db.Column('research_group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True))
 
-# association table: selector skill group filters
-skill_filter_table = db.Table('skill_filters',
-                              db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
-                              db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True)
-                              )
+# association table: active skill group filters for selectors
+sel_skill_filter_table = db.Table('sel_skill_filters',
+                                  db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
+                                  db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True))
 
 
 class MainConfig(db.Model):
@@ -1101,17 +1097,14 @@ class ProjectClass(db.Model):
     # colour to use to identify this project
     colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
+
+    # PRACTICAL DATA
+
     # which year does this project class run for?
     year = db.Column(db.Integer(), index=True)
 
     # how many years does the project extend? usually 1, but RP is more
     extent = db.Column(db.Integer())
-
-    # explicitly ask supervisors to confirm projects each year?
-    require_confirm = db.Column(db.Boolean())
-
-    # carry over supervisor in subsequent years?
-    supervisor_carryover = db.Column(db.Boolean())
 
     # how many submissions per year does this project have?
     submissions = db.Column(db.Integer())
@@ -1124,6 +1117,15 @@ class ProjectClass(db.Model):
 
     # is project selection open to all students?
     selection_open_to_all = db.Column(db.Boolean())
+
+
+    # OPTIONS
+
+    # explicitly ask supervisors to confirm projects each year?
+    require_confirm = db.Column(db.Boolean())
+
+    # carry over supervisor in subsequent years?
+    supervisor_carryover = db.Column(db.Boolean())
 
 
     # POPULARITY DISPLAY
@@ -1143,6 +1145,19 @@ class ProjectClass(db.Model):
     # CATS awarded for 2nd marking
     CATS_marking = db.Column(db.Integer())
 
+
+    # AUTOMATED MATCHING
+
+    MATCHING_NONE = 0
+    MATCHING_GLOBAL = 1
+    MATCHING_LOCAL = 2
+
+    # what level of automated student/project/2nd-marker matching does this project use?
+    # does it participate in the global automated matching, or is matching manual?
+    # TODO: matching = db.Column(db.Integer())
+
+    # 2nd marker data
+    # TODO
 
     # PERSONNEL
 
@@ -1311,12 +1326,21 @@ class ProjectClassConfig(db.Model):
     submission_period = db.Column(db.Integer())
 
 
+    # STATE
+
+    # active research group filters
+    group_filters = db.relationship('ResearchGroup', secondary=conv_group_filter_table, lazy='dynamic')
+
+    # active transferable skill group filters
+    skill_filters = db.relationship('SkillGroup', secondary=conv_skill_filter_table, lazy='dynamic')
+
+
     # WORKLOAD MODEL
 
-    # CATS awarded for supervising
+    # CATS awarded for supervising in this year
     CATS_supervision = db.Column(db.Integer())
 
-    # CATS awarded for 2nd marking
+    # CATS awarded for 2nd marking in this year
     CATS_marking = db.Column(db.Integer())
 
 
@@ -2143,11 +2167,11 @@ class SelectingStudent(db.Model):
                                 backref=db.backref('confirmed_students', lazy='dynamic'))
 
     # research group filters applied
-    group_filters = db.relationship('ResearchGroup', secondary=group_filter_table, lazy='dynamic',
+    group_filters = db.relationship('ResearchGroup', secondary=sel_group_filter_table, lazy='dynamic',
                                     backref=db.backref('filtering_students', lazy='dynamic'))
 
     # transferable skill group filters applied
-    skill_filters = db.relationship('SkillGroup', secondary=skill_filter_table, lazy='dynamic',
+    skill_filters = db.relationship('SkillGroup', secondary=sel_skill_filter_table, lazy='dynamic',
                                     backref=db.backref('filtering_students', lazy='dynamic'))
 
 

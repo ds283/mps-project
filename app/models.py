@@ -169,14 +169,14 @@ faculty_confirmations = db.Table('faculty_confirmations',
 # CONVENOR FILTERS
 
 # association table : active research group filters
-conv_group_filter_table = db.Table('conv_group_filters',
-                                   db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
-                                   db.Column('research_group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True))
+convenor_group_filter_table = db.Table('convenor_group_filters',
+                                       db.Column('owner_id', db.Integer(), db.ForeignKey('filters.id'), primary_key=True),
+                                       db.Column('research_group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True))
 
 # assocation table: active skill group filters
-conv_skill_filter_table = db.Table('conv_skill_filters',
-                                   db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
-                                   db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True))
+convenor_skill_filter_table = db.Table('convenor_skill_filters',
+                                       db.Column('owner_id', db.Integer(), db.ForeignKey('filters.id'), primary_key=True),
+                                       db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True))
 
 
 # STUDENT FILTERS
@@ -1324,15 +1324,6 @@ class ProjectClassConfig(db.Model):
 
     # submission period
     submission_period = db.Column(db.Integer())
-
-
-    # STATE
-
-    # active research group filters
-    group_filters = db.relationship('ResearchGroup', secondary=conv_group_filter_table, lazy='dynamic')
-
-    # active transferable skill group filters
-    skill_filters = db.relationship('SkillGroup', secondary=conv_skill_filter_table, lazy='dynamic')
 
 
     # WORKLOAD MODEL
@@ -2770,6 +2761,30 @@ class PopularityRecord(db.Model):
 
     # rank of number of selections
     selections_rank = db.Column(db.Integer())
+
+
+class FilterRecord(db.Model):
+
+    __tablename__ = 'filters'
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # tag with user_id to whom these filters are attached
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship(User, foreign_keys=[user_id], uselist=False)
+
+    # tag with ProjectClassConfig to which these filters are attached
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', foreign_keys=[config_id], uselist=False,
+                             backref=db.backref('filters', lazy='dynamic'))
+
+    # active research group filters
+    group_filters = db.relationship('ResearchGroup', secondary=convenor_group_filter_table, lazy='dynamic')
+
+    # active transferable skill group filters
+    skill_filters = db.relationship('SkillGroup', secondary=convenor_skill_filter_table, lazy='dynamic')
 
 
 

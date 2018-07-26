@@ -14,10 +14,10 @@ from flask_security import roles_accepted, current_user
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
-    PopularityRecord
+    PopularityRecord, FilterRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects
+    filter_projects, get_convenor_filter_record
 from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_submitter, add_liveproject
@@ -202,10 +202,14 @@ def attached(id):
     groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
     skills = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
+    # get filter record
+    filter_record = get_convenor_filter_record(config)
+
     return render_template('convenor/dashboard/attached.html', pane='attached',
                            pclass=pclass, config=config, current_year=current_year,
                            fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, groups=groups, skills=skills)
+                           live_count=live_count, proj_count=proj_count, groups=groups, skills=skills,
+                           filter_record=filter_record)
 
 
 @convenor.route('/attached_ajax/<int:id>', methods=['GET', 'POST'])
@@ -251,8 +255,12 @@ def attached_ajax(id):
     ps = [x[1] for x in pq2.all()]
     es = [x[1] for x in eq2.all()]
 
+    # get FilterRecord for currently logged-in user
+    filter_record = get_convenor_filter_record(config)
+
     plist = zip(ps, es)
-    projects = filter_projects(plist, config.group_filters.all(), config.skill_filters.all(), lambda x: x[0])
+    projects = filter_projects(plist, filter_record.group_filters.all(),
+                               filter_record.skill_filters.all(), lambda x: x[0])
 
     return ajax.project.build_data(projects, _project_menu, config=config)
 
@@ -557,11 +565,14 @@ def liveprojects(id):
     groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
     skills = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
 
+    # get filter record
+    filter_record = get_convenor_filter_record(config)
+
     return render_template('convenor/dashboard/liveprojects.html', pane='live', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count,
-                           groups=groups, skills=skills)
+                           groups=groups, skills=skills, filter_record=filter_record)
 
 
 @convenor.route('/liveprojects_ajax/<int:id>', methods=['GET', 'POST'])
@@ -583,7 +594,11 @@ def liveprojects_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    projects = filter_projects(config.live_projects.all(), config.group_filters.all(), config.skill_filters.all())
+    # get FilterRecord for currently logged-in user
+    filter_record = get_convenor_filter_record(config)
+
+    projects = filter_projects(config.live_projects.all(), filter_record.group_filters.all(),
+                               filter_record.skill_filters.all())
 
     return ajax.convenor.liveprojects_data(config, projects)
 
@@ -1825,15 +1840,15 @@ def add_group_filter(id, gid):
 
     group = ResearchGroup.query.get_or_404(gid)
 
-    # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    # id is a FilterRecord
+    record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(config.project_class):
+    if not validate_convenor(record.config.project_class):
         return redirect(request.referrer)
 
-    if group not in config.group_filters:
-        config.group_filters.append(group)
+    if group not in record.group_filters:
+        record.group_filters.append(group)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -1845,15 +1860,15 @@ def remove_group_filter(id, gid):
 
     group = ResearchGroup.query.get_or_404(gid)
 
-    # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    # id is a FilterRecord
+    record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(config.project_class):
+    if not validate_convenor(record.config.project_class):
         return redirect(request.referrer)
 
-    if group in config.group_filters:
-        config.group_filters.remove(group)
+    if group in record.group_filters:
+        record.group_filters.remove(group)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -1863,14 +1878,14 @@ def remove_group_filter(id, gid):
 @roles_accepted('faculty', 'admin', 'root')
 def clear_group_filters(id):
 
-    # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    # id is a FilterRecord
+    record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(config.project_class):
+    if not validate_convenor(record.config.project_class):
         return redirect(request.referrer)
 
-    config.group_filters = []
+    record.group_filters = []
     db.session.commit()
 
     return redirect(request.referrer)
@@ -1882,15 +1897,15 @@ def add_skill_filter(id, gid):
 
     skill = SkillGroup.query.get_or_404(gid)
 
-    # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    # id is a FilterRecord
+    record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(config.project_class):
+    if not validate_convenor(record.config.project_class):
         return redirect(request.referrer)
 
-    if skill not in config.skill_filters:
-        config.skill_filters.append(skill)
+    if skill not in record.skill_filters:
+        record.skill_filters.append(skill)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -1902,15 +1917,15 @@ def remove_skill_filter(id, gid):
 
     skill = SkillGroup.query.get_or_404(gid)
 
-    # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    # id is a FilterRecord
+    record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(config.project_class):
+    if not validate_convenor(record.config.project_class):
         return redirect(request.referrer)
 
-    if skill in config.skill_filters:
-        config.skill_filters.remove(skill)
+    if skill in record.skill_filters:
+        record.skill_filters.remove(skill)
         db.session.commit()
 
     return redirect(request.referrer)
@@ -1920,14 +1935,14 @@ def remove_skill_filter(id, gid):
 @roles_accepted('faculty', 'admin', 'root')
 def clear_skill_filters(id):
 
-    # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    # id is a FilterRecord
+    record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(config.project_class):
+    if not validate_convenor(record.config.project_class):
         return redirect(request.referrer)
 
-    config.skill_filters = []
+    record.skill_filters = []
     db.session.commit()
 
     return redirect(request.referrer)

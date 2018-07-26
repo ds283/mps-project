@@ -55,7 +55,7 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {{ filter_block(config, groups, skills, 'convenor.clear_group_filters', 'convenor.add_group_filter', 'convenor.remove_group_filter', 'convenor.clear_skill_filters', 'convenor.add_skill_filter', 'convenor.remove_skill_filter') }}
+    {{ filter_block(filter_record, groups, skills, 'convenor.clear_group_filters', 'convenor.add_group_filter', 'convenor.remove_group_filter', 'convenor.clear_skill_filters', 'convenor.add_skill_filter', 'convenor.remove_skill_filter') }}
 
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Projects attached to <strong>{{ pclass.name }}</strong></div>

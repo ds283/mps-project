@@ -13,7 +13,7 @@ from flask import redirect, url_for, flash
 from flask_security import current_user
 
 from app.models import db, MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
-    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject
+    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord
 
 from sqlalchemy import func
 
@@ -237,3 +237,17 @@ def filter_projects(plist, groups, skills, getter=None):
             projects.append(item)
 
     return projects
+
+
+def get_convenor_filter_record(config):
+
+    # extract FilterRecord for the logged-in user, if one exists
+    record = config.filters.filter_by(user_id=current_user.id).first()
+
+    if record is None:
+        record = FilterRecord(user_id=current_user.id,
+                              config_id=config.id)
+        db.session.add(record)
+        db.session.commit()
+
+    return record

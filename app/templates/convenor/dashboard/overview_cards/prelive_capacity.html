@@ -35,8 +35,8 @@
         <hr class="into-divider">
         <div class="row vertical-align capacity-table">
             <div class="col-xs-5"></div>
-            <div class="col-xs-2"><strong>{{ total_projects }}</strong></div>
-            <div class="col-xs-2">{% if not total_capacity_bounded %}>= {% endif %}<strong>{{ total_capacity }}</strong></div>
+            <div class="col-xs-2"><span class="label label-primary">{{ total_projects }}</span></div>
+            <div class="col-xs-2">{% if not total_capacity_bounded %}>= {% endif %}<span class="label label-primary">{{ total_capacity }}</span></div>
         </div>
         <hr class="intro-divider">
         {% if total_capacity < sel_count %}
@@ -56,6 +56,9 @@
             {% if total_faculty >= sel_count %}
                 <div class="alert alert-info">
                     Approximate allocation is less than one project per faculty member.
+                    <p>
+                        <strong>Warning.</strong> This estimate does not account for constraints.
+                    </p>
                 </div>
             {% else %}
                 {% set alloc = sel_count / total_faculty %}
@@ -64,6 +67,9 @@
                 <div class="alert alert-info">
                     Approximate allocation is between {{ alloc_lo }} and {{ alloc_hi }}
                     projects per faculty member.
+                    <p>
+                        <strong>Warning.</strong> This estimate does not account for constraints.
+                    </p>
                 </div>
             {% endif %}
         {% endif %}

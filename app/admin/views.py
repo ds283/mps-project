@@ -18,6 +18,7 @@ from flask_security.signals import user_registered
 
 from celery import chain, group
 
+from app.shared.validators import validate_is_admin_or_convenor
 from .actions import register_user
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
@@ -35,7 +36,7 @@ from .forms import RoleSelectForm, \
     EditBackupOptionsForm, BackupManageForm, \
     AddRoleForm, EditRoleForm
 
-from ..models import db, MainConfig, User, Role, FacultyData, StudentData, ResearchGroup,\
+from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role
@@ -43,7 +44,7 @@ from ..models import db, MainConfig, User, Role, FacultyData, StudentData, Resea
 from ..shared.utils import get_main_config, get_current_year, home_dashboard
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
-from ..shared.validators import validate_convenor
+from ..shared.validators import validate_is_convenor
 
 from ..task_queue import register_task
 
@@ -65,17 +66,6 @@ _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
 
 
-def _check_admin_or_convenor():
-    if current_user.has_role('admin') or current_user.has_role('root'):
-        return True
-
-    if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.first() is not None:
-        return True
-
-    flash('This operation is only available to administrative users and project class convenors')
-    return False
-
-
 @admin.route('/create_user', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root')
 def create_user():
@@ -85,8 +75,8 @@ def create_user():
 
     # check whether any active degree programmes exist, and raise an error if not
     if not DegreeProgramme.query.filter_by(active=True).first():
-        flash(
-            'No degree programmes are available. Set up at least one active degree programme before adding new users.')
+        flash('No degree programmes are available. ' \
+            'Set up at least one active degree programme before adding new users.')
         return redirect(request.referrer)
 
     # first task is to capture the user role
@@ -683,7 +673,7 @@ def edit_enrollment(id, returnid):
     # check logged-in user is administrator or a convenor for the project
     record = EnrollmentRecord.query.get_or_404(id)
 
-    if not validate_convenor(record.pclass):
+    if not validate_is_convenor(record.pclass):
         return redirect(request.referrer)
 
     form = EnrollmentRecordForm(obj=record)
@@ -1139,7 +1129,7 @@ def edit_skills():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     return render_template('admin/transferable_skills/edit_skills.html', subpane='skills')
@@ -1153,7 +1143,7 @@ def skills_ajax():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return jsonify({})
 
     skills = TransferableSkill.query.all()
@@ -1168,7 +1158,7 @@ def add_skill():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     # check whether any skill groups exist, and raise an error if not
@@ -1203,7 +1193,7 @@ def edit_skill(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
@@ -1234,7 +1224,7 @@ def activate_skill(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
@@ -1253,7 +1243,7 @@ def deactivate_skill(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
@@ -1271,7 +1261,7 @@ def edit_skill_groups():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     return render_template('admin/transferable_skills/edit_skill_groups.html', subpane='groups')
@@ -1285,7 +1275,7 @@ def skill_groups_ajax():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return jsonify({})
 
     groups = SkillGroup.query.all()
@@ -1300,7 +1290,7 @@ def add_skill_group():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     form = AddSkillGroupForm(request.form)
@@ -1329,7 +1319,7 @@ def edit_skill_group(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     group = SkillGroup.query.get_or_404(id)
@@ -1361,7 +1351,7 @@ def activate_skill_group(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     group = SkillGroup.query.get_or_404(id)
@@ -1380,7 +1370,7 @@ def deactivate_skill_group(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     group = SkillGroup.query.get_or_404(id)
@@ -1597,7 +1587,7 @@ def add_supervisor():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     form = AddSupervisorForm(request.form)
@@ -1624,7 +1614,7 @@ def edit_supervisor(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
@@ -1654,7 +1644,7 @@ def activate_supervisor(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
@@ -1673,7 +1663,7 @@ def deactivate_supervisor(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
@@ -2021,7 +2011,7 @@ def edit_messages():
     Edit message-of-the-day type messages
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     return render_template('admin/edit_messages.html')
@@ -2035,7 +2025,7 @@ def messages_ajax():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return jsonify({})
 
     if current_user.has_role('admin') or current_user.has_role('root'):
@@ -2059,7 +2049,7 @@ def add_message():
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     # convenors can't show login-screen messages
@@ -2101,7 +2091,7 @@ def edit_message(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     data = MessageOfTheDay.query.get_or_404(id)
@@ -2150,7 +2140,7 @@ def delete_message(id):
     :return:
     """
 
-    if not _check_admin_or_convenor():
+    if not validate_is_admin_or_convenor():
         return home_dashboard()
 
     data = MessageOfTheDay.query.get_or_404(id)

@@ -101,8 +101,8 @@
                         <div class="row vertical-align">
                             <div class="col-xs-6">
                                 Convenor:
-                                <a class="btn btn-link" href="mailto:{{ pclass.convenor.email }}">
-                                    {{ pclass.convenor.build_name() }}
+                                <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
+                                    {{ pclass.convenor_name }}
                                 </a>
                             </div>
                             <div class="col-xs-6">
@@ -167,9 +167,9 @@
                                 {% for pclass in pclasses %}
                                     <tr>
                                         <td>{{ pclass.name }}</td>
-                                        <td>{{ pclass.convenor.build_name() }}
-                                            <a href="mailto:{{ pclass.convenor.email }}">
-                                                {{ pclass.convenor.email }}
+                                        <td>{{ pclass.convenor_name }}
+                                            <a href="mailto:{{ pclass.convenor_email }}">
+                                                {{ pclass.convenor_email }}
                                             </a>
                                         </td>
                                     </tr>

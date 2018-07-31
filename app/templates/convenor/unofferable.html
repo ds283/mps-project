@@ -18,7 +18,7 @@
             $('#unattached-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/convenor/unattached_ajax', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/convenor/unofferable_ajax', dataSrc: '' },
                 columns: [
                     { data: 'name' },
                     { data: 'owner' },
@@ -41,7 +41,7 @@
 
 {% block bodyblock %}
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Unattached projects</div>
+        <div class="panel-heading">Unofferable projects</div>
         <div class="panel-body">
         <table id="unattached-table" class="table table-striped table-bordered">
             <thead>

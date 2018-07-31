@@ -15,7 +15,7 @@
                 <div class="panel-body email-display">
                     <p>To:
                         {% if email.user %}
-                            <strong>{{ email.user.build_name() }}</strong> &lt;{{ email.user.email }}&gt;</p>
+                            <strong>{{ email.user.name }}</strong> &lt;{{ email.user.email }}&gt;</p>
                         {% elif email.recipient %}
                             <strong>{{ email.recipient }}</strong>
                         {% else %}

@@ -18,7 +18,7 @@ from wtforms import StringField, IntegerField, SelectField, PasswordField, Boole
 from wtforms.validators import DataRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
-from ..models import User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
+from ..models import db, User, Role, FacultyData, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
     ProjectClass, Supervisor, BackupConfiguration, EnrollmentRecord, SkillGroup, \
     submission_choices, academic_titles, extent_choices, year_choices
 
@@ -277,12 +277,28 @@ def BuildDegreeProgrammeName(programme):
 
 def GetActiveFaculty():
 
-    return User.query.filter(User.active, User.roles.any(Role.name == 'faculty')).order_by(User.last_name, User.first_name)
+    return db.session.query(User) \
+            .filter(User.active) \
+            .join(FacultyData, FacultyData.id == User.id) \
+            .order_by(User.last_name, User.first_name)
+
+
+def GetPossibleConvenors():
+
+    return db.session.query(FacultyData) \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active) \
+            .order_by(User.last_name, User.first_name)
 
 
 def BuildUserRealName(user):
 
-    return user.build_name_and_username()
+    return user.name_and_username
+
+
+def BuildConvenorRealName(facdata):
+
+    return facdata.user.name_and_username
 
 
 def GetAllProjectClasses():
@@ -586,14 +602,16 @@ class ProjectClassMixin():
                      (8, '8 weeks')]
     keep_daily_popularity = SelectField('Keep daily popularity data for', choices=daily_choices, coerce=int)
 
-    convenor = QuerySelectField('Convenor', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
+    convenor = QuerySelectField('Convenor', query_factory=GetPossibleConvenors, get_label=BuildConvenorRealName)
 
     selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',
                                          description='Not normally required, but use for Research Placement projects')
 
-    programmes = CheckboxQuerySelectMultipleField('Auto-enroll students from degree programmes', query_factory=GetActiveDegreeProgrammes,
+    programmes = CheckboxQuerySelectMultipleField('Auto-enroll students from degree programmes',
+                                                  query_factory=GetActiveDegreeProgrammes,
                                                   get_label=BuildDegreeProgrammeName,
-                                                  validators=[DataRequired(message='At least one degree programme should be selected')])
+                                                  validators=[DataRequired(
+                                                      message='At least one degree programme should be selected')])
 
 
 class AddProjectClassForm(Form, ProjectClassMixin):

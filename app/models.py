@@ -82,6 +82,11 @@ pclass_programme_associations = db.Table('project_class_to_programmes',
                                          db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
                                          db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
+# association table giving co-convenors for a project class
+pclass_coconvenors = db.Table('project_class_coconvenors',
+                              db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
+                              db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
 
 # SYSTEM MESSAGES
 
@@ -257,7 +262,8 @@ class User(db.Model, UserMixin):
 
 
     # build a name for this user
-    def build_name(self):
+    @property
+    def name(self):
 
         prefix = ''
 
@@ -273,52 +279,10 @@ class User(db.Model, UserMixin):
         return prefix + self.first_name + ' ' + self.last_name
 
 
-    def build_name_and_username(self):
+    @property
+    def name_and_username(self):
 
-        return self.build_name() + ' (' + self.username + ')'
-
-
-    def add_convenorship(self, pclass):
-        """
-        Set up this user (assumed to be linked to a FacultyData record) for the convenorship
-        of the given project class. Currently empty.
-        :param pclass:
-        :return:
-        """
-
-        flash('Installed {name} as convenor of {title}'.format(name=self.build_name(), title=pclass.name))
-
-
-    def remove_convenorship(self, pclass):
-        """
-        Remove the convenorship of the given project class from this user
-        :param pclass:
-        :return:
-        """
-
-        # currently our only task is to remove system messages emplaced by this user in their role as convenor
-
-        for item in MessageOfTheDay.query.filter_by(user_id=self.id).all():
-
-            # if no assigned classes then this is a broadcast message; move on
-            # (we can assume the user is still an administrator)
-            if item.project_classes.first() is None:
-
-                break
-
-            # otherwise, remove this project class from the classes associated with this
-            if pclass in item.project_classes:
-
-                item.project_classes.remove(pclass)
-
-                # if assigned project classes are now empty then delete the parent message
-                if item.project_classes.first() is None:
-
-                    db.session.delete(item)
-
-        db.session.commit()
-
-        flash('Removed {name} as convenor of {title}'.format(name=self.build_name(), title=pclass.name))
+        return self.name + ' (' + self.username + ')'
 
 
     def post_task_update(self, uuid, payload, remove_on_load=False, autocommit=False):
@@ -714,6 +678,73 @@ class FacultyData(db.Model):
     def get_enrollment_record(self, pclass):
 
         return self.enrollments.filter_by(pclass_id=pclass.id).first()
+
+
+    @property
+    def is_convenor(self):
+        """
+        Determine whether this faculty member is convenor for any projects
+        :return:
+        """
+
+        if self.convenor_for is not None and self.convenor_for.first() is not None:
+            return True
+
+        if self.coconvenor_for is not None and self.coconvenor_for.first() is not None:
+            return True
+
+
+    @property
+    def convenor_list(self):
+        """
+        Return list of projects for which this faculty member is a convenor
+        :return:
+        """
+
+        pcls = self.convenor_for.all() + self.coconvenor_for.all()
+        return set(pcls)
+
+
+    def add_convenorship(self, pclass):
+        """
+        Set up this user faculty member for the convenorship of the given project class. Currently empty.
+        :param pclass:
+        :return:
+        """
+
+        flash('Installed {name} as convenor of {title}'.format(name=self.name, title=pclass.name))
+
+
+    def remove_convenorship(self, pclass):
+        """
+        Remove the convenorship of the given project class from this user
+        :param pclass:
+        :return:
+        """
+
+        # currently our only task is to remove system messages emplaced by this user in their role as convenor
+
+        for item in MessageOfTheDay.query.filter_by(user_id=self.id).all():
+
+            # if no assigned classes then this is a broadcast message; move on
+            # (we can assume the user is still an administrator)
+            if item.project_classes.first() is None:
+
+                break
+
+            # otherwise, remove this project class from the classes associated with this
+            if pclass in item.project_classes:
+
+                item.project_classes.remove(pclass)
+
+                # if assigned project classes are now empty then delete the parent message
+                if item.project_classes.first() is None:
+
+                    db.session.delete(item)
+
+        db.session.commit()
+
+        flash('Removed {name} as convenor of {title}'.format(name=self.name, title=pclass.name))
 
 
 class StudentData(db.Model):
@@ -1161,12 +1192,18 @@ class ProjectClass(db.Model):
 
     # PERSONNEL
 
-    # project convenor; must be a faculty member, so might be pereferable to link to faculty_data table,
-    # but to generate eg. tables we will need to extract usernames and emails
-    # For that purpose, it's better to link to the User table directly
-    convenor_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
-    convenor = db.relationship('User', foreign_keys=[convenor_id],
+    # principal project convenor. Must be a faculty member, so we link to faculty_data table
+    convenor_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
+    convenor = db.relationship('FacultyData', foreign_keys=[convenor_id],
                                backref=db.backref('convenor_for', lazy='dynamic'))
+
+    # project co-convenors
+    # co-convenors are similar to convenors, except that the principal convenor is always the
+    # displayed contact point.
+    # co-convenors could eg. be old convenors who are able to help out during a transition period
+    # between convenors
+    coconvenors = db.relationship('FacultyData', secondary=pclass_coconvenors, lazy='dynamic',
+                                   backref=db.backref('coconvenor_for', lazy='dynamic'))
 
     # associate this project class with a set of degree programmes
     programmes = db.relationship('DegreeProgramme', secondary=pclass_programme_associations, lazy='dynamic',
@@ -1224,6 +1261,29 @@ class ProjectClass(db.Model):
             return False
 
         return True
+
+
+    @property
+    def convenor_email(self):
+
+        return self.convenor.user.email
+
+
+    @property
+    def convenor_name(self):
+
+        return self.convenor.user.name
+
+
+    def is_convenor(self, id):
+
+        if self.convenor_id == id:
+            return True
+
+        if any([self.coconvenors.id == id]):
+            return True
+
+        return False
 
 
     def make_CSS_style(self):
@@ -1438,6 +1498,24 @@ class ProjectClassConfig(db.Model):
                 count += 1
 
         return count, total_students
+
+
+    @property
+    def convenor_email(self):
+
+        if self.convenor is not None and self.convenor.user is not None:
+            return self.convenor.user.email
+        else:
+            raise RuntimeError('convenor not set')
+
+
+    @property
+    def convenor_name(self):
+
+        if self.convenor is not None and self.convenor.user is not None:
+            return self.convenor.user.name
+        else:
+            raise RuntimeError('convenor not set')
 
 
     def generate_golive_requests(self):

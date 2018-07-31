@@ -174,7 +174,7 @@ def liveprojects_data(config, projects):
              'name': '<a href="{url}">{name}</a>'.format(name=p.name,
                                                          url=url_for('faculty.live_project', pid=p.id)),
              'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.email,
-                                                                name=p.owner.build_name()),
+                                                                name=p.owner.name),
              'group': p.group.make_label(),
              'bookmarks': {
                  'display': render_template_string(_bookmarks, project=p),

@@ -31,8 +31,8 @@
                     <div class="col-xs-6">
                         <a class="btn {% if style %}btn-default{% else %}btn-info{% endif %} btn-table-block"
                            {% if style %}style="{{ style }}"{% endif %}
-                           href="mailto:{{ pclass.convenor.email }}">
-                            {{ pclass.name }} ({{ pclass.convenor.build_name() }})
+                           href="mailto:{{ pclass.convenor_email }}">
+                            {{ pclass.name }} ({{ pclass.convenor_name }})
                         </a>
                     </div>
                     <div class="col-xs-3">
@@ -77,8 +77,8 @@
                 <h3>
                     {% for pclass in current_user.get_project_classes() %}
                         {% if not data.is_enrolled(pclass) %}
-                            <a class="btn btn-default btn-table-block" href="mailto:{{ pclass.convenor.email }}">
-                                {{ pclass.name }} ({{ pclass.convenor.build_name() }})
+                            <a class="btn btn-default btn-table-block" href="mailto:{{ pclass.convenor_email }}">
+                                {{ pclass.name }} ({{ pclass.convenor_name }})
                             </a>
                         {% endif %}
                     {% endfor %}
@@ -89,8 +89,8 @@
             The available classes are:</p>
             <h3>
                 {% for pclass in project_classes %}
-                    <a class="btn btn-default btn-table-block" href="mailto:{{ pclass.convenor.email }}">
-                        {{ pclass.name }} ({{ pclass.convenor.build_name() }})
+                    <a class="btn btn-default btn-table-block" href="mailto:{{ pclass.convenor_email }}">
+                        {{ pclass.name }} ({{ pclass.convenor_name }})
                     </a>
                 {% endfor %}
             </h3>

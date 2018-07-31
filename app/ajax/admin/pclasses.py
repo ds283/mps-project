@@ -82,8 +82,8 @@ _popularity = \
 _convenor = \
 """
 {% set style = p.make_CSS_style() %}
-<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor.email }}">
-    {{ p.convenor.build_name() }}
+<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
+    {{ p.convenor_name }}
 </a>
 """
 

@@ -22,7 +22,7 @@
                 </div>
                 <div class="col-xs-3">
                     <a href="mailto:{{ project.owner.email }}">
-                        {{ project.owner.build_name() }}
+                        {{ project.owner.name }}
                     </a>
                 </div>
             </div>
@@ -42,7 +42,7 @@
         {% for item in list %}
             <div class="row vertical-align bookmark-table">
                 <div class="col-xs-5">
-                    {{ item.user.user.build_name() }}
+                    {{ item.user.user.name }}
                 </div>
                 <div class="col-xs-1">
                     <span class="label label-success">#{{ item.rank }}</span>
@@ -82,7 +82,7 @@
         {% for item in list %}
             <div class="row vertical-align bookmark-table">
                 <div class="col-xs-5">
-                    {{ item.user.user.build_name() }}
+                    {{ item.user.user.name }}
                 </div>
                 <div class="col-xs-1">
                     <span class="label label-success">#{{ item.rank }}</span>
@@ -123,7 +123,7 @@
                     </div>
                     <div class="col-xs-3">
                         <a href="mailto:{{ project.owner.email }}">
-                            {{ project.owner.build_name() }}
+                            {{ project.owner.name }}
                         </a>
                     </div>
                 </div>

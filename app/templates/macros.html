@@ -14,7 +14,7 @@
             <div class="panel-body">
                 {% if item.created_by %}
                     <p>
-                        Created by {{ item.created_by.build_name_and_username() }}
+                        Created by {{ item.created_by.name_and_username }}
                         {% if item.creation_timestamp %}
                             on {{ item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                         {% endif %}
@@ -22,7 +22,7 @@
                 {% endif %}
                 {% if item.last_edited_by %}
                     <p>
-                        Last edited by {{ item.last_edited_by.build_name_and_username() }}
+                        Last edited by {{ item.last_edited_by.name_and_username }}
                         {% if item.last_edit_timestamp %}
                             on {{ item.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                         {% endif %}
@@ -61,7 +61,7 @@
         <hr class="intro-divider">
         <div class="row">
             <div class="col-xs-9">
-                Posted by <a href="mailto:{{ message.user.email }}">{{ message.user.build_name() }}</a>
+                Posted by <a href="mailto:{{ message.user.email }}">{{ message.user.name }}</a>
                 on {{ message.issue_date.strftime("%a %d %b %Y %H:%M:%S") }}
             </div>
             <div class="col-xs-3">

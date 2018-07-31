@@ -85,6 +85,11 @@ _convenor = \
 <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
     {{ p.convenor_name }}
 </a>
+{% for fac in p.coconvenors %}
+    <a class="label label-default" href="mailto:{{ fac.user.email }}">
+        {{ fac.user.name }}
+    </a>
+{% endfor %}
 """
 
 

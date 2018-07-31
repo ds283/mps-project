@@ -51,10 +51,16 @@
 
         {{ colour_field(pclass_form.colour, 'colour-group') }}
 
-        {{ wtf.form_field(pclass_form.convenor) }}
+        <div class="well">
+            {{ wtf.form_field(pclass_form.convenor) }}
+            {{ wtf.form_field(pclass_form.coconvenors) }}
+        </div>
 
-        {{ wtf.form_field(pclass_form.require_confirm) }}
-        {{ wtf.form_field(pclass_form.supervisor_carryover) }}
+        <div class="well">
+            <p>Options</p>
+            {{ wtf.form_field(pclass_form.require_confirm) }}
+            {{ wtf.form_field(pclass_form.supervisor_carryover) }}
+        </div>
 
         <div class="well {% if pclass_form.programmes.errors %}has-error{% endif %}">
             <p>Select degree programmes to which this project class applies</p>

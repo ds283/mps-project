@@ -11,12 +11,12 @@
 from flask import request, current_app
 from flask_security import current_user
 from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, get_form_field_label
-from flask_security.forms import password_required, password_length, email_required, email_validator, EqualTo
+from flask_security.forms import password_length, email_required, email_validator, EqualTo
 from werkzeug.local import LocalProxy
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
     TextAreaField, ValidationError, DateTimeField, FloatField, RadioField
 from wtforms.validators import DataRequired, Optional
-from wtforms_alchemy.fields import QuerySelectField
+from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..models import db, User, Role, FacultyData, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
     ProjectClass, Supervisor, BackupConfiguration, EnrollmentRecord, SkillGroup, \
@@ -603,6 +603,14 @@ class ProjectClassMixin():
     keep_daily_popularity = SelectField('Keep daily popularity data for', choices=daily_choices, coerce=int)
 
     convenor = QuerySelectField('Convenor', query_factory=GetPossibleConvenors, get_label=BuildConvenorRealName)
+
+    coconvenors = QuerySelectMultipleField('Co-convenors', query_factory=GetPossibleConvenors,
+                                           get_label=BuildConvenorRealName,
+                                           description='Co-convenors have the same administrative privileges '
+                                                       'as convenors, but are not identified to students. '
+                                                       'For example, they might be previous convenors who are '
+                                                       'assisting with administration.',
+                                           validators=[Optional()])
 
     selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',
                                          description='Not normally required, but use for Research Placement projects')

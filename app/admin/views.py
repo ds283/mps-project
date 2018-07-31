@@ -1420,6 +1420,11 @@ def add_pclass():
 
     if form.validate_on_submit():
 
+        # make sure convenor and coconvenors don't have overlap
+        coconvenors = form.coconvenors.data
+        if form.convenor.data in coconvenors:
+            coconvenors.remove(form.convenor.data)
+
         # insert a record for this project class
         data = ProjectClass(name=form.name.data,
                             abbreviation=form.abbreviation.data,
@@ -1430,6 +1435,7 @@ def add_pclass():
                             supervisor_carryover=form.supervisor_carryover.data,
                             submissions=form.submissions.data,
                             convenor=form.convenor.data,
+                            coconvenors=coconvenors,
                             selection_open_to_all=form.selection_open_to_all.data,
                             programmes=form.programmes.data,
                             initial_choices=form.initial_choices.data,
@@ -1491,6 +1497,11 @@ def edit_pclass(id):
 
     if form.validate_on_submit():
 
+        # make sure convenor and coconvenors don't have overlap
+        coconvenors = form.coconvenors.data
+        if form.convenor.data in coconvenors:
+            coconvenors.remove(form.convenor.data)
+
         data.name = form.name.data
         data.abbreviation = form.abbreviation.data
         data.year = form.year.data
@@ -1500,6 +1511,7 @@ def edit_pclass(id):
         data.supervisor_carryover = form.supervisor_carryover.data
         data.submissions = form.submissions.data
         data.convenor = form.convenor.data
+        data.coconvenors = coconvenors
         data.selection_open_to_all = form.selection_open_to_all.data
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data

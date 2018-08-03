@@ -56,7 +56,7 @@ def validate_edit_project(project):
     if project.owner_id != current_user.id \
             and not current_user.has_role('admin') \
             and not current_user.has_role('root') \
-            and not any([project.project_classes.is_convenor(current_user.id)]):
+            and not any([item.is_convenor(current_user.id) for item in project.project_classes]):
 
         flash('This project belongs to another user. To edit it, you must be a suitable convenor or an administrator.')
         return False

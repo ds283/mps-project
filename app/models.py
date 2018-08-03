@@ -1280,7 +1280,7 @@ class ProjectClass(db.Model):
         if self.convenor_id == id:
             return True
 
-        if any([self.coconvenors.id == id]):
+        if any([item.id == id for item in self.coconvenors]):
             return True
 
         return False

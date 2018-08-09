@@ -693,6 +693,8 @@ class FacultyData(db.Model):
         if self.coconvenor_for is not None and self.coconvenor_for.first() is not None:
             return True
 
+        return False
+
 
     @property
     def convenor_list(self):

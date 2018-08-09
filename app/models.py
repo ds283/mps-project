@@ -127,10 +127,15 @@ project_programmes = db.Table('project_to_programmes',
                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                               db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
-# association table giving association between projects and supervision tram
+# association table giving association between projects and supervision team
 project_supervision = db.Table('project_to_supervision',
                                db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                                db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
+
+# association table giving 2nd markers
+second_markers = db.Table('project_to_markers',
+                          db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                          db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
 
 # PROJECT ASSOCIATIONS (LIVE)
@@ -155,6 +160,11 @@ live_project_programmes = db.Table('live_project_to_programmes',
 live_project_supervision = db.Table('live_project_to_supervision',
                                     db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                                     db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
+
+# association table giving 2nd markers
+live_second_markers = db.Table('live_project_to_markers',
+                               db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                               db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
 
 # LIVE STUDENT ASSOCIATIONS
@@ -1693,23 +1703,30 @@ class Project(db.Model):
     # make table name plural
     __tablename__ = "projects"
 
+    # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
+    # project name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
-    active = db.Column(db.Boolean())
 
-    # free keywords describing scientific area
-    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    # active flag
+    active = db.Column(db.Boolean())
 
     # which faculty member owns this project?
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
     owner = db.relationship('User', foreign_keys=[owner_id], backref=db.backref('projects', lazy='dynamic'))
 
+
+    # TAGS AND METADATA
+
+    # free keywords describing scientific area
+    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
     # which research group is associated with this project?
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
     group = db.relationship('ResearchGroup', backref=db.backref('projects', lazy='dynamic'))
 
-    # which project class are associated with this project?
+    # which project classes are associated with this project?
     project_classes = db.relationship('ProjectClass', secondary=project_classes, lazy='dynamic',
                                       backref=db.backref('projects', lazy='dynamic'))
 
@@ -1721,27 +1738,40 @@ class Project(db.Model):
     programmes = db.relationship('DegreeProgramme', secondary=project_programmes, lazy='dynamic',
                                  backref=db.backref('projects', lazy='dynamic'))
 
+
+    # SELECTION
+
     # is a meeting required before selecting this project?
     MEETING_REQUIRED = 1
     MEETING_OPTIONAL = 2
     MEETING_NONE = 3
     meeting_reqd = db.Column(db.Integer())
 
-    # maximum number of students
-    capacity = db.Column(db.Integer())
+
+    # MATCHING
 
     # impose limitation on capacity
     enforce_capacity = db.Column(db.Boolean())
 
-    # supervisory roles
-    team = db.relationship('Supervisor', secondary=project_supervision, lazy='dynamic',
-                           backref=db.backref('projects', lazy='dynamic'))
+    # maximum number of students
+    capacity = db.Column(db.Integer())
+
+    # table of allowed 2nd markers
+    second_markers = db.relationship('FacultyData', secondary=second_markers, lazy='dynamic',
+                                     backref=db.backref('second_marker_for', lazy='dynamic'))
+
+
+    # PROJECT DESCRIPTION
 
     # project description
     description = db.Column(db.Text())
 
     # recommended reading
     reading = db.Column(db.Text())
+
+    # supervisory roles
+    team = db.relationship('Supervisor', secondary=project_supervision, lazy='dynamic',
+                           backref=db.backref('projects', lazy='dynamic'))
 
 
     # POPULARITY DISPLAY
@@ -1755,6 +1785,8 @@ class Project(db.Model):
     # show number of bookmarks
     show_bookmarks = db.Column(db.Boolean())
 
+
+    # EDITING METADATA
 
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -1928,13 +1960,16 @@ class LiveProject(db.Model):
     # project name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
 
-    # free keywords describing scientific area
-    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
-
     # which faculty member owns this project?
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
     owner = db.relationship('User', foreign_keys=[owner_id],
                             backref=db.backref('live_projects', lazy='dynamic'))
+
+
+    # TAGS AND METADATA
+
+    # free keywords describing scientific area
+    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # which research group is associated with this project?
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
@@ -1948,11 +1983,8 @@ class LiveProject(db.Model):
     programmes = db.relationship('DegreeProgramme', secondary=live_project_programmes, lazy='dynamic',
                                  backref=db.backref('live_projects', lazy='dynamic'))
 
-    # maximum number of students
-    capacity = db.Column(db.Integer())
 
-    # impose limitation on capacity
-    enforce_capacity = db.Column(db.Boolean())
+    # SELECTION
 
     # is a meeting required before selecting this project?
     MEETING_REQUIRED = 1
@@ -1960,14 +1992,31 @@ class LiveProject(db.Model):
     MEETING_NONE = 3
     meeting_reqd = db.Column(db.Integer())
 
-    team = db.relationship('Supervisor', secondary=live_project_supervision, lazy='dynamic',
-                           backref=db.backref('live_projects', lazy='dynamic'))
+
+    # MATCHING
+
+    # impose limitation on capacity
+    enforce_capacity = db.Column(db.Boolean())
+
+    # maximum number of students
+    capacity = db.Column(db.Integer())
+
+    # table of allowed 2nd markers
+    second_markers = db.relationship('FacultyData', secondary=live_second_markers, lazy='dynamic',
+                                     backref=db.backref('second_marker_for_live', lazy='dynamic'))
+
+
+    # PROJECT DESCRIPTION
 
     # project description
     description = db.Column(db.Text())
 
     # recommended reading
     reading = db.Column(db.Text())
+
+    # supervisor roles
+    team = db.relationship('Supervisor', secondary=live_project_supervision, lazy='dynamic',
+                           backref=db.backref('live_projects', lazy='dynamic'))
 
 
     # POPULARITY DISPLAY

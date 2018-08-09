@@ -270,8 +270,11 @@ class ProjectClassMixin():
 
     colour = StringField('Colour', description='Assign a colour to help students identify this project class.')
 
+    do_matching = BooleanField('Participate in automated global matching of faculty to projects')
+
     year = SelectField('Runs in year', choices=year_choices, coerce=int,
                        description='Select the academic year in which students join the project.')
+
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
                          description='For how many academic years do students participate in the project?')
 

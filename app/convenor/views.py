@@ -43,13 +43,17 @@ _project_menu = \
     </button>
     <ul class="dropdown-menu">
         <li>
-            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-pencil"></i> Edit project
-            </a>
-        </li>
-        <li>
             <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
                 Preview web page
+            </a>
+        </li>
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Editing</li>
+
+        <li>
+            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=config.pclass_id) }}">
+                <i class="fa fa-pencil"></i> Edit project
             </a>
         </li>
 
@@ -64,6 +68,8 @@ _project_menu = \
                 <i class="fa fa-pencil"></i> Degree programmes
             </a>
         </li>
+
+        <li role="separator" class="divider"></li>
 
         <li>
         {% if project.active %}
@@ -90,13 +96,17 @@ _unattached_project_menu = \
     </button>
     <ul class="dropdown-menu">
         <li>
-            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Edit project
-            </a>
-        </li>
-        <li>
             <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
                 Preview web page
+            </a>
+        </li>
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Editing</li>
+
+        <li>
+            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> Edit project
             </a>
         </li>
 
@@ -111,6 +121,8 @@ _unattached_project_menu = \
                 <i class="fa fa-pencil"></i> Degree programmes
             </a>
         </li>
+
+        <li role="separator" class="divider"></li>
 
         <li>
         {% if project.active %}

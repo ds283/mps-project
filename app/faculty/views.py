@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, render_template_string, redirect, url_for, flash, request, jsonify
+from flask import render_template, render_template_string, redirect, url_for, flash, request
 from flask_security import roles_required, roles_accepted, current_user
 
 from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
@@ -22,7 +22,7 @@ from . import faculty
 from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm
 
 from ..shared.utils import home_dashboard, get_root_dashboard_data
-from ..shared.validators import validate_edit_project, validate_project_open
+from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner
 from ..shared.actions import render_live_project, do_confirm, do_deconfirm
 
 from datetime import datetime
@@ -69,7 +69,7 @@ def remove_affiliation(groupid):
 
 
 @faculty.route('/edit_projects')
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def edit_projects():
 
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
@@ -125,7 +125,7 @@ _project_menu = \
 
 
 @faculty.route('/projects_ajax', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def projects_ajax():
     """
     Ajax data point for Edit Projects view
@@ -140,7 +140,7 @@ def projects_ajax():
 
 
 @faculty.route('/add_project', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def add_project():
 
     # set up form
@@ -197,75 +197,75 @@ def add_project():
 
 
 @faculty.route('/edit_project/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def edit_project(id):
 
     # set up form
-    data = Project.query.get_or_404(id)
+    proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
-    form = EditProjectForm(obj=data)
-    form.project = data
+    form = EditProjectForm(obj=proj)
+    form.project = proj
 
     # only convenors/administrators can reassign ownership
     del form.owner
 
     if form.validate_on_submit():
 
-        data.name = form.name.data
-        data.keywords = form.keywords.data
-        data.group = form.group.data
-        data.project_classes = form.project_classes.data
-        data.meeting_reqd = form.meeting_reqd.data
-        data.capacity = form.capacity.data
-        data.enforce_capacity = form.enforce_capacity.data
-        data.team = form.team.data
-        data.show_popularity = form.show_popularity.data
-        data.show_bookmarks = form.show_bookmarks.data
-        data.show_selections = form.show_selections.data
-        data.description = form.description.data
-        data.reading = form.reading.data
-        data.last_edit_id = current_user.id
-        data.last_edit_timestamp = datetime.now()
+        proj.name = form.name.data
+        proj.keywords = form.keywords.data
+        proj.group = form.group.data
+        proj.project_classes = form.project_classes.data
+        proj.meeting_reqd = form.meeting_reqd.data
+        proj.capacity = form.capacity.data
+        proj.enforce_capacity = form.enforce_capacity.data
+        proj.team = form.team.data
+        proj.show_popularity = form.show_popularity.data
+        proj.show_bookmarks = form.show_bookmarks.data
+        proj.show_selections = form.show_selections.data
+        proj.description = form.description.data
+        proj.reading = form.reading.data
+        proj.last_edit_id = current_user.id
+        proj.last_edit_timestamp = datetime.now()
 
-        data.validate_programmes()
+        proj.validate_programmes()
 
         db.session.commit()
 
         return redirect(url_for('faculty.edit_projects'))
 
-    return render_template('faculty/edit_project.html', project_form=form, project=data, title='Edit project details')
+    return render_template('faculty/edit_project.html', project_form=form, project=proj, title='Edit project details')
 
 
 @faculty.route('/activate_project/<int:id>')
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def activate_project(id):
 
     # get project details
-    data = Project.query.get_or_404(id)
+    proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
-    data.enable()
+    proj.enable()
     db.session.commit()
 
     return redirect(request.referrer)
 
 
 @faculty.route('/deactivate_project/<int:id>')
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def deactivate_project(id):
 
     # get project details
     data = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(data):
         return redirect(request.referrer)
 
     data.disable()
@@ -276,18 +276,20 @@ def deactivate_project(id):
 
 @faculty.route('/attach_skills/<int:id>/<int:sel_id>')
 @faculty.route('/attach_skills/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def attach_skills(id, sel_id=None):
 
     # get project details
-    data = Project.query.get_or_404(id)
+    proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
     form = SkillSelectorForm(request.form)
 
+    # retain memory of which skill group is selected
+    # (otherwise the form annoyingly resets itself everytime the page reloads)
     if not form.validate_on_submit() and request.method == 'GET':
         if sel_id is None:
             form.selector.data = SkillGroup.query \
@@ -306,104 +308,107 @@ def attach_skills(id, sel_id=None):
     else:
         skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
 
-    return render_template('faculty/attach_skills.html', data=data, skills=skills,
+    return render_template('faculty/attach_skills.html', data=proj, skills=skills,
                            form=form, sel_id=form.selector.data.id)
 
 
 @faculty.route('/add_skill/<int:projectid>/<int:skillid>/<int:sel_id>')
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def add_skill(projectid, skillid, sel_id):
 
     # get project details
-    data = Project.query.get_or_404(projectid)
+    proj = Project.query.get_or_404(projectid)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
     skill = TransferableSkill.query.get_or_404(skillid)
 
-    if skill not in data.skills:
-        data.add_skill(skill)
+    if skill not in proj.skills:
+        proj.add_skill(skill)
         db.session.commit()
 
     return redirect(url_for('faculty.attach_skills', id=projectid, sel_id=sel_id))
 
 
 @faculty.route('/remove_skill/<int:projectid>/<int:skillid>/<int:sel_id>')
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def remove_skill(projectid, skillid, sel_id):
 
     # get project details
-    data = Project.query.get_or_404(projectid)
+    proj = Project.query.get_or_404(projectid)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
     skill = TransferableSkill.query.get_or_404(skillid)
 
-    if skill in data.skills:
-        data.remove_skill(skill)
+    if skill in proj.skills:
+        proj.remove_skill(skill)
         db.session.commit()
 
     return redirect(url_for('faculty.attach_skills', id=projectid, sel_id=sel_id))
 
 
 @faculty.route('/attach_programmes/<int:id>')
-@roles_accepted('faculty', 'office')
+@roles_required('faculty')
 def attach_programmes(id):
 
     # get project details
-    data = Project.query.get_or_404(id)
+    proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
-    q = data.available_degree_programmes
+    q = proj.available_degree_programmes
 
-    return render_template('faculty/attach_programmes.html', data=data, programmes=q.all())
+    return render_template('faculty/attach_programmes.html', data=proj, programmes=q.all())
 
 
-@faculty.route('/add_programme/<int:projectid>/<int:progid>')
-@roles_accepted('faculty', 'admin', 'root')
-def add_programme(projectid, progid):
+@faculty.route('/add_programme/<id>/<int:prog_id>')
+@roles_required('faculty')
+def add_programme(id, prog_id):
 
     # get project details
-    data = Project.query.get_or_404(projectid)
+    proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
-    programme = DegreeProgramme.query.get_or_404(progid)
+    programme = DegreeProgramme.query.get_or_404(prog_id)
 
-    if data.programmes is not None and programme not in data.programmes:
-        data.add_programme(programme)
+    if proj.programmes is not None and programme not in proj.programmes:
+        proj.add_programme(programme)
         db.session.commit()
 
     return redirect(request.referrer)
 
 
-@faculty.route('/remove_programme/<int:projectid>/<int:progid>')
-@roles_accepted('faculty', 'admin', 'root')
-def remove_programme(projectid, progid):
+@faculty.route('/remove_programme/<id>/<int:prog_id>')
+@roles_required('faculty')
+def remove_programme(id, prog_id):
 
     # get project details
-    data = Project.query.get_or_404(projectid)
+    proj = Project.query.get_or_404(id)
 
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
-    programme = DegreeProgramme.query.get_or_404(progid)
+    programme = DegreeProgramme.query.get_or_404(prog_id)
 
-    if data.programmes is not None and programme in data.programmes:
-        data.remove_programme(programme)
+    if proj.programmes is not None and programme in proj.programmes:
+        proj.remove_programme(programme)
         db.session.commit()
 
     return redirect(request.referrer)
+
+
+# @faculty.route('/attach_markers/<int:id>')
 
 
 @faculty.route('/preview/<int:id>')
@@ -480,7 +485,7 @@ def dashboard():
 
 
 @faculty.route('/confirm_pclass/<int:id>')
-@roles_accepted('faculty')
+@roles_required('faculty')
 def confirm_pclass(id):
     """
     Issue confirmation for this project class and logged-in user
@@ -511,7 +516,7 @@ def confirm_pclass(id):
 
 
 @faculty.route('/confirm/<int:sid>/<int:pid>')
-@roles_accepted('faculty')
+@roles_required('faculty')
 def confirm(sid, pid):
 
     # sid is a SelectingStudent
@@ -521,9 +526,7 @@ def confirm(sid, pid):
     project = LiveProject.query.get_or_404(pid)
 
     # verify that logged-in user is the owner of this liveproject
-    if project.owner_id != current_user.id:
-
-        flash('You do not have privileges to edit this project', 'error')
+    if not validate_is_project_owner(project):
         return redirect(request.referrer)
 
     # validate that project is open
@@ -537,7 +540,7 @@ def confirm(sid, pid):
 
 
 @faculty.route('/deconfirm/<int:sid>/<int:pid>')
-@roles_accepted('faculty')
+@roles_required('faculty')
 def deconfirm(sid, pid):
 
     # sid is a SelectingStudent
@@ -547,8 +550,7 @@ def deconfirm(sid, pid):
     project = LiveProject.query.get_or_404(pid)
 
     # verify that logged-in user is the owner of this liveproject
-    if project.owner_id != current_user.id:
-        flash('You do not have privileges to edit this project', 'error')
+    if not validate_is_project_owner(project):
         return redirect(request.referrer)
 
     # validate that project is open
@@ -583,7 +585,7 @@ def live_project(pid):
 
 
 @faculty.route('/past_projects')
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def past_projects():
     """
     Show list of previously offered projects, extracted from live table
@@ -594,7 +596,7 @@ def past_projects():
 
 
 @faculty.route('/past_projects_ajax')
-@roles_accepted('faculty', 'admin', 'root')
+@roles_required('faculty')
 def past_projects_ajax():
     """
     Ajax data point for list of previously offered projects

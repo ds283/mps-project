@@ -148,8 +148,8 @@
                         {% if config.group_filters.first() or config.skill_filters.first() %}
                             [active]
                         {% endif %}
+                        <i class="indicator glyphicon glyphicon-chevron-up pull-right"></i>
                     </a>
-                    <i class="indicator glyphicon glyphicon-chevron-up pull-right"></i>
                 </h4>
             </div>
             <div id="collapseFilter" class="panel-collapse collapse in">
@@ -169,26 +169,30 @@
                                     </div>
                                 </div>
                             </div>
-                            {% for group in groups %}
-                                {% if group in config.group_filters %}
-                                    <a href="{{ url_for(remove_group, id=config.id, gid=group.id) }}"
-                                       class="label label-default selection-label" style="{{ group.make_CSS_style()|safe }}">
-                                        <i class="fa fa-times"></i>
-                                        {{ group.name }}
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
+                            <h4>
+                                {% for group in groups %}
+                                    {% if group in config.group_filters %}
+                                        <a href="{{ url_for(remove_group, id=config.id, gid=group.id) }}"
+                                           class="label label-default selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                            <i class="fa fa-times"></i>
+                                            {{ group.name }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </h4>
                         </div>
                         <div class="panel-footer">
-                            {% for group in groups %}
-                                {% if group not in config.group_filters %}
-                                    <a href="{{ url_for(add_group, id=config.id, gid=group.id) }}"
-                                       class="label label-default selection-label" style="{{ group.make_CSS_style()|safe }}">
-                                        <i class="fa fa-plus"></i>
-                                        {{ group.name }}
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
+                            <h4>
+                                {% for group in groups %}
+                                    {% if group not in config.group_filters %}
+                                        <a href="{{ url_for(add_group, id=config.id, gid=group.id) }}"
+                                           class="label label-default selection-label" style="{{ group.make_CSS_style()|safe }}">
+                                            <i class="fa fa-plus"></i>
+                                            {{ group.name }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </h4>
                         </div>
                     </div>
                     <div class="panel panel-default">
@@ -206,26 +210,30 @@
                                     </div>
                                 </div>
                             </div>
-                            {% for skill in skills %}
-                                {% if skill in config.skill_filters %}
-                                    <a href="{{ url_for(remove_skill, id=config.id, gid=skill.id) }}"
-                                       class="label label-default selection-label" style="{{ skill.make_CSS_style()|safe }}">
-                                        <i class="fa fa-times"></i>
-                                        {{ skill.name }}
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
+                            <h4>
+                                {% for skill in skills %}
+                                    {% if skill in config.skill_filters %}
+                                        <a href="{{ url_for(remove_skill, id=config.id, gid=skill.id) }}"
+                                           class="label label-default selection-label" style="{{ skill.make_CSS_style()|safe }}">
+                                            <i class="fa fa-times"></i>
+                                            {{ skill.name }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </h4>
                         </div>
                         <div class="panel-footer">
-                            {% for skill in skills %}
-                                {% if skill not in config.skill_filters %}
-                                    <a href="{{ url_for(add_skill, id=config.id, gid=skill.id) }}"
-                                       class="label label-default selection-label" style="{{ skill.make_CSS_style()|safe }}">
-                                        <i class="fa fa-plus"></i>
-                                        {{ skill.name }}
-                                    </a>
-                                {% endif %}
-                            {% endfor %}
+                            <h4>
+                                {% for skill in skills %}
+                                    {% if skill not in config.skill_filters %}
+                                        <a href="{{ url_for(add_skill, id=config.id, gid=skill.id) }}"
+                                           class="label label-default selection-label" style="{{ skill.make_CSS_style()|safe }}">
+                                            <i class="fa fa-plus"></i>
+                                            {{ skill.name }}
+                                        </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </h4>
                         </div>
                     </div>
                 </div>

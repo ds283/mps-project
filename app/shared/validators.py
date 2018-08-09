@@ -29,7 +29,7 @@ def validate_is_administrator():
 
 def validate_is_convenor(pclass):
     """
-    Validate that the logged-in user is privileged to view a convenor dashboard
+    Validate that the logged-in user is privileged to view a convenor dashboard or use other convenor functions
     :param pclass: Project class model instance
     :return: True/False
     """
@@ -81,6 +81,10 @@ def validate_project_open(config):
 
 
 def validate_is_admin_or_convenor():
+    """
+    Validate that the logged-in user is an administrator or is a convenor for any project class
+    :return:
+    """
 
     # any user with an admin role is ok
     if current_user.has_role('admin') or current_user.has_role('root'):

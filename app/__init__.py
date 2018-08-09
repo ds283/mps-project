@@ -32,7 +32,7 @@ from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
 def create_app():
 
-    # get current configuration, or default to production for safety
+    # get current configuration, or default to 'production' for safety
     config_name = os.environ.get('FLASK_ENV') or 'production'
 
     app = Flask(__name__, instance_relative_config=True)        # load configuration files from 'instance'

@@ -1429,6 +1429,7 @@ def add_pclass():
         data = ProjectClass(name=form.name.data,
                             abbreviation=form.abbreviation.data,
                             colour=form.colour.data,
+                            do_matching=form.do_matching.data,
                             year=form.year.data,
                             extent=form.extent.data,
                             require_confirm=form.require_confirm.data,
@@ -1506,6 +1507,7 @@ def edit_pclass(id):
         data.abbreviation = form.abbreviation.data
         data.year = form.year.data
         data.colour = form.colour.data
+        data.do_matching = form.do_matching.data
         data.extent = form.extent.data
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data

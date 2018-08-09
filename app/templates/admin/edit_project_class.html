@@ -58,6 +58,7 @@
 
         <div class="well">
             <p>Options</p>
+            {{ wtf.form_field(pclass_form.do_matching) }}
             {{ wtf.form_field(pclass_form.require_confirm) }}
             {{ wtf.form_field(pclass_form.supervisor_carryover) }}
         </div>

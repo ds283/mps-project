@@ -1181,16 +1181,10 @@ class ProjectClass(db.Model):
 
     # AUTOMATED MATCHING
 
-    MATCHING_NONE = 0
-    MATCHING_GLOBAL = 1
-    MATCHING_LOCAL = 2
-
-    # what level of automated student/project/2nd-marker matching does this project use?
+    # what level of automated student/project/2nd-marker matching does this project class use?
     # does it participate in the global automated matching, or is matching manual?
-    # TODO: matching = db.Column(db.Integer())
+    do_matching = db.Column(db.Boolean())
 
-    # 2nd marker data
-    # TODO
 
     # PERSONNEL
 

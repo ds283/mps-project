@@ -195,8 +195,6 @@ class SkillSelectorMixin():
 
     selector = QuerySelectField('Skill group', query_factory=GetSkillGroups, get_label='name')
 
-    submit = SubmitField('Change')
-
 
 class SkillSelectorForm(Form, SkillSelectorMixin):
 

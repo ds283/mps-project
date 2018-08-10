@@ -57,62 +57,62 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="well">
-        Filter:
-        <a href="{{ url_for('admin.edit_users', filter='all') }}"
-           class="btn btn-sm {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-            All
-        </a>
-        <a href="{{ url_for('admin.edit_users', filter='active') }}"
-           class="btn btn-sm {% if filter == 'active' %}btn-primary{% else %}btn-default{% endif %}">
-            Active
-        </a>
-        <a href="{{ url_for('admin.edit_users', filter='inactive') }}"
-           class="btn btn-sm {% if filter == 'inactive' %}btn-primary{% else %}btn-default{% endif %}">
-            Inactive
-        </a>
-        <a href="{{ url_for('admin.edit_users', filter='student') }}"
-           class="btn btn-sm {% if filter == 'student' %}btn-primary{% else %}btn-default{% endif %}">
-            Students
-        </a>
-        <a href="{{ url_for('admin.edit_users', filter='faculty') }}"
-           class="btn btn-sm {% if filter == 'faculty' %}btn-primary{% else %}btn-default{% endif %}">
-            Faculty
-        </a>
-        <a href="{{ url_for('admin.edit_users', filter='exec') }}"
-           class="btn btn-sm {% if filter == 'exec' %}btn-primary{% else %}btn-default{% endif %}">
-            Executive
-        </a>
-        <a href="{{ url_for('admin.edit_users', filter='admin') }}"
-           class="btn btn-sm {% if filter == 'admin' %}btn-primary{% else %}btn-default{% endif %}">
-            Admin
-        </a>
-        <a href="{{ url_for('admin.edit_users', filter='root') }}"
-           class="btn btn-sm {% if filter == 'root' %}btn-primary{% else %}btn-default{% endif %}">
-            Sysadmin
-        </a>
-    </div>
-
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Edit users</div>
         <div class="panel-body">
-        <table id="edit-users" class="table table-striped table-bordered">
-            <thead>
-            <tr>
-                <th width="8%"> Last name</th>
-                <th width="8%"> First name</th>
-                <th width="5%"> userid</th>
-                <th width="10%"> E-mail</th>
-                <th width="10%"> Confirmed</th>
-                <th width="5%"> Status</th>
-                <th width="5%"> Logins</th>
-                <th width="12%"> Last login</th>
-                <th width="9%"> Last IP</th>
-                <th width="13%"> Roles</th>
-                <th width="15%"> Actions</th>
-            </tr>
-            </thead>
-        </table>
+            <div class="well">
+                Filter:
+                <a href="{{ url_for('admin.edit_users', filter='all') }}"
+                   class="btn btn-sm {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                    All
+                </a>
+                <a href="{{ url_for('admin.edit_users', filter='active') }}"
+                   class="btn btn-sm {% if filter == 'active' %}btn-primary{% else %}btn-default{% endif %}">
+                    Active
+                </a>
+                <a href="{{ url_for('admin.edit_users', filter='inactive') }}"
+                   class="btn btn-sm {% if filter == 'inactive' %}btn-primary{% else %}btn-default{% endif %}">
+                    Inactive
+                </a>
+                <a href="{{ url_for('admin.edit_users', filter='student') }}"
+                   class="btn btn-sm {% if filter == 'student' %}btn-primary{% else %}btn-default{% endif %}">
+                    Students
+                </a>
+                <a href="{{ url_for('admin.edit_users', filter='faculty') }}"
+                   class="btn btn-sm {% if filter == 'faculty' %}btn-primary{% else %}btn-default{% endif %}">
+                    Faculty
+                </a>
+                <a href="{{ url_for('admin.edit_users', filter='exec') }}"
+                   class="btn btn-sm {% if filter == 'exec' %}btn-primary{% else %}btn-default{% endif %}">
+                    Executive
+                </a>
+                <a href="{{ url_for('admin.edit_users', filter='admin') }}"
+                   class="btn btn-sm {% if filter == 'admin' %}btn-primary{% else %}btn-default{% endif %}">
+                    Admin
+                </a>
+                <a href="{{ url_for('admin.edit_users', filter='root') }}"
+                   class="btn btn-sm {% if filter == 'root' %}btn-primary{% else %}btn-default{% endif %}">
+                    Sysadmin
+                </a>
+            </div>
+
+            <table id="edit-users" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="8%"> Last name</th>
+                    <th width="8%"> First name</th>
+                    <th width="5%"> userid</th>
+                    <th width="10%"> E-mail</th>
+                    <th width="10%"> Confirmed</th>
+                    <th width="5%"> Status</th>
+                    <th width="5%"> Logins</th>
+                    <th width="12%"> Last login</th>
+                    <th width="9%"> Last IP</th>
+                    <th width="13%"> Roles</th>
+                    <th width="15%"> Actions</th>
+                </tr>
+                </thead>
+            </table>
         </div>
     </div>
     <div style="text-align: center;">

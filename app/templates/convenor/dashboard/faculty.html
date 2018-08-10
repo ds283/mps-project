@@ -28,24 +28,25 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="well">
-        Filter:
-        <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='all') }}"
-           class="btn btn-sm {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-            All
-        </a>
-        <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='enrolled') }}"
-           class="btn btn-sm {% if filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
-            Enrolled
-        </a>
-        <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='not-enrolled') }}"
-           class="btn btn-sm {% if filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
-            Not enrolled
-        </a>
-    </div>
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Faculty list for <strong>{{ pclass.name }}</strong></div>
         <div class="panel-body">
+            <div class="well">
+                Filter:
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='all') }}"
+                   class="btn btn-sm {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                    All
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='enrolled') }}"
+                   class="btn btn-sm {% if filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
+                    Enrolled
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='not-enrolled') }}"
+                   class="btn btn-sm {% if filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
+                    Not enrolled
+                </a>
+            </div>
+
             <table id="faculty-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>

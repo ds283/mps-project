@@ -1195,6 +1195,9 @@ class ProjectClass(db.Model):
     # does it participate in the global automated matching, or is matching manual?
     do_matching = db.Column(db.Boolean())
 
+    # number of 2nd markers that should be specified per project
+    number_markers = db.Column(db.Integer())
+
 
     # PERSONNEL
 

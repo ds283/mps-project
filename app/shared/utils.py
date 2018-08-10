@@ -256,7 +256,7 @@ def filter_second_markers(proj, state_filter, pclass_filter, group_filter):
         # build list of all active faculty users who are enrolled
         user_query = proj.second_markers \
             .join(User, User.id == FacultyData.id) \
-            .filter(User.active == True)
+            .filter(User.active == True, User.id != proj.owner_id)
 
     elif state_filter == 'not-enrolled':
         # build list of all active faculty users who are not enrolled
@@ -266,13 +266,13 @@ def filter_second_markers(proj, state_filter, pclass_filter, group_filter):
             .join(User, User.id == FacultyData.id) \
             .join(enrolled_query, enrolled_query.c.id == FacultyData.id, isouter=True) \
             .filter(enrolled_query.c.id == None,
-                    User.active == True)
+                    User.active == True, User.id != proj.owner_id)
 
     else:
         # build list of all active faculty
         user_query = db.session.query(FacultyData) \
             .join(User, User.id == FacultyData.id) \
-            .filter(User.active == True)
+            .filter(User.active == True, User.id != proj.owner_id)
 
     # add filters for research group, if a filter is applied
     flag, value = is_integer(group_filter)

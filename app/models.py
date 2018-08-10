@@ -1632,12 +1632,12 @@ class EnrollmentRecord(db.Model):
 
     def marker_label(self):
 
-        if self.marker_state == self.MARKER_ENROLLED:
+        if self.marker_state == EnrollmentRecord.MARKER_ENROLLED:
             return '<span class="label label-success"><i class="fa fa-check"></i> 2nd mk active</span>'
-        elif self.marker_state == self.MARKER_SABBATICAL:
+        elif self.marker_state == EnrollmentRecord.MARKER_SABBATICAL:
             return '<span class="label label-warning"><i class="fa fa-times"></i> 2nd mk sabbat{year}</span>'.format(
                 year='' if self.marker_reenroll is None else ' ({yr})'.format(yr=self.marker_reenroll))
-        elif self.marker_state == self.MARKER_EXEMPT:
+        elif self.marker_state == EnrollmentRecord.MARKER_EXEMPT:
             return '<span class="label label-danger"><i class="fa fa-times"></i> 2nd mk exempt</span>'
 
         return ''
@@ -1937,8 +1937,98 @@ class Project(db.Model):
 
 
     def is_second_marker(self, faculty):
+        """
+        Determine whether a given FacultyData instance is a 2nd marker for this project
+        :param faculty:
+        :return:
+        """
 
         return faculty in self.second_markers
+
+
+    def num_markers(self, pclass):
+        """
+        Determine the number of 2nd markers enrolled who are available for a given project class
+        :param pclass:
+        :return:
+        """
+
+        number = 0
+
+        for marker in self.second_markers:
+
+            # ignore inactive users
+            if not marker.user.active:
+                break
+
+            # count number of enrollment records for this marker matching the project class, and marked as active
+            query = marker.enrollments.subquery()
+
+            num = db.session.query(sqlalchemy.func.count(query.c.id)) \
+                .filter(query.c.pclass_id == pclass.id,
+                        query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+                .scalar()
+
+            if num == 1:
+                number += 1
+            elif num > 1:
+                raise RuntimeError('Inconsistent enrollment records')
+
+        return number
+
+
+    def can_enroll_marker(self, faculty):
+        """
+        Determine whether a given FacultyData instance can be enrolled as a 2nd marker for this project
+        :param faculty:
+        :return:
+        """
+
+        if self.is_second_marker(faculty):
+            return False
+
+        # need to determine whether this faculty member is enrolled as a second marker for any project
+        # class we are attached to
+        enrollments = faculty.enrollments.subquery()
+        pclasses = self.project_classes.subquery()
+
+        number = db.session.query(sqlalchemy.func.count(enrollments.c.id)) \
+            .join(User, User.id == enrollments.c.owner_id) \
+            .join(pclasses, pclasses.c.id == enrollments.c.pclass_id) \
+            .filter(User.active == True,
+                    enrollments.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+            .scalar()
+
+        return number > 0
+
+
+    def add_marker(self, faculty):
+        """
+        Add a FacultyData instance as a 2nd marker
+        :param faculty:
+        :return:
+        """
+
+        if self.is_second_marker(faculty):
+            return
+
+        self.second_markers.append(faculty)
+        db.session.commit()
+
+
+    def remove_marker(self, faculty):
+        """
+        Remove a FacultyData instance as a 2nd marker
+        :param faculty:
+        :return:
+        """
+
+        if not self.is_second_marker(faculty):
+            return
+
+        self.second_markers.remove(faculty)
+        db.session.commit()
+
 
 
 class LiveProject(db.Model):

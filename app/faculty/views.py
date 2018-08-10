@@ -485,6 +485,42 @@ def attach_markers_ajax(id):
     return ajax.project.build_marker_data(faculty, proj)
 
 
+@faculty.route('/add_marker/<int:proj_id>/<int:mid>')
+@roles_required('faculty')
+def add_marker(proj_id, mid):
+
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+
+    # if project owner is not logged in user, return empty json
+    if not validate_is_project_owner(proj):
+        return jsonify({})
+
+    marker = FacultyData.query.get_or_404(mid)
+
+    proj.add_marker(marker)
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/remove_marker/<int:proj_id>/<int:mid>')
+@roles_required('faculty')
+def remove_marker(proj_id, mid):
+
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+
+    # if project owner is not logged in user, return empty json
+    if not validate_is_project_owner(proj):
+        return jsonify({})
+
+    marker = FacultyData.query.get_or_404(mid)
+
+    proj.remove_marker(marker)
+
+    return redirect(request.referrer)
+
+
 @faculty.route('/preview/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def project_preview(id):

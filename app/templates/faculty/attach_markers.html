@@ -29,7 +29,7 @@
                 ajax: { 'url': $SCRIPT_ROOT + '/faculty/attach_markers_ajax/{{ data.id }}?state_filter={{ state_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
                 columns: [
                     { data: 'name' },
-                    { data: 'group' },
+                    { data: 'groups' },
                     { data: 'status' },
                     { data: 'menu' }
                 ],
@@ -81,7 +81,7 @@
             <thead>
             <tr>
                 <th width="20%"> Name</th>
-                <th width="20%"> Group</th>
+                <th width="20%"> Affiliations</th>
                 <th width="40%"> Status</th>
                 <th width="20%"> Actions</th>
             </tr>

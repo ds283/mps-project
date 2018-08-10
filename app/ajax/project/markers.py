@@ -32,7 +32,7 @@ _status = \
 def build_marker_data(faculty, proj):
 
     data = [{'name': f.user.name,
-             'group': render_template_string(_affiliations, f=f),
+             'groups': render_template_string(_affiliations, f=f),
              'status': render_template_string(_status, f=f, proj=proj),
              'menu': ''} for f in faculty]
 

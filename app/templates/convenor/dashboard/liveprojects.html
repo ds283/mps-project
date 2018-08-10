@@ -76,12 +76,12 @@
 {% endblock %}
 
 {% block bodyblock %}
-    {{ filter_block(filter_record, groups, skills, 'convenor.clear_group_filters', 'convenor.add_group_filter', 'convenor.remove_group_filter', 'convenor.clear_skill_filters', 'convenor.add_skill_filter', 'convenor.remove_skill_filter') }}
-
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Live projects for selection: <strong>{{ pclass.name }}
             {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
         <div class="panel-body">
+            {{ filter_block(filter_record, groups, skills, 'convenor.clear_group_filters', 'convenor.add_group_filter', 'convenor.remove_group_filter', 'convenor.clear_skill_filters', 'convenor.add_skill_filter', 'convenor.remove_skill_filter') }}
+
             <table id="liveprojects-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>

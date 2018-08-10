@@ -241,6 +241,56 @@ def filter_projects(plist, groups, skills, getter=None):
     return projects
 
 
+def build_second_marker_query(proj, state_filter, pclass_filter, group_filter):
+    """
+    Build a query for FacultyData records suitable to populate the 2nd marker view
+    :param proj:
+    :param state_filter:
+    :param pclass_filter:
+    :param group_filter:
+    :return:
+    """
+
+    # build base query -- either all users, or enrolled users, or not enrolled faculty
+    if state_filter == 'enrolled':
+        # build list of all active faculty users who are enrolled
+        query = proj.second_markers \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active == True, User.id != proj.owner_id)
+
+    elif state_filter == 'not-enrolled':
+        # build list of all active faculty users who are not enrolled
+        enrolled_query = proj.second_markers.subquery()
+
+        query = db.session.query(FacultyData) \
+            .join(User, User.id == FacultyData.id) \
+            .join(enrolled_query, enrolled_query.c.id == FacultyData.id, isouter=True) \
+            .filter(enrolled_query.c.id == None,
+                    User.active == True, User.id != proj.owner_id)
+
+    else:
+        # build list of all active faculty
+        query = db.session.query(FacultyData) \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active == True, User.id != proj.owner_id)
+
+    # add filters for research group, if a filter is applied
+    flag, value = is_integer(group_filter)
+
+    if flag:
+        query = query.filter(FacultyData.affiliations.any(ResearchGroup.id == value))
+
+    # add filters for enrollment in a particular project class
+    flag, value = is_integer(pclass_filter)
+
+    if flag:
+        query = query.filter(FacultyData.enrollments.any(EnrollmentRecord.pclass_id == value))
+
+    query = query.order_by(User.last_name, User.first_name)
+
+    return query
+
+
 def filter_second_markers(proj, state_filter, pclass_filter, group_filter):
     """
     Build a list of FacultyData records suitable for the 2nd marker table
@@ -251,44 +301,9 @@ def filter_second_markers(proj, state_filter, pclass_filter, group_filter):
     :return:
     """
 
-    # build base query -- either all users, or enrolled users, or not enrolled faculty
-    if state_filter == 'enrolled':
-        # build list of all active faculty users who are enrolled
-        user_query = proj.second_markers \
-            .join(User, User.id == FacultyData.id) \
-            .filter(User.active == True, User.id != proj.owner_id)
+    query = build_second_marker_query(proj, state_filter, pclass_filter, group_filter)
 
-    elif state_filter == 'not-enrolled':
-        # build list of all active faculty users who are not enrolled
-        enrolled_query = proj.second_markers.subquery()
-
-        user_query = db.session.query(FacultyData) \
-            .join(User, User.id == FacultyData.id) \
-            .join(enrolled_query, enrolled_query.c.id == FacultyData.id, isouter=True) \
-            .filter(enrolled_query.c.id == None,
-                    User.active == True, User.id != proj.owner_id)
-
-    else:
-        # build list of all active faculty
-        user_query = db.session.query(FacultyData) \
-            .join(User, User.id == FacultyData.id) \
-            .filter(User.active == True, User.id != proj.owner_id)
-
-    # add filters for research group, if a filter is applied
-    flag, value = is_integer(group_filter)
-
-    if flag:
-        user_query = user_query.filter(FacultyData.affiliations.any(ResearchGroup.id == value))
-
-    # add filters for enrollment in a particular project class
-    flag, value = is_integer(pclass_filter)
-
-    if flag:
-        user_query = user_query.filter(FacultyData.enrollments.any(EnrollmentRecord.pclass_id == value))
-
-    user_query = user_query.order_by(User.last_name, User.first_name)
-
-    return user_query.all()
+    return query.all()
 
 
 def get_convenor_filter_record(config):

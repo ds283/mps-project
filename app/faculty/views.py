@@ -432,6 +432,7 @@ def attach_markers(id):
         return redirect(request.referrer)
 
     state_filter = request.args.get('state_filter')
+    pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
     # if no state filter supplied, check if one is stored in session
@@ -441,6 +442,14 @@ def attach_markers(id):
     # write state filter into session if it is not empty
     if state_filter is not None:
         session['faculty_marker_state_filter'] = state_filter
+
+    # if no pclass filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('faculty_marker_pclass_filter'):
+        pclass_filter = session['faculty_marker_pclass_filter']
+
+    # write pclass filter into session if it is not empty
+    if pclass_filter is not None:
+        session['faculty_marker_pclass_filter'] = pclass_filter
 
     # if no group filter supplied, check if one is stored in session
     if group_filter is None and session.get('faculty_marker_group_filter'):
@@ -452,8 +461,8 @@ def attach_markers(id):
 
     groups = ResearchGroup.query.filter_by(active=True).all()
 
-    return render_template('faculty/attach_markers.html', data=proj, groups=groups,
-                           state_filter=state_filter, group_filter=group_filter)
+    return render_template('faculty/attach_markers.html', data=proj, groups=groups, pclasses=proj.project_classes.all(),
+                           state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter)
 
 
 @faculty.route('/attach_markers_ajax/<int:id>')
@@ -468,9 +477,10 @@ def attach_markers_ajax(id):
         return jsonify({})
 
     state_filter = request.args.get('state_filter')
+    pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    faculty = filter_second_markers(proj, state_filter, group_filter)
+    faculty = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
 
     return ajax.project.build_marker_data(faculty, proj)
 

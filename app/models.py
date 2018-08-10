@@ -1857,6 +1857,14 @@ class Project(db.Model):
             self.error = "Capacity is zero or unset, but enforcement is enabled"
             return False
 
+        # for each project class we are attached to, check whether enough 2nd markers have been assigned
+        for pclass in self.project_classes:
+
+            if pclass.uses_marker:
+                if self.num_markers(pclass) < pclass.number_markers:
+                    self.error = "Too few 2nd markers assigned for '{name}'".format(name=pclass.name)
+                    return False
+
         return True
 
 

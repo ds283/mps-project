@@ -30,7 +30,7 @@ _email_log_menu = \
 
 def email_log_data(emails):
 
-    data = [{'recipient': e.user.build_name() if e.user is not None
+    data = [{'recipient': e.user.name if e.user is not None
                 else '<span class="label label-warning">Not logged</span>',
              'address': e.user.email if e.user is not None
                 else e.recipient if e.recipient is not None

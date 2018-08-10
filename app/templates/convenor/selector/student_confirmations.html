@@ -1,7 +1,7 @@
 {% extends "base_app.html" %}
 
 {% block title %}
-    Project confirmations for {{ sel.user.build_name() }}
+    Project confirmations for {{ sel.user.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -10,7 +10,7 @@
         <div class="col-xs-10">
             <div class="panel panel-success">
                 <div class="panel-heading">
-                    Project confirmations for <strong>{{ sel.user.build_name() }}</strong>
+                    Project confirmations for <strong>{{ sel.user.name }}</strong>
                 </div>
 
                 <div class="panel-body">
@@ -36,7 +36,7 @@
                                 </div>
                                 <div class="col-xs-3">
                                     <a href="mailto:{{ project.owner.email }}">
-                                        {{ project.owner.build_name() }}
+                                        {{ project.owner.name }}
                                     </a>
                                 </div>
                                 <div class="col-xs-2">
@@ -89,7 +89,7 @@
                                 </div>
                                 <div class="col-xs-3">
                                     <a href="mailto:{{ project.owner.email }}">
-                                        {{ project.owner.build_name() }}
+                                        {{ project.owner.name }}
                                     </a>
                                 </div>
                                 <div class="col-xs-2">

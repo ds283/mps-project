@@ -25,7 +25,7 @@
                         {% for student in project.confirmed_students %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
-                                    {{ student.user.build_name() }}
+                                    {{ student.user.name }}
                                 </div>
                                 <div class="col-xs-8">
                                     <div class="dropdown">
@@ -67,7 +67,7 @@
                         {% for student in project.confirm_waiting %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
-                                    {{ student.user.build_name() }}
+                                    {{ student.user.name }}
                                 </div>
                                 <div class="col-xs-8">
                                     <div class="dropdown">

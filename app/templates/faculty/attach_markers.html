@@ -28,7 +28,7 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#projects-table').DataTable({
+            $('#markers-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/faculty/attach_markers_ajax/{{ data.id }}?state_filter={{ state_filter }}&pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
@@ -38,6 +38,7 @@
                         _: 'display',
                         sort: 'sortstring' }
                     },
+                    { data: 'enrollments' },
                     { data: 'groups' },
                     { data: 'status' },
                     { data: 'menu' }
@@ -56,6 +57,43 @@
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Attach 2nd markers for project <strong>{{ data.name }}</strong></div>
         <div class="panel-body">
+
+            {% if pclasses is not none and pclasses|length > 0 %}
+                <div class="well">
+                    <div class="row vertical-align">
+                        <div class="col-xs-4"><strong>Project type</strong></div>
+                        <div class="col-xs-2"><strong>Markers required</strong></div>
+                        <div class="col-xs-2"><strong>Markers enrolled</strong></div>
+                        <div class="col-xs-4"></div>
+                    </div>
+
+                    {% for pclass in pclasses %}
+                        <div class="row vertical-align">
+                            <div class="col-xs-4">{{ pclass.name }}</div>
+                            <div class="col-xs-2">
+                                {% if pclass.do_matching %}
+                                    <span class="label label-info">{{ pclass.number_markers }}</span>
+                                {% else %}
+                                    <span class="label label-default">Not required</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-xs-2">
+                                {% set num = data.num_markers(pclass) %}
+                                {% if pclass.do_matching %}
+                                    {% if num >= pclass.number_markers %}
+                                        <span class="label label-success">{{ num }}</span>
+                                    {% else %}
+                                        <span class="label label-warning">{{ num }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="label label-default">{{ num }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-xs-4"></div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
             <div class="well">
                 <p>Filter by enrollment status</p>
@@ -105,13 +143,14 @@
                 {% endif %}
             </div>
 
-            <table id="projects-table" class="table table-striped table-bordered">
+            <table id="markers-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="20%"> Name</th>
+                    <th width="30%"> Name</th>
+                    <th width="20%"> Enrollments</th>
                     <th width="20%"> Affiliations</th>
-                    <th width="40%"> Status</th>
-                    <th width="20%"> Actions</th>
+                    <th width="15%"> Status</th>
+                    <th width="15%"> Actions</th>
                 </tr>
                 </thead>
             </table>

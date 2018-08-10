@@ -497,9 +497,9 @@ def add_marker(proj_id, mid):
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
-    # if project owner is not logged in user, return empty json
+    # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return jsonify({})
+        return redirect(request.referrer)
 
     marker = FacultyData.query.get_or_404(mid)
 
@@ -515,13 +515,59 @@ def remove_marker(proj_id, mid):
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
-    # if project owner is not logged in user, return empty json
+    # if project owner is not logged in user, object
     if not validate_is_project_owner(proj):
-        return jsonify({})
+        return redirect(request.referrer)
 
     marker = FacultyData.query.get_or_404(mid)
 
     proj.remove_marker(marker)
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/enroll_all_markers/<int:proj_id>')
+@roles_required('faculty')
+def enroll_all_markers(proj_id):
+
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
+        return redirect(request.referrer)
+
+    state_filter = request.args.get('state_filter')
+    pclass_filter = request.args.get('pclass_filter')
+    group_filter = request.args.get('group_filter')
+
+    markers = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+
+    for marker in markers:
+        proj.add_marker(marker)
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/remove_all_markers/<int:proj_id>')
+@roles_required('faculty')
+def remove_all_markers(proj_id):
+
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
+        return redirect(request.referrer)
+
+    state_filter = request.args.get('state_filter')
+    pclass_filter = request.args.get('pclass_filter')
+    group_filter = request.args.get('group_filter')
+
+    markers = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+
+    for marker in markers:
+        proj.remove_marker(marker)
 
     return redirect(request.referrer)
 

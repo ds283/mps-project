@@ -145,6 +145,23 @@
                         </a>
                     {% endfor %}
                 {% endif %}
+
+                <hr class="intro-divider">
+
+                <div class="row vertical-align">
+                    <div class="col-xs-12">
+                        <div class="pull-right">
+                            <a href="{{ url_for('faculty.remove_all_markers', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                               class="btn btn-default">
+                                <i class="fa fa-trash"></i> Remove all
+                            </a>
+                            <a href="{{ url_for('faculty.enroll_all_markers', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                               class="btn btn-default">
+                                <i class="fa fa-check"></i> Enroll all
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <table id="markers-table" class="table table-striped table-bordered">

@@ -28,7 +28,11 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/faculty/attach_markers_ajax/{{ data.id }}?state_filter={{ state_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
                 columns: [
-                    { data: 'name' },
+                    { data: 'name',
+                      render: {
+                        _: 'display',
+                        sort: 'sortstring' }
+                    },
                     { data: 'groups' },
                     { data: 'status' },
                     { data: 'menu' }

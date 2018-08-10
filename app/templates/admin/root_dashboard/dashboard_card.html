@@ -18,7 +18,7 @@
                     {% set pclass = config.project_class %}
                     <div class="row vertical-top root-dashboard-table">
                         <div class="col-xs-3"><a href="{{ url_for('convenor.overview', id=pclass.id) }}">{{ pclass.name }}</a></div>
-                        <div class="col-xs-2"><a href="mailto:{{ pclass.convenor.email }}">{{ pclass.convenor.build_name() }}</a></div>
+                        <div class="col-xs-2"><a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a></div>
                         <div class="col-xs-2">{{ config.year }}&ndash;{{ config.year+1 }}</div>
                         <div class="col-xs-5">
                             {% if config.year < current_year %}

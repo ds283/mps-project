@@ -31,8 +31,8 @@ _project_menu = \
 _pclass = \
 """
 {% set style = config.project_class.make_CSS_style() %}
-<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor.email }}">
-    {{ config.project_class.abbreviation }} {% if config.convenor is not none and config.convenor.user is not none %}({{ config.convenor.user.build_name() }}){% endif %}
+<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ config.convenor_email }}">
+    {{ config.project_class.abbreviation }} ({{ config.convenor_name }})
 </a>
 """
 

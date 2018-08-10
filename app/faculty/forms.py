@@ -10,17 +10,17 @@
 
 from flask_security import current_user
 from flask_security.forms import Form
-from wtforms import StringField, IntegerField, SelectField, PasswordField, SubmitField, ValidationError, \
+from wtforms import StringField, IntegerField, SelectField, SubmitField, ValidationError, \
     TextAreaField, DateField, BooleanField
 from wtforms.validators import DataRequired, Optional
-from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
+from wtforms_alchemy.fields import QuerySelectField
 
-from ..models import db, User, Role, ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, \
-    ProjectClass, Supervisor, Project, EnrollmentRecord, SkillGroup
+from ..models import db, ResearchGroup, ProjectClass, Supervisor, Project, EnrollmentRecord, SkillGroup
 
-from ..fields import EditFormMixin, CheckboxQuerySelectMultipleField
+from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
-from ..admin.forms import GetActiveFaculty, BuildUserRealName
+from ..shared.forms.queries import GetActiveFaculty, BuildUserRealName
+
 
 def globally_unique_project(form, field):
 
@@ -194,8 +194,6 @@ class ConfirmAllRequestsForm(Form):
 class SkillSelectorMixin():
 
     selector = QuerySelectField('Skill group', query_factory=GetSkillGroups, get_label='name')
-
-    submit = SubmitField('Change')
 
 
 class SkillSelectorForm(Form, SkillSelectorMixin):

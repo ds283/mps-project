@@ -52,12 +52,21 @@ _pclasses_menu = \
 </div>
 """
 
-_active = \
+_status = \
 """
 {% if p.active %}
     <span class="label label-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
     <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+{% endif %}
+{% if p.do_matching %}
+    <span class="label label-info">Auto-match</span>
+{% endif %}
+{% if p.require_confirm %}
+    <span class="label label-info">Confirm</span>
+{% endif %}
+{% if p.supervisor_carryover %}
+     <span class="label label-info">Carryover</span>
 {% endif %}
 """
 
@@ -82,16 +91,21 @@ _popularity = \
 _convenor = \
 """
 {% set style = p.make_CSS_style() %}
-<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor.email }}">
-    {{ p.convenor.build_name() }}
+<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
+    {{ p.convenor_name }}
 </a>
+{% for fac in p.coconvenors %}
+    <a class="label label-default" href="mailto:{{ fac.user.email }}">
+        {{ fac.user.name }}
+    </a>
+{% endfor %}
 """
 
 
 def pclasses_data(classes):
 
     data = [{'name': '{name} ({ab})'.format(name=p.name, ab=p.abbreviation),
-             'active': render_template_string(_active, p=p),
+             'status': render_template_string(_status, p=p),
              'colour': '<span class="label label-default">None</span>' if p.colour is None else p.make_label(p.colour),
              'year': '<span class="label label-info">Y{yr}</span>'.format(yr=p.year),
              'extent': '<span class="label label-info">{ex}</span>'.format(ex=p.extent),

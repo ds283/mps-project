@@ -18,7 +18,7 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record
-from ..shared.validators import validate_convenor, validate_administrator, validate_user, validate_open
+from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_submitter, add_liveproject
 
@@ -137,7 +137,7 @@ def overview(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current academic year
@@ -181,13 +181,13 @@ def overview(id):
 def attached(id):
 
     if id == 0:
-        return redirect(url_for('convenor.show_unattached'))
+        return redirect(url_for('convenor.show_unofferable'))
 
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current academic year
@@ -224,7 +224,7 @@ def attached_ajax(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
@@ -273,7 +273,7 @@ def faculty(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     filter = request.args.get('filter')
@@ -306,7 +306,7 @@ def faculty_ajax(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return jsonify({})
 
     filter = request.args.get('filter')
@@ -353,7 +353,7 @@ def selectors(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current academic year
@@ -383,7 +383,7 @@ def selectors_ajax(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
@@ -403,7 +403,7 @@ def enroll_selectors(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current academic year
@@ -437,7 +437,7 @@ def enroll_selectors_ajax(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
@@ -502,7 +502,7 @@ def submitters(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current academic year
@@ -530,7 +530,7 @@ def submitters_ajax(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
@@ -550,7 +550,7 @@ def liveprojects(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current academic year
@@ -588,7 +588,7 @@ def liveprojects_ajax(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
@@ -616,7 +616,7 @@ def attach_liveproject(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current academic year
@@ -663,7 +663,7 @@ def attach_liveproject_ajax(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
@@ -710,7 +710,7 @@ def manual_attach_project(id, configid):
     config = ProjectClassConfig.query.get_or_404(configid)
 
     # reject user if not entitled to act as convenor
-    if not validate_convenor(config.project_class):
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     # reject if project class is not live
@@ -837,7 +837,7 @@ def add_project(pclass_id):
     if pclass_id == 0:
 
         # got here from unattached projects view; reject if user is not administrator
-        if not validate_administrator():
+        if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
@@ -846,7 +846,7 @@ def add_project(pclass_id):
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_convenor(pclass):
+        if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
     # set up form
@@ -884,7 +884,7 @@ def add_project(pclass_id):
             if not owner.is_enrolled(pclass):
 
                 owner.add_enrollment(pclass)
-                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.build_name(), pclass=pclass.name))
+                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.name, pclass=pclass.name))
 
         db.session.add(data)
         db.session.commit()
@@ -913,7 +913,7 @@ def edit_project(id, pclass_id):
     if pclass_id == 0:
 
         # got here from unattached projects view; reject if user is not administrator
-        if not validate_administrator():
+        if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
@@ -922,7 +922,7 @@ def edit_project(id, pclass_id):
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_convenor(pclass):
+        if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
     # set up form
@@ -960,7 +960,7 @@ def edit_project(id, pclass_id):
             if not owner.is_enrolled(pclass):
 
                 owner.add_enrollment(pclass)
-                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.build_name(), pclass=pclass.name))
+                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.name, pclass=pclass.name))
 
         db.session.commit()
 
@@ -980,7 +980,7 @@ def activate_project(id, pclass_id):
     pclass = ProjectClass.query.get_or_404(pclass_id)
 
     # if logged in user is not a suitable convenor, or an administrator, object
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     data.enable()
@@ -1000,7 +1000,7 @@ def deactivate_project(id, pclass_id):
     pclass = ProjectClass.query.get_or_404(pclass_id)
 
     # if logged in user is not a suitable convenor, or an administrator, object
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     data.disable()
@@ -1020,7 +1020,7 @@ def attach_skills(id, pclass_id, sel_id=None):
     if pclass_id == 0:
 
         # got here from unattached projects view; reject if user is not administrator
-        if not validate_administrator():
+        if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
@@ -1029,7 +1029,7 @@ def attach_skills(id, pclass_id, sel_id=None):
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_convenor(pclass):
+        if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
     form = SkillSelectorForm(request.form)
@@ -1064,7 +1064,7 @@ def add_skill(projectid, skillid, pclass_id, sel_id):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     skill = TransferableSkill.query.get_or_404(skillid)
@@ -1084,7 +1084,7 @@ def remove_skill(projectid, skillid, pclass_id, sel_id):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     skill = TransferableSkill.query.get_or_404(skillid)
@@ -1106,7 +1106,7 @@ def attach_programmes(id, pclass_id):
     if pclass_id == 0:
 
         # got here from unattached projects view; reject if user is not administrator
-        if not validate_administrator():
+        if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
@@ -1115,7 +1115,7 @@ def attach_programmes(id, pclass_id):
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_convenor(pclass):
+        if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
     q = data.available_degree_programmes
@@ -1131,7 +1131,7 @@ def issue_confirm_requests(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
@@ -1175,7 +1175,7 @@ def golive_ajax(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
@@ -1184,26 +1184,26 @@ def golive_ajax(id):
     return ajax.convenor.golive_data(config)
 
 
-@convenor.route('/show_unattached')
+@convenor.route('/show_unofferable')
 @roles_accepted('faculty', 'admin', 'root')
-def show_unattached():
+def show_unofferable():
 
     # special-case of unattached projects; reject user if not administrator
-    if not validate_administrator():
+    if not validate_is_administrator():
         return redirect(request.referrer)
 
-    return render_template('convenor/unattached.html')
+    return render_template('convenor/unofferable.html')
 
 
-@convenor.route('/unattached_ajax')
+@convenor.route('/unofferable_ajax')
 @roles_accepted('faculty', 'admin', 'root')
-def unattached_ajax():
+def unofferable_ajax():
     """
     Ajax data point for show-unattached view
     :return:
     """
 
-    if not validate_administrator():
+    if not validate_is_administrator():
         return jsonify({})
 
     projects = [(p, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.offerable]
@@ -1220,7 +1220,7 @@ def force_confirm_all(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
@@ -1245,7 +1245,7 @@ def go_live(pid, configid):
     pclass = ProjectClass.query.get_or_404(pid)
 
     # reject user if not entitled to perform dashboard functions
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     year = get_current_year()
@@ -1285,7 +1285,7 @@ def close_selections(id):
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
@@ -1310,7 +1310,7 @@ def enroll(userid, pclassid):
     pclass = ProjectClass.query.get_or_404(pclassid)
 
     # reject user if not a suitable convenor or administrator
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
@@ -1327,7 +1327,7 @@ def unenroll(userid, pclassid):
     pclass = ProjectClass.query.get_or_404(pclassid)
 
     # reject user if not a suitable convenor or administrator
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
@@ -1346,11 +1346,11 @@ def confirm(sid, pid):
     # pid is a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     if do_confirm(sel, project):
@@ -1369,11 +1369,11 @@ def deconfirm(sid, pid):
     # pid is a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     if do_deconfirm(sel, project):
@@ -1392,11 +1392,11 @@ def deconfirm_to_pending(sid, pid):
     # pid is a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     if do_deconfirm_to_pending(sel, project):
@@ -1415,11 +1415,11 @@ def cancel_confirm(sid, pid):
     # pid is a LiveProject
     project = LiveProject.query.get_or_404(pid)
 
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     if do_cancel_confirm(sel, project):
@@ -1438,11 +1438,11 @@ def project_confirm_all(pid):
     pclass = project.config.project_class
 
     # validate that logged-in user is allowed to edit this LiveProject
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(project.config):
+    if not validate_project_open(project.config):
         return redirect(request.referrer)
 
     for item in project.confirm_waiting:
@@ -1464,11 +1464,11 @@ def project_clear_requests(pid):
     pclass = project.config.project_class
 
     # validate that logged-in user is allowed to edit this LiveProject
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(project.config):
+    if not validate_project_open(project.config):
         return redirect(request.referrer)
 
     for item in project.confirm_waiting:
@@ -1488,11 +1488,11 @@ def project_remove_confirms(pid):
     pclass = project.config.project_class
 
     # validate that logged-in user is allowed to edit this LiveProject
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(project.config):
+    if not validate_project_open(project.config):
         return redirect(request.referrer)
 
     for item in project.confirmed_students:
@@ -1512,11 +1512,11 @@ def project_make_all_confirms_pending(pid):
     pclass = project.config.project_class
 
     # validate that logged-in user is allowed to edit this LiveProject
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(project.config):
+    if not validate_project_open(project.config):
         return redirect(request.referrer)
 
     for item in project.confirmed_students:
@@ -1536,11 +1536,11 @@ def student_confirm_all(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     for item in sel.confirm_requests:
@@ -1560,11 +1560,11 @@ def student_remove_confirms(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     for item in sel.confirmed:
@@ -1582,11 +1582,11 @@ def student_clear_requests(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     for item in sel.confirm_requests:
@@ -1604,11 +1604,11 @@ def student_make_all_confirms_pending(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     for item in sel.confirmed:
@@ -1628,11 +1628,11 @@ def student_clear_bookmarks(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return home_dashboard()
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
     for item in sel.bookmarks:
@@ -1676,7 +1676,7 @@ def rollover(pid, configid):
         return home_dashboard()
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(pclass):
+    if not validate_is_convenor(pclass):
         return home_dashboard()
 
     year = get_current_year()
@@ -1713,7 +1713,7 @@ def reset_popularity_data(id):
     config = ProjectClassConfig.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(config.project_class):
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     title = 'Delete popularity data'
@@ -1741,7 +1741,7 @@ def perform_reset_popularity_data(id):
     config = ProjectClassConfig.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(config.project_class):
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     db.session.query(PopularityRecord).filter_by(config_id=id).delete()
@@ -1758,7 +1758,7 @@ def selector_bookmarks(id):
     sel = SelectingStudent.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_bookmarks.html', sel=sel)
@@ -1772,7 +1772,7 @@ def project_bookmarks(id):
     proj = LiveProject.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(proj.config.project_class):
+    if not validate_is_convenor(proj.config.project_class):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/project_bookmarks.html', project=proj)
@@ -1786,7 +1786,7 @@ def selector_choices(id):
     sel = SelectingStudent.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_choices.html', sel=sel)
@@ -1800,7 +1800,7 @@ def project_choices(id):
     proj = LiveProject.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(proj.config.project_class):
+    if not validate_is_convenor(proj.config.project_class):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/project_choices.html', project=proj)
@@ -1814,7 +1814,7 @@ def selector_confirmations(id):
     sel = SelectingStudent.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(sel.config.project_class):
+    if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_confirmations.html', sel=sel)
@@ -1828,7 +1828,7 @@ def project_confirmations(id):
     proj = LiveProject.query.get_or_404(id)
 
     # reject user if not entitled to view this dashboard
-    if not validate_convenor(proj.config.project_class):
+    if not validate_is_convenor(proj.config.project_class):
         return home_dashboard()
 
     return render_template('convenor/selector/project_confirmations.html', project=proj)
@@ -1844,7 +1844,7 @@ def add_group_filter(id, gid):
     record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(record.config.project_class):
+    if not validate_is_convenor(record.config.project_class):
         return redirect(request.referrer)
 
     if group not in record.group_filters:
@@ -1864,7 +1864,7 @@ def remove_group_filter(id, gid):
     record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(record.config.project_class):
+    if not validate_is_convenor(record.config.project_class):
         return redirect(request.referrer)
 
     if group in record.group_filters:
@@ -1882,7 +1882,7 @@ def clear_group_filters(id):
     record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(record.config.project_class):
+    if not validate_is_convenor(record.config.project_class):
         return redirect(request.referrer)
 
     record.group_filters = []
@@ -1901,7 +1901,7 @@ def add_skill_filter(id, gid):
     record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(record.config.project_class):
+    if not validate_is_convenor(record.config.project_class):
         return redirect(request.referrer)
 
     if skill not in record.skill_filters:
@@ -1921,7 +1921,7 @@ def remove_skill_filter(id, gid):
     record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(record.config.project_class):
+    if not validate_is_convenor(record.config.project_class):
         return redirect(request.referrer)
 
     if skill in record.skill_filters:
@@ -1939,7 +1939,7 @@ def clear_skill_filters(id):
     record = FilterRecord.query.get_or_404(id)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_convenor(record.config.project_class):
+    if not validate_is_convenor(record.config.project_class):
         return redirect(request.referrer)
 
     record.skill_filters = []

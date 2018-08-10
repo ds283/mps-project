@@ -22,7 +22,7 @@ from . import faculty
 from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm
 
 from ..shared.utils import home_dashboard, get_root_dashboard_data
-from ..shared.validators import validate_user, validate_open
+from ..shared.validators import validate_edit_project, validate_project_open
 from ..shared.actions import render_live_project, do_confirm, do_deconfirm
 
 from datetime import datetime
@@ -204,7 +204,7 @@ def edit_project(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     form = EditProjectForm(obj=data)
@@ -248,7 +248,7 @@ def activate_project(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     data.enable()
@@ -265,7 +265,7 @@ def deactivate_project(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     data.disable()
@@ -283,7 +283,7 @@ def attach_skills(id, sel_id=None):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     form = SkillSelectorForm(request.form)
@@ -318,7 +318,7 @@ def add_skill(projectid, skillid, sel_id):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     skill = TransferableSkill.query.get_or_404(skillid)
@@ -338,7 +338,7 @@ def remove_skill(projectid, skillid, sel_id):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     skill = TransferableSkill.query.get_or_404(skillid)
@@ -358,7 +358,7 @@ def attach_programmes(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     q = data.available_degree_programmes
@@ -374,7 +374,7 @@ def add_programme(projectid, progid):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     programme = DegreeProgramme.query.get_or_404(progid)
@@ -394,7 +394,7 @@ def remove_programme(projectid, progid):
     data = Project.query.get_or_404(projectid)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     programme = DegreeProgramme.query.get_or_404(progid)
@@ -414,7 +414,7 @@ def project_preview(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     return render_live_project(data)
@@ -527,7 +527,7 @@ def confirm(sid, pid):
         return redirect(request.referrer)
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(url_for(request.referrer))
 
     if do_confirm(sel, project):
@@ -552,7 +552,7 @@ def deconfirm(sid, pid):
         return redirect(request.referrer)
 
     # validate that project is open
-    if not validate_open(sel.config):
+    if not validate_project_open(sel.config):
         return redirect(url_for(request.referrer))
 
     if do_deconfirm(sel, project):
@@ -576,7 +576,7 @@ def live_project(pid):
     data = LiveProject.query.get_or_404(pid)
 
     # verify the logged-in user is allowed to view this live project
-    if not validate_user(data):
+    if not validate_edit_project(data):
         return redirect(request.referrer)
 
     return render_live_project(data)

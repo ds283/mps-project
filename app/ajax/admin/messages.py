@@ -67,7 +67,7 @@ _messages_menu = \
 
 
 def messages_data(messages):
-    data = [{'poster': m.user.build_name(),
+    data = [{'poster': m.user.name,
              'email': '<a href="{email}">{email}</a>'.format(email=m.user.email),
              'date': {
                  'display': m.issue_date.strftime("%a %d %b %Y %H:%M:%S"),

@@ -46,8 +46,8 @@ _project_pclasses = \
 """
 {% for pclass in project.project_classes %}
     {% set style = pclass.make_CSS_style() %}
-    <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor.email }}">
-        {{ pclass.abbreviation }} ({{ pclass.convenor.build_name() }})
+    <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">
+        {{ pclass.abbreviation }} ({{ pclass.convenor_name }})
     </a>
 {% endfor %}
 """
@@ -87,7 +87,7 @@ _project_skills = \
 def build_data(projects, menu_template, config=None):
 
     data = [{'name': render_template_string(_project_name, project=p),
-             'owner': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.email, nm=p.owner.build_name()),
+             'owner': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.email, nm=p.owner.name),
              'status': render_template_string(_project_status, project=p, enrollment=e),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),

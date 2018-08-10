@@ -255,8 +255,8 @@
             {% if pclasses and pclasses.first() %}
                 <li role="separator" class="divider"></li>
             {% endif %}
-            <li><a href="{{ url_for('convenor.show_unattached', id=0) }}">
-                Unattached projects
+            <li><a href="{{ url_for('convenor.show_unofferable', id=0) }}">
+                Unofferable projects
             </a></li>
         {% endif %}
         </ul>
@@ -308,8 +308,8 @@
                     {% if current_user.has_role('admin') or current_user.has_role('root') %}
                         {{ convenor_menu(current_user.get_project_classes()) }}
                     {% else  %}
-                        {% if current_user.has_role('faculty') and current_user.convenor_for and current_user.convenor_for.first() %}
-                            {{ convenor_menu(current_user.convenor_for) }}
+                        {% if current_user.has_role('faculty') and current_user.faculty_data and current_user.faculty_data.is_convenor() %}
+                            {{ convenor_menu(current_user.convenor_list) }}
                         {% endif %}
                     {% endif %}
 

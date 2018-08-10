@@ -47,34 +47,21 @@ _enrollments = \
 
 _menu = \
 """
-<div class="dropdown">
-                
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        {% if proj.is_second_marker(f) %}
-            <li>
-                <a href="{{ url_for('faculty.remove_marker', proj_id=proj.id, mid=f.id) }}">
-                    <i class="fa fa-trash"></i> Remove
-                </a>
-            </li>
-        {% elif proj.can_enroll_marker(f) %}
-            <li>
-                <a href="{{ url_for('faculty.add_marker', proj_id=proj.id, mid=f.id) }}">
-                    <i class="fa fa-plus"></i> Enroll
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-plus"></i> Enroll
-                </a>
-            </li>
-        {% endif %}
-    </ul>
-</div>
+{% if proj.is_second_marker(f) %}
+    <a href="{{ url_for('faculty.remove_marker', proj_id=proj.id, mid=f.id) }}"
+       class="btn btn-sm btn-default">
+        <i class="fa fa-trash"></i> Remove
+    </a>
+{% elif proj.can_enroll_marker(f) %}
+    <a href="{{ url_for('faculty.add_marker', proj_id=proj.id, mid=f.id) }}"
+       class="btn btn-sm btn-default">
+        <i class="fa fa-plus"></i> Enroll
+    </a>
+{% else %}
+    <a class="btn btn-default btn-sm disabled">
+        <i class="fa fa-plus"></i> Enroll
+    </a>
+{% endif %}
 """
 
 

@@ -1933,6 +1933,11 @@ class Project(db.Model):
                 self.remove_programme(prog)
 
 
+    def is_second_marker(self, faculty):
+
+        return faculty in self.second_markers
+
+
 class LiveProject(db.Model):
     """
     The definitive live project table

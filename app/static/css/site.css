@@ -118,8 +118,12 @@ p.copyright {
     word-break: break-all;
 }
 
-.log-button-pad {
+.grouped-button-pad {
     padding-bottom: 15px;
+}
+
+.grouped-button-margin {
+    margin-bottom: 2px;
 }
 
 .color-card {

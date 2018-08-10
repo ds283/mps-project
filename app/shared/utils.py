@@ -15,6 +15,8 @@ from flask_security import current_user
 from app.models import db, MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord
 
+from .conversions import is_integer
+
 from sqlalchemy import func
 
 
@@ -237,6 +239,49 @@ def filter_projects(plist, groups, skills, getter=None):
             projects.append(item)
 
     return projects
+
+
+def filter_second_markers(proj, state_filter, group_filter):
+    """
+    Build a list of FacultyData records suitable for the 2nd marker table
+    :param proj:
+    :param state_filter:
+    :param group_filter:
+    :return:
+    """
+
+    # build base query -- either all users, or enrolled users, or not enrolled faculty
+    if state_filter == 'enrolled':
+        # build list of all active faculty users who are enrolled
+        user_query = proj.second_markers \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active == True)
+
+    elif state_filter == 'not-enrolled':
+        # build list of all active faculty users who are not enrolled
+        enrolled_query = proj.second_markers.subquery()
+
+        user_query = db.session.query(FacultyData) \
+            .join(User, User.id == FacultyData.id) \
+            .join(enrolled_query, enrolled_query.c.id == FacultyData.id, isouter=True) \
+            .filter(enrolled_query.c.id == None,
+                    User.active == True)
+
+    else:
+        # build list of all active faculty
+        user_query = db.session.query(FacultyData) \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active == True)
+
+    # add filters for research group, if a filter is applied
+    flag, value = is_integer(group_filter)
+
+    if flag:
+        user_query = user_query.filter(FacultyData.affiliations.any(ResearchGroup.id == value))
+
+    user_query = user_query.order_by(User.last_name, User.first_name)
+
+    return user_query.all()
 
 
 def get_convenor_filter_record(config):

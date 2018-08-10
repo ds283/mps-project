@@ -8,10 +8,10 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, render_template_string, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, session, jsonify
 from flask_security import roles_required, roles_accepted, current_user
 
-from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
+from ..models import db, DegreeProgramme, User, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup
 
@@ -21,7 +21,7 @@ from . import faculty
 
 from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm
 
-from ..shared.utils import home_dashboard, get_root_dashboard_data
+from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_second_markers
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner
 from ..shared.actions import render_live_project, do_confirm, do_deconfirm
 
@@ -97,6 +97,12 @@ _project_menu = \
         <li>
             <a href="{{ url_for('faculty.edit_project', id=project.id) }}">
                 <i class="fa fa-pencil"></i> Edit project
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('faculty.attach_markers', id=project.id) }}">
+                <i class="fa fa-pencil"></i> 2nd markers
             </a>
         </li>
 
@@ -374,7 +380,7 @@ def attach_programmes(id):
     return render_template('faculty/attach_programmes.html', data=proj, programmes=q.all())
 
 
-@faculty.route('/add_programme/<id>/<int:prog_id>')
+@faculty.route('/add_programme/<int:id>/<int:prog_id>')
 @roles_required('faculty')
 def add_programme(id, prog_id):
 
@@ -394,7 +400,7 @@ def add_programme(id, prog_id):
     return redirect(request.referrer)
 
 
-@faculty.route('/remove_programme/<id>/<int:prog_id>')
+@faculty.route('/remove_programme/<int:id>/<int:prog_id>')
 @roles_required('faculty')
 def remove_programme(id, prog_id):
 
@@ -414,7 +420,59 @@ def remove_programme(id, prog_id):
     return redirect(request.referrer)
 
 
-# @faculty.route('/attach_markers/<int:id>')
+@faculty.route('/attach_markers/<int:id>')
+@roles_required('faculty')
+def attach_markers(id):
+
+    # get project details
+    proj = Project.query.get_or_404(id)
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
+        return redirect(request.referrer)
+
+    state_filter = request.args.get('state_filter')
+    group_filter = request.args.get('group_filter')
+
+    # if no state filter supplied, check if one is stored in session
+    if state_filter is None and session.get('faculty_marker_state_filter'):
+        state_filter = session['faculty_marker_state_filter']
+
+    # write state filter into session if it is not empty
+    if state_filter is not None:
+        session['faculty_marker_state_filter'] = state_filter
+
+    # if no group filter supplied, check if one is stored in session
+    if group_filter is None and session.get('faculty_marker_group_filter'):
+        group_filter = session['faculty_marker_group_filter']
+
+    # write group filter into session if it is not empty
+    if group_filter is not None:
+        session['faculty_marker_group_filter'] = group_filter
+
+    groups = ResearchGroup.query.filter_by(active=True).all()
+
+    return render_template('faculty/attach_markers.html', data=proj, groups=groups,
+                           state_filter=state_filter, group_filter=group_filter)
+
+
+@faculty.route('/attach_markers_ajax/<int:id>')
+@roles_required('faculty')
+def attach_markers_ajax(id):
+
+    # get project details
+    proj = Project.query.get_or_404(id)
+
+    # if project owner is not logged in user, return empty json
+    if not validate_is_project_owner(proj):
+        return jsonify({})
+
+    state_filter = request.args.get('state_filter')
+    group_filter = request.args.get('group_filter')
+
+    faculty = filter_second_markers(proj, state_filter, group_filter)
+
+    return ajax.project.build_marker_data(faculty, proj)
 
 
 @faculty.route('/preview/<int:id>')

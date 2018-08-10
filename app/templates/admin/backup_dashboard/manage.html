@@ -47,10 +47,10 @@
             <div class="col-xs-2">
                 {{ wtf.form_field(form.weeks) }}
             </div>
-            <div class="col-xs-2 log-button-pad">
+            <div class="col-xs-2 grouped-button-pad">
                 {{ wtf.form_field(form.delete_age, button_map={'delete_age': 'warning'}) }}
             </div>
-            <div class="col-xs-8 log-button-pad">
+            <div class="col-xs-8 grouped-button-pad">
                 <div class="pull-right">
                     <a href="{{ url_for('admin.confirm_delete_all_backups') }}" class="btn btn-danger">Delete all</a>
                 </div>

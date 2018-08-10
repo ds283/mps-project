@@ -1430,6 +1430,7 @@ def add_pclass():
                             abbreviation=form.abbreviation.data,
                             colour=form.colour.data,
                             do_matching=form.do_matching.data,
+                            number_markers=form.number_markers.data,
                             year=form.year.data,
                             extent=form.extent.data,
                             require_confirm=form.require_confirm.data,
@@ -1469,12 +1470,14 @@ def add_pclass():
         data.convenor.add_convenorship(data)
 
         db.session.add(config)
-
-        # don't generate any go-live requests here; this is done explicitly by user action
-
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))
+
+    else:
+
+        if request.method == 'GET':
+            form.number_markers.data = current_app.config['DEFAULT_SECOND_MARKERS']
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
 
@@ -1508,6 +1511,7 @@ def edit_pclass(id):
         data.year = form.year.data
         data.colour = form.colour.data
         data.do_matching = form.do_matching.data
+        data.number_markers = form.number_markers.data
         data.extent = form.extent.data
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data
@@ -1533,6 +1537,12 @@ def edit_pclass(id):
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))
+
+    else:
+
+        if request.method == 'GET':
+            if form.number_markers.data is None:
+                form.number_markers.data = current_app.config['DEFAULT_SECOND_MARKERS']
 
     return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')

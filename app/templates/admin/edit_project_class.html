@@ -58,9 +58,14 @@
 
         <div class="well">
             <p>Options</p>
-            {{ wtf.form_field(pclass_form.do_matching) }}
             {{ wtf.form_field(pclass_form.require_confirm) }}
             {{ wtf.form_field(pclass_form.supervisor_carryover) }}
+        </div>
+
+        <div class="well">
+            <p>Automated matching</p>
+            {{ wtf.form_field(pclass_form.do_matching) }}
+            {{ wtf.form_field(pclass_form.number_markers) }}
         </div>
 
         <div class="well {% if pclass_form.programmes.errors %}has-error{% endif %}">

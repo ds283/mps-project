@@ -241,9 +241,10 @@ def filter_projects(plist, groups, skills, getter=None):
     return projects
 
 
-def filter_second_markers(proj, state_filter, group_filter):
+def filter_second_markers(proj, state_filter, pclass_filter, group_filter):
     """
     Build a list of FacultyData records suitable for the 2nd marker table
+    :param pclass_filter:
     :param proj:
     :param state_filter:
     :param group_filter:
@@ -278,6 +279,12 @@ def filter_second_markers(proj, state_filter, group_filter):
 
     if flag:
         user_query = user_query.filter(FacultyData.affiliations.any(ResearchGroup.id == value))
+
+    # add filters for enrollment in a particular project class
+    flag, value = is_integer(pclass_filter)
+
+    if flag:
+        user_query = user_query.filter(FacultyData.enrollments.any(EnrollmentRecord.pclass_id == value))
 
     user_query = user_query.order_by(User.last_name, User.first_name)
 

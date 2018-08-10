@@ -1436,6 +1436,7 @@ def add_pclass():
                             require_confirm=form.require_confirm.data,
                             supervisor_carryover=form.supervisor_carryover.data,
                             submissions=form.submissions.data,
+                            uses_marker=form.uses_marker.data,
                             convenor=form.convenor.data,
                             coconvenors=coconvenors,
                             selection_open_to_all=form.selection_open_to_all.data,
@@ -1478,6 +1479,7 @@ def add_pclass():
 
         if request.method == 'GET':
             form.number_markers.data = current_app.config['DEFAULT_SECOND_MARKERS']
+            form.uses_marker.data = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
 
@@ -1516,6 +1518,7 @@ def edit_pclass(id):
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data
         data.submissions = form.submissions.data
+        data.uses_marker = form.uses_marker.data
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
         data.selection_open_to_all = form.selection_open_to_all.data
@@ -1543,6 +1546,8 @@ def edit_pclass(id):
         if request.method == 'GET':
             if form.number_markers.data is None:
                 form.number_markers.data = current_app.config['DEFAULT_SECOND_MARKERS']
+            if form.uses_marker.data is None:
+                form.uses_marker.data = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')

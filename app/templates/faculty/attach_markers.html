@@ -60,7 +60,7 @@
 
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="well">
-                    <div class="row vertical-align">
+                    <div class="row vertical-align marker-table">
                         <div class="col-xs-4"><strong>Project type</strong></div>
                         <div class="col-xs-2"><strong>Markers required</strong></div>
                         <div class="col-xs-2"><strong>Markers enrolled</strong></div>
@@ -68,7 +68,7 @@
                     </div>
 
                     {% for pclass in pclasses %}
-                        <div class="row vertical-align">
+                        <div class="row vertical-align marker-table">
                             <div class="col-xs-4">{{ pclass.name }}</div>
                             <div class="col-xs-2">
                                 {% if pclass.do_matching %}
@@ -92,6 +92,10 @@
                             <div class="col-xs-4"></div>
                         </div>
                     {% endfor %}
+                </div>
+            {% else %}
+                <div class="well">
+                    This project is not currently attached to any project types that require 2nd markers
                 </div>
             {% endif %}
 

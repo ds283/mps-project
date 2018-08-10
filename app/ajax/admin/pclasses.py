@@ -72,9 +72,8 @@ _status = \
 
 _workload = \
 """
-<span class="label label-info">{{ p.CATS_supervision }}</span>
-/
-<span class="label label-default">{{ p.CATS_marking }}</span>
+<span class="label label-primary">Supv: {{ p.CATS_supervision }}</span>
+<span class="label label-info">2nd: {{ p.CATS_marking }}</span>
 """
 
 _popularity = \
@@ -83,9 +82,8 @@ _popularity = \
 {% if p.keep_hourly_popularity == 1 %}{% set hourly_pl = '' %}{% endif %}
 {% set daily_pl = 's' %}
 {% if p.keep_daily_popularity == 1 %}{% set daily_pl = '' %}{% endif %}
-<span class="label label-info">{{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
-/
-<span class="label label-info">{{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
+<span class="label label-info">Hourly: {{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
+<span class="label label-info">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
 """
 
 _convenor = \
@@ -101,16 +99,29 @@ _convenor = \
 {% endfor %}
 """
 
+_submissions = \
+"""
+<span class="label label-primary">{{ p.submissions }}/yr</span>
+{% if p.uses_marker %}
+    <span class="label label-info">2nd marked</span>
+{% endif %}
+"""
+
+_configuration = \
+"""
+<span class="label label-primary">Y{{ p.year }}</span>
+<span class="label label-info">extent: {{ p.extent }} yr</span>
+"""
+
 
 def pclasses_data(classes):
 
-    data = [{'name': '{name} ({ab})'.format(name=p.name, ab=p.abbreviation),
+    data = [{'name': '{name} {ab}'.format(name=p.name, ab=p.make_label(p.abbreviation)),
              'status': render_template_string(_status, p=p),
              'colour': '<span class="label label-default">None</span>' if p.colour is None else p.make_label(p.colour),
-             'year': '<span class="label label-info">Y{yr}</span>'.format(yr=p.year),
-             'extent': '<span class="label label-info">{ex}</span>'.format(ex=p.extent),
+             'config': render_template_string(_configuration, p=p),
              'cats': render_template_string(_workload, p=p),
-             'submissions': '<span class="label label-primary">{sub}</span>'.format(sub=p.submissions),
+             'submissions': render_template_string(_submissions, p=p),
              'popularity': render_template_string(_popularity, p=p),
              'convenor': render_template_string(_convenor, p=p),
              'programmes': render_template_string(_pclasses_programmes, pcl=p),

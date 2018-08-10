@@ -30,19 +30,24 @@ _status = \
 
 _enrollments = \
 """
+{% set ns = namespace(count=0) %}
 {% for e in f.enrollments %}
-    {% if e.marker_state == e.MARKER_ENROLLED %}
-        {{ e.pclass.make_label('<i class="fa fa-check"></i> ' + e.pclass.abbreviation)|safe }}
-    {% elif e.marker_state == e.MARKER_SABBATICAL %}
-        <span class="label label-default"><i class="fa fa-times"></i> {{ e.pclass.abbreviation }} (buyout)</span>
-    {% elif e.marker_state == e.MARKER_EXEMPT %}
-        <span class="label label-default"><i class="fa fa-times"></i> {{ e.pclass.abbreviation }} (exempt)</span>
-    {% else %}
-        <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> {{ e.pclass.abbreviation }} (unknown state)</span>
+    {% if e.pclass.uses_marker %}
+        {% set ns.count = ns.count + 1 %}
+        {% if e.marker_state == e.MARKER_ENROLLED %}
+            {{ e.pclass.make_label('<i class="fa fa-check"></i> ' + e.pclass.abbreviation)|safe }}
+        {% elif e.marker_state == e.MARKER_SABBATICAL %}
+            <span class="label label-default"><i class="fa fa-times"></i> {{ e.pclass.abbreviation }} (buyout)</span>
+        {% elif e.marker_state == e.MARKER_EXEMPT %}
+            <span class="label label-default"><i class="fa fa-times"></i> {{ e.pclass.abbreviation }} (exempt)</span>
+        {% else %}
+            <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> {{ e.pclass.abbreviation }} (unknown state)</span>
+        {% endif %}
     {% endif %}
-{% else %}
-    <span class="label label-default">None</span>
 {% endfor %}
+{% if ns.count == 0 %}
+    <span class="label label-default">None</span>
+{% endif %}
 """
 
 _menu = \

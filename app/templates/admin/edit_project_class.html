@@ -57,6 +57,14 @@
         </div>
 
         <div class="well">
+            <p>Configuration</p>
+            {{ wtf.form_field(pclass_form.year) }}
+            {{ wtf.form_field(pclass_form.extent) }}
+            {{ wtf.form_field(pclass_form.submissions) }}
+            {{ wtf.form_field(pclass_form.uses_marker) }}
+        </div>
+
+        <div class="well">
             <p>Options</p>
             {{ wtf.form_field(pclass_form.require_confirm) }}
             {{ wtf.form_field(pclass_form.supervisor_carryover) }}
@@ -88,12 +96,6 @@
                     {{ pclass_form.selection_open_to_all()|safe }} {{ pclass_form.selection_open_to_all.label.text|safe }}
                 </label>
             </div>
-        </div>
-
-        <div class="well">
-            {{ wtf.form_field(pclass_form.year) }}
-            {{ wtf.form_field(pclass_form.extent) }}
-            {{ wtf.form_field(pclass_form.submissions) }}
         </div>
 
         <div class="well">

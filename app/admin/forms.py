@@ -290,6 +290,8 @@ class ProjectClassMixin():
     submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
                               description='Select number of marked reports submitted per academic year.')
 
+    uses_marker = BooleanField('Submissions are second-marked')
+
     initial_choices = IntegerField('Number of initial project preferences',
                                    description='Select number of preferences students should list before joining.')
 

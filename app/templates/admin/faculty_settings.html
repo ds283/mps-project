@@ -29,11 +29,13 @@
                 {% set style = pclass.make_CSS_style() %}
                 <div class="row vertical-align">
                     <div class="col-xs-6">
-                        <a class="btn {% if style %}btn-default{% else %}btn-info{% endif %} btn-table-block"
-                           {% if style %}style="{{ style }}"{% endif %}
-                           href="mailto:{{ pclass.convenor_email }}">
-                            {{ pclass.name }} ({{ pclass.convenor_name }})
-                        </a>
+                        <h4>
+                            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block"
+                               {% if style %}style="{{ style }}"{% endif %}
+                               href="mailto:{{ pclass.convenor_email }}">
+                                {{ pclass.name }} ({{ pclass.convenor_name }})
+                            </a>
+                        </h4>
                     </div>
                     <div class="col-xs-3">
                         <strong>Supervising:</strong>
@@ -53,20 +55,22 @@
                         {% endif %}
                     </div>
                     <div class="col-xs-3">
-                        <strong>2nd-marking:</strong>
-                        {% if record.marker_state == record.MARKER_ENROLLED %}
-                            <span class="label label-primary">enrolled</span>
-                        {% elif record.marker_state == record.MARKER_SABBATICAL %}
-                            <span class="label label-info">sabbatical/buyout</span>
-                            {% if record.marker_reenroll is not none %}
-                                <span class="label label-info">ends {{ record.marker_reenroll }}</span>
+                        {% if record.pclass.uses_marker %}
+                            <strong>2nd-marking:</strong>
+                            {% if record.marker_state == record.MARKER_ENROLLED %}
+                                <span class="label label-primary">enrolled</span>
+                            {% elif record.marker_state == record.MARKER_SABBATICAL %}
+                                <span class="label label-info">sabbatical/buyout</span>
+                                {% if record.marker_reenroll is not none %}
+                                    <span class="label label-info">ends {{ record.marker_reenroll }}</span>
+                                {% else %}
+                                    <span class="label label-warning">no end date</span>
+                                {% endif %}
+                            {% elif record.marker_state == record.MARKER_EXEMPT %}
+                                <span class="label label-warning">exempt</span>
                             {% else %}
-                                <span class="label label-warning">no end date</span>
+                                <span class="label label-danger">error</span>
                             {% endif %}
-                        {% elif record.marker_state == record.MARKER_EXEMPT %}
-                            <span class="label label-warning">exempt</span>
-                        {% else %}
-                            <span class="label label-danger">error</span>
                         {% endif %}
                     </div>
                 </div>

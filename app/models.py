@@ -1152,6 +1152,9 @@ class ProjectClass(db.Model):
     # how many submissions per year does this project have?
     submissions = db.Column(db.Integer())
 
+    # are the submissions second marker?
+    uses_marker = db.Column(db.Boolean())
+
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
 

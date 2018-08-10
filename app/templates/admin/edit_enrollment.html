@@ -24,12 +24,14 @@
         {{ wtf.form_field(form.supervisor_comment) }}
     </div>
 
-    <div class="well">
-        <p><strong>Role: 2nd marker</strong></p>
-        {{ wtf.form_field(form.marker_state) }}
-        {{ wtf.form_field(form.marker_reenroll) }}
-        {{ wtf.form_field(form.marker_comment) }}
-    </div>
+    {% if record.pclass.uses_marker %}
+        <div class="well">
+            <p><strong>Role: 2nd marker</strong></p>
+            {{ wtf.form_field(form.marker_state) }}
+            {{ wtf.form_field(form.marker_reenroll) }}
+            {{ wtf.form_field(form.marker_comment) }}
+        </div>
+    {% endif %}
 
     {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
 

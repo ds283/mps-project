@@ -459,9 +459,14 @@ def attach_markers(id):
     if group_filter is not None:
         session['faculty_marker_group_filter'] = group_filter
 
+    # get list of available research groups
     groups = ResearchGroup.query.filter_by(active=True).all()
 
-    return render_template('faculty/attach_markers.html', data=proj, groups=groups, pclasses=proj.project_classes.all(),
+    # get list of project classes to which this project is attached, and which require assignment of
+    # second markers
+    pclasses = proj.project_classes.filter_by(uses_marker=True).all()
+
+    return render_template('faculty/attach_markers.html', data=proj, groups=groups, pclasses=pclasses,
                            state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter)
 
 

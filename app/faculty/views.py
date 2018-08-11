@@ -28,55 +28,6 @@ from ..shared.actions import render_live_project, do_confirm, do_deconfirm
 from datetime import datetime
 
 
-@faculty.route('/affiliations')
-@roles_required('faculty')
-def affiliations():
-    """
-    Allow a faculty member to adjust their own affiliations without admin privileges
-    :return:
-    """
-
-    data = FacultyData.query.get_or_404(current_user.id)
-    research_groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name).all()
-
-    return render_template('faculty/affiliations.html', user=current_user, data=data, research_groups=research_groups)
-
-
-@faculty.route('/add_affiliation/<int:groupid>')
-@roles_required('faculty')
-def add_affiliation(groupid):
-
-    data = FacultyData.query.get_or_404(current_user.id)
-    group = ResearchGroup.query.get_or_404(groupid)
-
-    if group not in data.affiliations:
-        data.add_affiliation(group, autocommit=True)
-
-    return redirect(request.referrer)
-
-
-@faculty.route('/remove_affiliation/<int:groupid>')
-@roles_required('faculty')
-def remove_affiliation(groupid):
-
-    data = FacultyData.query.get_or_404(current_user.id)
-    group = ResearchGroup.query.get_or_404(groupid)
-
-    if group in data.affiliations:
-        data.remove_affiliation(group, autocommit=True)
-
-    return redirect(request.referrer)
-
-
-@faculty.route('/edit_projects')
-@roles_required('faculty')
-def edit_projects():
-
-    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
-
-    return render_template('faculty/edit_projects.html', groups=groups)
-
-
 _project_menu = \
 """
 <div class="dropdown">
@@ -134,6 +85,75 @@ _project_menu = \
     </ul>
 </div>
 """
+
+
+_marker_menu = \
+"""
+{% if proj.is_second_marker(f) %}
+    <a href="{{ url_for('faculty.remove_marker', proj_id=proj.id, mid=f.id) }}"
+       class="btn btn-sm btn-default">
+        <i class="fa fa-trash"></i> Remove
+    </a>
+{% elif proj.can_enroll_marker(f) %}
+    <a href="{{ url_for('faculty.add_marker', proj_id=proj.id, mid=f.id) }}"
+       class="btn btn-sm btn-default">
+        <i class="fa fa-plus"></i> Enroll
+    </a>
+{% else %}
+    <a class="btn btn-default btn-sm disabled">
+        <i class="fa fa-plus"></i> Enroll
+    </a>
+{% endif %}
+"""
+
+
+@faculty.route('/affiliations')
+@roles_required('faculty')
+def affiliations():
+    """
+    Allow a faculty member to adjust their own affiliations without admin privileges
+    :return:
+    """
+
+    data = FacultyData.query.get_or_404(current_user.id)
+    research_groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name).all()
+
+    return render_template('faculty/affiliations.html', user=current_user, data=data, research_groups=research_groups)
+
+
+@faculty.route('/add_affiliation/<int:groupid>')
+@roles_required('faculty')
+def add_affiliation(groupid):
+
+    data = FacultyData.query.get_or_404(current_user.id)
+    group = ResearchGroup.query.get_or_404(groupid)
+
+    if group not in data.affiliations:
+        data.add_affiliation(group, autocommit=True)
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/remove_affiliation/<int:groupid>')
+@roles_required('faculty')
+def remove_affiliation(groupid):
+
+    data = FacultyData.query.get_or_404(current_user.id)
+    group = ResearchGroup.query.get_or_404(groupid)
+
+    if group in data.affiliations:
+        data.remove_affiliation(group, autocommit=True)
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/edit_projects')
+@roles_required('faculty')
+def edit_projects():
+
+    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+
+    return render_template('faculty/edit_projects.html', groups=groups)
 
 
 @faculty.route('/projects_ajax', methods=['GET', 'POST'])
@@ -487,7 +507,7 @@ def attach_markers_ajax(id):
 
     faculty = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
 
-    return ajax.project.build_marker_data(faculty, proj)
+    return ajax.project.build_marker_data(faculty, proj, _marker_menu)
 
 
 @faculty.route('/add_marker/<int:proj_id>/<int:mid>')

@@ -759,6 +759,16 @@ class FacultyData(db.Model):
         flash('Removed {name} as convenor of {title}'.format(name=self.name, title=pclass.name))
 
 
+    @property
+    def number_marker(self):
+        """
+        Determine the number of projects to which we are attached as a 2nd marker
+        :return:
+        """
+
+        return db.session.query(sqlalchemy.func.count(self.second_marker_for.subquery().c.id)).scalar()
+
+
 class StudentData(db.Model):
     """
     Models extra data held on students

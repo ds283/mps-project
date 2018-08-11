@@ -1,4 +1,4 @@
-#
+ #
 # Created by David Seery on 24/05/2018.
 # Copyright (c) 2018 University of Sussex. All rights reserved.
 #
@@ -17,7 +17,7 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
     PopularityRecord, FilterRecord, DegreeProgramme
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects, get_convenor_filter_record
+    filter_projects, get_convenor_filter_record, filter_second_markers
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_submitter, add_liveproject
@@ -54,6 +54,12 @@ _project_menu = \
         <li>
             <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=config.pclass_id) }}">
                 <i class="fa fa-pencil"></i> Edit project
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.attach_markers', id=project.id, pclass_id=config.pclass_id) }}">
+                <i class="fa fa-pencil"></i> 2nd markers
             </a>
         </li>
 
@@ -111,6 +117,12 @@ _unattached_project_menu = \
         </li>
 
         <li>
+            <a href="{{ url_for('convenor.attach_markers', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> 2nd markers
+            </a>
+        </li>
+
+        <li>
             <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
                 <i class="fa fa-pencil"></i> Transferable skills
             </a>
@@ -137,6 +149,26 @@ _unattached_project_menu = \
         </li>
     </ul>
 </div>
+"""
+
+
+_marker_menu = \
+"""
+{% if proj.is_second_marker(f) %}
+    <a href="{{ url_for('convenor.remove_marker', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
+       class="btn btn-sm btn-default">
+        <i class="fa fa-trash"></i> Remove
+    </a>
+{% elif proj.can_enroll_marker(f) %}
+    <a href="{{ url_for('convenor.add_marker', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
+       class="btn btn-sm btn-default">
+        <i class="fa fa-plus"></i> Enroll
+    </a>
+{% else %}
+    <a class="btn btn-default btn-sm disabled">
+        <i class="fa fa-plus"></i> Enroll
+    </a>
+{% endif %}
 """
 
 
@@ -1212,6 +1244,224 @@ def remove_programme(id, pclass_id, prog_id):
     if proj.programmes is not None and programme in proj.programmes:
         proj.remove_programme(programme)
         db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/attach_markers/<int:id>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def attach_markers(id, pclass_id):
+
+    # get project details
+    proj = Project.query.get_or_404(id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    state_filter = request.args.get('state_filter')
+    pclass_filter = request.args.get('pclass_filter')
+    group_filter = request.args.get('group_filter')
+
+    # if no state filter supplied, check if one is stored in session
+    if state_filter is None and session.get('convenor_marker_state_filter'):
+        state_filter = session['convenor_marker_state_filter']
+
+    # write state filter into session if it is not empty
+    if state_filter is not None:
+        session['convenor_marker_state_filter'] = state_filter
+
+    # if no pclass filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('convenor_marker_pclass_filter'):
+        pclass_filter = session['convenor_marker_pclass_filter']
+
+    # write pclass filter into session if it is not empty
+    if pclass_filter is not None:
+        session['convenor_marker_pclass_filter'] = pclass_filter
+
+    # if no group filter supplied, check if one is stored in session
+    if group_filter is None and session.get('convenor_marker_group_filter'):
+        group_filter = session['convenor_marker_group_filter']
+
+    # write group filter into session if it is not empty
+    if group_filter is not None:
+        session['convenor_marker_group_filter'] = group_filter
+
+    # get list of available research groups
+    groups = ResearchGroup.query.filter_by(active=True).all()
+
+    # get list of project classes to which this project is attached, and which require assignment of
+    # second markers
+    pclasses = proj.project_classes.filter_by(uses_marker=True).all()
+
+    return render_template('convenor/attach_markers.html', data=proj, pclass_id=pclass_id, groups=groups, pclasses=pclasses,
+                           state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter)
+
+
+@convenor.route('/attach_markers_ajax/<int:id>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def attach_markers_ajax(id, pclass_id):
+
+    # get project details
+    proj = Project.query.get_or_404(id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return jsonify({})
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return jsonify({})
+
+    state_filter = request.args.get('state_filter')
+    pclass_filter = request.args.get('pclass_filter')
+    group_filter = request.args.get('group_filter')
+
+    faculty = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+
+    return ajax.project.build_marker_data(faculty, proj, _marker_menu, pclass_id)
+
+
+@convenor.route('/add_marker/<int:proj_id>/<int:pclass_id>/<int:mid>')
+@roles_accepted('faculty', 'admin', 'root')
+def add_marker(proj_id, pclass_id, mid):
+
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    marker = FacultyData.query.get_or_404(mid)
+
+    proj.add_marker(marker)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/remove_marker/<int:proj_id>/<int:pclass_id>/<int:mid>')
+@roles_accepted('faculty', 'admin', 'root')
+def remove_marker(proj_id, pclass_id, mid):
+
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    marker = FacultyData.query.get_or_404(mid)
+
+    proj.remove_marker(marker)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/enroll_all_markers/<int:proj_id>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_all_markers(proj_id, pclass_id):
+
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    state_filter = request.args.get('state_filter')
+    pclass_filter = request.args.get('pclass_filter')
+    group_filter = request.args.get('group_filter')
+
+    markers = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+
+    for marker in markers:
+        proj.add_marker(marker)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/remove_all_markers/<int:proj_id>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def remove_all_markers(proj_id, pclass_id):
+
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    state_filter = request.args.get('state_filter')
+    pclass_filter = request.args.get('pclass_filter')
+    group_filter = request.args.get('group_filter')
+
+    markers = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+
+    for marker in markers:
+        proj.remove_marker(marker)
 
     return redirect(request.referrer)
 

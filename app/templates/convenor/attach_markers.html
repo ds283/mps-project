@@ -31,7 +31,7 @@
             $('#markers-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/faculty/attach_markers_ajax/{{ data.id }}?state_filter={{ state_filter }}&pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/convenor/attach_markers_ajax/{{ data.id }}/{{ pclass_id }}?state_filter={{ state_filter }}&pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
                 columns: [
                     { data: 'name',
                       render: {
@@ -102,15 +102,15 @@
 
             <div class="well">
                 <p>Filter by enrollment status</p>
-                <a href="{{ url_for('faculty.attach_markers', id=data.id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter) }}"
                    class="btn btn-sm grouped-button-margin {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                     All
                 </a>
-                <a href="{{ url_for('faculty.attach_markers', id=data.id, state_filter='enrolled', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='enrolled', pclass_filter=pclass_filter, group_filter=group_filter) }}"
                    class="btn btn-sm grouped-button-margin {% if state_filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
                     Enrolled
                 </a>
-                <a href="{{ url_for('faculty.attach_markers', id=data.id, state_filter='not-enrolled', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='not-enrolled', pclass_filter=pclass_filter, group_filter=group_filter) }}"
                    class="btn btn-sm grouped-button-margin {% if state_filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
                     Not enrolled
                 </a>
@@ -119,12 +119,12 @@
                     <hr class="intro-divider">
 
                     <p>Filter by enrollment for project type</p>
-                    <a href="{{ url_for('faculty.attach_markers', id=data.id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter) }}"
+                    <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter) }}"
                        class="btn btn-sm grouped-button-margin {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for pclass in pclasses %}
-                        <a href="{{ url_for('faculty.attach_markers', id=data.id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter) }}"
+                        <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter) }}"
                            class="btn btn-sm grouped-button-margin {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ pclass.name }}
                         </a>
@@ -135,12 +135,12 @@
                     <hr class="intro-divider">
 
                     <p>Filter by research group affiliation</p>
-                    <a href="{{ url_for('faculty.attach_markers', id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all') }}"
+                    <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all') }}"
                        class="btn btn-sm grouped-button-margin {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for group in groups %}
-                        <a href="{{ url_for('faculty.attach_markers', id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id) }}"
+                        <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id) }}"
                            class="btn btn-sm grouped-button-margin {% if group_filter == group.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ group.name }}
                         </a>
@@ -152,11 +152,11 @@
                 <div class="row vertical-align">
                     <div class="col-xs-12">
                         <div class="pull-right">
-                            <a href="{{ url_for('faculty.remove_all_markers', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                            <a href="{{ url_for('convenor.remove_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
                                class="btn btn-default">
                                 <i class="fa fa-trash"></i> Remove all
                             </a>
-                            <a href="{{ url_for('faculty.enroll_all_markers', proj_id=data.id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                            <a href="{{ url_for('convenor.enroll_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
                                class="btn btn-default">
                                 <i class="fa fa-check"></i> Enroll all
                             </a>
@@ -180,7 +180,7 @@
         </div>
     </div>
 
-    <a href="{{ url_for('faculty.edit_projects') }}">
-        <i class="fa fa-backward"></i> Return to project list
+    <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+        <i class="fa fa-backward"></i> Return to convenor dashboard
     </a>
 {% endblock %}

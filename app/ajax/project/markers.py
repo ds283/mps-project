@@ -50,35 +50,23 @@ _enrollments = \
 {% endif %}
 """
 
-_menu = \
+
+_attached = \
 """
-{% if proj.is_second_marker(f) %}
-    <a href="{{ url_for('faculty.remove_marker', proj_id=proj.id, mid=f.id) }}"
-       class="btn btn-sm btn-default">
-        <i class="fa fa-trash"></i> Remove
-    </a>
-{% elif proj.can_enroll_marker(f) %}
-    <a href="{{ url_for('faculty.add_marker', proj_id=proj.id, mid=f.id) }}"
-       class="btn btn-sm btn-default">
-        <i class="fa fa-plus"></i> Enroll
-    </a>
-{% else %}
-    <a class="btn btn-default btn-sm disabled">
-        <i class="fa fa-plus"></i> Enroll
-    </a>
-{% endif %}
+<span class="label label-default">{{ f.number_marker }}</span>
 """
 
 
-def build_marker_data(faculty, proj):
+def build_marker_data(faculty, proj, menu, pclass_id=None):
 
     data = [{'name': {
                 'display': f.user.name,
                 'sortstring': f.user.last_name + f.user.first_name
              },
+             'attached': render_template_string(_attached, f=f),
              'groups': render_template_string(_affiliations, f=f),
              'status': render_template_string(_status, f=f, proj=proj),
              'enrollments': render_template_string(_enrollments, f=f),
-             'menu': render_template_string(_menu, f=f, proj=proj)} for f in faculty]
+             'menu': render_template_string(menu, f=f, proj=proj, pclass_id=pclass_id)} for f in faculty]
 
     return jsonify(data)

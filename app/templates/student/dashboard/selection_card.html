@@ -3,9 +3,9 @@
 {% macro selection_card(config, sel) %}
 
    <div class="panel
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
             panel-success
-        {% elif config.state == config.LIFECYCLE_SELECTIONS_CLOSED %}
+        {% elif config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED %}
             panel-warning
         {% else %}
             panel-default
@@ -17,7 +17,7 @@
             {% else %}
                 <strong>Project selection</strong>
             {% endif %}
-            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                 <div class="pull-right">
                     <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
                     {% if config.live_deadline %}
@@ -31,7 +31,7 @@
             {% endif %}
         </div>
         <div class="panel-body">
-            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
 
                 {# MAIN FUNCTIONS ALL HERE -- SELECTIONS ARE OPEN #}
 

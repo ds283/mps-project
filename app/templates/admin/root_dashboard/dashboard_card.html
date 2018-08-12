@@ -25,18 +25,18 @@
                                 <span class="label label-danger"><i class="fa fa-check"></i> Rollover available</span>
                             {% endif %}
 
-                            {% set state = config.state %}
-                            {% if state == config.LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                            {% set state = config.selector_lifecycle %}
+                            {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
                                 <span class="label label-default">Confirmations not issued</span>
-                            {% elif state == config.LIFECYCLE_WAITING_CONFIRMATIONS %}
+                            {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
                                 <span class="label label-default"><i class="fa fa-times"></i> Not live</span>
                                 <span class="label label-primary"><i class="fa fa-clock-o"></i> Confirmations outstanding</span>
-                            {% elif state == config.LIFECYCLE_READY_GOLIVE %}
+                            {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                                 <span class="label label-default">Not live</span>
                                 <span class="label label-success"><i class="fa fa-check"></i> GoLive ready</span>
-                            {% elif state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                            {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                 <span class="label label-primary"><i class="fa fa-check"></i> Selection open</span>
-                            {% elif state == config.LIFECYCLE_SELECTIONS_CLOSED %}
+                            {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED %}
                                 <span class="label label-primary">Selection closed</span>
                                 <span class="label label-success"><i class="fa fa-check"></i> Rollover ready</span>
                             {% else %}
@@ -53,7 +53,7 @@
                             {% if num_sub == 1 %}{% set pl = '' %}{% endif %}
                             <span class="label label-info">{{ num_sub }} submitter{{ pl }}</span>
 
-                            {% if state <= config.LIFECYCLE_READY_GOLIVE %}
+                            {% if state <= config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                                 {% if capacity < num_sel %}
                                     <span class="label label-danger">Capacity {% if not bounded %}>= {% endif %}{{ capacity }}</span>
                                 {% elif capacity < 1.15*num_sel %}

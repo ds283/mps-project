@@ -20,7 +20,7 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu">
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.has_bookmarks %}
+        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.has_bookmarks %}
             <li>
                 <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
                     <i class="fa fa-trash"></i> Delete bookmarks
@@ -60,7 +60,7 @@ _menu = \
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Meeting requests</li>
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirm_requests and student.confirm_requests.first() %}
+        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.confirm_requests and student.confirm_requests.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
                     <i class="fa fa-check"></i> Confirm all requests
@@ -86,7 +86,7 @@ _menu = \
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Meeting confirmations</li>
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and student.confirmed and student.confirmed.first() %}
+        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.confirmed and student.confirmed.first() %}
             <li>
                 <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
                     <i class="fa fa-trash"></i> Delete confirmations

@@ -1423,34 +1423,36 @@ class ProjectClassConfig(db.Model):
         return self.live and not self.closed
 
 
-    LIFECYCLE_CONFIRMATIONS_NOT_ISSUED = 1
-    LIFECYCLE_WAITING_CONFIRMATIONS = 2
-    LIFECYCLE_READY_GOLIVE = 3
-    LIFECYCLE_SELECTIONS_OPEN = 4
-    LIFECYCLE_SELECTIONS_CLOSED = 5
+    SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED = 1
+    SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS = 2
+    SELECTOR_LIFECYCLE_READY_GOLIVE = 3
+    SELECTOR_LIFECYCLE_SELECTIONS_OPEN = 4
+    SELECTOR_LIFECYCLE_READY_MATCHING = 5
+    SELECTOR_LIFECYCLE_READY_ROLLOVER = 6
+    SELECTOR_LIFECYCLE_SELECTIONS_CLOSED = 7
 
 
     @property
-    def state(self):
+    def selector_lifecycle(self):
 
         if self.live and self.closed:
-            return self.LIFECYCLE_SELECTIONS_CLOSED
+            return ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED
 
         if self._open:
-            return self.LIFECYCLE_SELECTIONS_OPEN
+            return ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
 
         # if we get here, project is not open
 
         if self.project_class.require_confirm:
             if self.requests_issued:
                 if self.golive_required.count() > 0:
-                    return self.LIFECYCLE_WAITING_CONFIRMATIONS
+                    return ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
                 else:
-                    return self.LIFECYCLE_READY_GOLIVE
+                    return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
             else:
-                return self.LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
+                return ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
 
-        return self.LIFECYCLE_READY_GOLIVE
+        return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
 
 
     @property

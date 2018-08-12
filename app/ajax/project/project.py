@@ -10,8 +10,6 @@
 
 from flask import render_template_string, jsonify
 
-from ...models import TransferableSkill
-
 
 _project_name = \
 """

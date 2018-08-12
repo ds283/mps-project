@@ -9,7 +9,8 @@
 #
 
 
-from ..models import db, Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent
+from ..models import db, Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent, \
+    ProjectClassConfig, EnrollmentRecord
 
 
 def add_liveproject(number, project, config_id, autocommit=False):
@@ -24,28 +25,43 @@ def add_liveproject(number, project, config_id, autocommit=False):
         if item is None:
             raise KeyError('Missing database record for Project id={id}'.format(id=project))
 
+    config = ProjectClassConfig.query.filter_by(id=config_id).first()
+    if config is None:
+        raise KeyError('Missing database record for ProjectClassConfig id={id}'.format(id=config_id))
+
     # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
     # all project classes need their own LiveProject record
     live_item = LiveProject(config_id=config_id,
                             parent_id=item.id,
                             number=number,
                             name=item.name,
-                            keywords=item.keywords,
                             owner_id=item.owner_id,
+                            keywords=item.keywords,
                             group_id=item.group_id,
                             skills=item.skills,
-                            capacity=item.capacity,
-                            enforce_capacity=item.enforce_capacity,
-                            meeting_reqd=item.meeting_reqd,
-                            team=item.team,
                             programmes=item.programmes,
+                            meeting_reqd=item.meeting_reqd,
+                            enforce_capacity=item.enforce_capacity,
+                            capacity=item.capacity,
                             description=item.description,
                             reading=item.reading,
+                            team=item.team,
                             show_popularity=item.show_popularity,
                             show_bookmarks=item.show_bookmarks,
                             show_selections=item.show_selections,
                             page_views=0,
                             last_view=None)
+
+    # assign 2nd markers
+    if config.pclass.uses_markers:
+
+        for marker in item.second_markers:
+
+            if marker.user.active:
+                enroll_rec = marker.get_enrollment_record(config.pclass)
+                if enroll_rec is not None:
+                    if enroll_rec.marker_state == EnrollmentRecord.MARKER_ENROLLED:
+                        live_item.second_markers.append(marker)
 
     db.session.add(live_item)
 

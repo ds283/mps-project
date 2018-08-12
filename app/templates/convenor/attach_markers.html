@@ -1,0 +1,186 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import skill_groups_key %}
+
+{% extends "base_app.html" %}
+
+{% if not group_filter or group_filter is none %}
+    {% set group_filter = 'all' %}
+{% endif %}
+
+{% if not pclass_filter or pclass_filter is none %}
+    {% set pclass_filter = 'all' %}
+{% endif %}
+
+{% if not state_filter or state_filter is none %}
+    {% set state_filter = 'all' %}
+{% endif %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#markers-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { 'url': $SCRIPT_ROOT + '/convenor/attach_markers_ajax/{{ data.id }}/{{ pclass_id }}?state_filter={{ state_filter }}&pclass_filter={{ pclass_filter }}&group_filter={{ group_filter }}', dataSrc: '' },
+                columns: [
+                    { data: 'name',
+                      render: {
+                        _: 'display',
+                        sort: 'sortstring' }
+                    },
+                    { data: 'attached' },
+                    { data: 'enrollments' },
+                    { data: 'groups' },
+                    { data: 'status' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Attach 2nd markers for project {{ data.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Attach 2nd markers for project <strong>{{ data.name }}</strong></div>
+        <div class="panel-body">
+
+            {% if pclasses is not none and pclasses|length > 0 %}
+                <div class="well">
+                    <div class="row vertical-align marker-table">
+                        <div class="col-xs-4"><strong>Project type</strong></div>
+                        <div class="col-xs-2"><strong>Markers required</strong></div>
+                        <div class="col-xs-2"><strong>Markers enrolled</strong></div>
+                        <div class="col-xs-4"></div>
+                    </div>
+
+                    {% for pclass in pclasses %}
+                        <div class="row vertical-align marker-table">
+                            <div class="col-xs-4">{{ pclass.name }}</div>
+                            <div class="col-xs-2">
+                                {% if pclass.do_matching %}
+                                    <span class="label label-info">{{ pclass.number_markers }}</span>
+                                {% else %}
+                                    <span class="label label-default">Not required</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-xs-2">
+                                {% set num = data.num_markers(pclass) %}
+                                {% if pclass.do_matching %}
+                                    {% if num >= pclass.number_markers %}
+                                        <span class="label label-success">{{ num }}</span>
+                                    {% else %}
+                                        <span class="label label-warning">{{ num }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="label label-default">{{ num }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="col-xs-4"></div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="well">
+                    This project is not currently attached to any project types that require 2nd markers
+                </div>
+            {% endif %}
+
+            <div class="well">
+                <p>Filter by enrollment status</p>
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                   class="btn btn-sm grouped-button-margin {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                    All
+                </a>
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='enrolled', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                   class="btn btn-sm grouped-button-margin {% if state_filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
+                    Enrolled
+                </a>
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='not-enrolled', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                   class="btn btn-sm grouped-button-margin {% if state_filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
+                    Not enrolled
+                </a>
+
+                {% if pclasses is not none and pclasses|length > 0 %}
+                    <hr class="intro-divider">
+
+                    <p>Filter by enrollment for project type</p>
+                    <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter) }}"
+                       class="btn btn-sm grouped-button-margin {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                        All
+                    </a>
+                    {% for pclass in pclasses %}
+                        <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter) }}"
+                           class="btn btn-sm grouped-button-margin {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                            {{ pclass.name }}
+                        </a>
+                    {% endfor %}
+                {% endif %}
+
+                {% if groups is not none and groups|length > 0 %}
+                    <hr class="intro-divider">
+
+                    <p>Filter by research group affiliation</p>
+                    <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all') }}"
+                       class="btn btn-sm grouped-button-margin {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                        All
+                    </a>
+                    {% for group in groups %}
+                        <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id) }}"
+                           class="btn btn-sm grouped-button-margin {% if group_filter == group.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                            {{ group.name }}
+                        </a>
+                    {% endfor %}
+                {% endif %}
+
+                <hr class="intro-divider">
+
+                <div class="row vertical-align">
+                    <div class="col-xs-12">
+                        <div class="pull-right">
+                            <a href="{{ url_for('convenor.remove_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                               class="btn btn-default">
+                                <i class="fa fa-trash"></i> Remove all
+                            </a>
+                            <a href="{{ url_for('convenor.enroll_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                               class="btn btn-default">
+                                <i class="fa fa-check"></i> Enroll all
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <table id="markers-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="25%"> Name</th>
+                    <th width="5%"> Attached</th>
+                    <th width="20%"> Enrollments</th>
+                    <th width="20%"> Affiliations</th>
+                    <th width="15%"> Status</th>
+                    <th width="15%"> Actions</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+
+    <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+        <i class="fa fa-backward"></i> Return to convenor dashboard
+    </a>
+{% endblock %}

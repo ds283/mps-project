@@ -17,7 +17,7 @@
                 <h4>
                 {% for programme in programmes %}
                     {% if programme in data.programmes %}
-                        <a class="btn btn-success selection-label" href="{{ url_for('faculty.remove_programme', projectid=data.id, progid=programme.id) }}"><i class="fa fa-times"></i> {{ programme.full_name }}</a>
+                        <a class="btn btn-success selection-label" href="{{ url_for('faculty.remove_programme', id=data.id, prog_id=programme.id) }}"><i class="fa fa-times"></i> {{ programme.full_name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>
@@ -33,7 +33,7 @@
                     <h4>
                     {% for programme in programmes %}
                         {% if (programme in proj_class.programmes) and (programme not in data.programmes) %}
-                            <a class="btn btn-default selection-label" href="{{ url_for('faculty.add_programme', projectid=data.id, progid=programme.id) }}"><i class="fa fa-plus"></i> {{ programme.full_name }}</a>
+                            <a class="btn btn-default selection-label" href="{{ url_for('faculty.add_programme', id=data.id, prog_id=programme.id) }}"><i class="fa fa-plus"></i> {{ programme.full_name }}</a>
                             {% set ns.output = true %}
                         {% endif %}
                     {% endfor %}

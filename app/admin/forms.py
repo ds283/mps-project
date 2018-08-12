@@ -272,6 +272,11 @@ class ProjectClassMixin():
 
     do_matching = BooleanField('Participate in automated global matching of faculty to projects')
 
+    number_markers = IntegerField('Number of 2nd markers required per project',
+                                  description='More than one 2nd marker is required per project to allow sufficient '
+                                              'flexibility during matching.',
+                                  validators=[NotOptionalIf(do_matching)])
+
     year = SelectField('Runs in year', choices=year_choices, coerce=int,
                        description='Select the academic year in which students join the project.')
 
@@ -284,6 +289,8 @@ class ProjectClassMixin():
 
     submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
                               description='Select number of marked reports submitted per academic year.')
+
+    uses_marker = BooleanField('Submissions are second-marked')
 
     initial_choices = IntegerField('Number of initial project preferences',
                                    description='Select number of preferences students should list before joining.')

@@ -51,7 +51,7 @@
                                         Key facts
                                     </div>
                                     <div class="col-xs-8">
-                                        {% if sel and sel.config.state == sel.config.LIFECYCLE_SELECTIONS_OPEN %}
+                                        {% if sel and sel.config.selector_lifecycle == sel.config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                             <div class="pull-right">
                                                 {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
                                                     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}" class="btn btn-default btn-sm">

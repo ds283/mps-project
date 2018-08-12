@@ -21,11 +21,11 @@
         <div class="panel
             {% if nproj == 0 %}
                 panel-danger
-            {% elif config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+            {% elif config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                 panel-success
-            {% elif config.state == config.LIFECYCLE_SELECTIONS_CLOSED %}
+            {% elif config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED %}
                 panel-primary
-            {% elif config.state == config.LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
+            {% elif config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
                 panel-warning
             {% else %}
                 panel-info
@@ -33,7 +33,7 @@
             ">
 
             <div class="panel-heading">
-                {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                     <strong>Status</strong>
                     <div class="pull-right">
                         <span class="label label-success">Selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
@@ -52,7 +52,7 @@
             <div class="panel-body">
 
                 {# show confirmation request if one is active #}
-                {% if config.state == config.LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
+                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
                     <div class="panel panel-danger">
                         <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
                         <div class="panel-body">
@@ -102,7 +102,7 @@
                 {% else %}
                     {% set number_live_plural = 's' %}
                 {% endif %}
-                {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and live_projects.first() %}
+                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and live_projects.first() %}
                     <hr class="intro-divider">
                     <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
                         on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>

@@ -59,25 +59,25 @@
             <div class="panel panel-primary panel-primary-bg">
                 <div class="panel-heading">Status</div>
                 <div class="panel-body">
-                    {% set state = config.state %}
-                    {% if state == config.LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                    {% set state = config.selector_lifecycle %}
+                    {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
 
                         {{ issue_confirmations(pclass, issue_form, capacity_data, sel_count) }}
 
-                    {% elif state == config.LIFECYCLE_WAITING_CONFIRMATIONS %}
+                    {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
 
                         {# if we get here then we can assume requests have been issued because of the outermost if #}
                         {{ waiting_confirmations(pclass, config, issue_form, capacity_data, sel_count) }}
 
-                    {% elif state == config.LIFECYCLE_READY_GOLIVE %}
+                    {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
 
                         {{ golive(pclass, config, golive_form, capacity_data, sel_count) }}
 
-                    {% elif state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                    {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
 
                         {{ selection_open(config) }}
 
-                    {% elif state == config.LIFECYCLE_SELECTIONS_CLOSED %}
+                    {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED %}
 
                         {{ selection_closed(config) }}
 

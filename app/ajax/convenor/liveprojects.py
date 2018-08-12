@@ -104,7 +104,7 @@ _menu = \
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Meeting requests</li>
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and project.number_pending > 0 %}
+        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_pending > 0 %}
             <li>
                 <a href="{{ url_for('convenor.project_confirm_all', pid=project.id) }}">
                     <i class="fa fa-check"></i> Confirm all requests
@@ -128,7 +128,7 @@ _menu = \
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Meeting confirmations</li>
-        {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN and project.number_confirmed > 0 %}
+        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and project.number_confirmed > 0 %}
             <li>
                 <a href="{{ url_for('convenor.project_remove_confirms', pid=project.id) }}">
                     <i class="fa fa-trash"></i> Delete confirmations

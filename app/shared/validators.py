@@ -12,6 +12,8 @@
 from flask import flash
 from flask_login import current_user
 
+from ..models import ProjectClassConfig
+
 
 def validate_is_administrator():
     """
@@ -71,7 +73,7 @@ def validate_project_open(config):
     :return:
     """
 
-    if config.state != config.LIFECYCLE_SELECTIONS_OPEN:
+    if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
 
         flash('{name} is not open for student selections.'.format(name=config.project_class.name), 'error')
 

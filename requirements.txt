@@ -44,6 +44,7 @@ numpy==1.14.3
 packaging==17.1
 parse==1.8.2
 passlib==1.7.1
+PuLP==1.6.8
 pycparser==2.18
 PyMySQL==0.8.1
 pyparsing==2.2.0

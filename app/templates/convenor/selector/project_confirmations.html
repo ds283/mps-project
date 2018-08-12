@@ -33,7 +33,7 @@
                                             Deconfirm <span class="caret"></span>
                                         </a>
                                         <ul class="dropdown-menu">
-                                            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                                            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.deconfirm_to_pending', sid=student.id, pid=project.id) }}">
                                                         <i class="fa fa-clock-o"></i> Make pending
@@ -75,7 +75,7 @@
                                             Confirm <span class="caret"></span>
                                         </a>
                                         <ul class="dropdown-menu">
-                                            {% if config.state == config.LIFECYCLE_SELECTIONS_OPEN %}
+                                            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id) }}">
                                                         <i class="fa fa-check"></i> Confirm

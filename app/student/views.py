@@ -71,7 +71,7 @@ def _verify_open(config):
     :return:
     """
 
-    if config.state != config.LIFECYCLE_SELECTIONS_OPEN:
+    if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
 
         flash('Project "{name}" is not open for student selections'.format(name=config.project_class.name), 'error')
 

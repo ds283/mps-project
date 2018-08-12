@@ -89,6 +89,10 @@ p.copyright {
     margin-bottom: 1%;
 }
 
+.marker-table {
+    margin-bottom: 1%;
+}
+
 .selected-project {
     border-color: #dff0d8;
     border-width: 3px;
@@ -118,8 +122,12 @@ p.copyright {
     word-break: break-all;
 }
 
-.log-button-pad {
+.grouped-button-pad {
     padding-bottom: 15px;
+}
+
+.grouped-button-margin {
+    margin-bottom: 2px;
 }
 
 .color-card {

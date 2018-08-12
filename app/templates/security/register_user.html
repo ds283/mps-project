@@ -8,7 +8,7 @@
 
 {% block formtitle %}
     {% if user %}
-        Edit user account data for <i class="fa fa-user"></i> {{ user.name_and_username }}
+        Edit user account data for <i class="fa fa-user"></i> <strong>{{ user.name_and_username }}</strong>
     {% else %}
         {{ title }}
     {% endif %}

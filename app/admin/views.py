@@ -1430,11 +1430,13 @@ def add_pclass():
                             abbreviation=form.abbreviation.data,
                             colour=form.colour.data,
                             do_matching=form.do_matching.data,
+                            number_markers=form.number_markers.data,
                             year=form.year.data,
                             extent=form.extent.data,
                             require_confirm=form.require_confirm.data,
                             supervisor_carryover=form.supervisor_carryover.data,
                             submissions=form.submissions.data,
+                            uses_marker=form.uses_marker.data,
                             convenor=form.convenor.data,
                             coconvenors=coconvenors,
                             selection_open_to_all=form.selection_open_to_all.data,
@@ -1469,12 +1471,15 @@ def add_pclass():
         data.convenor.add_convenorship(data)
 
         db.session.add(config)
-
-        # don't generate any go-live requests here; this is done explicitly by user action
-
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))
+
+    else:
+
+        if request.method == 'GET':
+            form.number_markers.data = current_app.config['DEFAULT_SECOND_MARKERS']
+            form.uses_marker.data = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
 
@@ -1508,10 +1513,12 @@ def edit_pclass(id):
         data.year = form.year.data
         data.colour = form.colour.data
         data.do_matching = form.do_matching.data
+        data.number_markers = form.number_markers.data
         data.extent = form.extent.data
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data
         data.submissions = form.submissions.data
+        data.uses_marker = form.uses_marker.data
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
         data.selection_open_to_all = form.selection_open_to_all.data
@@ -1533,6 +1540,14 @@ def edit_pclass(id):
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))
+
+    else:
+
+        if request.method == 'GET':
+            if form.number_markers.data is None:
+                form.number_markers.data = current_app.config['DEFAULT_SECOND_MARKERS']
+            if form.uses_marker.data is None:
+                form.uses_marker.data = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')

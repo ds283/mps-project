@@ -127,10 +127,15 @@ project_programmes = db.Table('project_to_programmes',
                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                               db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
-# association table giving association between projects and supervision tram
+# association table giving association between projects and supervision team
 project_supervision = db.Table('project_to_supervision',
                                db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                                db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
+
+# association table giving 2nd markers
+second_markers = db.Table('project_to_markers',
+                          db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                          db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
 
 # PROJECT ASSOCIATIONS (LIVE)
@@ -155,6 +160,11 @@ live_project_programmes = db.Table('live_project_to_programmes',
 live_project_supervision = db.Table('live_project_to_supervision',
                                     db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                                     db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
+
+# association table giving 2nd markers
+live_second_markers = db.Table('live_project_to_markers',
+                               db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                               db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
 
 # LIVE STUDENT ASSOCIATIONS
@@ -749,6 +759,16 @@ class FacultyData(db.Model):
         flash('Removed {name} as convenor of {title}'.format(name=self.name, title=pclass.name))
 
 
+    @property
+    def number_marker(self):
+        """
+        Determine the number of projects to which we are attached as a 2nd marker
+        :return:
+        """
+
+        return db.session.query(sqlalchemy.func.count(self.second_marker_for.subquery().c.id)).scalar()
+
+
 class StudentData(db.Model):
     """
     Models extra data held on students
@@ -1142,6 +1162,9 @@ class ProjectClass(db.Model):
     # how many submissions per year does this project have?
     submissions = db.Column(db.Integer())
 
+    # are the submissions second marker?
+    uses_marker = db.Column(db.Boolean())
+
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
 
@@ -1184,6 +1207,9 @@ class ProjectClass(db.Model):
     # what level of automated student/project/2nd-marker matching does this project class use?
     # does it participate in the global automated matching, or is matching manual?
     do_matching = db.Column(db.Boolean())
+
+    # number of 2nd markers that should be specified per project
+    number_markers = db.Column(db.Integer())
 
 
     # PERSONNEL
@@ -1619,12 +1645,12 @@ class EnrollmentRecord(db.Model):
 
     def marker_label(self):
 
-        if self.marker_state == self.MARKER_ENROLLED:
+        if self.marker_state == EnrollmentRecord.MARKER_ENROLLED:
             return '<span class="label label-success"><i class="fa fa-check"></i> 2nd mk active</span>'
-        elif self.marker_state == self.MARKER_SABBATICAL:
+        elif self.marker_state == EnrollmentRecord.MARKER_SABBATICAL:
             return '<span class="label label-warning"><i class="fa fa-times"></i> 2nd mk sabbat{year}</span>'.format(
                 year='' if self.marker_reenroll is None else ' ({yr})'.format(yr=self.marker_reenroll))
-        elif self.marker_state == self.MARKER_EXEMPT:
+        elif self.marker_state == EnrollmentRecord.MARKER_EXEMPT:
             return '<span class="label label-danger"><i class="fa fa-times"></i> 2nd mk exempt</span>'
 
         return ''
@@ -1693,23 +1719,30 @@ class Project(db.Model):
     # make table name plural
     __tablename__ = "projects"
 
+    # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
+    # project name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
-    active = db.Column(db.Boolean())
 
-    # free keywords describing scientific area
-    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    # active flag
+    active = db.Column(db.Boolean())
 
     # which faculty member owns this project?
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
     owner = db.relationship('User', foreign_keys=[owner_id], backref=db.backref('projects', lazy='dynamic'))
 
+
+    # TAGS AND METADATA
+
+    # free keywords describing scientific area
+    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
     # which research group is associated with this project?
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
     group = db.relationship('ResearchGroup', backref=db.backref('projects', lazy='dynamic'))
 
-    # which project class are associated with this project?
+    # which project classes are associated with this project?
     project_classes = db.relationship('ProjectClass', secondary=project_classes, lazy='dynamic',
                                       backref=db.backref('projects', lazy='dynamic'))
 
@@ -1721,27 +1754,40 @@ class Project(db.Model):
     programmes = db.relationship('DegreeProgramme', secondary=project_programmes, lazy='dynamic',
                                  backref=db.backref('projects', lazy='dynamic'))
 
+
+    # SELECTION
+
     # is a meeting required before selecting this project?
     MEETING_REQUIRED = 1
     MEETING_OPTIONAL = 2
     MEETING_NONE = 3
     meeting_reqd = db.Column(db.Integer())
 
-    # maximum number of students
-    capacity = db.Column(db.Integer())
+
+    # MATCHING
 
     # impose limitation on capacity
     enforce_capacity = db.Column(db.Boolean())
 
-    # supervisory roles
-    team = db.relationship('Supervisor', secondary=project_supervision, lazy='dynamic',
-                           backref=db.backref('projects', lazy='dynamic'))
+    # maximum number of students
+    capacity = db.Column(db.Integer())
+
+    # table of allowed 2nd markers
+    second_markers = db.relationship('FacultyData', secondary=second_markers, lazy='dynamic',
+                                     backref=db.backref('second_marker_for', lazy='dynamic'))
+
+
+    # PROJECT DESCRIPTION
 
     # project description
     description = db.Column(db.Text())
 
     # recommended reading
     reading = db.Column(db.Text())
+
+    # supervisory roles
+    team = db.relationship('Supervisor', secondary=project_supervision, lazy='dynamic',
+                           backref=db.backref('projects', lazy='dynamic'))
 
 
     # POPULARITY DISPLAY
@@ -1755,6 +1801,8 @@ class Project(db.Model):
     # show number of bookmarks
     show_bookmarks = db.Column(db.Boolean())
 
+
+    # EDITING METADATA
 
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -1821,6 +1869,14 @@ class Project(db.Model):
         if (self.capacity is None or self.capacity == 0) and self.enforce_capacity:
             self.error = "Capacity is zero or unset, but enforcement is enabled"
             return False
+
+        # for each project class we are attached to, check whether enough 2nd markers have been assigned
+        for pclass in self.project_classes:
+
+            if pclass.uses_marker:
+                if self.num_markers(pclass) < pclass.number_markers:
+                    self.error = "Too few 2nd markers assigned for '{name}'".format(name=pclass.name)
+                    return False
 
         return True
 
@@ -1901,6 +1957,101 @@ class Project(db.Model):
                 self.remove_programme(prog)
 
 
+    def is_second_marker(self, faculty):
+        """
+        Determine whether a given FacultyData instance is a 2nd marker for this project
+        :param faculty:
+        :return:
+        """
+
+        return faculty in self.second_markers
+
+
+    def num_markers(self, pclass):
+        """
+        Determine the number of 2nd markers enrolled who are available for a given project class
+        :param pclass:
+        :return:
+        """
+
+        number = 0
+
+        for marker in self.second_markers:
+
+            # ignore inactive users
+            if not marker.user.active:
+                break
+
+            # count number of enrollment records for this marker matching the project class, and marked as active
+            query = marker.enrollments.subquery()
+
+            num = db.session.query(sqlalchemy.func.count(query.c.id)) \
+                .filter(query.c.pclass_id == pclass.id,
+                        query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+                .scalar()
+
+            if num == 1:
+                number += 1
+            elif num > 1:
+                raise RuntimeError('Inconsistent enrollment records')
+
+        return number
+
+
+    def can_enroll_marker(self, faculty):
+        """
+        Determine whether a given FacultyData instance can be enrolled as a 2nd marker for this project
+        :param faculty:
+        :return:
+        """
+
+        if self.is_second_marker(faculty):
+            return False
+
+        # need to determine whether this faculty member is enrolled as a second marker for any project
+        # class we are attached to
+        enrollments = faculty.enrollments.subquery()
+        pclasses = self.project_classes.subquery()
+
+        number = db.session.query(sqlalchemy.func.count(enrollments.c.id)) \
+            .join(User, User.id == enrollments.c.owner_id) \
+            .join(pclasses, pclasses.c.id == enrollments.c.pclass_id) \
+            .filter(User.active == True,
+                    enrollments.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+            .scalar()
+
+        return number > 0
+
+
+    def add_marker(self, faculty):
+        """
+        Add a FacultyData instance as a 2nd marker
+        :param faculty:
+        :return:
+        """
+
+        if self.is_second_marker(faculty):
+            return
+
+        self.second_markers.append(faculty)
+        db.session.commit()
+
+
+    def remove_marker(self, faculty):
+        """
+        Remove a FacultyData instance as a 2nd marker
+        :param faculty:
+        :return:
+        """
+
+        if not self.is_second_marker(faculty):
+            return
+
+        self.second_markers.remove(faculty)
+        db.session.commit()
+
+
+
 class LiveProject(db.Model):
     """
     The definitive live project table
@@ -1928,13 +2079,16 @@ class LiveProject(db.Model):
     # project name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
 
-    # free keywords describing scientific area
-    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
-
     # which faculty member owns this project?
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
     owner = db.relationship('User', foreign_keys=[owner_id],
                             backref=db.backref('live_projects', lazy='dynamic'))
+
+
+    # TAGS AND METADATA
+
+    # free keywords describing scientific area
+    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # which research group is associated with this project?
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
@@ -1948,11 +2102,8 @@ class LiveProject(db.Model):
     programmes = db.relationship('DegreeProgramme', secondary=live_project_programmes, lazy='dynamic',
                                  backref=db.backref('live_projects', lazy='dynamic'))
 
-    # maximum number of students
-    capacity = db.Column(db.Integer())
 
-    # impose limitation on capacity
-    enforce_capacity = db.Column(db.Boolean())
+    # SELECTION
 
     # is a meeting required before selecting this project?
     MEETING_REQUIRED = 1
@@ -1960,14 +2111,31 @@ class LiveProject(db.Model):
     MEETING_NONE = 3
     meeting_reqd = db.Column(db.Integer())
 
-    team = db.relationship('Supervisor', secondary=live_project_supervision, lazy='dynamic',
-                           backref=db.backref('live_projects', lazy='dynamic'))
+
+    # MATCHING
+
+    # impose limitation on capacity
+    enforce_capacity = db.Column(db.Boolean())
+
+    # maximum number of students
+    capacity = db.Column(db.Integer())
+
+    # table of allowed 2nd markers
+    second_markers = db.relationship('FacultyData', secondary=live_second_markers, lazy='dynamic',
+                                     backref=db.backref('second_marker_for_live', lazy='dynamic'))
+
+
+    # PROJECT DESCRIPTION
 
     # project description
     description = db.Column(db.Text())
 
     # recommended reading
     reading = db.Column(db.Text())
+
+    # supervisor roles
+    team = db.relationship('Supervisor', secondary=live_project_supervision, lazy='dynamic',
+                           backref=db.backref('live_projects', lazy='dynamic'))
 
 
     # POPULARITY DISPLAY

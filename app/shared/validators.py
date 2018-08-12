@@ -94,5 +94,19 @@ def validate_is_admin_or_convenor():
     if current_user.has_role('faculty') and current_user.faculty_data.is_convenor:
         return True
 
-    flash('This operation is available only to administrative users and project convenors.')
+    flash('This operation is available only to administrative users and project convenors.', 'error')
+    return False
+
+
+def validate_is_project_owner(proj):
+    """
+    Validate that the logged-in user is the project owner
+    :param proj:
+    :return:
+    """
+
+    if proj.owner_id == current_user.id:
+        return True
+
+    flash('This operation is available only to the project owner.', 'error')
     return False

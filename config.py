@@ -54,6 +54,7 @@ class Config(object):
     DATABASE_HOSTNAME = os.environ.get('DATABASE_HOSTNAME') or 'localhost'
 
     DEFAULT_PROJECT_CAPACITY = 2
+    DEFAULT_SECOND_MARKERS = 5
 
 
 class DevelopmentConfig(Config):

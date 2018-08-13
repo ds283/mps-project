@@ -2004,6 +2004,38 @@ class Project(db.Model):
         return number
 
 
+    def get_marker_list(self, pclass):
+        """
+        Build a list of FacultyData objects for 2nd markers attached to this project who are
+        available for a given project class
+        :param pclass:
+        :return:
+        """
+
+        markers = []
+
+        for marker in self.second_markers:
+
+            # ignore inactive users
+            if not marker.user.active:
+                break
+
+            # count number of enrollment records for this marker matching the project class, and marked as active
+            query = marker.enrollments.subquery()
+
+            num = db.session.query(sqlalchemy.func.count(query.c.id)) \
+                .filter(query.c.pclass_id == pclass.id,
+                        query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+                .scalar()
+
+            if num == 1:
+                markers.append(marker)
+            elif num > 1:
+                raise RuntimeError('Inconsistent enrollment records')
+
+        return markers
+
+
     def can_enroll_marker(self, faculty):
         """
         Determine whether a given FacultyData instance can be enrolled as a 2nd marker for this project

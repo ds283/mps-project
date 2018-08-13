@@ -97,11 +97,11 @@ _marker_menu = \
 {% elif proj.can_enroll_marker(f) %}
     <a href="{{ url_for('faculty.add_marker', proj_id=proj.id, mid=f.id) }}"
        class="btn btn-sm btn-default">
-        <i class="fa fa-plus"></i> Enroll
+        <i class="fa fa-plus"></i> Attach
     </a>
 {% else %}
     <a class="btn btn-default btn-sm disabled">
-        <i class="fa fa-plus"></i> Enroll
+        <i class="fa fa-plus"></i> Can't attach
     </a>
 {% endif %}
 """
@@ -484,7 +484,7 @@ def attach_markers(id):
 
     # get list of project classes to which this project is attached, and which require assignment of
     # second markers
-    pclasses = proj.project_classes.filter_by(uses_marker=True).all()
+    pclasses = proj.project_classes.filter_by(active=True, uses_marker=True).all()
 
     return render_template('faculty/attach_markers.html', data=proj, groups=groups, pclasses=pclasses,
                            state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter)
@@ -546,9 +546,9 @@ def remove_marker(proj_id, mid):
     return redirect(request.referrer)
 
 
-@faculty.route('/enroll_all_markers/<int:proj_id>')
+@faculty.route('/attach_all_markers/<int:proj_id>')
 @roles_required('faculty')
-def enroll_all_markers(proj_id):
+def attach_all_markers(proj_id):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)

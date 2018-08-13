@@ -251,21 +251,21 @@ def build_second_marker_query(proj, state_filter, pclass_filter, group_filter):
     :return:
     """
 
-    # build base query -- either all users, or enrolled users, or not enrolled faculty
-    if state_filter == 'enrolled':
-        # build list of all active faculty users who are enrolled
+    # build base query -- either all users, or attached users, or not attached faculty
+    if state_filter == 'attached':
+        # build list of all active faculty users who are attached
         query = proj.second_markers \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True, User.id != proj.owner_id)
 
-    elif state_filter == 'not-enrolled':
-        # build list of all active faculty users who are not enrolled
-        enrolled_query = proj.second_markers.subquery()
+    elif state_filter == 'not-attached':
+        # build list of all active faculty users who are not attached
+        attached_query = proj.second_markers.subquery()
 
         query = db.session.query(FacultyData) \
             .join(User, User.id == FacultyData.id) \
-            .join(enrolled_query, enrolled_query.c.id == FacultyData.id, isouter=True) \
-            .filter(enrolled_query.c.id == None,
+            .join(attached_query, attached_query.c.id == FacultyData.id, isouter=True) \
+            .filter(attached_query.c.id == None,
                     User.active == True, User.id != proj.owner_id)
 
     else:

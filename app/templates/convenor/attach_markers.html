@@ -39,7 +39,7 @@
                         sort: 'sortstring' }
                     },
                     { data: 'attached' },
-                    { data: 'enrollments' },
+                    { data: 'attachments' },
                     { data: 'groups' },
                     { data: 'status' },
                     { data: 'menu' }
@@ -55,21 +55,27 @@
 {% endblock %}
 
 {% block bodyblock %}
+    <div class="top-return-link">
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+            <i class="fa fa-backward"></i> Return to convenor dashboard
+        </a>
+    </div>
+
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Attach 2nd markers for project <strong>{{ data.name }}</strong></div>
         <div class="panel-body">
 
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="well">
-                    <div class="row vertical-align marker-table">
+                    <div class="row vertical-top marker-table">
                         <div class="col-xs-4"><strong>Project type</strong></div>
                         <div class="col-xs-2"><strong>Markers required</strong></div>
-                        <div class="col-xs-2"><strong>Markers enrolled</strong></div>
+                        <div class="col-xs-2"><strong>Markers attached</strong></div>
                         <div class="col-xs-4"></div>
                     </div>
 
                     {% for pclass in pclasses %}
-                        <div class="row vertical-align marker-table">
+                        <div class="row vertical-top marker-table">
                             <div class="col-xs-4">{{ pclass.name }}</div>
                             <div class="col-xs-2">
                                 {% if pclass.do_matching %}
@@ -78,7 +84,7 @@
                                     <span class="label label-default">Not required</span>
                                 {% endif %}
                             </div>
-                            <div class="col-xs-2">
+                            <div class="col-xs-6">
                                 {% set num = data.num_markers(pclass) %}
                                 {% if pclass.do_matching %}
                                     {% if num >= pclass.number_markers %}
@@ -89,8 +95,11 @@
                                 {% else %}
                                     <span class="label label-default">{{ num }}</span>
                                 {% endif %}
+                                <p></p>
+                                {% for marker in data.get_marker_list(pclass) %}
+                                    <span class="label label-default">{{ marker.user.name }}</span>
+                                {% endfor %}
                             </div>
-                            <div class="col-xs-4"></div>
                         </div>
                     {% endfor %}
                 </div>
@@ -101,18 +110,18 @@
             {% endif %}
 
             <div class="well">
-                <p>Filter by enrollment status</p>
+                <p>Filter by attachment status</p>
                 <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter) }}"
                    class="btn btn-sm grouped-button-margin {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                     All
                 </a>
-                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='enrolled', pclass_filter=pclass_filter, group_filter=group_filter) }}"
-                   class="btn btn-sm grouped-button-margin {% if state_filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
-                    Enrolled
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='attached', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                   class="btn btn-sm grouped-button-margin {% if state_filter == 'attached' %}btn-primary{% else %}btn-default{% endif %}">
+                    Attached
                 </a>
-                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='not-enrolled', pclass_filter=pclass_filter, group_filter=group_filter) }}"
-                   class="btn btn-sm grouped-button-margin {% if state_filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
-                    Not enrolled
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='not-attached', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                   class="btn btn-sm grouped-button-margin {% if state_filter == 'not-attached' %}btn-primary{% else %}btn-default{% endif %}">
+                    Not attached
                 </a>
 
                 {% if pclasses is not none and pclasses|length > 0 %}
@@ -156,9 +165,9 @@
                                class="btn btn-default">
                                 <i class="fa fa-trash"></i> Remove all
                             </a>
-                            <a href="{{ url_for('convenor.enroll_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                            <a href="{{ url_for('convenor.attach_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
                                class="btn btn-default">
-                                <i class="fa fa-check"></i> Enroll all
+                                <i class="fa fa-check"></i> Attach all
                             </a>
                         </div>
                     </div>
@@ -170,7 +179,7 @@
                 <tr>
                     <th width="25%"> Name</th>
                     <th width="5%"> Attached</th>
-                    <th width="20%"> Enrollments</th>
+                    <th width="20%"> Attachments</th>
                     <th width="20%"> Affiliations</th>
                     <th width="15%"> Status</th>
                     <th width="15%"> Actions</th>

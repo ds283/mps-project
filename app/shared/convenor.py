@@ -43,6 +43,8 @@ def add_liveproject(number, project, config_id, autocommit=False):
                             meeting_reqd=item.meeting_reqd,
                             enforce_capacity=item.enforce_capacity,
                             capacity=item.capacity,
+                            second_markers=item.get_second_markers(config.pclass)
+                                if config.pclass.uses_markers else None,
                             description=item.description,
                             reading=item.reading,
                             team=item.team,
@@ -51,17 +53,6 @@ def add_liveproject(number, project, config_id, autocommit=False):
                             show_selections=item.show_selections,
                             page_views=0,
                             last_view=None)
-
-    # assign 2nd markers
-    if config.pclass.uses_markers:
-
-        for marker in item.second_markers:
-
-            if marker.user.active:
-                enroll_rec = marker.get_enrollment_record(config.pclass)
-                if enroll_rec is not None:
-                    if enroll_rec.marker_state == EnrollmentRecord.MARKER_ENROLLED:
-                        live_item.second_markers.append(marker)
 
     db.session.add(live_item)
 

@@ -162,11 +162,11 @@ _marker_menu = \
 {% elif proj.can_enroll_marker(f) %}
     <a href="{{ url_for('convenor.add_marker', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
        class="btn btn-sm btn-default">
-        <i class="fa fa-plus"></i> Enroll
+        <i class="fa fa-plus"></i> Attach
     </a>
 {% else %}
     <a class="btn btn-default btn-sm disabled">
-        <i class="fa fa-plus"></i> Enroll
+        <i class="fa fa-plus"></i> Can't attach
     </a>
 {% endif %}
 """
@@ -368,7 +368,7 @@ def faculty_ajax(id):
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, User.id == faculty_ids.c.owner_id)
 
-    elif filter == 'not-enrolled':
+    elif filter == 'not-attached':
 
         # build a list of only enrolled faculty, together with their FacultyData records
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
@@ -1303,7 +1303,7 @@ def attach_markers(id, pclass_id):
 
     # get list of project classes to which this project is attached, and which require assignment of
     # second markers
-    pclasses = proj.project_classes.filter_by(uses_marker=True).all()
+    pclasses = proj.project_classes.filter_by(active=True, uses_marker=True).all()
 
     return render_template('convenor/attach_markers.html', data=proj, pclass_id=pclass_id, groups=groups, pclasses=pclasses,
                            state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter)
@@ -1398,9 +1398,9 @@ def remove_marker(proj_id, pclass_id, mid):
     return redirect(request.referrer)
 
 
-@convenor.route('/enroll_all_markers/<int:proj_id>/<int:pclass_id>')
+@convenor.route('/attach_all_markers/<int:proj_id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def enroll_all_markers(proj_id, pclass_id):
+def attach_all_markers(proj_id, pclass_id):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)

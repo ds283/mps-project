@@ -7,26 +7,27 @@
             <div class="col-xs-2"><strong>Capacity</strong></div>
             <div class="col-xs-3"><strong>Unique faculty</strong></div>
         </div>
+        <hr class="intro-divider">
         {% for group in group_data %}
             {% set label, proj_count, fac_count, enrolled, total, capacity, bounded = group %}
             <div class="row vertical-align capacity-table">
                 <div class="col-xs-5">{{ label|safe }}</div>
                 <div class="col-xs-2">
                     {% if proj_count > 0 %}
-                        <span class="label label-success">{{ proj_count }}</span>
+                        <strong>{{ proj_count }}</strong>
                     {% else %}
-                        <span class="label label-warning">{{ proj_count }}</span>
+                        {{ proj_count }}
                     {% endif %}
                 </div>
                 <div class="col-xs-2">
                     {% if capacity > 0 %}
-                        {% if not bounded %}>= {% endif %}<span class="label label-success">{{ capacity }}</span>
+                        {% if not bounded %}>= {% endif %}<strong>{{ capacity }}</strong>
                     {% else %}
-                        {% if not bounded %}>= {% endif %}<span class="label label-warning">0</span>
+                        {% if not bounded %}>= {% endif %}0
                     {% endif %}
                 </div>
                 <div class="col-xs-3">
-                    <span class="label label-primary">{{ fac_count }}</span>
+                    <strong>{{ fac_count }}</strong>
                     <span class="label label-info">{{ enrolled }} enrolled</span>
                     <span class="label label-info">{{ total }} total</span>
                 </div>
@@ -34,9 +35,9 @@
         {% endfor %}
         <hr class="into-divider">
         <div class="row vertical-align capacity-table">
-            <div class="col-xs-5"></div>
-            <div class="col-xs-2"><span class="label label-primary">{{ total_projects }}</span></div>
-            <div class="col-xs-2">{% if not total_capacity_bounded %}>= {% endif %}<span class="label label-primary">{{ total_capacity }}</span></div>
+            <div class="col-xs-5"><strong>Total</strong></div>
+            <div class="col-xs-2"><strong>{{ total_projects }}</strong></div>
+            <div class="col-xs-2">{% if not total_capacity_bounded %}>= {% endif %}<strong>{{ total_capacity }}</strong></div>
         </div>
         <hr class="intro-divider">
         {% if total_capacity < sel_count %}

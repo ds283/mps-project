@@ -553,11 +553,12 @@ class FacultyData(db.Model):
         n = self.projects_offered(pclass)
 
         if n == 0:
-            return '<span class="label label-warning">{n}</span>'.format(n=n)
+            return '<span class="label label-warning"><i class="fa fa-times"></i> {n} available</span>'.format(n=n)
 
-        return '<span class="label label-info">{n}</span>'.format(n=n)
+        return '<span class="label label-primary"><i class="fa fa-check"></i> {n} available</span>'.format(n=n)
 
 
+    @property
     def projects_unofferable(self):
 
         unofferable = 0
@@ -568,14 +569,15 @@ class FacultyData(db.Model):
         return unofferable
 
 
+    @property
     def projects_unofferable_label(self):
 
-        n = self.projects_unofferable()
+        n = self.projects_unofferable
 
         if n == 0:
-            return '<span class="label label-info">{n}</span>'.format(n=n)
+            return '<span class="label label-default"><i class="fa fa-check"></i> {n} unofferable</span>'.format(n=n)
 
-        return '<span class="label label-warning">{n}</span>'.format(n=n)
+        return '<span class="label label-warning"><i class="fa fa-times"></i> {n} unofferable</span>'.format(n=n)
 
 
     def remove_affiliation(self, group, autocommit=False):
@@ -767,6 +769,22 @@ class FacultyData(db.Model):
         """
 
         return db.session.query(sqlalchemy.func.count(self.second_marker_for.subquery().c.id)).scalar()
+
+
+    @property
+    def marker_label(self):
+        """
+        Generate a label for the number of projects to which we are attached as a second marker
+        :param pclass:
+        :return:
+        """
+
+        num = self.number_marker
+
+        if num == 0:
+            return '<span class="label label-default"><i class="fa fa-times"></i> 0 marker</span>'
+
+        return '<span class="label label-success"><i class="fa fa-check"></i> {n} marker</span>'.format(n=num)
 
 
 class StudentData(db.Model):

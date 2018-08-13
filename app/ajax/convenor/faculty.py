@@ -62,16 +62,22 @@ _golive = \
 {% endif %}
 """
 
+_projects = \
+"""
+{{ d.projects_offered_label(pclass)|safe }}
+{{ d.projects_unofferable_label|safe }}
+{{ d.marker_label|safe }}
+"""
+
 
 def faculty_data(faculty, pclass, config):
 
-    data = [{'last': u.last_name,
-             'first': u.first_name,
+    data = [{'name': {'display': u.name,
+                      'sortstring': u.last_name + u.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
              'enrolled': d.enrolled_labels(pclass),
-             'offered': d.projects_offered_label(pclass),
-             'unoffer': d.projects_unofferable_label(),
+             'projects': render_template_string(_projects, d=d, pclass=pclass),
              'golive': render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
              'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in faculty]
 

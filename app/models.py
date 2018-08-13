@@ -1429,15 +1429,19 @@ class ProjectClassConfig(db.Model):
     SELECTOR_LIFECYCLE_SELECTIONS_OPEN = 4
     SELECTOR_LIFECYCLE_READY_MATCHING = 5
     SELECTOR_LIFECYCLE_READY_ROLLOVER = 6
-    SELECTOR_LIFECYCLE_SELECTIONS_CLOSED = 7
 
 
     @property
     def selector_lifecycle(self):
 
+        # if gone live and closed, then either we are ready to match or we are read to rollover
         if self.live and self.closed:
-            return ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED
+            if self.project_class.do_matching:
+                return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+            else:
+                return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
 
+        # open case is simple
         if self._open:
             return ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
 

@@ -5,8 +5,8 @@
    <div class="panel
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
             panel-success
-        {% elif config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED %}
-            panel-warning
+        {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+            panel-primary
         {% else %}
             panel-default
         {% endif %}

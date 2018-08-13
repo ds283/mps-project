@@ -8,13 +8,19 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import jsonify
+from flask import jsonify, render_template_string
+
+
+_projects = \
+"""
+{{ f.projects_offered_label(pclass)|safe }}
+{{ f.projects_unofferable_label|safe }}
+"""
 
 def golive_data(config):
-
-    data = [{'name': f.user.name,
+    data = [{'name': {'display': f.user.name,
+                      'sortstring': f.user.last_name + f.user.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
-             'available': f.projects_offered_label(config.project_class),
-             'unoffer': f.projects_unofferable_label()} for f in config.golive_required]
+             'projects': render_template_string(_projects, f=f, pclass=config.pclass)} for f in config.golive_required]
 
     return jsonify(data)

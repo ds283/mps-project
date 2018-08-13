@@ -615,7 +615,7 @@ def dashboard():
     """
 
     # check for unofferable projects and warn if any are prsent
-    unofferable = current_user.faculty_data.projects_unofferable()
+    unofferable = current_user.faculty_data.projects_unofferable
     if unofferable > 0:
         plural='s'
         isare='are'

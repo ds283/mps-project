@@ -27,10 +27,13 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/golive_ajax/{{ pclass.id }}', dataSrc: '' },
                 columns: [
-                    { data: 'name' },
+                    { data: 'name',
+                      render: {
+                        _: 'display',
+                        sort: 'sortstring' }
+                    },
                     { data: 'email' },
-                    { data: 'available' },
-                    { data: 'unoffer' }
+                    { data: 'projects' }
                 ],
                 deferRender: true
             });

@@ -368,7 +368,7 @@ def faculty_ajax(id):
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, User.id == faculty_ids.c.owner_id)
 
-    elif filter == 'not-attached':
+    elif filter == 'not-enrolled':
 
         # build a list of only enrolled faculty, together with their FacultyData records
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \

@@ -50,54 +50,49 @@
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
-            <div class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</div>
-            <hr class="intro-divider">
+            <div class="well">
+                <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
 
-            {# offer rollover of academic year if available #}
-            {% if config.year < current_year %}
-                rollover_card(current_year, pclass, config)
-            {% endif %}
+                {# offer rollover of academic year if available #}
+                {% if config.year < current_year %}
+                    rollover_card(current_year, pclass, config)
+                {% endif %}
 
-            {# provide summary #}
-            <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">Status</div>
-                <div class="panel-body">
-                    {% set state = config.selector_lifecycle %}
-                    {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                {# provide summary #}
+                {% set state = config.selector_lifecycle %}
+                {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
 
-                        {{ issue_confirmations(pclass, issue_form, capacity_data, sel_count) }}
+                    {{ issue_confirmations(pclass, issue_form, capacity_data, sel_count) }}
 
-                    {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
 
-                        {# if we get here then we can assume requests have been issued because of the outermost if #}
-                        {{ waiting_confirmations(pclass, config, issue_form, capacity_data, sel_count) }}
+                    {# if we get here then we can assume requests have been issued because of the outermost if #}
+                    {{ waiting_confirmations(pclass, config, issue_form, capacity_data, sel_count) }}
 
-                    {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
 
-                        {{ golive(pclass, config, golive_form, capacity_data, sel_count) }}
+                    {{ golive(pclass, config, golive_form, capacity_data, sel_count) }}
 
-                    {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
 
-                        {{ selection_open(config) }}
+                    {{ selection_open(config) }}
 
-                    {% elif state >= config.SELECTOR_LIFECYCLE_MATCHING_READY %}
+                {% elif state >= config.SELECTOR_LIFECYCLE_MATCHING_READY %}
 
-                        {{ selection_closed(config) }}
+                    {{ selection_closed(config) }}
 
-                    {% else %}
+                {% else %}
 
-                        <div class="panel panel-danger">
-                            <div class="panel-heading">Error</div>
-                            <div class="panel-body">
-                                <strong>Error:</strong>
-                                Unknown project lifecycle state {{ state }}
-                            </div>
+                    <div class="panel panel-danger">
+                        <div class="panel-heading">Error</div>
+                        <div class="panel-body">
+                            <strong>Error:</strong>
+                            Unknown project lifecycle state {{ state }}
                         </div>
+                    </div>
 
-                    {% endif %}
-                </div>
+                {% endif %}
             </div>
-
         </div>
         <div class="col-xs-1"></div>
     </div>

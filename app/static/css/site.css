@@ -39,6 +39,10 @@ p.copyright {
     margin-bottom: 10px;
 }
 
+.top-return-link {
+    padding-bottom: 16px;
+}
+
 .dashboard-project-title {
     font-size: 32px;
     font-weight: lighter;

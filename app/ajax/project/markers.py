@@ -22,9 +22,9 @@ _affiliations = \
 _status = \
 """
 {% if proj.is_second_marker(f) %}
-    <span class="label label-success"><i class="fa fa-check"></i> Enrolled</span>
+    <span class="label label-success"><i class="fa fa-check"></i> Attached</span>
 {% else %}
-    <span class="label label-default"><i class-"fa fa-times"></i> Not enrolled</span>
+    <span class="label label-default"><i class-"fa fa-times"></i> Not attached</span>
 {% endif %}
 """
 
@@ -66,7 +66,7 @@ def build_marker_data(faculty, proj, menu, pclass_id=None):
              'attached': render_template_string(_attached, f=f),
              'groups': render_template_string(_affiliations, f=f),
              'status': render_template_string(_status, f=f, proj=proj),
-             'enrollments': render_template_string(_enrollments, f=f),
+             'attachments': render_template_string(_enrollments, f=f),
              'menu': render_template_string(menu, f=f, proj=proj, pclass_id=pclass_id)} for f in faculty]
 
     return jsonify(data)

@@ -58,23 +58,32 @@ def get_root_dashboard_data():
 
     config_list = []
 
+    matching_ready = True
     rollover_ready = True
 
+    # loop through all active project classes
     for pclass in pcs:
 
+        # get current configuration record for this project class
         config = db.session.query(ProjectClassConfig) \
             .filter_by(pclass_id=pclass.id) \
             .order_by(ProjectClassConfig.year.desc()).first()
 
-        group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = get_capacity_data(pclass)
-
         if config is not None:
 
-            config_list.append( (config,total_capacity,total_capacity_bounded) )
-            if not config.closed:
+            # compute capacity data for this project class
+            group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = \
+                get_capacity_data(pclass)
+
+            config_list.append((config, total_capacity, total_capacity_bounded))
+
+            if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+                matching_ready = False
+
+            if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
                 rollover_ready = False
 
-    return config_list, current_year, rollover_ready
+    return config_list, current_year, rollover_ready, matching_ready
 
 
 def get_convenor_dashboard_data(pclass, config):

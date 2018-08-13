@@ -5,12 +5,22 @@
     {% set pclass = config.project_class %}
     <div class="well">
         <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
-        <p><span>
-            Convenor:
+        <p>
+            <span>Convenor:
             <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
                 {{ pclass.convenor_name }}
-            </a>
-        </span></p>
+            </a></span>
+        </p>
+        {% if pclass.coconvenors.first() %}
+            <p>
+                <span>Co-convenors:</span>
+                {% for fac in pclass.coconvenors %}
+                    <span><a class="btn btn-link" href="mailto:{{ fac.user.email }}">
+                        {{ fac.user.name }}
+                    </a></span>
+                {% endfor %}
+            </p>
+        {% endif %}
 
         {% set nproj = current_user.faculty_data.projects_offered(pclass) %}
         {% if nproj == 1 %}

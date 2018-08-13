@@ -23,7 +23,7 @@
                 panel-danger
             {% elif config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                 panel-success
-            {% elif config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED %}
+            {% elif config.selector_lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
                 panel-primary
             {% elif config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
                 panel-warning

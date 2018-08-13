@@ -36,7 +36,10 @@
                                 <span class="label label-success"><i class="fa fa-check"></i> GoLive ready</span>
                             {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                 <span class="label label-primary"><i class="fa fa-check"></i> Selection open</span>
-                            {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_CLOSED %}
+                            {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING %}
+                                <span class="label label-primary">Selection closed</span>
+                                <span class="label label-success"><i class="fa fa-check"></i> Matching ready</span>
+                            {% elif state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
                                 <span class="label label-primary">Selection closed</span>
                                 <span class="label label-success"><i class="fa fa-check"></i> Rollover ready</span>
                             {% else %}

@@ -77,7 +77,7 @@
 
                     {{ selection_open(config) }}
 
-                {% elif state >= config.SELECTOR_LIFECYCLE_MATCHING_READY %}
+                {% elif state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %}
 
                     {{ selection_closed(config) }}
 

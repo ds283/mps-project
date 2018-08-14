@@ -23,6 +23,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_skill_group, unique_or_original_skill_group, globally_unique_project_class, \
     unique_or_original_project_class, globally_unique_project_class_abbrev, unique_or_original_project_class_abbrev, \
     globally_unique_supervisor, unique_or_original_supervisor, globally_unique_role, unique_or_original_role, \
+    globally_unique_exam_number, unique_or_original_exam_number, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildUserRealName, BuildConvenorRealName, GetAllProjectClasses, \
@@ -131,8 +132,6 @@ class FacultyDataMixin():
 
 class StudentDataMixin():
 
-    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required")])
-
     cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
 
     programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes,
@@ -165,12 +164,14 @@ class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixin):
 
 class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin):
 
-    pass
+    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required"),
+                                                          globally_unique_exam_number])
 
 
 class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
 
-    pass
+    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required"),
+                                                          globally_unique_exam_number])
 
 
 class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, AskConfirmEditFormMixin, EditEmailFormMixin, FirstLastNameMixin):
@@ -185,7 +186,8 @@ class EditFacultyForm(EditOfficeForm, FacultyDataMixin):
 
 class EditStudentForm(EditOfficeForm, StudentDataMixin):
 
-    pass
+    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required"),
+                                                          unique_or_original_exam_number])
 
 
 class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixin, FirstLastNameMixin, EditFormMixin):

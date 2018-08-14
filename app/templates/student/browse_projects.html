@@ -74,16 +74,14 @@
         </a>
     </div>
 
-    {{ filter_block(sel, groups, skills, 'student.clear_group_filters', 'student.add_group_filter', 'student.remove_group_filter', 'student.clear_skill_filters', 'student.add_skill_filter', 'student.remove_skill_filter') }}
-
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">
-            <div class="row">
-                <div class="col-xs-8">
-                    Projects available for
-                    <strong>{{ config.project_class.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
-                </div>
-                <div class="col-xs-4">
+            Projects available for
+            <strong>{{ config.project_class.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
+        </div>
+        <div class="panel-body">
+            <div class="row" style="margin-bottom: 10px;">
+                <div class="col-xs-12">
                     <div class="pull-right">
                         {% set bookmarks = sel.get_num_bookmarks %}
                         {% set bmpl = 's' %}
@@ -94,8 +92,8 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="panel-body">
+            {{ filter_block(sel, groups, skills, 'student.clear_group_filters', 'student.add_group_filter', 'student.remove_group_filter', 'student.clear_skill_filters', 'student.add_skill_filter', 'student.remove_skill_filter') }}
+
             <table id="liveprojects-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>

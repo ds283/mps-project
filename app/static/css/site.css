@@ -98,14 +98,14 @@ p.copyright {
 }
 
 .selected-project {
-    border-color: #dff0d8;
-    border-width: 3px;
+    background-color: #dff0d8;
+    /*border-width: 3px;*/
     margin: 3px;
 }
 
 .deselected-project {
-    border-color: #f2dede;
-    border-width: 3px;
+    background-color: #f2dede;
+    /*border-width: 3px;*/
     margin: 3px;
 }
 

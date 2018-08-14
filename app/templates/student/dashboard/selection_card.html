@@ -55,52 +55,49 @@
 
 
 {% macro show_submission_status(config, sel) %}
-    <div class="well">
-        <div class="row vertical-top">
-            <div class="col-xs-8">
-                {% if sel.has_submitted %}
-                    <div>
-                        You have already submitted a valid list of project preferences.
-                    </div>
-                    <div>
-                        <span class="label label-success"><i class="fa fa-check"></i> Preferences received</span>
-                        <a href="{{ url_for('student.view_selection', sid=sel.id) }}"
-                           class="btn btn-link">Show selection ...</a>
-                    </div>
-                {% else %}
-                    <div>You have not yet submitted your project preferences.</div>
-                {% endif %}
-            </div>
-            <div class="col-xs-4">
-                <div class="pull-right">
-                    {% if sel.has_submitted %}
-                        <a class="btn btn-default" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
-                            Clear submission
-                        </a>
-                    {% endif %}
-                    {% set is_valid = sel.is_valid_selection %}
-                    <a id="P{{ config.id }}-valid-button"
-                       class="btn btn-default {% if not is_valid %}hidden{% endif %}"
-                       href="{{ url_for('student.submit', sid=sel.id) }}">
-                        {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
-                    </a>
-                    <a id="P{{ config.id }}-invalid-button"
-                       class="btn btn-default disabled {% if is_valid %}hidden{% endif %}">
-                        {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
-                    </a>
+    <div class="row vertical-top">
+        <div class="col-xs-8">
+            {% if sel.has_submitted %}
+                <div>
+                    You have already submitted a valid list of project preferences.
                 </div>
+                <div>
+                    <span class="label label-success"><i class="fa fa-check"></i> Preferences received</span>
+                    <a href="{{ url_for('student.view_selection', sid=sel.id) }}"
+                       class="btn btn-link">Show selection ...</a>
+                </div>
+            {% else %}
+                <div>You have not yet submitted your project preferences.</div>
+            {% endif %}
+        </div>
+        <div class="col-xs-4">
+            <div class="pull-right">
+                {% if sel.has_submitted %}
+                    <a class="btn btn-default" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
+                        Clear submission
+                    </a>
+                {% endif %}
+                {% set is_valid = sel.is_valid_selection %}
+                <a id="P{{ config.id }}-valid-button"
+                   class="btn btn-default {% if not is_valid %}hidden{% endif %}"
+                   href="{{ url_for('student.submit', sid=sel.id) }}">
+                    {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
+                </a>
+                <a id="P{{ config.id }}-invalid-button"
+                   class="btn btn-default disabled {% if is_valid %}hidden{% endif %}">
+                    {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
+                </a>
             </div>
         </div>
-        {% if sel.has_submitted %}
-            <div class="row">
-                <div class="col-xs-12">
-                    <div>You may continue to revise your list up to the deadline.</div>
-                    <div>Last submission received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</div>
-                </div>
-            </div>
-        {% endif %}
-
     </div>
+    {% if sel.has_submitted %}
+        <div class="row">
+            <div class="col-xs-12">
+                <div>You may continue to revise your list up to the deadline.</div>
+                <div>Last submission received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</div>
+            </div>
+        </div>
+    {% endif %}
 {% endmacro %}
 
 
@@ -122,7 +119,7 @@
 
 
 {% macro render_bookmarks(config, sel) %}
-    <div class="container-fluid list-group" id="P{{ config.id }}-bookmarks" >
+    <div class="list-group" id="P{{ config.id }}-bookmarks" >
         {% for bookmark in sel.get_ordered_bookmarks %}
         {% set project = bookmark.liveproject %}
             <div id="P{{ config.id }}-{{ project.id }}"
@@ -249,6 +246,7 @@
                     </div>
 
                     {{ render_bookmarks(config, sel) }}
+                    <hr class="intro-divider">
                     {{ show_submission_status(config, sel) }}
 
                 {% endif %}

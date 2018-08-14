@@ -58,7 +58,7 @@ def register_golive_tasks(celery):
 
         # build list of projects to be attached when we go live
         # note that we exclude any projects where the supervisor is not normally enrolled
-        attached_projects = db.session.query(Project.id) \
+        attached_projects = db.session.query(Project) \
             .filter(Project.active,
                     Project.project_classes.any(id=pclass_id)) \
             .join(User, User.id == Project.owner_id) \

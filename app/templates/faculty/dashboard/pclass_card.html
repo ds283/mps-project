@@ -19,14 +19,14 @@
             <div class="col-xs-6">
                 {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                     <div class="pull-right">
-                        <span class="label label-success">Selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
+                        <span class="label label-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
                         {% if config.live_deadline %}
                             <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
                         {% endif %}
                     </div>
                 {% else %}
                     <div class="pull-right">
-                        <span class="label label-default">Selection closed</span>
+                        <span class="label label-default">Student selection closed</span>
                     </div>
                 {% endif %}
             </div>

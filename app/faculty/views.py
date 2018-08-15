@@ -23,7 +23,7 @@ from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm
 
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_second_markers
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner
-from ..shared.actions import render_live_project, do_confirm, do_deconfirm
+from ..shared.actions import render_live_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 
 from datetime import datetime
 
@@ -739,6 +739,54 @@ def deconfirm(sid, pid):
         return redirect(url_for(request.referrer))
 
     if do_deconfirm(sel, project):
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/deconfirm_to_pending/<int:sid>/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def deconfirm_to_pending(sid, pid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify that logged-in user is the owner of this liveproject
+    if not validate_is_project_owner(project):
+        return redirect(request.referrer)
+
+    # validate that project is open
+    if not validate_project_open(sel.config):
+        return redirect(url_for(request.referrer))
+
+    if do_deconfirm_to_pending(sel, project):
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/cancel_confirm/<int:sid>/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def cancel_confirm(sid, pid):
+
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # pid is a LiveProject
+    project = LiveProject.query.get_or_404(pid)
+
+    # verify that logged-in user is the owner of this liveproject
+    if not validate_is_project_owner(project):
+        return redirect(request.referrer)
+
+    # validate that project is open
+    if not validate_project_open(sel.config):
+        return redirect(url_for(request.referrer))
+
+    if do_cancel_confirm(sel, project):
         db.session.commit()
 
     return redirect(request.referrer)

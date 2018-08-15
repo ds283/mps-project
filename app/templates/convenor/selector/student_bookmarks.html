@@ -3,7 +3,7 @@
 {% from "convenor/macros.html" import bookmark_projects %}
 
 {% block title %}
-    View bookmarks for {{ sel.user.name }}
+    View bookmarks for {{ sel.student.user.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -12,7 +12,7 @@
         <div class="col-xs-10">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    View bookmarks for <strong>{{ sel.user.name }}</strong>
+                    View bookmarks for <strong>{{ sel.student.user.name }}</strong>
                 </div>
                 <div class="panel-body">
                     {{ bookmark_projects(sel, sel.get_ordered_bookmarks) }}

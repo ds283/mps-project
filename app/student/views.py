@@ -36,7 +36,7 @@ def _verify_selector(sel):
     """
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
-    if sel.user_id != current_user.id and not current_user.has_role('admin') and not current_user.has_role('root'):
+    if sel.student_id != current_user.id and not current_user.has_role('admin') and not current_user.has_role('root'):
 
         flash('You do not have permission to perform operations for this user. '
               'If you believe this is incorrect, contract the system administrator.', 'error')
@@ -91,13 +91,13 @@ def dashboard():
     # build list of all project classes for which this student has roles
     pcs = []
 
-    for item in current_user.selecting.filter_by(retired=False).all():
+    for item in current_user.student_data.selecting.filter_by(retired=False).all():
 
         pclass = item.config.project_class
         if pclass.active and pclass not in pcs:
             pcs.append(pclass)
 
-    for item in current_user.submitting.filter_by(retired=False).all():
+    for item in current_user.student_data.submitting.filter_by(retired=False).all():
 
         pclass = item.config.project_class
         if pclass.active and pclass not in pcs:
@@ -111,7 +111,7 @@ def dashboard():
         config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
 
         # determine whether this student has a selector role for this project class
-        select_q = config.selecting_students.filter_by(retired=False, user_id=current_user.id)
+        select_q = config.selecting_students.filter_by(retired=False, student_id=current_user.id)
 
         # TODO: consider performance impact of count() here. Is there a better alternative?
         if select_q.count() > 1:
@@ -121,7 +121,7 @@ def dashboard():
         sel = select_q.first()
 
         # determine whether this student has a submitter role for this project class
-        submit_q = config.submitting_students.filter_by(retired=False, user_id=current_user.id)
+        submit_q = config.submitting_students.filter_by(retired=False, student_id=current_user.id)
 
         # TODO: consider performance impact of count() here. Is there a better alternative?
         if submit_q.count() > 1:
@@ -491,7 +491,7 @@ def update_ranking():
         return jsonify({'status': 'data_missing'})
 
     # check logged-in user is eligible to modify ranking data
-    if current_user.id != sel.user.id:
+    if current_user.id != sel.student.id:
 
         return jsonify({'status': 'insufficient_privileges'})
 
@@ -527,7 +527,7 @@ def submit(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify logged-in user is the selector
-    if current_user.id != sel.user_id:
+    if current_user.id != sel.student_id:
 
         flash('You do not have permission to submit project preferences for this selector.', 'error')
         return redirect(request.referrer)
@@ -547,7 +547,7 @@ def submit(sid):
 
             # rank is based on 1
             if bookmark.rank <= sel.number_choices:
-                rec = SelectionRecord(user_id=sel.user_id,
+                rec = SelectionRecord(user_id=sel.student_id,
                                       liveproject_id=bookmark.liveproject_id,
                                       rank=bookmark.rank)
                 sel.selections.append(rec)
@@ -575,7 +575,7 @@ def clear_submission(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify logged-in user is the selector
-    if current_user.id != sel.user_id:
+    if current_user.id != sel.student_id:
 
         flash('You do not have permission to clear project preferences for this selector.', 'error')
         return redirect(request.referrer)
@@ -601,7 +601,7 @@ def do_clear_submission(sid):
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify logged-in user is the selector
-    if current_user.id != sel.user_id:
+    if current_user.id != sel.student_id:
 
         flash('You do not have permission to clear project preferences for this selector.', 'error')
         return home_dashboard()

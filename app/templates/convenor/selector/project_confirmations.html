@@ -22,10 +22,10 @@
 
                         <hr class="intro-divider">
 
-                        {% for student in project.confirmed_students %}
+                        {% for sel in project.confirmed_students %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
-                                    {{ student.user.name }}
+                                    {{ sel.student.user.name }}
                                 </div>
                                 <div class="col-xs-8">
                                     <div class="dropdown">
@@ -35,12 +35,12 @@
                                         <ul class="dropdown-menu">
                                             {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
-                                                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=student.id, pid=project.id) }}">
+                                                    <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-clock-o"></i> Make pending
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a href="{{ url_for('convenor.deconfirm', sid=student.id, pid=project.id) }}">
+                                                    <a href="{{ url_for('convenor.deconfirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
                                                 </li>
@@ -64,10 +64,10 @@
 
                         {% if project.number_confirmed > 0 and project.number_pending > 0%}<hr class="intro-divider">{% endif %}
 
-                        {% for student in project.confirm_waiting %}
+                        {% for sel in project.confirm_waiting %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
-                                    {{ student.user.name }}
+                                    {{ sel.student.user.name }}
                                 </div>
                                 <div class="col-xs-8">
                                     <div class="dropdown">
@@ -77,12 +77,12 @@
                                         <ul class="dropdown-menu">
                                             {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
-                                                    <a href="{{ url_for('convenor.confirm', sid=student.id, pid=project.id) }}">
+                                                    <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-check"></i> Confirm
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a href="{{ url_for('convenor.cancel_confirm', sid=student.id, pid=project.id) }}">
+                                                    <a href="{{ url_for('convenor.cancel_confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
                                                 </li>

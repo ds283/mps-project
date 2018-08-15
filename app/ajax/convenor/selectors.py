@@ -127,9 +127,9 @@ _menu = \
 
 _cohort = \
 """
-{{ student.user.student_data.programme.label()|safe }}
-{{ student.academic_year_label()|safe }}
-{{ student.user.student_data.cohort_label()|safe }}
+{{ sel.student.programme.label()|safe }}
+{{ sel.academic_year_label()|safe }}
+{{ sel.student.cohort_label()|safe }}
 """
 
 _bookmarks = \
@@ -175,9 +175,11 @@ _confirmations = \
 
 def selectors_data(students, config):
 
-    data = [{'last': s.user.last_name,
-             'first': s.user.first_name,
-             'cohort': render_template_string(_cohort, student=s),
+    data = [{'name': {
+                'display': s.student.user.name,
+                'sortstring': s.student.user.last_name + s.student.user.first_name
+             },
+             'cohort': render_template_string(_cohort, sel=s),
              'bookmarks': {
                  'display': render_template_string(_bookmarks, sel=s),
                  'value': s.get_num_bookmarks
@@ -194,16 +196,20 @@ def selectors_data(students, config):
 
 _enroll_action = \
 """
-<a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">Manually enroll</a>
+<a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">
+    <i class="fa fa-plus"></i> Manually enroll
+</a>
 """
 
 
 def enroll_selectors_data(students, config):
 
-    data = [{'last': s.user.last_name,
-             'first': s.user.first_name,
+    data = [{'name': {
+                'display': s.user.name,
+                'sortstring': s.user.last_name + s.user.first_name
+             },
              'programme': s.programme.label(),
-             'admitted': s.cohort_label(),
+             'cohort': s.cohort_label(),
              'acadyear': '<span class="label label-info">Y{yr}</span>'.format(yr=config.year-s.cohort+1),
              'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
 

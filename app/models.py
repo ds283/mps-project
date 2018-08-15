@@ -2443,9 +2443,9 @@ class SelectingStudent(db.Model):
                              backref=db.backref('selecting_students', lazy='dynamic'))
 
     # key to student userid
-    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
-                           backref=db.backref('selecting', lazy='dynamic'))
+    student_id = db.Column(db.Integer(), db.ForeignKey('student_data.id'))
+    student = db.relationship('StudentData', foreign_keys=[student_id], uselist=False,
+                              backref=db.backref('selecting', lazy='dynamic'))
 
     # confirmation requests issued
     confirm_requests = db.relationship('LiveProject', secondary=confirmation_requests, lazy='dynamic',
@@ -2520,7 +2520,7 @@ class SelectingStudent(db.Model):
         :return:
         """
 
-        return self.config.year - self.user.student_data.cohort + 1
+        return self.config.year - self.student.cohort + 1
 
 
     def academic_year_label(self):
@@ -2549,7 +2549,7 @@ class SelectingStudent(db.Model):
         :return:
         """
 
-        return self.user.student_data.programme not in self.config.project_class.programmes
+        return self.student.programme not in self.config.project_class.programmes
 
 
     @property
@@ -2637,9 +2637,9 @@ class SubmittingStudent(db.Model):
                              backref=db.backref('submitting_students', lazy='dynamic'))
 
     # key to student userid
-    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
-                           backref=db.backref('submitting', lazy='dynamic'))
+    student_id = db.Column(db.Integer(), db.ForeignKey('student_data.id'))
+    student = db.relationship('StudentData', foreign_keys=[student_id], uselist=False,
+                              backref=db.backref('submitting', lazy='dynamic'))
 
 
     @property
@@ -2649,7 +2649,7 @@ class SubmittingStudent(db.Model):
         :return:
         """
 
-        return self.config.year - self.user.student_data.cohort + 1
+        return self.config.year - self.student.cohort + 1
 
 
     def academic_year_label(self):
@@ -2672,7 +2672,7 @@ class Bookmark(db.Model):
     # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
     # removed from the database
     user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    user = db.relationship('SelectingStudent', uselist=False,
+    owner = db.relationship('SelectingStudent', uselist=False,
                            backref=db.backref('bookmarks', lazy='dynamic', cascade='all, delete-orphan'))
 
     # LiveProject we are linking to

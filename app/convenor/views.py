@@ -21,6 +21,7 @@ from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashbo
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_submitter, add_liveproject
+from ..shared.conversions import is_integer
 
 from ..task_queue import register_task
 
@@ -399,18 +400,52 @@ def selectors(id):
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    if cohort_filter is None and session.get('convenor_selectors_cohort_filter'):
+        cohort_filter = session['convenor_selectors_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_selectors_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_selectors_prog_filter'):
+        prog_filter = session['convenor_selectors_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_selectors_prog_filter'] = prog_filter
+
+    if state_filter is None and session.get('convenor_selectors_state_filter'):
+        state_filter = session['convenor_selectors_state_filter']
+
+    if state_filter is not None:
+        session['convenor_selectors_state_filter'] = state_filter
+
     # get current academic year
     current_year = get_current_year()
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
+    # build a list of live students selecting from this project class
+    selectors = config.selecting_students.filter_by(retired=False).all()
+
+    # build list of available cohorts
+    cohorts = set()
+    for sel in selectors:
+        cohorts.add(sel.student.cohort)
+
+    # build list of available programmes
+    progs = DegreeProgramme.query.filter_by(active=True)
+
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter)
 
 
 @convenor.route('/selectors_ajax/<int:id>', methods=['GET', 'POST'])
@@ -429,19 +464,42 @@ def selectors_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     # build a list of live students selecting from this project class
-    selectors = config.selecting_students.filter_by(retired=False).all()
+    selectors = config.selecting_students.filter_by(retired=False)
 
-    # # pass through list of selecting students, building list of available cohorts
-    # cohorts = set()
-    # for sel in selectors:
-    #     c = sel.
-    #     sel.confirmed
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
 
-    return ajax.convenor.selectors_data(selectors, config)
+    if cohort_flag or prog_flag:
+        selectors = selectors \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id)
+
+    if cohort_flag:
+        selectors = selectors.filter(StudentData.cohort == cohort_value)
+
+    if prog_flag:
+        selectors = selectors.filter(StudentData.programme_id == prog_value)
+
+    if state_filter == 'submitted':
+        data = [ rec for rec in selectors.all() if rec.selections.first() is not None ]
+    elif state_filter == 'bookmarks':
+        data = [ rec for rec in selectors.all() if rec.selections.first() is None and rec.bookmarks.first() is not None ]
+    elif state_filter == 'none':
+        data = [ rec for rec in selectors.all() if rec.bookmarks.first() is None ]
+    elif state_filter == 'confirmations':
+        data = [ rec for rec in selectors.all() if rec.confirm_requests.first() is not None ]
+    else:
+        data = selectors.all()
+
+    return ajax.convenor.selectors_data(data, config)
 
 
 @convenor.route('/enroll_selectors/<int:id>')

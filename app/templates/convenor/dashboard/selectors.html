@@ -47,7 +47,7 @@
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Students enrolled as <strong>selectors</strong> for <strong>{{ pclass.name }}</strong></div>
         <div class="panel-body">
-            {% if cohorts and cohorts is not none %}
+            {% if cohorts and cohorts is not none and cohorts|length > 1 %}
                 <div class="well">
                     <p>Filter by cohort</p>
                     <a class="btn btn-sm grouped-button-margin {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"

@@ -4,22 +4,44 @@
 
     {% set pclass = config.project_class %}
     <div class="well">
-        <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
-        <p>
-            <span>Convenor:
-            <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
-                {{ pclass.convenor_name }}
-            </a></span>
-        </p>
+        <div class="row vertical-align">
+            <div class="col-xs-12">
+                <span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span>
+            </div>
+        </div>
+        <div class="row vertical-align">
+            <div class="col-xs-6">
+                <span>Convenor:
+                <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
+                    {{ pclass.convenor_name }}
+                </a></span>
+            </div>
+            <div class="col-xs-6">
+                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                    <div class="pull-right">
+                        <span class="label label-success">Selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
+                        {% if config.live_deadline %}
+                            <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="pull-right">
+                        <span class="label label-default">Selection closed</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
         {% if pclass.coconvenors.first() %}
-            <p>
-                <span>Co-convenors:</span>
-                {% for fac in pclass.coconvenors %}
-                    <span><a class="btn btn-link" href="mailto:{{ fac.user.email }}">
-                        {{ fac.user.name }}
-                    </a></span>
-                {% endfor %}
-            </p>
+            <div class="row vertical-align">
+                <div class="col-xs-12">
+                    <span>Co-convenors:</span>
+                    {% for fac in pclass.coconvenors %}
+                        <span><a class="btn btn-link" href="mailto:{{ fac.user.email }}">
+                            {{ fac.user.name }}
+                        </a></span>
+                    {% endfor %}
+                </div>
+            </div>
         {% endif %}
 
         {% set nproj = current_user.faculty_data.projects_offered(pclass) %}
@@ -42,22 +64,7 @@
             {% endif %}
             ">
 
-            <div class="panel-heading">
-                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    <strong>Status</strong>
-                    <div class="pull-right">
-                        <span class="label label-success">Selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
-                        {% if config.live_deadline %}
-                            <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
-                        {% endif %}
-                    </div>
-                {% else %}
-                    Status
-                    <div class="pull-right">
-                        <span class="label label-default">Selection closed</span>
-                    </div>
-                {% endif %}
-            </div>
+            <div class="panel-heading"><strong>Status</strong></div>
 
             <div class="panel-body">
 

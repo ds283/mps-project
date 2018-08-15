@@ -79,12 +79,12 @@
                 {% endif %}
                 {% set is_valid = sel.is_valid_selection %}
                 <a id="P{{ config.id }}-valid-button"
-                   class="btn btn-default {% if not is_valid %}hidden{% endif %}"
+                   class="btn btn-primary {% if not is_valid %}hidden{% endif %}"
                    href="{{ url_for('student.submit', sid=sel.id) }}">
                     {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
                 </a>
                 <a id="P{{ config.id }}-invalid-button"
-                   class="btn btn-default disabled {% if is_valid %}hidden{% endif %}">
+                   class="btn btn-primary disabled {% if is_valid %}hidden{% endif %}">
                     {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
                 </a>
             </div>
@@ -240,7 +240,7 @@
                         </div>
                         <div class="col-xs-3">
                             <span class="pull-right">
-                                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-primary">Show available projects</a>
+                                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success">Show available projects</a>
                             </span>
                         </div>
                     </div>

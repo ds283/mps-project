@@ -122,8 +122,8 @@
                                 {% endif %}
                                 {% if data is not none %}
                                     Your details:
-                                    {{ sdata.user.student_data.cohort_label()|safe }}
-                                    {{ sdata.user.student_data.programme.label()|safe }}
+                                    {{ sdata.student.cohort_label()|safe }}
+                                    {{ sdata.student.programme.label()|safe }}
                                     {{ sdata.academic_year_label()|safe }}
                                 {% endif %}
                             </div>

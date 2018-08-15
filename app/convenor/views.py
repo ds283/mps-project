@@ -433,7 +433,13 @@ def selectors_ajax(id):
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     # build a list of live students selecting from this project class
-    selectors = config.selecting_students.filter_by(retired=False)
+    selectors = config.selecting_students.filter_by(retired=False).all()
+
+    # # pass through list of selecting students, building list of available cohorts
+    # cohorts = set()
+    # for sel in selectors:
+    #     c = sel.
+    #     sel.confirmed
 
     return ajax.convenor.selectors_data(selectors, config)
 
@@ -505,13 +511,13 @@ def enroll_selectors_ajax(id):
         .join(User, StudentData.id == User.id).filter(User.active == True)
 
     # build a list of existing selecting students
-    selectors = db.session.query(SelectingStudent.user_id) \
+    selectors = db.session.query(SelectingStudent.student_id) \
         .filter(SelectingStudent.config_id == config.id,
                 ~SelectingStudent.retired).subquery()
 
     # find students in candidates who are not also in selectors
-    missing = candidates.join(selectors, selectors.c.user_id==StudentData.id, isouter=True) \
-        .filter(selectors.c.user_id==None)
+    missing = candidates.join(selectors, selectors.c.student_id==StudentData.id, isouter=True) \
+        .filter(selectors.c.student_id==None)
 
     return ajax.convenor.enroll_selectors_data(missing, config)
 
@@ -688,7 +694,7 @@ def attach_liveproject(id):
 _attach_liveproject_action = \
 """
 <a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    Manually attach
+    <i class="fa fa-plus"></i> Manually attach
 </a>
 """
 
@@ -784,7 +790,7 @@ def manual_attach_project(id, configid):
 _attach_liveproject_other_action = \
 """
 <a href="{{ url_for('convenor.manual_attach_other_project', id=project.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    Manually attach
+    <i class="fa fa-plus"></i> Manually attach
 </a>
 """
 

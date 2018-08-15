@@ -3,7 +3,7 @@
 {% from "convenor/macros.html" import ranked_selection %}
 
 {% block title %}
-    View submitted choices for {{ sel.user.name }}
+    View submitted choices for {{ sel.student.user.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -12,7 +12,7 @@
         <div class="col-xs-10">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    View submitted choices for student <strong>{{ sel.user.name }}</strong>
+                    View submitted choices for student <strong>{{ sel.student.user.name }}</strong>
                 </div>
                 <div class="panel-body">
                     {% if sel.has_submitted %}

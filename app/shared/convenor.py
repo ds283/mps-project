@@ -72,7 +72,7 @@ def add_selector(student, config_id, autocommit=False):
             raise KeyError('Missing database record for StudentData id={id}'.format(id=student))
 
     selector = SelectingStudent(config_id=config_id,
-                                user_id=item.user.id,
+                                student_id=item.id,
                                 retired=False)
     db.session.add(selector)
 
@@ -92,7 +92,7 @@ def add_submitter(student, config_id, autocommit=False):
             raise KeyError('Missing database record for StudentData id={id}'.format(id=student))
 
     submitter = SubmittingStudent(config_id=config_id,
-                                  user_id=item.user.id,
+                                  student_id=item.id,
                                   retired=False)
     db.session.add(submitter)
 

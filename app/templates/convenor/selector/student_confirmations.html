@@ -1,7 +1,7 @@
 {% extends "base_app.html" %}
 
 {% block title %}
-    Project confirmations for {{ sel.user.name }}
+    Project confirmations for {{ sel.student.user.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -10,7 +10,7 @@
         <div class="col-xs-10">
             <div class="panel panel-success">
                 <div class="panel-heading">
-                    Project confirmations for <strong>{{ sel.user.name }}</strong>
+                    Project confirmations for <strong>{{ sel.student.user.name }}</strong>
                 </div>
 
                 <div class="panel-body">

@@ -42,21 +42,21 @@
         {% for item in list %}
             <div class="row vertical-align bookmark-table">
                 <div class="col-xs-5">
-                    {{ item.user.user.name }}
+                    {{ item.owner.student.user.name }}
                 </div>
                 <div class="col-xs-1">
                     <span class="label label-success">#{{ item.rank }}</span>
                 </div>
                 <div class="col-xs-3">
-                    {% if item.user.has_submitted %}
+                    {% if item.owner.has_submitted %}
                         <span class="label label-success">Yes</span>
                     {% else %}
                         <span class="label label-default">No</span>
                     {% endif %}
                 </div>
                 <div class="col-xs-3">
-                    {% if item.user.has_submitted %}
-                        {% if item.user.is_project_submitted(item) %}
+                    {% if item.owner.has_submitted %}
+                        {% if item.owner.is_project_submitted(item) %}
                             <span class="label label-success">Yes</span>
                         {% else %}
                             <span class="label label-default">No</span>
@@ -82,16 +82,16 @@
         {% for item in list %}
             <div class="row vertical-align bookmark-table">
                 <div class="col-xs-5">
-                    {{ item.user.user.name }}
+                    {{ item.owner.student.user.name }}
                 </div>
                 <div class="col-xs-1">
                     <span class="label label-success">#{{ item.rank }}</span>
                 </div>
                 <div class="col-xs-3">
-                    {{ item.user.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}
+                    {{ item.owner.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}
                 </div>
                 <div class="col-xs-3">
-                    {{ item.user.submission_IP }}
+                    {{ item.owner.submission_IP }}
                 </div>
             </div>
         {% endfor %}

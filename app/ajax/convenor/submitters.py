@@ -13,16 +13,18 @@ from flask import render_template_string, jsonify
 
 _cohort = \
 """
-{{ student.user.student_data.programme.label()|safe }}
-{{ student.academic_year_label()|safe }}
-{{ student.user.student_data.cohort_label()|safe }}
+{{ sel.student.programme.label()|safe }}
+{{ sel.academic_year_label()|safe }}
+{{ sel.student.cohort_label()|safe }}
 """
 
 
 def submitters_data(students, config):
 
-    data = [{'last', student.user.last,
-             'first', student.user.first,
-             'cohort', render_template_string(_cohort, student=student)} for student in students]
+    data = [{'name': {
+                'display': s.student.user.name,
+                'sortstring': s.student.user.last_name + s.student.user.first_name
+             },
+             'cohort': render_template_string(_cohort, sel=s)} for s in students]
 
     return jsonify(data)

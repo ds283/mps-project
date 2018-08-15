@@ -156,23 +156,23 @@
                                     {{ project_metadata(project) }}
                                 </div>
                                 <div class="col-xs-3 faculty-confirm-area">
-                                    {% for student in project.confirm_waiting %}
+                                    {% for sel in project.confirm_waiting %}
                                         {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                         {#  for some reason, we need the explicit stlye attribute #}
                                         <div class="dropdown faculty-confirm-button" style="display: inline-block;">
                                             <a class="label label-success dropdown-toggle"
                                                     type="button" data-toggle="dropdown">
-                                                {{ student.user.name }} <span class="caret"></span>
+                                                {{ sel.student.user.name }} <span class="caret"></span>
                                             </a>
                                             <ul class="dropdown-menu">
                                                 {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                     <li>
-                                                        <a href="{{ url_for('faculty.confirm', sid=student.id, pid=project.id) }}">
+                                                        <a href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
                                                             <i class="fa fa-check"></i> Confirm
                                                         </a>
                                                     </li>
                                                     <li>
-                                                        <a href="{{ url_for('faculty.cancel_confirm', sid=student.id, pid=project.id) }}">
+                                                        <a href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
                                                             <i class="fa fa-trash"></i> Delete
                                                         </a>
                                                     </li>
@@ -193,22 +193,22 @@
                                     {% endfor %}
                                 </div>
                                 <div class="col-xs-3 faculty-confirm-area">
-                                    {% for student in project.confirmed_students %}
+                                    {% for sel in project.confirmed_students %}
                                         {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                         {#  for some reason, we need the explicit stlye attribute #}
                                         <div class="dropdown faculty-confirm-button" style="display: inline-block;">
                                             <a class="label label-warning dropdown-toggle"
                                                     type="button" data-toggle="dropdown">
-                                                {{ student.user.name }} <span class="caret"></span>
+                                                {{ sel.student.user.name }} <span class="caret"></span>
                                             </a>
                                             <ul class="dropdown-menu">
                                                 <li>
-                                                    <a href="{{ url_for('faculty.deconfirm_to_pending', sid=student.id, pid=project.id) }}">
+                                                    <a href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-clock-o"></i> Make pending
                                                     </a>
                                                 </li>
                                                 <li>
-                                                    <a href="{{ url_for('faculty.deconfirm', sid=student.id, pid=project.id) }}">
+                                                    <a href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-trash"></i> Delete
                                                     </a>
                                                 </li>

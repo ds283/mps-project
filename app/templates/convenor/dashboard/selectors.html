@@ -1,5 +1,9 @@
 {% extends "convenor/dashboard/selector_nav.html" %}
 
+{% if cohort_filter is none %}{% set cohort_filter = 'all' %}{% endif %}
+{% if prog_filter is none %}{% set prog_filter = 'all' %}{% endif %}
+{% if state_filter is none %}{% set state_filter = 'all' %}{% endif %}
+
 {% block scripts %}
     {{ super() }}
 
@@ -10,7 +14,7 @@
             $('#selectors-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/selectors_ajax/{{ pclass.id }}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/convenor/selectors_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&prog_filter={{ prog_filter }}&state_filter={{ state_filter }}', dataSrc: '' },
                 columns: [
                     { data: 'name',
                       render: {
@@ -43,6 +47,62 @@
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Students enrolled as <strong>selectors</strong> for <strong>{{ pclass.name }}</strong></div>
         <div class="panel-body">
+            {% if cohorts and cohorts is not none %}
+                <div class="well">
+                    <p>Filter by cohort</p>
+                    <a class="btn btn-sm grouped-button-margin {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                        href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter='all', prog_filter=prog_filter, state_filter=state_filter) }}">
+                        All
+                    </a>
+                    {% for cohort in cohorts %}
+                        <a class="btn btn-sm grouped-button-margin {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort, prog_filter=prog_filter, state_filter=state_filter) }}">
+                            {{ cohort }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if progs and progs is not none %}
+                <div class="well">
+                    <p>Filter by degree programme</p>
+                    <a class="btn btn-sm grouped-button-margin {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                        href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter='all', state_filter=state_filter) }}">
+                        All
+                    </a>
+                    {% for prog in progs %}
+                        <a class="btn btn-sm grouped-button-margin {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog.id, state_filter=state_filter) }}">
+                            {{ prog.full_name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="well">
+                <p>Filter by status</p>
+                <a class="btn btn-sm grouped-button-margin {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter='all') }}">
+                    All
+                </a>
+                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'submitted' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter='submitted') }}">
+                    Has submitted
+                </a>
+                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'bookmarks' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter='bookmarks') }}">
+                    Has bookmarks
+                </a>
+                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'none' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter='none') }}">
+                    No bookmarks
+                </a>
+                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'confirmations' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter='confirmations') }}">
+                    Confirmations outstanding
+                </a>
+            </div>
+
             <table id="selectors-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>

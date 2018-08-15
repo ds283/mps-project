@@ -2467,6 +2467,7 @@ class SelectingStudent(db.Model):
     # SELECTION METADATA
 
     # 'selections' field is added by backreference from SelectionRecord
+    # 'bookmarks' field is added by backreference from Bookmark
 
     # record time of last selection submission
     submission_time = db.Column(db.DateTime())

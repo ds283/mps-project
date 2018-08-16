@@ -684,6 +684,14 @@ def liveprojects(id):
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
+    state_filter = request.args.get('state_filter')
+
+    if state_filter is None and session.get('convenor_liveprojects_state_filter'):
+        state_filter = session['convenor_liveprojects_state_filter']
+
+    if state_filter is not None:
+        session['convenor_liveprojects_state_filter'] = state_filter
+
     # get current academic year
     current_year = get_current_year()
 
@@ -703,7 +711,8 @@ def liveprojects(id):
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count,
-                           groups=groups, skills=skills, filter_record=filter_record)
+                           groups=groups, skills=skills, filter_record=filter_record,
+                           state_filter=state_filter)
 
 
 @convenor.route('/liveprojects_ajax/<int:id>', methods=['GET', 'POST'])
@@ -722,6 +731,8 @@ def liveprojects_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
+    state_filter = request.args.get('state_filter')
+
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
@@ -731,7 +742,18 @@ def liveprojects_ajax(id):
     projects = filter_projects(config.live_projects.all(), filter_record.group_filters.all(),
                                filter_record.skill_filters.all())
 
-    return ajax.convenor.liveprojects_data(config, projects)
+    if state_filter == 'submitted':
+        data = [ rec for rec in projects if rec.selections.first() is not None ]
+    elif state_filter == 'bookmarks':
+        data = [ rec for rec in projects if rec.selections.first() is None and rec.bookmarks.first() is not None ]
+    elif state_filter == 'none':
+        data = [ rec for rec in projects if rec.bookmarks.first() is None ]
+    elif state_filter == 'confirmations':
+        data = [ rec for rec in projects if rec.confirm_waiting.first() is not None ]
+    else:
+        data = projects
+
+    return ajax.convenor.liveprojects_data(config, data)
 
 
 @convenor.route('/attach_liveproject/<int:id>')

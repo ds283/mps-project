@@ -547,7 +547,7 @@ def submit(sid):
 
             # rank is based on 1
             if bookmark.rank <= sel.number_choices:
-                rec = SelectionRecord(user_id=sel.student_id,
+                rec = SelectionRecord(owner_id=sel.student_id,
                                       liveproject_id=bookmark.liveproject_id,
                                       rank=bookmark.rank)
                 sel.selections.append(rec)

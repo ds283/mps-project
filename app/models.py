@@ -1536,14 +1536,24 @@ class ProjectClassConfig(db.Model):
     @property
     def count_submitted_students(self):
 
-        total_students = self.selecting_students.count()
+        total = 0
+        submitted = 0
+        bookmarks = 0
+        missing = 0
 
-        count = 0
         for student in self.selecting_students:
-            if student.has_submitted:
-                count += 1
+            total += 1
 
-        return count, total_students
+            if student.has_submitted:
+                submitted += 1
+
+            if not student.has_submitted and student.has_bookmarks:
+                bookmarks += 1
+
+            if not student.has_submitted and not student.has_bookmarks:
+                missing += 1
+
+        return submitted, bookmarks, missing, total
 
 
     @property

@@ -3,13 +3,61 @@
         <div class="panel-heading"><strong>Student choices are now closed</strong></div>
         <div class="panel-body">
             <div class="row vertical-align">
-                <div class="col-xs-9">
-                    {% set valid, total = config.count_submitted_students %}
-                    <p><strong>{{ valid }}</strong> out of <strong>{{ total }}</strong>
-                        students have valid selections (<strong>{{ total-valid }}</strong> remaining).</p>
+                <div class="col-xs-8">
+                    {% set submitted, bookmarks, missing, total = config.count_submitted_students %}
+                    <div class="row vertical-top">
+                        <div class="col-xs-4"><strong>Submitted</strong></div>
+                        <div class="col-xs-4"><strong>Has bookmarks</strong></div>
+                        <div class="col-xs-4"><strong>No bookmarks</strong></div>
+                    </div>
+                    <div class="row vertical-top">
+                        <div class="col-xs-4">
+                            <strong>{{ submitted }}</strong>/{{ total }}
+                            <a class="btn btn-link"
+                                href="{{ url_for('convenor.selectors', id=config.id, state_filter='submitted') }}">
+                                Show ...
+                            </a>
+                        </div>
+                        <div class="col-xs-4">
+                            <strong>{{ bookmarks }}</strong>/{{ total }}
+                            <a class="btn btn-link"
+                                href="{{ url_for('convenor.selectors', id=config.id, state_filter='bookmarks') }}">
+                                Show ...
+                            </a>
+                        </div>
+                        <div class="col-xs-4">
+                            <strong>{{ missing }}</strong>/{{ total }}
+                            <a class="btn btn-link"
+                                href="{{ url_for('convenor.selectors', id=config.id, state_filter='none') }}">
+                                Show ...
+                            </a>
+                        </div>
+                    </div>
+                    <hr class="intro-divider">
+                    <div class="row vertical-top">
+                        <div class="col-xs-12">
+                            {% if submitted == total %}
+                                <p>All students submitted validated choices before selection closed.</p>
+                            {% elif missing == 0 %}
+                                <p>
+                                    Some students did not submit a validated selection before closure,
+                                    but all students have bookmark data.
+                                </p>
+                                <p>
+                                    This data will be used when performing
+                                    automatic matching for students who are missing a validated selections.
+                                </p>
+                            {% else %}
+                                <p>Some students are missing both a validated selection and bookmark data.</p>
+                                <p>
+                                    If selections are closed now, these students will be allocated an arbitrary project
+                                    during automated matching.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>
-                <div class="col-xs-3">
-                </div>
+                <div class="col-xs-4"></div>
             </div>
         </div>
     </div>

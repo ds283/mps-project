@@ -515,13 +515,13 @@ def selectors_ajax(id):
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
     if state_filter == 'submitted':
-        data = [ rec for rec in selectors.all() if rec.selections.first() is not None ]
+        data = [ rec for rec in selectors.all() if rec.has_submitted ]
     elif state_filter == 'bookmarks':
-        data = [ rec for rec in selectors.all() if rec.selections.first() is None and rec.bookmarks.first() is not None ]
+        data = [ rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks ]
     elif state_filter == 'none':
-        data = [ rec for rec in selectors.all() if rec.bookmarks.first() is None ]
+        data = [ rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks ]
     elif state_filter == 'confirmations':
-        data = [ rec for rec in selectors.all() if rec.confirm_requests.first() is not None ]
+        data = [ rec for rec in selectors.all() if rec.number_penidng > 0 ]
     else:
         data = selectors.all()
 
@@ -765,13 +765,13 @@ def liveprojects_ajax(id):
                                filter_record.skill_filters.all())
 
     if state_filter == 'submitted':
-        data = [ rec for rec in projects if rec.selections.first() is not None ]
+        data = [ rec for rec in projects if rec.number_confirmed > 0 ]
     elif state_filter == 'bookmarks':
-        data = [ rec for rec in projects if rec.selections.first() is None and rec.bookmarks.first() is not None ]
+        data = [ rec for rec in projects if rec.number_confirmed == 0 and rec.number_bookmarks > 0 ]
     elif state_filter == 'none':
-        data = [ rec for rec in projects if rec.bookmarks.first() is None ]
+        data = [ rec for rec in projects if rec.number_confirmed == 0 and rec.number_bookmarks == 0 ]
     elif state_filter == 'confirmations':
-        data = [ rec for rec in projects if rec.confirm_waiting.first() is not None ]
+        data = [ rec for rec in projects if rec.number_pending > 0 ]
     else:
         data = projects
 

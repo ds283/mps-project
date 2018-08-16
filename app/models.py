@@ -2699,13 +2699,13 @@ class SelectionRecord(db.Model):
     # id of owning SelectingStudent
     # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
     # removed from the database
-    user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    user = db.relationship('SelectingStudent', uselist=False,
+    owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+    owner = db.relationship('SelectingStudent', foreign_keys=[owner_id], uselist=False,
                            backref=db.backref('selections', lazy='dynamic', cascade='all, delete-orphan'))
 
     # LiveProject we are linking to
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
-    liveproject = db.relationship('LiveProject', uselist=False,
+    liveproject = db.relationship('LiveProject', foreign_keys=[liveproject_id], uselist=False,
                                   backref=db.backref('selections', lazy='dynamic'))
 
     # rank in owner's list

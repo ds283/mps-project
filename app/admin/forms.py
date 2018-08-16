@@ -23,7 +23,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_skill_group, unique_or_original_skill_group, globally_unique_project_class, \
     unique_or_original_project_class, globally_unique_project_class_abbrev, unique_or_original_project_class_abbrev, \
     globally_unique_supervisor, unique_or_original_supervisor, globally_unique_role, unique_or_original_role, \
-    globally_unique_exam_number, unique_or_original_exam_number, \
+    globally_unique_exam_number, unique_or_original_exam_number, globally_unique_matching_name, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildUserRealName, BuildConvenorRealName, GetAllProjectClasses, \
@@ -619,7 +619,7 @@ class SkillGroupMixin():
 
 class AddSkillGroupForm(Form, SkillGroupMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='A name for the group is required'),
+    name = StringField('Name', validators=[DataRequired(message='Please supply a unique name for the group'),
                                            globally_unique_skill_group])
 
     submit = SubmitField('Add new skill')
@@ -627,7 +627,7 @@ class AddSkillGroupForm(Form, SkillGroupMixin):
 
 class EditSkillGroupForm(Form, SkillGroupMixin, EditFormMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='A name for the group is required'),
+    name = StringField('Name', validators=[DataRequired(message='Please supply a unique name for the group'),
                                            unique_or_original_skill_group])
 
 
@@ -638,7 +638,7 @@ class RoleMixin():
 
 class AddRoleForm(Form, RoleMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='A name for the role is required'),
+    name = StringField('Name', validators=[DataRequired(message='Please supply a unique name for the role'),
                                            globally_unique_role])
 
     submit = SubmitField('Add new role')
@@ -646,5 +646,37 @@ class AddRoleForm(Form, RoleMixin):
 
 class EditRoleForm(Form, RoleMixin, EditFormMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='A name for the role is required'),
+    name = StringField('Name', validators=[DataRequired(message='Please supply a unique name for the role'),
                                            unique_or_original_role])
+
+
+class MatchingMixin():
+
+    name = StringField('Name',
+                       validator=[DataRequired(message='Please supply a unique name for this matching attempt'),
+                                  globally_unique_matching_name])
+
+    ignore_per_faculty_limits = BooleanField('Ignore CAT limits specified in faculty accounts',
+                                             description='Sometimes this option is necessary to obtain a solution')
+
+    years_memory = IntegerField('Include how many years history when levelling workloads?',
+                                validator=[DataRequired(message='Please specify the number of years to include. '
+                                                                'Set equal to 1 if you do not wish to include history.')])
+
+    supervising_limit = IntegerField('CATS limit for supervising',
+                                     validator=[DataRequired(message='Please specify the maximum number of CATS '
+                                                                     'that can be allocated per faculty')])
+
+    marking_limit = IntegerField('CATS limit for marking',
+                                 validator=[DataRequired(message='Please specify the maximum number of CATS '
+                                                                 'that can be allocated per faculty')])
+
+    max_marking_multiplicity = IntegerField('Maximum multiplicity for 2nd markers',
+                                            description='2nd markers may be assigned multiple instances of the same '
+                                                        'project, up to the maximum multiplicity specified',
+                                            validator=[DataRequired(message='Please specify a multiplicity')])
+
+
+class NewMatchForm(Form, MatchingMixin):
+
+    pass

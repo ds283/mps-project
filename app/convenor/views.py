@@ -321,13 +321,20 @@ def faculty(id):
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
-    filter = request.args.get('filter')
+    enroll_filter = request.args.get('enroll_filter')
+    state_filter = request.args.get('state_filter')
 
-    if filter is None and session.get('conv_faculty_filter'):
-        filter = session['conv_faculty_filter']
+    if enroll_filter is None and session.get('convenor_faculty_enroll_filter'):
+        enroll_filter = session['convenor_faculty_enroll_filter']
 
-    if filter is not None:
-        session['conv_faculty_filter'] = filter
+    if enroll_filter is not None:
+        session['convenor_faculty_enroll_filter'] = enroll_filter
+
+    if state_filter is None and session.get('convenor_faculty_state_filter'):
+        state_filter = session['convenor_faculty_state_filter']
+
+    if state_filter is not None:
+        session['convenor_faculty_state_filter'] = state_filter
 
     # get current academic year
     current_year = get_current_year()
@@ -340,7 +347,8 @@ def faculty(id):
     return render_template('convenor/dashboard/faculty.html', pane='faculty',
                            pclass=pclass, config=config, current_year=current_year,
                            faculty=faculty, fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, filter=filter)
+                           live_count=live_count, proj_count=proj_count,
+                           enroll_filter=enroll_filter, state_filter=state_filter)
 
 
 @convenor.route('faculty_ajax/<int:id>', methods=['GET', 'POST'])
@@ -354,12 +362,13 @@ def faculty_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
-    filter = request.args.get('filter')
+    enroll_filter = request.args.get('enroll_filter')
+    state_filter = request.args.get('state_filter')
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if filter == 'enrolled':
+    if enroll_filter == 'enrolled':
 
         # build a list of only enrolled faculty, together with their FacultyData records
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
@@ -370,7 +379,7 @@ def faculty_ajax(id):
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, User.id == faculty_ids.c.owner_id)
 
-    elif filter == 'not-enrolled':
+    elif enroll_filter == 'not-enrolled':
 
         # build a list of only enrolled faculty, together with their FacultyData records
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
@@ -387,7 +396,17 @@ def faculty_ajax(id):
         # build list of all active faculty, together with their FacultyData records
         faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
 
-    return ajax.convenor.faculty_data(faculty, pclass, config)
+    # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
+    if state_filter == 'no-projects':
+        data = [ rec for rec in faculty.all() if rec[1].projects_offered(pclass) == 0 ]
+    elif state_filter == 'no-marker':
+        data = [ rec for rec in faculty.all() if rec[1].number_marker == 0 ]
+    elif state_filter == 'unofferable':
+        data = [ rec for rec in faculty.all() if rec[1].projects_unofferable > 0 ]
+    else:
+        data = faculty.all()
+
+    return ajax.convenor.faculty_data(data, pclass, config)
 
 
 @convenor.route('/selectors/<int:id>')

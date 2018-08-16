@@ -1,5 +1,8 @@
 {% extends "convenor/dashboard/nav.html" %}
 
+{% if enroll_filter is none %}{% set enroll_filter = 'all' %}{% endif %}
+{% if state_filter is none %}{% set state_filter = 'all' %}{% endif %}
+
 {% block scripts %}
     {{ super() }}
 
@@ -10,7 +13,7 @@
             $('#faculty-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_ajax/{{ pclass.id }}{% if filter is not none %}?filter={{ filter }}{% endif %}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/convenor/faculty_ajax/{{ pclass.id }}?enroll_filter={{ enroll_filter }}&state_filter={{ state_filter }}', dataSrc: '' },
                 columns: [
                     { data: 'name',
                       render: {
@@ -34,18 +37,38 @@
         <div class="panel-heading">Faculty list for <strong>{{ pclass.name }}</strong></div>
         <div class="panel-body">
             <div class="well">
-                Filter:
-                <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='all') }}"
-                   class="btn btn-sm {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                <p>Filter by enrollment status</p>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='all', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter is none or enroll_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                     All
                 </a>
-                <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='enrolled') }}"
-                   class="btn btn-sm {% if filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='enrolled', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
                     Enrolled
                 </a>
-                <a href="{{ url_for('convenor.faculty', id=pclass.id, filter='not-enrolled') }}"
-                   class="btn btn-sm {% if filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='not-enrolled', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
                     Not enrolled
+                </a>
+            </div>
+
+            <div class="well">
+                <p>Filter by project status</p>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter=enroll_filter, state_filter='all') }}"
+                   class="btn btn-sm {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                    All
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter=enroll_filter, state_filter='no-projects') }}"
+                   class="btn btn-sm {% if state_filter is none or state_filter == 'no-projects' %}btn-primary{% else %}btn-default{% endif %}">
+                    Has no projects
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter=enroll_filter, state_filter='unofferable') }}"
+                   class="btn btn-sm {% if state_filter is none or state_filter == 'unofferable' %}btn-primary{% else %}btn-default{% endif %}">
+                    Has unofferable projects
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter=enroll_filter, state_filter='no-marker') }}"
+                   class="btn btn-sm {% if state_filter is none or state_filter == 'no-marker' %}btn-primary{% else %}btn-default{% endif %}">
+                    No marking attachments
                 </a>
             </div>
 

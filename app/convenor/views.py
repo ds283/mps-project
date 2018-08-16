@@ -324,6 +324,9 @@ def faculty(id):
     enroll_filter = request.args.get('enroll_filter')
     state_filter = request.args.get('state_filter')
 
+    if state_filter == 'no-projects':
+        enroll_filter = 'enrolled'
+
     if enroll_filter is None and session.get('convenor_faculty_enroll_filter'):
         enroll_filter = session['convenor_faculty_enroll_filter']
 

@@ -63,7 +63,7 @@
                 </div>
             {% endif %}
 
-            {% if progs and progs is not none %}
+            {% if progs and progs is not none and progs|length > 1 %}
                 <div class="well">
                     <p>Filter by degree programme</p>
                     <a class="btn btn-sm grouped-button-margin {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
@@ -87,11 +87,11 @@
                 </a>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter == 'submitted' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter='submitted') }}">
-                    Has submitted
+                    Submitted
                 </a>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter == 'bookmarks' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter='bookmarks') }}">
-                    Has bookmarks
+                    Bookmarks only
                 </a>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter == 'none' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter='none') }}">

@@ -18,7 +18,8 @@ _projects = \
 """
 
 def golive_data(config):
-    data = [{'name': {'display': f.student.user.name,
+
+    data = [{'name': {'display': f.user.name,
                       'sortstring': f.user.last_name + f.user.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
              'projects': render_template_string(_projects, f=f, pclass=config.project_class)} for f in config.golive_required]

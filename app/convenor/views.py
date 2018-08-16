@@ -12,15 +12,16 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
 from flask_security import roles_accepted, current_user
 
+from app.shared.utils import build_enroll_selector_candidates
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
-    LiveProject, SelectingStudent, SubmittingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
+    LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_second_markers
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
-from ..shared.convenor import add_selector, add_submitter, add_liveproject
+from ..shared.convenor import add_selector, add_liveproject
 from ..shared.conversions import is_integer
 
 from ..task_queue import register_task
@@ -516,6 +517,21 @@ def enroll_selectors(id):
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
+    if cohort_filter is None and session.get('convenor_sel_enroll_cohort_filter'):
+        cohort_filter = session['convenor_sel_enroll_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_sel_enroll_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
+        prog_filter = session['convenor_sel_enroll_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_sel_enroll_prog_filter'] = prog_filter
+
     # get current academic year
     current_year = get_current_year()
 
@@ -526,12 +542,26 @@ def enroll_selectors(id):
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
+    candidates = build_enroll_selector_candidates(config)
+
+    # build list of available cohorts and degree programmes
+    cohorts = set()
+    programmes = set()
+    for student in candidates:
+        cohorts.add(student.cohort)
+        programmes.add(student.programme_id)
+
+    # build list of available programmes
+    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    progs = [ rec for rec in all_progs if rec.id in programmes ]
+
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/enroll_selectors.html', pane='selectors', subpane='enroll',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           cohort_filter=cohort_filter, prog_filter=prog_filter)
 
 
 @convenor.route('/enroll_selectors_ajax/<int:id>', methods=['GET', 'POST'])
@@ -550,37 +580,28 @@ def enroll_selectors_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     if config.closed:
         return jsonify({})
 
-    # which year does the project run in, and for how long?
-    year = config.project_class.year
-    extent = config.project_class.extent
+    candidates = build_enroll_selector_candidates(config)
 
-    # earliest year: academic year in which students can be selectors
-    first_selector_year = year - 1
-    # latest year: last academic year in which students can be a selector
-    last_selector_year = year + (extent - 1) - 1
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
 
-    # build a list of eligible students who are not already attached as selectors
-    candidates = db.session.query(StudentData) \
-        .filter(StudentData.cohort >= config.year - first_selector_year + 1,
-               StudentData.cohort <= config.year - last_selector_year + 1) \
-        .join(User, StudentData.id == User.id).filter(User.active == True)
+    if cohort_flag:
+        candidates = candidates.filter(StudentData.cohort == cohort_value)
 
-    # build a list of existing selecting students
-    selectors = db.session.query(SelectingStudent.student_id) \
-        .filter(SelectingStudent.config_id == config.id,
-                ~SelectingStudent.retired).subquery()
+    if prog_flag:
+        candidates = candidates.filter(StudentData.programme_id == prog_value)
 
-    # find students in candidates who are not also in selectors
-    missing = candidates.join(selectors, selectors.c.student_id==StudentData.id, isouter=True) \
-        .filter(selectors.c.student_id==None)
-
-    return ajax.convenor.enroll_selectors_data(missing, config)
+    return ajax.convenor.enroll_selectors_data(candidates, config)
 
 
 @convenor.route('/enroll_selector/<int:sid>/<int:configid>')

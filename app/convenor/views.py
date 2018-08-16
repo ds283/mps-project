@@ -431,13 +431,16 @@ def selectors(id):
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False).all()
 
-    # build list of available cohorts
+    # build list of available cohorts and degree programmes
     cohorts = set()
+    programmes = set()
     for sel in selectors:
         cohorts.add(sel.student.cohort)
+        programmes.add(sel.student.programme_id)
 
     # build list of available programmes
-    progs = DegreeProgramme.query.filter_by(active=True)
+    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    progs = [ rec for rec in all_progs if rec.id in programmes ]
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 

@@ -13,7 +13,7 @@ from flask import redirect, url_for, flash
 from flask_security import current_user
 
 from app.models import db, MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
-    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord
+    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData
 
 from .conversions import is_integer
 
@@ -327,3 +327,38 @@ def get_convenor_filter_record(config):
         db.session.commit()
 
     return record
+
+
+def build_enroll_selector_candidates(config):
+    """
+    Build a query that returns possible candidates for manual enrollment as selectors
+    :param config:
+    :return:
+    """
+
+    # which year does the project run in, and for how long?
+    year = config.project_class.year
+    extent = config.project_class.extent
+
+    # earliest year: academic year in which students can be selectors
+    first_selector_year = year - 1
+
+    # latest year: last academic year in which students can be a selector
+    last_selector_year = year + (extent - 1) - 1
+
+    # build a list of eligible students who are not already attached as selectors
+    candidates = db.session.query(StudentData) \
+        .filter(StudentData.cohort >= config.year - first_selector_year + 1,
+                StudentData.cohort <= config.year - last_selector_year + 1) \
+        .join(User, StudentData.id == User.id).filter(User.active == True)
+
+    # build a list of existing selecting students
+    selectors = db.session.query(SelectingStudent.student_id) \
+        .filter(SelectingStudent.config_id == config.id,
+                ~SelectingStudent.retired).subquery()
+
+    # find students in candidates who are not also in selectors
+    missing = candidates.join(selectors, selectors.c.student_id == StudentData.id, isouter=True) \
+        .filter(selectors.c.student_id == None)
+
+    return missing

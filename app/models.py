@@ -216,6 +216,17 @@ class MainConfig(db.Model):
     # year is the main configuration variable
     year = db.Column(db.Integer(), primary_key=True)
 
+    # which matching configuration did we use to rollover from this year?
+    # null means not committed yet
+    matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'), nullable=True)
+    matching_config = db.relationship('MatchingAttempt', foreign_keys=[matching_id], uselist=False)
+
+
+    @property
+    def matching_is_set(self):
+
+        return self.matching_id is not None
+
 
 class Role(db.Model, RoleMixin):
     """
@@ -1455,7 +1466,13 @@ class ProjectClassConfig(db.Model):
         # if gone live and closed, then either we are ready to match or we are read to rollover
         if self.live and self.closed:
             if self.project_class.do_matching:
-                return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+                # check whether a matching configuration has been assigned for the current year
+                current_config = MainConfig.query.order_by(MainConfig.year.desc()).first()
+
+                if current_config.matching_config is not None:
+                    return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
+                else:
+                    return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
             else:
                 return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
 
@@ -3094,6 +3111,52 @@ class FilterRecord(db.Model):
 
     # active transferable skill group filters
     skill_filters = db.relationship('SkillGroup', secondary=convenor_skill_filter_table, lazy='dynamic')
+
+
+class MatchingAttempt(db.Model):
+    """
+    Model configuration data for a matching attempt
+    """
+
+    # make table name plural
+    __tablename__ = 'matching_attempts'
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # year should match an available year in MainConfig
+    year = db.Column(db.Integer(), db.ForeignKey('main_config.year'))
+    main_config = db.relationship('MainConfig', foreign_keys=[year], uselist=False,
+                                  backref=db.backref('matching_attempts', lazy='dynamic'))
+
+    # a name for this configuraiton
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+
+    # was this matching attempt successful?
+    success = db.Column(db.Boolean())
+
+    # ignore CATS limits
+    ignore_per_faculty_limits = db.Column(db.Boolean())
+
+    # how many years memory to include wMainhen levelling CATS scores
+    years_memory = db.Column(db.Integer())
+
+    # global supervising CATS limit
+    supervising_limit = db.Column(db.Integer())
+
+    # global 2nd-marking CATS limit
+    marking_limit = db.Column(db.Integer())
+
+    # maximum multiplicity for 2nd markers
+    max_marking_multiplicity = db.Column(db.Integer())
+
+    # timestamp
+    timestamp = db.Column(db.DateTime(), index=True)
+
+    # owner
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('matching_attempts', lazy='dynamic'))
 
 
 

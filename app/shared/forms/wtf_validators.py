@@ -16,7 +16,7 @@ from wtforms.validators import Optional
 from zxcvbn import zxcvbn
 
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
-    Supervisor, Role, StudentData
+    Supervisor, Role, StudentData, MatchingAttempt
 
 from flask import current_app
 from werkzeug.local import LocalProxy
@@ -165,6 +165,11 @@ def unique_or_original_exam_number(form, field):
     if rec is not None:
         raise ValidationError('Exam number {n} is already associated with student {name}'.format(n=rec.exam_number,
                                                                                                  name=rec.user.name))
+
+
+def globally_unique_matching_name(form, field):
+    if MatchingAttempt.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already in use for a matching attempt'.format(name=field.data))
 
 
 def valid_json(form, field):

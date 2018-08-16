@@ -44,7 +44,7 @@ def add_liveproject(number, project, config_id, autocommit=False):
                             enforce_capacity=item.enforce_capacity,
                             capacity=item.capacity,
                             second_markers=item.get_marker_list(config.project_class)
-                            if config.project_class.uses_marker else None,
+                            if config.project_class.uses_marker else [],
                             description=item.description,
                             reading=item.reading,
                             team=item.team,

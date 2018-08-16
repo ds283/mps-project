@@ -9,9 +9,8 @@
         <div class="panel-body">
             <form action="{{ url_for('convenor.go_live', pid=pclass.id, configid=config.id) }}" method="POST"
                   name="golive-form">
-                <div class="row vertical-align">
+                <div class="row vertical-top">
                     <div class="col-xs-9">
-                        Freeze project descriptions and open student choices.
                         {% set group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = capacity_data %}
                         <p>
                             <strong>{{ total_projects }}</strong> projects are

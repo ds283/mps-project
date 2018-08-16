@@ -1772,7 +1772,7 @@ def close_selections(id):
 
     db.session.commit()
 
-    flash('Student selections for{name} {yeara}-{yearb} have now been closed'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
+    flash('Student selections for {name} {yeara}-{yearb} have now been closed'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
 
     return redirect(request.referrer)
 

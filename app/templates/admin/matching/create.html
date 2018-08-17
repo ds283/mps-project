@@ -1,0 +1,35 @@
+{% extends "admin/matching/nav.html" %}
+
+{% block title %}
+    Create new match
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="panel panel-primary panel-primary-bg">
+                <div class="panel-heading">Create new match</div>
+                <div class="panel-body">
+                    <form action="{{ url_for('admin.create_match') }}" method="POST" name="match_form">
+                        {{ form.hidden_tag() }}
+
+                        {{ wtf.form_field(form.name) }}
+
+                        <div class="well">
+                            <p>Options</p>
+                            {{ wtf.form_field(form.ignore_per_faculty_limits) }}
+                            {{ wtf.form_field(form.supervising_limit) }}
+                            {{ wtf.form_field(form.marking_limit) }}
+                            {{ wtf.form_field(form.max_marking_multiplicity) }}
+                            {{ wtf.form_field(form.years_memory) }}
+                        </div>
+
+                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

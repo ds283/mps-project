@@ -653,30 +653,30 @@ class EditRoleForm(Form, RoleMixin, EditFormMixin):
 class MatchingMixin():
 
     name = StringField('Name',
-                       validator=[DataRequired(message='Please supply a unique name for this matching attempt'),
-                                  globally_unique_matching_name])
+                       validators=[DataRequired(message='Please supply a unique name for this matching attempt'),
+                                   globally_unique_matching_name])
 
-    ignore_per_faculty_limits = BooleanField('Ignore CAT limits specified in faculty accounts',
+    ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts',
                                              description='Sometimes this option is necessary to obtain a solution')
 
     years_memory = IntegerField('Include how many years history when levelling workloads?',
-                                validator=[DataRequired(message='Please specify the number of years to include. '
-                                                                'Set equal to 1 if you do not wish to include history.')])
+                                validators=[DataRequired(message='Please specify the number of years to include. '
+                                                                 'Set equal to 1 if you do not wish to include history.')])
 
     supervising_limit = IntegerField('CATS limit for supervising',
-                                     validator=[DataRequired(message='Please specify the maximum number of CATS '
-                                                                     'that can be allocated per faculty')])
+                                     validators=[DataRequired(message='Please specify the maximum number of CATS '
+                                                                      'that can be allocated per faculty')])
 
     marking_limit = IntegerField('CATS limit for marking',
-                                 validator=[DataRequired(message='Please specify the maximum number of CATS '
-                                                                 'that can be allocated per faculty')])
+                                 validators=[DataRequired(message='Please specify the maximum number of CATS '
+                                                                  'that can be allocated per faculty')])
 
     max_marking_multiplicity = IntegerField('Maximum multiplicity for 2nd markers',
                                             description='2nd markers may be assigned multiple instances of the same '
                                                         'project, up to the maximum multiplicity specified',
-                                            validator=[DataRequired(message='Please specify a multiplicity')])
+                                            validators=[DataRequired(message='Please specify a multiplicity')])
 
 
 class NewMatchForm(Form, MatchingMixin):
 
-    pass
+    submit = SubmitField("Create new matching")

@@ -1,0 +1,22 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    Manage automated matching
+{% endblock %}
+
+{% block pillblock %}
+    {% set match_count = info %}
+    <ul class="nav nav-pills dashboard-nav">
+        <li {% if pane == 'manage' %}class="active"{% endif %}><a href="{{ url_for('admin.manage_matching') }}">
+            Manage matches
+            {% if match_count is defined %}
+                <span class="badge">{{ match_count }}</span>
+            {% endif %}
+        </a></li>
+        <li {% if pane == 'create' %}class="active"{% endif %}><a href="{{ url_for('admin.create_match') }}">
+            Create new match
+        </a></li>
+    </ul>
+{% endblock %}

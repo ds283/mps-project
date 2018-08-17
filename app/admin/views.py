@@ -34,14 +34,16 @@ from .forms import RoleSelectForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
     EditBackupOptionsForm, BackupManageForm, \
-    AddRoleForm, EditRoleForm
+    AddRoleForm, EditRoleForm, \
+    NewMatchForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
-    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role
+    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt
 
-from ..shared.utils import get_main_config, get_current_year, home_dashboard
+from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
+    get_root_dashboard_data
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor
@@ -2931,6 +2933,70 @@ def notifications_ajax():
         db.session.commit()
 
     return ajax.polling.notifications_payload(notifications)
+
+
+@admin.route('/manage_matching')
+@roles_required('root')
+def manage_matching():
+    """
+    Create the 'manage matching' dashboard view
+    :return:
+    """
+
+    # check that all projects are ready to match
+    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    if not matching_ready:
+        flash('Automated matching is not yet available because some project classes are not ready', 'error')
+        return redirect(request.referrer)
+
+    info = get_matching_dashboard_data()
+
+    return render_template('admin/matching/manage.html', pane='manage', info=info)
+
+
+@admin.route('/matches_ajax')
+@roles_required('root')
+def matches_ajax():
+    """
+    Create the 'manage matching' dashboard view
+    :return:
+    """
+
+    # check that all projects are ready to match
+    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    if not matching_ready:
+        return jsonify({})
+
+    current_year = get_current_year()
+
+    matches = db.session.query(MatchingAttempt).filter_by(year=current_year).all()
+
+    return ajax.admin.matches_data(matches)
+
+
+@admin.route('/create_match', methods=['GET', 'POST'])
+@roles_required('root')
+def create_match():
+    """
+    Create the 'create match' dashboard view
+    :return:
+    """
+
+    # check that all projects are ready to match
+    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    if not matching_ready:
+        flash('Automated matching is not yet available because some project classes are not ready', 'error')
+        return redirect(request.referrer)
+
+    info = get_matching_dashboard_data()
+
+    form = NewMatchForm(request.form)
+
+    if form.validate_on_submit():
+
+        pass
+
+    return render_template('admin/matching/create.html', pane='create', info=info, form=form)
 
 
 @admin.route('/launch_test_task')

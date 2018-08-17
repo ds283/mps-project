@@ -13,7 +13,8 @@ from flask import redirect, url_for, flash
 from flask_security import current_user
 
 from app.models import db, MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
-    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData
+    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
+    MatchingAttempt
 
 from .conversions import is_integer
 
@@ -195,6 +196,15 @@ def get_capacity_data(pclass):
         data.append( (group.make_label(group.name), proj_count, fac_count, enrolled, total, capacity, capacity_bounded) )
 
     return data, total_projects, total_faculty, total_capacity, total_capacity_bounded
+
+
+def get_matching_dashboard_data():
+
+    year = get_current_year()
+
+    matches = db.session.query(func.count(MatchingAttempt.id)).filter_by(year=year).scalar()
+
+    return matches
 
 
 def filter_projects(plist, groups, skills, getter=None):

@@ -16,3 +16,4 @@ from .supervisors import supervisors_data
 from .pclasses import pclasses_data
 from .groups import groups_data
 from .roles import roles_data
+from .matches import matches_data

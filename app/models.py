@@ -3129,7 +3129,7 @@ class MatchingAttempt(db.Model):
     main_config = db.relationship('MainConfig', foreign_keys=[year], uselist=False,
                                   backref=db.backref('matching_attempts', lazy='dynamic'))
 
-    # a name for this configuraiton
+    # a name for this configuration
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
 
     # was this matching attempt successful?

@@ -47,6 +47,16 @@ _info = \
 """
 
 
+_score = \
+"""
+{% if m.successful %}
+    <span class="label label-success">{{ m.score }}</span>
+{% else %}
+    <span class="label label-default">Null</span>
+{% endif %}
+"""
+
+
 def matches_data(matches):
     """
     Build AJAX JSON payload
@@ -57,6 +67,10 @@ def matches_data(matches):
     data = [{'name': m.name,
              'status': render_template_string(_status, m=m),
              'owner': render_template_string(_owner, m=m),
+             'score': {
+                 'display': render_template_string(_score, m=m),
+                 'value': m.score if m.successful else 0
+             },
              'timestamp': render_template_string(_timestamp, m=m),
              'info': render_template_string(_info, m=m),
              'menu': ''} for m in matches]

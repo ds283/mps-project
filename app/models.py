@@ -1394,7 +1394,7 @@ class ProjectClassConfig(db.Model):
     creation_timestamp = db.Column(db.DateTime())
 
 
-    # LIFECYCLE MANAGEMENT
+    # SELECTOR LIFECYCLE MANAGEMENT
 
     # are faculty requests to confirm projects open?
     requests_issued = db.Column(db.Boolean())

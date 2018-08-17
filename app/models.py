@@ -2964,10 +2964,12 @@ class TaskRecord(db.Model):
     RUNNING = 1
     SUCCESS = 2
     FAILURE = 3
+    TERMINATED = 4
     STATES = { PENDING: 'PENDING',
                RUNNING: 'RUNNING',
                SUCCESS: 'SUCCESS',
-               FAILURE: 'FAILURE' }
+               FAILURE: 'FAILURE',
+               TERMINATED: 'TERMINATED'}
     status = db.Column(db.Integer())
 
     # percentage complete (if used)
@@ -3132,13 +3134,40 @@ class MatchingAttempt(db.Model):
     # a name for this configuration
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
 
+
+    # CELERY TASK DATA
+
+    # Celery taskid, used in case we need to revoke the task;
+    # typically this will be a UUID
+    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # finished executing?
+    finished = db.Column(db.Boolean())
+
+
+    # METADATA
+
     # was this matching attempt successful?
     success = db.Column(db.Boolean())
+
+    # timestamp
+    timestamp = db.Column(db.DateTime(), index=True)
+
+    # owner
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('matching_attempts', lazy='dynamic'))
+
+
+    # MATCHING OPTIONS
 
     # ignore CATS limits
     ignore_per_faculty_limits = db.Column(db.Boolean())
 
-    # how many years memory to include wMainhen levelling CATS scores
+    # ignore degree programme preferences
+    ignore_programme_prefs = db.Column(db.Boolean())
+
+    # how many years memory to include when levelling CATS scores
     years_memory = db.Column(db.Integer())
 
     # global supervising CATS limit
@@ -3150,17 +3179,11 @@ class MatchingAttempt(db.Model):
     # maximum multiplicity for 2nd markers
     max_marking_multiplicity = db.Column(db.Integer())
 
+
+    # MATCHING OUTCOME
+
     # value of objective function, if match was successful
     score = db.Column(db.Integer())
-
-    # timestamp
-    timestamp = db.Column(db.DateTime(), index=True)
-
-    # owner
-    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
-                            backref=db.backref('matching_attempts', lazy='dynamic'))
-
 
 
 # ############################

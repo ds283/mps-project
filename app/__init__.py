@@ -77,6 +77,7 @@ def create_app():
     tasks.register_golive_tasks(celery)
     tasks.register_user_launch_tasks(celery)
     tasks.register_popularity_tasks(celery)
+    tasks.register_matching_tasks(celery)
     tasks.register_test_tasks(celery)
 
 
@@ -92,7 +93,7 @@ def create_app():
         task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
 
         # queue Celery task to send the email
-        task = send_log_email.delay(task_id, msg)
+        task = send_log_email.apply_async(args=(msg,), task_id=task_id)
 
 
     @security.login_context_processor

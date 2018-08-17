@@ -19,6 +19,11 @@
                         <div class="well">
                             <p>Options</p>
                             {{ wtf.form_field(form.ignore_per_faculty_limits) }}
+                            {{ wtf.form_field(form.ignore_programme_prefs) }}
+                        </div>
+
+                        <div class="well">
+                            <p>Limits</p>
                             {{ wtf.form_field(form.supervising_limit) }}
                             {{ wtf.form_field(form.marking_limit) }}
                             {{ wtf.form_field(form.max_marking_multiplicity) }}

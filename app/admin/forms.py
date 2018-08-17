@@ -657,8 +657,9 @@ class MatchingMixin():
                        validators=[DataRequired(message='Please supply a unique name'),
                                    globally_unique_matching_name])
 
-    ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts',
-                                             description='Sometimes this option is necessary to obtain a solution')
+    ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts')
+
+    ignore_programme_prefs = BooleanField('Ignore degree programme preferences')
 
     years_memory = IntegerField('Include how many years history when levelling workloads?',
                                 validators=[DataRequired(message='Please specify the number of years to include. '
@@ -680,4 +681,4 @@ class MatchingMixin():
 
 class NewMatchForm(Form, MatchingMixin):
 
-    submit = SubmitField("Create new matching")
+    submit = SubmitField("Create new match")

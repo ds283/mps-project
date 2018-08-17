@@ -18,7 +18,7 @@ _supervisors_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_supervisor', id=role.id) }}">
                 <i class="fa fa-pencil"></i> Edit details

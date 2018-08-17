@@ -32,7 +32,7 @@ _menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         {% if t.status == t.PENDING or t.status == t.RUNNING %}
             <li>
                 <a href="{{ url_for('admin.terminate_background_task', id=t.id) }}">

@@ -18,7 +18,7 @@ _email_log_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.delete_email', id=email.id) }}">
                 <i class="fa fa-trash"></i> Delete

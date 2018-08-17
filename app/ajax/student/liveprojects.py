@@ -66,7 +66,7 @@ _menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
                 View project

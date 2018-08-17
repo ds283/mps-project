@@ -75,7 +75,7 @@ _menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         {% if not m.finished %}
             <li>
                 <a href="{{ url_for('admin.terminate_match', id=m.id) }}">

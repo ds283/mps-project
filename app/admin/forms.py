@@ -653,7 +653,8 @@ class EditRoleForm(Form, RoleMixin, EditFormMixin):
 class MatchingMixin():
 
     name = StringField('Name',
-                       validators=[DataRequired(message='Please supply a unique name for this matching attempt'),
+                       description='Enter a short tag to identify this match',
+                       validators=[DataRequired(message='Please supply a unique name'),
                                    globally_unique_matching_name])
 
     ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts',

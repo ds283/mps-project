@@ -71,7 +71,7 @@ _menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
                 View web page

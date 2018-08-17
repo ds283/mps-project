@@ -18,7 +18,7 @@ _manage_backups_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.confirm_delete_backup', id=backup.id) }}">
                 <i class="fa fa-trash"></i> Delete

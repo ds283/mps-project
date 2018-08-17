@@ -19,7 +19,7 @@ _faculty_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             {% if userdata.is_enrolled(pclass) %}
                 <a href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">

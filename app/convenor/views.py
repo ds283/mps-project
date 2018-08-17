@@ -43,7 +43,7 @@ _project_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
                 Preview web page
@@ -102,7 +102,7 @@ _unattached_project_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
                 Preview web page

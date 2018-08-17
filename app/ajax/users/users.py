@@ -38,7 +38,7 @@ _user_menu_template = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_user', id=user.id) }}">
                 <i class="fa fa-pencil"></i> Edit account

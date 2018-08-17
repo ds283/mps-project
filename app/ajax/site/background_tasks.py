@@ -24,6 +24,33 @@ _state = \
 """
 
 
+_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+            data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+        {% if t.status == t.PENDING or t.status == t.RUNNING %}
+            <li>
+                <a href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
+                    <i class="fa fa-times"></i> Terminate
+                </a>
+            </li>
+        {% else %}
+            <li>
+                <a href="{{ url_for('admin.delete_background_task', id=t.id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</div>
+"""
+
+
 def background_task_data(tasks):
 
     data = [{'id': t.id,
@@ -38,6 +65,7 @@ def background_task_data(tasks):
              },
              'status': render_template_string(_state, state=t.status),
              'progress': '{c}%'.format(c=t.progress),
-             'message': t.message} for t in tasks]
+             'message': t.message,
+             'menu': render_template_string(_menu, t=t)} for t in tasks]
 
     return jsonify(data)

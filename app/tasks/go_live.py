@@ -41,8 +41,9 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if pcl is None or current_config is None or convenor is None:
-            convenor.post_message('Go Live failed. Please contact a system administrator', 'danger',
-                                  autocommit=True)
+            if convenor is not None:
+                convenor.post_message('Go Live failed. Please contact a system administrator', 'danger',
+                                      autocommit=True)
             self.update_state('FAILURE', meta='Could not load ProjectClass, ProjectClassConfig or User record from database')
             return
 

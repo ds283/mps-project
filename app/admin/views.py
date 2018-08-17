@@ -48,8 +48,9 @@ from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor
 
-from ..task_queue import register_task
+from ..task_queue import register_task, progress_update
 
+from sqlalchemy.exc import SQLAlchemyError
 import app.ajax as ajax
 
 from . import admin
@@ -1972,7 +1973,7 @@ def delete_all_emails():
     seq = chain(init.si(task_id, tk_name),
                 delete_email.si(),
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.email_log'))
 
@@ -2030,7 +2031,7 @@ def delete_email_cutoff(cutoff):
     seq = chain(init.si(task_id, tk_name),
                 prune_email.si(duration=cutoff, interval='weeks'),
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.email_log'))
 
@@ -2571,7 +2572,7 @@ def launch_scheduled_task(id):
                 tk.signature(record.args, record.kwargs, immutable=True),
                 final.si(task_id, record.name, current_user.id, notify=True)).on_error(
         error.si(task_id, record.name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(request.referrer)
 
@@ -2776,7 +2777,7 @@ def delete_all_backups():
 
     seq = chain(init.si(task_id, tk_name), work_group,
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.manage_backups'))
 
@@ -2840,7 +2841,7 @@ def delete_backup_cutoff(cutoff):
 
     seq = chain(init.si(task_id, tk_name), work_group,
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.manage_backups'))
 
@@ -2994,9 +2995,135 @@ def create_match():
 
     if form.validate_on_submit():
 
-        pass
+        uuid = register_task('Match job "{name}"'.format(name=form.name.data),
+                             owner=current_user, description="Automated project matching task")
+
+        data = MatchingAttempt(year=current_year,
+                               name=form.name.data,
+                               celery_id=uuid,
+                               finished=False,
+                               success=False,
+                               timestamp=datetime.now(),
+                               owner_id=current_user.id,
+                               ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
+                               ignore_programme_prefs=form.ignore_programme_prefs.data,
+                               years_memory=form.years_memory.data,
+                               supervising_limit=form.supervising_limit.data,
+                               marking_limit=form.marking_limit.data,
+                               max_marking_multiplicity=form.max_marking_multiplicity.data,
+                               score=None)
+
+        db.session.add(data)
+        db.session.commit()
+
+        celery = current_app.extensions['celery']
+        match_task = celery.tasks['app.tasks.matching.create_match']
+
+        match_task.apply_async(args=(data.id,), task_id=uuid)
+
+        return redirect(url_for('admin.manage_matching'))
 
     return render_template('admin/matching/create.html', pane='create', info=info, form=form)
+
+
+@admin.route('/terminate_match/<int:id>')
+@roles_required('root')
+def terminate_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if record.finished:
+        flash('Could not terminate matching task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    celery.control.revoke(record.celery_id)
+
+    try:
+        progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not terminate matching task "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/delete_match/<int:id>')
+@roles_required('root')
+def delete_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not record.finished:
+        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    try:
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not delete match "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/terminate_background_task/<string:id>')
+@roles_required('root')
+def terminate_background_task(id):
+
+    record = TaskRecord.query.get_or_404(id)
+
+    if record.state == TaskRecord.SUCCESS or record.state == TaskRecord.FAILURE or record.state == TaskRecord.TERMINATED:
+        flash('Could not terminate background task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    celery.control.revoke(record.id)
+
+    try:
+        progress_update(record.id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not terminate task "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/delete_background_task/<string:id>')
+@roles_required('root')
+def delete_background_task(id):
+
+    record = TaskRecord.query.get_or_404(id)
+
+    if not record.state == TaskRecord.PENDING or record.state == TaskRecord.RUNNING:
+        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    try:
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not delete match "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
 
 
 @admin.route('/launch_test_task')
@@ -3008,6 +3135,6 @@ def launch_test_task():
     celery = current_app.extensions['celery']
     test_task = celery.tasks['app.tasks.test.test_task']
 
-    test_task.delay(task_id)
+    test_task.apply_async(task_id=task_id)
 
     return 'success'

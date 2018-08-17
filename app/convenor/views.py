@@ -1746,7 +1746,7 @@ def go_live(pid, configid):
         task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
                                 owner=current_user,
                                 description='Perform Go Live of "{proj}"'.format(proj=pclass.name))
-        golive.apply_async((task_id, pid, configid, current_user.id, form.live_deadline.data),
+        golive.apply_async(args=(task_id, pid, configid, current_user.id, form.live_deadline.data), task_id=task_id,
                            link_error=golive_fail.si(task_id, current_user.id))
 
     return redirect(request.referrer)
@@ -2174,7 +2174,7 @@ def rollover(pid, configid):
     task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
                             owner=current_user,
                             description='Perform rollover of "{proj}" to new academic year'.format(proj=pclass.name))
-    rollover.apply_async((task_id, pid, configid, current_user.id),
+    rollover.apply_async(args=(task_id, pid, configid, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 
     return redirect(url_for('convenor.overview', id=pid))

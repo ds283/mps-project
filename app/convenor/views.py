@@ -521,7 +521,7 @@ def selectors_ajax(id):
     elif state_filter == 'none':
         data = [ rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks ]
     elif state_filter == 'confirmations':
-        data = [ rec for rec in selectors.all() if rec.number_penidng > 0 ]
+        data = [ rec for rec in selectors.all() if rec.number_pending > 0 ]
     else:
         data = selectors.all()
 

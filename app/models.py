@@ -3150,6 +3150,9 @@ class MatchingAttempt(db.Model):
     # maximum multiplicity for 2nd markers
     max_marking_multiplicity = db.Column(db.Integer())
 
+    # value of objective function, if match was successful
+    score = db.Column(db.Integer())
+
     # timestamp
     timestamp = db.Column(db.DateTime(), index=True)
 

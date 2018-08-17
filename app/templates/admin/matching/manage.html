@@ -21,6 +21,12 @@
                     { data: 'name'},
                     { data: 'status' },
                     { data: 'owner' },
+                    { data: 'score',
+                      render: {
+                        _: 'display',
+                        sort: 'value',
+                        type: 'value'
+                      } },
                     { data: 'timestamp' },
                     { data: 'info' },
                     { data: 'menu' }
@@ -42,10 +48,11 @@
             <table id="matches" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th width="20%"> Name</th>
-                        <th width="10%"> Status</th>
+                        <th width="16%"> Name</th>
+                        <th width="8%"> Status</th>
                         <th width="15%"> Owner</th>
-                        <th width="15%"> Timestamp</th>
+                        <th width="8%"> Score</th>
+                        <th width="13%"> Timestamp</th>
                         <th width="25%"> Information</th>
                         <th width="15%"> Actions</th>
                     </tr>

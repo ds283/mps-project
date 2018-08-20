@@ -1417,7 +1417,7 @@ class ProjectClassConfig(db.Model):
     live_deadline = db.Column(db.DateTime())
 
     # is project selection closed?
-    closed = db.Column(db.Boolean())
+    selection_closed = db.Column(db.Boolean())
 
     # who signed-off on close event?
     closed_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -1431,10 +1431,13 @@ class ProjectClassConfig(db.Model):
                                       backref=db.backref('live', lazy='dynamic'))
 
 
-    # SUBMISSION MANAGEMENT
+    # SUBMISSION LIFECYCLE MANAGEMENT
 
-    # submission period
+    # current submission period
     submission_period = db.Column(db.Integer())
+
+    # is feedback open for the current submission period?
+    feedback_open = db.Column(db.Boolean())
 
 
     # WORKLOAD MODEL
@@ -1447,9 +1450,9 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def _open(self):
+    def _selectien(self):
 
-        return self.live and not self.closed
+        return self.live and not self.selection_closed
 
 
     SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED = 1
@@ -1464,7 +1467,7 @@ class ProjectClassConfig(db.Model):
     def selector_lifecycle(self):
 
         # if gone live and closed, then either we are ready to match or we are read to rollover
-        if self.live and self.closed:
+        if self.live and self.selection_closed:
             if self.project_class.do_matching:
                 # check whether a matching configuration has been assigned for the current year
                 current_config = MainConfig.query.order_by(MainConfig.year.desc()).first()
@@ -1477,7 +1480,7 @@ class ProjectClassConfig(db.Model):
                 return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
 
         # open case is simple
-        if self._open:
+        if self._selection_open:
             return ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
 
         # if we get here, project is not open
@@ -2634,6 +2637,18 @@ class SelectingStudent(db.Model):
             return False
 
         for item in self.selections:
+            if item.liveproject_id == proj.id:
+                return True
+
+        return False
+
+
+    def is_project_bookmarked(self, proj):
+
+        if not self.has_bookmarks:
+            return False
+
+        for item in self.bookmarks:
             if item.liveproject_id == proj.id:
                 return True
 

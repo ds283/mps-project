@@ -18,6 +18,7 @@ from celery import chain, group
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime, timedelta
+import itertools
 
 
 def find_pclasses():
@@ -47,13 +48,61 @@ def enumerate_selectors(pclasses):
 
     for pclass in pclasses:
         # get current ProjectClassConfig for the current year
-        config = db.session.query(ProjectClassConfig).filter(pclass_id=pclass.id, year=current_year).first()
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=pclass.id, year=current_year).first()
 
         if config is None:
             raise RuntimeError(
                 'Configuration record for "{name}" and year={yr} is missing'.format(name=pclass.name, yr=current_year))
 
+        # get SelectingStudent instances that are not retired and belong to this config instance
+        selectors = db.session.query(SelectingStudent) \
+            .filter_by(retired=False, config_id=config.id).all()
 
+        for item in selectors:
+            sel_to_number[item.id] = number
+            number_to_sel[number] = item.id
+
+            number += 1
+
+    return number, sel_to_number, number_to_sel
+
+
+def enumerate_liveprojects(pclasses):
+    """
+    Build a list of LiveProjects belonging to projects that participate in automatic
+    matching, and assign them to consecutive numbers beginning at 0
+    :param pclasses: 
+    :return: 
+    """
+
+    current_year = get_current_year()
+
+    number = 0
+    lp_to_number = {}
+    number_to_lp = {}
+
+    for pclass in pclasses:
+        # get current ProjectClassConfig for the current year
+
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=pclass.id, year=current_year).first()
+
+        if config is None:
+            raise RuntimeError(
+                'Configuration record for "{name}" and year={yr} is missing'.format(name=pclass.name, yr=current_year))
+
+        # get LiveProject instances that belong to this config instance
+        projects = db.session.query(LiveProject) \
+            .filter_by(config_id=config.id).all()
+
+        for item in projects:
+            lp_to_number[item.id] = number
+            number_to_lp[number] = item.id
+
+            number += 1
+
+    return number, lp_to_number, number_to_lp
 
 
 def register_matching_tasks(celery):
@@ -77,10 +126,11 @@ def register_matching_tasks(celery):
 
         try:
             pclasses = find_pclasses()
-
             number_sel, sel_to_number, number_to_sel = enumerate_selectors(pclasses)
-        except SQLAlchemyError:
+            number_lp, lp_to_number, number_to_lp = enumerate_liveprojects(pclasses)
 
+        except SQLAlchemyError:
+            raise self.retry()
 
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Matching task complete', autocommit=False)
 

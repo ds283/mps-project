@@ -105,6 +105,44 @@ def enumerate_liveprojects(pclasses):
     return number, lp_to_number, number_to_lp
 
 
+def build_ranking_matrix(number_students, student_dict, number_projects, project_dict):
+
+    R = {}
+
+    for i in range(0, number_students):
+
+        try:
+            sel = db.session.query(SelectingStudent).filter_by(id=student_dict[i]).first()
+        except SQLAlchemyError:
+            raise
+
+        for j in range(0, number_projects):
+
+            try:
+                proj = db.session.query(LiveProject).filter_by(id=project_dict[j]).first()
+            except SQLAlchemyError:
+                raise
+
+            idx = (i, j)
+
+            # if sel has ranking information, use that
+            if sel.has_submitted:
+                if sel.is_project_submitted(proj):
+                    R[idx] = 1
+                else:
+                    R[idx] = 0
+            elif sel.has_bookmarks:
+                if sel.is_project_bookmarked(proj):
+                    R[idx] = 1
+                else:
+                    R[idx] = 0
+            else:
+                R[idx] = 0
+
+    return R
+
+
+
 def register_matching_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -128,6 +166,8 @@ def register_matching_tasks(celery):
             pclasses = find_pclasses()
             number_sel, sel_to_number, number_to_sel = enumerate_selectors(pclasses)
             number_lp, lp_to_number, number_to_lp = enumerate_liveprojects(pclasses)
+
+            R = build_ranking_matrix(number_sel, number_to_sel, number_lp, number_to_lp)
 
         except SQLAlchemyError:
             raise self.retry()

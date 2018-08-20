@@ -560,7 +560,7 @@ def enroll_selectors(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -608,7 +608,7 @@ def enroll_selectors_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if config.closed:
+    if config.selection_closed:
         return jsonify({})
 
     candidates = build_enroll_selector_candidates(config)
@@ -638,7 +638,7 @@ def enroll_selector(sid, configid):
 
     config = ProjectClassConfig.query.get_or_404(configid)
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -805,7 +805,7 @@ def attach_liveproject(id):
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
         return redirect(request.referrer)
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -844,7 +844,7 @@ def attach_liveproject_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if not config.live or config.closed:
+    if not config.live or config.selection_closed:
         return jsonify({})
 
     # get existing liveprojects
@@ -893,7 +893,7 @@ def manual_attach_project(id, configid):
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
         return redirect(request.referrer)
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -936,7 +936,7 @@ def attach_liveproject_other_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if not config.live or config.closed:
+    if not config.live or config.selection_closed:
         return jsonify({})
 
     # find all projects that do not have a LiveProject equivalent
@@ -992,7 +992,7 @@ def manual_attach_other_project(id, configid):
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
         return redirect(request.referrer)
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -1766,7 +1766,7 @@ def close_selections(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    config.closed = True
+    config.selection_closed = True
     config.closed_id = current_user.id
     config.closed_timestamp = datetime.now()
 

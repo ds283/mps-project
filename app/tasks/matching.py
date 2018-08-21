@@ -116,26 +116,22 @@ def build_ranking_matrix(number_students, student_dict, number_projects, project
         except SQLAlchemyError:
             raise
 
+        ranks = {}
+
+        if sel.has_submitted:
+            for item in sel.selections.all():
+                ranks[item.liveproject_id] = item.rank
+        elif sel.has_bookmarks:
+            for item in sel.bookmarks.all():
+                ranks[item.liveproject_id] = item.rank
+
         for j in range(0, number_projects):
 
-            try:
-                proj = db.session.query(LiveProject).filter_by(id=project_dict[j]).first()
-            except SQLAlchemyError:
-                raise
-
             idx = (i, j)
+            id = project_dict[j]
 
-            # if sel has ranking information, use that
-            if sel.has_submitted:
-                if sel.is_project_submitted(proj):
-                    R[idx] = 1
-                else:
-                    R[idx] = 0
-            elif sel.has_bookmarks:
-                if sel.is_project_bookmarked(proj):
-                    R[idx] = 1
-                else:
-                    R[idx] = 0
+            if id in ranks:
+                R[idx] = ranks[id]
             else:
                 R[idx] = 0
 

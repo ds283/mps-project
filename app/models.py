@@ -1191,7 +1191,7 @@ class ProjectClass(db.Model):
     # how many submissions per year does this project have?
     submissions = db.Column(db.Integer())
 
-    # are the submissions second marker?
+    # are the submissions second marked?
     uses_marker = db.Column(db.Boolean())
 
     # how many initial_choices should students make?
@@ -1450,7 +1450,7 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def _selectien(self):
+    def _selection_open(self):
 
         return self.live and not self.selection_closed
 

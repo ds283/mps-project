@@ -3162,8 +3162,13 @@ class MatchingAttempt(db.Model):
 
     # METADATA
 
-    # was this matching attempt successful?
-    success = db.Column(db.Boolean())
+    # outcome report from PuLP
+    OUTCOME_OPTIMAL = 0
+    OUTCOME_NOT_SOLVED = 1
+    OUTCOME_INFEASIBLE = 2
+    OUTCOME_UNBOUNDED = 3
+    OUTCOME_UNDEFINED = 4
+    outcome = db.Column(db.Integer())
 
     # timestamp
     timestamp = db.Column(db.DateTime(), index=True)

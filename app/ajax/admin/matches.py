@@ -15,15 +15,23 @@ _status = \
 """
 {% if m.finished %}
     <span class="label label-default">Finished</span>
+    {% if m.outcome == m.OUTCOME_OPTIMAL %}
+        <span class="label label-success">Optimal solution</span>
+    {% elif m.outcome == m.OUTCOME_NOT_SOLVED %}
+        <span class="label label-warning">Not solved</span>
+    {% elif m.outcome == m.OUTCOME_INFEASIBLE %}
+        <span class="label label-danger">Infeasible</span>
+    {% elif m.outcome == m.OUTCOME_UNBOUNDED %}
+        <span class="label label-danger">Unbounded</span>
+    {% elif m.outcome == m.OUTCOME_UNDEFINED %}
+        <span class="label label-danger">Undefined</span>
+    {% else %}
+        <span class="label label-danger">Unknown outcome</span>
+    {% endif %}
 {% else %}
     <span class="label label-success">In progress</span>
 {% endif %}
-{% if m.success %}
-    <span class="label label-success">Success</span>
-{% else %}
-    <span class="label label-default">Failed</span>
-{% endif %}
-"""
+    """
 
 
 _owner = \
@@ -59,10 +67,10 @@ _info = \
 
 _score = \
 """
-{% if m.successful %}
+{% if m.outcome == m.OUTCOME_OPTIMAL %}
     <span class="label label-success">{{ m.score }}</span>
 {% else %}
-    <span class="label label-default">Null</span>
+    <span class="label label-default">Invalid</span>
 {% endif %}
 """
 
@@ -106,7 +114,7 @@ def matches_data(matches):
              'owner': render_template_string(_owner, m=m),
              'score': {
                  'display': render_template_string(_score, m=m),
-                 'value': m.score if m.success and m.score is not None else 0
+                 'value': m.score if m.outcome == m.OUTCOME_OPTIMAL and m.score is not None else 0
              },
              'timestamp': render_template_string(_timestamp, m=m),
              'info': render_template_string(_info, m=m),

@@ -204,8 +204,10 @@ def add_project():
                        creation_timestamp=datetime.now())
         db.session.add(data)
         db.session.commit()
-
-        return redirect(url_for('faculty.edit_projects'))
+        if form.submit_and_preview.data:
+            return redirect(url_for('faculty.project_preview', id=data.id))
+        else:
+            return redirect(url_for('faculty.edit_projects'))
 
     else:
 
@@ -266,8 +268,10 @@ def edit_project(id):
         proj.validate_programmes()
 
         db.session.commit()
-
-        return redirect(url_for('faculty.edit_projects'))
+        if form.submit_and_preview.data:
+            return redirect(url_for('faculty.project_preview', id=id))
+        else:
+            return redirect(url_for('faculty.edit_projects'))
 
     return render_template('faculty/edit_project.html', project_form=form, project=proj, title='Edit project details')
 

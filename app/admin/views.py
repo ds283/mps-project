@@ -3003,7 +3003,7 @@ def create_match():
                                name=form.name.data,
                                celery_id=uuid,
                                finished=False,
-                               success=False,
+                               outcome=None,
                                timestamp=datetime.now(),
                                owner_id=current_user.id,
                                ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
@@ -3092,7 +3092,10 @@ def terminate_background_task(id):
     celery.control.revoke(record.id)
 
     try:
+        # update progress bar
         progress_update(record.id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+
+        # remove task from database
         db.session.delete(record)
         db.session.commit()
     except SQLAlchemyError:
@@ -3110,12 +3113,13 @@ def delete_background_task(id):
 
     record = TaskRecord.query.get_or_404(id)
 
-    if not record.state == TaskRecord.PENDING or record.state == TaskRecord.RUNNING:
+    if record.status == TaskRecord.PENDING or record.status == TaskRecord.RUNNING:
         flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
     try:
+        # remove task from database
         db.session.delete(record)
         db.session.commit()
     except SQLAlchemyError:

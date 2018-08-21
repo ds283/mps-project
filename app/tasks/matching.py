@@ -19,7 +19,7 @@ from celery import chain, group
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
-from datetime import datetime, timedelta
+import pulp
 import itertools
 
 
@@ -79,7 +79,7 @@ def enumerate_selectors(pclasses):
             sel_to_number[item.id] = number
             number_to_sel[number] = item.id
 
-            multiplicity[number] = pclass.submissions
+            multiplicity[number] = pclass.submissions if pclass.submissions >= 1 else 1
 
             selector_dict[number] = item
 
@@ -104,6 +104,8 @@ def enumerate_liveprojects(pclasses):
     CATS_supervisor = {}
     CATS_marker = {}
 
+    capacity = {}
+
     project_dict = {}
 
     for pclass in pclasses:
@@ -117,14 +119,18 @@ def enumerate_liveprojects(pclasses):
             lp_to_number[item.id] = number
             number_to_lp[number] = item.id
 
-            CATS_supervisor[number] = config.CATS_supervision
-            CATS_marker[number] = config.CATS_marking
+            sup = config.CATS_supervision
+            mk = config.CATS_marking
+            CATS_supervisor[number] = sup if sup is not None else 30
+            CATS_marker[number] = mk if mk is not None else 3
+
+            capacity[number] = item.capacity if (item.enforce_capacity and item.capacity > 0) else 0
 
             project_dict[number] = item
 
             number += 1
 
-    return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, project_dict
+    return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict
 
 
 def enumerate_supervising_faculty(pclasses):
@@ -139,6 +145,8 @@ def enumerate_supervising_faculty(pclasses):
     fac_to_number = {}
     number_to_fac = {}
 
+    limit = {}
+
     fac_dict = {}
 
     for pclass in pclasses:
@@ -150,14 +158,18 @@ def enumerate_supervising_faculty(pclasses):
             .filter(User.active).all()
 
         for item in faculty:
-            fac_to_number[item.id] = number
-            number_to_fac[number] = item.id
+            if item.owner_id not in fac_to_number:
+                fac_to_number[item.owner_id] = number
+                number_to_fac[number] = item.owner_id
 
-            fac_dict[number] = item.owner
+                lim = item.owner.CATS_supervision
+                limit[number] = lim if lim is not None and lim > 0 else 0
 
-            number += 1
+                fac_dict[number] = item.owner
 
-    return number, fac_to_number, number_to_fac, fac_dict
+                number += 1
+
+    return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
 def enumerate_marking_faculty(pclasses):
@@ -172,6 +184,8 @@ def enumerate_marking_faculty(pclasses):
     fac_to_number = {}
     number_to_fac = {}
 
+    limit = {}
+
     fac_dict = {}
 
     for pclass in pclasses:
@@ -183,17 +197,21 @@ def enumerate_marking_faculty(pclasses):
             .filter(User.active).all()
 
         for item in faculty:
-            fac_to_number[item.id] = number
-            number_to_fac[number] = item.id
+            if item.owner_id not in fac_to_number:
+                fac_to_number[item.owner_id] = number
+                number_to_fac[number] = item.owner_id
 
-            fac_dict[number] = item.owner
+                lim = item.owner.CATS_marking
+                limit[number] = lim if lim is not None and lim > 0 else 0
 
-            number += 1
+                fac_dict[number] = item.owner
 
-    return number, fac_to_number, number_to_fac, fac_dict
+                number += 1
+
+    return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def build_ranking_matrix(number_students, student_dict, number_projects, project_dict):
+def build_ranking_matrix(number_students, student_dict, number_projects, project_dict, ignore_programme_prefs=False):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
@@ -235,15 +253,18 @@ def build_ranking_matrix(number_students, student_dict, number_projects, project
             # compute weight for this (student, project) combination
             w = 1.0
 
-            # check whether this project has a preference for the degree programme our selector is on
-            count = db.session.query(func.count(proj.programmes.subquery().c.id)) \
-                .filter(DegreeProgramme.id == sel.student.programme_id) \
-                .scalar()
+            # check whether this project has a preference for the degree programme associated with the current selector
+            if not ignore_programme_prefs:
+                prog_query = proj.programmes.subquery()
+                count = db.session.query(func.count(prog_query.c.id)) \
+                    .filter(prog_query.c.id == sel.student.programme_id) \
+                    .scalar()
 
-            if count == 1:
-                w *= 2.0
-            elif count > 1:
-                raise RuntimeError('Inconsistent number of degree preferences match to SelectingStudent')
+                if count == 1:
+                    # TODO: reward for matching preferred programme might need tuning
+                    w *= 2.0
+                elif count > 1:
+                    raise RuntimeError('Inconsistent number of degree preferences match to SelectingStudent')
 
             W[idx] = w
 
@@ -253,7 +274,7 @@ def build_ranking_matrix(number_students, student_dict, number_projects, project
 def build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, max_multiplicity):
     """
     Construct a dictionary mapping from (marking_faculty, project) pairs to the maximum multiplicity
-    allowed for each marking asssignment
+    allowed for each marking assignment
     :param number_faculty:
     :param faculty_dict:
     :param number_project:
@@ -275,8 +296,9 @@ def build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, 
 
             if proj.config.project_class.uses_marker:
 
-                count = db.session.query(func.count(proj.second_markers.subquery().c.id)) \
-                    .filter(FacultyData.id == fac.id) \
+                marker_query = proj.second_markers.subquery()
+                count = db.session.query(func.count(marker_query.c.id)) \
+                    .filter(marker_query.c.id == fac.id) \
                     .scalar()
 
                 if count == 1:
@@ -284,13 +306,46 @@ def build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, 
                 elif count == 0:
                     M[idx] = 0
                 else:
-                    raise RuntimeError('Inconsistent number of second markers match to LiveProject')
+                    raise RuntimeError('Inconsistent number of second markers match to LiveProject: '
+                                       'fac={fname}, proj={pname}, '
+                                       'matches={c}'.format(fname=fac.user.name, pname=proj.name, c=count))
 
             else:
                 M[idx] = 0
 
     return M
 
+
+def build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dict):
+    """
+    Construct a dictionary mapping from (project, supervisor) pairs to:
+      0 if this supervisor does not supervise the given project
+      1 if this supervisor does supervise the given project
+    :param number_proj:
+    :param proj_dict:
+    :param number_sup:
+    :param sup_dict:
+    :return:
+    """
+
+    P = {}
+
+    for i in range(number_proj):
+
+        proj = proj_dict[i]
+
+        for j in range(number_sup):
+
+            idx = (i,j)
+
+            fac = sup_dict[j]
+
+            if proj.owner_id == fac.id:
+                P[idx] = 1
+            else:
+                P[idx] = 0
+
+    return P
 
 
 def register_matching_tasks(celery):
@@ -319,24 +374,119 @@ def register_matching_tasks(celery):
             # get lists of selectors and liveprojects, together with auxiliary data such as
             # multiplicities (for selectors) and CATS assignments (for projects)
             number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = enumerate_selectors(pclasses)
-            number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, lp_dict = enumerate_liveprojects(pclasses)
+            number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
+                lp_dict = enumerate_liveprojects(pclasses)
 
             # get supervising faculty and marking faculty lists
-            number_sup, sup_to_number, number_to_sup, sup_dict = enumerate_supervising_faculty(pclasses)
-            number_mark, mark_to_number, number_to_mark, mark_dict = enumerate_marking_faculty(pclasses)
+            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = enumerate_supervising_faculty(pclasses)
+            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = enumerate_marking_faculty(pclasses)
 
             # build student ranking matrix
-            R, W = build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict)
+            R, W = build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record.ignore_programme_prefs)
 
             # build marker compatibility matrix
             mm = record.max_marking_multiplicity
             M = build_marking_matrix(number_mark, mark_dict, number_lp, lp_dict, mm if mm >= 1 else 1)
 
+            # build project-to-supervisor mapping
+            P = build_project_supervisor_matrix(number_lp, lp_dict, number_sup, sup_dict)
+
         except SQLAlchemyError:
             raise self.retry()
 
-        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Matching task complete', autocommit=False)
+        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...", autocommit=True)
 
-        record.finished = True
-        record.success = True
-        db.session.commit()
+        # generate PuLP problem
+        prob = pulp.LpProblem(record.name, pulp.LpMaximize)
+
+        # generate decision variables for project assignment matrix
+        # the entries of this matrix are either 0 or 1
+        X = pulp.LpVariable.dicts("x", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
+
+        # generate decision variables for marker assignment matrix
+        # the entries of this matrix are integers, indicating multiplicity of assignment if > 1
+        Y = pulp.LpVariable.dicts("y", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpInteger)
+
+        # generate objective function
+        objective = 0
+
+        # reward the solution for assigning students to highly ranked projects:
+        for i in range(number_sel):
+            for j in range(number_lp):
+                idx = (i,j)
+                if R[idx] > 0:
+                    objective += X[idx] * W[idx] / R[idx]
+
+        # no need to add a reward for marker assignments; these only need to satisfy the constraints, and any
+        # one solution is as good as another
+
+        prob += objective, "objective function"
+
+        # selectors can only be assigned to projects that they have ranked
+        for key in X:
+            prob += X[key] <= float(R[key])
+
+        # markers can only be assigned projects to which they are attached
+        for key in Y:
+            prob += Y[key] <= float(M[key])
+
+        # enforce desired multiplicity for each selector
+        for i in range(number_sel):
+            prob += sum(X[(i,j)] for j in range(number_lp)) == float(multiplicity[i])
+
+        # enforce maximum capacity for each project
+        for j in range(number_lp):
+            if capacity[j] != 0:
+                prob += sum(X[(i,j)] for i in range(number_sel)) <= float(capacity[j])
+
+        # number of students assigned to each project must match number of markers assigned to each project
+        for j in range(number_lp):
+            prob += sum(X[(i,j)] for i in range(number_sel)) - \
+                sum(Y[(i,j)] for i in range(number_mark)) == float(0)
+
+        # CATS assigned to each supervisor must be within bounds
+        for i in range(number_sup):
+
+            lim = record.supervising_limit
+            if not record.ignore_per_faculty_limits and sup_limits[i] > 0:
+                lim = sup_limits[i]
+
+            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
+                        for k in range(number_sel)) <= float(lim)
+
+        # CATS assigned to each marker must be within bounds
+        for i in range(number_mark):
+
+            lim = record.marking_limit
+            if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
+                lim = mark_limits[i]
+
+            prob += sum(Y[(i,j)]*float(CATS_marker[j]) for j in range(number_lp)) <= float(lim)
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
+
+        output = prob.solve()
+        state = pulp.LpStatus[output]
+
+        if state == 'Optimal':
+            record.outcome = MatchingAttempt.OUTCOME_OPTIMAL
+        elif state == 'Not Solved':
+            record.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
+        elif state == 'Infeasible':
+            record.outcome = MatchingAttempt.OUTCOME_INFEASIBLE
+        elif state == 'Unbounded':
+            record.outcome = MatchingAttempt.OUTCOME_UNBOUNDED
+        elif state == 'Undefined':
+            record.outcome = MatchingAttempt.OUTCOME_UNDEFINED
+        else:
+            raise RuntimeError('Unknown PuLP outcome')
+
+        try:
+            progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Matching task complete', autocommit=False)
+
+            record.finished = True
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()

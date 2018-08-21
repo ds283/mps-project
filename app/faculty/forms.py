@@ -141,6 +141,7 @@ class AddProjectForm(Form, ProjectMixin):
                                             globally_unique_project])
 
     submit = SubmitField('Add new project')
+    submit_and_preview = SubmitField('Add new project and preview')
 
 
 class EditProjectForm(Form, ProjectMixin, EditFormMixin):
@@ -160,7 +161,7 @@ class EditProjectForm(Form, ProjectMixin, EditFormMixin):
 
     name = StringField('Title', validators=[DataRequired(message='Project title is required'),
                                             unique_or_original_project])
-
+    submit_and_preview = SubmitField('Save changes and preview')
     pass
 
 

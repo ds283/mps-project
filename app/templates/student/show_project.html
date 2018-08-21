@@ -169,12 +169,12 @@
                         </div>
 
                         <h4>Description</h4>
-                        <div class="project-description">{{ project.description|markdown|bclean|blinkify|safe }}</div>
+                        <div class="project-description">{{ project.description|dealingwithdollars|markdown|bclean|blinkify|safe }}</div>
 
                         {% if project.reading and project.reading is not none %}
                             <div class="panel panel-default">
                                 <div class="panel-heading">Recommended reading</div>
-                                <div class="panel-body">{{ project.reading|markdown|bclean|blinkify|safe }}</div>
+                                <div class="panel-body">{{ project.reading|dealingwithdollars|markdown|bclean|blinkify|safe }}</div>
                             </div>
                         {% endif %}
                         </div>

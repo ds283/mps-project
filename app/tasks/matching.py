@@ -470,6 +470,7 @@ def register_matching_tasks(celery):
 
         if state == 'Optimal':
             record.outcome = MatchingAttempt.OUTCOME_OPTIMAL
+            record.score = pulp.value(prob.objective)
         elif state == 'Not Solved':
             record.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
         elif state == 'Infeasible':
@@ -490,3 +491,5 @@ def register_matching_tasks(celery):
         except SQLAlchemyError:
             db.session.rollback()
             raise self.retry()
+
+        return record.score

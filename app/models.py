@@ -3203,7 +3203,7 @@ class MatchingAttempt(db.Model):
     # MATCHING OUTCOME
 
     # value of objective function, if match was successful
-    score = db.Column(db.Integer())
+    score = db.Column(db.Numeric())
 
 
 # ############################

@@ -1,8 +1,9 @@
-FROM python:3.6-alpine3.7
+FROM python:3.6-slim-stretch
 
-RUN apk upgrade --update-cache && apk add --update-cache gcc libffi libffi-dev musl-dev linux-headers mariadb-client openssl-dev
+RUN apt-get update && apt-get install -qq -y build-essential gcc mariadb-client libssl-dev --no-install-recommends
 
-RUN adduser -D -u 500 mpsproject
+# uid = 500 needed for deployment on Amazon, where ecs-user has uid 500
+RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 500 mpsproject
 
 WORKDIR /home/mpsproject
 

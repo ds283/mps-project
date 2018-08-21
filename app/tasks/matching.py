@@ -8,13 +8,15 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from ..models import db, MatchingAttempt, TaskRecord, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent
+from ..models import db, MatchingAttempt, TaskRecord, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, \
+    User, EnrollmentRecord, DegreeProgramme, FacultyData
 
 from ..shared.utils import get_current_year
 from ..task_queue import progress_update
 
 from celery import chain, group
 
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime, timedelta
@@ -32,28 +34,42 @@ def find_pclasses():
     return pclasses
 
 
+def get_current_pclass_config(pclass):
+
+    current_year = get_current_year()
+
+    # get ProjectClassConfig for the current year
+    config = db.session.query(ProjectClassConfig) \
+        .filter_by(pclass_id=pclass.id, year=current_year) \
+        .order_by(ProjectClassConfig.year.desc()).first()
+
+    if config is None:
+        raise RuntimeError(
+            'Configuration record for "{name}" and year={yr} is missing'.format(name=pclass.name, yr=current_year))
+
+    return config
+
+
 def enumerate_selectors(pclasses):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
-    matching, and assign them to consecutive numbers beginning at 0
+    matching, and assign them to consecutive numbers beginning at 0.
+    Also compute assignment multiplicity for each selector, ie. how many projects they should be
+    assigned (eg. FYP = 1 but MPP = 2 since projects only last one term)
     :param pclasses:
     :return:
     """
-
-    current_year = get_current_year()
 
     number = 0
     sel_to_number = {}
     number_to_sel = {}
 
-    for pclass in pclasses:
-        # get current ProjectClassConfig for the current year
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pclass.id, year=current_year).first()
+    multiplicity = {}
 
-        if config is None:
-            raise RuntimeError(
-                'Configuration record for "{name}" and year={yr} is missing'.format(name=pclass.name, yr=current_year))
+    selector_dict = {}
+
+    for pclass in pclasses:
+        config = get_current_pclass_config(pclass)
 
         # get SelectingStudent instances that are not retired and belong to this config instance
         selectors = db.session.query(SelectingStudent) \
@@ -63,34 +79,35 @@ def enumerate_selectors(pclasses):
             sel_to_number[item.id] = number
             number_to_sel[number] = item.id
 
+            multiplicity[number] = pclass.submissions
+
+            selector_dict[number] = item
+
             number += 1
 
-    return number, sel_to_number, number_to_sel
+    return number, sel_to_number, number_to_sel, multiplicity, selector_dict
 
 
 def enumerate_liveprojects(pclasses):
     """
     Build a list of LiveProjects belonging to projects that participate in automatic
-    matching, and assign them to consecutive numbers beginning at 0
+    matching, and assign them to consecutive numbers beginning at 0.
+    Also compute CATS values for supervising and marking each project
     :param pclasses: 
     :return: 
     """
-
-    current_year = get_current_year()
 
     number = 0
     lp_to_number = {}
     number_to_lp = {}
 
+    CATS_supervisor = {}
+    CATS_marker = {}
+
+    project_dict = {}
+
     for pclass in pclasses:
-        # get current ProjectClassConfig for the current year
-
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pclass.id, year=current_year).first()
-
-        if config is None:
-            raise RuntimeError(
-                'Configuration record for "{name}" and year={yr} is missing'.format(name=pclass.name, yr=current_year))
+        config = get_current_pclass_config(pclass)
 
         # get LiveProject instances that belong to this config instance
         projects = db.session.query(LiveProject) \
@@ -100,21 +117,101 @@ def enumerate_liveprojects(pclasses):
             lp_to_number[item.id] = number
             number_to_lp[number] = item.id
 
+            CATS_supervisor[number] = config.CATS_supervision
+            CATS_marker[number] = config.CATS_marking
+
+            project_dict[number] = item
+
             number += 1
 
-    return number, lp_to_number, number_to_lp
+    return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, project_dict
+
+
+def enumerate_supervising_faculty(pclasses):
+    """
+    Build a list of active, enrolled supervising faculty belonging to projects that
+    participate in automatic matching, and assign them to consecutive numbers beginning at zero
+    :param pclasses:
+    :return:
+    """
+
+    number = 0
+    fac_to_number = {}
+    number_to_fac = {}
+
+    fac_dict = {}
+
+    for pclass in pclasses:
+
+        # get EnrollmentRecord instances for this project class
+        faculty = db.session.query(EnrollmentRecord) \
+            .filter_by(pclass_id=pclass.id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
+            .join(User, User.id==EnrollmentRecord.owner_id) \
+            .filter(User.active).all()
+
+        for item in faculty:
+            fac_to_number[item.id] = number
+            number_to_fac[number] = item.id
+
+            fac_dict[number] = item.owner
+
+            number += 1
+
+    return number, fac_to_number, number_to_fac, fac_dict
+
+
+def enumerate_marking_faculty(pclasses):
+    """
+    Build a list of active, enrolled 2nd-marking faculty belonging to projects that
+    participate in automatic matching, and assign them to consecutive numbers beginning at zero
+    :param pclasses:
+    :return:
+    """
+
+    number = 0
+    fac_to_number = {}
+    number_to_fac = {}
+
+    fac_dict = {}
+
+    for pclass in pclasses:
+
+        # get EnrollmentRecord instances for this project class
+        faculty = db.session.query(EnrollmentRecord) \
+            .filter_by(pclass_id=pclass.id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
+            .join(User, User.id == EnrollmentRecord.owner_id) \
+            .filter(User.active).all()
+
+        for item in faculty:
+            fac_to_number[item.id] = number
+            number_to_fac[number] = item.id
+
+            fac_dict[number] = item.owner
+
+            number += 1
+
+    return number, fac_to_number, number_to_fac, fac_dict
 
 
 def build_ranking_matrix(number_students, student_dict, number_projects, project_dict):
+    """
+    Construct a dictionary mapping from (student, project) pairs to the rank assigned
+    to that project by the student.
+    Also build a weighting matrix that accounts for other factors we wish to weight
+    in the assignment, such as degree programme
+    :param number_students:
+    :param student_dict:
+    :param number_projects:
+    :param project_dict:
+    :return:
+    """
 
     R = {}
+    W = {}
 
     for i in range(0, number_students):
 
-        try:
-            sel = db.session.query(SelectingStudent).filter_by(id=student_dict[i]).first()
-        except SQLAlchemyError:
-            raise
+        sel = student_dict[i]
 
         ranks = {}
 
@@ -128,14 +225,71 @@ def build_ranking_matrix(number_students, student_dict, number_projects, project
         for j in range(0, number_projects):
 
             idx = (i, j)
-            id = project_dict[j]
+            proj = project_dict[j]
 
-            if id in ranks:
-                R[idx] = ranks[id]
+            if proj.id in ranks:
+                R[idx] = ranks[proj.id]
             else:
                 R[idx] = 0
 
-    return R
+            # compute weight for this (student, project) combination
+            w = 1.0
+
+            # check whether this project has a preference for the degree programme our selector is on
+            count = db.session.query(func.count(proj.programmes.subquery().c.id)) \
+                .filter(DegreeProgramme.id == sel.student.programme_id) \
+                .scalar()
+
+            if count == 1:
+                w *= 2.0
+            elif count > 1:
+                raise RuntimeError('Inconsistent number of degree preferences match to SelectingStudent')
+
+            W[idx] = w
+
+    return R, W
+
+
+def build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, max_multiplicity):
+    """
+    Construct a dictionary mapping from (marking_faculty, project) pairs to the maximum multiplicity
+    allowed for each marking asssignment
+    :param number_faculty:
+    :param faculty_dict:
+    :param number_project:
+    :param project_dict:
+    :param max_multiplicity:
+    :return:
+    """
+
+    M = {}
+
+    for i in range(0, number_mark):
+
+        fac = mark_dict[i]
+
+        for j in range(0, number_projects):
+
+            idx = (i, j)
+            proj = project_dict[j]
+
+            if proj.config.project_class.uses_marker:
+
+                count = db.session.query(func.count(proj.second_markers.subquery().c.id)) \
+                    .filter(FacultyData.id == fac.id) \
+                    .scalar()
+
+                if count == 1:
+                    M[idx] = max_multiplicity
+                elif count == 0:
+                    M[idx] = 0
+                else:
+                    raise RuntimeError('Inconsistent number of second markers match to LiveProject')
+
+            else:
+                M[idx] = 0
+
+    return M
 
 
 
@@ -159,11 +313,24 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
         try:
+            # get list of project classes participating in automatic assignment
             pclasses = find_pclasses()
-            number_sel, sel_to_number, number_to_sel = enumerate_selectors(pclasses)
-            number_lp, lp_to_number, number_to_lp = enumerate_liveprojects(pclasses)
 
-            R = build_ranking_matrix(number_sel, number_to_sel, number_lp, number_to_lp)
+            # get lists of selectors and liveprojects, together with auxiliary data such as
+            # multiplicities (for selectors) and CATS assignments (for projects)
+            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = enumerate_selectors(pclasses)
+            number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, lp_dict = enumerate_liveprojects(pclasses)
+
+            # get supervising faculty and marking faculty lists
+            number_sup, sup_to_number, number_to_sup, sup_dict = enumerate_supervising_faculty(pclasses)
+            number_mark, mark_to_number, number_to_mark, mark_dict = enumerate_marking_faculty(pclasses)
+
+            # build student ranking matrix
+            R, W = build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict)
+
+            # build marker compatibility matrix
+            mm = record.max_marking_multiplicity
+            M = build_marking_matrix(number_mark, mark_dict, number_lp, lp_dict, mm if mm >= 1 else 1)
 
         except SQLAlchemyError:
             raise self.retry()

@@ -5,7 +5,7 @@
 # This file is part of the MPS-Project platform developed in
 # the School of Mathematics & Physical Sciences, University of Sussex.
 #
-# Contributors: David Seery <D.Seery@sussex.ac.uk>
+# Contributors: David Seery <D.Seery@sussex.ac.uk>, David Turner <dt237@sussex.ac.uk>
 #
 
 import os
@@ -115,6 +115,29 @@ def create_app():
         if current_user.is_authenticated and request.endpoint is not None and 'ajax' not in request.endpoint:
             Notification.query.filter_by(remove_on_pageload=True).delete()
             db.session.commit()
+
+    @app.template_filter('dealingwithdollars')
+    def dealingwithdollars(s):
+        splat = list(s)  # Splits string into list of characters
+        dollar_inds = [i for i in range(0, len(splat)) if splat[i] == "$"]  # Finds indices of all dollar signs
+        math_inds = [elem for elem in dollar_inds if splat[elem - 1] != "\\"]  # \$ is allowed in LaTeX, $ is not.
+        just_dollar = [elem for elem in dollar_inds if elem not in math_inds]
+
+        if len(math_inds) % 2 != 0:  # Checks for lonely dollar signs
+            s = r"Odd number of maths delimiters, please use \$ for single dollar sign."
+
+        else:
+            for i in range(0, len(math_inds)):
+                if i % 2 == 0:
+                    splat[math_inds[i]] = r"\\("
+                else:
+                    splat[math_inds[i]] = r"\\)"
+
+            for elem in just_dollar:
+                splat.pop(elem - 1)
+
+            s = ''.join(splat)
+        return s
 
 
     # IMPORT BLUEPRINTS

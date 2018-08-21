@@ -29,7 +29,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildUserRealName, BuildConvenorRealName, GetAllProjectClasses, \
     GetConvenorProjectClasses, GetSysadminUsers
 from ..models import BackupConfiguration, EnrollmentRecord, submission_choices, academic_titles, \
-    extent_choices, year_choices
+    extent_choices, year_choices, matching_history_choices
 
 from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -661,9 +661,8 @@ class MatchingMixin():
 
     ignore_programme_prefs = BooleanField('Ignore degree programme preferences')
 
-    years_memory = IntegerField('Include how many years history when levelling workloads?',
-                                validators=[DataRequired(message='Please specify the number of years to include. '
-                                                                 'Set equal to 1 if you do not wish to include history.')])
+    years_memory = SelectField('Include how many years history when levelling workloads?',
+                               choices=matching_history_choices, coerce=int)
 
     supervising_limit = IntegerField('CATS limit for supervising',
                                      validators=[DataRequired(message='Please specify the maximum number of CATS '

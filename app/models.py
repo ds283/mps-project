@@ -58,6 +58,9 @@ extent_choices = [(1, '1 year'), (2, '2 years')]
 # labels and keys for 'academic titles' field
 academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss')]
 
+# labels and keys for years_history
+matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '4 years'), (5, '5 years')]
+
 
 ####################
 # ASSOCIATION TABLES

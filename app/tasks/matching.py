@@ -239,6 +239,13 @@ def build_ranking_matrix(number_students, student_dict, number_projects, project
         elif sel.has_bookmarks:
             for item in sel.bookmarks.all():
                 ranks[item.liveproject_id] = item.rank
+        else:
+            # no ranking data, so rank all LiveProjects in the right project class equal to 1
+            for k in project_dict:
+                proj = project_dict[k]
+
+                if sel.config_id == proj.config_id:
+                    ranks[proj.id] = 1
 
         for j in range(0, number_projects):
 
@@ -249,7 +256,7 @@ def build_ranking_matrix(number_students, student_dict, number_projects, project
                 R[idx] = ranks[proj.id]
             else:
                 # if not selection data all projects are ranked '1', so any of them can be chosen by the solver
-                R[idx] = 1
+                R[idx] = 0
 
             # compute weight for this (student, project) combination
             w = 1.0
@@ -397,6 +404,7 @@ def create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_
     prob += objective, "objective function"
 
     # selectors can only be assigned to projects that they have ranked
+    # (unless no ranking data was available, in which case all elements of R were set to 1)
     for key in X:
         prob += X[key] <= float(R[key])
 
@@ -441,7 +449,7 @@ def create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_
 
 
 def store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
-                        multiplicity):
+                        multiplicity, sel_dict, sup_dict, mark_dict):
     """
     Store
     :param prob:
@@ -454,6 +462,16 @@ def store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, numb
     :param number_to_mark:
     :return:
     """
+
+    # store configuration data
+    for k in sel_dict:
+        record.selectors.append(sel_dict[k])
+
+    for k in sup_dict:
+        record.supervisors.append(sup_dict[k])
+
+    for k in mark_dict:
+        record.markers.append(mark_dict[k])
 
     # generate dictionary of marker assignments; we map each project id to a list of available markers
     markers = {}
@@ -474,16 +492,16 @@ def store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, numb
 
         markers[proj_id] = assigned
 
-    # loop through all selectors that participated in the matching, generating match records for each one
+    # loop through all selectors that participated in the matching, generating matching records for each one
     for i in range(number_sel):
 
-        try:
-            sel = db.session.query(SelectingStudent).filter_by(id=number_to_sel[i]).first()
-        except SQLAlchemyError:
-            raise
-
-        if sel is None:
+        if i not in sel_dict:
             raise RuntimeError('PuLP solution contains invalid selector id')
+
+        sel = sel_dict[i]
+
+        if sel.id != number_to_sel[i]:
+            raise RuntimeError('Inconsistent selector ids when storing PuLP solution')
 
         # generate list of project assignments for this selector
         assigned = []
@@ -506,13 +524,19 @@ def store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, numb
                 raise RuntimeError('PuLP solution error: marker stack unexpectedly empty or missing')
 
             marker = markers[project].pop()
+            if marker is None:
+                raise RuntimeError('PuLP solution assigns too few markers to project')
+
+            rk = sel.project_rank(project)
+            if rk is None:
+                raise RuntimeError('PuLP solution assigns unranked project to selector')
 
             data = MatchingRecord(matching_id=record.id,
                                   selector_id=number_to_sel[i],
                                   project_id=project,
                                   marker_id=marker,
                                   submission_period=m+1,
-                                  rank=sel.project_rank(project))
+                                  rank=rk)
             db.session.add(data)
 
 
@@ -580,7 +604,7 @@ def register_matching_tasks(celery):
 
             try:
                 store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark,
-                                    number_to_mark, multiplicity)
+                                    number_to_mark, multiplicity, sel_dict, sup_dict, mark_dict)
                 db.session.commit()
 
             except SQLAlchemyError:

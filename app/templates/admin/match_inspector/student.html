@@ -18,7 +18,12 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/admin/match_student_view_ajax/{{ id }}', dataSrc: '' },
                 columns: [
-                    { data: 'student' },
+                    { data: 'student',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                    } },
                     { data: 'pclass' },
                     { data: 'cohort' },
                     { data: 'project' },

@@ -13,7 +13,7 @@ from flask import jsonify, render_template_string
 
 _student = \
 """
-<a href="mailto:{{ sel.student.email }}">{{ sel.student.user.name }}</a>
+<a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
 """
 
 
@@ -102,7 +102,10 @@ def student_view_data(records):
 
     # records is a list of (lists of) MatchingRecord instances
 
-    data = [{'student': render_template_string(_student, sel=r[0].selector),
+    data = [{'student': {
+                'display': render_template_string(_student, sel=r[0].selector),
+                'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
+             },
              'pclass': render_template_string(_pclass, sel=r[0].selector),
              'cohort': render_template_string(_cohort, sel=r[0].selector),
              'project': render_template_string(_project, recs=r),

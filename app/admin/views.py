@@ -19,7 +19,7 @@ from flask_security.signals import user_registered
 from celery import chain, group
 
 from app.shared.validators import validate_is_admin_or_convenor
-from .actions import register_user
+from .actions import register_user, estimate_CATS_load
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
     EditOfficeForm, EditFacultyForm, EditStudentForm, \
@@ -3005,6 +3005,8 @@ def create_match():
                                finished=False,
                                outcome=None,
                                timestamp=datetime.now(),
+                               construct_time=None,
+                               compute_time=None,
                                owner_id=current_user.id,
                                ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
                                ignore_programme_prefs=form.ignore_programme_prefs.data,
@@ -3024,7 +3026,12 @@ def create_match():
 
         return redirect(url_for('admin.manage_matching'))
 
-    return render_template('admin/matching/create.html', pane='create', info=info, form=form)
+    # estimate equitable CATS loading
+    supervising_CATS, marking_CATS, num_supervisors, num_markers = estimate_CATS_load()
+
+    return render_template('admin/matching/create.html', pane='create', info=info, form=form,
+                           supervising_CATS=supervising_CATS, marking_CATS=marking_CATS,
+                           num_supervisors=num_supervisors, num_markers=num_markers)
 
 
 @admin.route('/terminate_match/<int:id>')

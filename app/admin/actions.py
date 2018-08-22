@@ -9,11 +9,16 @@
 #
 
 
-from flask import current_app, render_template, redirect, url_for, flash
+from flask import current_app
 from werkzeug.local import LocalProxy
 from flask_security.utils import hash_password, do_flash, config_value, send_mail, get_message
 from flask_security.signals import user_registered
 from flask_security.confirmable import generate_confirmation_link
+
+from ..models import db, ProjectClass, ProjectClassConfig, EnrollmentRecord, FacultyData, SelectingStudent, User
+from ..shared.utils import get_current_year
+
+from sqlalchemy import func
 
 from datetime import datetime
 import string
@@ -68,3 +73,59 @@ def register_user(**kwargs):
             _datastore.commit()
 
     return user
+
+
+def estimate_CATS_load():
+
+    year = get_current_year()
+
+    # get list of project classes that participate in automatic matching
+    pclasses = db.session.query(ProjectClass).filter_by(active=True, do_matching=True).all()
+
+    supervising_CATS = 0
+    marking_CATS = 0
+
+    supervising_faculty = set()
+    marking_faculty = set()
+
+    for pclass in pclasses:
+
+        # get ProjectClassConfig for the current year
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=pclass.id, year=year) \
+            .order_by(ProjectClassConfig.year.desc()).first()
+
+        if config is None:
+            raise RuntimeError('Configuration record for "{name}" '
+                               'and year={yr} is missing'.format(name=pclass.name, yr=year))
+
+        # find number of selectors for this project class
+        num_selectors = db.session.query(func.count(SelectingStudent.id)) \
+            .filter_by(retired=False, config_id=config.id).scalar()
+
+        if config.CATS_supervision is not None and config.CATS_supervision > 0:
+            supervising_CATS += config.CATS_supervision * num_selectors
+
+        if config.CATS_marking is not None and config.CATS_marking > 0:
+            marking_CATS += config.CATS_marking * num_selectors
+
+        # find supervising faculty enrolled for this project
+        supervisors = db.session.query(EnrollmentRecord) \
+            .filter_by(pclass_id=pclass.id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
+            .join(User, User.id==EnrollmentRecord.owner_id) \
+            .filter(User.active).all()
+
+        for item in supervisors:
+            supervising_faculty.add(item.owner_id)
+
+        if pclass.uses_marker:
+            # find marking faculty enrolled for this project
+            markers = db.session.query(EnrollmentRecord) \
+                .filter_by(pclass_id=pclass.id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
+                .join(User, User.id == EnrollmentRecord.owner_id) \
+                .filter(User.active).all()
+
+            for item in markers:
+                marking_faculty.add(item.owner_id)
+
+    return supervising_CATS, marking_CATS, len(supervising_faculty), len(marking_faculty)

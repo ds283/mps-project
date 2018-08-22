@@ -56,7 +56,7 @@ _info = \
     <span class="label label-default">Apply per-faculty limits</span>
 {% endif %}
 {% if m.ignore_programme_prefs %}
-    <span class="label label-warning">Ignore programmes perfs/span>
+    <span class="label label-warning">Ignore programmes prefs/span>
 {% else %}
     <span class="label label-default">Apply programme prefs</span>
 {% endif %}
@@ -102,6 +102,20 @@ _menu = \
 """
 
 
+_name = \
+"""
+{{ m.name }}
+{% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
+    {% if m.construct_time %}
+        <span class="label label-default">Construct {{ m.formatted_construct_time }}</span>
+    {% endif %}
+    {% if m.compute_time %}
+        <span class="label label-default">Compute {{ m.formatted_compute_time }}</span>
+    {% endif %}
+{% endif %}
+"""
+
+
 def matches_data(matches):
     """
     Build AJAX JSON payload
@@ -109,12 +123,12 @@ def matches_data(matches):
     :return:
     """
 
-    data = [{'name': m.name,
+    data = [{'name': render_template_string(_name, m=m),
              'status': render_template_string(_status, m=m),
              'owner': render_template_string(_owner, m=m),
              'score': {
                  'display': render_template_string(_score, m=m),
-                 'value': m.score if m.outcome == m.OUTCOME_OPTIMAL and m.score is not None else 0
+                 'value': float(m.score) if m.outcome == m.OUTCOME_OPTIMAL and m.score is not None else 0
              },
              'timestamp': render_template_string(_timestamp, m=m),
              'info': render_template_string(_info, m=m),

@@ -40,7 +40,7 @@ from .forms import RoleSelectForm, \
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
-    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt
+    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data
@@ -3043,7 +3043,13 @@ def terminate_match(id):
 
     try:
         progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+
         db.session.delete(record)
+
+        # delete all MatchingRecords associated with this MatchingAttempt; in fact should not be any, but this
+        # is just to be sure
+        db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
+
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
@@ -3067,6 +3073,10 @@ def delete_match(id):
 
     try:
         db.session.delete(record)
+
+        # delete all MatchingRecords associated with this MatchingAttempt
+        db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
+
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()

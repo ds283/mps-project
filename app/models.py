@@ -2664,6 +2664,22 @@ class SelectingStudent(db.Model):
         return self.selections.order_by(SelectionRecord.rank)
 
 
+    def project_rank(self, proj_id):
+
+        if self.has_submitted:
+            for item in self.selections.all():
+                if item.liveproject_id == proj_id:
+                    return item.rank
+            return None
+
+        if self.has_bookmarks:
+            for item in self.bookmarks.all():
+                if item.liveproject_id == proj_id:
+                    return item.rank
+            return None
+
+        return None
+
 class SubmittingStudent(db.Model):
     """
     Model a student who is submitting work for evaluation in the current cycle
@@ -3207,6 +3223,44 @@ class MatchingAttempt(db.Model):
 
     # value of objective function, if match was successful
     score = db.Column(db.Numeric())
+
+
+class MatchingRecord(db.Model):
+    """
+    Store matching data for an individual selector
+    """
+
+    __tablename__ = 'matching_records'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning MatchingAttempt
+    matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
+    matching_attempt = db.relationship('MatchingAttempt', foreign_keys=[matching_id], uselist=False,
+                                       backref=db.backref('records', lazy='dynamic'))
+
+    # owning SelectingStudent
+    selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False,
+                               backref=db.backref('matching_records', lazy='dynamic'))
+
+    # submission period
+    submission_period = db.Column(db.Integer())
+
+    # assigned project
+    project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
+                              backref=db.backref('student_matches', lazy='dynamic'))
+
+    # rank of this project in the student's selection
+    rank = db.Column(db.Integer())
+
+    # assigned second marker, or none if second markers are not used
+    marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
+                             backref=db.backref('marker_matches', lazy='dynamic'))
 
 
 # ############################

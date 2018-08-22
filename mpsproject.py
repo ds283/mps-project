@@ -20,10 +20,10 @@ with app.app_context():
     Notification.query.delete()
 
     # any in-progress matching attempts will have been aborted when the app crashed or exited
-    in_progress_matching = MatchingAttempt.query.filter_by(finished=False)
-    for item in in_progress_matching:
-        item.finished = True
-        item.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
+    # in_progress_matching = MatchingAttempt.query.filter_by(finished=False)
+    # for item in in_progress_matching:
+    #     item.finished = True
+    #     item.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
 
     db.session.commit()
 

@@ -21,9 +21,20 @@ from sqlalchemy.exc import SQLAlchemyError
 
 import pulp
 import itertools
+import time
 
 
-def find_pclasses():
+class Timer:
+    def __enter__(self):
+        self.start = time.clock()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.clock()
+        self.interval = self.end - self.start
+
+
+def _find_pclasses():
     """
     Build a list of pclasses that participate in automatic matching
     :return:
@@ -34,7 +45,7 @@ def find_pclasses():
     return pclasses
 
 
-def get_current_pclass_config(pclass):
+def _get_current_pclass_config(pclass):
 
     current_year = get_current_year()
 
@@ -44,13 +55,13 @@ def get_current_pclass_config(pclass):
         .order_by(ProjectClassConfig.year.desc()).first()
 
     if config is None:
-        raise RuntimeError(
-            'Configuration record for "{name}" and year={yr} is missing'.format(name=pclass.name, yr=current_year))
+        raise RuntimeError('Configuration record for "{name}" '
+                           'and year={yr} is missing'.format(name=pclass.name, yr=current_year))
 
     return config
 
 
-def enumerate_selectors(pclasses):
+def _enumerate_selectors(pclasses):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
@@ -69,7 +80,7 @@ def enumerate_selectors(pclasses):
     selector_dict = {}
 
     for pclass in pclasses:
-        config = get_current_pclass_config(pclass)
+        config = _get_current_pclass_config(pclass)
 
         # get SelectingStudent instances that are not retired and belong to this config instance
         selectors = db.session.query(SelectingStudent) \
@@ -88,7 +99,7 @@ def enumerate_selectors(pclasses):
     return number, sel_to_number, number_to_sel, multiplicity, selector_dict
 
 
-def enumerate_liveprojects(pclasses):
+def _enumerate_liveprojects(pclasses):
     """
     Build a list of LiveProjects belonging to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
@@ -109,7 +120,7 @@ def enumerate_liveprojects(pclasses):
     project_dict = {}
 
     for pclass in pclasses:
-        config = get_current_pclass_config(pclass)
+        config = _get_current_pclass_config(pclass)
 
         # get LiveProject instances that belong to this config instance
         projects = db.session.query(LiveProject) \
@@ -133,7 +144,7 @@ def enumerate_liveprojects(pclasses):
     return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict
 
 
-def enumerate_supervising_faculty(pclasses):
+def _enumerate_supervising_faculty(pclasses):
     """
     Build a list of active, enrolled supervising faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
@@ -172,7 +183,7 @@ def enumerate_supervising_faculty(pclasses):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def enumerate_marking_faculty(pclasses):
+def _enumerate_marking_faculty(pclasses):
     """
     Build a list of active, enrolled 2nd-marking faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
@@ -211,7 +222,7 @@ def enumerate_marking_faculty(pclasses):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def build_ranking_matrix(number_students, student_dict, number_projects, project_dict, ignore_programme_prefs=False):
+def _build_ranking_matrix(number_students, student_dict, number_projects, project_dict, ignore_programme_prefs=False):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
@@ -279,7 +290,7 @@ def build_ranking_matrix(number_students, student_dict, number_projects, project
     return R, W
 
 
-def build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, max_multiplicity):
+def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, max_multiplicity):
     """
     Construct a dictionary mapping from (marking_faculty, project) pairs to the maximum multiplicity
     allowed for each marking assignment
@@ -324,7 +335,7 @@ def build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, 
     return M
 
 
-def build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dict):
+def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dict):
     """
     Construct a dictionary mapping from (project, supervisor) pairs to:
       0 if this supervisor does not supervise the given project
@@ -356,8 +367,8 @@ def build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dict
     return P
 
 
-def create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits, multiplicity,
-                        number_lp, number_mark, number_sel, number_sup, record):
+def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits, multiplicity,
+                         number_lp, number_mark, number_sel, number_sup, record, lp_dict):
     """
     Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
     :param R:
@@ -387,7 +398,8 @@ def create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_
 
     # generate decision variables for marker assignment matrix
     # the entries of this matrix are integers, indicating multiplicity of assignment if > 1
-    Y = pulp.LpVariable.dicts("y", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpInteger)
+    Y = pulp.LpVariable.dicts("y", itertools.product(range(number_mark), range(number_lp)),
+                              cat=pulp.LpInteger, lowBound=0)
 
     # generate objective function
     objective = 0
@@ -421,10 +433,20 @@ def create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_
         if capacity[j] != 0:
             prob += sum(X[(i, j)] for i in range(number_sel)) <= float(capacity[j])
 
-    # number of students assigned to each project must match number of markers assigned to each project
+    # number of students assigned to each project must match number of markers assigned to each project,
+    # if markers are being used; otherwise, number of markers should be zero
     for j in range(number_lp):
-        prob += sum(X[(i, j)] for i in range(number_sel)) - \
-                sum(Y[(i, j)] for i in range(number_mark)) == float(0)
+        if j not in lp_dict:
+            raise RuntimeError('lp_dict does not contain all projects when constructing PuLP problem')
+
+        proj = lp_dict[j]
+
+        if proj.config.project_class.uses_marker:
+            prob += sum(X[(i, j)] for i in range(number_sel)) - \
+                    sum(Y[(i, j)] for i in range(number_mark)) == float(0)
+
+        else:
+            prob += sum(Y[(i, j)] for i in range(number_mark)) == float(0)
 
     # CATS assigned to each supervisor must be within bounds
     for i in range(number_sup):
@@ -448,8 +470,8 @@ def create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_
     return prob, X, Y
 
 
-def store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
-                        multiplicity, sel_dict, sup_dict, mark_dict):
+def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
+                         multiplicity, sel_dict, sup_dict, mark_dict, lp_dict):
     """
     Store
     :param prob:
@@ -517,23 +539,29 @@ def store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, numb
         for m in range(multiplicity[i]):
 
             # pop a supervisor from the back of the stack
-            project = assigned.pop()
+            proj_id = assigned.pop()
+            project = lp_dict[proj_id]
 
-            # pop a 2nd marker from the back of the stack associated with this project
-            if project not in markers:
-                raise RuntimeError('PuLP solution error: marker stack unexpectedly empty or missing')
+            # assign a marker if one is used
+            if project.config.project_class.uses_marker:
+                # pop a 2nd marker from the back of the stack associated with this project
+                if proj_id not in markers:
+                    raise RuntimeError('PuLP solution error: marker stack unexpectedly empty or missing')
 
-            marker = markers[project].pop()
-            if marker is None:
-                raise RuntimeError('PuLP solution assigns too few markers to project')
+                marker = markers[proj_id].pop()
+                if marker is None:
+                    raise RuntimeError('PuLP solution assigns too few markers to project')
 
-            rk = sel.project_rank(project)
+            else:
+                marker = None
+
+            rk = sel.project_rank(proj_id)
             if rk is None:
                 raise RuntimeError('PuLP solution assigns unranked project to selector')
 
             data = MatchingRecord(matching_id=record.id,
                                   selector_id=number_to_sel[i],
-                                  project_id=project,
+                                  project_id=proj_id,
                                   marker_id=marker,
                                   submission_period=m+1,
                                   rank=rk)
@@ -561,50 +589,56 @@ def register_matching_tasks(celery):
 
         try:
             # get list of project classes participating in automatic assignment
-            pclasses = find_pclasses()
+            pclasses = _find_pclasses()
 
             # get lists of selectors and liveprojects, together with auxiliary data such as
             # multiplicities (for selectors) and CATS assignments (for projects)
-            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = enumerate_selectors(pclasses)
+            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(pclasses)
             number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
-                lp_dict = enumerate_liveprojects(pclasses)
+                lp_dict = _enumerate_liveprojects(pclasses)
 
             # get supervising faculty and marking faculty lists
-            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = enumerate_supervising_faculty(pclasses)
-            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = enumerate_marking_faculty(pclasses)
+            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = _enumerate_supervising_faculty(pclasses)
+            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = _enumerate_marking_faculty(pclasses)
 
             # build student ranking matrix
-            R, W = build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record.ignore_programme_prefs)
+            R, W = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record.ignore_programme_prefs)
 
             # build marker compatibility matrix
             mm = record.max_marking_multiplicity
-            M = build_marking_matrix(number_mark, mark_dict, number_lp, lp_dict, mm if mm >= 1 else 1)
+            M = _build_marking_matrix(number_mark, mark_dict, number_lp, lp_dict, mm if mm >= 1 else 1)
 
             # build project-to-supervisor mapping
-            P = build_project_supervisor_matrix(number_lp, lp_dict, number_sup, sup_dict)
+            P = _build_project_supervisor_matrix(number_lp, lp_dict, number_sup, sup_dict)
 
         except SQLAlchemyError:
             raise self.retry()
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...", autocommit=True)
 
-        prob, X, Y = create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
-                                         multiplicity, number_lp, number_mark, number_sel, number_sup, record)
+        with Timer() as create_time:
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
+                                              multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 
-        output = prob.solve()
+        with Timer() as solve_time:
+            output = prob.solve()
+
         state = pulp.LpStatus[output]
 
         if state == 'Optimal':
             record.outcome = MatchingAttempt.OUTCOME_OPTIMAL
             record.score = pulp.value(prob.objective)
 
+            record.construct_time = create_time.interval
+            record.compute_time = solve_time.interval
+
             progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing PuLP solution...", autocommit=True)
 
             try:
-                store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark,
-                                    number_to_mark, multiplicity, sel_dict, sup_dict, mark_dict)
+                _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark,
+                                     number_to_mark, multiplicity, sel_dict, sup_dict, mark_dict, lp_dict)
                 db.session.commit()
 
             except SQLAlchemyError:

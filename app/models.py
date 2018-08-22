@@ -3211,6 +3211,12 @@ class MatchingAttempt(db.Model):
     # timestamp
     timestamp = db.Column(db.DateTime(), index=True)
 
+    # time taken to construct the PuLP problem
+    construct_time = db.Column(db.Numeric(10,2))
+
+    # time taken by PulP to compute the solution
+    compute_time = db.Column(db.Numeric(10,2))
+
     # owner
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
@@ -3241,7 +3247,7 @@ class MatchingAttempt(db.Model):
     # MATCHING OUTCOME
 
     # value of objective function, if match was successful
-    score = db.Column(db.Numeric())
+    score = db.Column(db.Numeric(10,2))
 
 
     # CONFIGURATION
@@ -3257,6 +3263,33 @@ class MatchingAttempt(db.Model):
     # participating markers
     markers = db.relationship('FacultyData', secondary=marker_matching_table,
                               backref=db.backref('marker_matching_attempts', lazy='dynamic'))
+
+
+    def _format_time(self, seconds):
+
+        res = ''
+
+        if seconds > 60*60*24:
+            days, seconds = divmod(seconds, 60*60*24)
+            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}d'.format(n=days)
+        if seconds > 60*60:
+            hours, seconds = divmod(seconds, 60*60)
+            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}h'.format(n=hours)
+        if seconds > 60:
+            minutes, seconds = divmod(seconds, 60)
+            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}m'.format(n=minutes)
+
+        return (res + ' ' if len(res) > 0 else '') + '{n:.1f}s'.format(n=seconds)
+
+
+    @property
+    def formatted_construct_time(self):
+        return self._format_time(self.construct_time)
+
+
+    @property
+    def formatted_compute_time(self):
+        return self._format_time(self.compute_time)
 
 
 class MatchingRecord(db.Model):

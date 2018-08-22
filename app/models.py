@@ -212,11 +212,6 @@ sel_skill_filter_table = db.Table('sel_skill_filters',
 
 # MATCHING
 
-# configuration association: selectors
-selector_matching_table = db.Table('match_config_selectors',
-                                   db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
-                                   db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True))
-
 # configuration association: supervisors
 supervisors_matching_table = db.Table('match_config_supervisors',
                                       db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
@@ -594,7 +589,7 @@ class FacultyData(db.Model):
     def projects_unofferable(self):
 
         unofferable = 0
-        for proj in self.user.projects:
+        for proj in self.projects:
             if proj.active and not proj.offerable:
                 unofferable += 1
 
@@ -1804,8 +1799,8 @@ class Project(db.Model):
     active = db.Column(db.Boolean())
 
     # which faculty member owns this project?
-    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
-    owner = db.relationship('User', foreign_keys=[owner_id], backref=db.backref('projects', lazy='dynamic'))
+    owner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
+    owner = db.relationship('FacultyData', foreign_keys=[owner_id], backref=db.backref('projects', lazy='dynamic'))
 
 
     # TAGS AND METADATA
@@ -2187,8 +2182,8 @@ class LiveProject(db.Model):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
 
     # which faculty member owns this project?
-    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
-    owner = db.relationship('User', foreign_keys=[owner_id],
+    owner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
+    owner = db.relationship('FacultyData', foreign_keys=[owner_id],
                             backref=db.backref('live_projects', lazy='dynamic'))
 
 
@@ -3252,9 +3247,9 @@ class MatchingAttempt(db.Model):
 
     # CONFIGURATION
 
-    # participating selectors
-    selectors = db.relationship('SelectingStudent', secondary=selector_matching_table,
-                                backref=db.backref('matching_attempts', lazy='dynamic'))
+    # record participants in this matching attempt
+    # note, there is no need to track the selectors since they are in 1-to-1 correspondance with the attached
+    # MatchingRecords, available under the backref .records
 
     # participating supervisors
     supervisors = db.relationship('FacultyData', secondary=supervisors_matching_table,

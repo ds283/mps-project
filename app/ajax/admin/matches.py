@@ -84,6 +84,21 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+    
+        {% if m.finished %}
+            <li>
+                <a href="{{ url_for('admin.match_student_view', id=m.id) }}">
+                    Inspect match
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>Inspect match</a>
+            </li>
+        {% endif %}
+    
+        <li role="separator" class="divider">
+        
         {% if not m.finished %}
             <li>
                 <a href="{{ url_for('admin.terminate_match', id=m.id) }}">
@@ -104,7 +119,9 @@ _menu = \
 
 _name = \
 """
-{{ m.name }}
+<div>
+    <a href="{{ url_for('admin.match_student_view', id=m.id) }}">{{ m.name }}</a>
+</div>
 {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
     {% if m.construct_time %}
         <span class="label label-default">Construct {{ m.formatted_construct_time }}</span>

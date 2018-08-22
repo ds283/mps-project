@@ -372,3 +372,25 @@ def build_enroll_selector_candidates(config):
         .filter(selectors.c.student_id == None)
 
     return missing
+
+
+def build_match_selector_data(record):
+    """
+    Build data for the selector view of a matching attempt
+    :param id:
+    :return:
+    """
+
+    data = {}
+
+    # loop through all MatchingRecord instances attached to this MatchingAttempt
+    for item in record.records.all():
+
+        # if we haven't seen this selector ID before, start a new list containing this record.
+        # Otherwise, attach current record to the end of the existing list.
+        if item.selector_id not in data:
+            data[item.selector_id] = [item]
+        else:
+            data[item.selector_id].append(item)
+
+    return data.values()

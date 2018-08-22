@@ -212,8 +212,6 @@
 
                 {{ open_card(config, sel) }}
 
-                {# render bookmarks #}
-                {% if sel.has_bookmarks %}
                     <hr class="intro-divider">
                     <div class="row vertical-top">
                         <div class="col-xs-9">
@@ -245,6 +243,8 @@
                         </div>
                     </div>
 
+                {# render bookmarks #}
+                {% if sel.has_bookmarks %}
                     {{ render_bookmarks(config, sel) }}
                     <hr class="intro-divider">
                     {{ show_submission_status(config, sel) }}

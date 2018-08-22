@@ -486,9 +486,6 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
     """
 
     # store configuration data
-    for k in sel_dict:
-        record.selectors.append(sel_dict[k])
-
     for k in sup_dict:
         record.supervisors.append(sup_dict[k])
 

@@ -9,7 +9,7 @@
 #
 
 from ..models import db, MatchingAttempt, TaskRecord, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, \
-    User, EnrollmentRecord, DegreeProgramme, FacultyData
+    User, EnrollmentRecord, DegreeProgramme, FacultyData, MatchingRecord
 
 from ..shared.utils import get_current_year
 from ..task_queue import progress_update
@@ -248,7 +248,8 @@ def build_ranking_matrix(number_students, student_dict, number_projects, project
             if proj.id in ranks:
                 R[idx] = ranks[proj.id]
             else:
-                R[idx] = 0
+                # if not selection data all projects are ranked '1', so any of them can be chosen by the solver
+                R[idx] = 1
 
             # compute weight for this (student, project) combination
             w = 1.0
@@ -348,6 +349,173 @@ def build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dict
     return P
 
 
+def create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits, multiplicity,
+                        number_lp, number_mark, number_sel, number_sup, record):
+    """
+    Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
+    :param R:
+    :param M:
+    :param W:
+    :param P:
+    :param CATS_supervisor:
+    :param CATS_marker:
+    :param capacity:
+    :param sup_limits:
+    :param mark_limits:
+    :param multiplicity:
+    :param number_lp:
+    :param number_mark:
+    :param number_sel:
+    :param number_sup:
+    :param record:
+    :return:
+    """
+
+    # generate PuLP problem
+    prob = pulp.LpProblem(record.name, pulp.LpMaximize)
+
+    # generate decision variables for project assignment matrix
+    # the entries of this matrix are either 0 or 1
+    X = pulp.LpVariable.dicts("x", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
+
+    # generate decision variables for marker assignment matrix
+    # the entries of this matrix are integers, indicating multiplicity of assignment if > 1
+    Y = pulp.LpVariable.dicts("y", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpInteger)
+
+    # generate objective function
+    objective = 0
+
+    # reward the solution for assigning students to highly ranked projects:
+    for i in range(number_sel):
+        for j in range(number_lp):
+            idx = (i, j)
+            if R[idx] > 0:
+                objective += X[idx] * W[idx] / R[idx]
+
+    # no need to add a reward for marker assignments; these only need to satisfy the constraints, and any
+    # one solution is as good as another
+    prob += objective, "objective function"
+
+    # selectors can only be assigned to projects that they have ranked
+    for key in X:
+        prob += X[key] <= float(R[key])
+
+    # markers can only be assigned projects to which they are attached
+    for key in Y:
+        prob += Y[key] <= float(M[key])
+
+    # enforce desired multiplicity for each selector
+    for i in range(number_sel):
+        prob += sum(X[(i, j)] for j in range(number_lp)) == float(multiplicity[i])
+
+    # enforce maximum capacity for each project
+    for j in range(number_lp):
+        if capacity[j] != 0:
+            prob += sum(X[(i, j)] for i in range(number_sel)) <= float(capacity[j])
+
+    # number of students assigned to each project must match number of markers assigned to each project
+    for j in range(number_lp):
+        prob += sum(X[(i, j)] for i in range(number_sel)) - \
+                sum(Y[(i, j)] for i in range(number_mark)) == float(0)
+
+    # CATS assigned to each supervisor must be within bounds
+    for i in range(number_sup):
+
+        lim = record.supervising_limit
+        if not record.ignore_per_faculty_limits and sup_limits[i] > 0:
+            lim = sup_limits[i]
+
+        prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
+                    for k in range(number_sel)) <= float(lim)
+
+    # CATS assigned to each marker must be within bounds
+    for i in range(number_mark):
+
+        lim = record.marking_limit
+        if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
+            lim = mark_limits[i]
+
+        prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= float(lim)
+
+    return prob, X, Y
+
+
+def store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
+                        multiplicity):
+    """
+    Store
+    :param prob:
+    :param record:
+    :param number_sel:
+    :param number_to_sel:
+    :param number_lp:
+    :param number_to_lp:
+    :param number_mark:
+    :param number_to_mark:
+    :return:
+    """
+
+    # generate dictionary of marker assignments; we map each project id to a list of available markers
+    markers = {}
+    for j in range(number_lp):
+
+        proj_id = number_to_lp[j]
+        if proj_id in markers:
+            raise RuntimeError('PuLP solution has inconsistent marker assignment')
+
+        assigned = []
+
+        for i in range(number_mark):
+            Y[(i,j)].round()
+            m = pulp.value(Y[(i,j)])
+            if m > 0:
+                for k in range(m):
+                    assigned.append(number_to_mark[i])
+
+        markers[proj_id] = assigned
+
+    # loop through all selectors that participated in the matching, generating match records for each one
+    for i in range(number_sel):
+
+        try:
+            sel = db.session.query(SelectingStudent).filter_by(id=number_to_sel[i]).first()
+        except SQLAlchemyError:
+            raise
+
+        if sel is None:
+            raise RuntimeError('PuLP solution contains invalid selector id')
+
+        # generate list of project assignments for this selector
+        assigned = []
+
+        for j in range(number_lp):
+            X[(i,j)].round()
+            if pulp.value(X[(i,j)]) == 1:
+                assigned.append(number_to_lp[j])
+
+        if len(assigned) != multiplicity[i]:
+            raise RuntimeError('PuLP solution has unexpected multiplicity')
+
+        for m in range(multiplicity[i]):
+
+            # pop a supervisor from the back of the stack
+            project = assigned.pop()
+
+            # pop a 2nd marker from the back of the stack associated with this project
+            if project not in markers:
+                raise RuntimeError('PuLP solution error: marker stack unexpectedly empty or missing')
+
+            marker = markers[project].pop()
+
+            data = MatchingRecord(matching_id=record.id,
+                                  selector_id=number_to_sel[i],
+                                  project_id=project,
+                                  marker_id=marker,
+                                  submission_period=m+1,
+                                  rank=sel.project_rank(project))
+            db.session.add(data)
+
+
 def register_matching_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -396,72 +564,8 @@ def register_matching_tasks(celery):
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...", autocommit=True)
 
-        # generate PuLP problem
-        prob = pulp.LpProblem(record.name, pulp.LpMaximize)
-
-        # generate decision variables for project assignment matrix
-        # the entries of this matrix are either 0 or 1
-        X = pulp.LpVariable.dicts("x", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
-
-        # generate decision variables for marker assignment matrix
-        # the entries of this matrix are integers, indicating multiplicity of assignment if > 1
-        Y = pulp.LpVariable.dicts("y", itertools.product(range(number_mark), range(number_lp)), cat=pulp.LpInteger)
-
-        # generate objective function
-        objective = 0
-
-        # reward the solution for assigning students to highly ranked projects:
-        for i in range(number_sel):
-            for j in range(number_lp):
-                idx = (i,j)
-                if R[idx] > 0:
-                    objective += X[idx] * W[idx] / R[idx]
-
-        # no need to add a reward for marker assignments; these only need to satisfy the constraints, and any
-        # one solution is as good as another
-
-        prob += objective, "objective function"
-
-        # selectors can only be assigned to projects that they have ranked
-        for key in X:
-            prob += X[key] <= float(R[key])
-
-        # markers can only be assigned projects to which they are attached
-        for key in Y:
-            prob += Y[key] <= float(M[key])
-
-        # enforce desired multiplicity for each selector
-        for i in range(number_sel):
-            prob += sum(X[(i,j)] for j in range(number_lp)) == float(multiplicity[i])
-
-        # enforce maximum capacity for each project
-        for j in range(number_lp):
-            if capacity[j] != 0:
-                prob += sum(X[(i,j)] for i in range(number_sel)) <= float(capacity[j])
-
-        # number of students assigned to each project must match number of markers assigned to each project
-        for j in range(number_lp):
-            prob += sum(X[(i,j)] for i in range(number_sel)) - \
-                sum(Y[(i,j)] for i in range(number_mark)) == float(0)
-
-        # CATS assigned to each supervisor must be within bounds
-        for i in range(number_sup):
-
-            lim = record.supervising_limit
-            if not record.ignore_per_faculty_limits and sup_limits[i] > 0:
-                lim = sup_limits[i]
-
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
-                        for k in range(number_sel)) <= float(lim)
-
-        # CATS assigned to each marker must be within bounds
-        for i in range(number_mark):
-
-            lim = record.marking_limit
-            if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
-                lim = mark_limits[i]
-
-            prob += sum(Y[(i,j)]*float(CATS_marker[j]) for j in range(number_lp)) <= float(lim)
+        prob, X, Y = create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
+                                         multiplicity, number_lp, number_mark, number_sel, number_sup, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 
@@ -471,6 +575,17 @@ def register_matching_tasks(celery):
         if state == 'Optimal':
             record.outcome = MatchingAttempt.OUTCOME_OPTIMAL
             record.score = pulp.value(prob.objective)
+
+            progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing PuLP solution...", autocommit=True)
+
+            try:
+                store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark,
+                                    number_to_mark, multiplicity)
+                db.session.commit()
+
+            except SQLAlchemyError:
+                db.session.rollback()
+                raise self.retry()
         elif state == 'Not Solved':
             record.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
         elif state == 'Infeasible':

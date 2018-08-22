@@ -210,6 +210,24 @@ sel_skill_filter_table = db.Table('sel_skill_filters',
                                   db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True))
 
 
+# MATCHING
+
+# configuration association: selectors
+selector_matching_table = db.Table('match_config_selectors',
+                                   db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
+                                   db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True))
+
+# configuration association: supervisors
+supervisors_matching_table = db.Table('match_config_supervisors',
+                                      db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
+                                      db.Column('supervisor_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
+# configuration association: markers
+marker_matching_table = db.Table('match_config_markers',
+                                 db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
+                                 db.Column('marker_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -2680,6 +2698,7 @@ class SelectingStudent(db.Model):
 
         return None
 
+
 class SubmittingStudent(db.Model):
     """
     Model a student who is submitting work for evaluation in the current cycle
@@ -3223,6 +3242,21 @@ class MatchingAttempt(db.Model):
 
     # value of objective function, if match was successful
     score = db.Column(db.Numeric())
+
+
+    # CONFIGURATION
+
+    # participating selectors
+    selectors = db.relationship('SelectingStudent', secondary=selector_matching_table,
+                                backref=db.backref('matching_attempts', lazy='dynamic'))
+
+    # participating supervisors
+    supervisors = db.relationship('FacultyData', secondary=supervisors_matching_table,
+                                  backref=db.backref('supervisor_matching_attempts', lazy='dynamic'))
+
+    # participating markers
+    markers = db.relationship('FacultyData', secondary=marker_matching_table,
+                              backref=db.backref('marker_matching_attempts', lazy='dynamic'))
 
 
 class MatchingRecord(db.Model):

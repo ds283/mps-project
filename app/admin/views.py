@@ -3044,12 +3044,11 @@ def terminate_match(id):
     try:
         progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
 
-        db.session.delete(record)
-
         # delete all MatchingRecords associated with this MatchingAttempt; in fact should not be any, but this
         # is just to be sure
         db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
 
+        db.session.delete(record)
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
@@ -3072,11 +3071,10 @@ def delete_match(id):
         return redirect(request.referrer)
 
     try:
-        db.session.delete(record)
-
         # delete all MatchingRecords associated with this MatchingAttempt
         db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
 
+        db.session.delete(record)
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()

@@ -66,7 +66,7 @@ _menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
                 View project
@@ -141,8 +141,8 @@ def liveprojects_data(sel, projects):
              'name': '<a href="{url}">{name}</strong></a>'.format(name=p.name,
                                                                   url=url_for('student.view_project', sid=sel.id,
                                                                               pid=p.id)),
-             'supervisor': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.name,
-                                                                         em=p.owner.email),
+             'supervisor': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name,
+                                                                         em=p.owner.user.email),
              'group': render_template_string(_project_group, sel=sel, group=p.group),
              'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
              'prefer': render_template_string(_project_prefer, project=p),

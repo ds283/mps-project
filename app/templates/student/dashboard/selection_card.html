@@ -134,8 +134,8 @@
                     </a>
                 </div>
                 <div class="col-xs-2">
-                    <a href="mailto:{{ project.owner.email }}">
-                        {{ project.owner.name }}
+                    <a href="mailto:{{ project.owner.user.email }}">
+                        {{ project.owner.user.name }}
                     </a>
                 </div>
                 <div class="col-xs-4">
@@ -251,7 +251,7 @@
 
                 {% endif %}
 
-            {% elif config.closed %}
+            {% elif config.selection_closed %}
 
                 {{ closed_card(config, sel) }}
 

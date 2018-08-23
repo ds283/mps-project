@@ -19,7 +19,7 @@ from flask_security.signals import user_registered
 from celery import chain, group
 
 from app.shared.validators import validate_is_admin_or_convenor
-from .actions import register_user
+from .actions import register_user, estimate_CATS_load
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
     EditOfficeForm, EditFacultyForm, EditStudentForm, \
@@ -34,20 +34,23 @@ from .forms import RoleSelectForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
     EditBackupOptionsForm, BackupManageForm, \
-    AddRoleForm, EditRoleForm
+    AddRoleForm, EditRoleForm, \
+    NewMatchForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
-    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role
+    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord
 
-from ..shared.utils import get_main_config, get_current_year, home_dashboard
+from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
+    get_root_dashboard_data, build_match_selector_data, build_match_faculty_data
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor
 
-from ..task_queue import register_task
+from ..task_queue import register_task, progress_update
 
+from sqlalchemy.exc import SQLAlchemyError
 import app.ajax as ajax
 
 from . import admin
@@ -1461,7 +1464,8 @@ def add_pclass():
                                     convenor_id=data.convenor_id,
                                     requests_issued=False,
                                     live=False,
-                                    closed=False,
+                                    selection_closed=False,
+                                    feedback_open=False,
                                     CATS_supervision=data.CATS_supervision,
                                     CATS_marking=data.CATS_marking,
                                     creator_id=current_user.id,
@@ -1970,7 +1974,7 @@ def delete_all_emails():
     seq = chain(init.si(task_id, tk_name),
                 delete_email.si(),
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.email_log'))
 
@@ -2028,7 +2032,7 @@ def delete_email_cutoff(cutoff):
     seq = chain(init.si(task_id, tk_name),
                 prune_email.si(duration=cutoff, interval='weeks'),
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.email_log'))
 
@@ -2569,7 +2573,7 @@ def launch_scheduled_task(id):
                 tk.signature(record.args, record.kwargs, immutable=True),
                 final.si(task_id, record.name, current_user.id, notify=True)).on_error(
         error.si(task_id, record.name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(request.referrer)
 
@@ -2774,7 +2778,7 @@ def delete_all_backups():
 
     seq = chain(init.si(task_id, tk_name), work_group,
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.manage_backups'))
 
@@ -2838,7 +2842,7 @@ def delete_backup_cutoff(cutoff):
 
     seq = chain(init.si(task_id, tk_name), work_group,
                 final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async()
+    seq.apply_async(task_id=task_id)
 
     return redirect(url_for('admin.manage_backups'))
 
@@ -2933,6 +2937,281 @@ def notifications_ajax():
     return ajax.polling.notifications_payload(notifications)
 
 
+@admin.route('/manage_matching')
+@roles_required('root')
+def manage_matching():
+    """
+    Create the 'manage matching' dashboard view
+    :return:
+    """
+
+    # check that all projects are ready to match
+    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    if not matching_ready:
+        flash('Automated matching is not yet available because some project classes are not ready', 'error')
+        return redirect(request.referrer)
+
+    info = get_matching_dashboard_data()
+
+    return render_template('admin/matching/manage.html', pane='manage', info=info)
+
+
+@admin.route('/matches_ajax')
+@roles_required('root')
+def matches_ajax():
+    """
+    Create the 'manage matching' dashboard view
+    :return:
+    """
+
+    # check that all projects are ready to match
+    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    if not matching_ready:
+        return jsonify({})
+
+    current_year = get_current_year()
+
+    matches = db.session.query(MatchingAttempt).filter_by(year=current_year).all()
+
+    return ajax.admin.matches_data(matches)
+
+
+@admin.route('/create_match', methods=['GET', 'POST'])
+@roles_required('root')
+def create_match():
+    """
+    Create the 'create match' dashboard view
+    :return:
+    """
+
+    # check that all projects are ready to match
+    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    if not matching_ready:
+        flash('Automated matching is not yet available because some project classes are not ready', 'error')
+        return redirect(request.referrer)
+
+    info = get_matching_dashboard_data()
+
+    form = NewMatchForm(request.form)
+
+    if form.validate_on_submit():
+
+        uuid = register_task('Match job "{name}"'.format(name=form.name.data),
+                             owner=current_user, description="Automated project matching task")
+
+        data = MatchingAttempt(year=current_year,
+                               name=form.name.data,
+                               celery_id=uuid,
+                               finished=False,
+                               outcome=None,
+                               timestamp=datetime.now(),
+                               construct_time=None,
+                               compute_time=None,
+                               owner_id=current_user.id,
+                               ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
+                               ignore_programme_prefs=form.ignore_programme_prefs.data,
+                               years_memory=form.years_memory.data,
+                               supervising_limit=form.supervising_limit.data,
+                               marking_limit=form.marking_limit.data,
+                               max_marking_multiplicity=form.max_marking_multiplicity.data,
+                               score=None)
+
+        db.session.add(data)
+        db.session.commit()
+
+        celery = current_app.extensions['celery']
+        match_task = celery.tasks['app.tasks.matching.create_match']
+
+        match_task.apply_async(args=(data.id,), task_id=uuid)
+
+        return redirect(url_for('admin.manage_matching'))
+
+    # estimate equitable CATS loading
+    supervising_CATS, marking_CATS, num_supervisors, num_markers = estimate_CATS_load()
+
+    return render_template('admin/matching/create.html', pane='create', info=info, form=form,
+                           supervising_CATS=supervising_CATS, marking_CATS=marking_CATS,
+                           num_supervisors=num_supervisors, num_markers=num_markers)
+
+
+@admin.route('/terminate_match/<int:id>')
+@roles_required('root')
+def terminate_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if record.finished:
+        flash('Could not terminate matching task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    celery.control.revoke(record.celery_id)
+
+    try:
+        progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+
+        # delete all MatchingRecords associated with this MatchingAttempt; in fact should not be any, but this
+        # is just to be sure
+        db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
+
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not terminate matching task "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/delete_match/<int:id>')
+@roles_required('root')
+def delete_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not record.finished:
+        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    try:
+        # delete all MatchingRecords associated with this MatchingAttempt
+        db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
+
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not delete match "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/match_student_view/<int:id>')
+@roles_required('root')
+def match_student_view(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not record.finished:
+        flash('Match "{name}" is not yet available for inspection '
+              'because the solver has not terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" is not available for inspection '
+              'because it did not yield an optimal solution'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    return render_template('admin/match_inspector/student.html', pane='student', record=record)
+
+
+@admin.route('/match_faculty_view/<int:id>')
+@roles_required('root')
+def match_faculty_view(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not record.finished:
+        flash('Match "{name}" is not yet available for inspection '
+              'because the solver has not terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" is not available for inspection '
+              'because it did not yield an optimal solution'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record)
+
+
+@admin.route('/match_student_view_ajax/<int:id>')
+@roles_required('root')
+def match_student_view_ajax(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        return jsonify({})
+
+    data = build_match_selector_data(record)
+
+    return ajax.admin.match_view_student.student_view_data(data)
+
+
+@admin.route('/match_faculty_view_ajax/<int:id>')
+@roles_required('root')
+def match_faculty_view_ajax(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        return jsonify({})
+
+    data = build_match_faculty_data(record)
+
+    return ajax.admin.match_view_faculty.faculty_view_data(data, record)
+
+
+@admin.route('/terminate_background_task/<string:id>')
+@roles_required('root')
+def terminate_background_task(id):
+
+    record = TaskRecord.query.get_or_404(id)
+
+    if record.state == TaskRecord.SUCCESS or record.state == TaskRecord.FAILURE or record.state == TaskRecord.TERMINATED:
+        flash('Could not terminate background task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    celery.control.revoke(record.id)
+
+    try:
+        # update progress bar
+        progress_update(record.id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+
+        # remove task from database
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not terminate task "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/delete_background_task/<string:id>')
+@roles_required('root')
+def delete_background_task(id):
+
+    record = TaskRecord.query.get_or_404(id)
+
+    if record.status == TaskRecord.PENDING or record.status == TaskRecord.RUNNING:
+        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    try:
+        # remove task from database
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not delete match "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
 @admin.route('/launch_test_task')
 @roles_required('root')
 def launch_test_task():
@@ -2942,6 +3221,6 @@ def launch_test_task():
     celery = current_app.extensions['celery']
     test_task = celery.tasks['app.tasks.test.test_task']
 
-    test_task.delay(task_id)
+    test_task.apply_async(task_id=task_id)
 
     return 'success'

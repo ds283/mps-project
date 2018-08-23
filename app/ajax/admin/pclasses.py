@@ -25,7 +25,7 @@ _pclasses_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
                 <i class="fa fa-pencil"></i> Edit project class

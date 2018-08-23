@@ -9,14 +9,22 @@
 #
 
 from app import create_app
-from app.models import db, TaskRecord, Notification
+from app.models import db, TaskRecord, Notification, MatchingAttempt
 
 app, celery = create_app()
 
-# drop all transient task records and notifications
 with app.app_context():
+
+    # drop all transient task records and notifications, which will no longer have any meaning
     TaskRecord.query.delete()
     Notification.query.delete()
+
+    # any in-progress matching attempts will have been aborted when the app crashed or exited
+    # in_progress_matching = MatchingAttempt.query.filter_by(finished=False)
+    # for item in in_progress_matching:
+    #     item.finished = True
+    #     item.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
+
     db.session.commit()
 
 # pass control to application entry point if we are the controlling script

@@ -54,8 +54,8 @@ _menu = \
 def background_task_data(tasks):
 
     data = [{'id': t.id,
-             'owner': '<a href="mailto:{em}">{nm}</a>'.format(nm=t.owner.name,
-                                                              em=t.owner.email) if t.owner is not None
+             'owner': '<a href="mailto:{em}">{nm}</a>'.format(nm=t.owner.user.name,
+                                                              em=t.owner.user.email) if t.owner is not None
                 else '<span class="label label-default">Nobody</span>',
              'name': t.name,
              'description': t.description,

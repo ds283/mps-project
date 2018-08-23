@@ -173,8 +173,8 @@ def liveprojects_data(config, projects):
     data = [{'number': '{c}'.format(c=p.number),
              'name': '<a href="{url}">{name}</a>'.format(name=p.name,
                                                          url=url_for('faculty.live_project', pid=p.id)),
-             'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.email,
-                                                                name=p.owner.name),
+             'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.user.email,
+                                                                name=p.owner.user.name),
              'group': p.group.make_label(),
              'bookmarks': {
                  'display': render_template_string(_bookmarks, project=p),

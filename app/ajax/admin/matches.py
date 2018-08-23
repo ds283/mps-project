@@ -85,7 +85,7 @@ _menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
     
-        {% if m.finished %}
+        {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
             <li>
                 <a href="{{ url_for('admin.match_student_view', id=m.id) }}">
                     Inspect match
@@ -120,7 +120,11 @@ _menu = \
 _name = \
 """
 <div>
-    <a href="{{ url_for('admin.match_student_view', id=m.id) }}">{{ m.name }}</a>
+    {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
+        <a href="{{ url_for('admin.match_student_view', id=m.id) }}">{{ m.name }}</a>
+    {% else %}
+        {{ m.name }}
+    {% endif %}
 </div>
 {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
     {% if m.construct_time %}

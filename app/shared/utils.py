@@ -13,7 +13,8 @@ from flask import redirect, url_for, flash
 from flask_security import current_user
 
 from app.models import db, MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
-    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData
+    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
+    MatchingAttempt, MatchingRecord
 
 from .conversions import is_integer
 
@@ -197,6 +198,15 @@ def get_capacity_data(pclass):
     return data, total_projects, total_faculty, total_capacity, total_capacity_bounded
 
 
+def get_matching_dashboard_data():
+
+    year = get_current_year()
+
+    matches = db.session.query(func.count(MatchingAttempt.id)).filter_by(year=year).scalar()
+
+    return matches
+
+
 def filter_projects(plist, groups, skills, getter=None):
 
     projects = []
@@ -362,3 +372,47 @@ def build_enroll_selector_candidates(config):
         .filter(selectors.c.student_id == None)
 
     return missing
+
+
+def build_match_selector_data(record):
+    """
+    Build data for the selector view of a matching attempt
+    :param id:
+    :return:
+    """
+
+    data = {}
+
+    # loop through all MatchingRecord instances attached to this MatchingAttempt
+    for item in record.records.order_by(MatchingRecord.submission_period.asc()).all():
+
+        # if we haven't seen this selector ID before, start a new list containing this record.
+        # Otherwise, attach current record to the end of the existing list.
+        if item.selector_id not in data:
+            data[item.selector_id] = [item]
+        else:
+            data[item.selector_id].append(item)
+
+    return data.values()
+
+
+def build_match_faculty_data(record):
+    """
+    Build data for the faculty view of a matching attempt.
+    We do this by combining the FacultyData records associated with both supervisors and markers
+    into a single set of FacultyData objects
+    :param record:
+    :return:
+    """
+
+    data = {}
+
+    for item in record.supervisors:
+        if item.id not in data:
+            data[item.id] = item
+
+    for item in record.markers:
+        if item.id not in data:
+            data[item.id] = item
+
+    return data.values()

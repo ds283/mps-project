@@ -3,3 +3,9 @@
 .idea
 .vscode
 .DS_Store
+backups
+thirdparty
+venv
+mysql
+database\ copies
+nginx

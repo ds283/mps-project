@@ -21,8 +21,8 @@
                     {{ project.group.make_label(project.group.name)|safe }}
                 </div>
                 <div class="col-xs-3">
-                    <a href="mailto:{{ project.owner.email }}">
-                        {{ project.owner.name }}
+                    <a href="mailto:{{ project.owner.user.email }}">
+                        {{ project.owner.user.name }}
                     </a>
                 </div>
             </div>
@@ -122,8 +122,8 @@
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
                     <div class="col-xs-3">
-                        <a href="mailto:{{ project.owner.email }}">
-                            {{ project.owner.name }}
+                        <a href="mailto:{{ project.owner.user.email }}">
+                            {{ project.owner.user.name }}
                         </a>
                     </div>
                 </div>

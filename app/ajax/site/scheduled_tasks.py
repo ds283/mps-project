@@ -18,7 +18,7 @@ _scheduled_menu_template = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
                 <i class="fa fa-pencil"></i> Edit task
@@ -69,8 +69,8 @@ def _format_schedule(task):
 def scheduled_task_data(tasks):
     data = [{'name': t.name,
              'schedule': _format_schedule(t),
-             'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
-                                                               name=t.owner.name) if t.owner is not None
+             'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.user.email,
+                                                               name=t.owner.user.name) if t.owner is not None
                 else '<span class="label label-default">Nobody</span>',
              'active': 'Yes' if t.enabled else 'No',
              'last_run': {

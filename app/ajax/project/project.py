@@ -85,7 +85,7 @@ _project_skills = \
 def build_data(projects, menu_template, config=None):
 
     data = [{'name': render_template_string(_project_name, project=p),
-             'owner': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.email, nm=p.owner.name),
+             'owner': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.user.email, nm=p.owner.user.name),
              'status': render_template_string(_project_status, project=p, enrollment=e),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),

@@ -14,7 +14,7 @@ from flask import jsonify, render_template_string
 _status = \
 """
 {% if m.finished %}
-    <span class="label label-default">Finished</span>
+    <span class="label label-primary">Finished</span>
     {% if m.outcome == m.OUTCOME_OPTIMAL %}
         <span class="label label-success">Optimal solution</span>
     {% elif m.outcome == m.OUTCOME_NOT_SOLVED %}

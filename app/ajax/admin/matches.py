@@ -14,7 +14,7 @@ from flask import jsonify, render_template_string
 _status = \
 """
 {% if m.finished %}
-    <span class="label label-default">Finished</span>
+    <span class="label label-primary">Finished</span>
     {% if m.outcome == m.OUTCOME_OPTIMAL %}
         <span class="label label-success">Optimal solution</span>
     {% elif m.outcome == m.OUTCOME_NOT_SOLVED %}
@@ -62,6 +62,9 @@ _info = \
 {% endif %}
 <span class="label label-info">Marker multiplicity {{ m.max_marking_multiplicity }}</span>
 <span class="label label-info">Memory {{ m.years_memory }} yr</span>
+<span class="label label-default">Levelling {{ m.levelling_bias }}</span>
+<span class="label label-default">Group {{ m.intra_group_tension }}</span>
+<span class="label label-default">Programme {{ m.programme_bias }}</span>
 """
 
 
@@ -85,7 +88,7 @@ _menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
     
-        {% if m.finished %}
+        {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
             <li>
                 <a href="{{ url_for('admin.match_student_view', id=m.id) }}">
                     Inspect match
@@ -120,7 +123,11 @@ _menu = \
 _name = \
 """
 <div>
-    <a href="{{ url_for('admin.match_student_view', id=m.id) }}">{{ m.name }}</a>
+    {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
+        <a href="{{ url_for('admin.match_student_view', id=m.id) }}">{{ m.name }}</a>
+    {% else %}
+        {{ m.name }}
+    {% endif %}
 </div>
 {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
     {% if m.construct_time %}

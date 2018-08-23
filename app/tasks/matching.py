@@ -528,7 +528,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
         for j in range(number_lp):
             X[(i,j)].round()
             if pulp.value(X[(i,j)]) == 1:
-                assigned.append(number_to_lp[j])
+                assigned.append(j)
 
         if len(assigned) != multiplicity[i]:
             raise RuntimeError('PuLP solution has unexpected multiplicity')
@@ -536,11 +536,15 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
         for m in range(multiplicity[i]):
 
             # pop a supervisor from the back of the stack
-            proj_id = assigned.pop()
+            proj_number = assigned.pop()
+            proj_id = number_to_lp[proj_number]
 
-            if proj_id not in lp_dict:
+            if proj_number not in lp_dict:
                 raise RuntimeError('PuLP solution references unexpected LiveProject instance')
-            project = lp_dict[proj_id]
+            project = lp_dict[proj_number]
+
+            if proj_id != project.id:
+                raise RuntimeError('Inconsistent project lookup when storing PuLP solution')
 
             # assign a marker if one is used
             if project.config.project_class.uses_marker:

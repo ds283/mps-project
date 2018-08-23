@@ -39,12 +39,43 @@ _cohort = \
 
 _project = \
 """
+{% macro project_tag(r, show_period) %}
+    {% set adjustable = false %}
+    {% if r.selector.has_submitted or r.selector.has_bookmarks %}{% set adjustable = true %}{% endif %}
+    <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
+        <a class="label label-info {% if adjustable %}dropdown-toggle{% endif %}" {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
+            {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }} (No. {{ r.project.number }})
+            <span class="caret"></span>
+        </a>
+        {% if adjustable %}
+            {% if r.selector.has_submitted %}{% set list = r.selector.get_ordered_selection %}
+            {% elif r.rselector.has_bookmarks %}{% set list = r.selector.get_ordered_bookmarks %}
+            {% endif %}
+            <ul class="dropdown-menu">
+                {% if r.selector.has_submitted %}
+                    <li class="dropdown-header">Submitted choices</li>
+                {% elif r.selector.has_bookmarks %}
+                    <li class="dropdown-header">Ranked bookmarks</li>
+                {% endif %}
+                {% for item in list %}
+                    {% set disabled = false %}
+                    {% if item.liveproject_id == r.project_id %}{% set disabled = true %}{% endif %}
+                    <li {% if disabled %}class="disabled"{% endif %}>
+                        <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
+                           #{{ item.rank }}:
+                           {{ item.liveproject.owner.user.name }} - No. {{ item.liveproject.number }}: {{ item.liveproject.name }} 
+                        </a>
+                    </li> 
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+{% endmacro %}
 {% if recs|length == 1 %}
-    {% set r = recs[0] %}
-    <span class="label label-info">{{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
+    {{ project_tag(recs[0], false) }}
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        <span class="label label-info">#{{ r.submission_period }}: {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
+        {{ project_tag(r, true) }}
     {% endfor %}
 {% endif %}
 """
@@ -52,20 +83,35 @@ _project = \
 
 _marker = \
 """
-{% if recs|length == 1 %}
-    {% set r = recs[0] %}
+{% macro marker_tag(r) %}
     {% if r.marker %}
-        <span class="label label-default">{{ r.marker.user.name }}</span>
+        <div class="dropdown match-assign-button" style="display: inline-block;">
+            <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">
+                {{ r.marker.user.name }}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li class="dropdown-header">Reassign 2nd marker</li>
+                {% for marker in r.project.second_markers %}
+                    {% set disabled = false %}
+                    {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
+                    <li {% if disabled %}class="disabled"{% endif %}>
+                        <a {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
+                            {{ marker.user.name }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
     {% else %}
         <span class="label label-default">None</span>
     {% endif %}
+{% endmacro %}
+{% if recs|length == 1 %}
+    {{ marker_tag(recs[0]) }}
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        {% if r.marker %}
-            <span class="label label-default">#{{ r.submission_period }}: {{ r.marker.user.name }}</span>
-        {% else %}
-            <span class="label label-default">None</span>
-        {% endif %}
+        {{ marker_tag(r) }}
     {% endfor %}
 {% endif %}
 """

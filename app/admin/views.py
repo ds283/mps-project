@@ -3016,6 +3016,9 @@ def create_match():
                                supervising_limit=form.supervising_limit.data,
                                marking_limit=form.marking_limit.data,
                                max_marking_multiplicity=form.max_marking_multiplicity.data,
+                               levelling_bias=form.levelling_bias.data,
+                               intra_group_tension=form.intra_group_tension.data,
+                               programme_bias=form.programme_bias.data,
                                score=None)
 
         db.session.add(data)

@@ -3239,6 +3239,23 @@ class MatchingAttempt(db.Model):
     max_marking_multiplicity = db.Column(db.Integer())
 
 
+    # WORKLOAD LEVELLING
+
+    # workload levelling bias
+    # (this is the prefactor we use to set the normalization of the tension term in the objective function.
+    # the tension term represents the difference in CATS between the upper and lower workload in each group,
+    # plus another term (the 'intra group tension') that tensions all groups together. 'Group' here means
+    # faculty that supervise only, mark only, or supervise and mark. Each group will typically have a different
+    # median workload.)
+    levelling_bias = db.Column(db.Numeric(8,3))
+
+    # intra-group tensioning
+    intra_group_tension = db.Column(db.Numeric(8,3))
+
+    # programme matching bias
+    programme_bias = db.Column(db.Numeric(8,3))
+
+
     # MATCHING OUTCOME
 
     # value of objective function, if match was successful

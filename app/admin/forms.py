@@ -677,6 +677,30 @@ class MatchingMixin():
                                                         'project, up to the maximum multiplicity specified',
                                             validators=[DataRequired(message='Please specify a multiplicity')])
 
+    levelling_bias = FloatField('Workload levelling bias', default=1.0,
+                                description='This sets the normalization of the workload levelling tension in '
+                                            'the objective function. This term tensions good student matches against '
+                                            'roughly equal workload for all faculty members who supervise, '
+                                            'perform marking, or both. Set to 0 to turn off workload levelling. '
+                                            'Set to large values to prioritize equal workloads rather than '
+                                            'student matches to high-ranked projects. Set to values less than 1 to'
+                                            'prioritize matching to high-ranked projects rather than equal workloads.',
+                                validators=[DataRequired(message='Please specify a levelling bias')])
+
+    intra_group_tension = FloatField('Intra-group tension', default=1.0,
+                                     description='This sets the tension with which the typical workload for '
+                                                 'each faculty group (supervisors, markers, and those who do both) '
+                                                 'are held together. Set to large values to keep workloads '
+                                                 'as closely matched as possible.',
+                                     validators=[DataRequired(message='Please specify an intra-group tension')])
+
+    programme_bias = FloatField('Degree programme preference bias', default=1.5,
+                                description='Values greater than 1 bias the optimization to match students '
+                                            'on given degree programmes with projects that '
+                                            'are marked as preferring that programme. '
+                                            'A value of 1 disables this preference.',
+                                validators=[DataRequired(message='Please specify a programme preference bias')])
+
 
 class NewMatchForm(Form, MatchingMixin):
 

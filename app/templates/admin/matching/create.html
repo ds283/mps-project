@@ -17,12 +17,6 @@
                         {{ wtf.form_field(form.name) }}
 
                         <div class="well">
-                            <p>Options</p>
-                            {{ wtf.form_field(form.ignore_per_faculty_limits) }}
-                            {{ wtf.form_field(form.ignore_programme_prefs) }}
-                        </div>
-
-                        <div class="well">
                             <p>Workload guidance (does not account for constraints)</p>
                             <div class="row">
                                 <div class="col-xs-4">
@@ -50,10 +44,19 @@
 
                         <div class="well">
                             <p>Limits</p>
+                            {{ wtf.form_field(form.ignore_per_faculty_limits) }}
                             {{ wtf.form_field(form.supervising_limit) }}
                             {{ wtf.form_field(form.marking_limit) }}
                             {{ wtf.form_field(form.max_marking_multiplicity) }}
                             {{ wtf.form_field(form.years_memory) }}
+                        </div>
+
+                        <div class="well">
+                            <p>Optimization settings</p>
+                            {{ wtf.form_field(form.ignore_programme_prefs) }}
+                            {{ wtf.form_field(form.levelling_bias) }}
+                            {{ wtf.form_field(form.intra_group_tension) }}
+                            {{ wtf.form_field(form.programme_bias) }}
                         </div>
 
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}

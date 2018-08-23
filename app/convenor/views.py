@@ -43,7 +43,7 @@ _project_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
                 Preview web page
@@ -102,7 +102,7 @@ _unattached_project_menu = \
         Actions
         <span class="caret"></span>
     </button>
-    <ul class="dropdown-menu">
+    <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
                 Preview web page
@@ -521,7 +521,7 @@ def selectors_ajax(id):
     elif state_filter == 'none':
         data = [ rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks ]
     elif state_filter == 'confirmations':
-        data = [ rec for rec in selectors.all() if rec.number_penidng > 0 ]
+        data = [ rec for rec in selectors.all() if rec.number_pending > 0 ]
     else:
         data = selectors.all()
 
@@ -560,7 +560,7 @@ def enroll_selectors(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -608,7 +608,7 @@ def enroll_selectors_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if config.closed:
+    if config.selection_closed:
         return jsonify({})
 
     candidates = build_enroll_selector_candidates(config)
@@ -638,7 +638,7 @@ def enroll_selector(sid, configid):
 
     config = ProjectClassConfig.query.get_or_404(configid)
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -805,7 +805,7 @@ def attach_liveproject(id):
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
         return redirect(request.referrer)
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -844,7 +844,7 @@ def attach_liveproject_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if not config.live or config.closed:
+    if not config.live or config.selection_closed:
         return jsonify({})
 
     # get existing liveprojects
@@ -893,7 +893,7 @@ def manual_attach_project(id, configid):
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
         return redirect(request.referrer)
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -936,7 +936,7 @@ def attach_liveproject_other_ajax(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    if not config.live or config.closed:
+    if not config.live or config.selection_closed:
         return jsonify({})
 
     # find all projects that do not have a LiveProject equivalent
@@ -992,7 +992,7 @@ def manual_attach_other_project(id, configid):
         flash('Manual attachment of projects is only possible after going live in this academic year', 'error')
         return redirect(request.referrer)
 
-    if config.closed:
+    if config.selection_closed:
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -1059,7 +1059,7 @@ def add_project(pclass_id):
             if not owner.is_enrolled(pclass):
 
                 owner.add_enrollment(pclass)
-                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.name, pclass=pclass.name))
+                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
 
         db.session.add(data)
         db.session.commit()
@@ -1135,7 +1135,7 @@ def edit_project(id, pclass_id):
             if not owner.is_enrolled(pclass):
 
                 owner.add_enrollment(pclass)
-                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.name, pclass=pclass.name))
+                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
 
         db.session.commit()
 
@@ -1746,7 +1746,7 @@ def go_live(pid, configid):
         task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
                                 owner=current_user,
                                 description='Perform Go Live of "{proj}"'.format(proj=pclass.name))
-        golive.apply_async((task_id, pid, configid, current_user.id, form.live_deadline.data),
+        golive.apply_async(args=(task_id, pid, configid, current_user.id, form.live_deadline.data), task_id=task_id,
                            link_error=golive_fail.si(task_id, current_user.id))
 
     return redirect(request.referrer)
@@ -1766,7 +1766,7 @@ def close_selections(id):
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
-    config.closed = True
+    config.selection_closed = True
     config.closed_id = current_user.id
     config.closed_timestamp = datetime.now()
 
@@ -2174,7 +2174,7 @@ def rollover(pid, configid):
     task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
                             owner=current_user,
                             description='Perform rollover of "{proj}" to new academic year'.format(proj=pclass.name))
-    rollover.apply_async((task_id, pid, configid, current_user.id),
+    rollover.apply_async(args=(task_id, pid, configid, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 
     return redirect(url_for('convenor.overview', id=pid))

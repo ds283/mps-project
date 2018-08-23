@@ -1059,7 +1059,7 @@ def add_project(pclass_id):
             if not owner.is_enrolled(pclass):
 
                 owner.add_enrollment(pclass)
-                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.name, pclass=pclass.name))
+                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
 
         db.session.add(data)
         db.session.commit()
@@ -1135,7 +1135,7 @@ def edit_project(id, pclass_id):
             if not owner.is_enrolled(pclass):
 
                 owner.add_enrollment(pclass)
-                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.name, pclass=pclass.name))
+                flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
 
         db.session.commit()
 

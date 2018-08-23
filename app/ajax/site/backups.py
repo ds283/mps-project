@@ -34,8 +34,8 @@ def backups_data(backups):
                 'display': b.date.strftime("%a %d %b %Y %H:%M:%S"),
                 'timestamp': b.date.timestamp()
             },
-            'initiated': '<a href="mailto:{e}">{name}</a>'.format(e=b.owner.email,
-                                                                  name=b.owner.name) if b.owner is not None
+            'initiated': '<a href="mailto:{e}">{name}</a>'.format(e=b.owner.user.email,
+                                                                  name=b.owner.user.name) if b.owner is not None
             else '<span class="label label-default">Nobody</span>',
             'type': b.type_to_string(),
             'description': b.description if b.description is not None and len(b.description) > 0

@@ -40,7 +40,8 @@ from .forms import RoleSelectForm, \
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
-    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord
+    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
+    LiveProject
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, build_match_selector_data, build_match_faculty_data
@@ -51,6 +52,7 @@ from ..shared.validators import validate_is_convenor
 from ..task_queue import register_task, progress_update
 
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 import app.ajax as ajax
 
 from . import admin
@@ -3156,6 +3158,65 @@ def match_faculty_view_ajax(id):
     data = build_match_faculty_data(record)
 
     return ajax.admin.match_view_faculty.faculty_view_data(data, record)
+
+
+@admin.route('/reassign_match_project/<int:id>/<int:pid>')
+@roles_required('root')
+def reassign_match_project(id, pid):
+
+    record = MatchingRecord.query.get_or_404(id)
+    project = LiveProject.query.get_or_404(pid)
+
+    if record.selector.has_submitted:
+        if record.selector.is_project_submitted(project):
+            record.project_id = project.id
+            record.supervisor_id = project.owner_id
+            db.session.commit()
+        else:
+            flash('Could not reassign "{proj}" to {name} this project '
+                  'was not included in their submitted choices'.format(proj=project.name,
+                                                                       name=record.selector.student.user.name),
+                  'error')
+
+    elif record.selector.has_bookmarks:
+        if record.selector.is_project_bookmarked(project):
+            record.project_id = project.id
+            record.supervisor_id = project.owner_id
+            db.session.commit()
+        else:
+            flash('Could not reassign "{proj}" to {name} this project '
+                  'was not included in their ranked bookmarks'.format(proj=project.name,
+                                                                      name=record.selector.student.user.name),
+                  'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/reassign_match_marker/<int:id>/<int:mid>')
+@roles_required('root')
+def reassign_match_marker(id, mid):
+
+    record = MatchingRecord.query.get_or_404(id)
+
+    # check intended mid is in list of attached second markers
+    q = record.project.second_markers.subquery()
+    count = db.session.query(func.count(q.c.id)).filter(q.c.id == mid).scalar()
+
+    if count == 0:
+        marker = FacultyData.query.get_or_404(mid)
+        flash('Could not assign {name} as 2nd marker since '
+              'not tagged as available for assigned project "{proj}"'.format(name=marker.user.name,
+                                                                             proj=record.project.name), 'error')
+
+    elif count == 1:
+        record.marker_id = mid
+        db.session.commit()
+
+    else:
+        flash('Inconsistent marker counts for matching record (id={id}). '
+              'Please contact a system administrator'.format(id=record.id), 'error')
+
+    return redirect(request.referrer)
 
 
 @admin.route('/terminate_background_task/<string:id>')

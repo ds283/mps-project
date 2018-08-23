@@ -41,10 +41,10 @@ _project = \
 """
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
-    <span class="label label-info">{{ r.project.owner.user.name }} (No. {{ r.project.number }})</span>
+    <span class="label label-info">{{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        <span class="label label-info">{{ r.submission_period }}. {{ r.project.owner.user.name }} (No. {{ r.project.number }})</span>
+        <span class="label label-info">#{{ r.submission_period }}: {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
     {% endfor %}
 {% endif %}
 """
@@ -62,7 +62,7 @@ _marker = \
 {% elif recs|length > 1 %}
     {% for r in recs %}
         {% if r.marker %}
-            <span class="label label-default">{{ r.submission_period }}. {{ r.marker.user.name }}</span>
+            <span class="label label-default">#{{ r.submission_period }}: {{ r.marker.user.name }}</span>
         {% else %}
             <span class="label label-default">None</span>
         {% endif %}
@@ -81,7 +81,7 @@ _rank = \
     {% set ns = namespace(tot=0) %}
     {% for r in recs %}
         {% set ns.tot = ns.tot + r.rank - 1 %}
-        <span class="label label-info">{{ r.submission_period }}. {{ r.rank }}</span>
+        <span class="label label-info">#{{ r.submission_period }}: {{ r.rank }}</span>
     {% endfor %}
     <span class="label label-primary">delta = {{ ns.tot }}</span>
 {% endif %}

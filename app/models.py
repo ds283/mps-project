@@ -3207,10 +3207,10 @@ class MatchingAttempt(db.Model):
     timestamp = db.Column(db.DateTime(), index=True)
 
     # time taken to construct the PuLP problem
-    construct_time = db.Column(db.Numeric(10,2))
+    construct_time = db.Column(db.Numeric(8, 3))
 
     # time taken by PulP to compute the solution
-    compute_time = db.Column(db.Numeric(10,2))
+    compute_time = db.Column(db.Numeric(8, 3))
 
     # owner
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -3274,7 +3274,7 @@ class MatchingAttempt(db.Model):
             minutes, seconds = divmod(seconds, 60)
             res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}m'.format(n=minutes)
 
-        return (res + ' ' if len(res) > 0 else '') + '{n:.1f}s'.format(n=seconds)
+        return (res + ' ' if len(res) > 0 else '') + '{n:.3f}s'.format(n=seconds)
 
 
     @property
@@ -3315,6 +3315,12 @@ class MatchingRecord(db.Model):
     project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
     project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
                               backref=db.backref('student_matches', lazy='dynamic'))
+
+    # assigned supervisor (redundant with project, but allows us to attach a backref from the
+    # supervisor's FacultyData record)
+    supervisor_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    supervisor = db.relationship('FacultyData', foreign_keys=[supervisor_id], uselist=False,
+                                 backref=db.backref('supervisor_matches', lazy='dynamic'))
 
     # rank of this project in the student's selection
     rank = db.Column(db.Integer())

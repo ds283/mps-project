@@ -537,6 +537,9 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
 
             # pop a supervisor from the back of the stack
             proj_id = assigned.pop()
+
+            if proj_id not in lp_dict:
+                raise RuntimeError('PuLP solution references unexpected LiveProject instance')
             project = lp_dict[proj_id]
 
             # assign a marker if one is used
@@ -559,6 +562,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
             data = MatchingRecord(matching_id=record.id,
                                   selector_id=number_to_sel[i],
                                   project_id=proj_id,
+                                  supervisor_id=project.owner_id,
                                   marker_id=marker,
                                   submission_period=m+1,
                                   rank=rk)

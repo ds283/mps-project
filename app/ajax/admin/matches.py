@@ -62,6 +62,9 @@ _info = \
 {% endif %}
 <span class="label label-info">Marker multiplicity {{ m.max_marking_multiplicity }}</span>
 <span class="label label-info">Memory {{ m.years_memory }} yr</span>
+<span class="label label-default">Levelling {{ m.levelling_bias }}</span>
+<span class="label label-default">Group {{ m.intra_group_tension }}</span>
+<span class="label label-default">Programme {{ m.programme_bias }}</span>
 """
 
 

@@ -61,6 +61,21 @@ def _get_current_pclass_config(pclass):
     return config
 
 
+def _find_mean_project_CATS(pclasses):
+
+    CATS_total = 0
+    number = 0
+
+    for pclass in pclasses:
+
+        config = _get_current_pclass_config(pclass)
+        if config.CATS_supervision is not None:
+            CATS_total += config.CATS_supervision
+            number += 1
+
+    return float(CATS_total)/number
+
+
 def _enumerate_selectors(pclasses):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
@@ -222,7 +237,8 @@ def _enumerate_marking_faculty(pclasses):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def _build_ranking_matrix(number_students, student_dict, number_projects, project_dict, ignore_programme_prefs=False):
+def _build_ranking_matrix(number_students, student_dict, number_projects, project_dict,
+                          ignore_programme_prefs=False, programme_bias=1.5):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
@@ -280,8 +296,7 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
                     .scalar()
 
                 if count == 1:
-                    # TODO: reward for matching preferred programme might need tuning
-                    w *= 2.0
+                    w *= programme_bias
                 elif count > 1:
                     raise RuntimeError('Inconsistent number of degree preferences match to SelectingStudent')
 
@@ -369,7 +384,8 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
 
 def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits, multiplicity,
                          number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                         sup_only_numbers, mark_only_numbers, sup_and_mark_numbers):
+                         sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
+                         levelling_bias, intra_group_tension, mean_CATS_per_project):
     """
     Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
     :param R:
@@ -436,11 +452,17 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
                 objective += X[idx] * W[idx] / R[idx]
 
     # tension top and bottom workloads in each group against each other
-    levelling = (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin) + (globalMax - globalMin)
+    levelling = (supMax - supMin) \
+                + (markMax - markMin) \
+                + (supMarkMax - supMarkMin) \
+                + abs(float(intra_group_tension))*(globalMax - globalMin)
 
     # no need to add a reward for marker assignments; these only need to satisfy the constraints, and any
     # one solution is as good as another
-    prob += objective - levelling, "objective function"
+
+    # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
+    # upper and lower limits roughly equal to one ranking place in matching to students
+    prob += objective - abs(float(levelling_bias))*levelling/mean_CATS_per_project, "objective function"
 
 
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
@@ -682,6 +704,7 @@ def register_matching_tasks(celery):
         try:
             # get list of project classes participating in automatic assignment
             pclasses = _find_pclasses()
+            mean_CATS_per_project = _find_mean_project_CATS(pclasses)
 
             # get lists of selectors and liveprojects, together with auxiliary data such as
             # multiplicities (for selectors) and CATS assignments (for projects)
@@ -707,7 +730,8 @@ def register_matching_tasks(celery):
             sup_and_mark_numbers = {(sup_to_number[x], mark_to_number[x]) for x in sup_and_mark}
 
             # build student ranking matrix
-            R, W = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record.ignore_programme_prefs)
+            R, W = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record.ignore_programme_prefs,
+                                         record.programme_bias)
 
             # build marker compatibility matrix
             mm = record.max_marking_multiplicity
@@ -724,7 +748,8 @@ def register_matching_tasks(celery):
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                                              sup_only_numbers, mark_only_numbers, sup_and_mark_numbers)
+                                              sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
+                                              record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 

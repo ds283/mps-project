@@ -43,7 +43,7 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_root_dashboard_data, build_match_selector_data
+    get_root_dashboard_data, build_match_selector_data, build_match_faculty_data
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor
@@ -3108,7 +3108,7 @@ def match_student_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    return render_template('admin/match_inspector/student.html', pane='student', id=id)
+    return render_template('admin/match_inspector/student.html', pane='student', record=record)
 
 
 @admin.route('/match_faculty_view/<int:id>')
@@ -3127,7 +3127,7 @@ def match_faculty_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    return render_template('admin/match_inspector/faculty.html', pane='faculty', id=id)
+    return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record)
 
 
 @admin.route('/match_student_view_ajax/<int:id>')
@@ -3153,7 +3153,9 @@ def match_faculty_view_ajax(id):
     if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         return jsonify({})
 
-    return ajax.admin.match_view_faculty.faculty_view_data([])
+    data = build_match_faculty_data(record)
+
+    return ajax.admin.match_view_faculty.faculty_view_data(data, record)
 
 
 @admin.route('/terminate_background_task/<string:id>')

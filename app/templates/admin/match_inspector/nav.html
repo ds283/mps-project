@@ -4,10 +4,10 @@
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        <li {% if pane == 'student' %}class="active"{% endif %}><a href="{{ url_for('admin.match_student_view', id=id) }}">
+        <li {% if pane == 'student' %}class="active"{% endif %}><a href="{{ url_for('admin.match_student_view', id=record.id) }}">
             Student view
         </a></li>
-        <li {% if pane == 'faculty' %}class="active"{% endif %}><a href="{{ url_for('admin.match_faculty_view', id=id) }}">
+        <li {% if pane == 'faculty' %}class="active"{% endif %}><a href="{{ url_for('admin.match_faculty_view', id=record.id) }}">
             Faculty view
         </a></li>
     </ul>

@@ -3370,8 +3370,9 @@ class MatchingAttempt(db.Model):
                 self._faculty_list[item.id] = item
 
 
-    def get_faculty_CATS(self, fac):
+    def get_faculty_CATS(self, fac, pclass_id=None):
         """
+        Compute faculty workload in CATS, optionally for a specific pclass
         :param fac: FacultyData instance
         :return:
         """
@@ -3382,15 +3383,17 @@ class MatchingAttempt(db.Model):
         for item in self.records.filter_by(supervisor_id=fac.id).all():
             config = item.project.config
 
-            if config.CATS_supervision is not None and config.CATS_supervision > 0:
-                CATS_supervisor += config.CATS_supervision
+            if pclass_id is None or config.pclass_id == pclass_id:
+                if config.CATS_supervision is not None and config.CATS_supervision > 0:
+                    CATS_supervisor += config.CATS_supervision
 
         for item in self.records.filter_by(marker_id=fac.id).all():
             config = item.project.config
 
-            if config.project_class.uses_marker:
-                if config.CATS_marking is not None and config.CATS_marking > 0:
-                    CATS_marker += config.CATS_marking
+            if pclass_id is None or config.pclass_id == pclass_id:
+                if config.project_class.uses_marker:
+                    if config.CATS_marking is not None and config.CATS_marking > 0:
+                        CATS_marker += config.CATS_marking
 
         return CATS_supervisor, CATS_marker
 

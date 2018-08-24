@@ -19,7 +19,7 @@ from ..models import db, ResearchGroup, ProjectClass, Supervisor, Project, Enrol
 
 from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
-from ..shared.forms.queries import GetActiveFaculty, BuildUserRealName
+from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName
 
 
 def globally_unique_project(form, field):
@@ -75,7 +75,7 @@ def GetSkillGroups():
 
 class ProjectMixin():
 
-    owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildUserRealName)
+    owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
 
     keywords = StringField('Keywords', description='Optional. Separate with commas or semicolons.')
 
@@ -141,6 +141,7 @@ class AddProjectForm(Form, ProjectMixin):
                                             globally_unique_project])
 
     submit = SubmitField('Add new project')
+
     submit_and_preview = SubmitField('Add new project and preview')
 
 
@@ -161,7 +162,9 @@ class EditProjectForm(Form, ProjectMixin, EditFormMixin):
 
     name = StringField('Title', validators=[DataRequired(message='Project title is required'),
                                             unique_or_original_project])
+
     submit_and_preview = SubmitField('Save changes and preview')
+
     pass
 
 

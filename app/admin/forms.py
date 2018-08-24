@@ -26,8 +26,8 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_exam_number, unique_or_original_exam_number, globally_unique_matching_name, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
-    BuildDegreeProgrammeName, GetPossibleConvenors, BuildUserRealName, BuildConvenorRealName, GetAllProjectClasses, \
-    GetConvenorProjectClasses, GetSysadminUsers
+    BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
+    GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers
 from ..models import BackupConfiguration, EnrollmentRecord, submission_choices, academic_titles, \
     extent_choices, year_choices, matching_history_choices
 
@@ -470,7 +470,7 @@ class ScheduledTaskMixin():
 
     name = StringField('Name', validators=[DataRequired(message='A task name is required')])
 
-    owner = QuerySelectField('Owner', query_factory=GetSysadminUsers, get_label=BuildUserRealName)
+    owner = QuerySelectField('Owner', query_factory=GetSysadminUsers, get_label=BuildSysadminUserName)
 
     tasks_available = [('app.tasks.prune_email.prune_email_log', 'Prune email log'),
                        ('app.tasks.backup.backup', 'Perform local backup'),

@@ -178,7 +178,7 @@ def add_project():
     # set up form
     form = AddProjectForm(request.form)
 
-    # only convenors/administrators can reassign ownership
+    # only conveners/administrators can reassign ownership
     del form.owner
 
     if form.validate_on_submit():
@@ -186,7 +186,7 @@ def add_project():
         data = Project(name=form.name.data,
                        keywords=form.keywords.data,
                        active=True,
-                       owner=current_user.faculty,
+                       owner=current_user.faculty_data,
                        group=form.group.data,
                        project_classes=form.project_classes.data,
                        skills=[],

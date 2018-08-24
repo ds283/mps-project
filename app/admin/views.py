@@ -3144,7 +3144,9 @@ def match_student_view_ajax(id):
     if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         return jsonify({})
 
-    return ajax.admin.match_view_student.student_view_data(record.selectors)
+    data_set = zip(record.selectors, record.selector_deltas)
+
+    return ajax.admin.match_view_student.student_view_data(data_set)
 
 
 @admin.route('/match_faculty_view_ajax/<int:id>')

@@ -3281,25 +3281,25 @@ class MatchingAttempt(db.Model):
     @orm.reconstructor
     def _reconstruct(self):
 
-        self._student_list = None
+        self._selector_list = None
         self._faculty_list = None
 
 
     def _build_selector_list(self):
 
-        if self._student_list is not None:
+        if self._selector_list is not None:
             return
 
-        self._student_list = {}
+        self._selector_list = {}
 
         for item in self.records.order_by(MatchingRecord.submission_period.asc()).all():
 
             # if we haven't seen this selector ID before, start a new list containing this record.
             # Otherwise, attach current record to the end of the existing list.
-            if item.selector_id not in self._student_list:
-                self._student_list[item.selector_id] = [item]
+            if item.selector_id not in self._selector_list:
+                self._selector_list[item.selector_id] = [item]
             else:
-                self._student_list[item.selector_id].append(item)
+                self._selector_list[item.selector_id].append(item)
 
 
     def _build_faculty_list(self):
@@ -3321,7 +3321,7 @@ class MatchingAttempt(db.Model):
     @property
     def selectors(self):
         self._build_selector_list()
-        return self._student_list.values()
+        return self._selector_list.values()
 
 
     @property
@@ -3337,6 +3337,23 @@ class MatchingAttempt(db.Model):
     @property
     def formatted_compute_time(self):
         return format_time(self.compute_time)
+
+
+    @property
+    def selector_deltas(self):
+        self._build_selector_list()
+        fsum = lambda recs: sum([rec.delta for rec in recs])
+        return [fsum(x) for x in self.selectors]
+
+
+    @property
+    def delta_max(self):
+        return max(self.selector_deltas)
+
+
+    @property
+    def delta_min(self):
+        return min(self.selector_deltas)
 
 
 class MatchingRecord(db.Model):

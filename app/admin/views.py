@@ -18,7 +18,6 @@ from flask_security.signals import user_registered
 
 from celery import chain, group
 
-from app.shared.validators import validate_is_admin_or_convenor
 from .actions import register_user, estimate_CATS_load
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
@@ -44,10 +43,10 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
     LiveProject
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_root_dashboard_data
+    get_root_dashboard_data, get_automatch_pclasses
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
-from ..shared.validators import validate_is_convenor
+from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor
 
 from ..task_queue import register_task, progress_update
 
@@ -3113,7 +3112,9 @@ def match_student_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    return render_template('admin/match_inspector/student.html', pane='student', record=record)
+    pclasses = get_automatch_pclasses()
+
+    return render_template('admin/match_inspector/student.html', pane='student', record=record, pclasses=pclasses)
 
 
 @admin.route('/match_faculty_view/<int:id>')
@@ -3132,7 +3133,9 @@ def match_faculty_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record)
+    pclasses = get_automatch_pclasses()
+
+    return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record, pclasses=pclasses)
 
 
 @admin.route('/match_student_view_ajax/<int:id>')

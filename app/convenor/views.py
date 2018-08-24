@@ -1129,12 +1129,10 @@ def edit_project(id, pclass_id):
         data.validate_programmes()
 
         # auto-enroll if implied by current project class associations
-        owner = data.owner.faculty_data
         for pclass in data.project_classes:
 
-            if not owner.is_enrolled(pclass):
-
-                owner.add_enrollment(pclass)
+            if not data.owner.is_enrolled(pclass):
+                data.owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
 
         db.session.commit()

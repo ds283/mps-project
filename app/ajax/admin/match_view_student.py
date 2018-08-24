@@ -122,31 +122,19 @@ _rank = \
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
     <span class="label label-info">{{ r.rank }}</span>
-    <span class="label label-primary">delta = {{ r.rank-1 }}</span>
+    <span class="label label-primary">&delta; = {{ delta }}</span>
 {% elif recs|length > 1 %}
-    {% set ns = namespace(tot=0) %}
     {% for r in recs %}
-        {% set ns.tot = ns.tot + r.rank - 1 %}
         <span class="label label-info">#{{ r.submission_period }}: {{ r.rank }}</span>
     {% endfor %}
-    <span class="label label-primary">delta = {{ ns.tot }}</span>
+    <span class="label label-primary">&delta; = {{ delta }}</span>
 {% endif %}
 """
 
 
-def _ranksum(rec_list):
+def student_view_data(selector_data):
 
-    s = 0
-
-    for rec in rec_list:
-        s += rec.rank-1
-
-    return s
-
-
-def student_view_data(records):
-
-    # records is a list of (lists of) MatchingRecord instances
+    # selector_data is a list of ((lists of) MatchingRecord, delta-value) pairs
 
     data = [{'student': {
                 'display': render_template_string(_student, sel=r[0].selector),
@@ -157,8 +145,8 @@ def student_view_data(records):
              'project': render_template_string(_project, recs=r),
              'marker': render_template_string(_marker, recs=r),
              'rank': {
-                'display': render_template_string(_rank, recs=r),
-                'sortvalue': _ranksum(r)
-             } } for r in records]
+                'display': render_template_string(_rank, recs=r, delta=d),
+                'sortvalue': d
+             } } for r, d in selector_data]
 
     return jsonify(data)

@@ -45,9 +45,9 @@ _marking = \
 
 _workload = \
 """
-<span class="label label-info">Supv {{ sup }} CATS</span>
-<span class="label label-default">2nd {{ mark }} CATS</span>
-<span class="label label-primary">Total {{ tot }} CATS</span>
+<span class="label label-info">Supv {{ sup }}</span>
+<span class="label label-default">2nd {{ mark }}</span>
+<span class="label label-primary">Total {{ tot }}</span>
 """
 
 

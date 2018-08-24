@@ -72,6 +72,8 @@ _score = \
 """
 {% if m.outcome == m.OUTCOME_OPTIMAL %}
     <span class="label label-success">{{ m.score }}</span>
+    <span class="label label-info">&delta; max {{ m.delta_max }}</span>
+    <span class="label label-info">&delta; min {{ m.delta_min }}</span>
 {% else %}
     <span class="label label-default">Invalid</span>
 {% endif %}

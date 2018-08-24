@@ -29,6 +29,8 @@ from mdx_smartypants import makeExtension
 
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
+import latex2markdown
+
 
 def create_app():
 

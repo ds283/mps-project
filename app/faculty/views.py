@@ -186,7 +186,7 @@ def add_project():
         data = Project(name=form.name.data,
                        keywords=form.keywords.data,
                        active=True,
-                       owner=current_user,
+                       owner=current_user.faculty,
                        group=form.group.data,
                        project_classes=form.project_classes.data,
                        skills=[],

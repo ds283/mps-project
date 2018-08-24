@@ -12,6 +12,7 @@
 from flask import redirect, url_for, flash
 from flask_security import current_user
 
+from app import db
 from app.models import db, MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
     MatchingAttempt, MatchingRecord
@@ -372,3 +373,14 @@ def build_enroll_selector_candidates(config):
         .filter(selectors.c.student_id == None)
 
     return missing
+
+
+def get_automatch_pclasses():
+    """
+    Build a list of pclasses that participate in automatic matching
+    :return:
+    """
+
+    pclasses = db.session.query(ProjectClass).filter_by(active=True, do_matching=True).all()
+
+    return pclasses

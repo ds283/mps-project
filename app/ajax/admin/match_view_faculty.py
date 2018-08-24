@@ -51,60 +51,20 @@ _workload = \
 """
 
 
-def _get_attempt_records(q, rec):
-
-    # q is an SQLAlchemy q that produces a list of MatchingRecord instances,
-    # typically associated either with faculty assignment as supervisor or marker
-
-    return q.filter_by(matching_id=rec.id).order_by(MatchingRecord.submission_period.asc()).all()
-
-
-def _compute_CATS(sup, mark, rec):
-
-    # sup, mark are SQL queries that produce a list of MatchingRecord instances
-
-    CATS_supervisor = 0
-    CATS_marker = 0
-
-    for item in sup.filter_by(matching_id=rec.id).all():
-        config = item.project.config
-
-        if config.CATS_supervision is not None and config.CATS_supervision > 0:
-            CATS_supervisor += config.CATS_supervision
-
-    for item in mark.filter_by(matching_id=rec.id).all():
-        config = item.project.config
-
-        if config.project_class.uses_marker:
-            if config.CATS_marking is not None and config.CATS_marking > 0:
-                CATS_marker += config.CATS_marking
-
-    return CATS_supervisor, CATS_marker
-
-
 def faculty_view_data(faculty, rec):
 
     data = []
 
     for f in faculty:
 
-        CATS_supervisor, CATS_marker = _compute_CATS(f.supervisor_matches, f.marker_matches, rec)
-        CATS_tot = CATS_supervisor + CATS_marker
-        sup_records = _get_attempt_records(f.supervisor_matches, rec)
-        mark_records = _get_attempt_records(f.marker_matches, rec)
+        CATS_sup, CATS_mark = rec.get_faculty_CATS(f)
 
-        gp = {'name': {
-                'display': render_template_string(_name, f=f),
-                'sortvalue': f.user.last_name + f.user.first_name
-             },
-             'projects': render_template_string(_projects, recs=sup_records),
-             'marking': render_template_string(_marking, recs=mark_records),
-             'workload': {
-                'display': render_template_string(_workload, sup=CATS_supervisor, mark=CATS_marker,
-                                                  tot=CATS_tot),
-                'sortvalue': CATS_tot
-             } }
-
-        data.append(gp)
+        data.append({'name': {'display': render_template_string(_name, f=f),
+                              'sortvalue': f.user.last_name + f.user.first_name},
+                     'projects': render_template_string(_projects, recs=rec.get_supervisor_records(f).all()),
+                     'marking': render_template_string(_marking, recs=rec.get_marker_records(f).all()),
+                     'workload': {'display': render_template_string(_workload, sup=CATS_sup, mark=CATS_mark,
+                                                                    tot=CATS_sup + CATS_mark),
+                                  'sortvalue': CATS_sup + CATS_mark}})
 
     return jsonify(data)

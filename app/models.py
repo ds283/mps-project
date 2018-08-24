@@ -3283,6 +3283,7 @@ class MatchingAttempt(db.Model):
 
         self._selector_list = None
         self._faculty_list = None
+        self._CATS_list = None
 
 
     def _build_selector_list(self):
@@ -3318,6 +3319,42 @@ class MatchingAttempt(db.Model):
                 self._faculty_list[item.id] = item
 
 
+    def get_faculty_CATS(self, fac):
+        """
+        :param fac: FacultyData instance
+        :return:
+        """
+
+        CATS_supervisor = 0
+        CATS_marker = 0
+
+        for item in self.records.filter_by(supervisor_id=fac.id).all():
+            config = item.project.config
+
+            if config.CATS_supervision is not None and config.CATS_supervision > 0:
+                CATS_supervisor += config.CATS_supervision
+
+        for item in self.records.filter_by(marker_id=fac.id).all():
+            config = item.project.config
+
+            if config.project_class.uses_marker:
+                if config.CATS_marking is not None and config.CATS_marking > 0:
+                    CATS_marker += config.CATS_marking
+
+        return CATS_supervisor, CATS_marker
+
+
+    def _build_CATS_list(self):
+
+        if self._CATS_list is not None:
+            return
+
+        fsum = lambda x: x[0] + x[1]
+
+        self._build_faculty_list()
+        self._CATS_list = [fsum(self.get_faculty_CATS(fac)) for fac in self.faculty]
+
+
     @property
     def selectors(self):
         self._build_selector_list()
@@ -3328,6 +3365,7 @@ class MatchingAttempt(db.Model):
     def faculty(self):
         self._build_faculty_list()
         return self._faculty_list.values()
+
 
     @property
     def formatted_construct_time(self):
@@ -3347,6 +3385,12 @@ class MatchingAttempt(db.Model):
 
 
     @property
+    def faculty_CATS(self):
+        self._build_CATS_list()
+        return self._CATS_list
+
+
+    @property
     def delta_max(self):
         return max(self.selector_deltas)
 
@@ -3354,6 +3398,25 @@ class MatchingAttempt(db.Model):
     @property
     def delta_min(self):
         return min(self.selector_deltas)
+
+
+    @property
+    def CATS_max(self):
+        return max(self.faculty_CATS)
+
+
+    @property
+    def CATS_min(self):
+        return min(self.faculty_CATS)
+
+
+    def get_supervisor_records(self, fac):
+        return self.records.filter_by(supervisor_id=fac.id).order_by(MatchingRecord.submission_period.asc())
+
+
+    def get_marker_records(self, fac):
+        return self.records.filter_by(marker_id=fac.id).order_by(MatchingRecord.submission_period.asc())
+
 
 
 class MatchingRecord(db.Model):

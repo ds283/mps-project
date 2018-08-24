@@ -44,7 +44,7 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
     LiveProject
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_root_dashboard_data, build_match_selector_data, build_match_faculty_data
+    get_root_dashboard_data
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor
@@ -3144,9 +3144,7 @@ def match_student_view_ajax(id):
     if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         return jsonify({})
 
-    data = build_match_selector_data(record)
-
-    return ajax.admin.match_view_student.student_view_data(data)
+    return ajax.admin.match_view_student.student_view_data(record.selectors)
 
 
 @admin.route('/match_faculty_view_ajax/<int:id>')
@@ -3158,9 +3156,7 @@ def match_faculty_view_ajax(id):
     if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         return jsonify({})
 
-    data = build_match_faculty_data(record)
-
-    return ajax.admin.match_view_faculty.faculty_view_data(data, record)
+    return ajax.admin.match_view_faculty.faculty_view_data(record.faculty, record)
 
 
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')

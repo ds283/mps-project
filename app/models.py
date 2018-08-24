@@ -13,9 +13,10 @@ from flask_security import current_user, UserMixin, RoleMixin
 from flask_sqlalchemy import SQLAlchemy
 
 import sqlalchemy
+from sqlalchemy import orm
 from celery import schedules
 
-from .shared.formatters import format_size
+from .shared.formatters import format_size, format_time
 from .shared.colours import get_text_colour
 
 from datetime import date, datetime, timedelta
@@ -3277,31 +3278,65 @@ class MatchingAttempt(db.Model):
                               backref=db.backref('marker_matching_attempts', lazy='dynamic'))
 
 
-    def _format_time(self, seconds):
+    @orm.reconstructor
+    def _reconstruct(self):
 
-        res = ''
+        self._student_list = None
+        self._faculty_list = None
 
-        if seconds > 60*60*24:
-            days, seconds = divmod(seconds, 60*60*24)
-            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}d'.format(n=days)
-        if seconds > 60*60:
-            hours, seconds = divmod(seconds, 60*60)
-            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}h'.format(n=hours)
-        if seconds > 60:
-            minutes, seconds = divmod(seconds, 60)
-            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}m'.format(n=minutes)
 
-        return (res + ' ' if len(res) > 0 else '') + '{n:.3f}s'.format(n=seconds)
+    def _build_selector_list(self):
+
+        if self._student_list is not None:
+            return
+
+        self._student_list = {}
+
+        for item in self.records.order_by(MatchingRecord.submission_period.asc()).all():
+
+            # if we haven't seen this selector ID before, start a new list containing this record.
+            # Otherwise, attach current record to the end of the existing list.
+            if item.selector_id not in self._student_list:
+                self._student_list[item.selector_id] = [item]
+            else:
+                self._student_list[item.selector_id].append(item)
+
+
+    def _build_faculty_list(self):
+
+        if self._faculty_list is not None:
+            return
+
+        self._faculty_list = {}
+
+        for item in self.supervisors:
+            if item.id not in self._faculty_list:
+                self._faculty_list[item.id] = item
+
+        for item in self.markers:
+            if item.id not in self._faculty_list:
+                self._faculty_list[item.id] = item
 
 
     @property
+    def selectors(self):
+        self._build_selector_list()
+        return self._student_list.values()
+
+
+    @property
+    def faculty(self):
+        self._build_faculty_list()
+        return self._faculty_list.values()
+
+    @property
     def formatted_construct_time(self):
-        return self._format_time(self.construct_time)
+        return format_time(self.construct_time)
 
 
     @property
     def formatted_compute_time(self):
-        return self._format_time(self.compute_time)
+        return format_time(self.compute_time)
 
 
 class MatchingRecord(db.Model):
@@ -3346,6 +3381,21 @@ class MatchingRecord(db.Model):
     marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
     marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
                              backref=db.backref('marker_matches', lazy='dynamic'))
+
+
+    @property
+    def valid(self):
+
+        if self.supervisor_id == self.marker_id:
+            self.error = 'Supervisor and marker are the same'
+            return False
+
+        return True
+
+
+    @property
+    def delta(self):
+        return self.rank-1
 
 
 # ############################

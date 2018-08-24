@@ -37,9 +37,9 @@ def BuildDegreeProgrammeName(programme):
 
 def GetActiveFaculty():
 
-    return db.session.query(User) \
+    return db.session.query(FacultyData) \
+            .join(User, User.id == FacultyData.id) \
             .filter(User.active) \
-            .join(FacultyData, FacultyData.id == User.id) \
             .order_by(User.last_name, User.first_name)
 
 
@@ -51,14 +51,14 @@ def GetPossibleConvenors():
             .order_by(User.last_name, User.first_name)
 
 
-def BuildUserRealName(user):
+def BuildActiveFacultyName(fac):
 
-    return user.name_and_username
+    return fac.user.name
 
 
-def BuildConvenorRealName(facdata):
+def BuildConvenorRealName(fac):
 
-    return facdata.user.name_and_username
+    return fac.user.name
 
 
 def GetAllProjectClasses():
@@ -73,4 +73,10 @@ def GetConvenorProjectClasses():
 
 def GetSysadminUsers():
 
-    return User.query.filter(User.active, User.roles.any(Role.name == 'root')).order_by(User.last_name, User.first_name)
+    return User.query.filter(User.active, User.roles.any(Role.name == 'root')) \
+        .order_by(User.last_name, User.first_name)
+
+
+def BuildSysadminUserName(user):
+
+    return user.name_and_username

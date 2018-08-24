@@ -13,9 +13,10 @@ from flask_security import current_user, UserMixin, RoleMixin
 from flask_sqlalchemy import SQLAlchemy
 
 import sqlalchemy
+from sqlalchemy import orm
 from celery import schedules
 
-from .shared.formatters import format_size
+from .shared.formatters import format_size, format_time
 from .shared.colours import get_text_colour
 
 from datetime import date, datetime, timedelta
@@ -221,6 +222,11 @@ supervisors_matching_table = db.Table('match_config_supervisors',
 marker_matching_table = db.Table('match_config_markers',
                                  db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
                                  db.Column('marker_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
+# configuration association: projects
+project_matching_table = db.Table('match_config_projects',
+                                  db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
+                                  db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True))
 
 
 class MainConfig(db.Model):
@@ -1894,6 +1900,11 @@ class Project(db.Model):
         self.error = None
 
 
+    @orm.reconstructor
+    def _reconstruct(self):
+        self.error = None
+
+
     @property
     def show_popularity_data(self):
         return False
@@ -2468,6 +2479,21 @@ class LiveProject(db.Model):
         pl = 's' if self.number_selections != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
         return '<span class="label label-primary {cls}">{n} selection{pl}</span>'.format(cls=cls, n=self.number_selections, pl=pl)
+
+
+    def satisfies_preferences(self, sel):
+
+        prog_query = self.programmes.subquery()
+        count = db.session.query(sqlalchemy.func.count(prog_query.c.id)) \
+            .filter(prog_query.c.id == sel.student.programme_id).scalar()
+
+        if count == 1:
+            return True
+
+        if count > 1:
+            raise RuntimeError('Inconsistent number of degree preferences match a single SelectingStudent')
+
+        return False
 
 
 class SelectingStudent(db.Model):
@@ -3276,32 +3302,374 @@ class MatchingAttempt(db.Model):
     markers = db.relationship('FacultyData', secondary=marker_matching_table,
                               backref=db.backref('marker_matching_attempts', lazy='dynamic'))
 
+    # participating projects
+    projects = db.relationship('LiveProject', secondary=project_matching_table,
+                               backref=db.backref('project_matching_attempts', lazy='dynamic'))
 
-    def _format_time(self, seconds):
+    # mean CATS per project during matching
+    mean_CATS_per_project = db.Column(db.Numeric(8,5))
 
-        res = ''
 
-        if seconds > 60*60*24:
-            days, seconds = divmod(seconds, 60*60*24)
-            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}d'.format(n=days)
-        if seconds > 60*60:
-            hours, seconds = divmod(seconds, 60*60)
-            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}h'.format(n=hours)
-        if seconds > 60:
-            minutes, seconds = divmod(seconds, 60)
-            res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}m'.format(n=minutes)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selector_list = None
+        self._faculty_list = None
+        self._CATS_list = None
 
-        return (res + ' ' if len(res) > 0 else '') + '{n:.3f}s'.format(n=seconds)
+        self._validated = False
+        self._student_issues = False
+        self._faculty_issues = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+
+        self._selector_list = None
+        self._faculty_list = None
+        self._CATS_list = None
+
+        self._validated = False
+        self._student_issues = False
+        self._faculty_issues = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    def _build_selector_list(self):
+
+        if self._selector_list is not None:
+            return
+
+        self._selector_list = {}
+
+        for item in self.records.order_by(MatchingRecord.submission_period.asc()).all():
+
+            # if we haven't seen this selector ID before, start a new list containing this record.
+            # Otherwise, attach current record to the end of the existing list.
+            if item.selector_id not in self._selector_list:
+                self._selector_list[item.selector_id] = [item]
+            else:
+                self._selector_list[item.selector_id].append(item)
+
+
+    def _build_faculty_list(self):
+
+        if self._faculty_list is not None:
+            return
+
+        self._faculty_list = {}
+
+        for item in self.supervisors:
+            if item.id not in self._faculty_list:
+                self._faculty_list[item.id] = item
+
+        for item in self.markers:
+            if item.id not in self._faculty_list:
+                self._faculty_list[item.id] = item
+
+
+    def get_faculty_CATS(self, fac):
+        """
+        :param fac: FacultyData instance
+        :return:
+        """
+
+        CATS_supervisor = 0
+        CATS_marker = 0
+
+        for item in self.records.filter_by(supervisor_id=fac.id).all():
+            config = item.project.config
+
+            if config.CATS_supervision is not None and config.CATS_supervision > 0:
+                CATS_supervisor += config.CATS_supervision
+
+        for item in self.records.filter_by(marker_id=fac.id).all():
+            config = item.project.config
+
+            if config.project_class.uses_marker:
+                if config.CATS_marking is not None and config.CATS_marking > 0:
+                    CATS_marker += config.CATS_marking
+
+        return CATS_supervisor, CATS_marker
+
+
+    def _build_CATS_list(self):
+
+        if self._CATS_list is not None:
+            return
+
+        fsum = lambda x: x[0] + x[1]
+
+        self._build_faculty_list()
+        self._CATS_list = [fsum(self.get_faculty_CATS(fac)) for fac in self.faculty]
+
+
+    @property
+    def selectors(self):
+        self._build_selector_list()
+        return self._selector_list.values()
+
+
+    @property
+    def faculty(self):
+        self._build_faculty_list()
+        return self._faculty_list.values()
 
 
     @property
     def formatted_construct_time(self):
-        return self._format_time(self.construct_time)
+        return format_time(self.construct_time)
 
 
     @property
     def formatted_compute_time(self):
-        return self._format_time(self.compute_time)
+        return format_time(self.compute_time)
+
+
+    @property
+    def selector_deltas(self):
+        self._build_selector_list()
+        fsum = lambda recs: sum([rec.delta for rec in recs])
+        return [fsum(x) for x in self.selectors]
+
+
+    @property
+    def faculty_CATS(self):
+        self._build_CATS_list()
+        return self._CATS_list
+
+
+    @property
+    def delta_max(self):
+        return max(self.selector_deltas)
+
+
+    @property
+    def delta_min(self):
+        return min(self.selector_deltas)
+
+
+    @property
+    def CATS_max(self):
+        return max(self.faculty_CATS)
+
+
+    @property
+    def CATS_min(self):
+        return min(self.faculty_CATS)
+
+
+    def get_supervisor_records(self, fac):
+        return self.records.filter_by(supervisor_id=fac.id).order_by(MatchingRecord.submission_period.asc())
+
+
+    def get_marker_records(self, fac):
+        return self.records.filter_by(marker_id=fac.id).order_by(MatchingRecord.submission_period.asc())
+
+
+    def number_project_assignments(self, project):
+        records = self.records.subquery()
+
+        return db.session.query(sqlalchemy.func.count(records.c.id)) \
+            .filter(records.c.project_id == project.id).scalar()
+
+
+    def is_project_overassigned(self, project):
+        count = self.number_project_assignments(project)
+        if project.enforce_capacity and project.capacity > 0 and count > project.capacity:
+            return True
+
+        return False
+
+
+    def is_supervisor_overassigned(self, faculty):
+        CATS_sup, CATS_mark = self.get_faculty_CATS(faculty)
+
+        sup_lim = self.supervising_limit
+
+        if not self.ignore_per_faculty_limits:
+            if faculty.CATS_supervision is not None and faculty.CATS_supervision > 0:
+                sup_lim = faculty.CATS_supervision
+
+        if CATS_sup > sup_lim:
+            return True, CATS_sup, sup_lim
+
+        return False, CATS_sup, sup_lim
+
+
+    def is_marker_overassigned(self, faculty):
+        CATS_sup, CATS_mark = self.get_faculty_CATS(faculty)
+
+        mark_lim = self.marking_limit
+
+        if not self.ignore_per_faculty_limits:
+            if faculty.CATS_marking is not None and faculty.CATS_marking > 0:
+                mark_lim = faculty.CATS_marking
+
+        if CATS_mark > mark_lim:
+            return True, CATS_mark, mark_lim
+
+        return False, CATS_mark, mark_lim
+
+
+    @property
+    def is_valid(self):
+        """
+        Perform validation
+        :return:
+        """
+
+        # there are several steps:
+        #   1. Validate that each MatchingRecord is valid (2nd marker is not supervisor,
+        #      LiveProject is attached to right class).
+        #      These errors are fatal
+        #   2. Validate that project capacity constraints are not violated.
+        #      This is also a fatal error.
+        #   3. Validate that faculty CATS limits are respected.
+        #      This is a warning, not an error
+
+        self._errors = {}
+        self._warnings = {}
+        self._student_issues = False
+        self._faculty_issues = False
+
+        for record in self.records:
+            if not record.is_valid:
+                self._errors[('basic', record.id)] \
+                    = '{name}/{abbv}: {err}'.format(err=record.error,
+                                                    name=record.selector.student.user.name,
+                                                    abbv=record.selector.config.project_class.abbreviation)
+                self._student_issues = True
+
+        for project in self.projects:
+            if self.is_project_overassigned(project):
+                self._errors[('capacity', project.id)] = \
+                    'Project "{supv}: {name}" is over-assigned ' \
+                    '(assigned={m}, max capacity={n})'.format(supv=project.owner.user.name, name=project.name,
+                                                              m=self.number_project_assignments(project),
+                                                              n=project.capacity)
+                self._student_issues = True
+
+        for fac in self.faculty:
+            sup_over, CATS_sup, sup_lim = self.is_supervisor_overassigned(fac)
+            if sup_over:
+                self._warnings[('supervising', fac.id)] = \
+                    'Supervising workload for {name} exceeds CATS limit ' \
+                    '(assigned={m}, max capacity={n})'.format(name=fac.user.name, m=CATS_sup, n=sup_lim)
+                self._faculty_issues = True
+
+            mark_over, CATS_mark, mark_lim = self.is_marker_overassigned(fac)
+            if mark_over:
+                self._warnings[('marking', fac.id)] = \
+                    'Marking workload for {name} exceeds CATS limit ' \
+                    '(assigned={m}, max capacity={n})'.format(name=fac.user.name, m=CATS_mark, n=mark_lim)
+                self._faculty_issues = True
+
+        self._validated = True
+
+        if len(self._errors) > 0 or len(self._warnings) > 0:
+            return False
+
+        return True
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
+
+
+    @property
+    def faculty_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._faculty_issues
+
+
+    @property
+    def student_issues(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._student_issues
+
+
+    @property
+    def current_score(self):
+        objective = sum([x.current_score for x in self.records])
+
+        sup_dict = {x.id: x for x in self.supervisors}
+        mark_dict = {x.id: x for x in self.markers}
+
+        supervisor_ids = sup_dict.keys()
+        marker_ids = mark_dict.keys()
+
+        # these are set difference and set intersection operators
+        sup_only_ids = supervisor_ids - marker_ids
+        mark_only_ids = marker_ids - supervisor_ids
+        sup_and_mark_ids = supervisor_ids & marker_ids
+
+        sup_only = [sup_dict[i] for i in sup_only_ids]
+        mark_only = [sup_dict[i] for i in mark_only_ids]
+        sup_and_mark = [sup_dict[i] for i in sup_and_mark_ids]
+
+        fsum = lambda x: x[0] + x[1]
+
+        sup_CATS = [fsum(self.get_faculty_CATS(x)) for x in sup_only]
+        mark_CATS = [fsum(self.get_faculty_CATS(x)) for x in mark_only]
+        sup_mark_CATS = [fsum(self.get_faculty_CATS(x)) for x in sup_and_mark]
+
+        minList = []
+        maxList = []
+
+        if len(sup_CATS) > 0:
+            supMax = max(sup_CATS)
+            supMin = min(sup_CATS)
+
+            maxList.append(supMax)
+            minList.append(supMin)
+        else:
+            supMax = 0.0
+            supMin = 0.0
+
+        if len(mark_CATS) > 0:
+            markMax = max(mark_CATS)
+            markMin = min(mark_CATS)
+
+            maxList.append(markMax)
+            minList.append(markMin)
+        else:
+            markMax = 0.0
+            markMin = 0.0
+
+        if len(sup_mark_CATS) > 0:
+            supMarkMax = max(sup_mark_CATS)
+            supMarkMin = min(sup_mark_CATS)
+
+            maxList.append(supMarkMax)
+            minList.append(supMarkMin)
+        else:
+            supMarkMax = 0.0
+            supMarkMin = 0.0
+
+        globalMin = min(minList) if len(minList) > 0 else 0.0
+        globalMax = max(maxList) if len(maxList) > 0 else 0.0
+
+        levelling = (supMax - supMin) \
+                    + (markMax - markMin) \
+                    + (supMarkMax - supMarkMin) \
+                    + abs(float(self.intra_group_tension)) * (globalMax - globalMin)
+
+        return objective - abs(float(self.levelling_bias))*levelling/float(self.mean_CATS_per_project)
 
 
 class MatchingRecord(db.Model):
@@ -3346,6 +3714,82 @@ class MatchingRecord(db.Model):
     marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
     marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
                              backref=db.backref('marker_matches', lazy='dynamic'))
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.error = None
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self.error = None
+
+
+    @property
+    def is_valid(self):
+
+        if self.supervisor_id == self.marker_id:
+            self.error = 'Supervisor and marker are the same'
+            return False
+
+        if (self.selector.has_submitted or self.selector.has_bookmarks) \
+                and self.selector.project_rank(self.project_id) is None:
+            self.error = "Assigned project does not appear in this selector's choices"
+            return False
+
+        if self.project.config_id != self.selector.config_id:
+            self.error = 'Assigned project does not belong to the correct class for this selector'
+            return False
+
+        markers = self.project.second_markers.subquery()
+        count = db.session.query(sqlalchemy.func.count(markers.c.id)) \
+            .filter(markers.c.id == self.marker_id).scalar()
+        if count != 1:
+            self.error = 'Assigned 2nd marker is not compatible with assigned project'
+            return False
+
+        return True
+
+
+    @property
+    def is_overassigned(self):
+        if self.matching_attempt.is_project_overassigned(self.project):
+            self.error = 'Project "{supv} - {name}" is over-assigned ' \
+                         '(assigned={m}, max capacity={n})'.format(supv=self.project.owner.user.name, name=self.project.name,
+                                                                   m=self.matching_attempt.number_project_assignments(self.project),
+                                                                   n=self.project.capacity)
+            return True
+
+        return False
+
+
+    @property
+    def delta(self):
+        return self.rank-1
+
+
+    @property
+    def hi_ranked(self):
+        return self.rank == 1 or self.rank == 2
+
+
+    @property
+    def lo_ranked(self):
+        choices = self.selector.config.project_class.initial_choices
+        return self.rank == choices or self.rank == choices-1
+
+
+    @property
+    def current_score(self):
+        # score is 1/rank of assigned project, weighted
+        weight = 1.0
+
+        if not self.matching_attempt.ignore_programme_prefs:
+            if self.project.satisfies_preferences(self.selector):
+                weight *= self.matching_attempt.programme_bias
+
+        return weight / float(self.rank)
 
 
 # ############################

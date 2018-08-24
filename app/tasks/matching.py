@@ -290,15 +290,8 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
 
             # check whether this project has a preference for the degree programme associated with the current selector
             if not ignore_programme_prefs:
-                prog_query = proj.programmes.subquery()
-                count = db.session.query(func.count(prog_query.c.id)) \
-                    .filter(prog_query.c.id == sel.student.programme_id) \
-                    .scalar()
-
-                if count == 1:
+                if proj.satisfies_preferences(sel):
                     w *= programme_bias
-                elif count > 1:
-                    raise RuntimeError('Inconsistent number of degree preferences match to SelectingStudent')
 
             W[idx] = w
 
@@ -449,6 +442,7 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
         for j in range(number_lp):
             idx = (i, j)
             if R[idx] > 0:
+                # score is 1/rank of assigned project, weighted
                 objective += X[idx] * W[idx] / R[idx]
 
     # tension top and bottom workloads in each group against each other
@@ -481,6 +475,7 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
         prob += sum(X[(i, j)] for j in range(number_lp)) == float(multiplicity[i])
 
     # enforce maximum capacity for each project
+    # note capacity[j] will be zero if this project is not enforcing an upper limit on capacity
     for j in range(number_lp):
         if capacity[j] != 0:
             prob += sum(X[(i, j)] for i in range(number_sel)) <= float(capacity[j])
@@ -580,7 +575,7 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
 
 
 def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
-                         multiplicity, sel_dict, sup_dict, mark_dict, lp_dict):
+                         multiplicity, sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project):
     """
     Store
     :param prob:
@@ -600,6 +595,11 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
 
     for k in mark_dict:
         record.markers.append(mark_dict[k])
+
+    for k in lp_dict:
+        record.projects.append(lp_dict[k])
+
+    record.mean_CATS_per_project = mean_CATS_per_project
 
     # generate dictionary of marker assignments; we map each project id to a list of available markers
     markers = {}
@@ -644,7 +644,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
 
         for m in range(multiplicity[i]):
 
-            # pop a supervisor from the back of the stack
+            # pop a project assignment from the back of the stack
             proj_number = assigned.pop()
             proj_id = number_to_lp[proj_number]
 
@@ -769,7 +769,8 @@ def register_matching_tasks(celery):
 
             try:
                 _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark,
-                                     number_to_mark, multiplicity, sel_dict, sup_dict, mark_dict, lp_dict)
+                                     number_to_mark, multiplicity, sel_dict, sup_dict, mark_dict, lp_dict,
+                                     mean_CATS_per_project)
                 db.session.commit()
 
             except SQLAlchemyError:

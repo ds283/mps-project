@@ -30,3 +30,20 @@ def format_size(s):
         return "{x:.3g} kb".format(x=float(s) / _kb)
 
     return "{x:.3g} bytes".format(x=float(s))
+
+
+def format_time(seconds):
+
+    res = ''
+
+    if seconds > 60*60*24:
+        days, seconds = divmod(seconds, 60*60*24)
+        res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}d'.format(n=days)
+    if seconds > 60*60:
+        hours, seconds = divmod(seconds, 60*60)
+        res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}h'.format(n=hours)
+    if seconds > 60:
+        minutes, seconds = divmod(seconds, 60)
+        res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}m'.format(n=minutes)
+
+    return (res + ' ' if len(res) > 0 else '') + '{n:.3f}s'.format(n=seconds)

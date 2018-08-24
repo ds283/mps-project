@@ -1053,7 +1053,7 @@ def add_project(pclass_id):
         data.validate_programmes()
 
         # auto-enroll if implied by current project class associations
-        owner = data.owner.faculty_data
+        owner = data.owner
         for pclass in data.project_classes:
 
             if not owner.is_enrolled(pclass):
@@ -1107,7 +1107,6 @@ def edit_project(id, pclass_id):
     form.project = data
 
     if form.validate_on_submit():
-
         data.name = form.name.data
         data.owner = form.owner.data
         data.keywords = form.keywords.data

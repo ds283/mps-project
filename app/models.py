@@ -2481,6 +2481,21 @@ class LiveProject(db.Model):
         return '<span class="label label-primary {cls}">{n} selection{pl}</span>'.format(cls=cls, n=self.number_selections, pl=pl)
 
 
+    def satisfies_preferences(self, sel):
+
+        prog_query = self.programmes.subquery()
+        count = db.session.query(sqlalchemy.func.count(prog_query.c.id)) \
+            .filter(prog_query.c.id == sel.student.programme_id).scalar()
+
+        if count == 1:
+            return True
+
+        if count > 1:
+            raise RuntimeError('Inconsistent number of degree preferences match a single SelectingStudent')
+
+        return False
+
+
 class SelectingStudent(db.Model):
     """
     Model a student who is selecting a project in the current cycle
@@ -3291,6 +3306,9 @@ class MatchingAttempt(db.Model):
     projects = db.relationship('LiveProject', secondary=project_matching_table,
                                backref=db.backref('project_matching_attempts', lazy='dynamic'))
 
+    # mean CATS per project during matching
+    mean_CATS_per_project = db.Column(db.Numeric(8,5))
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -3585,6 +3603,75 @@ class MatchingAttempt(db.Model):
         return self._student_issues
 
 
+    @property
+    def current_score(self):
+        objective = sum([x.current_score for x in self.records])
+
+        sup_dict = {x.id: x for x in self.supervisors}
+        mark_dict = {x.id: x for x in self.markers}
+
+        supervisor_ids = sup_dict.keys()
+        marker_ids = mark_dict.keys()
+
+        # these are set difference and set intersection operators
+        sup_only_ids = supervisor_ids - marker_ids
+        mark_only_ids = marker_ids - supervisor_ids
+        sup_and_mark_ids = supervisor_ids & marker_ids
+
+        sup_only = [sup_dict[i] for i in sup_only_ids]
+        mark_only = [sup_dict[i] for i in mark_only_ids]
+        sup_and_mark = [sup_dict[i] for i in sup_and_mark_ids]
+
+        fsum = lambda x: x[0] + x[1]
+
+        sup_CATS = [fsum(self.get_faculty_CATS(x)) for x in sup_only]
+        mark_CATS = [fsum(self.get_faculty_CATS(x)) for x in mark_only]
+        sup_mark_CATS = [fsum(self.get_faculty_CATS(x)) for x in sup_and_mark]
+
+        minList = []
+        maxList = []
+
+        if len(sup_CATS) > 0:
+            supMax = max(sup_CATS)
+            supMin = min(sup_CATS)
+
+            maxList.append(supMax)
+            minList.append(supMin)
+        else:
+            supMax = 0.0
+            supMin = 0.0
+
+        if len(mark_CATS) > 0:
+            markMax = max(mark_CATS)
+            markMin = min(mark_CATS)
+
+            maxList.append(markMax)
+            minList.append(markMin)
+        else:
+            markMax = 0.0
+            markMin = 0.0
+
+        if len(sup_mark_CATS) > 0:
+            supMarkMax = max(sup_mark_CATS)
+            supMarkMin = min(sup_mark_CATS)
+
+            maxList.append(supMarkMax)
+            minList.append(supMarkMin)
+        else:
+            supMarkMax = 0.0
+            supMarkMin = 0.0
+
+        globalMin = min(minList) if len(minList) > 0 else 0.0
+        globalMax = max(maxList) if len(maxList) > 0 else 0.0
+
+        levelling = (supMax - supMin) \
+                    + (markMax - markMin) \
+                    + (supMarkMax - supMarkMin) \
+                    + abs(float(self.intra_group_tension)) * (globalMax - globalMin)
+
+        return objective - abs(float(self.levelling_bias))*levelling/float(self.mean_CATS_per_project)
+
+
 class MatchingRecord(db.Model):
     """
     Store matching data for an individual selector
@@ -3691,6 +3778,18 @@ class MatchingRecord(db.Model):
     def lo_ranked(self):
         choices = self.selector.config.project_class.initial_choices
         return self.rank == choices or self.rank == choices-1
+
+
+    @property
+    def current_score(self):
+        # score is 1/rank of assigned project, weighted
+        weight = 1.0
+
+        if not self.matching_attempt.ignore_programme_prefs:
+            if self.project.satisfies_preferences(self.selector):
+                weight *= self.matching_attempt.programme_bias
+
+        return weight / float(self.rank)
 
 
 # ############################

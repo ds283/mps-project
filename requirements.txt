@@ -72,3 +72,4 @@ WTForms==2.2.1
 WTForms-Alchemy==0.16.7
 WTForms-Components==0.10.3
 zxcvbn==4.4.27
+latex2markdown==0.2.1

@@ -29,6 +29,8 @@ from mdx_smartypants import makeExtension
 
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
+import latex2markdown
+
 
 def create_app():
 
@@ -118,27 +120,36 @@ def create_app():
             db.session.commit()
 
     @app.template_filter('dealingwithdollars')
-    def dealingwithdollars(s):
-        splat = list(s)  # Splits string into list of characters
+    def dealingwithdollars(latex_string):
+        splat = list(latex_string)  # Splits string into list of characters
         dollar_inds = [i for i in range(0, len(splat)) if splat[i] == "$"]  # Finds indices of all dollar signs
-        math_inds = [elem for elem in dollar_inds if splat[elem - 1] != "\\"]  # \$ is allowed in LaTeX, $ is not.
-        just_dollar = [elem for elem in dollar_inds if elem not in math_inds]
+        display_inds = []  # Less pythonic than list comprehension, but now inline_inds can exclude double dollar signs
+        for elem in dollar_inds:
+            if elem != len(splat) - 1:
+                if splat[elem + 1] == r"$":
+                    display_inds.append(elem)
+                    display_inds.append(elem + 1)
+        inline_inds = [elem for elem in dollar_inds if splat[elem - 1] != "\\" and elem not in display_inds]  # \$ is allowed in LaTeX, $ is not.
+        just_dollar = [elem for elem in dollar_inds if elem not in inline_inds and elem not in display_inds]
 
-        if len(math_inds) % 2 != 0:  # Checks for lonely dollar signs
-            s = r"Odd number of maths delimiters, please use \$ for single dollar sign."
+        if len(inline_inds) % 2 != 0:  # Checks for lonely dollar signs
+            latex_string = r"Failed to parse, please check your syntax."
 
-        else:
-            for i in range(0, len(math_inds)):
+        else:  # Only converts inline math delimiters, as latex2markdown seems to convert display math delimiters
+            for i in range(0, len(inline_inds)):
                 if i % 2 == 0:
-                    splat[math_inds[i]] = r"\\("
+                    splat[inline_inds[i]] = r"\\("
                 else:
-                    splat[math_inds[i]] = r"\\)"
+                    splat[inline_inds[i]] = r"\\)"
 
             for elem in just_dollar:
                 splat.pop(elem - 1)
 
-            s = ''.join(splat)
-        return s
+            latex_string = ''.join(splat)
+
+        l2m_obj = latex2markdown.LaTeX2Markdown(latex_string)
+        mathjax_string = l2m_obj.to_markdown()
+        return mathjax_string
 
 
     # IMPORT BLUEPRINTS

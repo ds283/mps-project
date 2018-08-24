@@ -16,13 +16,13 @@
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.13.0.min.js"></script>#}
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.13.0.min.js"></script>#}
 
-    {% if archive_div is defined and archive_div != None and archive_script is defined and archive_script != None %}
+    {% if archive_div is defined and archive_div is not None and archive_script is defined and archive_script is not none %}
         {{ archive_script|safe }}
     {% endif %}
-    {% if backup_div is defined and backup_div != None and backup_script is defined and backup_script != None %}
+    {% if backup_div is defined and backup_div is not None and backup_script is defined and backup_script is not none %}
         {{ backup_script|safe }}
     {% endif %}
-    {% if gauge_div is defined and gauge_div != None and gauge_script is defined and gauge_script != None %}
+    {% if gauge_div is defined and gauge_div is not None and gauge_script is defined and gauge_script is not none %}
         {{ gauge_script|safe }}
     {% endif %}
 {% endblock %}

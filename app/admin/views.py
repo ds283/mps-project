@@ -66,6 +66,8 @@ from math import pi
 from bokeh.plotting import figure
 from bokeh.embed import components
 
+from numpy import histogram
+
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -3121,8 +3123,8 @@ def match_student_view(id):
 
     pclasses = get_automatch_pclasses()
 
-    return render_template('admin/match_inspector/student.html', pane='student', record=record, pclasses=pclasses,
-                           pclass_filter=pclass_filter)
+    return render_template('admin/match_inspector/student.html', pane='student', record=record,
+                           pclasses=pclasses, pclass_filter=pclass_filter)
 
 
 @admin.route('/match_faculty_view/<int:id>')
@@ -3149,8 +3151,72 @@ def match_faculty_view(id):
 
     pclasses = get_automatch_pclasses()
 
-    return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record, pclasses=pclasses,
-                           pclass_filter=pclass_filter)
+    return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record,
+                           pclasses=pclasses, pclass_filter=pclass_filter)
+
+
+@admin.route('/match_dists_view/<int:id>')
+@roles_required('root')
+def match_dists_view(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not record.finished:
+        flash('Match "{name}" is not yet available for inspection '
+              'because the solver has not terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" is not available for inspection '
+              'because it did not yield an optimal solution'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    pclass_filter = request.args.get('pclass_filter')
+
+    # if no state filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('admin_match_pclass_filter'):
+        pclass_filter = session['admin_match_pclass_filter']
+
+    flag, pclass_value = is_integer(pclass_filter)
+
+    pclasses = get_automatch_pclasses()
+
+    fsum = lambda x: x[0] + x[1]
+    CATS_tot = [fsum(record.get_faculty_CATS(f, pclass_value if flag else None)) for f in record.faculty]
+
+    CATS_plot = figure(title='Workload distribution',
+                       x_axis_label='CATS', plot_width=800, plot_height=300)
+    CATS_hist, CATS_edges = histogram(CATS_tot, bins='auto')
+    CATS_plot.quad(top=CATS_hist, bottom=0, left=CATS_edges[:-1], right=CATS_edges[1:],
+                   fill_color="#036564", line_color="#033649")
+    CATS_plot.sizing_mode = 'scale_width'
+    CATS_plot.toolbar.logo = None
+    CATS_plot.border_fill_color = None
+    CATS_plot.background_fill_color = 'lightgrey'
+
+    CATS_script, CATS_div = components(CATS_plot)
+
+    delta_data_set = zip(record.selectors, record.selector_deltas)
+    if flag:
+        delta_data_set = [x for x in delta_data_set if (x[0])[0].selector.config.pclass_id == pclass_value]
+
+    deltas = [x[1] for x in delta_data_set]
+
+    delta_plot = figure(title='Delta distribution',
+                       x_axis_label='Total delta', plot_width=800, plot_height=300)
+    delta_hist, delta_edges = histogram(deltas, bins='auto')
+    delta_plot.quad(top=delta_hist, bottom=0, left=delta_edges[:-1], right=delta_edges[1:],
+                   fill_color="#036564", line_color="#033649")
+    delta_plot.sizing_mode = 'scale_width'
+    delta_plot.toolbar.logo = None
+    delta_plot.border_fill_color = None
+    delta_plot.background_fill_color = 'lightgrey'
+
+    delta_script, delta_div = components(delta_plot)
+
+    return render_template('admin/match_inspector/dists.html', pane='dists', record=record, pclasses=pclasses,
+                           pclass_filter=pclass_filter, CATS_script=CATS_script, CATS_div=CATS_div,
+                           delta_script=delta_script, delta_div=delta_div)
 
 
 @admin.route('/match_student_view_ajax/<int:id>')
@@ -3163,7 +3229,6 @@ def match_student_view_ajax(id):
         return jsonify({})
 
     pclass_filter = request.args.get('pclass_filter')
-
     flag, pclass_value = is_integer(pclass_filter)
 
     data_set = zip(record.selectors, record.selector_deltas)

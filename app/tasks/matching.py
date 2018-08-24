@@ -8,13 +8,12 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from ..models import db, MatchingAttempt, TaskRecord, ProjectClass, ProjectClassConfig, LiveProject, SelectingStudent, \
-    User, EnrollmentRecord, DegreeProgramme, FacultyData, MatchingRecord
 
-from ..shared.utils import get_current_year
+from ..models import db, MatchingAttempt, TaskRecord, ProjectClassConfig, LiveProject, SelectingStudent, \
+    User, EnrollmentRecord, MatchingRecord
+
+from ..shared.utils import get_current_year, get_automatch_pclasses
 from ..task_queue import progress_update
-
-from celery import chain, group
 
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -32,17 +31,6 @@ class Timer:
     def __exit__(self, *args):
         self.end = time.clock()
         self.interval = self.end - self.start
-
-
-def _find_pclasses():
-    """
-    Build a list of pclasses that participate in automatic matching
-    :return:
-    """
-
-    pclasses = db.session.query(ProjectClass).filter_by(active=True, do_matching=True).all()
-
-    return pclasses
 
 
 def _get_current_pclass_config(pclass):
@@ -703,7 +691,7 @@ def register_matching_tasks(celery):
 
         try:
             # get list of project classes participating in automatic assignment
-            pclasses = _find_pclasses()
+            pclasses = get_automatch_pclasses()
             mean_CATS_per_project = _find_mean_project_CATS(pclasses)
 
             # get lists of selectors and liveprojects, together with auxiliary data such as

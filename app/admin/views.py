@@ -47,6 +47,7 @@ from ..shared.utils import get_main_config, get_current_year, home_dashboard, ge
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor
+from ..shared.conversions import is_integer
 
 from ..task_queue import register_task, progress_update
 
@@ -3112,9 +3113,16 @@ def match_student_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
+    pclass_filter = request.args.get('pclass_filter')
+
+    # if no state filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('admin_match_pclass_filter'):
+        pclass_filter = session['admin_match_pclass_filter']
+
     pclasses = get_automatch_pclasses()
 
-    return render_template('admin/match_inspector/student.html', pane='student', record=record, pclasses=pclasses)
+    return render_template('admin/match_inspector/student.html', pane='student', record=record, pclasses=pclasses,
+                           pclass_filter=pclass_filter)
 
 
 @admin.route('/match_faculty_view/<int:id>')
@@ -3133,9 +3141,16 @@ def match_faculty_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
+    pclass_filter = request.args.get('pclass_filter')
+
+    # if no state filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('admin_match_pclass_filter'):
+        pclass_filter = session['admin_match_pclass_filter']
+
     pclasses = get_automatch_pclasses()
 
-    return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record, pclasses=pclasses)
+    return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record, pclasses=pclasses,
+                           pclass_filter=pclass_filter)
 
 
 @admin.route('/match_student_view_ajax/<int:id>')
@@ -3147,7 +3162,13 @@ def match_student_view_ajax(id):
     if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         return jsonify({})
 
+    pclass_filter = request.args.get('pclass_filter')
+
+    flag, pclass_value = is_integer(pclass_filter)
+
     data_set = zip(record.selectors, record.selector_deltas)
+    if flag:
+        data_set = [x for x in data_set if (x[0])[0].selector.config.pclass_id == pclass_value]
 
     return ajax.admin.match_view_student.student_view_data(data_set)
 
@@ -3161,7 +3182,11 @@ def match_faculty_view_ajax(id):
     if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         return jsonify({})
 
-    return ajax.admin.match_view_faculty.faculty_view_data(record.faculty, record)
+    pclass_filter = request.args.get('pclass_filter')
+
+    flag, pclass_value = is_integer(pclass_filter)
+
+    return ajax.admin.match_view_faculty.faculty_view_data(record.faculty, record, pclass_value if flag else None)
 
 
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')

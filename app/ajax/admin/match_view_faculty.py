@@ -24,13 +24,18 @@ _name = \
 
 _projects = \
 """
+{% set ns = namespace(count=0) %}
 {% for r in recs %}
-    {% set pclass = r.selector.config.project_class %}
-    {% set style = pclass.make_CSS_style() %}
-    <span class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})</span>
-{% else %}
-    <span class="label label-default btn-table-block">None</span>
+    {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
+        {% set ns.count = ns.count + 1 %}
+        {% set pclass = r.selector.config.project_class %}
+        {% set style = pclass.make_CSS_style() %}
+        <span class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})</span>
+    {% endif %}
 {% endfor %}
+{% if ns.count == 0 %}
+    <span class="label label-default btn-table-block">None</span>
+{% endif %}
 {% if overassigned %}
     <div class="has-error">
         <p class="help-block">Supervising workload exceeds CATS limit (assigned={{ assigned }}, max capacity={{ lim }})</p>
@@ -41,13 +46,18 @@ _projects = \
 
 _marking = \
 """
+{% set ns = namespace(count=0) %}
 {% for r in recs %}
-    {% set pclass = r.selector.config.project_class %}
-    {% set style = pclass.make_CSS_style() %}
-    <span class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})</span>
-{% else %}
-    <span class="label label-default btn-table-block">None</span>
+    {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
+        {% set ns.count = ns.count + 1 %}
+        {% set pclass = r.selector.config.project_class %}
+        {% set style = pclass.make_CSS_style() %}
+        <span class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})</span>
+    {% endif %}
 {% endfor %}
+{% if ns.count == 0 %}
+    <span class="label label-default btn-table-block">None</span>
+{% endif %}
 {% if overassigned %}
     <div class="has-error">
         <p class="help-block">Marking workload exceeds CATS limit (assigned={{ assigned }}, max capacity={{ lim }})</p>
@@ -64,24 +74,33 @@ _workload = \
 """
 
 
-def faculty_view_data(faculty, rec):
+def faculty_view_data(faculty, rec, pclass_filter):
 
     data = []
 
     for f in faculty:
-
         sup_overassigned, CATS_sup, sup_lim = rec.is_supervisor_overassigned(f)
         mark_overassigned, CATS_mark, mark_lim = rec.is_marker_overassigned(f)
         overassigned = sup_overassigned or mark_overassigned
 
+        if pclass_filter is None:
+            workload_sup = CATS_sup
+            workload_mark = CATS_mark
+            workload_tot = CATS_sup + CATS_mark
+        else:
+            workload_sup, workload_mark = rec.get_faculty_CATS(f, pclass_filter)
+            workload_tot = workload_sup + workload_mark
+
         data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned),
                               'sortvalue': f.user.last_name + f.user.first_name},
                      'projects': render_template_string(_projects, recs=rec.get_supervisor_records(f).all(),
-                                                        overassigned=sup_overassigned, assigned=CATS_sup, lim=sup_lim),
+                                                        overassigned=sup_overassigned, assigned=CATS_sup, lim=sup_lim,
+                                                        pclass_filter=pclass_filter),
                      'marking': render_template_string(_marking, recs=rec.get_marker_records(f).all(),
-                                                       overassigned=mark_overassigned, assigned=CATS_mark, lim=mark_lim),
-                     'workload': {'display': render_template_string(_workload, sup=CATS_sup, mark=CATS_mark,
-                                                                    tot=CATS_sup + CATS_mark,
+                                                       overassigned=mark_overassigned, assigned=CATS_mark, lim=mark_lim,
+                                                       pclass_filter=pclass_filter),
+                     'workload': {'display': render_template_string(_workload, sup=workload_sup, mark=workload_mark,
+                                                                    tot=workload_tot,
                                                                     sup_overassigned=sup_overassigned,
                                                                     mark_overassigned=mark_overassigned),
                                   'sortvalue': CATS_sup + CATS_mark}})

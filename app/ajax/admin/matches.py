@@ -65,13 +65,52 @@ _info = \
 <span class="label label-default">Levelling {{ m.levelling_bias }}</span>
 <span class="label label-default">Group {{ m.intra_group_tension }}</span>
 <span class="label label-default">Programme {{ m.programme_bias }}</span>
+<p></p>
+{% set errors = m.errors %}
+{% set warnings = m.warnings %}
+{% if errors|length == 1 %}
+    <span class="label label-danger">1 error</span>
+{% elif errors|length > 1 %}
+    <span class="label label-danger">{{ errors|length }} errors</span>
+{% else %}
+    <span class="label label-success">0 errors</span>
+{% endif %}
+{% if warnings|length == 1 %}
+    <span class="label label-warning">1 warning</span>
+{% elif warnings|length > 1 %}
+    <span class="label label-warning">{{ warnings|length }} warnings</span>
+{% else %}
+    <span class="label label-success">0 warnings</span>
+{% endif %}
+{% if errors|length > 0 %}
+    <div class="has-error">
+        {% for item in errors %}
+            {% if loop.index <= 10 %}
+                <p class="help-block">{{ item }}</p>
+            {% elif loop.index == 11 %}
+                <p class="help-block">...</p>
+            {% endif %}            
+        {% endfor %}
+    </div>
+{% endif %}
+{% if warnings|length > 0 %}
+    <div class="has-error">
+        {% for item in warnings %}
+            {% if loop.index <= 10 %}
+                <p class="help-block">{{ item }}</p>
+            {% elif loop.index == 11 %}
+                <p class="help-block">...</p>
+            {% endif %}
+        {% endfor %}
+    </div>
+{% endif %}
 """
 
 
 _score = \
 """
 {% if m.outcome == m.OUTCOME_OPTIMAL %}
-    <span class="label label-success">{{ m.score }}</span>
+    <span class="label label-success">{{ m.score }} (original)</span>
     <span class="label label-info">&delta; max {{ m.delta_max }}</span>
     <span class="label label-info">&delta; min {{ m.delta_min }}</span>
     <span class="label label-primary">CATS max {{ m.CATS_max }}</span>
@@ -129,6 +168,9 @@ _name = \
 <div>
     {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
         <a href="{{ url_for('admin.match_student_view', id=m.id) }}">{{ m.name }}</a>
+        {% if not m.is_valid %}
+            <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+        {% endif %}
     {% else %}
         {{ m.name }}
     {% endif %}

@@ -481,6 +481,7 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
         prob += sum(X[(i, j)] for j in range(number_lp)) == float(multiplicity[i])
 
     # enforce maximum capacity for each project
+    # note capacity[j] will be zero if this project is not enforcing an upper limit on capacity
     for j in range(number_lp):
         if capacity[j] != 0:
             prob += sum(X[(i, j)] for i in range(number_sel)) <= float(capacity[j])
@@ -601,6 +602,9 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
     for k in mark_dict:
         record.markers.append(mark_dict[k])
 
+    for k in lp_dict:
+        record.projects.append(lp_dict[k])
+
     # generate dictionary of marker assignments; we map each project id to a list of available markers
     markers = {}
     for j in range(number_lp):
@@ -644,7 +648,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
 
         for m in range(multiplicity[i]):
 
-            # pop a supervisor from the back of the stack
+            # pop a project assignment from the back of the stack
             proj_number = assigned.pop()
             proj_id = number_to_lp[proj_number]
 

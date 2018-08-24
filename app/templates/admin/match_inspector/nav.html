@@ -6,9 +6,15 @@
     <ul class="nav nav-pills dashboard-nav">
         <li {% if pane == 'student' %}class="active"{% endif %}><a href="{{ url_for('admin.match_student_view', id=record.id) }}">
             Student view
+            {% if record.student_issues %}
+                <i class="fa fa-exclamation-triangle"></i>
+            {% endif %}
         </a></li>
         <li {% if pane == 'faculty' %}class="active"{% endif %}><a href="{{ url_for('admin.match_faculty_view', id=record.id) }}">
             Faculty view
+            {% if record.faculty_issues %}
+                <i class="fa fa-exclamation-triangle"></i>
+            {% endif %}
         </a></li>
     </ul>
 {% endblock %}

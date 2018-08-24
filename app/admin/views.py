@@ -3172,6 +3172,7 @@ def reassign_match_project(id, pid):
         if record.selector.is_project_submitted(project):
             record.project_id = project.id
             record.supervisor_id = project.owner_id
+            record.rank = record.selector.project_rank(project.id)
             db.session.commit()
         else:
             flash('Could not reassign "{proj}" to {name} this project '
@@ -3183,6 +3184,7 @@ def reassign_match_project(id, pid):
         if record.selector.is_project_bookmarked(project):
             record.project_id = project.id
             record.supervisor_id = project.owner_id
+            record.rank = record.selector.project_rank(project.id)
             db.session.commit()
         else:
             flash('Could not reassign "{proj}" to {name} this project '

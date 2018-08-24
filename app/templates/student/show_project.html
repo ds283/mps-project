@@ -2,10 +2,22 @@
 
 {% extends "base_project.html" %}
 
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        extensions: ["tex2jax.js", "AMSmath.js"],
+        jax: ["input/TeX", "output/HTML-CSS"],
+        tex2jax: {
+            displayMath: [ ['$$','$$'], ["\[","\]"] ],
+            processEscapes: true
+        },
+    });
+
 {% block scripts %}
     {{ super() }}
     <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/latest.js?config=TeX-MML-AM_CHTML' async></script>
 {% endblock %}
+
+
 
 {% block title %}
     {{ title }}

@@ -106,20 +106,16 @@ class ProjectMixin():
 
     show_selections = BooleanField('Show number of selections')
 
-
     description = TextAreaField('Project description', render_kw={"rows": 20},
                                 description=r'Enter a description of your project. '
-                                            r'You can use Markdown to add bold and italic, to generate lists, or to embed links. '
-                                            r'You can also use LaTeX markup for mathematics, which will be rendered using the '
-                                            r'MathJax plugin when viewed as a webpage. <strong>Note</strong> that MathJax '
-                                            r'expects $$ or \\[...]\] delimiters for displayed mathematics and \\(...\\) for inline equations. '
-                                            r'It does not support single dollar $ delimiters since these also occur frequently in '
-                                            r'non-mathematical contexts. Note that you need to double the slashes \\ compared to '
-                                            r'LaTeX, since otherwise they are incorrectly interpreted by the Markdown compiler.',
+                                            r'The LaTeX math environment is supported, as are common LaTeX commands. '
+                                            r'The amsmath, amsthm, and amssymb packages are also included. <strong>'
+                                            r'Please preview your project to check it renders correctly!</strong>',
                                 validators=[DataRequired(message='A project description is required')])
 
     reading = TextAreaField('Recommended reading', render_kw={"rows": 10},
-                            description='Optional. The same styling and LaTeX options are available.')
+                            description="Optional. The same styling and LaTeX options are available. <strong>"
+                                        r"Add links using [Title](url) syntax.</strong>")
 
 
 class AddProjectForm(Form, ProjectMixin):

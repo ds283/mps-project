@@ -753,7 +753,7 @@ class FacultyData(db.Model):
         :return:
         """
 
-        flash('Installed {name} as convenor of {title}'.format(name=self.name, title=pclass.name))
+        flash('Installed {name} as convenor of {title}'.format(name=self.user.name, title=pclass.name))
 
 
     def remove_convenorship(self, pclass):
@@ -785,7 +785,7 @@ class FacultyData(db.Model):
 
         db.session.commit()
 
-        flash('Removed {name} as convenor of {title}'.format(name=self.name, title=pclass.name))
+        flash('Removed {name} as convenor of {title}'.format(name=self.user.name, title=pclass.name))
 
 
     @property

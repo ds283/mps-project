@@ -14,6 +14,10 @@ from flask import jsonify, render_template_string
 _student = \
 """
 <a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+{% if not valid %}
+    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+{% endif %}
+
 """
 
 
@@ -43,7 +47,7 @@ _project = \
     {% set adjustable = false %}
     {% if r.selector.has_submitted or r.selector.has_bookmarks %}{% set adjustable = true %}{% endif %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label label-info {% if adjustable %}dropdown-toggle{% endif %}" {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
+        <a class="label {% if r.is_overassigned %}label-danger{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}" {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
             {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }} (No. {{ r.project.number }})
             <span class="caret"></span>
         </a>
@@ -78,6 +82,14 @@ _project = \
         {{ project_tag(r, true) }}
     {% endfor %}
 {% endif %}
+{% for r in recs %}
+    {# if both not valid and overassigned, should leave error message from is_valid intact due to short-circuit evaluation #}
+    {% if not r.is_valid or r.is_overassigned %}
+        <div class="has-error">
+            <p class="help-block">{% if recs|length > 1 %}#{{ r.submission_period }}: {% endif %}{{ r.error }}</p>
+        <div class="has-error">
+    {% endif %}
+{% endfor %}
 """
 
 
@@ -121,11 +133,11 @@ _rank = \
 """
 {% if recs|length == 1 %}
     {% set r = recs[0] %}
-    <span class="label label-info">{{ r.rank }}</span>
+    <span class="label {% if r.hi_ranked %}label-success{% elif r.lo_ranked %}label-warning{% else %}label-info{% endif %}">{{ r.rank }}</span>
     <span class="label label-primary">&delta; = {{ delta }}</span>
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        <span class="label label-info">#{{ r.submission_period }}: {{ r.rank }}</span>
+        <span class="label {% if r.hi_ranked %}label-success{% elif r.lo_ranked %}label-warning{% else %}label-info{% endif %}">#{{ r.submission_period }}: {{ r.rank }}</span>
     {% endfor %}
     <span class="label label-primary">&delta; = {{ delta }}</span>
 {% endif %}
@@ -137,7 +149,7 @@ def student_view_data(selector_data):
     # selector_data is a list of ((lists of) MatchingRecord, delta-value) pairs
 
     data = [{'student': {
-                'display': render_template_string(_student, sel=r[0].selector),
+                'display': render_template_string(_student, sel=r[0].selector, valid=all([rc.is_valid and not rc.is_overassigned for rc in r])),
                 'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
              },
              'pclass': render_template_string(_pclass, sel=r[0].selector),

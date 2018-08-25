@@ -108,14 +108,16 @@ class ProjectMixin():
 
     description = TextAreaField('Project description', render_kw={"rows": 20},
                                 description=r'Enter a description of your project. '
-                                            r'The LaTeX math environment is supported, as are common LaTeX commands. '
-                                            r'The amsmath, amsthm, and amssymb packages are also included. <strong>'
-                                            r'Please preview your project to check it renders correctly!</strong>',
+                                            r'The LaTeX mathematics environments are supported, as are common LaTeX commands. '
+                                            r'The amsmath, amsthm, and amssymb packages are included. '
+                                            r'You may use displayed or inline mathematics. '
+                                            r'You may also use Markdown syntax to format your description. '
+                                            r'<strong>Please preview your project and check it renders correctly.</strong>',
                                 validators=[DataRequired(message='A project description is required')])
 
     reading = TextAreaField('Recommended reading', render_kw={"rows": 10},
-                            description="Optional. The same styling and LaTeX options are available. <strong>"
-                                        r"Add links using [Title](url) syntax.</strong>")
+                            description='Optional. The same styling and LaTeX options are available. '
+                                        'To embed internet links, use the Markdown syntax [link text](URL).')
 
 
 class AddProjectForm(Form, ProjectMixin):

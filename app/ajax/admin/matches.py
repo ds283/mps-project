@@ -65,6 +65,15 @@ _info = \
 <span class="label label-default">Levelling {{ m.levelling_bias }}</span>
 <span class="label label-default">Group {{ m.intra_group_tension }}</span>
 <span class="label label-default">Programme {{ m.programme_bias }}</span>
+{% if not m.ignore_programme_prefs %}
+    <p></p>
+    {% set outcome = m.prefer_programme_status %}
+    {% if outcome is not none %}
+        {% set match, fail = outcome %}
+        <span class="label label-success">Matched {{ match }} programme prefs</span>
+        <span class="label {% if fail > 0 %}label-warning{% else %}label-success{% endif %}">Failed {{ fail }} programme prefs</span>
+    {% endif %}
+{% endif %}
 <p></p>
 {% set errors = m.errors %}
 {% set warnings = m.warnings %}

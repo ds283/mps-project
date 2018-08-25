@@ -2484,14 +2484,20 @@ class LiveProject(db.Model):
     def satisfies_preferences(self, sel):
 
         prog_query = self.programmes.subquery()
-        count = db.session.query(sqlalchemy.func.count(prog_query.c.id)) \
+
+        pref_count = db.session.query(sqlalchemy.func.count(prog_query.c.id)).scalar()
+
+        match_count = db.session.query(sqlalchemy.func.count(prog_query.c.id)) \
             .filter(prog_query.c.id == sel.student.programme_id).scalar()
 
-        if count == 1:
+        if match_count == 1:
             return True
 
-        if count > 1:
+        if match_count > 1:
             raise RuntimeError('Inconsistent number of degree preferences match a single SelectingStudent')
+
+        if match_count == 0 and pref_count == 0:
+            return None
 
         return False
 
@@ -3674,6 +3680,28 @@ class MatchingAttempt(db.Model):
                     + abs(float(self.intra_group_tension)) * (globalMax - globalMin)
 
         return objective - abs(float(self.levelling_bias))*levelling/float(self.mean_CATS_per_project)
+
+
+    @property
+    def prefer_programme_status(self):
+        if self.ignore_programme_prefs:
+            return None
+
+        matched = 0
+        failed = 0
+
+        for rec in self.records:
+            outcome = rec.project.satisfies_preferences(rec.selector)
+
+            if outcome is None:
+                break
+
+            if outcome:
+                matched += 1
+            else:
+                failed += 1
+
+        return matched, failed
 
 
 class MatchingRecord(db.Model):

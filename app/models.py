@@ -3554,6 +3554,7 @@ class MatchingAttempt(db.Model):
                                                               m=self.number_project_assignments(project),
                                                               n=project.capacity)
                 self._student_issues = True
+                self._faculty_issues = True
 
         for fac in self.faculty:
             sup_over, CATS_sup, sup_lim = self.is_supervisor_overassigned(fac)
@@ -3756,7 +3757,7 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def is_overassigned(self):
+    def is_project_overassigned(self):
         if self.matching_attempt.is_project_overassigned(self.project):
             self.error = 'Project "{supv} - {name}" is over-assigned ' \
                          '(assigned={m}, max capacity={n})'.format(supv=self.project.owner.user.name, name=self.project.name,

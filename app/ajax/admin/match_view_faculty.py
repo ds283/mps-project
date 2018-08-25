@@ -24,13 +24,45 @@ _name = \
 
 _projects = \
 """
+{% macro project_tag(r) %}
+    {% set adjustable = false %}
+    {% if r.selector.has_submitted or r.selector.has_bookmarks %}{% set adjustable = true %}{% endif %}
+    {% set pclass = r.selector.config.project_class %}
+    {% set style = pclass.make_CSS_style() %}
+    <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
+        <a class="label {% if r.is_project_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}" {% if not r.is_project_overassigned and style %}style="{{ style }}"{% endif %} {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
+            #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
+            <span class="caret"></span>
+        </a>
+        {% if adjustable %}
+            {% if r.selector.has_submitted %}{% set list = r.selector.get_ordered_selection %}
+            {% elif r.rselector.has_bookmarks %}{% set list = r.selector.get_ordered_bookmarks %}
+            {% endif %}
+            <ul class="dropdown-menu">
+                {% if r.selector.has_submitted %}
+                    <li class="dropdown-header">Submitted choices</li>
+                {% elif r.selector.has_bookmarks %}
+                    <li class="dropdown-header">Ranked bookmarks</li>
+                {% endif %}
+                {% for item in list %}
+                    {% set disabled = false %}
+                    {% if item.liveproject_id == r.project_id %}{% set disabled = true %}{% endif %}
+                    <li {% if disabled %}class="disabled"{% endif %}>
+                        <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
+                           #{{ item.rank }}:
+                           {{ item.liveproject.owner.user.name }} - No. {{ item.liveproject.number }}: {{ item.liveproject.name }} 
+                        </a>
+                    </li> 
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+{% endmacro %}
 {% set ns = namespace(count=0) %}
 {% for r in recs %}
     {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
         {% set ns.count = ns.count + 1 %}
-        {% set pclass = r.selector.config.project_class %}
-        {% set style = pclass.make_CSS_style() %}
-        <span class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})</span>
+        {{ project_tag(r) }}
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
@@ -41,18 +73,45 @@ _projects = \
         <p class="help-block">Supervising workload exceeds CATS limit (assigned={{ assigned }}, max capacity={{ lim }})</p>
     </div>
 {% endif %}
+{% if err_msgs|length > 0 %}
+    <div class="has-error">
+        {% for msg in err_msgs %}
+            <p class="help-block">{{ msg }}</p>
+        {% endfor %}
+    </div>
+{% endif %}
 """
 
 
 _marking = \
 """
+{% macro marker_tag(r) %}
+    {% set pclass = r.selector.config.project_class %}
+    {% set style = pclass.make_CSS_style() %}
+    <div class="dropdown match-assign-button" style="display: inline-block;">
+        <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+            #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
+            <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+            <li class="dropdown-header">Reassign 2nd marker</li>
+            {% for marker in r.project.second_markers %}
+                {% set disabled = false %}
+                {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('admin.reassign_match_marker', id=r.id, mid=marker.id) }}"{% endif %}>
+                        {{ marker.user.name }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endmacro %}
 {% set ns = namespace(count=0) %}
 {% for r in recs %}
-    {% if pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
+    {% if r.marker and pclass_filter is none or r.selector.config.pclass_id == pclass_filter %}
         {% set ns.count = ns.count + 1 %}
-        {% set pclass = r.selector.config.project_class %}
-        {% set style = pclass.make_CSS_style() %}
-        <span class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})</span>
+        {{ marker_tag(r) }}
     {% endif %}
 {% endfor %}
 {% if ns.count == 0 %}
@@ -79,6 +138,7 @@ def faculty_view_data(faculty, rec, pclass_filter):
     data = []
 
     for f in faculty:
+        # check for CATS overassignment
         sup_overassigned, CATS_sup, sup_lim = rec.is_supervisor_overassigned(f)
         mark_overassigned, CATS_mark, mark_lim = rec.is_marker_overassigned(f)
         overassigned = sup_overassigned or mark_overassigned
@@ -91,12 +151,28 @@ def faculty_view_data(faculty, rec, pclass_filter):
             workload_sup, workload_mark = rec.get_faculty_CATS(f, pclass_filter)
             workload_tot = workload_sup + workload_mark
 
-        data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned),
+        # check for project overassignment and cache error messages to prevent multiple display
+        supv_records = rec.get_supervisor_records(f).all()
+        mark_records = rec.get_marker_records(f).all()
+
+        errors = {}
+        proj_overassigned = False
+        for item in supv_records:
+            if pclass_filter is None or item.selector.config.pclass_id == pclass_filter:
+                if item.is_project_overassigned:
+                    if item.project_id not in errors:
+                        errors[item.project_id] = item.error
+        if len(errors) > 0:
+            proj_overassigned = True
+
+        err_msgs = errors.values()
+
+        data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned or proj_overassigned),
                               'sortvalue': f.user.last_name + f.user.first_name},
-                     'projects': render_template_string(_projects, recs=rec.get_supervisor_records(f).all(),
+                     'projects': render_template_string(_projects, recs=supv_records,
                                                         overassigned=sup_overassigned, assigned=CATS_sup, lim=sup_lim,
-                                                        pclass_filter=pclass_filter),
-                     'marking': render_template_string(_marking, recs=rec.get_marker_records(f).all(),
+                                                        pclass_filter=pclass_filter, err_msgs=err_msgs),
+                     'marking': render_template_string(_marking, recs=mark_records,
                                                        overassigned=mark_overassigned, assigned=CATS_mark, lim=mark_lim,
                                                        pclass_filter=pclass_filter),
                      'workload': {'display': render_template_string(_workload, sup=workload_sup, mark=workload_mark,

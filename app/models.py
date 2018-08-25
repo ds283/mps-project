@@ -3746,6 +3746,21 @@ class MatchingRecord(db.Model):
             self.error = 'Assigned project does not belong to the correct class for this selector'
             return False
 
+        records = self.matching_attempt.records.subquery()
+        count = db.session.query(sqlalchemy.func.count(records.c.id)) \
+            .filter(records.c.selector_id == self.selector_id,
+                    records.c.project_id == self.project_id).scalar()
+        if count != 1:
+            # only refuse to validate if we are the first member of the multiplet
+            # this prevents errors being reported multiple times
+            lo_rec = self.matching_attempt.records \
+                .filter_by(selector_id=self.selector_id, project_id=self.project_id) \
+                .order_by(MatchingRecord.submission_period.asc()).first()
+
+            if lo_rec is not None and lo_rec.submission_period == self.submission_period:
+                self.error = 'Project "{name}" is duplicated in multiple submission periods'.format(name=self.project.name)
+                return False
+
         markers = self.project.second_markers.subquery()
         count = db.session.query(sqlalchemy.func.count(markers.c.id)) \
             .filter(markers.c.id == self.marker_id).scalar()

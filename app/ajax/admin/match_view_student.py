@@ -47,7 +47,7 @@ _project = \
     {% set adjustable = false %}
     {% if r.selector.has_submitted or r.selector.has_bookmarks %}{% set adjustable = true %}{% endif %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label {% if r.is_overassigned %}label-danger{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}" {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
+        <a class="label {% if r.is_project_overassigned %}label-danger{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}" {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
             {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }} (No. {{ r.project.number }})
             <span class="caret"></span>
         </a>
@@ -84,7 +84,7 @@ _project = \
 {% endif %}
 {% for r in recs %}
     {# if both not valid and overassigned, should leave error message from is_valid intact due to short-circuit evaluation #}
-    {% if not r.is_valid or r.is_overassigned %}
+    {% if not r.is_valid or r.is_project_overassigned %}
         <div class="has-error">
             <p class="help-block">{% if recs|length > 1 %}#{{ r.submission_period }}: {% endif %}{{ r.error }}</p>
         <div class="has-error">
@@ -95,11 +95,11 @@ _project = \
 
 _marker = \
 """
-{% macro marker_tag(r) %}
+{% macro marker_tag(r, show_period) %}
     {% if r.marker %}
         <div class="dropdown match-assign-button" style="display: inline-block;">
             <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">
-                {{ r.marker.user.name }}
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.marker.user.name }}
                 <span class="caret"></span>
             </a>
             <ul class="dropdown-menu">
@@ -120,10 +120,10 @@ _marker = \
     {% endif %}
 {% endmacro %}
 {% if recs|length == 1 %}
-    {{ marker_tag(recs[0]) }}
+    {{ marker_tag(recs[0], false) }}
 {% elif recs|length > 1 %}
     {% for r in recs %}
-        {{ marker_tag(r) }}
+        {{ marker_tag(r, true) }}
     {% endfor %}
 {% endif %}
 """
@@ -149,7 +149,7 @@ def student_view_data(selector_data):
     # selector_data is a list of ((lists of) MatchingRecord, delta-value) pairs
 
     data = [{'student': {
-                'display': render_template_string(_student, sel=r[0].selector, valid=all([rc.is_valid and not rc.is_overassigned for rc in r])),
+                'display': render_template_string(_student, sel=r[0].selector, valid=all([rc.is_valid and not rc.is_project_overassigned for rc in r])),
                 'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
              },
              'pclass': render_template_string(_pclass, sel=r[0].selector),

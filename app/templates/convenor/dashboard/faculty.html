@@ -50,6 +50,30 @@
                    class="btn btn-sm {% if enroll_filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
                     Not enrolled
                 </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='supv-active', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'supv-active' %}btn-primary{% else %}btn-default{% endif %}">
+                    Supervisor active
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='supv-sabbatical', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'supv-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
+                    Supervisor sabbatical
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='supv-exempt', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'supv-exempt' %}btn-primary{% else %}btn-default{% endif %}">
+                    Supervisor exempt
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='mark-active', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'mark-active' %}btn-primary{% else %}btn-default{% endif %}">
+                    Marker active
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='mark-sabbatical', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'mark-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
+                    Marker sabbatical
+                </a>
+                <a href="{{ url_for('convenor.faculty', id=pclass.id, enroll_filter='mark-exempt', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'mark-exempt' %}btn-primary{% else %}btn-default{% endif %}">
+                    Marker exempt
+                </a>
             </div>
 
             <div class="well">

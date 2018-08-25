@@ -394,6 +394,32 @@ def faculty_ajax(id):
             .join(faculty_ids, faculty_ids.c.owner_id == User.id, isouter=True) \
             .filter(faculty_ids.c.owner_id == None)
 
+    elif enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt' \
+            or enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt':
+
+        faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
+            .filter(EnrollmentRecord.pclass_id == id)
+
+        if enroll_filter == 'supv-active':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+        elif enroll_filter == 'supv-sabbatical':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL)
+        elif enroll_filter == 'supv-exempt':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT)
+        elif enroll_filter == 'mark-active':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+        elif enroll_filter == 'mark-sabbatical':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
+        elif enroll_filter == 'mark-exempt':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
+
+        faculty_ids_q = faculty_ids.subquery()
+
+        # get User, FacultyData pairs for this list
+        faculty = db.session.query(User, FacultyData) \
+            .join(FacultyData, FacultyData.id == User.id) \
+            .join(faculty_ids_q, User.id == faculty_ids_q.c.owner_id)
+
     else:
 
         # build list of all active faculty, together with their FacultyData records

@@ -56,9 +56,15 @@
 
 {% block bodyblock %}
     {% if config.live %}
-        <div class="alert alert-danger">
-            <p>This project class has already gone live for the current academic year.</p>
-            <p>Edits made in this section will not be reflected in the live project database this year.</p>
+        <div class="row">
+            <div class="col-xs-1"></div>
+            <div class="col-xs-10">
+                <div class="alert alert-danger">
+                    <p>This project class has already gone live for the current academic year.</p>
+                    <p>Edits made in this section will not be reflected in the live project database this year.</p>
+                </div>
+            </div>
+            <div class="col-xs-1"></div>
         </div>
     {% endif %}
 

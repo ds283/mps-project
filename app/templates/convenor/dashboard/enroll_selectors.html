@@ -33,9 +33,15 @@
 
 {% block bodyblock %}
     {% if config.selection_closed %}
-        <div class="alert alert-danger">
-            <p>Student selections have already closed for the current academic year.</p>
-            <p>It is no longer possible to manually enroll selectors for this project class</p>
+        <div class="row">
+            <div class="col-xs-1"></div>
+            <div class="col-xs-10">
+                <div class="alert alert-danger">
+                    <p>Student selections have already closed for the current academic year.</p>
+                    <p>It is no longer possible to manually enroll selectors for this project class</p>
+                </div>
+            </div>
+            <div class="col-xs-1"></div>
         </div>
     {% endif %}
 

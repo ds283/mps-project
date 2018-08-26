@@ -113,6 +113,21 @@
     </div>
 {% endmacro %}
 
+{% macro on_click_selector_field(field, show_label) %}
+    <div class="form-group {% if field.errors %} has-error{% endif -%}
+                               {%- if field.flags.required %} required{% endif -%}">
+        {% if show_label %}
+            {{ field.label(class="control-label")|safe }}
+        {% endif %}
+        {{ field(class="form-control", onchange="this.form.submit()")|safe }}
+        {% if field.errors %}
+            {% for error in field.errors %}
+                <p class="help-block">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+    </div>
+{% endmacro %}
+
 {% macro research_groups_key(groups) %}
     <div class="well">
         <p>Research groups colour key</p>
@@ -136,7 +151,6 @@
         </h4>
     </div>
 {% endmacro %}
-
 
 {% macro filter_block(config, groups, skills, clear_group, add_group, remove_group, clear_skill, add_skill, remove_skill) %}
     <div class="panel-group" id="accordion">

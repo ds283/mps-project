@@ -561,17 +561,18 @@ class BackupOptionsMixin():
                      (7, '7 weeks'),
                      (8, '8 weeks')]
     keep_daily = SelectField('Keep daily backups for', choices=daily_choices, coerce=int,
-                             description='When hourly backups are no longer being kept, daily backups are kept '
-                                         'for an extra period of time. After this, only weekly backups are retained.')
+                             description='Daily backups are kept when hourly backups are no longer being retained. '
+                                         'Use this field to determine for how long daily backups are stored. '
+                                         'After this time backups are retained only weekly.')
 
     # field names for limits are blank; to get formatting right they're included directly on the template
-    backup_limit = FloatField('', validators=[Optional()],
-                                description='Leave blank for no limit.')
+    backup_limit = FloatField('Limit total size of backups', validators=[Optional()],
+                              description='Leave blank for no limit.')
 
     units_choices = [(BackupConfiguration.KEY_MB, 'Mb'),
                      (BackupConfiguration.KEY_GB, 'Gb'),
                      (BackupConfiguration.KEY_TB, 'Tb')]
-    limit_units = SelectField('', choices=units_choices, coerce=int)
+    limit_units = SelectField('Units', choices=units_choices, coerce=int)
 
 
 class EditBackupOptionsForm(Form, BackupOptionsMixin):

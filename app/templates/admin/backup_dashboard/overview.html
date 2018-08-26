@@ -1,5 +1,7 @@
 {% extends "admin/backup_dashboard/nav.html" %}
 
+{% from "macros.html" import on_click_selector_field %}
+
 {% block scripts %}
     {{ super() }}
     <link
@@ -16,13 +18,13 @@
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.13.0.min.js"></script>#}
     {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.13.0.min.js"></script>#}
 
-    {% if archive_div is defined and archive_div is not None and archive_script is defined and archive_script is not none %}
+    {% if archive_div is defined and archive_div is not none and archive_script is defined and archive_script is not none %}
         {{ archive_script|safe }}
     {% endif %}
-    {% if backup_div is defined and backup_div is not None and backup_script is defined and backup_script is not none %}
+    {% if backup_div is defined and backup_div is not none and backup_script is defined and backup_script is not none %}
         {{ backup_script|safe }}
     {% endif %}
-    {% if gauge_div is defined and gauge_div is not None and gauge_script is defined and gauge_script is not none %}
+    {% if gauge_div is defined and gauge_div is not none and gauge_script is defined and gauge_script is not none %}
         {{ gauge_script|safe }}
     {% endif %}
 {% endblock %}
@@ -35,52 +37,27 @@
                 <form action="{{ url_for('admin.backups_overview') }}" method="POST" name="backup_options_form">
                     {{ form.hidden_tag() }}
                     <div class="row vertical-top">
-                        <div class="col-xs-10">
-                            Current backup size: <strong>{{ backup_size }}</strong>
+                        <div class="col-xs-6">
+                            <span class="label label-primary" style="font-size: 100%;">Current backup size {{ backup_size }}</span>
                         </div>
-                        <div class="col-xs-2">
-                            <div class="pull-right" style="margin-bottom: 4%;">
-                                {{ wtf.form_field(form.submit, button_map={'submit': 'default'}) }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-xs-12">
+                        <div class="col-xs-6">
                             <div class="pull-right">
-                                Last edited: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}
+                                <span class="label label-info" style="font-size: 100%;">Settings last changed: {{ last_change.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                             </div>
                         </div>
                     </div>
                     <hr class="intro-divider">
-                    <div class="row">
-                        <div class="col-xs-12">
-                            <strong>Limit total size of backups</strong>
-                        </div>
-                    </div>
-                    <div class="row vertical-top">
-                        <div class="col-xs-4">
-                            {{ wtf.form_field(form.backup_limit) }}
-                        </div>
-                        <div class="col-xs-2">
-                            {{ wtf.form_field(form.limit_units) }}
-                        </div>
-                        <div class="col-xs-6"></div>
-                    </div>
-                    <div class="row vertical-top">
-                        <div class="col-xs-6">
-                            {{ wtf.form_field(form.keep_hourly) }}
-                        </div>
-                        <div class="col-xs-6">
-                            {{ wtf.form_field(form.keep_daily) }}
-                        </div>
-                    </div>
+                    {{ on_click_selector_field(form.backup_limit, true) }}
+                    {{ on_click_selector_field(form.limit_units, true) }}
+                    {{ on_click_selector_field(form.keep_hourly, true) }}
+                    {{ on_click_selector_field(form.keep_daily, true) }}
                 </form>
             </div>
 
             <div class="well">
                 <div class="row">
                     <div class="col-xs-8">
-                        {% if archive_div is defined and archive_div != None and archive_script is defined and archive_script != None %}
+                        {% if archive_div is defined and archive_div is not none and archive_script is defined and archive_script is not none %}
                             {{ archive_div|safe }}
                         {% else %}
                             <span class="label label-warning">Too few data points to generate plot for archive file size vs. time</span>
@@ -112,7 +89,7 @@
                 </div>
                 <div class="row">
                     <div class="col-xs-8">
-                        {% if backup_div is defined and backup_div != None and backup_script is defined and backup_script != None %}
+                        {% if backup_div is defined and backup_div is not none and backup_script is defined and backup_script is not none %}
                             {{ backup_div|safe }}
                         {% else %}
                             <span class="label label-warning">Too few data points to generate plot for backup size vs. time</span>
@@ -122,7 +99,7 @@
                         <div class="row">
                             <div class="col-xs-2"></div>
                             <div class="col-xs-8">
-                                {% if gauge_div is defined and gauge_div != None and gauge_script is defined and gauge_script != None %}
+                                {% if gauge_div is defined and gauge_div is not none and gauge_script is defined and gauge_script is not none %}
                                     <div style="text-align: center;">
                                         <strong>Space used {{ capacity }}</strong>
                                     </div>

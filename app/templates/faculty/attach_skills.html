@@ -1,6 +1,7 @@
-{% import "bootstrap/wtf.html" as wtf %}
-
 {% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import on_click_selector_field %}
 
 {% block title %}
     {{ title }}
@@ -36,15 +37,7 @@
         <div class="panel-footer">
             <form action="{{ url_for('faculty.attach_skills', id=data.id) }}" method="POST" name="skill-selector-form">
                 {{ form.hidden_tag() }}
-                <div class="form-group {% if form.selector.errors %} has-error{% endif -%}
-                                           {%- if form.selector.flags.required %} required{% endif -%}">
-                    {{ form.selector(class="form-control", onchange="this.form.submit()")|safe }}
-                    {% if form.selector.errors %}
-                        {% for error in form.selector.errors %}
-                            <p class="help-block">{{ error }}</p>
-                        {% endfor %}
-                    {% endif %}
-                </div>
+                {{ on_click_selector_field(form.selector, false) }}
             </form>
             {% if data and skills %}
                 <h4>

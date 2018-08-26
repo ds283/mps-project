@@ -2606,8 +2606,7 @@ def backups_overview():
     if form.validate_on_submit():
 
         set_backup_config(form.keep_hourly.data, form.keep_daily.data, form.backup_limit.data, form.limit_units.data)
-
-        flash('Your new backup configuration has been saved')
+        flash('Your new backup configuration has been saved', 'success')
 
     else:
 

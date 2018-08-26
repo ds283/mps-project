@@ -1,0 +1,83 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import skill_groups_key %}
+
+{% extends "base_app.html" %}
+
+{% if not pclass_filter or pclass_filter is none %}
+    {% set pclass_filter = 'all' %}
+{% endif %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#second-marker-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { 'url': $SCRIPT_ROOT + '/faculty/marking_ajax?pclass_filter={{ pclass_filter }}', dataSrc: '' },
+                columns: [
+                    { data: 'name' },
+                    { data: 'owner' },
+                    { data: 'status' },
+                    { data: 'pclasses' },
+                    { data: 'meeting' },
+                    { data: 'group' },
+                    { data: 'prefer' },
+                    { data: 'skills' },
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    My 2nd-marking pool attachments
+{% endblock %}
+
+{% block bodyblock %}
+   <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Projects for which I am in the 2nd-marking pool</div>
+        <div class="panel-body">
+            {% if pclasses is not none and pclasses|length > 0 %}
+                <div class="well">
+                    <p>Filter by project type</p>
+                    <a href="{{ url_for('faculty.second_marker', pclass_filter='all') }}"
+                       class="btn btn-sm grouped-button-margin {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                        All
+                    </a>
+                    {% for pclass in pclasses %}
+                        <a href="{{ url_for('faculty.second_marker', pclass_filter=pclass.id) }}"
+                           class="btn btn-sm grouped-button-margin {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                            {{ pclass.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <table id="second-marker-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="15%"> Name</th>
+                    <th width="14%"> Owner</th>
+                    <th width="8%"> Status</th>
+                    <th width="12%"> Available for</th>
+                    <th width="8%"> Meeting required?</th>
+                    <th width="8%"> Affiliation</th>
+                    <th width="15%"> Prefer degree programmes</th>
+                    <th width="20%"> Transferable skills</th>
+                </tr>
+                </thead>
+            </table>
+        </div>
+    </div>
+    {{ skill_groups_key(groups) }}
+{% endblock %}

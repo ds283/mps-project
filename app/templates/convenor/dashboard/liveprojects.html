@@ -79,9 +79,15 @@
 
 {% block bodyblock %}
     {% if not config.live %}
-        <div class="alert alert-danger">
-            <p>This project class has not yet gone live in this academic year.</p>
-            <p>This section will be populated with project records when go-live is complete.</p>
+        <div class="row">
+            <div class="col-xs-1"></div>
+                <div class="col-xs-10">
+                    <div class="alert alert-danger">
+                        <p>This project class has not yet gone live in this academic year.</p>
+                        <p>This section will be populated with project records when go-live is complete.</p>
+                    </div>
+                </div>
+            <div class="col-xs-1"></div>
         </div>
     {% endif %}
 

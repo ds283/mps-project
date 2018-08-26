@@ -13,7 +13,7 @@ from flask_security import roles_required, roles_accepted, current_user
 
 from ..models import db, DegreeProgramme, User, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
-    EnrollmentRecord, SkillGroup
+    EnrollmentRecord, SkillGroup, ProjectClass
 
 import app.ajax as ajax
 
@@ -24,6 +24,7 @@ from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_second_markers
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner
 from ..shared.actions import render_live_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..shared.conversions import is_integer
 
 from datetime import datetime
 
@@ -165,10 +166,49 @@ def projects_ajax():
     """
 
     pq = Project.query.filter_by(owner_id=current_user.id)
-
     data = [(p, None) for p in pq.all()]
 
     return ajax.project.build_data(data, _project_menu)
+
+
+@faculty.route('/second_marker')
+@roles_required('faculty')
+def second_marker():
+
+    pclass_filter = request.args.get('pclass_filter')
+
+    # if no pclass filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('view_marker_pclass_filter'):
+        pclass_filter = session['view_marker_pclass_filter']
+
+    # write pclass filter into session if it is not empty
+    if pclass_filter is not None:
+        session['view_marker_pclass_filter'] = pclass_filter
+
+    groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    pclasses = ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc()).all()
+
+    return render_template('faculty/second_marker.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
+
+
+@faculty.route('/marking_ajax', methods=['GET', 'POST'])
+@roles_required('faculty')
+def marking_ajax():
+    """
+    Ajax data point for Marking pool view
+    :return:
+    """
+
+    pclass_filter = request.args.get('pclass_filter')
+    flag, pclass_value = is_integer(pclass_filter)
+
+    pq = current_user.faculty_data.second_marker_for
+    if flag:
+        pq = pq.filter(Project.project_classes.any(id=pclass_value))
+
+    data = [(p, None) for p in pq.all()]
+
+    return ajax.project.build_data(data, "")
 
 
 @faculty.route('/add_project', methods=['GET', 'POST'])

@@ -29,7 +29,12 @@
                 ajax: { url: $SCRIPT_ROOT + '/convenor/attached_ajax/{{ pclass.id }}', dataSrc: '' },
                 columns: [
                     { data: 'name' },
-                    { data: 'owner' },
+                    { data: 'owner',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                    } },
                     { data: 'status' },
                     { data: 'meeting' },
                     { data: 'group' },

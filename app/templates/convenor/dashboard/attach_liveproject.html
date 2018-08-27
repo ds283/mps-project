@@ -13,7 +13,12 @@
                 ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_ajax/{{ pclass.id }}', dataSrc: '' },
                 columns: [
                     { data: 'name' },
-                    { data: 'owner' },
+                    { data: 'owner',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                    } },
                     { data: 'status' },
                     { data: 'meeting' },
                     { data: 'group' },
@@ -31,7 +36,12 @@
                     ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_other_ajax/{{ pclass.id }}', dataSrc: '' },
                     columns: [
                         { data: 'name' },
-                        { data: 'owner' },
+                        { data: 'owner',
+                          render: {
+                            _: 'display',
+                            sort: 'sortvalue',
+                            type: 'sortvalue'
+                        } },
                         { data: 'status' },
                         { data: 'pclasses' },
                         { data: 'meeting' },

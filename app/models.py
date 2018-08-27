@@ -136,6 +136,14 @@ project_supervision = db.Table('project_to_supervision',
                                db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                                db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
 
+description_supervisors = db.Table('description_to_supervisors',
+                                   db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
+                                   db.Column('supervisor_id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
+
+description_pclasses = db.Table('description_to_pclasses',
+                                db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
+                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
+
 # association table giving 2nd markers
 second_markers = db.Table('project_to_markers',
                           db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
@@ -1855,6 +1863,13 @@ class Project(db.Model):
 
     # PROJECT DESCRIPTION
 
+    # 'descriptions' field is established by backreference from ProjectDescription
+
+    # link to default description, if one exists
+    default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
+    default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False,
+                              backref=db.backref('default', uselist=False))
+
     # project description
     description = db.Column(db.Text())
 
@@ -2163,6 +2178,39 @@ class Project(db.Model):
         self.second_markers.remove(faculty)
         db.session.commit()
 
+
+class ProjectDescription(db.Model):
+    """
+    Capture a project description. Projects can have multiple descriptions, each
+    attached to a set of project classes
+    """
+
+    __tablename__ = "descriptions"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning project
+    parent_id = db.Column(db.Integer(), db.ForeignKey('projects.id'))
+    parent = db.relationship('Project', foreign_keys=[parent_id], uselist=False,
+                             backref=db.backref('descriptions', lazy='dynamic', cascade='all, delete-orphan'))
+
+    # which project classes are associated with this description?
+    project_classes = db.relationship('ProjectClass', secondary=description_pclasses, lazy='dynamic',
+                                      backref=db.backref('descriptions', lazy='dynamic'))
+
+    # description
+    description = db.Column(db.Text())
+
+    # recommended reading
+    reading = db.Column(db.Text())
+
+    # supervisory roles
+    team = db.relationship('Supervisor', secondary=description_supervisors, lazy='dynamic',
+                           backref=db.backref('descriptions', lazy='dynamic'))
+
+    # maximum number of students
+    capacity = db.Column(db.Integer())
 
 
 class LiveProject(db.Model):
@@ -2780,12 +2828,12 @@ class Bookmark(db.Model):
     # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
     # removed from the database
     user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    owner = db.relationship('SelectingStudent', uselist=False,
+    owner = db.relationship('SelectingStudent', foreign_keys=[user_id], uselist=False,
                            backref=db.backref('bookmarks', lazy='dynamic', cascade='all, delete-orphan'))
 
     # LiveProject we are linking to
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
-    liveproject = db.relationship('LiveProject', uselist=False,
+    liveproject = db.relationship('LiveProject', foreign_keys=[liveproject_id], uselist=False,
                                   backref=db.backref('bookmarks', lazy='dynamic'))
 
     # rank in owner's list

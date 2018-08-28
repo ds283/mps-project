@@ -875,11 +875,9 @@ def project_preview(id):
     form = DescriptionSelectorForm(id, request.form)
 
     if form.validate_on_submit():
-
         pass
 
     else:
-
         if request.method == 'GET':
 
             # attach first available project class
@@ -1095,7 +1093,10 @@ def live_project(pid):
     if not validate_edit_project(data):
         return redirect(request.referrer)
 
-    return render_project(data, data)
+    text = request.args.get('text')
+    url = request.args.get('url')
+
+    return render_project(data, data, text=text, url=url)
 
 
 @faculty.route('/past_projects')

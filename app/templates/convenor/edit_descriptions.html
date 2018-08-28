@@ -18,7 +18,7 @@
             $('#descriptions-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/faculty/descriptions_ajax/{{ project.id }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/convenor/descriptions_ajax/{{ project.id }}/{{ pclass_id }}', dataSrc: '' },
                 columns: [
                     { data: 'label' },
                     { data: 'pclasses' },
@@ -38,8 +38,8 @@
 
 {% block bodyblock %}
     <div class="top-return-link">
-        <a href="{{ url_for('faculty.edit_projects') }}">
-            <i class="fa fa-backward"></i> Return to project list
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+            <i class="fa fa-backward"></i> Return to convenor dashboard
         </a>
     </div>
 
@@ -60,12 +60,12 @@
         </div>
     </div>
 
-    <a href="{{ url_for('faculty.edit_projects') }}">
-        <i class="fa fa-backward"></i> Return to project list
+    <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+        <i class="fa fa-backward"></i> Return to convenor dashboard
     </a>
 
     <div style="text-align: center;">
-        <a href="{{ url_for('faculty.add_description', pid=project.id) }}" class="btn btn-default btn-lg">
+        <a href="{{ url_for('convenor.add_description', pid=project.id, pclass_id=pclass_id) }}" class="btn btn-default btn-lg">
             <i class="fa fa-plus"></i>
             Add new description
         </a>

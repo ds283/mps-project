@@ -18,13 +18,13 @@
 {% block form_content %}
     {% if desc %}
         {% if pclass_id is defined %}
-{#            <form action="{{ url_for('convenor.edit_description', id=project.id, pclass_id=pclass_id) }}" method="POST" name="form">#}
+            <form action="{{ url_for('convenor.edit_description', did=desc.id, pclass_id=pclass_id) }}" method="POST" name="form">
         {% else %}
             <form action="{{ url_for('faculty.edit_description', did=desc.id) }}" method="POST" name="form">
         {% endif %}
     {% else %}
         {% if pclass_id is defined %}
-{#            <form action="{{ url_for('convenor.add_description', pclass_id=pclass_id) }}" method="POST" name="form">#}
+            <form action="{{ url_for('convenor.add_description', pid=project.id, pclass_id=pclass_id) }}" method="POST" name="form">
         {% else %}
             <form action="{{ url_for('faculty.add_description', pid=project.id) }}" method="POST" name="form">
         {% endif %}

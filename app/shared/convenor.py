@@ -29,6 +29,11 @@ def add_liveproject(number, project, config_id, autocommit=False):
     if config is None:
         raise KeyError('Missing database record for ProjectClassConfig id={id}'.format(id=config_id))
 
+    description = project.get_description(config.project_class)
+    if description is None:
+        raise KeyError('Missing description for Project id={id}, ProjectClass id={pid}'.format(id=project.id,
+                                                                                               pid=config.pclass_id))
+
     # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
     # all project classes need their own LiveProject record
     live_item = LiveProject(config_id=config_id,
@@ -42,12 +47,12 @@ def add_liveproject(number, project, config_id, autocommit=False):
                             programmes=item.programmes,
                             meeting_reqd=item.meeting_reqd,
                             enforce_capacity=item.enforce_capacity,
-                            capacity=item.capacity,
+                            capacity=description.capacity,
                             second_markers=item.get_marker_list(config.project_class)
                             if config.project_class.uses_marker else [],
-                            description=item.description,
-                            reading=item.reading,
-                            team=item.team,
+                            description=description.description,
+                            reading=description.reading,
+                            team=description.team,
                             show_popularity=item.show_popularity,
                             show_bookmarks=item.show_bookmarks,
                             show_selections=item.show_selections,

@@ -146,8 +146,9 @@ def _compute_group_capacity_data(pclass, group):
             if project.owner.id not in faculty:
                 faculty.add(project.owner.id)
 
-            if project.capacity is not None:
-                capacity += project.capacity
+            cap = project.get_capacity(pclass)
+            if cap is not None and cap > 0:
+                capacity += cap
             if not project.enforce_capacity:
                 capacity_bounded = False
 

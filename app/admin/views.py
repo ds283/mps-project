@@ -1631,6 +1631,8 @@ def add_supervisor():
 
     if form.validate_on_submit():
         data = Supervisor(name=form.name.data,
+                          abbreviation=form.abbreviation.data,
+                          colour=form.colour.data,
                           active=True,
                           creator_id=current_user.id,
                           creation_timestamp=datetime.now())
@@ -1661,6 +1663,8 @@ def edit_supervisor(id):
 
     if form.validate_on_submit():
         data.name = form.name.data
+        data.abbreviation = form.abbreviation.data
+        data.colour = form.colour.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 

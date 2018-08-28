@@ -127,7 +127,7 @@ def _compute_group_capacity_data(pclass, group):
     # set of faculty members offering projects
     faculty = set()
 
-    # number of offerable projects
+    # number of is_offerable projects
     project_count = 0
 
     # total capacity of projects
@@ -138,7 +138,7 @@ def _compute_group_capacity_data(pclass, group):
 
     for project in projects:
 
-        if project.offerable:
+        if project.is_offerable:
 
             project_count += 1
 

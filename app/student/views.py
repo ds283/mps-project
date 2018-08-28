@@ -317,7 +317,9 @@ def view_project(sid, pid):
     # build list of keywords
     keywords = [ kw.strip() for kw in re.split(";.", project.keywords) ]
 
-    return render_template('student/show_project.html', title=project.name, sel=sel, project=project, keywords=keywords)
+    return render_template('student/show_project.html', title=project.name, sel=sel, project=project, desc=project,
+                           keywords=keywords, text='project list',
+                           url=url_for('student.browse_projects', id=sel.config.pclass_id))
 
 
 @student.route('/add_bookmark/<int:sid>/<int:pid>')

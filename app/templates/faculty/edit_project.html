@@ -52,38 +52,15 @@
             {% endif %}
         </div>
 
-        {{ wtf.form_field(project_form.meeting_reqd) }}
-
         <div class="well">
-            <p>Capacity</p>
+            <p>Options</p>
+            {{ wtf.form_field(project_form.meeting_reqd) }}
             {{ wtf.form_field(project_form.enforce_capacity) }}
-            {{ wtf.form_field(project_form.capacity) }}
-        </div>
-
-        <div class="well {% if project_form.team.errors %}has-error{% endif %}">
-            <p>Who will be part of the supervisory team?</p>
-            {% for widget in project_form.team %}
-                {{ wtf.form_field(widget) }}
-            {% else %}
-                <span class="label label-danger">No supervisory roles currently available</span>
-            {% endfor %}
-            {% if project_form.team.errors %}
-                {% for error in project_form.team.errors %}
-                    <p class="help-block">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
-
-        </div>
-
-        <div class="well">
             <p>Should the project page include popularity information?</p>
             {{ wtf.form_field(project_form.show_popularity) }}
             {{ wtf.form_field(project_form.show_bookmarks) }}
             {{ wtf.form_field(project_form.show_selections) }}
         </div>
-
-        {{ wtf.form_field(project_form.description) }}
-        {{ wtf.form_field(project_form.reading) }}
 
         {{ wtf.form_field(project_form.submit, button_map={'submit': 'primary'}) }}
         {{ wtf.form_field(project_form.submit_and_preview, button_map={'submit_and_preview': 'default'}) }}

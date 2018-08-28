@@ -132,6 +132,25 @@ _desc_menu = \
                 <i class="fa fa-trash"></i> Delete
             </a>
         </li>
+        
+        <li role="separator" class="divider"></li>
+        
+        <li>
+            <a href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
+                Duplicate
+            </a>
+        </li>
+        <li>
+            {% if d.default is none %}
+                <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
+                    Make default
+                </a>
+            {% else %}
+                <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id) }}">
+                    Remove default
+                </a>
+            {% endif %}
+        </li>
     </ul>
 </div>
 """
@@ -413,7 +432,7 @@ def add_description(pid):
     if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
-    form = AddDescriptionForm(request.form)
+    form = AddDescriptionForm(pid, request.form)
     form.project_id = pid
 
     if form.validate_on_submit():
@@ -446,7 +465,7 @@ def edit_description(did):
     if not validate_is_project_owner(desc.parent):
         return redirect(request.referrer)
 
-    form = EditDescriptionForm(obj=desc)
+    form = EditDescriptionForm(desc.parent_id, did, obj=desc)
     form.project_id = desc.parent_id
     form.desc = desc
 
@@ -480,6 +499,69 @@ def delete_description(did):
         return redirect(request.referrer)
 
     db.session.delete(desc)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/duplicate_description/<int:did>')
+@roles_required('faculty')
+def duplicate_description(did):
+
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    suffix = 2
+    while suffix < 100:
+        new_label = '{label} #{suffix}'.format(label=desc.label, suffix=suffix)
+
+        if ProjectDescription.query.filter_by(parent_id=desc.parent_id, label=new_label).first() is None:
+            break
+
+        suffix += 1
+
+    if suffix >= 100:
+        flash('Could not duplicate description "{label}" because a new unique label could not '
+              'be generated'.format(label=desc.label), 'error')
+        return redirect(request.referrer)
+
+    data = ProjectDescription(parent_id=desc.parent_id,
+                              label=new_label,
+                              project_classes=[],
+                              capacity=desc.capacity,
+                              description=desc.description,
+                              reading=desc.reading,
+                              team=desc.team)
+
+    db.session.add(data)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/make_default_description/<int:pid>/<int:did>')
+@faculty.route('/make_default_description/<int:pid>')
+@roles_required('faculty')
+def make_default_description(pid, did=None):
+
+    proj = Project.query.get_or_404(pid)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(proj):
+        return redirect(request.referrer)
+
+    if did is not None:
+        desc = ProjectDescription.query.get_or_404(did)
+
+        if desc.parent_id != pid:
+            flash('Cannot set default description (id={did)) for project (id={pid}) because this description '
+                  'does not belong to the project'.format(pid=pid, did=did), 'error')
+            return redirect(request.referrer)
+
+    proj.default_id = did
     db.session.commit()
 
     return redirect(request.referrer)

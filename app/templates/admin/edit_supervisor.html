@@ -1,7 +1,28 @@
 {% import "bootstrap/wtf.html" as wtf %}
-{% from "macros.html" import edit_data %}
+{% from "macros.html" import edit_data, colour_field %}
 
 {% extends "security/index.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
+        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-colorpicker-min.js", "js/bootstrap-colorpicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $(function () {
+            $('#colour-group').colorpicker({
+                format: 'hex',
+                useAlpha: false
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     {{ title }}
@@ -23,6 +44,8 @@
 {#        {{ wtf.form_errors(supervisor_form) }}#}
 
         {{ wtf.form_field(supervisor_form.name) }}
+        {{ wtf.form_field(supervisor_form.abbreviation) }}
+        {{ colour_field(supervisor_form.colour, 'colour-group') }}
 
         {{ wtf.form_field(supervisor_form.submit, button_map={'submit': 'primary'}) }}
 

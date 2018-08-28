@@ -12,7 +12,8 @@
 from flask_login import current_user
 
 from app import db, User
-from app.models import DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role
+from app.models import DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role, ResearchGroup, \
+    EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses
 
 
 def GetActiveDegreeTypes():
@@ -80,3 +81,71 @@ def GetSysadminUsers():
 def BuildSysadminUserName(user):
 
     return user.name_and_username
+
+
+def CurrentUserResearchGroups():
+
+    return ResearchGroup.query.filter(ResearchGroup.active, ResearchGroup.faculty.any(id=current_user.id))
+
+
+def AllResearchGroups():
+
+    return ResearchGroup.query.filter_by(active=True)
+
+
+def CurrentUserProjectClasses():
+
+    # build list of enrollment records for the current user
+    sq = EnrollmentRecord.query.filter_by(owner_id=current_user.id).subquery()
+
+    # join to project class table
+    return db.session.query(ProjectClass).join(sq, sq.c.pclass_id == ProjectClass.id)
+
+
+def AllProjectClasses():
+
+    return ProjectClass.query.filter_by(active=True)
+
+
+def GetProjectClasses():
+
+    return ProjectClass.query.filter_by(active=True)
+
+
+def GetSupervisorRoles():
+
+    return Supervisor.query.filter_by(active=True)
+
+
+def GetSkillGroups():
+
+    return SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc())
+
+
+def CurrentProjectDescriptionClasses(project_id, desc_id):
+
+    for c in project_classes.columns:
+        print(c.name, c.type)
+
+    # query for pclass identifiers available from project_id
+    pclass_ids = db.session.query(project_classes.c.project_class_id) \
+        .filter(project_classes.c.project_id == project_id).subquery()
+
+    # query for pclass identifiers used by descriptions associated with project_id, except for desc_id
+    used_ids = db.session.query(description_pclasses.c.project_class_id) \
+        .join(ProjectDescription, ProjectDescription.id == description_pclasses.c.description_id) \
+        .filter(ProjectDescription.parent_id == project_id)
+
+    if desc_id is not None:
+        used_ids = used_ids.filter(description_pclasses.c.description_id != desc_id)
+
+    used_ids = used_ids.distinct().subquery()
+
+    # query for unused pclass identifiers
+    unused_ids = db.session.query(pclass_ids.c.project_class_id) \
+        .join(used_ids, used_ids.c.project_class_id == pclass_ids.c.project_class_id, isouter=True) \
+        .filter(used_ids.c.project_class_id == None).subquery()
+
+    # construct ProjectClass records for these id
+    return db.session.query(ProjectClass) \
+        .join(unused_ids, ProjectClass.id == unused_ids.c.project_class_id)

@@ -42,7 +42,9 @@
             {% for widget in form.project_classes %}
                 {{ wtf.form_field(widget) }}
             {% else %}
-                <span class="label label-danger">No project classes currently available</span>
+                <div class="has-error">
+                    <p class="help-block">All available project classes have already been assigned</p>
+                </div>
             {% endfor %}
             {% if form.project_classes.errors %}
                 {% for error in form.project_classes.errors %}

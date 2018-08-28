@@ -15,6 +15,7 @@ from wtforms import ValidationError
 from wtforms.validators import Optional
 from zxcvbn import zxcvbn
 
+from app.models import Project, ProjectDescription
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
     Supervisor, Role, StudentData, MatchingAttempt
 
@@ -138,6 +139,16 @@ def globally_unique_supervisor(form, field):
 def unique_or_original_supervisor(form, field):
     if field.data != form.supervisor.name and Supervisor.query.filter_by(name=field.data).first():
         raise ValidationError('{name} is already associated with a supervisory role'.format(name=field.data))
+
+
+def globally_unique_supervisor_abbrev(form, field):
+    if Supervisor.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('{name} is already in use as an abbreviation'.format(name=field.data))
+
+
+def unique_or_original_supervisor_abbrev(form, field):
+    if field.data != form.supervisor.abbreviation and Supervisor.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('{name} is already in use as an abbreviation'.format(name=field.data))
 
 
 def globally_unique_role(form, field):
@@ -266,3 +277,28 @@ class NotOptionalIf(Optional):
 
         if not bool(other_field.data):
             super(NotOptionalIf, self).__call__(form, field)
+
+
+def globally_unique_project(form, field):
+
+    if Project.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a project'.format(name=field.data))
+
+
+def unique_or_original_project(form, field):
+
+    if field.data != form.project.name and Project.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a project'.format(name=field.data))
+
+
+def project_unique_label(form, field):
+
+    if ProjectDescription.query.filter_by(parent_id=form.project_id, label=field.data).first():
+        raise ValidationError('{name} is already used as a label for this project'.format(name=field.data))
+
+
+def project_unique_or_original_label(form, field):
+
+    if field.data != form.desc.label and ProjectDescription.query \
+            .filter_by(parent_id=form.project_id, label=field.data).first():
+        raise ValidationError('{name} is already used as a label for this project'.format(name=field.data))

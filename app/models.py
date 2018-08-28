@@ -512,8 +512,7 @@ class ResearchGroup(db.Model):
         if style is None:
             return '<span class="label label-default">{msg}</span>'.format(msg=text)
 
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text,
-                                                                                     sty=self.make_CSS_style())
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
 class FacultyData(db.Model):
@@ -1389,8 +1388,7 @@ class ProjectClass(db.Model):
         if style is None:
             return '<span class="label label-default">{msg}</span>'.format(msg=text)
 
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text,
-                                                                                     sty=self.make_CSS_style())
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
 class ProjectClassConfig(db.Model):
@@ -1755,7 +1753,16 @@ class Supervisor(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
+    # role name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+
+    # role abbrevation
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # colour string
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # active flag
     active = db.Column(db.Boolean())
 
     # created by
@@ -1793,6 +1800,31 @@ class Supervisor(db.Model):
         """
 
         self.active = True
+
+
+    def make_CSS_style(self):
+
+        if self.colour is None:
+            return None
+
+        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+
+
+    def make_label(self, text=None):
+        """
+        Make appropriately coloured label
+        :param text:
+        :return:
+        """
+
+        if text is None:
+            text = self.abbreviation
+
+        style = self.make_CSS_style()
+        if style is None:
+            return '<span class="label label-default">{msg}</span>'.format(msg=text)
+
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
 class Project(db.Model):

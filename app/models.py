@@ -603,7 +603,7 @@ class FacultyData(db.Model):
 
         unofferable = 0
         for proj in self.projects:
-            if proj.active and not proj.offerable:
+            if proj.active and not proj.is_offerable:
                 unofferable += 1
 
         return unofferable
@@ -1976,7 +1976,7 @@ class Project(db.Model):
 
 
     @property
-    def offerable(self):
+    def is_offerable(self):
         """
         Determine whether this project is available for selection
         :return:
@@ -1999,12 +1999,17 @@ class Project(db.Model):
             return False
 
         # for each project class we are attached to, check whether enough 2nd markers have been assigned
+        # and whether a project description is available
         for pclass in self.project_classes:
 
             if pclass.uses_marker:
                 if self.num_markers(pclass) < pclass.number_markers:
                     self.error = "Too few 2nd markers assigned for '{name}'".format(name=pclass.name)
                     return False
+
+            if self.get_description(pclass) is None:
+                self.error = "No project description assigned for '{name}'".format(name=pclass.name)
+                return False
 
         return True
 
@@ -2209,6 +2214,34 @@ class Project(db.Model):
 
         self.second_markers.remove(faculty)
         db.session.commit()
+
+
+    def get_description(self, pclass):
+        """
+        Gets the ProjectDescription instance for project class pclass, or returns None if no
+        description is available
+        :param pclass:
+        :return:
+        """
+
+        pcls = self.project_classes.subquery()
+        count = db.session.query(sqlalchemy.func.count(pcls.c.id)) \
+            .filter(pcls.c.id == pclass.id).scalar()
+
+        if count == 0:
+            raise RuntimeError('Cannot get description for non-associated project class')
+        elif count > 1:
+            raise RuntimeError('Inconsistent project class associations')
+
+        count = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).count()
+
+        if count == 0:
+            # return default is one is available, otherwise none
+            return self.default
+        if count > 1:
+            raise RuntimeError('Inconsistent project description assignment of project classes')
+
+        return self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
 
 
 class ProjectDescription(db.Model):

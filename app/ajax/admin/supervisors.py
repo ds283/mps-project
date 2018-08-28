@@ -53,13 +53,19 @@ _active = \
 
 _colour = \
 """
-{{ r.make_label()|safe }}
+{{ r.make_label(r.colour)|safe }}
+"""
+
+
+_name = \
+"""
+{{ r.name }} {{ r.make_label()|safe }}
 """
 
 
 def supervisors_data(roles):
 
-    data = [{'role': r.name,
+    data = [{'role': render_template_string(_name, r=r),
              'colour': render_template_string(_colour, r=r),
              'active': render_template_string(_active, r=r),
              'menu': render_template_string(_supervisors_menu, role=r)} for r in roles]

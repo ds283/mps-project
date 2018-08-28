@@ -82,32 +82,27 @@ def create_user():
 
     # check whether any active degree programmes exist, and raise an error if not
     if not DegreeProgramme.query.filter_by(active=True).first():
-        flash('No degree programmes are available. ' \
-            'Set up at least one active degree programme before adding new users.')
+        flash('No degree programmes are available. '
+              'Set up at least one active degree programme before adding new users.')
         return redirect(request.referrer)
 
     # first task is to capture the user role
     form = RoleSelectForm(request.form)
 
     if form.validate_on_submit():
-
         # get role and redirect to appropriate form
         role = form.roles.data
 
         if role == 'office':
-
             return redirect(url_for('admin.create_office', role=role))
 
         elif role == 'faculty':
-
             return redirect(url_for('admin.create_faculty', role=role))
 
         elif role == 'student':
-
             return redirect(url_for('admin.create_student', role=role))
 
         else:
-
             flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
             return redirect(url_for('admin.edit_users'))
 

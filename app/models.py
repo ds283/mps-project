@@ -2003,6 +2003,13 @@ class Project(db.Model):
         return True
 
 
+    @property
+    def is_deletable(self):
+
+        count = db.session.query(sqlalchemy.func.count(self.live_projects.subquery().c.id)).scalar()
+        return count == 0
+
+
     def add_skill(self, skill):
 
         self.skills.append(skill)

@@ -40,7 +40,7 @@ _pclasses = \
 _team = \
 """
 {% for sup in d.team %}
-    <span class="label label-info">{{ sup.name }}</span>
+    {{ sup.make_label(sup.name)|safe }}
 {% else %}
     <span class="label label-danger">No staff selected</span>
 {% endfor %}

@@ -52,14 +52,10 @@
             {% endif %}
         </div>
 
-        {{ wtf.form_field(project_form.meeting_reqd) }}
-
         <div class="well">
             <p>Options</p>
+            {{ wtf.form_field(project_form.meeting_reqd) }}
             {{ wtf.form_field(project_form.enforce_capacity) }}
-        </div>
-
-        <div class="well">
             <p>Should the project page include popularity information?</p>
             {{ wtf.form_field(project_form.show_popularity) }}
             {{ wtf.form_field(project_form.show_bookmarks) }}

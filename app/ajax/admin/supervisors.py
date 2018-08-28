@@ -40,6 +40,7 @@ _supervisors_menu = \
 </div>
 """
 
+
 _active = \
 """
 {% if r.active %}
@@ -50,9 +51,16 @@ _active = \
 """
 
 
+_colour = \
+"""
+{{ r.make_label()|safe }}
+"""
+
+
 def supervisors_data(roles):
 
     data = [{'role': r.name,
+             'colour': render_template_string(_colour, r=r),
              'active': render_template_string(_active, r=r),
              'menu': render_template_string(_supervisors_menu, role=r)} for r in roles]
 

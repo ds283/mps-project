@@ -1,0 +1,80 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if desc %}
+        Edit description <strong>{{ desc.label }}</strong>
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if desc %}
+        {% if pclass_id is defined %}
+            <form action="{{ url_for('convenor.edit_description', did=desc.id, pclass_id=pclass_id) }}" method="POST" name="form">
+        {% else %}
+            <form action="{{ url_for('faculty.edit_description', did=desc.id) }}" method="POST" name="form">
+        {% endif %}
+    {% else %}
+        {% if pclass_id is defined %}
+            <form action="{{ url_for('convenor.add_description', pid=project.id, pclass_id=pclass_id) }}" method="POST" name="form">
+        {% else %}
+            <form action="{{ url_for('faculty.add_description', pid=project.id) }}" method="POST" name="form">
+        {% endif %}
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.form_field(form.label) }}
+        {{ wtf.form_field(form.capacity) }}
+
+        <div class="well {% if form.project_classes.errors %}has-error{% endif %}">
+            <p>Select the project classes for which this description should be made available</p>
+            {% for widget in form.project_classes %}
+                {{ wtf.form_field(widget) }}
+            {% else %}
+                <div class="has-error">
+                    <p class="help-block">All available project classes have already been assigned</p>
+                </div>
+            {% endfor %}
+            {% if form.project_classes.errors %}
+                {% for error in form.project_classes.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="well {% if form.team.errors %}has-error{% endif %}">
+            <p>Who will be part of the supervisory team?</p>
+            {% for widget in form.team %}
+                {{ wtf.form_field(widget) }}
+            {% else %}
+                <span class="label label-danger">No supervisory roles currently available</span>
+            {% endfor %}
+            {% if form.team.errors %}
+                {% for error in form.team.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        {{ wtf.form_field(form.description) }}
+        {{ wtf.form_field(form.reading) }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(desc) }}
+{% endblock %}

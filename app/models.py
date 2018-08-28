@@ -136,6 +136,14 @@ project_supervision = db.Table('project_to_supervision',
                                db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                                db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
 
+description_supervisors = db.Table('description_to_supervisors',
+                                   db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
+                                   db.Column('supervisor_id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
+
+description_pclasses = db.Table('description_to_pclasses',
+                                db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
+                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
+
 # association table giving 2nd markers
 second_markers = db.Table('project_to_markers',
                           db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
@@ -504,8 +512,7 @@ class ResearchGroup(db.Model):
         if style is None:
             return '<span class="label label-default">{msg}</span>'.format(msg=text)
 
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text,
-                                                                                     sty=self.make_CSS_style())
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
 class FacultyData(db.Model):
@@ -596,7 +603,7 @@ class FacultyData(db.Model):
 
         unofferable = 0
         for proj in self.projects:
-            if proj.active and not proj.offerable:
+            if proj.active and not proj.is_offerable:
                 unofferable += 1
 
         return unofferable
@@ -1381,8 +1388,7 @@ class ProjectClass(db.Model):
         if style is None:
             return '<span class="label label-default">{msg}</span>'.format(msg=text)
 
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text,
-                                                                                     sty=self.make_CSS_style())
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
 class ProjectClassConfig(db.Model):
@@ -1747,7 +1753,16 @@ class Supervisor(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
+    # role name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+
+    # role abbrevation
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # colour string
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # active flag
     active = db.Column(db.Boolean())
 
     # created by
@@ -1785,6 +1800,31 @@ class Supervisor(db.Model):
         """
 
         self.active = True
+
+
+    def make_CSS_style(self):
+
+        if self.colour is None:
+            return None
+
+        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+
+
+    def make_label(self, text=None):
+        """
+        Make appropriately coloured label
+        :param text:
+        :return:
+        """
+
+        if text is None:
+            text = self.abbreviation
+
+        style = self.make_CSS_style()
+        if style is None:
+            return '<span class="label label-default">{msg}</span>'.format(msg=text)
+
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
 class Project(db.Model):
@@ -1854,6 +1894,13 @@ class Project(db.Model):
 
 
     # PROJECT DESCRIPTION
+
+    # 'descriptions' field is established by backreference from ProjectDescription
+
+    # link to default description, if one exists
+    default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
+    default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False,
+                              backref=db.backref('default', uselist=False))
 
     # project description
     description = db.Column(db.Text())
@@ -1929,7 +1976,7 @@ class Project(db.Model):
 
 
     @property
-    def offerable(self):
+    def is_offerable(self):
         """
         Determine whether this project is available for selection
         :return:
@@ -1939,24 +1986,34 @@ class Project(db.Model):
             self.error = "No active project types assigned to project"
             return False
 
-        if not self.team.filter(Supervisor.active).first():
-            self.error = "No active supervisory roles assigned to project"
-            return False
-
         if self.group is None:
             self.error = "No active research group affiliated with project"
             return False
 
-        if (self.capacity is None or self.capacity == 0) and self.enforce_capacity:
-            self.error = "Capacity is zero or unset, but enforcement is enabled"
-            return False
-
         # for each project class we are attached to, check whether enough 2nd markers have been assigned
+        # and whether a project description is available
         for pclass in self.project_classes:
 
             if pclass.uses_marker:
                 if self.num_markers(pclass) < pclass.number_markers:
                     self.error = "Too few 2nd markers assigned for '{name}'".format(name=pclass.name)
+                    return False
+
+            desc = self.get_description(pclass)
+
+            if desc is None:
+                self.error = "No project description assigned for '{name}'".format(name=pclass.name)
+                return False
+
+            if not desc.team.filter(Supervisor.active).first():
+                self.error = "No active supervisory roles assigned for '{name}'".format(name=pclass.name)
+                return False
+
+            if self.enforce_capacity:
+
+                if desc.capacity is None or desc.capacity <= 0:
+                    self.error = "Capacity is zero or unset for '{name}', " \
+                                 "but enforcement is enabled".format(name=pclass.name)
                     return False
 
         return True
@@ -2163,6 +2220,102 @@ class Project(db.Model):
         self.second_markers.remove(faculty)
         db.session.commit()
 
+
+    def get_description(self, pclass):
+        """
+        Gets the ProjectDescription instance for project class pclass, or returns None if no
+        description is available
+        :param pclass:
+        :return:
+        """
+
+        pcls = self.project_classes.subquery()
+        count = db.session.query(sqlalchemy.func.count(pcls.c.id)) \
+            .filter(pcls.c.id == pclass.id).scalar()
+
+        if count == 0:
+            raise RuntimeError('Cannot get description for non-associated project class')
+        elif count > 1:
+            raise RuntimeError('Inconsistent project class associations')
+
+        count = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).count()
+
+        if count == 0:
+            # return default is one is available, otherwise none
+            return self.default
+        if count > 1:
+            raise RuntimeError('Inconsistent project description assignment of project classes')
+
+        return self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
+
+
+    def get_capacity(self, pclass):
+        """
+        Get the available capacity for a given pclass, or return None if unset
+        :param pclass:
+        :return:
+        """
+
+        desc = self.get_description(pclass)
+
+        if desc is None:
+            return None
+
+        return desc.capacity
+
+
+class ProjectDescription(db.Model):
+    """
+    Capture a project description. Projects can have multiple descriptions, each
+    attached to a set of project classes
+    """
+
+    __tablename__ = "descriptions"
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning project
+    parent_id = db.Column(db.Integer(), db.ForeignKey('projects.id'))
+    parent = db.relationship('Project', foreign_keys=[parent_id], uselist=False,
+                             backref=db.backref('descriptions', lazy='dynamic', cascade='all, delete-orphan'))
+
+    # which project classes are associated with this description?
+    project_classes = db.relationship('ProjectClass', secondary=description_pclasses, lazy='dynamic',
+                                      backref=db.backref('descriptions', lazy='dynamic'))
+
+    # label
+    label = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # description
+    description = db.Column(db.Text())
+
+    # recommended reading
+    reading = db.Column(db.Text())
+
+    # supervisory roles
+    team = db.relationship('Supervisor', secondary=description_supervisors, lazy='dynamic',
+                           backref=db.backref('descriptions', lazy='dynamic'))
+
+    # maximum number of students
+    capacity = db.Column(db.Integer())
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
 class LiveProject(db.Model):
@@ -2780,12 +2933,12 @@ class Bookmark(db.Model):
     # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
     # removed from the database
     user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    owner = db.relationship('SelectingStudent', uselist=False,
+    owner = db.relationship('SelectingStudent', foreign_keys=[user_id], uselist=False,
                            backref=db.backref('bookmarks', lazy='dynamic', cascade='all, delete-orphan'))
 
     # LiveProject we are linking to
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
-    liveproject = db.relationship('LiveProject', uselist=False,
+    liveproject = db.relationship('LiveProject', foreign_keys=[liveproject_id], uselist=False,
                                   backref=db.backref('bookmarks', lazy='dynamic'))
 
     # rank in owner's list

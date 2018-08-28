@@ -11,22 +11,24 @@
 from flask import render_template, redirect, url_for, flash, request, session, jsonify
 from flask_security import roles_required, roles_accepted, current_user
 
-from ..models import db, DegreeProgramme, User, FacultyData, ResearchGroup, \
+from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
-    EnrollmentRecord, SkillGroup, ProjectClass
+    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription
 
 import app.ajax as ajax
 
 from . import faculty
 
-from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm
+from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm, \
+    DescriptionSelectorForm
 
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_second_markers
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner
-from ..shared.actions import render_live_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
 from datetime import datetime
+import json
 
 
 _project_menu = \
@@ -38,17 +40,23 @@ _project_menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
                 Preview web page
             </a>
         </li>
 
         <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Editing</li>
+        <li class="dropdown-header">Edit project</li>
 
         <li>
             <a href="{{ url_for('faculty.edit_project', id=project.id) }}">
-                <i class="fa fa-pencil"></i> Edit project
+                <i class="fa fa-pencil"></i> Project settings
+            </a>
+        </li>
+        
+        <li>
+            <a href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
+                <i class="fa fa-pencil"></i> Descriptions
             </a>
         </li>
 
@@ -105,6 +113,48 @@ _marker_menu = \
         <i class="fa fa-plus"></i> Can't attach
     </a>
 {% endif %}
+"""
+
+
+_desc_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li>
+            <a href="{{ url_for('faculty.edit_description', did=d.id) }}">
+                <i class="fa fa-pencil"></i> Edit description
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('faculty.delete_description', did=d.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
+        </li>
+        
+        <li role="separator" class="divider"></li>
+        
+        <li>
+            <a href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
+                Duplicate
+            </a>
+        </li>
+        <li>
+            {% if d.default is none %}
+                <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
+                    Make default
+                </a>
+            {% else %}
+                <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id) }}">
+                    Remove default
+                </a>
+            {% endif %}
+        </li>
+    </ul>
+</div>
 """
 
 
@@ -168,7 +218,9 @@ def projects_ajax():
     pq = Project.query.filter_by(owner_id=current_user.id)
     data = [(p, None) for p in pq.all()]
 
-    return ajax.project.build_data(data, _project_menu)
+    return ajax.project.build_data(data, _project_menu,
+                                   text='projects list',
+                                   url=url_for('faculty.edit_projects'))
 
 
 @faculty.route('/second_marker')
@@ -211,6 +263,34 @@ def marking_ajax():
     return ajax.project.build_data(data, "")
 
 
+@faculty.route('/edit_descriptions/<int:id>')
+@roles_required('faculty')
+def edit_descriptions(id):
+
+    project = Project.query.get_or_404(id)
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(project):
+        return redirect(request.referrer)
+
+    return render_template('faculty/edit_descriptions.html', project=project)
+
+
+@faculty.route('/descriptions_ajax/<int:id>')
+@roles_required('faculty')
+def descriptions_ajax(id):
+
+    project = Project.query.get_or_404(id)
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(project):
+        return jsonify({})
+
+    descs = project.descriptions.all()
+
+    return ajax.faculty.descriptions_data(descs, _desc_menu)
+
+
 @faculty.route('/add_project', methods=['GET', 'POST'])
 @roles_required('faculty')
 def add_project():
@@ -232,20 +312,20 @@ def add_project():
                        skills=[],
                        programmes=[],
                        meeting_reqd=form.meeting_reqd.data,
-                       capacity=form.capacity.data,
                        enforce_capacity=form.enforce_capacity.data,
-                       team=form.team.data,
                        show_popularity=form.show_popularity.data,
                        show_bookmarks=form.show_bookmarks.data,
                        show_selections=form.show_selections.data,
-                       description=form.description.data,
-                       reading=form.reading.data,
                        creator_id=current_user.id,
                        creation_timestamp=datetime.now())
+
         db.session.add(data)
         db.session.commit()
+
         if form.submit_and_preview.data:
-            return redirect(url_for('faculty.project_preview', id=data.id))
+            return redirect(url_for('faculty.project_preview', id=data.id,
+                                    text='project list',
+                                    url=url_for('faculty.edit_projects')))
         else:
             return redirect(url_for('faculty.edit_projects'))
 
@@ -294,26 +374,25 @@ def edit_project(id):
         proj.group = form.group.data
         proj.project_classes = form.project_classes.data
         proj.meeting_reqd = form.meeting_reqd.data
-        proj.capacity = form.capacity.data
         proj.enforce_capacity = form.enforce_capacity.data
-        proj.team = form.team.data
         proj.show_popularity = form.show_popularity.data
         proj.show_bookmarks = form.show_bookmarks.data
         proj.show_selections = form.show_selections.data
-        proj.description = form.description.data
-        proj.reading = form.reading.data
         proj.last_edit_id = current_user.id
         proj.last_edit_timestamp = datetime.now()
 
         proj.validate_programmes()
 
         db.session.commit()
+
         if form.submit_and_preview.data:
-            return redirect(url_for('faculty.project_preview', id=id))
+            return redirect(url_for('faculty.project_preview', id=id,
+                                    text='project list',
+                                    url=url_for('faculty.edit_projects')))
         else:
             return redirect(url_for('faculty.edit_projects'))
 
-    return render_template('faculty/edit_project.html', project_form=form, project=proj, title='Edit project details')
+    return render_template('faculty/edit_project.html', project_form=form, project=proj, title='Edit project settings')
 
 
 @faculty.route('/activate_project/<int:id>')
@@ -345,6 +424,152 @@ def deactivate_project(id):
         return redirect(request.referrer)
 
     data.disable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/add_description/<int:pid>', methods=['GET', 'POST'])
+@roles_required('faculty')
+def add_description(pid):
+
+    # get parent project details
+    proj = Project.query.get_or_404(pid)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(proj):
+        return redirect(request.referrer)
+
+    form = AddDescriptionForm(pid, request.form)
+    form.project_id = pid
+
+    if form.validate_on_submit():
+
+        data = ProjectDescription(parent_id=pid,
+                                  label=form.label.data,
+                                  project_classes=form.project_classes.data,
+                                  description=form.description.data,
+                                  reading=form.reading.data,
+                                  team=form.team.data,
+                                  capacity=form.capacity.data,
+                                  creator_id=current_user.id,
+                                  creation_timestamp=datetime.now())
+
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('faculty.edit_descriptions', id=pid))
+
+    return render_template('faculty/edit_description.html', project=proj, form=form, title='Add new description')
+
+
+@faculty.route('/edit_description/<int:did>', methods=['GET', 'POST'])
+@roles_required('faculty')
+def edit_description(did):
+
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    form = EditDescriptionForm(desc.parent_id, did, obj=desc)
+    form.project_id = desc.parent_id
+    form.desc = desc
+
+    if form.validate_on_submit():
+
+        desc.label = form.label.data
+        desc.project_classes = form.project_classes.data
+        desc.description = form.description.data
+        desc.reading = form.reading.data
+        desc.team = form.team.data
+        desc.capacity = form.capacity.data
+        desc.last_edit_id = current_user.id
+        desc.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id))
+
+    return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
+                           title='Edit description')
+
+
+@faculty.route('/delete_description/<int:did>')
+@roles_required('faculty')
+def delete_description(did):
+
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    db.session.delete(desc)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/duplicate_description/<int:did>')
+@roles_required('faculty')
+def duplicate_description(did):
+
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    suffix = 2
+    while suffix < 100:
+        new_label = '{label} #{suffix}'.format(label=desc.label, suffix=suffix)
+
+        if ProjectDescription.query.filter_by(parent_id=desc.parent_id, label=new_label).first() is None:
+            break
+
+        suffix += 1
+
+    if suffix >= 100:
+        flash('Could not duplicate description "{label}" because a new unique label could not '
+              'be generated'.format(label=desc.label), 'error')
+        return redirect(request.referrer)
+
+    data = ProjectDescription(parent_id=desc.parent_id,
+                              label=new_label,
+                              project_classes=[],
+                              capacity=desc.capacity,
+                              description=desc.description,
+                              reading=desc.reading,
+                              team=desc.team)
+
+    db.session.add(data)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/make_default_description/<int:pid>/<int:did>')
+@faculty.route('/make_default_description/<int:pid>')
+@roles_required('faculty')
+def make_default_description(pid, did=None):
+
+    proj = Project.query.get_or_404(pid)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(proj):
+        return redirect(request.referrer)
+
+    if did is not None:
+        desc = ProjectDescription.query.get_or_404(did)
+
+        if desc.parent_id != pid:
+            flash('Cannot set default description (id={did)) for project (id={pid}) because this description '
+                  'does not belong to the project'.format(pid=pid, did=did), 'error')
+            return redirect(request.referrer)
+
+    proj.default_id = did
     db.session.commit()
 
     return redirect(request.referrer)
@@ -636,7 +861,7 @@ def remove_all_markers(proj_id):
     return redirect(request.referrer)
 
 
-@faculty.route('/preview/<int:id>')
+@faculty.route('/preview/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def project_preview(id):
 
@@ -647,7 +872,23 @@ def project_preview(id):
     if not validate_edit_project(data):
         return redirect(request.referrer)
 
-    return render_live_project(data)
+    form = DescriptionSelectorForm(id, request.form)
+
+    if form.validate_on_submit():
+
+        pass
+
+    else:
+
+        if request.method == 'GET':
+
+            # attach first available project class
+            form.selector.data = data.project_classes.first()
+
+    text = request.args.get('text')
+    url = request.args.get('url')
+
+    return render_project(data, data.get_description(form.selector.data), form=form, text=text, url=url)
 
 
 @faculty.route('/dashboard')
@@ -854,7 +1095,7 @@ def live_project(pid):
     if not validate_edit_project(data):
         return redirect(request.referrer)
 
-    return render_live_project(data)
+    return render_project(data, data)
 
 
 @faculty.route('/past_projects')

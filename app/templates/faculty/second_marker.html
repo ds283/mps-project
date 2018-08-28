@@ -1,7 +1,7 @@
+{% extends "base_app.html" %}
+
 {% import "bootstrap/wtf.html" as wtf %}
 {% from "macros.html" import skill_groups_key %}
-
-{% extends "base_app.html" %}
 
 {% if not pclass_filter or pclass_filter is none %}
     {% set pclass_filter = 'all' %}

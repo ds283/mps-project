@@ -24,6 +24,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     unique_or_original_project_class, globally_unique_project_class_abbrev, unique_or_original_project_class_abbrev, \
     globally_unique_supervisor, unique_or_original_supervisor, globally_unique_role, unique_or_original_role, \
     globally_unique_exam_number, unique_or_original_exam_number, globally_unique_matching_name, \
+    globally_unique_supervisor_abbrev, unique_or_original_supervisor_abbrev, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -357,6 +358,7 @@ class AddProjectClassForm(Form, ProjectClassMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
                                            globally_unique_project_class])
+
     abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
                                                            globally_unique_project_class_abbrev])
 
@@ -367,22 +369,34 @@ class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
                                            unique_or_original_project_class])
+
     abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
                                                            unique_or_original_project_class_abbrev])
 
 
-class AddSupervisorForm(Form):
+class SupervisorMixin():
+
+    colour = StringField('Colour',
+                         description='Assign a colour to help students identify the roles of team members')
+
+
+class AddSupervisorForm(Form, SupervisorMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
                                            globally_unique_supervisor])
 
+    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
+                                                           globally_unique_supervisor_abbrev])
     submit = SubmitField('Add new supervisory role')
 
 
-class EditSupervisorForm(Form, EditFormMixin):
+class EditSupervisorForm(Form, SupervisorMixin, EditFormMixin):
 
     name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
                                            unique_or_original_supervisor])
+
+    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
+                                                           unique_or_original_supervisor_abbrev])
 
 
 class EmailLogForm(Form):

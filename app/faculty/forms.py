@@ -20,7 +20,7 @@ from ..shared.forms.wtf_validators import globally_unique_project, unique_or_ori
     project_unique_or_original_label
 from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, CurrentUserResearchGroups, \
     AllResearchGroups, CurrentUserProjectClasses, AllProjectClasses, GetSupervisorRoles, GetSkillGroups, \
-    CurrentProjectDescriptionClasses
+    AvailableProjectDescriptionClasses, ProjectDescriptionClasses
 
 from functools import partial
 
@@ -131,7 +131,7 @@ class AddDescriptionForm(Form, DescriptionMixin):
 
         super().__init__(*args, **kwargs)
 
-        self.project_classes.query_factory = partial(CurrentProjectDescriptionClasses, project_id, None)
+        self.project_classes.query_factory = partial(AvailableProjectDescriptionClasses, project_id, None)
 
 
     label = StringField('Label', validators=[DataRequired(message='Please enter a label to identify this description'),
@@ -148,7 +148,7 @@ class EditDescriptionForm(Form, DescriptionMixin, EditFormMixin):
 
         super().__init__(*args, **kwargs)
 
-        self.project_classes.query_factory = partial(CurrentProjectDescriptionClasses, project_id, desc_id)
+        self.project_classes.query_factory = partial(AvailableProjectDescriptionClasses, project_id, desc_id)
 
     label = StringField('Label', validators=[DataRequired(message='Please enter a label to identify this description'),
                                              project_unique_or_original_label],
@@ -191,3 +191,17 @@ class SkillSelectorMixin():
 class SkillSelectorForm(Form, SkillSelectorMixin):
 
     pass
+
+
+class DescriptionSelectorMixin():
+
+    selector = QuerySelectField('Show project preview for', query_factory=ProjectDescriptionClasses, get_label='name')
+
+
+class DescriptionSelectorForm(Form, DescriptionSelectorMixin):
+
+    def __init__(self, project_id, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.selector.query_factory = partial(ProjectDescriptionClasses, project_id)

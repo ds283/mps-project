@@ -14,13 +14,14 @@ from flask import render_template
 import re
 
 
-def render_live_project(data):
+def render_project(data, desc, form=None, text=None, url=None):
 
     # build list of keywords
     keywords = [ kw.strip() for kw in re.split(";.", data.keywords) ]
 
     # without the sel variable, won't render any of the student-specific items
-    return render_template('student/show_project.html', title=data.name, project=data, keywords=keywords)
+    return render_template('student/show_project.html', title=data.name, project=data, desc=desc, keywords=keywords,
+                           form=form, text=text, url=url)
 
 
 

@@ -19,14 +19,16 @@ import app.ajax as ajax
 
 from . import faculty
 
-from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
+from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm, \
+    DescriptionSelectorForm
 
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_second_markers
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner
-from ..shared.actions import render_live_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
+from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
 from datetime import datetime
+import json
 
 
 _project_menu = \
@@ -38,7 +40,7 @@ _project_menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
                 Preview web page
             </a>
         </li>
@@ -216,7 +218,9 @@ def projects_ajax():
     pq = Project.query.filter_by(owner_id=current_user.id)
     data = [(p, None) for p in pq.all()]
 
-    return ajax.project.build_data(data, _project_menu)
+    return ajax.project.build_data(data, _project_menu,
+                                   text='projects list',
+                                   url=url_for('faculty.edit_projects'))
 
 
 @faculty.route('/second_marker')
@@ -319,7 +323,9 @@ def add_project():
         db.session.commit()
 
         if form.submit_and_preview.data:
-            return redirect(url_for('faculty.project_preview', id=data.id))
+            return redirect(url_for('faculty.project_preview', id=data.id,
+                                    text='project list',
+                                    url=url_for('faculty.edit_projects')))
         else:
             return redirect(url_for('faculty.edit_projects'))
 
@@ -380,7 +386,9 @@ def edit_project(id):
         db.session.commit()
 
         if form.submit_and_preview.data:
-            return redirect(url_for('faculty.project_preview', id=id))
+            return redirect(url_for('faculty.project_preview', id=id,
+                                    text='project list',
+                                    url=url_for('faculty.edit_projects')))
         else:
             return redirect(url_for('faculty.edit_projects'))
 
@@ -853,7 +861,7 @@ def remove_all_markers(proj_id):
     return redirect(request.referrer)
 
 
-@faculty.route('/preview/<int:id>')
+@faculty.route('/preview/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def project_preview(id):
 
@@ -864,7 +872,23 @@ def project_preview(id):
     if not validate_edit_project(data):
         return redirect(request.referrer)
 
-    return render_live_project(data)
+    form = DescriptionSelectorForm(id, request.form)
+
+    if form.validate_on_submit():
+
+        pass
+
+    else:
+
+        if request.method == 'GET':
+
+            # attach first available project class
+            form.selector.data = data.project_classes.first()
+
+    text = request.args.get('text')
+    url = request.args.get('url')
+
+    return render_project(data, data.get_description(form.selector.data), form=form, text=text, url=url)
 
 
 @faculty.route('/dashboard')
@@ -1071,7 +1095,7 @@ def live_project(pid):
     if not validate_edit_project(data):
         return redirect(request.referrer)
 
-    return render_live_project(data)
+    return render_project(data, data)
 
 
 @faculty.route('/past_projects')

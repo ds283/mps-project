@@ -46,7 +46,7 @@ _project_menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
                 Preview web page
             </a>
         </li>
@@ -111,7 +111,7 @@ _unattached_project_menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
                 Preview web page
             </a>
         </li>
@@ -361,7 +361,9 @@ def attached_ajax(id):
     projects = filter_projects(plist, filter_record.group_filters.all(),
                                filter_record.skill_filters.all(), lambda x: x[0])
 
-    return ajax.project.build_data(projects, _project_menu, config=config)
+    return ajax.project.build_data(projects, _project_menu, config=config,
+                                   text='attached projects list',
+                                   url=url_for('convenor.attached', id=id))
 
 
 @convenor.route('/faculty/<int:id>')
@@ -949,7 +951,9 @@ def attach_liveproject_ajax(id):
     ps = [ x[1] for x in pq2.all() ]
     es = [ x[1] for x in eq2.all() ]
 
-    return ajax.project.build_data(zip(ps, es), _attach_liveproject_action, config=config)
+    return ajax.project.build_data(zip(ps, es), _attach_liveproject_action, config=config,
+                                   text='attach view',
+                                   url=url_for('convenor.attach_liveproject', id=id))
 
 
 @convenor.route('/manual_attach_project/<int:id>/<int:configid>')
@@ -1052,7 +1056,9 @@ def attach_liveproject_other_ajax(id):
     ps = [ x[1] for x in pq2.all() ]
     es = [ x[1] for x in eq2.all() ]
 
-    return ajax.project.build_data(zip(ps, es), _attach_liveproject_other_action, config=config)
+    return ajax.project.build_data(zip(ps, es), _attach_liveproject_other_action, config=config,
+                                   text='attach view',
+                                   url=url_for('convenor.attach_liveproject', id=id))
 
 
 @convenor.route('/manual_attach_other_project/<int:id>/<int:configid>')
@@ -2006,7 +2012,9 @@ def unofferable_ajax():
 
     projects = [(p, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.is_offerable]
 
-    return ajax.project.build_data(projects, _unattached_project_menu)
+    return ajax.project.build_data(projects, _unattached_project_menu,
+                                   text='attached projects list',
+                                   url=url_for('convenor.show_unofferable'))
 
 
 

@@ -13,12 +13,12 @@ from flask import render_template_string, jsonify
 
 _project_name = \
 """
-{% set offerable = project.offerable %}
-<div class="{% if not offerable %}has-error{% endif %}">
+{% set is_offerable = project.is_offerable %}
+<div class="{% if not is_offerable %}has-error{% endif %}">
     <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
         {{ project.name }}
     </a>
-    {% if not offerable and project.error %}
+    {% if not is_offerable and project.error %}
         <p class="help-block">Warning: {{ project.error }}</p>
     {% endif %}
 </div>
@@ -26,7 +26,7 @@ _project_name = \
 
 _project_status = \
 """
-{% if project.offerable %}
+{% if project.is_offerable %}
     {% if project.active %}
         <span class="label label-success"><i class="fa fa-check"></i> Project active</span>
     {% else %}

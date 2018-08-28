@@ -70,9 +70,9 @@ def register_golive_tasks(celery):
             .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
             .order_by(User.last_name, User.first_name).all()
 
-        # weed out projects that are not offerable
+        # weed out projects that are not is_offerable
         for proj in attached_projects:
-            if not proj.offerable:
+            if not proj.is_offerable:
                 attached_projects.remove(proj)
 
         if len(attached_projects) == 0:

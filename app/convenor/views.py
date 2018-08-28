@@ -117,11 +117,17 @@ _unattached_project_menu = \
         </li>
 
         <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Editing</li>
+        <li class="dropdown-header">Edit project</li>
 
         <li>
             <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Edit project
+                <i class="fa fa-pencil"></i> Project settings
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-pencil"></i> Descriptions
             </a>
         </li>
 
@@ -1998,7 +2004,7 @@ def unofferable_ajax():
     if not validate_is_administrator():
         return jsonify({})
 
-    projects = [(p, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.offerable]
+    projects = [(p, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.is_offerable]
 
     return ajax.project.build_data(projects, _unattached_project_menu)
 

@@ -102,15 +102,16 @@ class DescriptionMixin():
     project_classes = CheckboxQuerySelectMultipleField('Project classes',
                                                        query_factory=CurrentUserProjectClasses, get_label='name')
 
-    capacity = IntegerField('Maximum capacity', description='Optional. Used only if project-level option to enforce '
-                                                            'capacity is selected',
+    capacity = IntegerField('Maximum student capacity',
+                            description='Optional. Used only if project-level option to enforce capacity is selected. '
+                                        'Note this refers to the number of assigned students, not your CATS assignment.',
                             validators=[Optional()])
 
     # allow team to be empty (but then the project is not offered)
     team = CheckboxQuerySelectMultipleField('Supervisory team',
                                             query_factory=GetSupervisorRoles, get_label='name')
 
-    description = TextAreaField('Project description', render_kw={"rows": 20},
+    description = TextAreaField('Project description', render_kw={"rows": 15},
                                 description=r'Enter a description of your project. '
                                             r'The LaTeX mathematics environments are supported, as are common LaTeX commands. '
                                             r'The amsmath, amsthm, and amssymb packages are included. '
@@ -119,7 +120,7 @@ class DescriptionMixin():
                                             r'<strong>Please preview your project to check it renders correctly.</strong>',
                                 validators=[DataRequired(message='A project description is required')])
 
-    reading = TextAreaField('Recommended reading', render_kw={"rows": 10},
+    reading = TextAreaField('Recommended reading', render_kw={"rows": 7},
                             description='Optional. The same styling and LaTeX options are available. '
                                         'To embed internet links, use the Markdown syntax [link text](URL).')
 
@@ -134,7 +135,9 @@ class AddDescriptionForm(Form, DescriptionMixin):
 
 
     label = StringField('Label', validators=[DataRequired(message='Please enter a label to identify this description'),
-                                             project_unique_label])
+                                             project_unique_label],
+                        description='Enter a short label to identify this description in the list. '
+                                    'The label will not be visible to students.')
 
     submit = SubmitField('Add new project')
 
@@ -148,7 +151,9 @@ class EditDescriptionForm(Form, DescriptionMixin, EditFormMixin):
         self.project_classes.query_factory = partial(CurrentProjectDescriptionClasses, project_id, desc_id)
 
     label = StringField('Label', validators=[DataRequired(message='Please enter a label to identify this description'),
-                                             project_unique_or_original_label])
+                                             project_unique_or_original_label],
+                        description='Enter a short label to identify this description in the list. '
+                                    'The label will not be visible to students.')
 
 
 class RolloverForm(Form):

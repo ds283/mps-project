@@ -44,9 +44,7 @@ _project_pclasses = \
 """
 {% for pclass in project.project_classes %}
     {% set style = pclass.make_CSS_style() %}
-    <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">
-        {{ pclass.abbreviation }} ({{ pclass.convenor_name }})
-    </a>
+    <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }} ({{ pclass.convenor_name }})</a>
 {% endfor %}
 """
 

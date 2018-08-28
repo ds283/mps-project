@@ -27,8 +27,9 @@ from ..shared.validators import validate_edit_project, validate_project_open, va
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from datetime import datetime
-import json
 
 
 _project_menu = \
@@ -81,16 +82,27 @@ _project_menu = \
         <li role="separator" class="divider"></li>
 
         <li>
-        {% if project.active %}
-            <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
-                Make inactive
-            </a>
-        {% else %}
-            <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
-                Make active
-            </a>
-        {% endif %}
+            {% if project.active %}
+                <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
+                    Make inactive
+                </a>
+            {% else %}
+                <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
+                    Make active
+                </a>
+            {% endif %}
         </li>
+        {% if project.is_deletable %}
+            <li>
+                <a href="{{ url_for('faculty.delete_project', id=project.id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled"><a>
+                <i class="fa fa-trash"></i> Delete disabled
+            </a></li>
+        {% endif %}
     </ul>
 </div>
 """
@@ -425,6 +437,29 @@ def deactivate_project(id):
 
     data.disable()
     db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/delete_project/<int:id>')
+@roles_required('faculty')
+def delete_project(id):
+
+    # get project details
+    data = Project.query.get_or_404(id)
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(data):
+        return redirect(request.referrer)
+
+    try:
+        for item in data.descriptions:
+            db.session.delete(item)
+
+        db.session.delete(data)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.rollback()
 
     return redirect(request.referrer)
 

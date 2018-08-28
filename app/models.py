@@ -1986,16 +1986,8 @@ class Project(db.Model):
             self.error = "No active project types assigned to project"
             return False
 
-        if not self.team.filter(Supervisor.active).first():
-            self.error = "No active supervisory roles assigned to project"
-            return False
-
         if self.group is None:
             self.error = "No active research group affiliated with project"
-            return False
-
-        if (self.capacity is None or self.capacity == 0) and self.enforce_capacity:
-            self.error = "Capacity is zero or unset, but enforcement is enabled"
             return False
 
         # for each project class we are attached to, check whether enough 2nd markers have been assigned
@@ -2007,9 +1999,22 @@ class Project(db.Model):
                     self.error = "Too few 2nd markers assigned for '{name}'".format(name=pclass.name)
                     return False
 
-            if self.get_description(pclass) is None:
+            desc = self.get_description(pclass)
+
+            if desc is None:
                 self.error = "No project description assigned for '{name}'".format(name=pclass.name)
                 return False
+
+            if not desc.team.filter(Supervisor.active).first():
+                self.error = "No active supervisory roles assigned for '{name}'".format(name=pclass.name)
+                return False
+
+            if self.enforce_capacity:
+
+                if desc.capacity is None or desc.capacity <= 0:
+                    self.error = "Capacity is zero or unset for '{name}', " \
+                                 "but enforcement is enabled".format(name=pclass.name)
+                    return False
 
         return True
 
@@ -2242,6 +2247,21 @@ class Project(db.Model):
             raise RuntimeError('Inconsistent project description assignment of project classes')
 
         return self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
+
+
+    def get_capacity(self, pclass):
+        """
+        Get the available capacity for a given pclass, or return None if unset
+        :param pclass:
+        :return:
+        """
+
+        desc = self.get_description(pclass)
+
+        if desc is None:
+            return None
+
+        return desc.capacity
 
 
 class ProjectDescription(db.Model):

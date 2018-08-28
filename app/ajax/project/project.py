@@ -15,7 +15,7 @@ _project_name = \
 """
 {% set is_offerable = project.is_offerable %}
 <div class="{% if not is_offerable %}has-error{% endif %}">
-    <a href="{{ url_for('faculty.project_preview', id=project.id) }}">
+    <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
         {{ project.name }}
     </a>
     {% if not is_offerable and project.error %}
@@ -80,9 +80,9 @@ _project_skills = \
 """
 
 
-def build_data(projects, menu_template, config=None):
+def build_data(projects, menu_template, config=None, text=None, url=None):
 
-    data = [{'name': render_template_string(_project_name, project=p),
+    data = [{'name': render_template_string(_project_name, project=p, text=text, url=url),
              'owner': {
                  'display': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.user.email, nm=p.owner.user.name),
                  'sortvalue': p.owner.user.last_name + p.owner.user.first_name},
@@ -92,6 +92,6 @@ def build_data(projects, menu_template, config=None):
              'group': p.group.make_label(),
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, skills=p.ordered_skills),
-             'menu': render_template_string(menu_template, project=p, config=config)} for p, e in projects]
+             'menu': render_template_string(menu_template, project=p, config=config, text=text, url=url)} for p, e in projects]
 
     return jsonify(data)

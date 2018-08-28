@@ -122,16 +122,13 @@ def GetSkillGroups():
     return SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc())
 
 
-def CurrentProjectDescriptionClasses(project_id, desc_id):
-
-    for c in project_classes.columns:
-        print(c.name, c.type)
+def AvailableProjectDescriptionClasses(project_id, desc_id):
 
     # query for pclass identifiers available from project_id
     pclass_ids = db.session.query(project_classes.c.project_class_id) \
         .filter(project_classes.c.project_id == project_id).subquery()
 
-    # query for pclass identifiers used by descriptions associated with project_id, except for desc_id
+    # query for pclass identifiers used by descriptions associated with project_id, except (possibly) for desc_id
     used_ids = db.session.query(description_pclasses.c.project_class_id) \
         .join(ProjectDescription, ProjectDescription.id == description_pclasses.c.description_id) \
         .filter(ProjectDescription.parent_id == project_id)
@@ -146,6 +143,26 @@ def CurrentProjectDescriptionClasses(project_id, desc_id):
         .join(used_ids, used_ids.c.project_class_id == pclass_ids.c.project_class_id, isouter=True) \
         .filter(used_ids.c.project_class_id == None).subquery()
 
-    # construct ProjectClass records for these id
+    # construct ProjectClass records for these ids
     return db.session.query(ProjectClass) \
         .join(unused_ids, ProjectClass.id == unused_ids.c.project_class_id)
+
+
+def ProjectDescriptionClasses(project_id):
+
+    project = db.session.query(Project).filter_by(id=project_id).first()
+
+    # if a default has been set, we can use any project class to which the main project is attached
+    if project is not None and project.default is not None:
+        return project.project_classes
+
+    # otherwise, we can only use project classes for which descriptions are available
+
+    # query for pclass identifiers used by descriptions associated with project_id
+    used_ids = db.session.query(description_pclasses.c.project_class_id) \
+        .join(ProjectDescription, ProjectDescription.id == description_pclasses.c.description_id) \
+        .filter(ProjectDescription.parent_id == project_id).distinct().subquery()
+
+    # construct ProjectClass records for these ids
+    return db.session.query(ProjectClass) \
+        .join(used_ids, ProjectClass.id == used_ids.c.project_class_id)

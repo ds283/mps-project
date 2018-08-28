@@ -2199,6 +2199,9 @@ class ProjectDescription(db.Model):
     project_classes = db.relationship('ProjectClass', secondary=description_pclasses, lazy='dynamic',
                                       backref=db.backref('descriptions', lazy='dynamic'))
 
+    # label
+    label = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
     # description
     description = db.Column(db.Text())
 

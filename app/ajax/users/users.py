@@ -11,7 +11,7 @@
 from flask import render_template_string, jsonify
 
 
-_user_role_template = \
+_roles = \
 """
 {% if user.has_role('faculty') %}
    <span class="label label-info">faculty</span>
@@ -31,7 +31,7 @@ _user_role_template = \
 {% endif %}
 """
 
-_user_menu_template = \
+_menu = \
 """
 <div class="dropdown">
     <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
@@ -39,6 +39,7 @@ _user_menu_template = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+        <li class="dropdown-header">Edit</li>
         <li>
             <a href="{{ url_for('admin.edit_user', id=user.id) }}">
                 <i class="fa fa-pencil"></i> Edit account
@@ -56,6 +57,9 @@ _user_menu_template = \
                 </a>
             </li>
         {% endif %}
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Operations</li>
 
         <li {% if user.username == current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
             {% if user.is_active %}
@@ -113,8 +117,10 @@ _user_menu_template = \
 
 def build_data(users):
 
-    data = [{'last': u.last_name,
-             'first': u.first_name,
+    data = [{'name': {
+                'display': u.name,
+                'sortvalue': u.last_name + u.first_name
+             },
              'user': u.username,
              'email': '<a href="mailto:{m}">{m}</a>'.format(m=u.email),
              'confirm': {
@@ -136,7 +142,7 @@ def build_data(users):
              },
              'ip': u.last_login_ip if u.last_login_ip is not None and len(u.last_login_ip) > 0
                  else '<span class="label label-default">None</a>',
-             'role': render_template_string(_user_role_template, user=u),
-             'menu': render_template_string(_user_menu_template, user=u)} for u in users]
+             'role': render_template_string(_roles, user=u),
+             'menu': render_template_string(_menu, user=u)} for u in users]
 
     return jsonify(data)

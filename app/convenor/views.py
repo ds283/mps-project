@@ -15,11 +15,12 @@ from flask_security import roles_accepted, current_user
 from app.shared.utils import build_enroll_selector_candidates
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
-    PopularityRecord, FilterRecord, DegreeProgramme
+    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_second_markers
-from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, validate_project_open
+from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
+    validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_liveproject
 from ..shared.conversions import is_integer
@@ -31,7 +32,7 @@ import app.ajax as ajax
 from . import convenor
 
 from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFacultyConfirmRequestForm, \
-    SkillSelectorForm
+    SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
 
 from datetime import date, datetime, timedelta
 
@@ -51,11 +52,17 @@ _project_menu = \
         </li>
 
         <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Editing</li>
+        <li class="dropdown-header">Edit project</li>
 
         <li>
             <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-pencil"></i> Edit project
+                <i class="fa fa-pencil"></i> Project settings
+            </a>
+        </li>
+
+        <li>
+            <a href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=config.pclass_id) }}">
+                <i class="fa fa-pencil"></i> Descriptions
             </a>
         </li>
 
@@ -172,6 +179,47 @@ _marker_menu = \
     </a>
 {% endif %}
 """
+
+_desc_menu = \
+"""
+    <div class="dropdown">
+        <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+            Actions
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id) }}">
+                    <i class="fa fa-pencil"></i> Edit description
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+            </li>
+    
+            <li role="separator" class="divider"></li>
+    
+            <li>
+                <a href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
+                    Duplicate
+                </a>
+            </li>
+            <li>
+                {% if d.default is none %}
+                    <a href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id, did=d.id) }}">
+                        Make default
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id) }}">
+                        Remove default
+                    </a>
+                {% endif %}
+            </li>
+        </ul>
+    </div>
+ """
 
 
 @convenor.route('/overview/<int:id>', methods=['GET', 'POST'])
@@ -1031,6 +1079,58 @@ def manual_attach_other_project(id, configid):
     return redirect(request.referrer)
 
 
+@convenor.route('/edit_descriptions/<int:id>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def edit_descriptions(id, pclass_id):
+
+    # get project details
+    project = Project.query.get_or_404(id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    return render_template('convenor/edit_descriptions.html', project=project, pclass_id=pclass_id)
+
+
+@convenor.route('/descriptions_ajax/<int:id>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def descriptions_ajax(id, pclass_id):
+
+    # get project details
+    project = Project.query.get_or_404(id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    descs = project.descriptions.all()
+
+    return ajax.faculty.descriptions_data(descs, _desc_menu, pclass_id)
+
+
 @convenor.route('/add_project/<int:pclass_id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def add_project(pclass_id):
@@ -1214,6 +1314,208 @@ def deactivate_project(id, pclass_id):
         return redirect(request.referrer)
 
     proj.disable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/add_description/<int:pid>/<int:pclass_id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def add_description(pid, pclass_id):
+
+    # get project details
+    proj = Project.query.get_or_404(id)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    form = AddDescriptionForm(pid, request.form)
+    form.project_id = pid
+
+    if form.validate_on_submit():
+
+        data = ProjectDescription(parent_id=pid,
+                                  label=form.label.data,
+                                  project_classes=form.project_classes.data,
+                                  description=form.description.data,
+                                  reading=form.reading.data,
+                                  team=form.team.data,
+                                  capacity=form.capacity.data,
+                                  creator_id=current_user.id,
+                                  creation_timestamp=datetime.now())
+
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('convenor.edit_descriptions', id=pid, pclass_id=pclass_id))
+
+    return render_template('faculty/edit_description.html', project=proj, form=form, pclass_id=pclass_id,
+                           title='Add new description')
+
+
+@convenor.route('/edit_description/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_description(did, pclass_id):
+
+    desc = ProjectDescription.query.get_or_404(did)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    form = EditDescriptionForm(desc.parent_id, did, obj=desc)
+    form.project_id = desc.parent_id
+    form.desc = desc
+
+    if form.validate_on_submit():
+
+        desc.label = form.label.data
+        desc.project_classes = form.project_classes.data
+        desc.description = form.description.data
+        desc.reading = form.reading.data
+        desc.team = form.team.data
+        desc.capacity = form.capacity.data
+        desc.last_edit_id = current_user.id
+        desc.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id))
+
+    return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
+                           pclass_id=pclass_id, title='Edit description')
+
+
+@convenor.route('/delete_description/<int:did>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_description(did, pclass_id):
+
+    desc = ProjectDescription.query.get_or_404(did)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    db.session.delete(desc)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/duplicate_description/<int:did>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def duplicate_description(did, pclass_id):
+
+    desc = ProjectDescription.query.get_or_404(did)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    suffix = 2
+    while suffix < 100:
+        new_label = '{label} #{suffix}'.format(label=desc.label, suffix=suffix)
+
+        if ProjectDescription.query.filter_by(parent_id=desc.parent_id, label=new_label).first() is None:
+            break
+
+        suffix += 1
+
+    if suffix >= 100:
+        flash('Could not duplicate description "{label}" because a new unique label could not '
+              'be generated'.format(label=desc.label), 'error')
+        return redirect(request.referrer)
+
+    data = ProjectDescription(parent_id=desc.parent_id,
+                              label=new_label,
+                              project_classes=[],
+                              capacity=desc.capacity,
+                              description=desc.description,
+                              reading=desc.reading,
+                              team=desc.team)
+
+    db.session.add(data)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/make_default_description/<int:pid>/<int:pclass_id>/<int:did>')
+@convenor.route('/make_default_description/<int:pid>/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def make_default_description(pid, pclass_id, did=None):
+
+    proj = Project.query.get_or_404(pid)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    if did is not None:
+        desc = ProjectDescription.query.get_or_404(did)
+
+        if desc.parent_id != pid:
+            flash('Cannot set default description (id={did)) for project (id={pid}) because this description '
+                  'does not belong to the project'.format(pid=pid, did=did), 'error')
+            return redirect(request.referrer)
+
+    proj.default_id = did
     db.session.commit()
 
     return redirect(request.referrer)

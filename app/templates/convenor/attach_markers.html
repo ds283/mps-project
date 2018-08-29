@@ -111,15 +111,15 @@
 
             <div class="well">
                 <p>Filter by attachment status</p>
-                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='all', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                    class="btn btn-sm grouped-button-margin {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                     All
                 </a>
-                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='attached', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                    class="btn btn-sm grouped-button-margin {% if state_filter == 'attached' %}btn-primary{% else %}btn-default{% endif %}">
                     Attached
                 </a>
-                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='not-attached', pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter='not-attached', pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                    class="btn btn-sm grouped-button-margin {% if state_filter == 'not-attached' %}btn-primary{% else %}btn-default{% endif %}">
                     Not attached
                 </a>
@@ -128,12 +128,12 @@
                     <hr class="intro-divider">
 
                     <p>Filter by enrollment for project type</p>
-                    <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter) }}"
+                    <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter='all', group_filter=group_filter, create=create) }}"
                        class="btn btn-sm grouped-button-margin {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for pclass in pclasses %}
-                        <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter) }}"
+                        <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter, create=create) }}"
                            class="btn btn-sm grouped-button-margin {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ pclass.name }}
                         </a>
@@ -144,12 +144,12 @@
                     <hr class="intro-divider">
 
                     <p>Filter by research group affiliation</p>
-                    <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all') }}"
+                    <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter='all', create=create) }}"
                        class="btn btn-sm grouped-button-margin {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for group in groups %}
-                        <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id) }}"
+                        <a href="{{ url_for('convenor.attach_markers', id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group.id, create=create) }}"
                            class="btn btn-sm grouped-button-margin {% if group_filter == group.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ group.name }}
                         </a>
@@ -161,11 +161,11 @@
                 <div class="row vertical-align">
                     <div class="col-xs-12">
                         <div class="pull-right">
-                            <a href="{{ url_for('convenor.remove_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                            <a href="{{ url_for('convenor.remove_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                                class="btn btn-default">
                                 <i class="fa fa-trash"></i> Remove all
                             </a>
-                            <a href="{{ url_for('convenor.attach_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter) }}"
+                            <a href="{{ url_for('convenor.attach_all_markers', proj_id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter, create=create) }}"
                                class="btn btn-default">
                                 <i class="fa fa-check"></i> Attach all
                             </a>
@@ -189,7 +189,19 @@
         </div>
     </div>
 
-    <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
-        <i class="fa fa-backward"></i> Return to convenor dashboard
-    </a>
+    {% if create %}
+        <a href="{{ url_for('convenor.attach_skills', id=data.id, pclass_id=pclass_id, create=1) }}" class="btn btn-primary">
+            Next: Attach transferable skills
+        </a>
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}" class="btn btn-default">
+            Save and exit
+        </a>
+        <a href="{{ url_for('faculty.project_preview', id=data.id, text='attached projects list', url=url_for('convenor.attached', id=pclass_id)) }}" class="btn btn-default">
+            Save and preview
+        </a>
+    {% else %}
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+            <i class="fa fa-backward"></i> Return to convenor dashboard
+        </a>
+    {% endif %}
 {% endblock %}

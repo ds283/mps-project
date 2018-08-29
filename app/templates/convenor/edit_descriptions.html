@@ -18,7 +18,7 @@
             $('#descriptions-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/convenor/descriptions_ajax/{{ project.id }}/{{ pclass_id }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/convenor/descriptions_ajax/{{ project.id }}/{{ pclass_id }}{% if create %}?create=1{% endif %}', dataSrc: '' },
                 columns: [
                     { data: 'label' },
                     { data: 'pclasses' },
@@ -58,7 +58,7 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-                <a href="{{ url_for('convenor.add_description', pid=project.id, pclass_id=pclass_id) }}" class="btn btn-default btn-lg">
+                <a href="{{ url_for('convenor.add_description', pid=project.id, pclass_id=pclass_id, create=create) }}" class="btn btn-default btn-lg">
                     <i class="fa fa-plus"></i>
                     Add new description
                 </a>
@@ -66,7 +66,19 @@
         </div>
     </div>
 
-    <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
-        <i class="fa fa-backward"></i> Return to convenor dashboard
-    </a>
+    {% if create %}
+        <a href="{{ url_for('convenor.attach_markers', id=project.id, pclass_id=pclass_id, create=1) }}" class="btn btn-primary">
+            Next: Attach 2nd markers
+        </a>
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}" class="btn btn-default">
+            Save and exit
+        </a>
+        <a href="{{ url_for('faculty.project_preview', id=project.id, text='attached projects list', url=url_for('convenor.attached', id=pclass_id)) }}" class="btn btn-default">
+            Save and preview
+        </a>
+    {% else %}
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+            <i class="fa fa-backward"></i> Return to convenor dashboard
+        </a>
+    {% endif %}
 {% endblock %}

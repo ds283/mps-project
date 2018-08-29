@@ -233,17 +233,18 @@ def create_student(role):
                            exam_number=form.exam_number.data,
                            cohort=form.cohort.data,
                            programme=form.programme.data,
+                           foundation_year=form.foundation_year.data,
+                           repeated_years=form.repeated_years.data,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now())
-        db.session.add(data)
 
+        db.session.add(data)
         db.session.commit()
 
         return redirect(url_for('admin.edit_users'))
 
     else:
         if request.method == 'GET':
-
             # populate cohort with default value on first load
             config = get_main_config()
 
@@ -604,8 +605,10 @@ def edit_student(id):
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
 
+        data.foundation_year = form.foundation_year.data
         data.exam_number = form.exam_number.data
         data.cohort = form.cohort.data
+        data.repeated_years = form.repeated_years.data
         data.programme_id = form.programme.data.id
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
@@ -622,9 +625,10 @@ def edit_student(id):
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == 'GET':
-
+            form.foundation_year.data = data.foundation_year
             form.exam_number.data = data.exam_number
             form.cohort.data = data.cohort
+            form.repeated_years.data = data.repeated_years
             form.programme.data = data.programme
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')

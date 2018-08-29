@@ -13,7 +13,7 @@ from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, 
 from flask_security.forms import password_length, email_required, email_validator, EqualTo
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
     TextAreaField, DateTimeField, FloatField, RadioField
-from wtforms.validators import DataRequired, Optional
+from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_username, \
@@ -24,7 +24,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     unique_or_original_project_class, globally_unique_project_class_abbrev, unique_or_original_project_class_abbrev, \
     globally_unique_supervisor, unique_or_original_supervisor, globally_unique_role, unique_or_original_role, \
     globally_unique_exam_number, unique_or_original_exam_number, globally_unique_matching_name, \
-    globally_unique_supervisor_abbrev, unique_or_original_supervisor_abbrev, \
+    globally_unique_supervisor_abbrev, unique_or_original_supervisor_abbrev, value_is_nonnegative, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -37,13 +37,13 @@ from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleFiel
 
 class UniqueUserNameMixin():
 
-    username = StringField('Username', validators=[DataRequired(message='Username is required'),
+    username = StringField('Username', validators=[InputRequired(message='Username is required'),
                                                    valid_username, globally_unique_username])
 
 
 class EditUserNameMixin():
 
-    username = StringField('Username', validators=[DataRequired(message='Username is required'),
+    username = StringField('Username', validators=[InputRequired(message='Username is required'),
                                                    valid_username, unique_or_original_username])
 
 
@@ -94,9 +94,9 @@ class RoleSelectForm(Form, RoleMixin):
 
 class FirstLastNameMixin():
 
-    first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
+    first_name = StringField('First name', validators=[InputRequired(message='First name is required')])
 
-    last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
+    last_name = StringField('Last or family name', validators=[InputRequired(message='Last name is required')])
 
 
 class FacultyDataMixin():
@@ -124,17 +124,28 @@ class FacultyDataMixin():
                                     description='Leave blank for default assignment',
                                     validators=[Optional()])
 
-    CATS_marking = IntegerField('Guidline number of CATS available for marking',
+    CATS_marking = IntegerField('Guideline number of CATS available for marking',
                                 description='Leave blank for default assignment',
                                 validators=[Optional()])
 
-    office = StringField('Office', validators=[DataRequired(message='Please enter your office details to help '
+    office = StringField('Office', validators=[InputRequired(message='Please enter your office details to help '
                                                                     'students find you')])
 
 
 class StudentDataMixin():
 
-    cohort = IntegerField('Cohort', validators=[DataRequired(message="Cohort is required")])
+    foundation_year = BooleanField('Foundation year')
+
+    cohort = IntegerField('Cohort', validators=[InputRequired(message="Cohort is required")],
+                          description='Enter the year the student joined the university. '
+                                      'If this needs to be adjusted because the student did a foundation year,'
+                                      'or for other reasons such as resitting years, this will be accommodated '
+                                      'separately.')
+
+    repeated_years = IntegerField('Number of repeat years',
+                                  validators=[InputRequired(message="Number of repeat years is required"),
+                                              value_is_nonnegative],
+                                  description='Enter the number of repeat years the student has used.')
 
     programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes,
                                  get_label=BuildDegreeProgrammeName)
@@ -177,13 +188,13 @@ class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixin):
 
 class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin):
 
-    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required"),
+    exam_number = IntegerField('Exam number', validators=[InputRequired(message="Exam number is required"),
                                                           globally_unique_exam_number])
 
 
 class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
 
-    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required"),
+    exam_number = IntegerField('Exam number', validators=[InputRequired(message="Exam number is required"),
                                                           globally_unique_exam_number])
 
 
@@ -199,7 +210,7 @@ class EditFacultyForm(EditOfficeForm, FacultyDataMixin):
 
 class EditStudentForm(EditOfficeForm, StudentDataMixin):
 
-    exam_number = IntegerField('Exam number', validators=[DataRequired(message="Exam number is required"),
+    exam_number = IntegerField('Exam number', validators=[InputRequired(message="Exam number is required"),
                                                           unique_or_original_exam_number])
 
 
@@ -210,7 +221,7 @@ class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixin, FirstLastNa
 
 class ResearchGroupForm():
 
-    name = StringField('Name', validators=[DataRequired(message='Name is required')])
+    name = StringField('Name', validators=[InputRequired(message='Name is required')])
 
     website = StringField('Website', description='Optional.')
 
@@ -219,7 +230,7 @@ class ResearchGroupForm():
 
 class AddResearchGroupForm(Form, ResearchGroupForm):
 
-    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='Abbreviation is required'),
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
                                                            globally_unique_group_abbreviation])
 
     submit = SubmitField('Add new group')
@@ -227,14 +238,14 @@ class AddResearchGroupForm(Form, ResearchGroupForm):
 
 class EditResearchGroupForm(Form, ResearchGroupForm, EditFormMixin):
 
-    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='Abbreviation is required'),
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
                                                            unique_or_original_abbreviation])
-    name = StringField('Name', validators=[DataRequired(message='Name is required')])
+    name = StringField('Name', validators=[InputRequired(message='Name is required')])
 
 
 class AddDegreeTypeForm(Form):
 
-    name = StringField('Name', validators=[DataRequired(message='Degree type name is required'),
+    name = StringField('Name', validators=[InputRequired(message='Degree type name is required'),
                                            globally_unique_degree_type])
 
     submit = SubmitField('Add new degree type')
@@ -242,14 +253,14 @@ class AddDegreeTypeForm(Form):
 
 class EditDegreeTypeForm(Form, EditFormMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Degree type name is required'),
+    name = StringField('Name', validators=[InputRequired(message='Degree type name is required'),
                                            unique_or_original_degree_type])
 
 
 class AddDegreeProgrammeForm(Form):
 
     degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
-    name = StringField('Name', validators=[DataRequired(message='Degree programme name is required'),
+    name = StringField('Name', validators=[InputRequired(message='Degree programme name is required'),
                                            globally_unique_degree_programme])
 
     submit = SubmitField('Add new degree programme')
@@ -258,7 +269,7 @@ class AddDegreeProgrammeForm(Form):
 class EditDegreeProgrammeForm(Form, EditFormMixin):
 
     degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
-    name = StringField('Name', validators=[DataRequired(message='Degree programme name is required'),
+    name = StringField('Name', validators=[InputRequired(message='Degree programme name is required'),
                                            unique_or_original_degree_programme])
 
 
@@ -269,7 +280,7 @@ class TransferableSkillMixin():
 
 class AddTransferableSkillForm(Form, TransferableSkillMixin):
 
-    name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
+    name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
                                             globally_unique_transferable_skill])
 
     submit = SubmitField('Add new transferable skill')
@@ -277,7 +288,7 @@ class AddTransferableSkillForm(Form, TransferableSkillMixin):
 
 class EditTransferableSkillForm(Form, TransferableSkillMixin, EditFormMixin):
 
-    name = StringField('Skill', validators=[DataRequired(message='Name of transferable skill is required'),
+    name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
                                             unique_or_original_transferable_skill])
 
 
@@ -315,7 +326,7 @@ class ProjectClassMixin():
                                               'if switching is allowed.')
 
     CATS_supervision = IntegerField('CATS awarded for project supervision',
-                                    validators=[DataRequired(message='Please enter an integer value')])
+                                    validators=[InputRequired(message='Please enter an integer value')])
 
     CATS_marking = IntegerField('CATS awarded for project 2nd marking',
                                 validators=[Optional()])
@@ -362,16 +373,16 @@ class ProjectClassMixin():
     programmes = CheckboxQuerySelectMultipleField('Auto-enroll students from degree programmes',
                                                   query_factory=GetActiveDegreeProgrammes,
                                                   get_label=BuildDegreeProgrammeName,
-                                                  validators=[DataRequired(
+                                                  validators=[InputRequired(
                                                       message='At least one degree programme should be selected')])
 
 
 class AddProjectClassForm(Form, ProjectClassMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
+    name = StringField('Name', validators=[InputRequired(message='Name of project class is required'),
                                            globally_unique_project_class])
 
-    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
                                                            globally_unique_project_class_abbrev])
 
     submit = SubmitField('Add new project class')
@@ -379,10 +390,10 @@ class AddProjectClassForm(Form, ProjectClassMixin):
 
 class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Name of project class is required'),
+    name = StringField('Name', validators=[InputRequired(message='Name of project class is required'),
                                            unique_or_original_project_class])
 
-    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
                                                            unique_or_original_project_class_abbrev])
 
 
@@ -394,26 +405,26 @@ class SupervisorMixin():
 
 class AddSupervisorForm(Form, SupervisorMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
+    name = StringField('Name', validators=[InputRequired(message='Name of supervisory role is required'),
                                            globally_unique_supervisor])
 
-    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
                                                            globally_unique_supervisor_abbrev])
     submit = SubmitField('Add new supervisory role')
 
 
 class EditSupervisorForm(Form, SupervisorMixin, EditFormMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Name of supervisory role is required'),
+    name = StringField('Name', validators=[InputRequired(message='Name of supervisory role is required'),
                                            unique_or_original_supervisor])
 
-    abbreviation = StringField('Abbreviation', validators=[DataRequired(message='An abbreviation is required'),
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
                                                            unique_or_original_supervisor_abbrev])
 
 
 class EmailLogForm(Form):
 
-    weeks = IntegerField('Age cutoff in weeks', validators=[DataRequired(message='Cutoff is required. Emails older '
+    weeks = IntegerField('Age cutoff in weeks', validators=[InputRequired(message='Cutoff is required. Emails older '
                                                                                  'than the limit will be removed.')])
 
     delete_age = SubmitField('Delete emails older than cutoff')
@@ -421,7 +432,7 @@ class EmailLogForm(Form):
 
 class BackupManageForm(Form):
 
-    weeks = IntegerField('Age cutoff in weeks', validators=[DataRequired(message='Cutoff is required. Backups older '
+    weeks = IntegerField('Age cutoff in weeks', validators=[InputRequired(message='Cutoff is required. Backups older '
                                                                                  'than the limit will be removed.')])
 
     delete_age = SubmitField('Delete backups older than cutoff')
@@ -440,7 +451,7 @@ class MessageMixin():
     title = StringField('Title', validators=[Optional()], description='Optional. Summarize your message briefly.')
 
     body = TextAreaField('Message', render_kw={"rows": 5},
-                         validators=[DataRequired(message='You must enter a message, however short')])
+                         validators=[InputRequired(message='You must enter a message, however short')])
 
     project_classes = CheckboxQuerySelectMultipleField('Display to users enrolled with',
                                                        query_factory=GetAllProjectClasses, get_label='name',
@@ -460,7 +471,7 @@ class AddMessageForm(Form, MessageMixin):
 
         if convenor_editing:
             self.projects.query_factory = GetConvenorProjectClasses
-            self.projects.validators = [DataRequired(message='At least one project class should be selected')]
+            self.projects.validators = [InputRequired(message='At least one project class should be selected')]
 
     submit = SubmitField('Add new message')
 
@@ -494,7 +505,7 @@ class ScheduleTypeForm(Form, ScheduleTypeMixin):
 
 class ScheduledTaskMixin():
 
-    name = StringField('Name', validators=[DataRequired(message='A task name is required')])
+    name = StringField('Name', validators=[InputRequired(message='A task name is required')])
 
     owner = QuerySelectField('Owner', query_factory=GetSysadminUsers, get_label=BuildSysadminUserName)
 
@@ -521,7 +532,7 @@ class ScheduledTaskMixin():
 
 class IntervalMixin():
 
-    every = IntegerField('Run every', validators=[DataRequired(message='You must enter a nonzero interval')])
+    every = IntegerField('Run every', validators=[InputRequired(message='You must enter a nonzero interval')])
 
     available_periods = [('seconds', 'seconds'), ('minutes', 'minutes'), ('hours', 'hours'), ('days', 'days'), ('weeks', 'weeks')]
     period = SelectField('Period', choices=available_periods)
@@ -529,15 +540,15 @@ class IntervalMixin():
 
 class CrontabMixin():
 
-    minute = StringField('Minute pattern', validators=[DataRequired(message='You must enter a pattern')])
+    minute = StringField('Minute pattern', validators=[InputRequired(message='You must enter a pattern')])
 
-    hour = StringField('Hour pattern', validators=[DataRequired(message='You must enter a pattern')])
+    hour = StringField('Hour pattern', validators=[InputRequired(message='You must enter a pattern')])
 
-    day_of_week = StringField('Day-of-week pattern', validators=[DataRequired(message='You must enter a pattern')])
+    day_of_week = StringField('Day-of-week pattern', validators=[InputRequired(message='You must enter a pattern')])
 
-    day_of_month = StringField('Day-of-month pattern', validators=[DataRequired(message='You must enter a pattern')])
+    day_of_month = StringField('Day-of-month pattern', validators=[InputRequired(message='You must enter a pattern')])
 
-    month_of_year = StringField('Month-of-year pattern', validators=[DataRequired(message='You must enter a pattern')])
+    month_of_year = StringField('Month-of-year pattern', validators=[InputRequired(message='You must enter a pattern')])
 
 
 class AddIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin):
@@ -646,7 +657,7 @@ class SkillGroupMixin():
 
 class AddSkillGroupForm(Form, SkillGroupMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Please supply a unique name for the group'),
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
                                            globally_unique_skill_group])
 
     submit = SubmitField('Add new skill')
@@ -654,7 +665,7 @@ class AddSkillGroupForm(Form, SkillGroupMixin):
 
 class EditSkillGroupForm(Form, SkillGroupMixin, EditFormMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Please supply a unique name for the group'),
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
                                            unique_or_original_skill_group])
 
 
@@ -665,7 +676,7 @@ class RoleMixin():
 
 class AddRoleForm(Form, RoleMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Please supply a unique name for the role'),
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
                                            globally_unique_role])
 
     submit = SubmitField('Add new role')
@@ -673,7 +684,7 @@ class AddRoleForm(Form, RoleMixin):
 
 class EditRoleForm(Form, RoleMixin, EditFormMixin):
 
-    name = StringField('Name', validators=[DataRequired(message='Please supply a unique name for the role'),
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
                                            unique_or_original_role])
 
 
@@ -681,7 +692,7 @@ class MatchingMixin():
 
     name = StringField('Name',
                        description='Enter a short tag to identify this match',
-                       validators=[DataRequired(message='Please supply a unique name'),
+                       validators=[InputRequired(message='Please supply a unique name'),
                                    globally_unique_matching_name])
 
     ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts')
@@ -692,41 +703,42 @@ class MatchingMixin():
                                choices=matching_history_choices, coerce=int)
 
     supervising_limit = IntegerField('CATS limit for supervising',
-                                     validators=[DataRequired(message='Please specify the maximum number of CATS '
+                                     validators=[InputRequired(message='Please specify the maximum number of CATS '
                                                                       'that can be allocated per faculty')])
 
     marking_limit = IntegerField('CATS limit for marking',
-                                 validators=[DataRequired(message='Please specify the maximum number of CATS '
+                                 validators=[InputRequired(message='Please specify the maximum number of CATS '
                                                                   'that can be allocated per faculty')])
 
     max_marking_multiplicity = IntegerField('Maximum multiplicity for 2nd markers',
                                             description='2nd markers may be assigned multiple instances of the same '
                                                         'project, up to the maximum multiplicity specified',
-                                            validators=[DataRequired(message='Please specify a multiplicity')])
+                                            validators=[InputRequired(message='Please specify a multiplicity')])
 
     levelling_bias = FloatField('Workload levelling bias', default=1.0,
                                 description='This sets the normalization of the workload levelling tension in '
                                             'the objective function. This term tensions good student matches against '
                                             'roughly equal workload for all faculty members who supervise, '
                                             'perform marking, or both. Set to 0 to turn off workload levelling. '
+                                            'Set to values less than 1 to '
+                                            'prioritize matching to high-ranked projects rather than equal workloads. '
                                             'Set to large values to prioritize equal workloads rather than '
-                                            'student matches to high-ranked projects. Set to values less than 1 to'
-                                            'prioritize matching to high-ranked projects rather than equal workloads.',
-                                validators=[DataRequired(message='Please specify a levelling bias')])
+                                            'student matches to high-ranked projects.',
+                                validators=[InputRequired(message='Please specify a levelling bias')])
 
     intra_group_tension = FloatField('Intra-group tension', default=1.0,
                                      description='This sets the tension with which the typical workload for '
                                                  'each faculty group (supervisors, markers, and those who do both) '
                                                  'are held together. Set to large values to keep workloads '
                                                  'as closely matched as possible.',
-                                     validators=[DataRequired(message='Please specify an intra-group tension')])
+                                     validators=[InputRequired(message='Please specify an intra-group tension')])
 
     programme_bias = FloatField('Degree programme preference bias', default=1.5,
                                 description='Values greater than 1 bias the optimization to match students '
                                             'on given degree programmes with projects that '
                                             'are marked as preferring that programme. '
                                             'A value of 1 disables this preference.',
-                                validators=[DataRequired(message='Please specify a programme preference bias')])
+                                validators=[InputRequired(message='Please specify a programme preference bias')])
 
 
 class NewMatchForm(Form, MatchingMixin):

@@ -122,9 +122,9 @@
                                 {% endif %}
                                 {% if data is not none %}
                                     Your details:
-                                    {{ sdata.student.cohort_label()|safe }}
+                                    {{ sdata.student.cohort_label|safe }}
                                     {{ sdata.student.programme.label()|safe }}
-                                    {{ sdata.academic_year_label()|safe }}
+                                    {{ sdata.academic_year_label|safe }}
                                 {% endif %}
                             </div>
                             <div class="col-xs-5">

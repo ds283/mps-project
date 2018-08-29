@@ -845,6 +845,13 @@ class StudentData(db.Model):
     programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
     programme = db.relationship('DegreeProgramme', backref=db.backref('students', lazy='dynamic'))
 
+    # did this student do a foundation year? if so, their admission cohort
+    # needs to be treated differently when calculating academic years
+    foundation_year = db.Column(db.Boolean())
+
+    # has this student had repeat years? If so, they also upset the academic year calculation
+    repeated_years = db.Column(db.Integer())
+
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
@@ -860,9 +867,38 @@ class StudentData(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    @property
     def cohort_label(self):
-
         return '<span class="label label-primary">{c} cohort</span>'.format(c=self.cohort)
+
+
+    def academic_year(self, current_year):
+        """
+        Computes the academic year of a student, relative to a given year
+        :param current_year:
+        :return:
+        """
+
+        base_year = current_year - self.cohort + 1 - self.repeated_years
+
+        if self.foundation_year:
+            base_year -= 1
+
+        return base_year
+
+
+    def academic_year_label(self, current_year):
+
+        text = 'Y{y}'.format(y=self.academic_year(current_year))
+
+        if self.foundation_year:
+            text += ' +F'
+
+        if self.repeated_years > 0:
+            text += ' +{n}'.format(n=self.repeated_years)
+
+        return '<span class="label label-info">{label}</span>'.format(label=text)
+
 
 
 class DegreeType(db.Model):
@@ -2723,7 +2759,7 @@ class SelectingStudent(db.Model):
 
 
     @property
-    def get_ordered_bookmarks(self):
+    def ordered_bookmarks(self):
         """
         return bookmarks in rank order
         :return:
@@ -2733,7 +2769,7 @@ class SelectingStudent(db.Model):
 
 
     @property
-    def get_num_bookmarks(self):
+    def number_bookmarks(self):
 
         return db.session.query(sqlalchemy.func.count(Bookmark.id)).with_parent(self).scalar()
 
@@ -2741,16 +2777,15 @@ class SelectingStudent(db.Model):
     @property
     def get_academic_year(self):
         """
-        Compute the current academic year for this student, relative this ProjectClassConfig
+        Compute the current academic year for this student, relative to our ProjectClassConfig record
         :return:
         """
+        return self.student.academic_year(self.config.year)
 
-        return self.config.year - self.student.cohort + 1
 
-
+    @property
     def academic_year_label(self):
-
-        return '<span class="label label-info">Y{y}</span>'.format(y=self.get_academic_year)
+        return self.student.academic_year_label(self.config.year)
 
 
     @property
@@ -2760,9 +2795,7 @@ class SelectingStudent(db.Model):
         :return:
         """
 
-        academic_year = self.get_academic_year
-
-        return academic_year == self.config.project_class.year-1
+        return self.academic_year == self.config.project_class.year - 1
 
 
     @property
@@ -2850,7 +2883,7 @@ class SelectingStudent(db.Model):
 
 
     @property
-    def get_ordered_selection(self):
+    def ordered_selection(self):
 
         return self.selections.order_by(SelectionRecord.rank)
 
@@ -2897,18 +2930,17 @@ class SubmittingStudent(db.Model):
 
 
     @property
-    def get_academic_year(self):
+    def academic_year(self):
         """
         Compute the current academic year for this student, relative this ProjectClassConfig
         :return:
         """
+        return self.student.academic_year(self.config.year)
 
-        return self.config.year - self.student.cohort + 1
 
-
+    @property
     def academic_year_label(self):
-
-        return '<span class="label label-info">Y{y}</span>'.format(y=self.get_academic_year)
+        return self.student.academic_year_label(self.config.year)
 
 
 class Bookmark(db.Model):

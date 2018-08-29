@@ -34,7 +34,7 @@ _menu = \
             </li>
         {% endif %}
 
-        {% if student.get_num_bookmarks > 0 %}
+        {% if student.number_bookmarks > 0 %}
             <li>
                 <a href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
                     Show bookmarks
@@ -128,13 +128,13 @@ _menu = \
 _cohort = \
 """
 {{ sel.student.programme.label()|safe }}
-{{ sel.academic_year_label()|safe }}
-{{ sel.student.cohort_label()|safe }}
+{{ sel.academic_year_label|safe }}
+{{ sel.student.cohort_label|safe }}
 """
 
 _bookmarks = \
 """
-{% set count = sel.get_num_bookmarks %}
+{% set count = sel.number_bookmarks %}
 {% if count > 0 %}
     <span class="label label-primary">{{ count }}</span>
     <a href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
@@ -182,7 +182,7 @@ def selectors_data(students, config):
              'cohort': render_template_string(_cohort, sel=s),
              'bookmarks': {
                  'display': render_template_string(_bookmarks, sel=s),
-                 'value': s.get_num_bookmarks
+                 'value': s.number_bookmarks
              },
              'confirmations': {
                  'display': render_template_string(_confirmations, sel=s),
@@ -209,8 +209,8 @@ def enroll_selectors_data(students, config):
                 'sortstring': s.user.last_name + s.user.first_name
              },
              'programme': s.programme.label(),
-             'cohort': s.cohort_label(),
-             'acadyear': '<span class="label label-info">Y{yr}</span>'.format(yr=config.year-s.cohort+1),
+             'cohort': s.cohort_label,
+             'acadyear': s.academic_year_label(config.year),
              'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
 
     return jsonify(data)

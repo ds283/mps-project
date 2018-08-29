@@ -10,7 +10,7 @@
 
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, DateField, BooleanField
-from wtforms.validators import DataRequired, Optional
+from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import Project
@@ -67,7 +67,7 @@ class AddProjectForm(Form, ProjectMixin):
             self.project_classes.query_factory = AllProjectClasses
             self.group.query_factory = AllResearchGroups
 
-    name = StringField('Title', validators=[DataRequired(message='Project title is required'),
+    name = StringField('Title', validators=[InputRequired(message='Project title is required'),
                                             globally_unique_project])
 
     submit = SubmitField('Next: Project descriptions')
@@ -92,7 +92,7 @@ class EditProjectForm(Form, ProjectMixin, EditFormMixin):
             self.project_classes.query_factory = AllProjectClasses
             self.group.query_factory = AllResearchGroups
 
-    name = StringField('Title', validators=[DataRequired(message='Project title is required'),
+    name = StringField('Title', validators=[InputRequired(message='Project title is required'),
                                             unique_or_original_project])
 
     save_and_preview = SubmitField('Save changes and preview')
@@ -120,7 +120,7 @@ class DescriptionMixin():
                                             r'You may use displayed or inline mathematics. '
                                             r'You may also use Markdown syntax to format your description. '
                                             r'<strong>Please preview your project to check it renders correctly.</strong>',
-                                validators=[DataRequired(message='A project description is required')])
+                                validators=[InputRequired(message='A project description is required')])
 
     reading = TextAreaField('Recommended reading', render_kw={"rows": 7},
                             description='Optional. The same styling and LaTeX options are available. '
@@ -136,7 +136,7 @@ class AddDescriptionForm(Form, DescriptionMixin):
         self.project_classes.query_factory = partial(AvailableProjectDescriptionClasses, project_id, None)
 
 
-    label = StringField('Label', validators=[DataRequired(message='Please enter a label to identify this description'),
+    label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
                                              project_unique_label],
                         description='Enter a short label to identify this description in the list. '
                                     'The label will not be visible to students.')
@@ -152,7 +152,7 @@ class EditDescriptionForm(Form, DescriptionMixin, EditFormMixin):
 
         self.project_classes.query_factory = partial(AvailableProjectDescriptionClasses, project_id, desc_id)
 
-    label = StringField('Label', validators=[DataRequired(message='Please enter a label to identify this description'),
+    label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
                                              project_unique_or_original_label],
                         description='Enter a short label to identify this description in the list. '
                                     'The label will not be visible to students.')
@@ -166,7 +166,7 @@ class RolloverForm(Form):
 class GoLiveForm(Form):
 
     live = SubmitField('Go live')
-    live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[DataRequired()])
+    live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
 
 
 class CloseStudentSelectionsForm(Form):
@@ -177,7 +177,7 @@ class CloseStudentSelectionsForm(Form):
 class IssueFacultyConfirmRequestForm(Form):
 
     requests_issued = SubmitField('Issue confirmation requests')
-    request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[DataRequired()])
+    request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
 
 
 class ConfirmAllRequestsForm(Form):

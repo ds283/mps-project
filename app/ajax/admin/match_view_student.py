@@ -36,8 +36,8 @@ _pclass = \
 _cohort = \
 """
 {{ sel.student.programme.label()|safe }}
-{{ sel.academic_year_label()|safe }}
-{{ sel.student.cohort_label()|safe }}
+{{ sel.academic_year_label|safe }}
+{{ sel.student.cohort_label|safe }}
 """
 
 
@@ -52,8 +52,8 @@ _project = \
             <span class="caret"></span>
         </a>
         {% if adjustable %}
-            {% if r.selector.has_submitted %}{% set list = r.selector.get_ordered_selection %}
-            {% elif r.rselector.has_bookmarks %}{% set list = r.selector.get_ordered_bookmarks %}
+            {% if r.selector.has_submitted %}{% set list = r.selector.ordered_selection %}
+            {% elif r.rselector.has_bookmarks %}{% set list = r.selector.ordered_bookmarks %}
             {% endif %}
             <ul class="dropdown-menu">
                 {% if r.selector.has_submitted %}

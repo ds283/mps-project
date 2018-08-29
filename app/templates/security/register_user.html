@@ -45,17 +45,19 @@
             {{ wtf.form_field(user_form.username) }}
         </div>
 
-        <div class="well">
-            {% if user_form.password %}
-                {{ wtf.form_field(user_form.password) }}
-            {% endif %}
-            {% if user_form.password_confirm %}
-                {{ wtf.form_field(user_form.password_confirm) }}
-            {% endif %}
-            {% if user_form.random_password %}
-                {{ wtf.form_field(user_form.random_password) }}
-            {% endif %}
-        </div>
+        {% if user_form.password or user_form.password_confirm or user_form.random_password %}
+            <div class="well">
+                {% if user_form.password %}
+                    {{ wtf.form_field(user_form.password) }}
+                {% endif %}
+                {% if user_form.password_confirm %}
+                    {{ wtf.form_field(user_form.password_confirm) }}
+                {% endif %}
+                {% if user_form.random_password %}
+                    {{ wtf.form_field(user_form.random_password) }}
+                {% endif %}
+            </div>
+        {% endif %}
 
         <div class="well">
             {{ wtf.form_field(user_form.first_name) }}

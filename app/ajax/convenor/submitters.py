@@ -13,7 +13,7 @@ from flask import render_template_string, jsonify
 
 _cohort = \
 """
-{{ sel.student.programme.label()|safe }}
+{{ sel.student.programme.label|safe }}
 {{ sel.academic_year_label|safe }}
 {{ sel.student.cohort_label|safe }}
 """

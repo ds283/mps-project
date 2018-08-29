@@ -65,7 +65,7 @@ _project_prefer = \
 """
 {% for programme in project.programmes %}
     {% if programme.active %}
-        {{ programme.label()|safe }}
+        {{ programme.label|safe }}
     {% endif %}
 {% endfor %}
 """

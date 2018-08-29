@@ -8,4 +8,6 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from .users import build_data
+from .accounts import build_accounts_data
+from .faculty import build_faculty_data
+from .students import build_student_data

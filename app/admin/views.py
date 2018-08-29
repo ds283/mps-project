@@ -268,13 +268,88 @@ def edit_users():
 
     filter = request.args.get('filter')
 
-    if filter is None and session.get('edit_user_filter'):
-        filter = session['edit_user_filter']
+    if filter is None and session.get('accounts_role_filter'):
+        filter = session['accounts_role_filter']
 
     if filter is not None:
-        session['edit_user_filter'] = filter
+        session['accounts_role_filter'] = filter
 
-    return render_template("admin/edit_users.html", filter=filter)
+    return render_template("admin/users_dashboard/accounts.html", filter=filter, pane='accounts')
+
+
+@admin.route('/edit_users_students')
+@roles_accepted('admin', 'root')
+def edit_users_students():
+    """
+    View function that handles listing of all registered students
+    :return: HTML string
+    """
+
+    prog_filter = request.args.get('prog_filter')
+
+    if prog_filter is None and session.get('accounts_prog_filter'):
+        prog_filter = session['accounts_prog_filter']
+
+    if prog_filter is not None:
+        session['accounts_prog_filter'] = prog_filter
+
+    cohort_filter = request.args.get('cohort_filter')
+
+    if cohort_filter is None and session.get('accounts_cohort_filter'):
+        cohort_filter = session['accounts_cohort_filter']
+
+    if cohort_filter is not None:
+        session['accounts_cohort_filter'] = cohort_filter
+
+    year_filter = request.args.get('year_filter')
+
+    if year_filter is None and session.get('accounts_year_filter'):
+        year_filter = session['accounts_year_filter']
+
+    if year_filter is not None:
+        session['accounts_year_filter'] = year_filter
+
+    programmes = db.session.query(DegreeProgramme).filter(DegreeProgramme.active == True).all()
+    cohort_data = db.session.query(StudentData.cohort) \
+        .join(User, User.id == StudentData.id) \
+        .filter(User.active == True).distinct().all()
+    cohorts = [c[0] for c in cohort_data]
+
+    return render_template("admin/users_dashboard/students.html", filter=prog_filter, pane='students',
+                           prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter,
+                           programmes=programmes, cohorts=cohorts)
+
+
+@admin.route('/edit_users_faculty')
+@roles_accepted('admin', 'root')
+def edit_users_faculty():
+    """
+    View function that handles listing of all registered faculty
+    :return: HTML string
+    """
+
+    group_filter = request.args.get('group_filter')
+
+    if group_filter is None and session.get('accounts_group_filter'):
+        group_filter = session['accounts_group_filter']
+
+    if group_filter is not None:
+        session['accounts_group_filter'] = group_filter
+
+    pclass_filter = request.args.get('pclass_filter')
+
+    if pclass_filter is None and session.get('accounts_pclass_filter'):
+        pclass_filter = session['accounts_pclass_filter']
+
+    if pclass_filter is not None:
+        session['accounts_pclass_filter'] = pclass_filter
+
+    groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+    pclasses = db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name.asc()).all()
+
+    return render_template("admin/users_dashboard/faculty.html", pane='faculty',
+                           group_filter=group_filter, pclass_filter=pclass_filter,
+                           groups=groups, pclasses=pclasses)
 
 
 @admin.route('/users_ajax')
@@ -304,7 +379,68 @@ def users_ajax():
     else:
         users = User.query.all()
 
-    return ajax.users.build_data(users)
+    return ajax.users.build_accounts_data(users)
+
+
+@admin.route('/users_students_ajax')
+@roles_accepted('admin', 'root')
+def users_students_ajax():
+
+    prog_filter = request.args.get('prog_filter')
+    cohort_filter = request.args.get('cohort_filter')
+    year_filter = request.args.get('year_filter')
+
+    data = db.session.query(StudentData, User) \
+        .join(User, User.id == StudentData.id)
+
+    flag, prog_value = is_integer(prog_filter)
+    if flag:
+        data = data.filter(StudentData.programme_id == prog_value)
+
+    flag, cohort_value = is_integer(cohort_filter)
+    if flag:
+        data = data.filter(StudentData.cohort == cohort_value)
+
+    flag, year_value = is_integer(year_filter)
+    if flag:
+        current_year = get_current_year()
+        nonf = data.filter(StudentData.foundation_year == False,
+                           current_year - StudentData.cohort + 1 - StudentData.repeated_years == year_value)
+        foun = data.filter(StudentData.foundation_year == True,
+                           current_year - StudentData.cohort - StudentData.repeated_years == year_value)
+
+        data = nonf.union(foun)
+    elif year_filter == 'grad':
+        current_year = get_current_year()
+        nonf = data.filter(StudentData.foundation_year == False,
+                           current_year - StudentData.cohort + 1 - StudentData.repeated_years > 4)
+        foun = data.filter(StudentData.foundation_year == True,
+                           current_year - StudentData.cohort - StudentData.repeated_years > 4)
+
+        data = nonf.union(foun)
+
+    return ajax.users.build_student_data(data.all())
+
+
+@admin.route('/users_faculty_ajax')
+@roles_accepted('admin', 'root')
+def users_faculty_ajax():
+
+    group_filter = request.args.get('group_filter')
+    pclass_filter = request.args.get('pclass_filter')
+
+    data = db.session.query(FacultyData, User) \
+        .join(User, User.id == FacultyData.id)
+
+    flag, group_value = is_integer(group_filter)
+    if flag:
+        data = data.filter(FacultyData.affiliations.any(id=group_value))
+
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        data = data.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
+
+    return ajax.users.build_faculty_data(data.all())
 
 
 @admin.route('/make_admin/<int:id>')
@@ -529,6 +665,8 @@ def edit_faculty(id):
 
     data = FacultyData.query.get_or_404(id)
 
+    pane = request.args.get('pane', default=None)
+
     if form.validate_on_submit():
 
         resend_confirmation = False
@@ -558,7 +696,14 @@ def edit_faculty(id):
         if resend_confirmation:
             _resend_confirm_email(user)
 
-        return redirect(url_for('admin.edit_users'))
+        if pane is None or pane == 'accounts':
+            return redirect(url_for('admin.edit_users'))
+        elif pane == 'faculty':
+            return redirect(url_for('admin.edit_users_faculty'))
+        elif pane == 'students':
+            return redirect(url_for('admin.edit_users_students'))
+        else:
+            raise RuntimeWarning('Unknown user dashboard pane')
 
     else:
 
@@ -579,7 +724,8 @@ def edit_faculty(id):
             if form.project_capacity.data is None and form.enforce_capacity.data:
                 form.project_capacity.data = current_app.config['DEFAULT_PROJECT_CAPACITY']
 
-    return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
+    return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account',
+                           pane=pane)
 
 
 @admin.route('/edit_student/<int:id>', methods=['GET', 'POST'])
@@ -592,6 +738,8 @@ def edit_student(id):
     form.user = user
 
     data = StudentData.query.get_or_404(id)
+
+    pane = request.args.get('pane', default=None)
 
     if form.validate_on_submit():
 
@@ -618,7 +766,14 @@ def edit_student(id):
         if resend_confirmation:
             _resend_confirm_email(user)
 
-        return redirect(url_for('admin.edit_users'))
+        if pane is None or pane == 'accounts':
+            return redirect(url_for('admin.edit_users'))
+        elif pane == 'faculty':
+            return redirect(url_for('admin.edit_users_faculty'))
+        elif pane == 'students':
+            return redirect(url_for('admin.edit_users_students'))
+        else:
+            raise RuntimeWarning('Unknown user dashboard pane')
 
     else:
 
@@ -631,7 +786,8 @@ def edit_student(id):
             form.repeated_years.data = data.repeated_years
             form.programme.data = data.programme
 
-    return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
+    return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account',
+                           pane=pane)
 
 
 @admin.route('/edit_affiliations/<int:id>')
@@ -648,9 +804,10 @@ def edit_affiliations(id):
     research_groups = ResearchGroup.query.filter_by(active=True)
 
     create = request.args.get('create', default=None)
+    pane = request.args.get('pane', default=None)
 
     return render_template('admin/edit_affiliations.html', user=user, data=data, research_groups=research_groups,
-                           create=create)
+                           create=create, pane=pane)
 
 
 @admin.route('/edit_enrollments/<int:id>')
@@ -667,9 +824,10 @@ def edit_enrollments(id):
     project_classes = ProjectClass.query.filter_by(active=True)
 
     create = request.args.get('create', default=None)
+    pane = request.args.get('pane', default=None)
 
     return render_template('admin/edit_enrollments.html', user=user, data=data, project_classes=project_classes,
-                           create=create)
+                           create=create, pane=pane)
 
 
 @admin.route('/edit_enrollment/<int:id>/<int:returnid>', methods=['GET', 'POST'])

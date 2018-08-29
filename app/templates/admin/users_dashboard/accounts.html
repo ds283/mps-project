@@ -1,6 +1,4 @@
-{% import "bootstrap/wtf.html" as wtf %}
-
-{% extends "base_app.html" %}
+{% extends "admin/users_dashboard/nav.html" %}
 
 {% block scripts %}
     {{ super() }}
@@ -15,7 +13,7 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#edit-users').DataTable({
+            $('#edit-accounts').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/users_ajax{% if filter is not none %}?filter={{ filter }}{% endif %}', dataSrc: '' },
@@ -66,7 +64,7 @@
         <div class="panel-heading">Edit users</div>
         <div class="panel-body">
             <div class="well">
-                Filter:
+                <p>Filter by role</p>
                 <a href="{{ url_for('admin.edit_users', filter='all') }}"
                    class="btn btn-sm {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                     All
@@ -101,7 +99,7 @@
                 </a>
             </div>
 
-            <table id="edit-users" class="table table-striped table-bordered">
+            <table id="edit-accounts" class="table table-striped table-bordered">
                 <thead>
                 <tr>
                     <th width="16%"> Name</th>

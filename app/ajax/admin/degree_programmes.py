@@ -30,7 +30,7 @@ _programmes_menu = \
                 Make inactive
             </a></li>
         {% else %}
-            {% if programme.available() %}
+            {% if programme.available %}
                 <li><a href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
                     Make active
                 </a></li>

@@ -1,0 +1,23 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        <li {% if pane == 'accounts' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_users') }}">
+                Account details
+            </a>
+        </li>
+        <li {% if pane == 'faculty' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_users_faculty') }}">
+                Faculty accounts
+            </a>
+        </li>
+        <li {% if pane == 'students' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_users_students') }}">
+                Student accounts
+            </a>
+        </li>
+    </ul>
+{% endblock %}

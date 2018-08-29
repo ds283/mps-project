@@ -57,17 +57,16 @@
                 </tr>
                 </thead>
             </table>
+            <div style="text-align: center;">
+                <a href="{{ url_for('convenor.add_description', pid=project.id, pclass_id=pclass_id) }}" class="btn btn-default btn-lg">
+                    <i class="fa fa-plus"></i>
+                    Add new description
+                </a>
+            </div>
         </div>
     </div>
 
     <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
         <i class="fa fa-backward"></i> Return to convenor dashboard
     </a>
-
-    <div style="text-align: center;">
-        <a href="{{ url_for('convenor.add_description', pid=project.id, pclass_id=pclass_id) }}" class="btn btn-default btn-lg">
-            <i class="fa fa-plus"></i>
-            Add new description
-        </a>
-    </div>
 {% endblock %}

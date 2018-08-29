@@ -44,27 +44,27 @@
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Edit projects</div>
         <div class="panel-body">
-        <table id="projects-table" class="table table-striped table-bordered">
-            <thead>
-            <tr>
-                <th width="15%"> Name</th>
-                <th width="8%"> Status</th>
-                <th width="12%"> Available for</th>
-                <th width="8%"> Meeting required?</th>
-                <th width="8%"> Affiliation</th>
-                <th width="15%"> Prefer degree programmes</th>
-                <th width="20%"> Transferable skills</th>
-                <th width="14%"> Actions</th>
-            </tr>
-            </thead>
-        </table>
+            <table id="projects-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="15%"> Name</th>
+                    <th width="8%"> Status</th>
+                    <th width="12%"> Available for</th>
+                    <th width="8%"> Meeting required?</th>
+                    <th width="8%"> Affiliation</th>
+                    <th width="15%"> Prefer degree programmes</th>
+                    <th width="20%"> Transferable skills</th>
+                    <th width="14%"> Actions</th>
+                </tr>
+                </thead>
+            </table>
+            <div style="text-align: center;">
+                <a href="{{ url_for('faculty.add_project') }}" class="btn btn-default btn-lg">
+                    <i class="fa fa-plus"></i>
+                    Add new project
+                </a>
+            </div>
         </div>
     </div>
     {{ skill_groups_key(groups) }}
-    <div style="text-align: center;">
-        <a href="{{ url_for('faculty.add_project') }}" class="btn btn-default btn-lg">
-            <i class="fa fa-plus"></i>
-            Add new project
-        </a>
-    </div>
 {% endblock %}

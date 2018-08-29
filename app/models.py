@@ -1890,10 +1890,12 @@ class Project(db.Model):
     # PROJECT DESCRIPTION
 
     # 'descriptions' field is established by backreference from ProjectDescription
+    # (this works well but is a bit awkward because it creates a circular dependency between
+    # Project and ProjectDescription which we solve using post_upddate
 
     # link to default description, if one exists
     default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
-    default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False,
+    default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False, post_update=True,
                               backref=db.backref('default', uselist=False))
 
 

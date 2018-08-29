@@ -195,7 +195,7 @@ _desc_menu = \
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
             <li>
-                <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id) }}">
+                <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
                     <i class="fa fa-pencil"></i> Edit description
                 </a>
             </li>
@@ -1113,7 +1113,9 @@ def edit_descriptions(id, pclass_id):
         if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
-    return render_template('convenor/edit_descriptions.html', project=project, pclass_id=pclass_id)
+    create = request.args.get('create', default=None)
+
+    return render_template('convenor/edit_descriptions.html', project=project, pclass_id=pclass_id, create=create)
 
 
 @convenor.route('/descriptions_ajax/<int:id>/<int:pclass_id>')
@@ -1140,7 +1142,9 @@ def descriptions_ajax(id, pclass_id):
 
     descs = project.descriptions.all()
 
-    return ajax.faculty.descriptions_data(descs, _desc_menu, pclass_id)
+    create = request.args.get('create', default=None)
+
+    return ajax.faculty.descriptions_data(descs, _desc_menu, pclass_id, create=create)
 
 
 @convenor.route('/add_project/<int:pclass_id>', methods=['GET', 'POST'])
@@ -1189,28 +1193,41 @@ def add_project(pclass_id):
         # auto-enroll if implied by current project class associations
         owner = data.owner
         for pclass in data.project_classes:
-
             if not owner.is_enrolled(pclass):
-
                 owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
 
         db.session.add(data)
         db.session.commit()
 
-        return redirect(url_for('convenor.attached', id=pclass_id))
+        if form.submit.data:
+            return redirect(url_for('convenor.edit_descriptions', id=data.id, pclass_id=pclass_id, create=1))
+        elif form.save_and_exit.data:
+            return redirect(url_for('convenor.attached'))
+        elif form.save_and_preview:
+            return redirect(url_for('faculty.project_preview', id=data.id,
+                                    text='attached projects list',
+                                    url=url_for('convenor.attached')))
+        else:
+            raise RuntimeError('Unknown submit button in faculty.add_project')
 
     else:
 
         if request.method == 'GET':
+            # use convenor's defaults
+            # This solution seems no less arbitrary than any other options
+            owner = current_user.faculty_data
 
-            # can't use any individual user's preferences to set defaults, so pick a standard set
-            form.show_popularity.data = True
-            form.show_bookmarks.data = True
-            form.show_selections.data = True
+            if owner.show_popularity:
+                form.show_popularity.data = True
+                form.show_bookmarks.data = True
+                form.show_selections.data = True
+            else:
+                form.show_popularity.data = False
+                form.show_bookmarks.data = False
+                form.show_selections.data = False
 
-            form.capacity.data = current_app.config['DEFAULT_PROJECT_CAPACITY']
-            form.enforce_capacity.data = True
+            form.enforce_capacity.data = owner.enforce_capacity
 
     return render_template('faculty/edit_project.html', project_form=form, pclass_id=pclass_id, title='Add new project')
 
@@ -1336,7 +1353,7 @@ def deactivate_project(id, pclass_id):
 def add_description(pid, pclass_id):
 
     # get project details
-    proj = Project.query.get_or_404(id)
+    proj = Project.query.get_or_404(pid)
 
     if pclass_id == 0:
 
@@ -1352,6 +1369,8 @@ def add_description(pid, pclass_id):
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
 
     form = AddDescriptionForm(pid, request.form)
     form.project_id = pid
@@ -1371,10 +1390,10 @@ def add_description(pid, pclass_id):
         db.session.add(data)
         db.session.commit()
 
-        return redirect(url_for('convenor.edit_descriptions', id=pid, pclass_id=pclass_id))
+        return redirect(url_for('convenor.edit_descriptions', id=pid, pclass_id=pclass_id, create=create))
 
     return render_template('faculty/edit_description.html', project=proj, form=form, pclass_id=pclass_id,
-                           title='Add new description')
+                           title='Add new description', create=create)
 
 
 @convenor.route('/edit_description/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])
@@ -1398,6 +1417,8 @@ def edit_description(did, pclass_id):
         if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
+    create = request.args.get('create', default=None)
+
     form = EditDescriptionForm(desc.parent_id, did, obj=desc)
     form.project_id = desc.parent_id
     form.desc = desc
@@ -1415,10 +1436,10 @@ def edit_description(did, pclass_id):
 
         db.session.commit()
 
-        return redirect(url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id))
+        return redirect(url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create))
 
     return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
-                           pclass_id=pclass_id, title='Edit description')
+                           pclass_id=pclass_id, title='Edit description', create=create)
 
 
 @convenor.route('/delete_description/<int:did>/<int:pclass_id>')
@@ -1576,8 +1597,10 @@ def attach_skills(id, pclass_id, sel_id=None):
     else:
         skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
 
+    create = request.args.get('create', default=None)
+
     return render_template('convenor/attach_skills.html', data=proj, skills=skills, pclass_id=pclass_id,
-                           form=form, sel_id=form.selector.data.id)
+                           form=form, sel_id=form.selector.data.id, create=create)
 
 
 @convenor.route('/add_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>')
@@ -1591,13 +1614,15 @@ def add_skill(projectid, skillid, pclass_id, sel_id):
     if not validate_edit_project(proj):
         return redirect(request.referrer)
 
+    create = request.args.get('create', default=None)
+
     skill = TransferableSkill.query.get_or_404(skillid)
 
     if skill not in proj.skills:
         proj.add_skill(skill)
         db.session.commit()
 
-    return redirect(url_for('convenor.attach_skills', id=projectid, pclass_id=pclass_id, sel_id=sel_id))
+    return redirect(url_for('convenor.attach_skills', id=projectid, pclass_id=pclass_id, sel_id=sel_id, create=create))
 
 
 @convenor.route('/remove_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>')
@@ -1611,13 +1636,15 @@ def remove_skill(projectid, skillid, pclass_id, sel_id):
     if not validate_edit_project(proj):
         return redirect(request.referrer)
 
+    create = request.args.get('create', default=None)
+
     skill = TransferableSkill.query.get_or_404(skillid)
 
     if skill in proj.skills:
         proj.remove_skill(skill)
         db.session.commit()
 
-    return redirect(url_for('convenor.attach_skills', id=projectid, pclass_id=pclass_id, sel_id=sel_id))
+    return redirect(url_for('convenor.attach_skills', id=projectid, pclass_id=pclass_id, sel_id=sel_id, create=create))
 
 
 @convenor.route('/attach_programmes/<int:id>/<int:pclass_id>')
@@ -1644,7 +1671,10 @@ def attach_programmes(id, pclass_id):
 
     q = proj.available_degree_programmes
 
-    return render_template('convenor/attach_programmes.html', data=proj, programmes=q.all(), pclass_id=pclass_id)
+    create = request.args.get('create', default=None)
+
+    return render_template('convenor/attach_programmes.html', data=proj, programmes=q.all(), pclass_id=pclass_id,
+                           create=create)
 
 
 @convenor.route('/add_programme/<int:id>/<int:pclass_id>/<int:prog_id>')
@@ -1731,6 +1761,8 @@ def attach_markers(id, pclass_id):
         if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
+    create = request.args.get('create', default=None)
+
     state_filter = request.args.get('state_filter')
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
@@ -1767,7 +1799,8 @@ def attach_markers(id, pclass_id):
     pclasses = proj.project_classes.filter_by(active=True, uses_marker=True).all()
 
     return render_template('convenor/attach_markers.html', data=proj, pclass_id=pclass_id, groups=groups, pclasses=pclasses,
-                           state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter)
+                           state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter,
+                           create=create)
 
 
 @convenor.route('/attach_markers_ajax/<int:id>/<int:pclass_id>')

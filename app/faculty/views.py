@@ -465,7 +465,8 @@ def delete_project(id):
         db.session.delete(data)
         db.session.commit()
     except SQLAlchemyError:
-        db.rollback()
+        db.session.rollback()
+        raise
 
     return redirect(request.referrer)
 

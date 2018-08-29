@@ -29,7 +29,7 @@ def register_prune_email(celery):
             EmailLog.query.filter(EmailLog.send_date < limit).delete()
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()
 
 
@@ -40,5 +40,5 @@ def register_prune_email(celery):
             EmailLog.query.delete()
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()

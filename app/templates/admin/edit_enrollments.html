@@ -64,7 +64,13 @@
         </div>
     </div>
 
-    <a href="{{ url_for('admin.edit_users') }}">
-        <i class="fa fa-backward"></i> Return to user list
-    </a>
+    {% if create %}
+        <a href="{{ url_for('admin.edit_users') }}" class="btn btn-primary">
+            Finish and save
+        </a>
+    {% else %}
+        <a href="{{ url_for('admin.edit_users') }}">
+            <i class="fa fa-backward"></i> Return to user list
+        </a>
+    {% endif %}
 {% endblock %}

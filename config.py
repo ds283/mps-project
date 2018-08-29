@@ -56,6 +56,12 @@ class Config(object):
     DEFAULT_PROJECT_CAPACITY = 2
     DEFAULT_SECOND_MARKERS = 5
 
+    DEFAULT_SIGN_OFF_STUDENTS = True
+    DEFAULT_ENFORCE_CAPACITY = True
+    DEFAULT_SHOW_POPULARITY = True
+
+    DEFAULT_USE_ACADEMIC_TITLE = True
+
 
 class DevelopmentConfig(Config):
     """

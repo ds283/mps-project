@@ -95,6 +95,7 @@ class RoleSelectForm(Form, RoleMixin):
 class FirstLastNameMixin():
 
     first_name = StringField('First name', validators=[DataRequired(message='First name is required')])
+
     last_name = StringField('Last or family name', validators=[DataRequired(message='Last name is required')])
 
 
@@ -148,6 +149,7 @@ class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfir
 class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, NextFormMixin):
 
     def __init__(self, *args, **kwargs):
+
         super().__init__(*args, **kwargs)
         if not self.next.data:
             self.next.data = request.args.get('next', '')
@@ -155,12 +157,22 @@ class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, Ne
 
 class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixin):
 
-    pass
+    save_and_exit = SubmitField('Save and exit')
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+        self.submit.label.text = 'Next: Research group affiliations'
 
 
 class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixin):
 
-    pass
+    save_and_exit = SubmitField('Save and exit')
+
+    def __init__(self, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+        self.submit.label.text = 'Next: Research group affiliations'
 
 
 class RegisterStudentForm(RegisterOfficeForm, StudentDataMixin):

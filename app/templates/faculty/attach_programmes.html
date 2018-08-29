@@ -48,7 +48,16 @@
         </div>
     </div>
 
-    <a href="{{ url_for('faculty.edit_projects') }}">
-        <i class="fa fa-backward"></i> Return to project list
-    </a>
+    {% if create %}
+        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-primary">
+            Finish and exit
+        </a>
+        <a href="{{ url_for('faculty.project_preview', id=data.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-default">
+            Finish and preview
+        </a>
+    {% else %}
+        <a href="{{ url_for('faculty.edit_projects') }}">
+            <i class="fa fa-backward"></i> Return to project list
+        </a>
+    {% endif %}
 {% endblock %}

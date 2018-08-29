@@ -188,7 +188,7 @@ def create_faculty(role):
         elif form.save_and_exit.data:
             return redirect(url_for('admin.edit_users'))
         else:
-            raise RuntimeError('Unknown submit field in create_faculty')
+            raise RuntimeError('Unknown submit button in create_faculty')
 
     else:
 

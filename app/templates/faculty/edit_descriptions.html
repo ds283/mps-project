@@ -18,7 +18,7 @@
             $('#descriptions-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/faculty/descriptions_ajax/{{ project.id }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/faculty/descriptions_ajax/{{ project.id }}{% if create %}?create=1{% endif %}', dataSrc: '' },
                 columns: [
                     { data: 'label' },
                     { data: 'pclasses' },
@@ -58,7 +58,7 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-                <a href="{{ url_for('faculty.add_description', pid=project.id) }}" class="btn btn-default btn-lg">
+                <a href="{{ url_for('faculty.add_description', pid=project.id, create=create) }}" class="btn btn-default btn-lg">
                     <i class="fa fa-plus"></i>
                     Add new description
                 </a>
@@ -66,7 +66,19 @@
         </div>
     </div>
 
-    <a href="{{ url_for('faculty.edit_projects') }}">
-        <i class="fa fa-backward"></i> Return to project list
-    </a>
+    {% if create %}
+        <a href="{{ url_for('faculty.attach_markers', id=project.id, create=1) }}" class="btn btn-primary">
+            Next: Attach 2nd markers
+        </a>
+        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-default">
+            Save and exit
+        </a>
+        <a href="{{ url_for('faculty.project_preview', id=project.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-default">
+            Save and preview
+        </a>
+    {% else %}
+        <a href="{{ url_for('faculty.edit_projects') }}">
+            <i class="fa fa-backward"></i> Return to project list
+        </a>
+    {% endif %}
 {% endblock %}

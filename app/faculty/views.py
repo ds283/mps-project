@@ -137,7 +137,7 @@ _desc_menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('faculty.edit_description', did=d.id) }}">
+            <a href="{{ url_for('faculty.edit_description', did=d.id, create=create) }}">
                 <i class="fa fa-pencil"></i> Edit description
             </a>
         </li>
@@ -285,7 +285,9 @@ def edit_descriptions(id):
     if not validate_is_project_owner(project):
         return redirect(request.referrer)
 
-    return render_template('faculty/edit_descriptions.html', project=project)
+    create = request.args.get('create', default=None)
+
+    return render_template('faculty/edit_descriptions.html', project=project, create=create)
 
 
 @faculty.route('/descriptions_ajax/<int:id>')
@@ -300,7 +302,9 @@ def descriptions_ajax(id):
 
     descs = project.descriptions.all()
 
-    return ajax.faculty.descriptions_data(descs, _desc_menu)
+    create = request.args.get('create', default=None)
+
+    return ajax.faculty.descriptions_data(descs, _desc_menu, create=create)
 
 
 @faculty.route('/add_project', methods=['GET', 'POST'])
@@ -334,12 +338,16 @@ def add_project():
         db.session.add(data)
         db.session.commit()
 
-        if form.submit_and_preview.data:
+        if form.submit.data:
+            return redirect(url_for('faculty.edit_descriptions', id=data.id, create=1))
+        elif form.save_and_exit.data:
+            return redirect(url_for('faculty.edit_projects'))
+        elif form.save_and_preview:
             return redirect(url_for('faculty.project_preview', id=data.id,
                                     text='project list',
                                     url=url_for('faculty.edit_projects')))
         else:
-            return redirect(url_for('faculty.edit_projects'))
+            raise RuntimeError('Unknown submit button in faculty.add_project')
 
     else:
 
@@ -395,7 +403,7 @@ def edit_project(id):
 
         db.session.commit()
 
-        if form.submit_and_preview.data:
+        if form.save_and_preview.data:
             return redirect(url_for('faculty.project_preview', id=id,
                                     text='project list',
                                     url=url_for('faculty.edit_projects')))
@@ -473,6 +481,8 @@ def add_description(pid):
     if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
+    create = request.args.get('create', default=None)
+
     form = AddDescriptionForm(pid, request.form)
     form.project_id = pid
 
@@ -491,13 +501,14 @@ def add_description(pid):
         db.session.add(data)
         db.session.commit()
 
-        return redirect(url_for('faculty.edit_descriptions', id=pid))
+        return redirect(url_for('faculty.edit_descriptions', id=pid, create=create))
 
     else:
         if request.method == 'GET':
             form.capacity.data = proj.owner.project_capacity
 
-    return render_template('faculty/edit_description.html', project=proj, form=form, title='Add new description')
+    return render_template('faculty/edit_description.html', project=proj, form=form, title='Add new description',
+                           create=create)
 
 
 @faculty.route('/edit_description/<int:did>', methods=['GET', 'POST'])
@@ -509,6 +520,8 @@ def edit_description(did):
     # if project owner is not logged-in user, object
     if not validate_is_project_owner(desc.parent):
         return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
 
     form = EditDescriptionForm(desc.parent_id, did, obj=desc)
     form.project_id = desc.parent_id
@@ -527,10 +540,10 @@ def edit_description(did):
 
         db.session.commit()
 
-        return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id))
+        return redirect(url_for('faculty.edit_descriptions', id=desc.parent_id, create=create))
 
     return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
-                           title='Edit description')
+                           title='Edit description', create=create)
 
 
 @faculty.route('/delete_description/<int:did>')
@@ -646,8 +659,10 @@ def attach_skills(id, sel_id=None):
     else:
         skills = TransferableSkill.query.filter_by(active=True).order_by(TransferableSkill.name.asc())
 
+    create = request.args.get('create', default=None)
+
     return render_template('faculty/attach_skills.html', data=proj, skills=skills,
-                           form=form, sel_id=form.selector.data.id)
+                           form=form, sel_id=form.selector.data.id, create=create)
 
 
 @faculty.route('/add_skill/<int:projectid>/<int:skillid>/<int:sel_id>')
@@ -661,13 +676,15 @@ def add_skill(projectid, skillid, sel_id):
     if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
+    create = request.args.get('create', default=None)
+
     skill = TransferableSkill.query.get_or_404(skillid)
 
     if skill not in proj.skills:
         proj.add_skill(skill)
         db.session.commit()
 
-    return redirect(url_for('faculty.attach_skills', id=projectid, sel_id=sel_id))
+    return redirect(url_for('faculty.attach_skills', id=projectid, sel_id=sel_id, create=create))
 
 
 @faculty.route('/remove_skill/<int:projectid>/<int:skillid>/<int:sel_id>')
@@ -681,13 +698,15 @@ def remove_skill(projectid, skillid, sel_id):
     if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
+    create = request.args.get('create', default=None)
+
     skill = TransferableSkill.query.get_or_404(skillid)
 
     if skill in proj.skills:
         proj.remove_skill(skill)
         db.session.commit()
 
-    return redirect(url_for('faculty.attach_skills', id=projectid, sel_id=sel_id))
+    return redirect(url_for('faculty.attach_skills', id=projectid, sel_id=sel_id, create=create))
 
 
 @faculty.route('/attach_programmes/<int:id>')
@@ -703,7 +722,9 @@ def attach_programmes(id):
 
     q = proj.available_degree_programmes
 
-    return render_template('faculty/attach_programmes.html', data=proj, programmes=q.all())
+    create = request.args.get('create', default=None)
+
+    return render_template('faculty/attach_programmes.html', data=proj, programmes=q.all(), create=create)
 
 
 @faculty.route('/add_programme/<int:id>/<int:prog_id>')
@@ -757,6 +778,8 @@ def attach_markers(id):
     if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
+    create = request.args.get('create', default=None)
+
     state_filter = request.args.get('state_filter')
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
@@ -793,7 +816,8 @@ def attach_markers(id):
     pclasses = proj.project_classes.filter_by(active=True, uses_marker=True).all()
 
     return render_template('faculty/attach_markers.html', data=proj, groups=groups, pclasses=pclasses,
-                           state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter)
+                           state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter,
+                           create=create)
 
 
 @faculty.route('/attach_markers_ajax/<int:id>')

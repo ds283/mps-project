@@ -344,7 +344,6 @@ def add_project():
     else:
 
         if request.method == 'GET':
-
             owner = current_user.faculty_data
 
             if owner.show_popularity:
@@ -356,7 +355,6 @@ def add_project():
                 form.show_bookmarks.data = False
                 form.show_selections.data = False
 
-            form.capacity.data = owner.project_capacity
             form.enforce_capacity.data = owner.enforce_capacity
 
     return render_template('faculty/edit_project.html', project_form=form, title='Add new project')
@@ -494,6 +492,10 @@ def add_description(pid):
         db.session.commit()
 
         return redirect(url_for('faculty.edit_descriptions', id=pid))
+
+    else:
+        if request.method == 'GET':
+            form.capacity.data = proj.owner.project_capacity
 
     return render_template('faculty/edit_description.html', project=proj, form=form, title='Add new description')
 

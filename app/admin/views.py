@@ -179,11 +179,16 @@ def create_faculty(role):
                            office=form.office.data,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now())
-        db.session.add(data)
 
+        db.session.add(data)
         db.session.commit()
 
-        return redirect(url_for('admin.edit_users'))
+        if form.submit.data:
+            return redirect(url_for('admin.edit_affiliations', id=data.id, create=1))
+        elif form.save_and_exit.data:
+            return redirect(url_for('admin.edit_users'))
+        else:
+            raise RuntimeError('Unknown submit field in create_faculty')
 
     else:
 
@@ -191,6 +196,12 @@ def create_faculty(role):
 
             # dynamically set default project capacity
             form.project_capacity.data = current_app.config['DEFAULT_PROJECT_CAPACITY']
+
+            form.sign_off_students.data = current_app.config['DEFAULT_SIGN_OFF_STUDENTS']
+            form.enforce_capacity.data = current_app.config['DEFAULT_ENFORCE_CAPACITY']
+            form.show_popularity.data = current_app.config['DEFAULT_SHOW_POPULARITY']
+
+            form.use_academic_title.data = current_app.config['DEFAULT_USE_ACADEMIC_TITLE']
 
     return render_template('security/register_user.html', user_form=form, role=role,
                            title='Register a new {r} user account'.format(r=role))
@@ -231,18 +242,15 @@ def create_student(role):
         return redirect(url_for('admin.edit_users'))
 
     else:
-
         if request.method == 'GET':
 
             # populate cohort with default value on first load
             config = get_main_config()
 
             if config:
-
                 form.cohort.data = config.year
 
             else:
-
                 form.cohort.data = date.today().year
 
     return render_template('security/register_user.html', user_form=form, role=role,
@@ -454,15 +462,12 @@ def edit_user(id):
     user = User.query.get_or_404(id)
 
     if user.has_role('office'):
-
         return redirect(url_for('admin.edit_office', id=id))
 
     elif user.has_role('faculty'):
-
         return redirect(url_for('admin.edit_faculty', id=id))
 
     elif user.has_role('student'):
-
         return redirect(url_for('admin.edit_student', id=id))
 
     flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
@@ -503,8 +508,6 @@ def edit_office(id):
         user.last_name = form.last_name.data
 
         _datastore.commit()
-
-        flash('All changes saved')
 
         if resend_confirmation:
             _resend_confirm_email(user)
@@ -550,8 +553,6 @@ def edit_faculty(id):
         data.last_edit_timestamp = datetime.now()
 
         _datastore.commit()
-
-        flash('All changes saved')
 
         if resend_confirmation:
             _resend_confirm_email(user)
@@ -611,8 +612,6 @@ def edit_student(id):
 
         _datastore.commit()
 
-        flash('All changes saved')
-
         if resend_confirmation:
             _resend_confirm_email(user)
 
@@ -644,7 +643,10 @@ def edit_affiliations(id):
     data = FacultyData.query.get_or_404(id)
     research_groups = ResearchGroup.query.filter_by(active=True)
 
-    return render_template('admin/edit_affiliations.html', user=user, data=data, research_groups=research_groups)
+    create = request.args.get('create', default=None)
+
+    return render_template('admin/edit_affiliations.html', user=user, data=data, research_groups=research_groups,
+                           create=create)
 
 
 @admin.route('/edit_enrollments/<int:id>')
@@ -660,7 +662,10 @@ def edit_enrollments(id):
     data = FacultyData.query.get_or_404(id)
     project_classes = ProjectClass.query.filter_by(active=True)
 
-    return render_template('admin/edit_enrollments.html', user=user, data=data, project_classes=project_classes)
+    create = request.args.get('create', default=None)
+
+    return render_template('admin/edit_enrollments.html', user=user, data=data, project_classes=project_classes,
+                           create=create)
 
 
 @admin.route('/edit_enrollment/<int:id>/<int:returnid>', methods=['GET', 'POST'])

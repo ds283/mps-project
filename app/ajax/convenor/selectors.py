@@ -121,6 +121,19 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+        
+        <li role="separator" class="divider"></li>
+        {% if config.selection_closed %}
+            <li class="disabled"><a>
+                <i class="fa fa-trash"></i> Delete disabled
+            </a></li>
+        {% else %}
+            <li>
+                <a href="{{ url_for('convenor.delete_selector', sid=student.id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+            </li>
+        {% endif %}
     </ul>
 </div>
 """

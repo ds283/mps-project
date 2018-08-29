@@ -35,6 +35,7 @@ from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFa
     SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
 
 from datetime import date, datetime, timedelta
+from sqlalchemy.exc import SQLAlchemyError
 
 
 _project_menu = \
@@ -720,11 +721,45 @@ def enroll_selector(sid, configid):
 
     config = ProjectClassConfig.query.get_or_404(configid)
 
+    # reject user if not entitled to view this dashboard
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
     if config.selection_closed:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
     add_selector(sid, configid, autocommit=True)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/delete_selector/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_selector(sid):
+    """
+    Manually delete a selector
+    :param sid:
+    :return:
+    """
+
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    if sel.config.selection_closed:
+        flash('Manual deletion of selectors is only possible before student choices are closed', 'error')
+        return redirect(request.referrer)
+
+    try:
+        db.session.delete(sel)      # delete should cascade to Bookmark and SelectionRecord items
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not delete selector due to a database error. Please contact a system administrator.',
+              'error')
 
     return redirect(request.referrer)
 

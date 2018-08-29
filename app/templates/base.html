@@ -29,6 +29,35 @@
     {{ super() }}
     <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
 
+    {# to to ensure that dropdown menus don't open off-screen #}
+    {# based on https://stackoverflow.com/questions/32746598/bootstrap-dropdown-list-position-up-bottom-based-on-document-height #}
+    <script>
+        function determineDropDirection(){
+          $(".dropdown-menu").each( function(){
+            $(this).css({
+              visibility: "hidden",
+              display: "block"
+            });
+
+            // Invisibly expand the dropdown menu so its true height can be calculated
+            $(this).parent().removeClass("dropup");
+
+            // Necessary to remove class each time so we don't unwantedly use dropup's offset top
+            // 40 offset is for bottom navbar, which hides a menu
+            if ($(this).offset().top + $(this).outerHeight() > $(window).innerHeight() + $(window).scrollTop() - 40){
+              $(this).parent().addClass("dropup");
+            }
+
+            // Return dropdown menu to fully hidden state
+            $(this).removeAttr("style");
+          });
+        }
+
+        determineDropDirection();
+        $(window).scroll(determineDropDirection);
+        $(window).resize(determineDropDirection);
+    </script>
+
     {% if current_user.is_authenticated %}
     <script>
 

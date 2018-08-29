@@ -140,7 +140,7 @@ _menu = \
 
 _cohort = \
 """
-{{ sel.student.programme.label()|safe }}
+{{ sel.student.programme.label|safe }}
 {{ sel.academic_year_label|safe }}
 {{ sel.student.cohort_label|safe }}
 """
@@ -221,9 +221,11 @@ def enroll_selectors_data(students, config):
                 'display': s.user.name,
                 'sortstring': s.user.last_name + s.user.first_name
              },
-             'programme': s.programme.label(),
+             'programme': s.programme.label,
              'cohort': s.cohort_label,
-             'acadyear': s.academic_year_label(config.year),
+             'acadyear': {
+                 'display': s.academic_year_label(config.year),
+                 'sortvalue': s.academic_year(config.year)},
              'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
 
     return jsonify(data)

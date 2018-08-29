@@ -14,7 +14,7 @@ from flask import render_template_string, jsonify
 _pclasses_programmes = \
 """
 {% for programme in pcl.programmes %}
-    {{ programme.label()|safe }}
+    {{ programme.label|safe }}
 {% endfor %}
 """
 
@@ -37,7 +37,7 @@ _pclasses_menu = \
                 Make inactive
             </a></li>
         {% else %}
-            {% if pcl.available() %}
+            {% if pcl.available %}
                 <li><a href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
                     Make active
                 </a></li>

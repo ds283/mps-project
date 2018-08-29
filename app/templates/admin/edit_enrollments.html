@@ -69,8 +69,20 @@
             Finish and save
         </a>
     {% else %}
-        <a href="{{ url_for('admin.edit_users') }}">
-            <i class="fa fa-backward"></i> Return to user list
-        </a>
+        {% if pane is none or pane == 'accounts' %}
+            <a href="{{ url_for('admin.edit_users') }}">
+                <i class="fa fa-backward"></i> Return to user accounts
+            </a>
+        {% elif pane == 'faculty' %}
+            <a href="{{ url_for('admin.edit_users_faculty') }}">
+                <i class="fa fa-backward"></i> Return to faculty accounts
+            </a>
+        {% elif pane == 'students' %}
+            <a href="{{ url_for('admin.edit_users_students') }}">
+                <i class="fa fa-backward"></i> Return to student accounts
+            </a>
+        {% else  %}
+            <span class="label label-danger">Unknown user dashboard pane '{{ pane }}'</span>
+        {% endif %}
     {% endif %}
 {% endblock %}

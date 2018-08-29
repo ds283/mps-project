@@ -22,7 +22,12 @@
                       } },
                     { data: 'programme' },
                     { data: 'cohort' },
-                    { data: 'acadyear' },
+                    { data: 'acadyear',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                      } },
                     { data: 'actions' }
                 ],
                 deferRender: true

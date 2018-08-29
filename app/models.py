@@ -333,6 +333,15 @@ class User(db.Model, UserMixin):
         return self.name + ' (' + self.username + ')'
 
 
+    @property
+    def active_label(self):
+
+        if self.active:
+            return '<span class="label label-success">Active</a>'
+
+        return '<span class="label label-default">Inactive</a>'
+
+
     def post_task_update(self, uuid, payload, remove_on_load=False, autocommit=False):
         """
         Add a notification to this user
@@ -889,7 +898,17 @@ class StudentData(db.Model):
 
     def academic_year_label(self, current_year):
 
-        text = 'Y{y}'.format(y=self.academic_year(current_year))
+        academic_year = self.academic_year(current_year)
+
+        if academic_year < 0:
+            text = 'Error(<0)'
+            type = 'danger'
+        elif academic_year > 4:
+            text = 'Graduated'
+            type = 'primary'
+        else:
+            text = 'Y{y}'.format(y=self.academic_year(current_year))
+            type = 'info'
 
         if self.foundation_year:
             text += ' +F'
@@ -897,7 +916,7 @@ class StudentData(db.Model):
         if self.repeated_years > 0:
             text += ' +{n}'.format(n=self.repeated_years)
 
-        return '<span class="label label-info">{label}</span>'.format(label=text)
+        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
 
 
 
@@ -1001,10 +1020,11 @@ class DegreeProgramme(db.Model):
         :return:
         """
 
-        if self.available():
+        if self.available:
             self.active = True
 
 
+    @property
     def available(self):
         """
         Determine whether this degree programme is available for use (or activation)
@@ -1021,6 +1041,7 @@ class DegreeProgramme(db.Model):
         return '{p} {t}'.format(p=self.name, t=self.degree_type.name)
 
 
+    @property
     def label(self):
 
         return '<span class="label label-default">{n}</span>'.format(n=self.full_name)
@@ -1359,10 +1380,11 @@ class ProjectClass(db.Model):
         :return:
         """
 
-        if self.available():
+        if self.available:
             self.active = True
 
 
+    @property
     def available(self):
         """
         Determine whether this project class is available for use (or activation)

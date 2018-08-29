@@ -112,7 +112,7 @@
         {% if sel.has_bookmarks and sel.is_valid_selection %}
             <p>Your ranked list of bookmarks was:</p>
             <hr class="intro-divider">
-            {{ ranked_selection(sel, sel.get_ordered_bookmarks) }}
+            {{ ranked_selection(sel, sel.ordered_bookmarks) }}
         {% endif %}
     {% endif %}
 {% endmacro %}
@@ -120,7 +120,7 @@
 
 {% macro render_bookmarks(config, sel) %}
     <div class="list-group" id="P{{ config.id }}-bookmarks" >
-        {% for bookmark in sel.get_ordered_bookmarks %}
+        {% for bookmark in sel.ordered_bookmarks %}
         {% set project = bookmark.liveproject %}
             <div id="P{{ config.id }}-{{ project.id }}"
                  class="row vertical-align list-group-item {% if loop.index <= sel.number_choices %}selected-project{% else %}deselected-project{% endif %}">

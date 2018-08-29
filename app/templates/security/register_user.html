@@ -66,13 +66,19 @@
 
         {# STUDENT FIELDS #}
 
-        {% if user_form.exam_number or user_form.cohort or user_form.programme %}
+        {% if user_form.foundation_year or user_form.exam_number or user_form.cohort or user_form.repeated_years or user_form.programme %}
             <div class="well">
                 {% if user_form.exam_number %}
                     {{ wtf.form_field(user_form.exam_number) }}
                 {% endif %}
                 {% if user_form.cohort %}
                     {{ wtf.form_field(user_form.cohort) }}
+                {% endif %}
+                {%  if user_form.repeated_years %}
+                    {{ wtf.form_field(user_form.repeated_years) }}
+                {% endif %}
+                {% if user_form.foundation_year %}
+                    {{ wtf.form_field(user_form.foundation_year) }}
                 {% endif %}
                 {% if user_form.programme %}
                     {{ wtf.form_field(user_form.programme) }}

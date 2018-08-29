@@ -22,7 +22,7 @@
                             from IP address
                             <strong>{{ sel.submission_IP }}</strong>
                         </div>
-                        {{ ranked_selection(sel, sel.get_ordered_selection) }}
+                        {{ ranked_selection(sel, sel.ordered_selection) }}
                     {% else %}
                         No preferences have been received for this student.
                     {% endif %}

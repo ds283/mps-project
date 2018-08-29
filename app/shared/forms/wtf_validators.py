@@ -302,3 +302,9 @@ def project_unique_or_original_label(form, field):
     if field.data != form.desc.label and ProjectDescription.query \
             .filter_by(parent_id=form.project_id, label=field.data).first():
         raise ValidationError('{name} is already used as a label for this project'.format(name=field.data))
+
+
+def value_is_nonnegative(form, field):
+
+    if field.data < 0:
+        raise ValidationError('Please enter a non-negative value')

@@ -360,9 +360,23 @@ def build_enroll_selector_candidates(config):
 
     # build a list of eligible students who are not already attached as selectors
     candidates = db.session.query(StudentData) \
-        .filter(StudentData.cohort >= config.year - first_selector_year + 1,
-                StudentData.cohort <= config.year - last_selector_year + 1) \
-        .join(User, StudentData.id == User.id).filter(User.active == True)
+        .filter(StudentData.foundation_year == False,
+                config.year - StudentData.cohort + 1 - StudentData.repeated_years >= first_selector_year,
+                config.year - StudentData.cohort + 1 - StudentData.repeated_years <= last_selector_year) \
+        .join(User, StudentData.id == User.id) \
+        .filter(User.active == True)
+
+    fyear_candidates = db.session.query(StudentData) \
+        .filter(StudentData.foundation_year == True,
+                config.year - StudentData.cohort - StudentData.repeated_years >= first_selector_year,
+                config.year - StudentData.cohort - StudentData.repeated_years <= last_selector_year) \
+        .join(User, StudentData.id == User.id) \
+        .filter(User.active == True)
+
+    c_data = candidates.all()
+    fc_data = fyear_candidates.all()
+
+    candidates = candidates.union(fyear_candidates)
 
     # build a list of existing selecting students
     selectors = db.session.query(SelectingStudent.student_id) \

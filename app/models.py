@@ -869,7 +869,6 @@ class StudentData(db.Model):
 
     @property
     def cohort_label(self):
-
         return '<span class="label label-primary">{c} cohort</span>'.format(c=self.cohort)
 
 
@@ -2786,7 +2785,7 @@ class SelectingStudent(db.Model):
 
     @property
     def academic_year_label(self):
-        return self.student.academic_year_label(self.config_year)
+        return self.student.academic_year_label(self.config.year)
 
 
     @property

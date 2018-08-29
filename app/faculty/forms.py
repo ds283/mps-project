@@ -70,9 +70,11 @@ class AddProjectForm(Form, ProjectMixin):
     name = StringField('Title', validators=[DataRequired(message='Project title is required'),
                                             globally_unique_project])
 
-    submit = SubmitField('Add new project')
+    submit = SubmitField('Next: Project descriptions')
 
-    submit_and_preview = SubmitField('Add new project and preview')
+    save_and_exit = SubmitField('Save and exit')
+
+    save_and_preview = SubmitField('Save and preview')
 
 
 class EditProjectForm(Form, ProjectMixin, EditFormMixin):
@@ -93,7 +95,7 @@ class EditProjectForm(Form, ProjectMixin, EditFormMixin):
     name = StringField('Title', validators=[DataRequired(message='Project title is required'),
                                             unique_or_original_project])
 
-    submit_and_preview = SubmitField('Save changes and preview')
+    save_and_preview = SubmitField('Save changes and preview')
 
 
 class DescriptionMixin():
@@ -139,7 +141,7 @@ class AddDescriptionForm(Form, DescriptionMixin):
                         description='Enter a short label to identify this description in the list. '
                                     'The label will not be visible to students.')
 
-    submit = SubmitField('Add new project')
+    submit = SubmitField('Add new description')
 
 
 class EditDescriptionForm(Form, DescriptionMixin, EditFormMixin):

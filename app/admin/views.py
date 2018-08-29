@@ -229,12 +229,14 @@ def create_student(role):
 
         # insert extra data for student accounts
 
+        rep_years = form.repeated_years.data
+        ry = rep_years if rep_years is not None and rep_years >= 0 else 0
         data = StudentData(id=user.id,
                            exam_number=form.exam_number.data,
                            cohort=form.cohort.data,
                            programme=form.programme.data,
                            foundation_year=form.foundation_year.data,
-                           repeated_years=form.repeated_years.data,
+                           repeated_years=ry,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now())
 
@@ -753,10 +755,13 @@ def edit_student(id):
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
 
+        rep_years = form.repeated_years.data
+        ry = rep_years if rep_years is not None and rep_years >= 0 else 0
+
         data.foundation_year = form.foundation_year.data
         data.exam_number = form.exam_number.data
         data.cohort = form.cohort.data
-        data.repeated_years = form.repeated_years.data
+        data.repeated_years = ry
         data.programme_id = form.programme.data.id
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()

@@ -13,7 +13,7 @@ from flask import render_template_string, jsonify, url_for
 
 _label = \
 """
-<a href="{{ url_for('faculty.edit_description', did=d.id) }}">{{ d.label }}</a>
+<a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id) }}">{{ d.label }}</a>
 """
 
 
@@ -49,7 +49,7 @@ _team = \
 
 def descriptions_data(descs, menu, pclass_id=None, create=None):
 
-    data = [{'label': render_template_string(_label, d=d),
+    data = [{'label': render_template_string(_label, d=d, pclass_id=pclass_id),
              'pclasses': render_template_string(_pclasses, d=d),
              'team': render_template_string(_team, d=d),
              'capacity': d.capacity,

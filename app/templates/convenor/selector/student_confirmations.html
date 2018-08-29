@@ -27,7 +27,7 @@
                         {% for project in sel.confirmed %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
-                                    <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+                                    <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
                                         <strong>{{ project.name }}</strong>
                                     </a>
                                 </div>
@@ -80,7 +80,7 @@
                         {% for project in sel.confirm_requests %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
-                                    <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+                                    <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
                                         <strong>{{ project.name }}</strong>
                                     </a>
                                 </div>

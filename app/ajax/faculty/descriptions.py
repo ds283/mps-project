@@ -47,12 +47,12 @@ _team = \
 """
 
 
-def descriptions_data(descs, menu, pclass_id=None):
+def descriptions_data(descs, menu, pclass_id=None, create=None):
 
     data = [{'label': render_template_string(_label, d=d),
              'pclasses': render_template_string(_pclasses, d=d),
              'team': render_template_string(_team, d=d),
              'capacity': d.capacity,
-             'menu': render_template_string(menu, d=d, pclass_id=pclass_id)} for d in descs]
+             'menu': render_template_string(menu, d=d, pclass_id=pclass_id, create=create)} for d in descs]
 
     return jsonify(data)

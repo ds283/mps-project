@@ -37,46 +37,57 @@
 
 {#        {{ wtf.form_errors(user_form) }}#}
 
-        {{ wtf.form_field(user_form.email) }}
-        {% if user_form.ask_confirm %}
-            {{ wtf.form_field(user_form.ask_confirm) }}
-        {% endif %}
-        {{ wtf.form_field(user_form.username) }}
+        <div class="well">
+            {{ wtf.form_field(user_form.email) }}
+            {% if user_form.ask_confirm %}
+                {{ wtf.form_field(user_form.ask_confirm) }}
+            {% endif %}
+            {{ wtf.form_field(user_form.username) }}
+        </div>
 
-        {% if user_form.password %}
-            {{ wtf.form_field(user_form.password) }}
-        {% endif %}
-        {% if user_form.password_confirm %}
-            {{ wtf.form_field(user_form.password_confirm) }}
-        {% endif %}
-        {% if user_form.random_password %}
-            {{ wtf.form_field(user_form.random_password) }}
+        {% if user_form.password or user_form.password_confirm or user_form.random_password %}
+            <div class="well">
+                {% if user_form.password %}
+                    {{ wtf.form_field(user_form.password) }}
+                {% endif %}
+                {% if user_form.password_confirm %}
+                    {{ wtf.form_field(user_form.password_confirm) }}
+                {% endif %}
+                {% if user_form.random_password %}
+                    {{ wtf.form_field(user_form.random_password) }}
+                {% endif %}
+            </div>
         {% endif %}
 
-        {{ wtf.form_field(user_form.first_name) }}
-        {{ wtf.form_field(user_form.last_name) }}
+        <div class="well">
+            {{ wtf.form_field(user_form.first_name) }}
+            {{ wtf.form_field(user_form.last_name) }}
+        </div>
 
         {# STUDENT FIELDS #}
 
-        {% if user_form.exam_number %}
-            {{ wtf.form_field(user_form.exam_number) }}
-        {% endif %}
-        {% if user_form.cohort %}
-            {{ wtf.form_field(user_form.cohort) }}
-        {% endif %}
-        {% if user_form.programme %}
-            {{ wtf.form_field(user_form.programme) }}
-        {% endif %}
+        {% if user_form.exam_number or user_form.cohort or user_form.programme %}
+            <div class="well">
+                {% if user_form.exam_number %}
+                    {{ wtf.form_field(user_form.exam_number) }}
+                {% endif %}
+                {% if user_form.cohort %}
+                    {{ wtf.form_field(user_form.cohort) }}
+                {% endif %}
+                {% if user_form.programme %}
+                    {{ wtf.form_field(user_form.programme) }}
+                {% endif %}
+            </div>
+        {%  endif %}
 
         {# FACULTY FIELDS #}
 
-        {% if user_form.office %}
-            {{ wtf.form_field(user_form.office) }}
-        {% endif %}
 
         {% if user_form.academic_title or user_form.use_academic_title %}
             <div class="well">
-                <p>Titles</p>
+                {% if user_form.office %}
+                    {{ wtf.form_field(user_form.office) }}
+                {% endif %}
                 {% if user_form.academic_title %}
                     {{ wtf.form_field(user_form.academic_title) }}
                 {% endif %}
@@ -117,6 +128,9 @@
         {% endif %}
 
         {{ wtf.form_field(user_form.submit, button_map={'submit': 'primary'}) }}
+        {% if user_form.save_and_exit %}
+            {{ wtf.form_field(user_form.save_and_exit, button_map={'save_and_exit': 'default'}) }}
+        {% endif %}
 
     </form>
 {% endblock %}

@@ -13,7 +13,7 @@
                     <span class="label label-primary">#{{ item.rank }}</span>
                 </div>
                 <div class="col-xs-5">
-                    <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+                    <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector bookmarks view', url=url_for('convenor.selector_bookmarks', id=sel.id)) }}">
                         <strong>{{ project.name }}</strong>
                     </a>
                 </div>
@@ -114,7 +114,7 @@
                         <span class="label label-success">#{{ item.rank }}</span>
                     </div>
                     <div class="col-xs-5">
-                        <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+                        <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector submission view', url=url_for('convenor.selector_choices', id=sel.id)) }}">
                             <strong>{{ project.name }}</strong>
                         </a>
                     </div>

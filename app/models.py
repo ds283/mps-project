@@ -131,23 +131,20 @@ project_programmes = db.Table('project_to_programmes',
                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                               db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
-# association table giving association between projects and supervision team
-project_supervision = db.Table('project_to_supervision',
-                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
-                               db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
-
-description_supervisors = db.Table('description_to_supervisors',
-                                   db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
-                                   db.Column('supervisor_id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
-
-description_pclasses = db.Table('description_to_pclasses',
-                                db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
-                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
-
 # association table giving 2nd markers
 second_markers = db.Table('project_to_markers',
                           db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                           db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
+# association table matching project descriptions to supervision team
+description_supervisors = db.Table('description_to_supervisors',
+                                   db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
+                                   db.Column('supervisor_id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
+
+# association table matching project descriptions to project classes
+description_pclasses = db.Table('description_to_pclasses',
+                                db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
+                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
 
 
 # PROJECT ASSOCIATIONS (LIVE)
@@ -1885,9 +1882,6 @@ class Project(db.Model):
     # impose limitation on capacity
     enforce_capacity = db.Column(db.Boolean())
 
-    # maximum number of students
-    capacity = db.Column(db.Integer())
-
     # table of allowed 2nd markers
     second_markers = db.relationship('FacultyData', secondary=second_markers, lazy='dynamic',
                                      backref=db.backref('second_marker_for', lazy='dynamic'))
@@ -1896,21 +1890,13 @@ class Project(db.Model):
     # PROJECT DESCRIPTION
 
     # 'descriptions' field is established by backreference from ProjectDescription
+    # (this works well but is a bit awkward because it creates a circular dependency between
+    # Project and ProjectDescription which we solve using post_upddate
 
     # link to default description, if one exists
     default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
-    default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False,
+    default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False, post_update=True,
                               backref=db.backref('default', uselist=False))
-
-    # project description
-    description = db.Column(db.Text())
-
-    # recommended reading
-    reading = db.Column(db.Text())
-
-    # supervisory roles
-    team = db.relationship('Supervisor', secondary=project_supervision, lazy='dynamic',
-                           backref=db.backref('projects', lazy='dynamic'))
 
 
     # POPULARITY DISPLAY
@@ -2017,6 +2003,13 @@ class Project(db.Model):
                     return False
 
         return True
+
+
+    @property
+    def is_deletable(self):
+
+        count = db.session.query(sqlalchemy.func.count(self.live_projects.subquery().c.id)).scalar()
+        return count == 0
 
 
     def add_skill(self, skill):

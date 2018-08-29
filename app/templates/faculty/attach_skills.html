@@ -21,7 +21,7 @@
                        {% if skill.group is not none %}
                             style="{{ skill.group.make_CSS_style() }}"
                        {% endif %}
-                       href="{{ url_for('faculty.remove_skill', projectid=data.id, skillid=skill.id, sel_id=sel_id) }}">
+                       href="{{ url_for('faculty.remove_skill', projectid=data.id, skillid=skill.id, sel_id=sel_id, create=create) }}">
                         <i class="fa fa-times"></i>
                         {% if skill.group is not none  %}
                             {{ skill.group.name }}:
@@ -35,7 +35,7 @@
             {% endif %}
         </div>
         <div class="panel-footer">
-            <form action="{{ url_for('faculty.attach_skills', id=data.id) }}" method="POST" name="skill-selector-form">
+            <form action="{{ url_for('faculty.attach_skills', id=data.id, create=create) }}" method="POST" name="skill-selector-form">
                 {{ form.hidden_tag() }}
                 {{ on_click_selector_field(form.selector, false) }}
             </form>
@@ -44,7 +44,7 @@
                     {% for skill in skills %}
                         {% if skill not in data.skills %}
                             <a class="btn btn-default selection-label"
-                               href="{{ url_for('faculty.add_skill', projectid=data.id, skillid=skill.id, sel_id=sel_id) }}">
+                               href="{{ url_for('faculty.add_skill', projectid=data.id, skillid=skill.id, sel_id=sel_id, create=create) }}">
                                 <i class="fa fa-plus"></i> {{ skill.name }}
                             </a>
                         {% endif %}
@@ -56,7 +56,19 @@
         </div>
     </div>
 
-    <a href="{{ url_for('faculty.edit_projects') }}">
-        <i class="fa fa-backward"></i> Return to project list
-    </a>
+    {% if create %}
+        <a href="{{ url_for('faculty.attach_programmes', id=data.id, create=1) }}" class="btn btn-primary">
+            Next: Attach preferred degree programmes
+        </a>
+        <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-default">
+            Save and exit
+        </a>
+        <a href="{{ url_for('faculty.project_preview', id=data.id, text='project list', url=url_for('faculty.edit_projects')) }}" class="btn btn-default">
+            Save and preview
+        </a>
+    {% else %}
+        <a href="{{ url_for('faculty.edit_projects') }}">
+            <i class="fa fa-backward"></i> Return to project list
+        </a>
+    {% endif %}
 {% endblock %}

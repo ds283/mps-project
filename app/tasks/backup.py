@@ -471,7 +471,7 @@ def register_backup_tasks(celery):
         try:
             success, msg = remove_backup(id)
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()
 
         if not success:

@@ -48,7 +48,16 @@
         </div>
     </div>
 
-    <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
-        <i class="fa fa-backward"></i> Return to convenor dashboard
-    </a>
+    {% if create %}
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}" class="btn btn-default">
+            Finish and exit
+        </a>
+        <a href="{{ url_for('faculty.project_preview', id=data.id, text='attached projects list', url=url_for('convenor.attached', id=pclass_id)) }}" class="btn btn-default">
+            Finish and preview
+        </a>
+    {% else %}
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}">
+            <i class="fa fa-backward"></i> Return to convenor dashboard
+        </a>
+    {% endif %}
 {% endblock %}

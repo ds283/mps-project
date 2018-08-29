@@ -63,7 +63,10 @@
         </div>
 
         {{ wtf.form_field(project_form.submit, button_map={'submit': 'primary'}) }}
-        {{ wtf.form_field(project_form.submit_and_preview, button_map={'submit_and_preview': 'default'}) }}
+        {% if project_form.save_and_exit %}
+            {{ wtf.form_field(project_form.save_and_exit, button_map={'save_and_exit': 'default'}) }}
+        {% endif %}
+        {{ wtf.form_field(project_form.save_and_preview, button_map={'save_and_preview': 'default'}) }}
 
     </form>
 {% endblock %}

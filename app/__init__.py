@@ -18,6 +18,8 @@ from flask_mail import Mail
 from flask_assets import Environment
 from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
+from flask_debugtoolbar import DebugToolbarExtension
+from flask_debug_api import DebugAPIExtension
 
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay, Notification
@@ -48,6 +50,15 @@ def create_app():
     mail = Mail(app)
     bleach = Bleach(app)
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
+
+    if config_name == 'development':
+        toolbar = DebugToolbarExtension(app)
+        api_toolbar = DebugAPIExtension(app)
+
+        panels = list(app.config['DEBUG_TB_PANELS'])
+        panels.append('flask_debugtoolbar_lineprofilerpanel.panels.LineProfilerPanel')
+        panels.append('flask_debug_api.BrowseAPIPanel')
+        app.config['DEBUG_TB_PANELS'] = panels
 
     app.config['BLEACH_ALLOWED_TAGS'] = markdown_tags
     app.config['BLEACH_ALLOWED_ATTRS'] = markdown_attrs

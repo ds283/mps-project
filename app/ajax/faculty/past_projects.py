@@ -20,7 +20,7 @@ _project_menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+            <a href="{{ url_for('faculty.live_project', pid=project.id, text='offered projects view', url=url_for('faculty.past_projects')) }}">
                 View web page
             </a>
         </li>
@@ -41,7 +41,9 @@ def pastproject_data(projects):
 
     data = [{'year': '{c}'.format(c=p.config.year),
              'name': '<a href="{url}">{name}</a>'.format(name=p.name, url=url_for('faculty.live_project',
-                                                                                  pid=p.id)),
+                                                                                  pid=p.id,
+                                                                                  text='offered projects view',
+                                                                                  url=url_for('faculty.past_projects'))),
              'pclass': render_template_string(_pclass, config=p.config),
              'group': p.group.make_label(),
              'metadata': render_template_string('{% from "faculty/macros.html" import project_metadata %}{{ project_metadata(p) }}', p=p),

@@ -73,7 +73,7 @@ _menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('faculty.live_project', pid=project.id) }}">
+            <a href="{{ url_for('faculty.live_project', pid=project.id, text='live projects list', url=url_for('convenor.liveprojects', id=config.pclass_id)) }}">
                 View web page
             </a>
         </li>
@@ -172,7 +172,9 @@ def liveprojects_data(config, projects):
 
     data = [{'number': '{c}'.format(c=p.number),
              'name': '<a href="{url}">{name}</a>'.format(name=p.name,
-                                                         url=url_for('faculty.live_project', pid=p.id)),
+                                                         url=url_for('faculty.live_project', pid=p.id,
+                                                                     text='live projects list',
+                                                                     url=url_for('convenor.liveprojects', id=config.pclass_id))),
              'owner': '<a href="mailto:{em}">{name}</a>'.format(em=p.owner.user.email,
                                                                 name=p.owner.user.name),
              'group': p.group.make_label(),

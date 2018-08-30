@@ -12,6 +12,8 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
 from flask_security import roles_accepted, current_user
 
+from celery import chain
+
 from app.shared.utils import build_enroll_selector_candidates
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
@@ -2138,13 +2140,25 @@ def go_live(pid, configid):
         celery = current_app.extensions['celery']
         golive = celery.tasks['app.tasks.go_live.pclass_golive']
         golive_fail = celery.tasks['app.tasks.go_live.golive_fail']
+        golive_close = celery.tasks['app.tasks.go_live.golive_close']
 
         # register Go Live as a new background task and push it to the celery scheduler
         task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
                                 owner=current_user,
                                 description='Perform Go Live of "{proj}"'.format(proj=pclass.name))
-        golive.apply_async(args=(task_id, pid, configid, current_user.id, form.live_deadline.data), task_id=task_id,
-                           link_error=golive_fail.si(task_id, current_user.id))
+
+        if form.live.data:
+            golive.apply_async(args=(task_id, pid, configid, current_user.id, form.live_deadline.data, False),
+                               task_id=task_id,
+                               link_error=golive_fail.si(task_id, current_user.id))
+
+        elif form.live_and_close.data:
+            seq = chain(golive.si(task_id, pid, configid, current_user.id, form.live_deadline.data, True),
+                        golive_close.si(configid, current_user.id)).on_error(golive_fail.si(task_id, current_user.id))
+            seq.apply_async()
+
+        else:
+            raise RuntimeError('Unknown GoLive submission button')
 
     return redirect(request.referrer)
 
@@ -2169,7 +2183,8 @@ def close_selections(id):
 
     db.session.commit()
 
-    flash('Student selections for {name} {yeara}-{yearb} have now been closed'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
+    flash('Student selections for {name} {yeara}-{yearb} have now been'
+          ' closed'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
 
     return redirect(request.referrer)
 

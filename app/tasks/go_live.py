@@ -28,14 +28,14 @@ from datetime import datetime
 def register_golive_tasks(celery):
 
     @celery.task(bind=True, serializer='pickle')
-    def pclass_golive(self, task_id, pclass_id, current_id, convenor_id, deadline):
+    def pclass_golive(self, task_id, pclass_id, config_id, convenor_id, deadline, allow_empty):
 
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to Go Live...', autocommit=True)
 
         # get database records for this project class
         try:
             pcl = ProjectClass.query.filter_by(id=pclass_id).first()
-            current_config = ProjectClassConfig.query.filter_by(id=current_id).first()
+            current_config = ProjectClassConfig.query.filter_by(id=config_id).first()
             convenor = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError:
             raise self.retry()
@@ -76,16 +76,16 @@ def register_golive_tasks(celery):
             if not proj.is_offerable:
                 attached_projects.remove(proj)
 
-        if len(attached_projects) == 0:
+        if len(attached_projects) == 0 and not allow_empty:
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
                                   'because there would be no attached projects. If this is not what you expect, '
                                   'check active flags and sabbatical/exemption status for all enrolled faculty.'
-                                  ''.format(name=pcl.name, yra=year, yrb=year+1), 'warning', autocommit=True)
+                                  ''.format(name=pcl.name, yra=year, yrb=year+1), 'error', autocommit=True)
             self.update_state('FAILURE', meta='No attached projects')
             return golive_fail.apply_async(args=(task_id, convenor_id))
 
         # build group of tasks to automatically take attached projects live
-        projects_group = group(project_golive.si(n+1, p.id, current_id) for n, p in enumerate(attached_projects))
+        projects_group = group(project_golive.si(n + 1, p.id, config_id) for n, p in enumerate(attached_projects))
 
         # get backup task from Celery instance
         celery = current_app.extensions['celery']
@@ -95,7 +95,7 @@ def register_golive_tasks(celery):
                     backup.si(convenor_id, type=BackupRecord.PROJECT_GOLIVE_FALLBACK, tag='golive',
                               description='Rollback snapshot for {proj} Go Live {yr}'.format(proj=pcl.name, yr=year)),
                     projects_group,
-                    golive_finalize.si(task_id, current_id, convenor_id, deadline)).on_error(golive_fail.si(task_id, convenor_id))
+                    golive_finalize.si(task_id, config_id, convenor_id, deadline)).on_error(golive_fail.si(task_id, convenor_id))
 
         seq.apply_async()
 
@@ -160,3 +160,25 @@ def register_golive_tasks(celery):
         except KeyError as e:
             db.session.rollback()
             self.update_state(state='FAILURE', meta='Database error: {msg}'.format(msg=str(e)))
+
+
+    @celery.task(bind=True)
+    def golive_close(self, config_id, convenor_id):
+
+        try:
+            convenor = User.query.filter_by(id=convenor_id).first()
+            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if config is not None:
+            config.selection_closed = True
+            config.closed_id = convenor_id
+            config.closed_timestamp = datetime.now()
+
+        if convenor is not None:
+            convenor.post_message('Student selections for {name} {yeara}-{yearb} have now been'
+                                  ' closed'.format(name=config.project_class.name, yeara=config.year,
+                                                   yearb=config.year+1), 'success')
+
+        db.session.commit()

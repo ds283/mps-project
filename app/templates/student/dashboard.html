@@ -28,39 +28,41 @@
         }
 
         {% for config, sel, sub in enrollments %}
-            Sortable.create(document.getElementById("P{{ config.id }}-bookmarks"), {
-                handle: '.drag-handle',
-                animation: 150,
-                onSort: function(e) {
-                    const items = e.to.children;
-                    let result = [];
-                    for (let i=0; i < items.length; i++) {
-                        // push id to ranking list
-                        result.push($(items[i]).attr('id'));
+            {% if sel is not None %}
+                Sortable.create(document.getElementById("P{{ config.id }}-bookmarks"), {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    onSort: function(e) {
+                        const items = e.to.children;
+                        let result = [];
+                        for (let i=0; i < items.length; i++) {
+                            // push id to ranking list
+                            result.push($(items[i]).attr('id'));
 
-                        // update colours of list items to indicate selection status
-                        if (i < {{ sel.number_choices }}) {
-                            $(items[i]).addClass('selected-project');
-                            $(items[i]).removeClass('deselected-project');
-                        } else {
-                            $(items[i]).addClass('deselected-project');
-                            $(items[i]).removeClass('selected-project');
-                        }
+                            // update colours of list items to indicate selection status
+                            if (i < {{ sel.number_choices }}) {
+                                $(items[i]).addClass('selected-project');
+                                $(items[i]).removeClass('deselected-project');
+                            } else {
+                                $(items[i]).addClass('deselected-project');
+                                $(items[i]).removeClass('selected-project');
+                            }
 
-                        // update numerical rankings
-                        rspan = $(items[i]).find('#ranking')
-                        rspan.html("#" + (i+1));
-                        if (i < {{ sel.number_choices }}) {
-                            rspan.addClass('label-success');
-                            rspan.removeClass('label-danger');
-                        } else {
-                            rspan.addClass('label-danger');
-                            rspan.removeClass('label-success');
+                            // update numerical rankings
+                            rspan = $(items[i]).find('#ranking')
+                            rspan.html("#" + (i+1));
+                            if (i < {{ sel.number_choices }}) {
+                                rspan.addClass('label-success');
+                                rspan.removeClass('label-danger');
+                            } else {
+                                rspan.addClass('label-danger');
+                                rspan.removeClass('label-success');
+                            }
                         }
+                        sendAjax(result, {{ config.id }}, {{ sel.id }});
                     }
-                    sendAjax(result, {{ config.id }}, {{ sel.id }});
-                }
-            });
+                });
+            {% endif %}
         {% endfor %}
     </script>
 {% endblock %}

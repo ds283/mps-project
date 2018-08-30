@@ -1545,7 +1545,6 @@ class ProjectClassConfig(db.Model):
 
     @property
     def _selection_open(self):
-
         return self.live and not self.selection_closed
 
 
@@ -1559,7 +1558,6 @@ class ProjectClassConfig(db.Model):
 
     @property
     def selector_lifecycle(self):
-
         # if gone live and closed, then either we are ready to match or we are read to rollover
         if self.live and self.selection_closed:
             if self.project_class.do_matching:
@@ -1593,7 +1591,6 @@ class ProjectClassConfig(db.Model):
 
     @property
     def time_to_request_deadline(self):
-
         if self.request_deadline is None:
             return '<invalid>'
 
@@ -1610,7 +1607,6 @@ class ProjectClassConfig(db.Model):
 
     @property
     def time_to_live_deadline(self):
-
         if self.live_deadline is None:
             return '<invalid>'
 
@@ -1637,19 +1633,16 @@ class ProjectClassConfig(db.Model):
 
     @property
     def number_selectors(self):
-
         return db.session.query(sqlalchemy.func.count(SelectingStudent.id)).with_parent(self).scalar()
 
 
     @property
     def number_submitters(self):
-
         return db.session.query(sqlalchemy.func.count(SubmittingStudent.id)).with_parent(self).scalar()
 
 
     @property
     def count_submitted_students(self):
-
         total = 0
         submitted = 0
         bookmarks = 0
@@ -1672,7 +1665,6 @@ class ProjectClassConfig(db.Model):
 
     @property
     def convenor_email(self):
-
         if self.convenor is not None and self.convenor.user is not None:
             return self.convenor.user.email
         else:
@@ -1681,7 +1673,6 @@ class ProjectClassConfig(db.Model):
 
     @property
     def convenor_name(self):
-
         if self.convenor is not None and self.convenor.user is not None:
             return self.convenor.user.name
         else:
@@ -2507,14 +2498,12 @@ class LiveProject(db.Model):
 
 
     def meeting_confirmed(self, sel):
-
         if sel in self.confirmed_students:
             return True
 
 
     @property
     def ordered_skills(self):
-
         return self.skills \
             .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
             .order_by(SkillGroup.name.asc(),
@@ -2522,7 +2511,6 @@ class LiveProject(db.Model):
 
 
     def _get_popularity_attr(self, getter):
-
         record = PopularityRecord.query \
             .filter_by(liveproject_id=self.id) \
             .order_by(PopularityRecord.datestamp.desc()).first()
@@ -2538,7 +2526,6 @@ class LiveProject(db.Model):
 
     @property
     def popularity_score(self):
-
         def getter(record):
             return record.score
 
@@ -2547,7 +2534,6 @@ class LiveProject(db.Model):
 
     @property
     def popularity_rank(self):
-
         def getter(record):
             return record.score_rank, record.total_number
 
@@ -2558,7 +2544,6 @@ class LiveProject(db.Model):
 
     @property
     def lowest_popularity_rank(self):
-
         def getter(record):
             return record.lowest_score_rank
 
@@ -2569,7 +2554,6 @@ class LiveProject(db.Model):
 
     @property
     def views_rank(self):
-
         def getter(record):
             return record.views_rank, record.total_number
 
@@ -2578,7 +2562,6 @@ class LiveProject(db.Model):
 
     @property
     def bookmarks_rank(self):
-
         def getter(record):
             return record.bookmarks_rank, record.total_number
 
@@ -2587,7 +2570,6 @@ class LiveProject(db.Model):
 
     @property
     def selections_rank(self):
-
         def getter(record):
             return record.selections_rank, record.total_number
 
@@ -2596,36 +2578,30 @@ class LiveProject(db.Model):
 
     @property
     def show_popularity_data(self):
-
         return self.parent.show_popularity or self.parent.show_bookmarks or self.parent.show_selections
 
 
     @property
     def number_bookmarks(self):
-
         return db.session.query(sqlalchemy.func.count(Bookmark.id)).filter_by(liveproject_id=self.id).scalar()
 
 
     @property
     def number_selections(self):
-
         return db.session.query(sqlalchemy.func.count(SelectionRecord.id)).filter_by(liveproject_id=self.id).scalar()
 
 
     @property
     def number_pending(self):
-
         return db.session.query(sqlalchemy.func.count(self.confirm_waiting.subquery().c.id)).scalar()
 
 
     @property
     def number_confirmed(self):
-
         return db.session.query(sqlalchemy.func.count(self.confirmed_students.subquery().c.id)).scalar()
 
 
     def format_popularity_label(self, css_classes=None):
-
         if not self.parent.show_popularity:
             return None
 
@@ -2633,35 +2609,36 @@ class LiveProject(db.Model):
 
 
     def popularity_label(self, css_classes=None):
-
         cls = '' if css_classes is None else ' '.join(css_classes)
 
         score = self.popularity_rank
         if score is None:
-            return '<span class="label label-default {cls}">Popularity unavailable</span>'.format(cls=cls)
+            return '<span class="label label-default {cls}">Popularity score unavailable</span>'.format(cls=cls)
 
         rank, total = score
         lowest_rank = self.lowest_popularity_rank
 
+        # don't report popularity data if there isn't enough differentiation between projects for it to be
+        # meaningful. Remember the lowest rank is actually numerically the highest number.
+        # We report scores only if there is enoug differentiation to push this rank above the 50th percentile
         frac = float(rank)/float(total)
         lowest_frac = float(lowest_rank)/float(total)
 
-        if lowest_frac > 0.4:
-            return '<span class="label label-default {cls}">Popularity available soon</span>'.format(cls=cls)
+        if lowest_frac < 0.5:
+            return '<span class="label label-default {cls}">Insufficient data for popularity score</span>'.format(cls=cls)
 
-        label='Low'
-        if frac > 0.9:
+        label = 'Low'
+        if frac < 0.1:
             label = 'Very high'
-        elif frac > 0.7:
+        elif frac < 0.3:
             label = 'High'
-        elif frac > 0.4:
+        elif frac < 0.5:
             label = 'Medium'
 
-        return '<span class="label label-success {cls}">Popularity: {{ label }}</span>'.format(cls=cls, label=label)
+        return '<span class="label label-success {cls}">Popularity: {label}</span>'.format(cls=cls, label=label)
 
 
     def format_bookmarks_label(self, css_classes=None):
-
         if not self.parent.show_bookmarks:
             return None
 
@@ -2669,20 +2646,17 @@ class LiveProject(db.Model):
 
 
     def bookmarks_label(self, css_classes=None):
-
         pl = 's' if self.number_bookmarks != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
         return '<span class="label label-info {cls}">{n} bookmark{pl}</span>'.format(cls=cls, n=self.number_bookmarks, pl=pl)
 
 
     def views_label(self, css_classes=None):
-
         pl = 's' if self.page_views != 1 else ''
         return '<span class="label label-info">{n} view{pl}</span>'.format(n=self.page_views, pl=pl)
 
 
     def format_selections_label(self, css_classes=None):
-
         if not self.parent.show_selections:
             return None
 
@@ -2690,14 +2664,12 @@ class LiveProject(db.Model):
 
 
     def selections_label(self, css_classes=None):
-
         pl = 's' if self.number_selections != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
         return '<span class="label label-primary {cls}">{n} selection{pl}</span>'.format(cls=cls, n=self.number_selections, pl=pl)
 
 
     def satisfies_preferences(self, sel):
-
         prog_query = self.programmes.subquery()
 
         pref_count = db.session.query(sqlalchemy.func.count(prog_query.c.id)).scalar()
@@ -3831,7 +3803,14 @@ class MatchingAttempt(db.Model):
 
     @property
     def current_score(self):
-        objective = sum([x.current_score for x in self.records])
+        if self.levelling_bias is None or self.mean_CATS_per_project is None or self.intra_group_tension is None:
+            return None
+
+        scores = [x.current_score for x in self.records]
+        if None in scores:
+            return None
+
+        objective = sum(scores)
 
         sup_dict = {x.id: x for x in self.supervisors}
         mark_dict = {x.id: x for x in self.markers}
@@ -4045,6 +4024,9 @@ class MatchingRecord(db.Model):
 
     @property
     def current_score(self):
+        if self.rank is None:
+            return None
+
         # score is 1/rank of assigned project, weighted
         weight = 1.0
 
@@ -4064,7 +4046,7 @@ class MatchingRecord(db.Model):
 
 
 class CrontabSchedule(db.Model):
-    
+
     __tablename__ = 'celery_crontabs'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -4105,7 +4087,7 @@ class CrontabSchedule(db.Model):
 
 
 class IntervalSchedule(db.Model):
-    
+
     __tablename__ = 'celery_intervals'
 
     id = db.Column(db.Integer, primary_key=True)

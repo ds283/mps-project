@@ -342,7 +342,7 @@ def add_bookmark(sid, pid):
     # add bookmark
     if not sel.bookmarks.filter_by(liveproject_id=pid).first():
 
-        bm = Bookmark(user_id=sid, liveproject_id=pid, rank=sel.bookmarks.count()+1)
+        bm = Bookmark(owner_id=sid, liveproject_id=pid, rank=sel.bookmarks.count()+1)
         db.session.add(bm)
         db.session.commit()
 
@@ -545,6 +545,7 @@ def submit(sid):
                 rec = SelectionRecord(owner_id=sel.student_id,
                                       liveproject_id=bookmark.liveproject_id,
                                       rank=bookmark.rank,
+                                      converted_from_bookmark=False,
                                       hint=SelectionRecord.SELECTION_HINT_NEUTRAL)
                 sel.selections.append(rec)
 

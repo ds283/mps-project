@@ -2111,27 +2111,18 @@ def force_confirm_all(id):
     return redirect(request.referrer)
 
 
-@convenor.route('/go_live/<pid>/<int:configid>', methods=['GET', 'POST'])
+@convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def go_live(pid, configid):
+def go_live(id):
 
-    # get details for project class
-    pclass = ProjectClass.query.get_or_404(pid)
+    # get details for current pclass configuration
+    config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not validate_is_convenor(pclass):
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     year = get_current_year()
-
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
-
-    if config.id != configid or config.year != year:
-        flash('A "Go Live" request was ignored. If you are attempting to go live with this project class, '
-              'please contact a system administrator.', 'error')
-        return redirect(url_for('convenor.overview', id=pid))
-
     form = GoLiveForm(request.form)
 
     if form.is_submitted():
@@ -2143,18 +2134,19 @@ def go_live(pid, configid):
         golive_close = celery.tasks['app.tasks.go_live.golive_close']
 
         # register Go Live as a new background task and push it to the celery scheduler
-        task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
+        task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=config.project_class.name,
+                                                                          yra=year, yrb=year+1),
                                 owner=current_user,
-                                description='Perform Go Live of "{proj}"'.format(proj=pclass.name))
+                                description='Perform Go Live of "{proj}"'.format(proj=config.project_class.name))
 
         if form.live.data:
-            golive.apply_async(args=(task_id, pid, configid, current_user.id, form.live_deadline.data, False),
+            golive.apply_async(args=(task_id, id, current_user.id, form.live_deadline.data, False),
                                task_id=task_id,
                                link_error=golive_fail.si(task_id, current_user.id))
 
         elif form.live_and_close.data:
-            seq = chain(golive.si(task_id, pid, configid, current_user.id, form.live_deadline.data, True),
-                        golive_close.si(configid, current_user.id)).on_error(golive_fail.si(task_id, current_user.id))
+            seq = chain(golive.si(task_id, id, current_user.id, form.live_deadline.data, True),
+                        golive_close.si(id, current_user.id)).on_error(golive_fail.si(task_id, current_user.id))
             seq.apply_async()
 
         else:
@@ -2167,24 +2159,28 @@ def go_live(pid, configid):
 @roles_accepted('faculty', 'admin', 'root')
 def close_selections(id):
 
-    # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    # get details for current pclass configuration
+    config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not entitled to perform dashboard functions
-    if not validate_is_convenor(pclass):
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    year = get_current_year()
 
-    config.selection_closed = True
-    config.closed_id = current_user.id
-    config.closed_timestamp = datetime.now()
+    celery = current_app.extensions['celery']
+    close = celery.tasks['app.tasks.close_selection.pclass_close']
+    close_fail = celery.tasks['app.tasks.close_selection.close_fail']
 
-    db.session.commit()
+    # register as new background task and push to celery scheduler
+    task_id = register_task('Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.project_class.name,
+                                                                               yra=year, yrb=year+1),
+                            owner=current_user,
+                            description='Close selections for "{proj}"'.format(proj=config.project_class.name))
 
-    flash('Student selections for {name} {yeara}-{yearb} have now been'
-          ' closed'.format(name=pclass.name, yeara=config.year, yearb=config.year+1), 'success')
+    close.apply_async(args=(task_id, config.id, current_user.id),
+                      task_id=task_id,
+                      link_error=close_fail(task_id, current_user.id))
 
     return redirect(request.referrer)
 

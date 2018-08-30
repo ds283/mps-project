@@ -37,7 +37,6 @@ def _verify_selector(sel):
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if sel.student_id != current_user.id and not current_user.has_role('admin') and not current_user.has_role('root'):
-
         flash('You do not have permission to perform operations for this user. '
               'If you believe this is incorrect, contract the system administrator.', 'error')
         return False
@@ -54,11 +53,9 @@ def _verify_view_project(sel, project):
     """
 
     if not project in sel.config.live_projects:
-
         flash('You are not able to view or bookmark this project because it is not attached to your student '
               'record for this type of project. Return to the dashboard and try to access the project from there. '
               'If problems persist, contact the system administrator.', 'error')
-
         return False
 
     return True
@@ -72,9 +69,7 @@ def _verify_open(config):
     """
 
     if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-
         flash('Project "{name}" is not open for student selections'.format(name=config.project_class.name), 'error')
-
         return False
 
     return True

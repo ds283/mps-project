@@ -8,8 +8,13 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, redirect, url_for, flash
-from flask_security import login_required, current_user, logout_user
+from flask import render_template, redirect, url_for, flash, session
+from flask_security import login_required, current_user, logout_user, login_user
+
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+
+from ..models import db, User
+from ..shared.utils import home_dashboard
 
 from . import auth
 
@@ -19,6 +24,19 @@ def logout():
     """
     Log out the current user
     """
+
+    prev_id = session.pop('previous_login', None)
+
+    if prev_id is not None and isinstance(prev_id, int):
+        try:
+            user = db.session.query(User).filter_by(id=prev_id).one()
+
+            login_user(user)
+            return home_dashboard()
+        except NoResultFound:
+            pass
+        except MultipleResultsFound:
+            pass
 
     logout_user()
     flash("You have been logged out")

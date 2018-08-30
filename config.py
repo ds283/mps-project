@@ -9,6 +9,7 @@
 #
 
 import os
+import redis
 
 # get absolute path of the directory containing this file;
 # used to locate a local database if we are using a backend
@@ -43,6 +44,11 @@ class Config(object):
     SECURITY_EMAIL_HTML = False       # disable HTML emails
 
     SECURITY_USER_IDENTITY_ATTRIBUTES = ['email', 'username']
+
+    # Flask-Session
+    SESSION_TYPE = 'redis'
+    SESSION_REDIS_URL = os.environ.get('SESSION_REDIS_URL') or 'redis://localhost:6379'
+    SESSION_REDIS = redis.from_url(SESSION_REDIS_URL)
 
     # MPS-Project configuration
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'

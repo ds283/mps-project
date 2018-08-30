@@ -10,7 +10,7 @@
 
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session
 from werkzeug.local import LocalProxy
-from flask_security import login_required, roles_required, roles_accepted, current_user
+from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from flask_security.utils import config_value, get_message, do_flash, \
     send_mail
 from flask_security.confirmable import generate_confirmation_link
@@ -3551,3 +3551,14 @@ def launch_test_task():
     test_task.apply_async(task_id=task_id)
 
     return 'success'
+
+
+@admin.route('/login_as/<int:id>')
+@roles_required('root')
+def login_as(id):
+
+    user = User.query.get_or_404(id)
+    login_user(user, remember=False)
+    # don't commit changes to database to avoid confusing this with a real login
+
+    return home_dashboard()

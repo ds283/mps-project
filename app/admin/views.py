@@ -3558,6 +3558,12 @@ def launch_test_task():
 def login_as(id):
 
     user = User.query.get_or_404(id)
+
+    # store previous login identifier
+    # this is OK provided we only ever use server-side sessions for security, so that the session
+    # variables are not editable by
+    session['previous_login'] = current_user.id
+
     login_user(user, remember=False)
     # don't commit changes to database to avoid confusing this with a real login
 

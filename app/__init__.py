@@ -20,6 +20,7 @@ from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
+from flask_session import Session
 
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay, Notification
@@ -50,6 +51,7 @@ def create_app():
     mail = Mail(app)
     bleach = Bleach(app)
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
+    session = Session(app)
 
     if config_name == 'development':
         toolbar = DebugToolbarExtension(app)

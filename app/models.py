@@ -2985,8 +2985,8 @@ class Bookmark(db.Model):
     # id of owning SelectingStudent
     # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
     # removed from the database
-    user_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    owner = db.relationship('SelectingStudent', foreign_keys=[user_id], uselist=False,
+    owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+    owner = db.relationship('SelectingStudent', foreign_keys=[owner_id], uselist=False,
                            backref=db.backref('bookmarks', lazy='dynamic', cascade='all, delete-orphan'))
 
     # LiveProject we are linking to
@@ -3185,6 +3185,12 @@ class BackupRecord(db.Model):
     SCHEDULED_BACKUP = 1
     PROJECT_ROLLOVER_FALLBACK = 2
     PROJECT_GOLIVE_FALLBACK = 3
+    PROJECT_CLOSE_FALLBACK = 4
+
+    _type_index = {SCHEDULED_BACKUP: 'Scheduled backup',
+                   PROJECT_ROLLOVER_FALLBACK: 'Rollover restore point',
+                   PROJECT_GOLIVE_FALLBACK: 'Go Live restore point',
+                   PROJECT_CLOSE_FALLBACK: 'Close selection restore point'}
 
     type = db.Column(db.Integer())
 
@@ -3201,40 +3207,31 @@ class BackupRecord(db.Model):
     backup_size = db.Column(db.Integer())
 
 
-    def type_to_string(self):
 
-        if self.type == self.SCHEDULED_BACKUP:
-            return 'Scheduled backup'
-        elif self.type == self.PROJECT_ROLLOVER_FALLBACK:
-            return 'Rollover restore point'
-        elif self.type == self.PROJECT_GOLIVE_FALLBACK:
-            return 'Go Live restore point'
-        else:
-            return '<Unknown>'
+    def type_to_string(self):
+        if self.type in self._type_index:
+            return self._type_index[self.type]
+
+        return '<Unknown>'
 
 
     @property
     def print_filename(self):
-
         return path.join("...", path.basename(self.filename))
-
 
 
     @property
     def readable_db_size(self):
-
         return format_size(self.db_size) if self.db_size is not None else "<unset>"
 
 
     @property
     def readable_archive_size(self):
-
         return format_size(self.archive_size) if self.archive_size is not None else "<unset>"
 
 
     @property
     def readable_total_backup_size(self):
-
         return format_size(self.backup_size) if self.backup_size is not None else "<unset>"
 
 

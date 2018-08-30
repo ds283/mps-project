@@ -3439,7 +3439,7 @@ def reassign_match_project(id, pid):
             record.rank = record.selector.project_rank(project.id)
             db.session.commit()
         else:
-            flash("Could not reassign "{proj}" to {name}; this project "
+            flash("Could not reassign '{proj}' to {name}; this project "
                   "was not included in this selector's choices".format(proj=project.name,
                                                                        name=record.selector.student.user.name),
                   'error')

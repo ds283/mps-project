@@ -218,6 +218,16 @@ sel_skill_filter_table = db.Table('sel_skill_filters',
 
 # MATCHING
 
+# project classes participating in a match
+match_configs = db.Table('match_configs',
+                         db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
+                         db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True))
+
+# workload balancing: include CATS from other MatchingAttempts
+match_balancing = db.Table('match_balancing',
+                           db.Column('child_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
+                           db.Column('parent_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True))
+
 # configuration association: supervisors
 supervisors_matching_table = db.Table('match_config_supervisors',
                                       db.Column('match_id', db.Integer(), db.ForeignKey('matching_attempts.id'), primary_key=True),
@@ -3411,8 +3421,15 @@ class MatchingAttempt(db.Model):
     main_config = db.relationship('MainConfig', foreign_keys=[year], uselist=False,
                                   backref=db.backref('matching_attempts', lazy='dynamic'))
 
-    # a name for this configuration
+    # a name for this matching attempt
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+
+
+    # PARTICIPATING PCLASSES
+
+    # pclasses that are part of this match
+    config_members = db.relationship('ProjectClassConfig', secondary=match_configs, lazy='dynamic',
+                                      backref=db.backref('matching_attempts', lazy='dynamic'))
 
 
     # CELERY TASK DATA
@@ -3452,10 +3469,10 @@ class MatchingAttempt(db.Model):
 
     # MATCHING OPTIONS
 
-    # ignore CATS limits
+    # ignore CATS limits specified in faculty accounts?
     ignore_per_faculty_limits = db.Column(db.Boolean())
 
-    # ignore degree programme preferences
+    # ignore degree programme preferences specified in project descriptions?
     ignore_programme_prefs = db.Column(db.Boolean())
 
     # how many years memory to include when levelling CATS scores
@@ -3486,6 +3503,12 @@ class MatchingAttempt(db.Model):
 
     # programme matching bias
     programme_bias = db.Column(db.Numeric(8,3))
+
+    # other MatchingAttempts to include in CATS calcualtions
+    include_matches = db.relationship('MatchingAttempt', secondary=match_balancing,
+                                      primaryjoin=match_balancing.c.child_id==id,
+                                      secondaryjoin=match_balancing.c.parent_id==id,
+                                      backref='balanced_with')
 
 
     # MATCHING OUTCOME

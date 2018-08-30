@@ -9,18 +9,15 @@
         <div class="panel-body">
             <form action="{{ url_for('convenor.go_live', pid=pclass.id, configid=config.id) }}" method="POST"
                   name="golive-form">
-                <div class="row vertical-top">
-                    <div class="col-xs-9">
-                        {% set group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = capacity_data %}
-                        <p>
-                            <strong>{{ total_projects }}</strong> projects are
-                            currently
-                            available to go live.
-                        </p>
-                    </div>
-                    <div class="col-xs-3">
+                {% set group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = capacity_data %}
+                <strong>{{ total_projects }}</strong> projects are
+                currently
+                available to go live.
+                <hr class="intro-divider">
+                {{ date_field(golive_form.live_deadline) }}
+                <div class="row">
+                    <div class="col-xs-12">
                         <div class="pull-right">
-                            {{ date_field(golive_form.live_deadline) }}
                             {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
                         </div>
                     </div>

@@ -48,8 +48,12 @@ p.copyright {
     font-weight: lighter;
 }
 
+.dashboard-button {
+    margin-top: 8px;
+}
+
 .filter-title {
-    font-size: 20px;
+    font-size: 18px;
     font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
     font-weight: lighter;
 }

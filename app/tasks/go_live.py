@@ -45,17 +45,18 @@ def register_golive_tasks(celery):
                 convenor.post_message('Go Live failed. Please contact a system administrator', 'danger',
                                       autocommit=True)
             self.update_state('FAILURE', meta='Could not load ProjectClass, ProjectClassConfig or User record from database')
-            return
+            return golive_fail.apply_async(args=(task_id, convenor_id))
 
         year = get_current_year()
 
         if current_config.golive_required.first() is not None:
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
                                   'because some confirmation requests are outstanding. '
-                                  'If needed, force all confirmations and try again.'.format(name=pcl.name,
-                                                                                             yra=year, yrb=year+1))
+                                  'If needed, force all '
+                                  'confirmations and try again.'.format(name=pcl.name, yra=year, yrb=year+1),
+                                  'warning', autocommit=True)
             self.update_state('FAILURE', meta='Some Go Live confirmations were still outstanding')
-            return
+            return golive_fail.apply_async(args=(task_id, convenor_id))
 
         # build list of projects to be attached when we go live
         # note that we exclude any projects where the supervisor is not normally enrolled
@@ -79,8 +80,9 @@ def register_golive_tasks(celery):
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
                                   'because there would be no attached projects. If this is not what you expect, '
                                   'check active flags and sabbatical/exemption status for all enrolled faculty.'
-                                  ''.format(name=pcl.name, yra=year, yrb=year+1))
+                                  ''.format(name=pcl.name, yra=year, yrb=year+1), 'warning', autocommit=True)
             self.update_state('FAILURE', meta='No attached projects')
+            return golive_fail.apply_async(args=(task_id, convenor_id))
 
         # build group of tasks to automatically take attached projects live
         projects_group = group(project_golive.si(n+1, p.id, current_id) for n, p in enumerate(attached_projects))

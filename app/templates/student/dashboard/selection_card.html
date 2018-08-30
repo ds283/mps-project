@@ -15,40 +15,40 @@
     </div>
 
     {% if sel.is_optional %}
-        <div class="alert alert-info">
+        <p>
             This project is <strong>optional</strong> for your degree programme
             ({{ current_user.student_data.programme.full_name }}).
             If you wish to participate, add bookmarks to keep track of the projects
             in which you are interested. Drag-and-drop your bookmarks using the drag handle
             to rank them in order of preference. Submit your selection when you are finished.
-        </div>
+        </p>
 
-        <div class="alert alert-info">
+        <p>
             Some projects require the project supervisor to confirm that
             a pre-selection meeting has taken place, or at least been arranged,
             before the project becomes available.
-        </div>
+        </p>
     {% else %}
         {% if sel.is_initial_selection %}
-            <div class="alert alert-info">
+            <p>
                 This project is <strong>mandatory</strong> for your degree programme
                 ({{ current_user.student_data.programme.full_name }}).
                 Add bookmarks to keep track of the projects in which you are interested,
                 then drag-and-drop to rank them in order of preference.
                 Submit your selection when you are finished.
-            </div>
+            </p>
 
-            <div class="alert alert-info">
+            <p>
                 Some projects require the project supervisor to confirm that
                 a pre-selection meeting has taken place, or at least been arranged,
                 before the project becomes available.
-            </div>
+            </p>
         {% else %}
-            <div class="alert alert-info">
+            <p>
                 If you wish to <strong>switch supervisors</strong>,
                 then add bookmarks for each project of interest.
                 Drag-and-drop your bookmarks to indicate your order of preference.
-            </div>
+            </p>
         {% endif %}
     {% endif %}
 {% endmacro %}

@@ -377,7 +377,8 @@ class User(db.Model, UserMixin):
     CLASSES = {'success': 'alert-success',
                'info': 'alert-info',
                'warning': 'alert-warning',
-               'danger': 'alert-danger'}
+               'danger': 'alert-danger',
+               'error': 'alert-danger'}
 
 
     def post_message(self, message, cls, remove_on_load=False, autocommit=False):
@@ -2495,7 +2496,7 @@ class LiveProject(db.Model):
 
         # if project doesn't require sign off, is always available
         # if project owner doesn't require confirmation, is always available
-        if self.meeting_reqd != self.MEETING_REQUIRED or self.owner.faculty_data.sign_off_students is False:
+        if self.meeting_reqd != self.MEETING_REQUIRED or self.owner.sign_off_students is False:
             return True
 
         # otherwise, check if sel is in list of confirmed students
@@ -2770,13 +2771,11 @@ class SelectingStudent(db.Model):
 
     @property
     def number_pending(self):
-
         return db.session.query(sqlalchemy.func.count(self.confirm_requests.subquery().c.id)).scalar()
 
 
     @property
     def number_confirmed(self):
-
         return db.session.query(sqlalchemy.func.count(self.confirmed.subquery().c.id)).scalar()
 
 
@@ -2786,7 +2785,6 @@ class SelectingStudent(db.Model):
         determine whether this SelectingStudent has bookmarks
         :return:
         """
-
         return self.bookmarks.first() is not None
 
 
@@ -2796,18 +2794,16 @@ class SelectingStudent(db.Model):
         return bookmarks in rank order
         :return:
         """
-
         return self.bookmarks.order_by(Bookmark.rank)
 
 
     @property
     def number_bookmarks(self):
-
         return db.session.query(sqlalchemy.func.count(Bookmark.id)).with_parent(self).scalar()
 
 
     @property
-    def get_academic_year(self):
+    def academic_year(self):
         """
         Compute the current academic year for this student, relative to our ProjectClassConfig record
         :return:
@@ -2826,7 +2822,6 @@ class SelectingStudent(db.Model):
         Determine whether this is the initial selection or a switch
         :return:
         """
-
         return self.academic_year == self.config.project_class.year - 1
 
 
@@ -2838,7 +2833,6 @@ class SelectingStudent(db.Model):
         project class
         :return:
         """
-
         return self.student.programme not in self.config.project_class.programmes
 
 
@@ -2848,7 +2842,6 @@ class SelectingStudent(db.Model):
         Compute the number of choices this student should make
         :return:
         """
-
         if self.is_initial_selection:
             return self.config.project_class.initial_choices
 

@@ -141,8 +141,9 @@ def liveprojects_data(sel, projects):
              'name': '<a href="{url}">{name}</strong></a>'.format(name=p.name,
                                                                   url=url_for('student.view_project', sid=sel.id,
                                                                               pid=p.id)),
-             'supervisor': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name,
-                                                                         em=p.owner.user.email),
+             'supervisor': {
+                 'display': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
+                 'sortvalue': p.owner.user.last_name + p.owner.user.first_name},
              'group': render_template_string(_project_group, sel=sel, group=p.group),
              'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
              'prefer': render_template_string(_project_prefer, project=p),

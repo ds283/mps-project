@@ -14,7 +14,6 @@ from flask_security import login_required, current_user, logout_user, login_user
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from ..models import db, User
-from ..shared.utils import home_dashboard
 
 from . import auth
 
@@ -32,7 +31,7 @@ def logout():
             user = db.session.query(User).filter_by(id=prev_id).one()
 
             login_user(user)
-            return home_dashboard()
+            return redirect(url_for('admin.edit_users'))
         except NoResultFound:
             pass
         except MultipleResultsFound:

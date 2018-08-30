@@ -49,7 +49,7 @@
     </div>
 
     {% if create %}
-        <a href="{{ url_for('convenor.attached', id=pclass_id) }}" class="btn btn-default">
+        <a href="{{ url_for('convenor.attached', id=pclass_id) }}" class="btn btn-primary">
             Finish and exit
         </a>
         <a href="{{ url_for('faculty.project_preview', id=data.id, text='attached projects list', url=url_for('convenor.attached', id=pclass_id)) }}" class="btn btn-default">

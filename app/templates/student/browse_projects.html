@@ -38,7 +38,12 @@
                 ajax: { url: $SCRIPT_ROOT + '/student/projects_ajax/{{ sel.id }}', dataSrc: '' },
                 columns: [
                     { data: 'name' },
-                    { data: 'supervisor' },
+                    { data: 'supervisor',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                    } },
                     { data: 'group' },
                     { data: 'skills' },
                     { data: 'meeting' },

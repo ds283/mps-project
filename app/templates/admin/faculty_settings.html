@@ -38,38 +38,38 @@
                         </h4>
                     </div>
                     <div class="col-xs-3">
-                        <strong>Supervising:</strong>
+                        Supervising:
                         {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
-                            <span class="label label-primary">enrolled</span>
+                            <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
                         {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                            <span class="label label-info">sabbatical/buyout</span>
+                            <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
                             {% if record.supervisor_reenroll is not none %}
                                 <span class="label label-info">ends {{ record.supervisor_reenroll }}</span>
                             {% else %}
                                 <span class="label label-warning">no end date</span>
                             {% endif %}
                         {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                            <span class="label label-warning">exempt</span>
+                            <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
                         {% else %}
-                            <span class="label label-danger">error</span>
+                            <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
                         {% endif %}
                     </div>
                     <div class="col-xs-3">
                         {% if record.pclass.uses_marker %}
-                            <strong>2nd-marking:</strong>
+                            2nd-marking:
                             {% if record.marker_state == record.MARKER_ENROLLED %}
-                                <span class="label label-primary">enrolled</span>
+                                <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
                             {% elif record.marker_state == record.MARKER_SABBATICAL %}
-                                <span class="label label-info">sabbatical/buyout</span>
+                                <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
                                 {% if record.marker_reenroll is not none %}
                                     <span class="label label-info">ends {{ record.marker_reenroll }}</span>
                                 {% else %}
                                     <span class="label label-warning">no end date</span>
                                 {% endif %}
                             {% elif record.marker_state == record.MARKER_EXEMPT %}
-                                <span class="label label-warning">exempt</span>
+                                <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
                             {% else %}
-                                <span class="label label-danger">error</span>
+                                <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
                             {% endif %}
                         {% endif %}
                     </div>

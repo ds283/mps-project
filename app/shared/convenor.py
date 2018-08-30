@@ -29,7 +29,7 @@ def add_liveproject(number, project, config_id, autocommit=False):
     if config is None:
         raise KeyError('Missing database record for ProjectClassConfig id={id}'.format(id=config_id))
 
-    description = project.get_description(config.project_class)
+    description = item.get_description(config.project_class)
     if description is None:
         raise KeyError('Missing description for Project id={id}, ProjectClass id={pid}'.format(id=project.id,
                                                                                                pid=config.pclass_id))

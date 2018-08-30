@@ -23,8 +23,8 @@
 
         $(document).ready(function () {
             $('#golive-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'ftip',
+                stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/golive_ajax/{{ pclass.id }}', dataSrc: '' },
                 columns: [
                     { data: 'name',

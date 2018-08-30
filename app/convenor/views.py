@@ -251,11 +251,9 @@ def overview(id):
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
     if config.requests_issued:
-
         issue_form.requests_issued.label.text = 'Save changes'
 
     if request.method == 'GET':
-
         if config.request_deadline is not None:
             issue_form.request_deadline.data = config.request_deadline
         else:

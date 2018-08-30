@@ -160,12 +160,19 @@ class EditDescriptionForm(Form, DescriptionMixin, EditFormMixin):
 
 class RolloverForm(Form):
 
+    # rollover action button
     rollover = SubmitField('Rollover')
 
 
 class GoLiveForm(Form):
 
+    # normal Go Live option
     live = SubmitField('Go live')
+
+    # go live and close option
+    live_and_close = SubmitField('Go live and immediately close')
+
+    # deadline field
     live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
 
 

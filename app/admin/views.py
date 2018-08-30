@@ -3092,7 +3092,7 @@ def notifications_ajax():
 
     # query for all tasks associated with the current user
     notifications = current_user.notifications \
-        .filter(Notification.timestamp > since) \
+        .filter(Notification.timestamp >= since) \
         .order_by(Notification.timestamp.asc()).all()
 
     # mark any messages or instructions (as opposed to task progress updates) for removal on next page load

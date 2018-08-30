@@ -15,6 +15,11 @@
                     Viewing selecting students for <strong>{{ project.name }}</strong>
                 </div>
                 <div class="panel-body">
+                    {% if project.config.selector_lifecycle < project.config.SELECTOR_LIFECYCLE_READY_MATCHING %}
+                        <div class="alert alert-info">
+                            Selecting hinting will become available once student selections are closed.
+                        </div>
+                    {% endif %}
                     {{ selecting_students(project, project.selections) }}
                 </div>
             </div>

@@ -3439,21 +3439,9 @@ def reassign_match_project(id, pid):
             record.rank = record.selector.project_rank(project.id)
             db.session.commit()
         else:
-            flash('Could not reassign "{proj}" to {name} this project '
-                  'was not included in their submitted choices'.format(proj=project.name,
+            flash("Could not reassign "{proj}" to {name}; this project "
+                  "was not included in this selector's choices".format(proj=project.name,
                                                                        name=record.selector.student.user.name),
-                  'error')
-
-    elif record.selector.has_bookmarks:
-        if record.selector.is_project_bookmarked(project):
-            record.project_id = project.id
-            record.supervisor_id = project.owner_id
-            record.rank = record.selector.project_rank(project.id)
-            db.session.commit()
-        else:
-            flash('Could not reassign "{proj}" to {name} this project '
-                  'was not included in their ranked bookmarks'.format(proj=project.name,
-                                                                      name=record.selector.student.user.name),
                   'error')
 
     return redirect(request.referrer)

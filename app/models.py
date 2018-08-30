@@ -1642,7 +1642,30 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def count_submitted_students(self):
+    def selector_data(self):
+        """
+        Report simple statistics about selectors attached to this ProjectClassConfg instance.
+
+        **
+        BEFORE SELECTIONS ARE CLOSED,
+        we report the total number of selectors, the number who have already made submissions, the number who have
+        bookmarks but have not yet made a submission, and the number who are entirely missing.
+
+        AFTER SELECTIONS ARE CLOSED,
+        we report the total number of selectors, the number who made submissions,
+        and the number who are entirely missing. This is because bookmarks are converted to SelectionRecords
+        on project closure, if needed.
+        :return:
+        """
+
+        if self.selector_lifecycle < self.SELECTOR_LIFECYCLE_READY_MATCHING:
+            return self._open_selector_data
+
+        return self._closed_selector_data
+
+
+    @property
+    def _open_selector_data(self):
         total = 0
         submitted = 0
         bookmarks = 0
@@ -1661,6 +1684,23 @@ class ProjectClassConfig(db.Model):
                 missing += 1
 
         return submitted, bookmarks, missing, total
+
+
+    @property
+    def _closed_selector_data(self):
+        total = 0
+        submitted = 0
+        missing = 0
+
+        for student in self.selecting_students:
+            total += 1
+
+            if student.has_submitted:
+                submitted += 1
+            else:
+                missing += 1
+
+        return submitted, missing, total
 
 
     @property
@@ -2827,7 +2867,6 @@ class SelectingStudent(db.Model):
         Determine whether the current selection is valid
         :return:
         """
-
         num_choices = self.number_choices
 
         if self.bookmarks.count() < num_choices:
@@ -2851,12 +2890,10 @@ class SelectingStudent(db.Model):
         Determine whether a submission has been made
         :return:
         """
-
         return self.selections.first() is not None
 
 
     def is_project_submitted(self, proj):
-
         if not self.has_submitted:
             return False
 
@@ -2868,7 +2905,6 @@ class SelectingStudent(db.Model):
 
 
     def is_project_bookmarked(self, proj):
-
         if not self.has_bookmarks:
             return False
 
@@ -2881,20 +2917,15 @@ class SelectingStudent(db.Model):
 
     @property
     def ordered_selection(self):
-
         return self.selections.order_by(SelectionRecord.rank)
 
 
     def project_rank(self, proj_id):
-
+        # ignore bookmarks; these will be converted to
+        # SelectionRecords after closure if needed, and project_rank() is only really
+        # meaningful once selections have closed
         if self.has_submitted:
             for item in self.selections.all():
-                if item.liveproject_id == proj_id:
-                    return item.rank
-            return None
-
-        if self.has_bookmarks:
-            for item in self.bookmarks.all():
                 if item.liveproject_id == proj_id:
                     return item.rank
             return None
@@ -2992,6 +3023,20 @@ class SelectionRecord(db.Model):
 
     # rank in owner's list
     rank = db.Column(db.Integer())
+
+    # was this record converted from a bookmark when selections were closed?
+    converted_from_bookmark = db.Column(db.Boolean())
+
+    SELECTION_HINT_NEUTRAL = 0
+    SELECTION_HINT_REQUIRE = 1
+    SELECTION_HINT_FORBID = 2
+    SELECTION_HINT_ENCOURAGE = 3
+    SELECTION_HINT_DISCOURAGE = 4
+    SELECTION_HINT_ENCOURAGE_STRONG = 5
+    SELECTION_HINT_DISCOURAGE_STRONG = 6
+
+    # convenor hint for this match
+    hint = db.Column(db.Integer())
 
 
 class EmailLog(db.Model):

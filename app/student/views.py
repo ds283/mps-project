@@ -525,18 +525,16 @@ def submit(sid):
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
-
         flash('You do not have permission to submit project preferences for this selector.', 'error')
         return redirect(request.referrer)
 
     if not sel.is_valid_selection:
-
         flash('The current bookmark list is not a valid set of project preferences. This is an internal error; '
               'please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
     try:
-
+        # delete any exising selections
         sel.selections = []
 
         # iterate through bookmarks, converting them to a selection set
@@ -546,7 +544,8 @@ def submit(sid):
             if bookmark.rank <= sel.number_choices:
                 rec = SelectionRecord(owner_id=sel.student_id,
                                       liveproject_id=bookmark.liveproject_id,
-                                      rank=bookmark.rank)
+                                      rank=bookmark.rank,
+                                      hint=SelectionRecord.SELECTION_HINT_NEUTRAL)
                 sel.selections.append(rec)
 
         sel.submission_time = datetime.now()
@@ -555,7 +554,6 @@ def submit(sid):
         db.session.commit()
 
     except SQLAlchemyError:
-
         db.session.rollback()
 
         flash('An database error occurred during submission. Please contact a system administrator.', 'error')

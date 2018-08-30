@@ -4,28 +4,20 @@
         <div class="panel-body">
             <div class="row vertical-align">
                 <div class="col-xs-8">
-                    {% set submitted, bookmarks, missing, total = config.count_submitted_students %}
+                    {% set submitted, missing, total = config.selector_data %}
                     <div class="row vertical-top">
-                        <div class="col-xs-4"><strong>Submitted</strong></div>
-                        <div class="col-xs-4"><strong>Has bookmarks</strong></div>
-                        <div class="col-xs-4"><strong>No bookmarks</strong></div>
+                        <div class="col-xs-6"><strong>Have submission data</strong></div>
+                        <div class="col-xs-6"><strong>Missing submission data</strong></div>
                     </div>
                     <div class="row vertical-top">
-                        <div class="col-xs-4">
+                        <div class="col-xs-6">
                             <strong>{{ submitted }}</strong>/{{ total }}
                             <a class="btn btn-link"
                                 href="{{ url_for('convenor.selectors', id=config.id, state_filter='submitted') }}">
                                 Show ...
                             </a>
                         </div>
-                        <div class="col-xs-4">
-                            <strong>{{ bookmarks }}</strong>/{{ total }}
-                            <a class="btn btn-link"
-                                href="{{ url_for('convenor.selectors', id=config.id, state_filter='bookmarks') }}">
-                                Show ...
-                            </a>
-                        </div>
-                        <div class="col-xs-4">
+                        <div class="col-xs-6">
                             <strong>{{ missing }}</strong>/{{ total }}
                             <a class="btn btn-link"
                                 href="{{ url_for('convenor.selectors', id=config.id, state_filter='none') }}">
@@ -40,17 +32,15 @@
                                 <p>All students submitted validated choices before selection closed.</p>
                             {% elif missing == 0 %}
                                 <p>
-                                    Some students did not submit a validated selection before closure,
-                                    but all students have bookmark data.
-                                </p>
-                                <p>
-                                    This data will be used when performing
-                                    automatic matching for students who are missing a validated selections.
-                                </p>
+                                    Some students did not submit a validated selection before closure.
+                                    For students who had a list of ranked bookmarks, these lists have been
+                                    converted into submission data. However, these choices will be downweighted
+                                    during matching in order to prioritize rankings from students who
+                                    submitted a correct list of choices.
                             {% else %}
-                                <p>Some students are missing both a validated selection and bookmark data.</p>
+                                <p>Some students have missing submission data.</p>
                                 <p>
-                                    If selections are closed now, these students will be allocated an arbitrary project
+                                    These students will be allocated an arbitrary project
                                     during automated matching.
                                 </p>
                             {% endif %}

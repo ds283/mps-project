@@ -19,18 +19,18 @@ menu = \
             <li class="dropdown-header">Edit</li>
             <li>
                 <a href="{{ url_for('admin.edit_user', id=user.id, pane=pane) }}">
-                    <i class="fa fa-pencil"></i> Edit account
+                    <i class="fa fa-pencil"></i> Account settings
                 </a>
             </li>
             {% if user.has_role('faculty') %}
                 <li>
                     <a href="{{ url_for('admin.edit_affiliations', id=user.id, pane=pane) }}">
-                        <i class="fa fa-pencil"></i> Edit affiliations
+                        <i class="fa fa-pencil"></i> Affiliations
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('admin.edit_enrollments', id=user.id, pane=pane) }}">
-                        <i class="fa fa-pencil"></i> Edit enrollments
+                        <i class="fa fa-pencil"></i> Enrollments
                     </a>
                 </li>
             {% endif %}
@@ -86,6 +86,14 @@ menu = \
                         <a href="{{ url_for('admin.make_exec', id=user.id) }}">Make executive</a>
                     </li>
                 {% endif %}
+            {% endif %}
+            
+            {% if current_user.has_role('root') and not current_user.has_role('student') %}
+                <li role="separator" class="divider"></li>
+                <li class="dropdown-header">Superuser functions</li>
+                <li>
+                    <a href="{{ url_for('admin.login_as', id=user.id) }}">Login as user</a>
+                </li>
             {% endif %}
         </ul>
     </div>

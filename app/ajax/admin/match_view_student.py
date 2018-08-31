@@ -45,29 +45,23 @@ _project = \
 """
 {% macro project_tag(r, show_period) %}
     {% set adjustable = false %}
-    {% if r.selector.has_submitted or r.selector.has_bookmarks %}{% set adjustable = true %}{% endif %}
+    {% if r.selector.has_submitted %}{% set adjustable = true %}{% endif %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
         <a class="label {% if r.is_project_overassigned %}label-danger{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}" {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
             {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }} (No. {{ r.project.number }})
             {% if adjustable %}<span class="caret"></span>{% endif %}
         </a>
         {% if adjustable %}
-            {% if r.selector.has_submitted %}{% set list = r.selector.ordered_selection %}
-            {% elif r.rselector.has_bookmarks %}{% set list = r.selector.ordered_bookmarks %}
-            {% endif %}
+            {% set list = r.selector.ordered_selection %}
             <ul class="dropdown-menu">
-                {% if r.selector.has_submitted %}
-                    <li class="dropdown-header">Submitted choices</li>
-                {% elif r.selector.has_bookmarks %}
-                    <li class="dropdown-header">Ranked bookmarks</li>
-                {% endif %}
+                <li class="dropdown-header">Submitted choices</li>
                 {% for item in list %}
                     {% set disabled = false %}
                     {% if item.liveproject_id == r.project_id %}{% set disabled = true %}{% endif %}
                     <li {% if disabled %}class="disabled"{% endif %}>
                         <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                            #{{ item.rank }}:
-                           {{ item.liveproject.owner.user.name }} - No. {{ item.liveproject.number }}: {{ item.liveproject.name }} 
+                           {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.liveproject.name }} 
                         </a>
                     </li> 
                 {% endfor %}

@@ -14,13 +14,12 @@ from flask_security import roles_accepted, current_user
 
 from celery import chain
 
-from app.shared.utils import build_enroll_selector_candidates
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects, get_convenor_filter_record, filter_second_markers
+    filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
@@ -622,6 +621,16 @@ def enroll_selectors(id):
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
+        return redirect(request.referrer)
+
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
 
@@ -636,16 +645,6 @@ def enroll_selectors(id):
 
     if prog_filter is not None:
         session['convenor_sel_enroll_prog_filter'] = prog_filter
-
-    # get current academic year
-    current_year = get_current_year()
-
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
-
-    if config.selection_closed:
-        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
 
     candidates = build_enroll_selector_candidates(config)
 
@@ -706,7 +705,7 @@ def enroll_selectors_ajax(id):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
-    return ajax.convenor.enroll_selectors_data(candidates, config)
+    return app.ajax.convenor.enroll_selectors.enroll_selectors_data(candidates, config)
 
 
 @convenor.route('/enroll_selector/<int:sid>/<int:configid>')
@@ -762,6 +761,104 @@ def delete_selector(sid):
               'error')
 
     return redirect(request.referrer)
+
+
+@convenor.route('/selector_grid/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selector_grid(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('The selector grid view is availably only after student choices are closed', 'error')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
+    if cohort_filter is None and session.get('convenor_sel_grid_cohort_filter'):
+        cohort_filter = session['convenor_sel_grid_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_sel_grid_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_sel_grid_prog_filter'):
+        prog_filter = session['convenor_sel_grid_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_sel_grid_prog_filter'] = prog_filter
+
+    # build a list of live students selecting from this project class
+    selectors = config.selecting_students.filter_by(retired=False).all()
+
+    # build list of available cohorts and degree programmes
+    cohorts = set()
+    programmes = set()
+    for sel in selectors:
+        cohorts.add(sel.student.cohort)
+        programmes.add(sel.student.programme_id)
+
+    # build list of available programmes
+    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    progs = [ rec for rec in all_progs if rec.id in programmes ]
+    groups = ResearchGroup.query.filter_by(active=True).all()
+
+    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/selector_grid.html', pane='selectors', subpane='grid',
+                           pclass=pclass, config=config, fac_data=fac_data,
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           cohort_filter=cohort_filter, prog_filter=prog_filter, groups=groups)
+
+
+@convenor.route('/selector_grid_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selector_grid_ajax(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not entitled to view this dashboard
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+
+    # build a list of live students selecting from this project class
+    selectors = config.selecting_students.filter_by(retired=False)
+
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
+
+    if cohort_flag or prog_flag:
+        selectors = selectors \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id)
+
+    if cohort_flag:
+        selectors = selectors.filter(StudentData.cohort == cohort_value)
+
+    if prog_flag:
+        selectors = selectors.filter(StudentData.programme_id == prog_value)
+
+    return ajax.convenor.selector_grid_data(selectors.all(), config)
 
 
 @convenor.route('/submitters/<int:id>')

@@ -26,7 +26,7 @@ _projects = \
 """
 {% macro project_tag(r) %}
     {% set adjustable = false %}
-    {% if r.selector.has_submitted or r.selector.has_bookmarks %}{% set adjustable = true %}{% endif %}
+    {% if r.selector.has_submitted %}{% set adjustable = true %}{% endif %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
@@ -35,9 +35,7 @@ _projects = \
             {% if adjustable %}<span class="caret"></span>{% endif %}
         </a>
         {% if adjustable %}
-            {% if r.selector.has_submitted %}{% set list = r.selector.ordered_selection %}
-            {% elif r.rselector.has_bookmarks %}{% set list = r.selector.ordered_bookmarks %}
-            {% endif %}
+            {% set list = r.selector.ordered_selection %}
             <ul class="dropdown-menu">
                 {% if r.selector.has_submitted %}
                     <li class="dropdown-header">Submitted choices</li>
@@ -50,7 +48,7 @@ _projects = \
                     <li {% if disabled %}class="disabled"{% endif %}>
                         <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                            #{{ item.rank }}:
-                           {{ item.liveproject.owner.user.name }} - No. {{ item.liveproject.number }}: {{ item.liveproject.name }} 
+                           {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.liveproject.name }} 
                         </a>
                     </li> 
                 {% endfor %}

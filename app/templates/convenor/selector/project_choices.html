@@ -7,6 +7,8 @@
 {% endblock %}
 
 {% block bodyblock %}
+    {% set config = project.config %}
+    {% set lifecycle = config.selector_lifecycle %}
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
@@ -15,17 +17,17 @@
                     Viewing selecting students for <strong>{{ project.name }}</strong>
                 </div>
                 <div class="panel-body">
-                    {% if project.config.selector_lifecycle < project.config.SELECTOR_LIFECYCLE_READY_MATCHING %}
+                    {% if lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING %}
                         <div class="alert alert-info">
-                            Selecting hinting will become available once student selections are closed.
+                            Selection hinting will become available once student selections are closed.
                         </div>
                     {% endif %}
-                    {{ selecting_students(project, project.selections) }}
+                    {{ selecting_students(project, project.selections, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) }}
                 </div>
             </div>
 
             <div>
-                <a href="{{ url_for('convenor.liveprojects', id=project.config.project_class.id) }}">
+                <a href="{{ url_for('convenor.liveprojects', id=config.project_class.id) }}">
                     <i class="fa fa-backward"></i> Return to dashboard
                 </a>
             </div>

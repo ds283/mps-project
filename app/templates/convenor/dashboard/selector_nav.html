@@ -1,14 +1,22 @@
 {% extends "convenor/dashboard/nav.html" %}
 
 {% block tabblock %}
+    {% set lifecycle = config.selector_lifecycle %}
+    {% set show_manual_enroll = (lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
+    {% set show_selector_grid = (lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     <ul class="nav nav-tabs dashboard-nav">
         <li {% if subpane=='list' %}class="active"{% endif %}>
             <a href="{{ url_for('convenor.selectors', id=pclass.id) }}">
                 Show enrolled
             </a>
         </li>
-        <li {% if not config.selection_closed %}{% if subpane=='enroll' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
-            <a {% if not config.selection_closed %}href="{{ url_for('convenor.enroll_selectors', id=pclass.id) }}"{% endif %}>
+        <li {% if show_selector_grid %}{% if subpane=='grid' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
+            <a {% if show_selector_grid %}href="{{ url_for('convenor.selector_grid', id=pclass.id) }}"{% endif %}>
+                Selector grid
+            </a>
+        </li>
+        <li {% if show_manual_enroll %}{% if subpane=='enroll' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
+            <a {% if show_manual_enroll %}href="{{ url_for('convenor.enroll_selectors', id=pclass.id) }}"{% endif %}>
                 Manual enrollment
             </a>
         </li>

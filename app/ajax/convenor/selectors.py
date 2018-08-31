@@ -141,8 +141,8 @@ _menu = \
 _cohort = \
 """
 {{ sel.student.programme.label|safe }}
-{{ sel.academic_year_label|safe }}
 {{ sel.student.cohort_label|safe }}
+{{ sel.academic_year_label|safe }}
 """
 
 _bookmarks = \
@@ -192,7 +192,10 @@ def selectors_data(students, config):
                 'display': s.student.user.name,
                 'sortstring': s.student.user.last_name + s.student.user.first_name
              },
-             'cohort': render_template_string(_cohort, sel=s),
+             'cohort': {
+                 'display': render_template_string(_cohort, sel=s),
+                 'value': s.student.cohort
+             },
              'bookmarks': {
                  'display': render_template_string(_bookmarks, sel=s),
                  'value': s.number_bookmarks
@@ -207,25 +210,3 @@ def selectors_data(students, config):
     return jsonify(data)
 
 
-_enroll_action = \
-"""
-<a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    <i class="fa fa-plus"></i> Manually enroll
-</a>
-"""
-
-
-def enroll_selectors_data(students, config):
-
-    data = [{'name': {
-                'display': s.user.name,
-                'sortstring': s.user.last_name + s.user.first_name
-             },
-             'programme': s.programme.label,
-             'cohort': s.cohort_label,
-             'acadyear': {
-                 'display': s.academic_year_label(config.year),
-                 'sortvalue': s.academic_year(config.year)},
-             'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
-
-    return jsonify(data)

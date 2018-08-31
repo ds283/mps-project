@@ -319,18 +319,18 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('faculty.edit_projects') }}">
-                                    <i class="fa fa-pencil"></i> Edit projects
+                                    <i class="fa fa-pencil"></i> My project library
                                 </a></li>
                                 <li><a href="{{ url_for('faculty.second_marker') }}">
-                                    My 2nd marker projects
+                                    <i class="fa fa-book"></i> My 2nd marker projects
                                 </a></li>
                                 <li role="separator" class="divider"></li>
                                 <li class="dropdown-header">Browse history</li>
                                 <li><a href="{{ url_for('faculty.past_projects') }}">
-                                    Offered projects
+                                    <i class="fa fa-book"></i> Offered projects
                                 </a></li>
                                 <li><a href="#">
-                                    Students
+                                    <i class="fa fa-book"></i> Students
                                 </a></li>
                             </ul>
                         </li>
@@ -361,7 +361,7 @@
                                 {% endif %}
                                 <li class="dropdown-header">Tools</li>
                                 <li><a href="{{ url_for('admin.edit_messages') }}">
-                                    Messages
+                                    <i class="fa fa-comment"></i> Messages
                                 </a></li>
                                 <li role="separator" class="divider"></li>
                                 <li class="dropdown-header">Project components</li>
@@ -431,7 +431,9 @@
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="{{ url_for('home.homepage') }}">Dashboard</a></li>
+                                <li><a href="{{ url_for('home.homepage') }}">
+                                    <i class="fa fa-line-chart"></i> Dashboard
+                                </a></li>
                                 {% if current_user.has_role('faculty') %}
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Faculty options</li>
@@ -452,7 +454,9 @@
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
-                                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                                <li><a href="{{ url_for('auth.logout') }}">
+                                    <i class="fa fa-times-circle"></i> Logout
+                                </a></li>
                             </ul>
                         </li>
                     {% endif %}

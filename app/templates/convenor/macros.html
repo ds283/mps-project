@@ -56,7 +56,7 @@
                 </div>
                 <div class="col-xs-3">
                     {% if item.owner.has_submitted %}
-                        {% if item.owner.is_project_submitted(item) %}
+                        {% if item.owner.is_project_submitted(item.liveproject) %}
                             <span class="label label-success">Yes</span>
                         {% else %}
                             <span class="label label-default">No</span>

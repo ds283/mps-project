@@ -191,10 +191,10 @@ _name = \
 </div>
 {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
     {% if m.construct_time %}
-        <span class="label label-default">Construct {{ m.formatted_construct_time }}</span>
+        <span class="label label-default"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
     {% endif %}
     {% if m.compute_time %}
-        <span class="label label-default">Compute {{ m.formatted_compute_time }}</span>
+        <span class="label label-default"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
     {% endif %}
 {% endif %}
 """

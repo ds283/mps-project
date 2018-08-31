@@ -3855,7 +3855,7 @@ class MatchingAttempt(db.Model):
 
         scores = [x.current_score for x in self.records]
         if None in scores:
-            return None
+            scores = [x for x in scores if x is not None]
 
         objective = sum(scores)
 

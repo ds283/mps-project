@@ -33,30 +33,12 @@ class Timer:
         self.interval = self.end - self.start
 
 
-def _get_current_pclass_config(pclass):
-
-    current_year = get_current_year()
-
-    # get ProjectClassConfig for the current year
-    config = db.session.query(ProjectClassConfig) \
-        .filter_by(pclass_id=pclass.id, year=current_year) \
-        .order_by(ProjectClassConfig.year.desc()).first()
-
-    if config is None:
-        raise RuntimeError('Configuration record for "{name}" '
-                           'and year={yr} is missing'.format(name=pclass.name, yr=current_year))
-
-    return config
-
-
-def _find_mean_project_CATS(pclasses):
+def _find_mean_project_CATS(configs):
 
     CATS_total = 0
     number = 0
 
-    for pclass in pclasses:
-
-        config = _get_current_pclass_config(pclass)
+    for config in configs:
         if config.CATS_supervision is not None:
             CATS_total += config.CATS_supervision
             number += 1
@@ -64,13 +46,13 @@ def _find_mean_project_CATS(pclasses):
     return float(CATS_total)/number
 
 
-def _enumerate_selectors(pclasses):
+def _enumerate_selectors(configs):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
     Also compute assignment multiplicity for each selector, ie. how many projects they should be
     assigned (eg. FYP = 1 but MPP = 2 since projects only last one term)
-    :param pclasses:
+    :param configs:
     :return:
     """
 
@@ -82,9 +64,7 @@ def _enumerate_selectors(pclasses):
 
     selector_dict = {}
 
-    for pclass in pclasses:
-        config = _get_current_pclass_config(pclass)
-
+    for config in configs:
         # get SelectingStudent instances that are not retired and belong to this config instance
         selectors = db.session.query(SelectingStudent) \
             .filter_by(retired=False, config_id=config.id).all()
@@ -93,7 +73,8 @@ def _enumerate_selectors(pclasses):
             sel_to_number[item.id] = number
             number_to_sel[number] = item.id
 
-            multiplicity[number] = pclass.submissions if pclass.submissions >= 1 else 1
+            submissions = config.project_class.submissions
+            multiplicity[number] = submissions if submissions >= 1 else 1
 
             selector_dict[number] = item
 
@@ -102,12 +83,12 @@ def _enumerate_selectors(pclasses):
     return number, sel_to_number, number_to_sel, multiplicity, selector_dict
 
 
-def _enumerate_liveprojects(pclasses):
+def _enumerate_liveprojects(configs):
     """
     Build a list of LiveProjects belonging to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
     Also compute CATS values for supervising and marking each project
-    :param pclasses: 
+    :param configs:
     :return: 
     """
 
@@ -122,9 +103,7 @@ def _enumerate_liveprojects(pclasses):
 
     project_dict = {}
 
-    for pclass in pclasses:
-        config = _get_current_pclass_config(pclass)
-
+    for config in configs:
         # get LiveProject instances that belong to this config instance
         projects = db.session.query(LiveProject) \
             .filter_by(config_id=config.id).all()
@@ -147,11 +126,11 @@ def _enumerate_liveprojects(pclasses):
     return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict
 
 
-def _enumerate_supervising_faculty(pclasses):
+def _enumerate_supervising_faculty(configs):
     """
     Build a list of active, enrolled supervising faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
-    :param pclasses:
+    :param configs:
     :return:
     """
 
@@ -163,11 +142,10 @@ def _enumerate_supervising_faculty(pclasses):
 
     fac_dict = {}
 
-    for pclass in pclasses:
-
+    for config in configs:
         # get EnrollmentRecord instances for this project class
         faculty = db.session.query(EnrollmentRecord) \
-            .filter_by(pclass_id=pclass.id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
+            .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
             .join(User, User.id==EnrollmentRecord.owner_id) \
             .filter(User.active).all()
 
@@ -186,11 +164,11 @@ def _enumerate_supervising_faculty(pclasses):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def _enumerate_marking_faculty(pclasses):
+def _enumerate_marking_faculty(configs):
     """
     Build a list of active, enrolled 2nd-marking faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
-    :param pclasses:
+    :param configs:
     :return:
     """
 
@@ -202,11 +180,10 @@ def _enumerate_marking_faculty(pclasses):
 
     fac_dict = {}
 
-    for pclass in pclasses:
-
+    for config in configs:
         # get EnrollmentRecord instances for this project class
         faculty = db.session.query(EnrollmentRecord) \
-            .filter_by(pclass_id=pclass.id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
+            .filter_by(pclass_id=config.pclass_id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
             .join(User, User.id == EnrollmentRecord.owner_id) \
             .filter(User.active).all()
 
@@ -691,18 +668,18 @@ def register_matching_tasks(celery):
 
         try:
             # get list of project classes participating in automatic assignment
-            pclasses = get_automatch_pclasses()
-            mean_CATS_per_project = _find_mean_project_CATS(pclasses)
+            configs = record.config_members
+            mean_CATS_per_project = _find_mean_project_CATS(configs)
 
             # get lists of selectors and liveprojects, together with auxiliary data such as
             # multiplicities (for selectors) and CATS assignments (for projects)
-            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(pclasses)
+            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(configs)
             number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
-                lp_dict = _enumerate_liveprojects(pclasses)
+                lp_dict = _enumerate_liveprojects(configs)
 
             # get supervising faculty and marking faculty lists
-            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = _enumerate_supervising_faculty(pclasses)
-            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = _enumerate_marking_faculty(pclasses)
+            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = _enumerate_supervising_faculty(configs)
+            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = _enumerate_marking_faculty(configs)
 
             # partition faculty into supervisors, markers and supervisors+markers
             supervisors = sup_to_number.keys()

@@ -3597,6 +3597,27 @@ class MatchingAttempt(db.Model):
     max_marking_multiplicity = db.Column(db.Integer())
 
 
+    # CONVENOR HINTS
+
+    # enable/disable convenor hints
+    use_hints = db.Column(db.Boolean())
+
+    # bias for 'encourage'
+    encourage_bias = db.Column(db.Numeric(8, 3))
+
+    # bias for 'discourage'
+    discourage_bias = db.Column(db.Numeric(8, 3))
+
+    # bias for 'strong encourage'
+    strong_encourage_bias = db.Column(db.Numeric(8, 3))
+
+    # bias for 'strong discourage'
+    strong_discourage_bias = db.Column(db.Numeric(8, 3))
+
+    # bookmark bias - penalty for using bookmarks rather than a real submission
+    bookmark_bias = db.Column(db.Numeric(8, 3))
+
+
     # WORKLOAD LEVELLING
 
     # workload levelling bias

@@ -130,9 +130,9 @@ _info = \
 _score = \
 """
 {% if m.outcome == m.OUTCOME_OPTIMAL %}
-    <span class="label label-success">{{ m.score }} original</span>
+    <span class="label label-success">Score {{ m.score }} original</span>
     {% if m.current_score %}
-        <span class="label label-primary">{{ m.current_score|round(precision=2) }} current</span>
+        <span class="label label-primary">Score {{ m.current_score|round(precision=2) }} now</span>
     {% else %}
         <span class="label label-warning">Current score undefined</span>
     {% endif %}

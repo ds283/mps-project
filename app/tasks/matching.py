@@ -10,7 +10,7 @@
 
 
 from ..models import db, MatchingAttempt, TaskRecord, ProjectClassConfig, LiveProject, SelectingStudent, \
-    User, EnrollmentRecord, MatchingRecord
+    User, EnrollmentRecord, MatchingRecord, SelectionRecord
 
 from ..shared.utils import get_current_year, get_automatch_pclasses
 from ..task_queue import progress_update
@@ -202,8 +202,7 @@ def _enumerate_marking_faculty(configs):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def _build_ranking_matrix(number_students, student_dict, number_projects, project_dict,
-                          ignore_programme_prefs=False, programme_bias=1.5):
+def _build_ranking_matrix(number_students, student_dict, number_projects, project_dict, record):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
@@ -219,18 +218,43 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
     R = {}
     W = {}
 
+    ignore_programme_prefs = record.ignore_programme_prefs
+    programme_bias = float(record.programme_bias) if record.programme_bias is not None else 1.0
+    bookmark_bias = float(record.bookmark_bias) if record.bookmark_bias is not None else 1.0
+
+    use_hints = record.use_hints
+    encourage_bias = float(record.encourage_bias)
+    discourage_bias = float(record.discourage_bias)
+    strong_encourage_bias = float(record.strong_encourage_bias)
+    strong_discourage_bias = float(record.strong_discourage_bias)
+
     for i in range(0, number_students):
 
         sel = student_dict[i]
 
         ranks = {}
+        weights = {}
 
         if sel.has_submitted:
             for item in sel.selections.all():
-                ranks[item.liveproject_id] = item.rank
-        elif sel.has_bookmarks:
-            for item in sel.bookmarks.all():
-                ranks[item.liveproject_id] = item.rank
+                if item.hint != SelectionRecord.SELECTION_HINT_FORBID or not use_hints:
+                    ranks[item.liveproject_id] = item.rank
+
+                w = 1.0
+                if item.converted_from_bookmark:
+                    w = w * bookmark_bias
+                if use_hints:
+                    if item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE:
+                        w = w * encourage_bias
+                    elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
+                        w = w * discourage_bias
+                    elif item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG:
+                        w = w * strong_encourage_bias
+                    elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
+                        w = w * strong_discourage_bias
+
+                weights[item.liveproject_id] = w
+
         else:
             # no ranking data, so rank all LiveProjects in the right project class equal to 1
             for k in project_dict:
@@ -244,14 +268,20 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
             idx = (i, j)
             proj = project_dict[j]
 
+            val = True
+
             if proj.id in ranks:
                 R[idx] = ranks[proj.id]
             else:
-                # if not selection data all projects are ranked '1', so any of them can be chosen by the solver
+                # if not ranked, prevent solver from making this choice
                 R[idx] = 0
+                val = False
 
             # compute weight for this (student, project) combination
-            w = 1.0
+            if proj.id in weights:
+                w = weights[proj.id]
+            else:
+                w = 0 if val is False else 1.0
 
             # check whether this project has a preference for the degree programme associated with the current selector
             if not ignore_programme_prefs:
@@ -695,8 +725,7 @@ def register_matching_tasks(celery):
             sup_and_mark_numbers = {(sup_to_number[x], mark_to_number[x]) for x in sup_and_mark}
 
             # build student ranking matrix
-            R, W = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record.ignore_programme_prefs,
-                                         record.programme_bias)
+            R, W = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record)
 
             # build marker compatibility matrix
             mm = record.max_marking_multiplicity

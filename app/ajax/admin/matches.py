@@ -120,7 +120,11 @@ _score = \
 """
 {% if m.outcome == m.OUTCOME_OPTIMAL %}
     <span class="label label-success">{{ m.score }} original</span>
-    <span class="label label-primary">{{ m.current_score|round(precision=2) }} current</span>
+    {% if m.current_score %}
+        <span class="label label-primary">{{ m.current_score|round(precision=2) }} current</span>
+    {% else %}
+        <span class="label label-warning">Current score undefined</span>
+    {% endif %}
     <span class="label label-info">&delta; max {{ m.delta_max }}</span>
     <span class="label label-info">&delta; min {{ m.delta_min }}</span>
     <span class="label label-primary">CATS max {{ m.CATS_max }}</span>

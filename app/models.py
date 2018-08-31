@@ -2921,7 +2921,7 @@ class SelectingStudent(db.Model):
 
 
     def project_rank(self, proj_id):
-        # ignore bookmarks; these will be converted to
+        # ignore bookmarks; these will have been converted to
         # SelectionRecords after closure if needed, and project_rank() is only really
         # meaningful once selections have closed
         if self.has_submitted:
@@ -3574,7 +3574,6 @@ class MatchingAttempt(db.Model):
 
 
     def _build_selector_list(self):
-
         if self._selector_list is not None:
             return
 
@@ -3591,7 +3590,6 @@ class MatchingAttempt(db.Model):
 
 
     def _build_faculty_list(self):
-
         if self._faculty_list is not None:
             return
 
@@ -3635,7 +3633,6 @@ class MatchingAttempt(db.Model):
 
 
     def _build_CATS_list(self):
-
         if self._CATS_list is not None:
             return
 
@@ -3670,8 +3667,14 @@ class MatchingAttempt(db.Model):
     @property
     def selector_deltas(self):
         self._build_selector_list()
-        fsum = lambda recs: sum([rec.delta for rec in recs])
-        return [fsum(x) for x in self.selectors]
+
+        d = lambda recs: [y.delta for y in recs]
+        delta_set = [d(x) for x in self.selectors]
+
+        fsum = lambda deltas: sum(deltas) if None not in deltas else None
+        sum_delta_set = [fsum(d) for d in delta_set]
+
+        return sum_delta_set
 
 
     @property
@@ -3682,12 +3685,14 @@ class MatchingAttempt(db.Model):
 
     @property
     def delta_max(self):
-        return max(self.selector_deltas)
+        filtered_deltas = [x for x in self.selector_deltas if x is not None]
+        return max(filtered_deltas)
 
 
     @property
     def delta_min(self):
-        return min(self.selector_deltas)
+        filtered_deltas = [x for x in self.selector_deltas if x is not None]
+        return min(filtered_deltas)
 
 
     @property
@@ -4050,6 +4055,8 @@ class MatchingRecord(db.Model):
 
     @property
     def delta(self):
+        if self.rank is None:
+            return None
         return self.rank-1
 
 

@@ -3371,7 +3371,7 @@ def match_dists_view(id):
     if flag:
         delta_data_set = [x for x in delta_data_set if (x[0])[0].selector.config.pclass_id == pclass_value]
 
-    deltas = [x[1] for x in delta_data_set]
+    deltas = [x[1] for x in delta_data_set if x[1] is not None]
 
     delta_plot = figure(title='Delta distribution',
                        x_axis_label='Total delta', plot_width=800, plot_height=300)

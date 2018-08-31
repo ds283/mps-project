@@ -201,9 +201,7 @@ def get_capacity_data(pclass):
 
 
 def get_matching_dashboard_data():
-
     year = get_current_year()
-
     matches = db.session.query(func.count(MatchingAttempt.id)).filter_by(year=year).scalar()
 
     return matches

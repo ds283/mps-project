@@ -2998,6 +2998,16 @@ class Bookmark(db.Model):
     rank = db.Column(db.Integer())
 
 
+    @property
+    def format_project(self):
+        return self.liveproject.name
+
+
+    @property
+    def format_name(self):
+        return self.owner.student.user.name
+
+
 class SelectionRecord(db.Model):
     """
     Model an ordered list of project selections
@@ -3035,8 +3045,100 @@ class SelectionRecord(db.Model):
     SELECTION_HINT_ENCOURAGE_STRONG = 5
     SELECTION_HINT_DISCOURAGE_STRONG = 6
 
+    _icons = {SELECTION_HINT_NEUTRAL: '',
+              SELECTION_HINT_REQUIRE: '<i class="fa fa-check"></i>',
+              SELECTION_HINT_FORBID: '<i class="fa fa-times"></i>',
+              SELECTION_HINT_ENCOURAGE: '<i class="fa fa-plus"></i>',
+              SELECTION_HINT_DISCOURAGE: '<i class="fa fa-minus"></i>',
+              SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fa fa-plus"></i> <i class="fa fa-plus"></i>',
+              SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fa fa-minus"></i> <i class="fa fa-minus"></i>'}
+
+    _menu_items = {SELECTION_HINT_NEUTRAL: 'Neutral',
+                   SELECTION_HINT_REQUIRE: 'Force',
+                   SELECTION_HINT_FORBID: 'Forbid',
+                   SELECTION_HINT_ENCOURAGE: 'Encourage',
+                   SELECTION_HINT_DISCOURAGE: 'Discourage',
+                   SELECTION_HINT_ENCOURAGE_STRONG: 'Strongly encourage',
+                   SELECTION_HINT_DISCOURAGE_STRONG: 'Strongly discourage'}
+
+    _menu_order = [SELECTION_HINT_NEUTRAL,
+                   "Force",
+                   SELECTION_HINT_REQUIRE,
+                   SELECTION_HINT_FORBID,
+                   "Hint",
+                   SELECTION_HINT_ENCOURAGE,
+                   SELECTION_HINT_DISCOURAGE,
+                   SELECTION_HINT_ENCOURAGE_STRONG,
+                   SELECTION_HINT_DISCOURAGE_STRONG]
+
     # convenor hint for this match
     hint = db.Column(db.Integer())
+
+
+    @property
+    def format_project(self):
+        if self.hint in self._icons:
+            tag = self._icons[self.hint]
+        else:
+            tag = ''
+
+        if len(tag) > 0:
+            tag += ' '
+
+        return tag + self.liveproject.name
+
+
+    @property
+    def format_name(self):
+        if self.hint in self._icons:
+            tag = self._icons[self.hint]
+        else:
+            tag = ''
+
+        if len(tag) > 0:
+            tag += ' '
+
+        return tag + self.owner.student.user.name
+
+
+    @property
+    def menu_order(self):
+        return self._menu_order
+
+
+    def menu_item(self, number):
+        if number in self._menu_items:
+            if number in self._icons:
+                tag = self._icons[number]
+
+            value = self._menu_items[number]
+            if len(tag) > 0:
+                value = tag + ' ' + value
+
+            return value
+
+        return None
+
+
+    def set_hint(self, hint):
+        if hint < SelectionRecord.SELECTION_HINT_NEUTRAL or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
+            return
+
+        self.hint = hint
+
+        if hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+            # remove any other 'require' rags
+            for item in self.owner.selections:
+                if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+                    item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
+
+        if hint == SelectionRecord.SELECTION_HINT_FORBID:
+            # remove any other 'require' rags
+            for item in self.owner.selections:
+                if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_FORBID:
+                    item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
+
+        # note database has to be committed separately
 
 
 class EmailLog(db.Model):

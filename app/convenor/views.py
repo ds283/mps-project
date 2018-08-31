@@ -17,7 +17,7 @@ from celery import chain
 from app.shared.utils import build_enroll_selector_candidates
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
-    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription
+    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_second_markers
@@ -2826,6 +2826,28 @@ def clear_skill_filters(id):
         return redirect(request.referrer)
 
     record.skill_filters = []
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/set_hint/<int:id>/<int:hint>')
+@roles_accepted('faculty', 'admin', 'root')
+def set_hint(id, hint):
+
+    rec = SelectionRecord.query.get_or_404(id)
+    config = rec.owner.config
+
+    # reject user if not entitled to view this dashboard
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('Selection hints may only be set once student choices are closed and the project class '
+              'is ready to match', 'error')
+        return redirect(request.referrer)
+
+    rec.set_hint(hint)
     db.session.commit()
 
     return redirect(request.referrer)

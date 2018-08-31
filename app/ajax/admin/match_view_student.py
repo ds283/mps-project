@@ -49,7 +49,7 @@ _project = \
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
         <a class="label {% if r.is_project_overassigned %}label-danger{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}" {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
             {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }} (No. {{ r.project.number }})
-            <span class="caret"></span>
+            {% if adjustable %}<span class="caret"></span>{% endif %}
         </a>
         {% if adjustable %}
             {% if r.selector.has_submitted %}{% set list = r.selector.ordered_selection %}

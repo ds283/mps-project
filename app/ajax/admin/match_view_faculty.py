@@ -32,7 +32,7 @@ _projects = \
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
         <a class="label {% if r.is_project_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}" {% if not r.is_project_overassigned and style %}style="{{ style }}"{% endif %} {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
             #{{ r.submission_period }}: {{ r.selector.student.user.name }} (No. {{ r.project.number }})
-            <span class="caret"></span>
+            {% if adjustable %}<span class="caret"></span>{% endif %}
         </a>
         {% if adjustable %}
             {% if r.selector.has_submitted %}{% set list = r.selector.ordered_selection %}

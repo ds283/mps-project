@@ -3167,7 +3167,7 @@ def create_match():
 
     info = get_matching_dashboard_data()
 
-    form = NewMatchForm(request.form)
+    form = NewMatchForm(current_year, request.form)
 
     if form.validate_on_submit():
 
@@ -3192,7 +3192,39 @@ def create_match():
                                levelling_bias=form.levelling_bias.data,
                                intra_group_tension=form.intra_group_tension.data,
                                programme_bias=form.programme_bias.data,
+                               bookmark_bias=form.bookmark_bias.data,
+                               use_hints=form.use_hints.data,
+                               encourage_bias=form.encourage_bias.data,
+                               discourage_bias=form.discourage_bias.data,
+                               strong_encourage_bias=form.strong_encourage_bias.data,
+                               strong_discourage_bias=form.strong_discourage_bias.data,
                                score=None)
+
+        for pclass in form.pclasses_to_include.data:
+
+            config = db.session.query(ProjectClassConfig) \
+                .filter(ProjectClassConfig.pclass_id == pclass.id) \
+                .order_by(ProjectClassConfig.year == current_year).first()
+
+            if config is not None:
+                if config not in data.config_members:
+                    data.config_members.append(config)
+
+        for match in form.include_matches.data:
+
+            if match not in data.include_matches:
+                ok = True
+                for pclass_a in data.config_members:
+                    for pclass_b in match.config_members:
+                        if pclass_a.id == pclass_b.id:
+                            ok = False
+                            flash('Excluded CATS form matching "{name}" since it contains project class '
+                                  '"{pname}" which overlaps with the current match'.format(name=match.label,
+                                                                                           pname=pclass_a.name))
+                            break
+
+                if ok:
+                    data.include_matches.append(match)
 
         db.session.add(data)
         db.session.commit()
@@ -3203,6 +3235,11 @@ def create_match():
         match_task.apply_async(args=(data.id,), task_id=uuid)
 
         return redirect(url_for('admin.manage_matching'))
+
+    else:
+
+        if request.method == 'GET':
+            form.use_hints.data = True
 
     # estimate equitable CATS loading
     supervising_CATS, marking_CATS, num_supervisors, num_markers = estimate_CATS_load()

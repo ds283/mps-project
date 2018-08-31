@@ -28,11 +28,14 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
-    GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers
+    GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
+    GetMatchingAttempts
 from ..models import BackupConfiguration, EnrollmentRecord, submission_choices, academic_titles, \
     extent_choices, year_choices, matching_history_choices
 
 from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
+
+from functools import partial
 
 
 class UniqueUserNameMixin():
@@ -695,6 +698,10 @@ class MatchingMixin():
                        validators=[InputRequired(message='Please supply a unique name'),
                                    globally_unique_matching_name])
 
+    pclasses_to_include = CheckboxQuerySelectMultipleField('Include which project classes',
+                                                           query_factory=GetAutomatedMatchPClasses,
+                                                           get_label='name')
+
     ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts')
 
     ignore_programme_prefs = BooleanField('Ignore degree programme preferences')
@@ -714,6 +721,9 @@ class MatchingMixin():
                                             description='2nd markers may be assigned multiple instances of the same '
                                                         'project, up to the maximum multiplicity specified',
                                             validators=[InputRequired(message='Please specify a multiplicity')])
+
+    include_matches = QuerySelectMultipleField('When levelling workloads, include CATS from existing matches',
+                                               query_factory=GetMatchingAttempts, get_label='name')
 
     levelling_bias = FloatField('Workload levelling bias', default=1.0,
                                 description='This sets the normalization of the workload levelling tension in '
@@ -740,7 +750,33 @@ class MatchingMixin():
                                             'A value of 1 disables this preference.',
                                 validators=[InputRequired(message='Please specify a programme preference bias')])
 
+    bookmark_bias = FloatField('Penalty for using bookmarks', default=0.333,
+                               description='Values less than 1 penalize preferences taken from bookmark data '
+                                           'rather than a verified submission. Set to 1 if you do not wish '
+                                           'to distinguish these cases.',
+                               validators=[InputRequired(message='Please specify a bookmark bias')])
+
+    use_hints = BooleanField('Use convenor hints')
+
+    encourage_bias = FloatField('Bias for convenor <i>encouraged</i> hint', default=2.0,
+                                validators=[InputRequired(message='Please specify a bias')])
+
+    discourage_bias = FloatField('Bias for convenor <i>discouraged</i> hint', default=0.5,
+                                 validators=[InputRequired(message='Please specify a bias')])
+
+    strong_encourage_bias = FloatField('Bias for convenor <i>strongly encouraged</i> hint', default=5.0,
+                                       validators=[InputRequired(message='Please specify a bias')])
+
+    strong_discourage_bias = FloatField('Bias for convenor <i>strongly discouraged</i> hint', default=0.2,
+                                        validators=[InputRequired(message='Please specify a bias')])
+
 
 class NewMatchForm(Form, MatchingMixin):
 
     submit = SubmitField("Create new match")
+
+    def __init__(self, year, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.include_matches.query_factory = partial(GetMatchingAttempts, year)

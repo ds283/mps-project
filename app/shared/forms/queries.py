@@ -13,7 +13,8 @@ from flask_login import current_user
 
 from app import db, User
 from app.models import DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role, ResearchGroup, \
-    EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses
+    EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
+    MatchingAttempt
 
 
 def GetActiveDegreeTypes():
@@ -166,3 +167,11 @@ def ProjectDescriptionClasses(project_id):
     # construct ProjectClass records for these ids
     return db.session.query(ProjectClass) \
         .join(used_ids, ProjectClass.id == used_ids.c.project_class_id)
+
+
+def GetAutomatedMatchPClasses():
+    return db.session.query(ProjectClass).filter_by(active=True, do_matching=True)
+
+
+def GetMatchingAttempts(year):
+    return db.session.query(MatchingAttempt).filter_by(year=year).order_by(MatchingAttempt.name)

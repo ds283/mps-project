@@ -65,6 +65,17 @@ _info = \
 <span class="label label-default">Levelling {{ m.levelling_bias }}</span>
 <span class="label label-default">Group {{ m.intra_group_tension }}</span>
 <span class="label label-default">Programme {{ m.programme_bias }}</span>
+<span class="label label-default">Bookmarks {{ m.bookmark_bias }}</span>
+<p></p>
+{% if m.use_hints %}
+    <span class="label label-success"><i class="fa fa-check"></i> Use hints</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Ignore hints</span>
+{% endif %}
+<span class="label label-default">Encourage {{ m.encourage_bias }}</span>
+<span class="label label-default">Discourage {{ m.discourage_bias }}</span>
+<span class="label label-default">Strong encourage {{ m.strong_encourage_bias }}</span>
+<span class="label label-default">Strong discourage {{ m.strong_discourage_bias }}</span>
 {% if not m.ignore_programme_prefs %}
     <p></p>
     {% set outcome = m.prefer_programme_status %}
@@ -189,7 +200,13 @@ _name = \
         {{ m.name }}
     {% endif %}
 </div>
+<p></p>
+{% for config in m.config_members %}
+    {% set pclass = config.project_class %}
+    {{ pclass.make_label(pclass.abbreviation)|safe }}
+{% endfor %}
 {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
+    <p></p>
     {% if m.construct_time %}
         <span class="label label-default"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
     {% endif %}

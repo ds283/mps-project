@@ -76,7 +76,6 @@ def register_user(**kwargs):
 
 
 def estimate_CATS_load():
-
     year = get_current_year()
 
     # get list of project classes that participate in automatic matching

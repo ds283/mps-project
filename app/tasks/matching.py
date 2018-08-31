@@ -657,7 +657,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
                 marker = None
 
             rk = sel.project_rank(proj_id)
-            if rk is None:
+            if sel.has_submitted and rk is None:
                 raise RuntimeError('PuLP solution assigns unranked project to selector')
 
             data = MatchingRecord(matching_id=record.id,

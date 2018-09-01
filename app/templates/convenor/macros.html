@@ -131,51 +131,49 @@
             <div class="col-xs-3"><strong>Supervisor</strong></div>
         </div>
         {% for item in list %}
-            {% if item.rank <= sel.number_choices %}
-                {% set project = item.liveproject %}
-                <div class="row vertical-align final-selection-table">
-                    <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}>
-                        <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
-                        {% if show_hint %}
-                            <div class="rank-hint-button">
-                                <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
-                                    Hint
-                                    <span class="caret"></span>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-right">
-                                    {% set menu_items = item.menu_order %}
-                                    {% for mi in menu_items %}
-                                        {% if mi is string %}
-                                            <li role="separator" class="divider"></li>
-                                            <li class="dropdown-header">{{ mi }}</li>
-                                        {% elif mi is number %}
-                                            {% set disabled = (mi == item.hint) %}
-                                            <li {% if disabled %}class="disabled"{% endif %}>
-                                                <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                                    {{ item.menu_item(mi)|safe }}
-                                                </a>
-                                            </li>
-                                        {% endif %}
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                        {% endif %}
-                    </div>
-                    <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
-                        <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector submission view', url=url_for('convenor.selector_choices', id=sel.id)) }}">
-                            {{ item.format_project|safe }}
-                        </a>
-                    </div>
-                    <div class="col-xs-3">
-                        {{ project.group.make_label(project.group.name)|safe }}
-                    </div>
-                    <div class="col-xs-3">
-                        <a href="mailto:{{ project.owner.user.email }}">
-                            {{ project.owner.user.name }}
-                        </a>
-                    </div>
+            {% set project = item.liveproject %}
+            <div class="row vertical-align final-selection-table">
+                <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}>
+                    <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
+                    {% if show_hint %}
+                        <div class="rank-hint-button">
+                            <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                Hint
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-right">
+                                {% set menu_items = item.menu_order %}
+                                {% for mi in menu_items %}
+                                    {% if mi is string %}
+                                        <li role="separator" class="divider"></li>
+                                        <li class="dropdown-header">{{ mi }}</li>
+                                    {% elif mi is number %}
+                                        {% set disabled = (mi == item.hint) %}
+                                        <li {% if disabled %}class="disabled"{% endif %}>
+                                            <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                {{ item.menu_item(mi)|safe }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
                 </div>
-            {% endif %}
+                <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
+                    <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector submission view', url=url_for('convenor.selector_choices', id=sel.id)) }}">
+                        {{ item.format_project|safe }}
+                    </a>
+                </div>
+                <div class="col-xs-3">
+                    {{ project.group.make_label(project.group.name)|safe }}
+                </div>
+                <div class="col-xs-3">
+                    <a href="mailto:{{ project.owner.user.email }}">
+                        {{ project.owner.user.name }}
+                    </a>
+                </div>
+            </div>
         {% endfor %}
     </div>
 {% endmacro %}

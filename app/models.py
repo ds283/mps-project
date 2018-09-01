@@ -3054,7 +3054,7 @@ class SelectionRecord(db.Model):
               SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fa fa-minus"></i> <i class="fa fa-minus"></i>'}
 
     _menu_items = {SELECTION_HINT_NEUTRAL: 'Neutral',
-                   SELECTION_HINT_REQUIRE: 'Force',
+                   SELECTION_HINT_REQUIRE: 'Require',
                    SELECTION_HINT_FORBID: 'Forbid',
                    SELECTION_HINT_ENCOURAGE: 'Encourage',
                    SELECTION_HINT_DISCOURAGE: 'Discourage',
@@ -3062,10 +3062,10 @@ class SelectionRecord(db.Model):
                    SELECTION_HINT_DISCOURAGE_STRONG: 'Strongly discourage'}
 
     _menu_order = [SELECTION_HINT_NEUTRAL,
-                   "Force",
+                   "Force fit",
                    SELECTION_HINT_REQUIRE,
                    SELECTION_HINT_FORBID,
-                   "Hint",
+                   "Fitting hints",
                    SELECTION_HINT_ENCOURAGE,
                    SELECTION_HINT_DISCOURAGE,
                    SELECTION_HINT_ENCOURAGE_STRONG,

@@ -215,8 +215,9 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
     :return:
     """
 
-    R = {}
-    W = {}
+    R = {}          # R is ranking matrix. Accounts for Forbid hints.
+    W = {}          # W is weights matrix. Accounts for encourage & discourage hints, programme bias and bookmark bias
+    cstr = set()    # cstr is a set of (student, project) pairs that will be converted into Require hints
 
     ignore_programme_prefs = record.ignore_programme_prefs
     programme_bias = float(record.programme_bias) if record.programme_bias is not None else 1.0
@@ -234,6 +235,7 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
 
         ranks = {}
         weights = {}
+        require = set()
 
         if sel.has_submitted:
             for item in sel.selections.all():
@@ -254,6 +256,9 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
                         w = w * strong_discourage_bias
 
                 weights[item.liveproject_id] = w
+
+                if use_hints and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+                    require.add(item.liveproject_id)
 
         else:
             # no ranking data, so rank all LiveProjects in the right project class equal to 1
@@ -290,7 +295,10 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
 
             W[idx] = w
 
-    return R, W
+            if proj.id in require:
+                cstr.add(idx)
+
+    return R, W, cstr
 
 
 def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, max_multiplicity):
@@ -370,8 +378,8 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
     return P
 
 
-def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits, multiplicity,
-                         number_lp, number_mark, number_sel, number_sup, record, lp_dict,
+def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
+                         multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
                          sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
                          levelling_bias, intra_group_tension, mean_CATS_per_project):
     """
@@ -459,21 +467,21 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
     # selectors can only be assigned to projects that they have ranked
     # (unless no ranking data was available, in which case all elements of R were set to 1)
     for key in X:
-        prob += X[key] <= float(R[key])
+        prob += X[key] <= R[key]
 
     # markers can only be assigned projects to which they are attached
     for key in Y:
-        prob += Y[key] <= float(M[key])
+        prob += Y[key] <= M[key]
 
     # enforce desired multiplicity for each selector
     for i in range(number_sel):
-        prob += sum(X[(i, j)] for j in range(number_lp)) == float(multiplicity[i])
+        prob += sum(X[(i, j)] for j in range(number_lp)) == multiplicity[i]
 
     # enforce maximum capacity for each project
     # note capacity[j] will be zero if this project is not enforcing an upper limit on capacity
     for j in range(number_lp):
         if capacity[j] != 0:
-            prob += sum(X[(i, j)] for i in range(number_sel)) <= float(capacity[j])
+            prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j]
 
     # number of students assigned to each project must match number of markers assigned to each project,
     # if markers are being used; otherwise, number of markers should be zero
@@ -485,10 +493,10 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
 
         if proj.config.project_class.uses_marker:
             prob += sum(X[(i, j)] for i in range(number_sel)) - \
-                    sum(Y[(i, j)] for i in range(number_mark)) == float(0)
+                    sum(Y[(i, j)] for i in range(number_mark)) == 0
 
         else:
-            prob += sum(Y[(i, j)] for i in range(number_mark)) == float(0)
+            prob += sum(Y[(i, j)] for i in range(number_mark)) == 0
 
     # CATS assigned to each supervisor must be within bounds
     for i in range(number_sup):
@@ -498,7 +506,7 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
             lim = sup_limits[i]
 
         prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
-                    for k in range(number_sel)) <= float(lim)
+                    for k in range(number_sel)) <= lim
 
     # CATS assigned to each marker must be within bounds
     for i in range(number_mark):
@@ -507,7 +515,11 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
         if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
             lim = mark_limits[i]
 
-        prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= float(lim)
+        prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= lim
+
+    # add constraints for any matches marked 'require' by convenors
+    for idx in cstr:
+        prob += X[idx] == 1
 
 
     # WORKLOAD LEVELLING
@@ -725,7 +737,7 @@ def register_matching_tasks(celery):
             sup_and_mark_numbers = {(sup_to_number[x], mark_to_number[x]) for x in sup_and_mark}
 
             # build student ranking matrix
-            R, W = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record)
+            R, W, cstr = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record)
 
             # build marker compatibility matrix
             mm = record.max_marking_multiplicity
@@ -740,7 +752,7 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...", autocommit=True)
 
         with Timer() as create_time:
-            prob, X, Y = _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
                                               sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
                                               record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)

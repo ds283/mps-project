@@ -3260,6 +3260,34 @@ def terminate_match(id):
               'error')
         return redirect(request.referrer)
 
+    title = 'Terminate match'
+    panel_title = 'Terminate match <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_terminate_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to terminate the matching job ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Terminate job'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_terminate_match/<int:id>')
+@roles_required('root')
+def perform_terminate_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.manage_matching')
+
+    if record.finished:
+        flash('Could not terminate matching task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(url)
+
     celery = current_app.extensions['celery']
     celery.control.revoke(record.celery_id)
 
@@ -3278,7 +3306,7 @@ def terminate_match(id):
               'Please contact a system administrator.'.format(name=record.name),
               'error')
 
-    return redirect(request.referrer)
+    return redirect(url)
 
 
 @admin.route('/delete_match/<int:id>')
@@ -3292,6 +3320,35 @@ def delete_match(id):
               'error')
         return redirect(request.referrer)
 
+    title = 'Delete match'
+    panel_title = 'Delete match <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_delete_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to delete the matching ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Delete match'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_delete_match/<int:id>')
+@roles_required('root')
+def perform_delete_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.manage_matching')
+
+    if not record.finished:
+        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(url)
+
     try:
         # delete all MatchingRecords associated with this MatchingAttempt
         db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
@@ -3304,7 +3361,7 @@ def delete_match(id):
               'Please contact a system administrator.'.format(name=record.name),
               'error')
 
-    return redirect(request.referrer)
+    return redirect(url)
 
 
 @admin.route('/match_student_view/<int:id>')

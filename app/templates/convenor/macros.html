@@ -73,19 +73,22 @@
 {% macro selecting_students(proj, list, show_hint) %}
     <div class="container-fluid">
         <div class="row vertical-align bookmark-table">
-            <div {% if show_hint %}class="col-xs-4">{% else %}class="col-xs-5">{% endif %}<strong>Student</strong></div>
-            <div {% if show_hint %}class="col-xs-2">{% else %}class="col-xs-1">{% endif %}<strong>Rank</strong></div>
+            <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}><strong>Student</strong></div>
+            <div {% if show_hint %}class="col-xs-3"{% else %}class="col-xs-2"{% endif %}><strong>Rank</strong></div>
             <div class="col-xs-3"><strong>Timestamp</strong></div>
-            <div class="col-xs-3"><strong>IP address</strong></div>
+            <div class="col-xs-2"><strong>IP address</strong></div>
         </div>
 
         {% for item in list %}
             <div class="row vertical-align bookmark-table">
-                <div {% if show_hint %}class="col-xs-4">{% else %}class="col-xs-5">{% endif %}
+                <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
                     {{ item.format_name|safe }}
                 </div>
-                <div {% if show_hint %}class="col-xs-2">{% else %}class="col-xs-1">{% endif %}
+                <div {% if show_hint %}class="col-xs-3"{% else %}class="col-xs-2"{% endif %}>
                     <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
+                    {% if item.converted_from_bookmark %}
+                        <span class="label label-warning rank-hint-button">Bookmark</span>
+                    {% endif %}
                     {% if show_hint %}
                         <div class="rank-hint-button">
                             <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
@@ -114,7 +117,7 @@
                 <div class="col-xs-3">
                     {{ item.owner.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}
                 </div>
-                <div class="col-xs-3">
+                <div class="col-xs-2">
                     {{ item.owner.submission_IP }}
                 </div>
             </div>
@@ -125,8 +128,8 @@
 {% macro ranked_selection(sel, list, show_hint) %}
     <div class="container-fluid">
         <div class="row vertical-align final-selection-table">
-            <div {% if show_hint %}class="col-xs-2">{% else %}class="col-xs-1">{% endif %}<strong>Rank</strong></div>
-            <div {% if show_hint %}class="col-xs-4">{% else %}class="col-xs-5">{% endif %}<strong>Project title</strong></div>
+            <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}><strong>Rank</strong></div>
+            <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}><strong>Project title</strong></div>
             <div class="col-xs-3"><strong>Research group</strong></div>
             <div class="col-xs-3"><strong>Supervisor</strong></div>
         </div>
@@ -135,6 +138,9 @@
             <div class="row vertical-align final-selection-table">
                 <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}>
                     <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
+                    {% if item.converted_from_bookmark %}
+                        <span class="label label-warning rank-hint-button">Bookmark</span>
+                    {% endif %}
                     {% if show_hint %}
                         <div class="rank-hint-button">
                             <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">

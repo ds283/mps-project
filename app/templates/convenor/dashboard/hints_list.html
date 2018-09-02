@@ -10,7 +10,7 @@
         <div class="col-xs-10">
             <div class="top-return-link">
                 <a href="{{ url_for('convenor.selector_grid', id=pclass.id) }}">
-                    <i class="fa fa-backward"></i> Return to dashboard
+                    <i class="fa fa-backward"></i> Return to selector grid
                 </a>
             </div>
 
@@ -38,7 +38,7 @@
                                             Hint
                                             <span class="caret"></span>
                                         </a>
-                                        <ul class="dropdown-menu dropdown-menu-right">
+                                        <ul class="dropdown-menu">
                                             {% set menu_items = item.menu_order %}
                                             {% for mi in menu_items %}
                                                 {% if mi is string %}
@@ -74,7 +74,7 @@
 
             <div>
                 <a href="{{ url_for('convenor.selector_grid', id=pclass.id) }}">
-                    <i class="fa fa-backward"></i> Return to dashboard
+                    <i class="fa fa-backward"></i> Return to selector grid
                 </a>
             </div>
         </div>

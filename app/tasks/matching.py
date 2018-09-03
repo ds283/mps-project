@@ -450,10 +450,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # particular assignment won't significantly affect markMax/markMin or supMarkMax/supMarkMin,
     # we add a term to the objective function designed to keep down the maximum number of
     # projects assigned to any individual faculty member.
-    # We simultaneously try to keep down the total number of supervising+marking assignments
-    # given to any individual faculty member
     maxMarking = pulp.LpVariable("maxMarking", lowBound=0, cat=pulp.LpContinuous)
-    # maxCombined = pulp.LpVariable("maxCombined", lowBound=0, cat=pulp.LpContinuous)
 
     # generate objective function
     objective = 0
@@ -479,8 +476,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # upper and lower limits roughly equal to one ranking place in matching to students
     prob += objective \
             - abs(levelling_bias) * levelling / mean_CATS_per_project \
-            - maxMarking, "objective function"
-            # - maxMarking - maxCombined, "objective function"
+            - abs(levelling_bias) * maxMarking, "objective function"
 
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
 
@@ -607,15 +603,6 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
             prob += sum(Y[(i, j)] for j in range(number_lp)) <= maxMarking
     else:
         prob += maxMarking == 0
-
-    # maxCombined should be larger than the total number of supervising + 2nd marking assignments
-    # for any individual faculty member
-    # if len(sup_and_mark_numbers) > 0:
-    #     for i1, i2 in sup_and_mark_numbers:
-    #         prob += sum(X[(k, j)] * P[(j, i1)] for j in range(number_lp) for k in range(number_sel)) \
-    #                 + sum(Y[(i2, j)] for j in range(number_lp)) <= maxCombined
-    # else:
-    #     prob += maxCombined == 0
 
     return prob, X, Y
 

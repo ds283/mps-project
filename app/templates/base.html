@@ -272,18 +272,14 @@
         </a>
 
         <ul class="dropdown-menu">
-        {% if pclasses and pclasses.first() %}
-            <li class="dropdown-header">Convenorships</li>
-        {% endif %}
+        <li class="dropdown-header">Convenorships</li>
         {% for project_class in pclasses %}
             <li><a href="{{ url_for('convenor.overview', id=project_class.id) }}">
                 <i class="fa fa-briefcase"></i> {{ project_class.name }}
             </a></li>
         {% endfor %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
-            {% if pclasses and pclasses.first() %}
-                <li role="separator" class="divider"></li>
-            {% endif %}
+            <li role="separator" class="divider"></li>
             <li><a href="{{ url_for('convenor.show_unofferable', id=0) }}">
                 Unofferable projects
             </a></li>
@@ -338,11 +334,9 @@
 
                     <!-- add convenor menu if user is a convenor, or an admin user -->
                     {% if current_user.has_role('admin') or current_user.has_role('root') %}
-                        {{ convenor_menu(current_user.get_project_classes()) }}
-                    {% else  %}
-                        {% if current_user.has_role('faculty') and current_user.faculty_data and current_user.faculty_data.is_convenor %}
-                            {{ convenor_menu(current_user.convenor_list) }}
-                        {% endif %}
+                        {{ convenor_menu(current_user.all_project_classes.all()) }}
+                    {% elif current_user.has_role('faculty') and current_user.faculty_data and current_user.faculty_data.is_convenor %}
+                        {{ convenor_menu(current_user.faculty_data.convenor_list) }}
                     {% endif %}
 
                     <!-- add admin menu if user is an administrator or system administrator, or a convenor -->

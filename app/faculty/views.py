@@ -973,8 +973,8 @@ def project_preview(id):
             # attach first available project class
             form.selector.data = data.project_classes.first()
 
-    text = request.args.get('text')
-    url = request.args.get('url')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
 
     return render_project(data, data.get_description(form.selector.data), form=form, text=text, url=url)
 

@@ -56,10 +56,21 @@ _settings = \
 """
 
 
+_name = \
+"""
+{{ u.name }}
+{% if f.is_convenor %}
+    {% for item in f.convenor_list %}
+        {{ item.make_label('Convenor ' + item.abbreviation)|safe }}
+    {% endfor %}
+{% endif %}
+"""
+
+
 def build_faculty_data(faculty):
 
     data = [{'name': {
-                'display': u.name,
+                'display': render_template_string(_name, u=u, f=f),
                 'sortstring': u.last_name + u.first_name},
              'active': u.active_label,
              'office': f.office,

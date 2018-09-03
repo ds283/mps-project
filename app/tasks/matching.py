@@ -19,6 +19,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 import pulp
+import pulp.solvers as solvers
 import itertools
 import time
 
@@ -402,6 +403,15 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     :return:
     """
 
+    if not isinstance(levelling_bias, float):
+        levelling_bias = float(levelling_bias)
+
+    if not isinstance(intra_group_tension, float):
+        intra_group_tension = float(intra_group_tension)
+
+    if not isinstance(mean_CATS_per_project, float):
+        mean_CATS_per_project = float(mean_CATS_per_project)
+
     # generate PuLP problem
     prob = pulp.LpProblem(record.name, pulp.LpMaximize)
 
@@ -424,7 +434,6 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
     # we also tension the workload between groups, so that the workload of no one group
     # is pushed too far away from the others, subject to existing CATS caps
-
     supMax = pulp.LpVariable("supMax", lowBound=0, cat=pulp.LpContinuous)
     supMin = pulp.LpVariable("supMin", lowBound=0, cat=pulp.LpContinuous)
 
@@ -436,6 +445,15 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
     globalMax = pulp.LpVariable("globalMax", lowBound=0, cat=pulp.LpContinuous)
     globalMin = pulp.LpVariable("globalMin", lowBound=0, cat=pulp.LpContinuous)
+
+    # finally, to spread second-marking tasks fairly among a pool of faculty, where any
+    # particular assignment won't significantly affect markMax/markMin or supMarkMax/supMarkMin,
+    # we add a term to the objective function designed to keep down the maximum number of
+    # projects assigned to any individual faculty member.
+    # We simultaneously try to keep down the total number of supervising+marking assignments
+    # given to any individual faculty member
+    maxMarking = pulp.LpVariable("maxMarking", lowBound=0, cat=pulp.LpContinuous)
+    # maxCombined = pulp.LpVariable("maxCombined", lowBound=0, cat=pulp.LpContinuous)
 
     # generate objective function
     objective = 0
@@ -452,15 +470,17 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     levelling = (supMax - supMin) \
                 + (markMax - markMin) \
                 + (supMarkMax - supMarkMin) \
-                + abs(float(intra_group_tension))*(globalMax - globalMin)
+                + abs(intra_group_tension)*(globalMax - globalMin)
 
-    # no need to add a reward for marker assignments; these only need to satisfy the constraints, and any
-    # one solution is as good as another
+    # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
+    # these only need to satisfy the constraints, and any one solution is as good as another
 
     # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
     # upper and lower limits roughly equal to one ranking place in matching to students
-    prob += objective - abs(float(levelling_bias))*levelling/mean_CATS_per_project, "objective function"
-
+    prob += objective \
+            - abs(levelling_bias) * levelling / mean_CATS_per_project \
+            - maxMarking, "objective function"
+            # - maxMarking - maxCombined, "objective function"
 
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
 
@@ -496,7 +516,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
                     sum(Y[(i, j)] for i in range(number_mark)) == 0
 
         else:
-            prob += sum(Y[(i, j)] for i in range(number_mark)) == 0
+            for j in range(number_mark):
+                prob += Y[(i, j)] == 0      # enforce no markers assigned to this project
 
     # CATS assigned to each supervisor must be within bounds
     for i in range(number_sup):
@@ -505,7 +526,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         if not record.ignore_per_faculty_limits and sup_limits[i] > 0:
             lim = sup_limits[i]
 
-        prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
+        prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
                     for k in range(number_sel)) <= lim
 
     # CATS assigned to each marker must be within bounds
@@ -515,9 +536,9 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
             lim = mark_limits[i]
 
-        prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= lim
+        prob += sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim
 
-    # add constraints for any matches marked 'require' by convenors
+    # add constraints for any matches marked 'require' by a convenor
     for idx in cstr:
         prob += X[idx] == 1
 
@@ -529,9 +550,9 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # supMin and supMax should bracket the CATS workload of faculty who supervise only
     if len(sup_only_numbers) > 0:
         for i in sup_only_numbers:
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
+            prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
                         for k in range(number_sel)) <= supMax
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
+            prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
                         for k in range(number_sel)) >= supMin
 
         prob += globalMin <= supMin
@@ -545,8 +566,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # markMin and markMax should bracket the CATS workload of faculty who mark only
     if len(mark_only_numbers) > 0:
         for i in mark_only_numbers:
-            prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= markMax
-            prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) >= markMin
+            prob += sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= markMax
+            prob += sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) >= markMin
 
         prob += globalMin <= markMin
         prob += globalMax >= markMax
@@ -559,12 +580,12 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # supMarkMin and supMarkMAx should bracket the CATS workload of faculty who both supervise and mark
     if len(sup_and_mark_numbers) > 0:
         for i1, i2 in sup_and_mark_numbers:
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i1)]) for j in range(number_lp)
+            prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i1)] for j in range(number_lp)
                         for k in range(number_sel)) \
-                    + sum(Y[(i2, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= supMarkMax
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i1)]) for j in range(number_lp)
+                    + sum(Y[(i2, j)] * CATS_marker[j] for j in range(number_lp)) <= supMarkMax
+            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * P[(j, i1)] for j in range(number_lp)
                         for k in range(number_sel)) \
-                    + sum(Y[(i2, j)] * float(CATS_marker[j]) for j in range(number_lp)) >= supMarkMin
+                    + sum(Y[(i2, j)] * CATS_marker[j] for j in range(number_lp)) >= supMarkMin
 
         prob += globalMin <= supMarkMin
         prob += globalMax >= supMarkMax
@@ -574,9 +595,27 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         prob += supMarkMax == 0
         prob += supMarkMin == 0
 
+    # if no constraints have been emitted for the global variables, issue constraints to tie them to zero:
     if global_trivial:
         prob += globalMin == 0
         prob += globalMax == 0
+
+    # maxMarking should be larger than the total number of projects assigned for 2nd marking to
+    # any individual faculty member
+    if number_mark > 0:
+        for i in range(number_mark):
+            prob += sum(Y[(i, j)] for j in range(number_lp)) <= maxMarking
+    else:
+        prob += maxMarking == 0
+
+    # maxCombined should be larger than the total number of supervising + 2nd marking assignments
+    # for any individual faculty member
+    # if len(sup_and_mark_numbers) > 0:
+    #     for i1, i2 in sup_and_mark_numbers:
+    #         prob += sum(X[(k, j)] * P[(j, i1)] for j in range(number_lp) for k in range(number_sel)) \
+    #                 + sum(Y[(i2, j)] for j in range(number_lp)) <= maxCombined
+    # else:
+    #     prob += maxCombined == 0
 
     return prob, X, Y
 
@@ -682,8 +721,10 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
             data = MatchingRecord(matching_id=record.id,
                                   selector_id=number_to_sel[i],
                                   project_id=proj_id,
+                                  original_project_id=proj_id,
                                   supervisor_id=project.owner_id,
                                   marker_id=marker,
+                                  original_marker_id=marker,
                                   submission_period=m+1,
                                   rank=rk)
             db.session.add(data)
@@ -760,7 +801,14 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 
         with Timer() as solve_time:
-            output = prob.solve()
+            if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
+                output = prob.solve(solvers.PULP_CBC_CMD())
+            elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
+                output = prob.solve(solvers.COIN_CMD())
+            elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
+                output = prob.solve(solvers.GLPK_CMD())
+            else:
+                output = prob.solve()
 
         state = pulp.LpStatus[output]
 

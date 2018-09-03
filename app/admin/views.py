@@ -3179,10 +3179,8 @@ def create_match():
                                celery_id=uuid,
                                finished=False,
                                outcome=None,
-                               timestamp=datetime.now(),
                                construct_time=None,
                                compute_time=None,
-                               owner_id=current_user.id,
                                ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
                                ignore_programme_prefs=form.ignore_programme_prefs.data,
                                years_memory=form.years_memory.data,
@@ -3198,8 +3196,14 @@ def create_match():
                                discourage_bias=form.discourage_bias.data,
                                strong_encourage_bias=form.strong_encourage_bias.data,
                                strong_discourage_bias=form.strong_discourage_bias.data,
+                               solver=form.solver.data,
+                               creation_timestamp=datetime.now(),
+                               creator_id=current_user.id,
+                               last_edit_timestamp=None,
+                               last_edit_id=None,
                                score=None)
 
+        count = 0
         for pclass in form.pclasses_to_include.data:
 
             config = db.session.query(ProjectClassConfig) \
@@ -3208,7 +3212,12 @@ def create_match():
 
             if config is not None:
                 if config not in data.config_members:
+                    count += 1
                     data.config_members.append(config)
+
+        if count == 0:
+            flash('No project classes were specified for inclusion, so no match was computed.', 'error')
+            return redirect(url_for('admin.manage_caching'))
 
         for match in form.include_matches.data:
 
@@ -3531,6 +3540,10 @@ def reassign_match_project(id, pid):
             record.project_id = project.id
             record.supervisor_id = project.owner_id
             record.rank = record.selector.project_rank(project.id)
+
+            record.last_edit_id = current_user.id
+            record.last_edit_timestamp = datetime.now()
+
             db.session.commit()
         else:
             flash("Could not reassign '{proj}' to {name}; this project "
@@ -3559,6 +3572,10 @@ def reassign_match_marker(id, mid):
 
     elif count == 1:
         record.marker_id = mid
+
+        record.last_edit_id = current_user.id
+        record.last_edit_timestamp = datetime.now()
+
         db.session.commit()
 
     else:

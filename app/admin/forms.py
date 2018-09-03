@@ -31,7 +31,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts
 from ..models import BackupConfiguration, EnrollmentRecord, submission_choices, academic_titles, \
-    extent_choices, year_choices, matching_history_choices
+    extent_choices, year_choices, matching_history_choices, solver_choices
 
 from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -769,6 +769,10 @@ class MatchingMixin():
 
     strong_discourage_bias = FloatField('Bias for convenor <i>strongly discouraged</i> hint', default=0.2,
                                         validators=[InputRequired(message='Please specify a bias')])
+
+    solver = SelectField('Solver', choices=solver_choices, coerce=int,
+                         description='The optimizer can use a number of differnet solvers. If in doubt, use the '
+                                     'packaged CBC solver.')
 
 
 class NewMatchForm(Form, MatchingMixin):

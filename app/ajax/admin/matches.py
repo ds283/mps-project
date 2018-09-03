@@ -36,13 +36,13 @@ _status = \
 
 _owner = \
 """
-<a href="mailto:{{ m.owner.email }}">{{ m.owner.name }}</a>
+<a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
 """
 
 
 _timestamp = \
 """
-{{ m.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+{{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
 """
 
 
@@ -61,7 +61,8 @@ _info = \
     <span class="label label-default">Apply programme prefs</span>
 {% endif %}
 <span class="label label-info">Marker multiplicity {{ m.max_marking_multiplicity }}</span>
-<span class="label label-info">Memory {{ m.years_memory }} yr</span>
+<p></p>
+<span class="label label-success">Solver {{ m.solver_name }}</span>
 <span class="label label-default">Levelling {{ m.levelling_bias }}</span>
 <span class="label label-default">Group {{ m.intra_group_tension }}</span>
 <span class="label label-default">Programme {{ m.programme_bias }}</span>

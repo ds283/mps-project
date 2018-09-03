@@ -18,7 +18,7 @@
                 <div class="panel-heading">
                     View all convenor hints for <strong>{{ pclass.name }}</strong>
                 </div>
-                <div class="panel body">
+                <div class="panel-body">
                     <div class="container-fluid" style="margin-top: 10px;">
                         <div class="row vertical-top hints-table">
                             <div class="col-xs-3"><strong>Selector</strong></div>
@@ -65,6 +65,12 @@
                                     <div>
                                         {{ project.group.make_label(project.group.name)|safe }}
                                     </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="row vertical-top hints-table">
+                                <div class="col-xs-12">
+                                    <div style="text-align: center; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">Nothing to display</div>
                                 </div>
                             </div>
                         {% endfor %}

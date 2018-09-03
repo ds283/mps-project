@@ -28,21 +28,35 @@ _status = \
     {% else %}
         <span class="label label-danger">Unknown outcome</span>
     {% endif %}
+    <p></p>
+    {% if m.last_edit_timestamp is not none %}
+        <span class="label label-warning">Modified</span>
+    {% else %}
+        <span class="label label-success">Original</span>
+    {% endif %}
 {% else %}
     <span class="label label-success">In progress</span>
 {% endif %}
-    """
-
-
-_owner = \
-"""
-<a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
 """
 
 
 _timestamp = \
 """
-{{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+Created by
+<a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
+on
+{% if m.creation_timestamp is not none %}
+    {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+{% else %}
+    <span class="label label-default">Unknown</span>
+{% endif %}
+{% if m.last_edited_by is not none %}
+    Last edited by 
+    <a href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
+    {% if m.last_edit_timestamp is not none %}
+        {{ m.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+    {% endif %}
+{% endif %}
 """
 
 
@@ -137,6 +151,7 @@ _score = \
     {% else %}
         <span class="label label-warning">Current score undefined</span>
     {% endif %}
+    <p></p>
     <span class="label label-info">&delta; max {{ m.delta_max }}</span>
     <span class="label label-info">&delta; min {{ m.delta_min }}</span>
     <span class="label label-primary">CATS max {{ m.CATS_max }}</span>
@@ -227,7 +242,6 @@ def matches_data(matches):
 
     data = [{'name': render_template_string(_name, m=m),
              'status': render_template_string(_status, m=m),
-             'owner': render_template_string(_owner, m=m),
              'score': {
                  'display': render_template_string(_score, m=m),
                  'value': float(m.score) if m.outcome == m.OUTCOME_OPTIMAL and m.score is not None else 0

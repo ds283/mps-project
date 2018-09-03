@@ -66,7 +66,9 @@ def progress_update(task_id, state, progress, message, autocommit=False):
         if data.owner is not None:
 
             remove_on_load = False
-            if data.status == TaskRecord.SUCCESS or data.status == TaskRecord.FAILURE:
+            if data.status == TaskRecord.SUCCESS \
+                    or data.status == TaskRecord.FAILURE \
+                    or data.status == TaskRecord.TERMINATED:
                 remove_on_load = True
 
             data.owner.post_task_update(data.id, {'task': data.name, 'state': state,

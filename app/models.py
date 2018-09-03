@@ -62,6 +62,9 @@ academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs')
 # labels and keys for years_history
 matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '4 years'), (5, '5 years')]
 
+# PuLP solver choices
+solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GLPK external command')]
+
 
 ####################
 # ASSOCIATION TABLES
@@ -3559,21 +3562,22 @@ class MatchingAttempt(db.Model):
     OUTCOME_INFEASIBLE = 2
     OUTCOME_UNBOUNDED = 3
     OUTCOME_UNDEFINED = 4
+
+    # outcome of calculation
     outcome = db.Column(db.Integer())
 
-    # timestamp
-    timestamp = db.Column(db.DateTime(), index=True)
+    SOLVER_CBC_PACKAGED = 0
+    SOLVER_CBC_CMD = 1
+    SOLVER_GLPK_CMD = 2
+
+    # which solver to use
+    solver = db.Column(db.Integer())
 
     # time taken to construct the PuLP problem
     construct_time = db.Column(db.Numeric(8, 3))
 
     # time taken by PulP to compute the solution
     compute_time = db.Column(db.Numeric(8, 3))
-
-    # owner
-    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
-                            backref=db.backref('matching_attempts', lazy='dynamic'))
 
 
     # MATCHING OPTIONS
@@ -3667,6 +3671,24 @@ class MatchingAttempt(db.Model):
 
     # mean CATS per project during matching
     mean_CATS_per_project = db.Column(db.Numeric(8,5))
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False,
+                                 backref=db.backref('matching_attempts', lazy='dynamic'))
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def __init__(self, *args, **kwargs):
@@ -4069,6 +4091,16 @@ class MatchingAttempt(db.Model):
         return matched, failed
 
 
+    _solvers = {0: 'PuLP-CBC', 1: 'CBC-CMD', 2: 'GLPK-CMD'}
+
+    @property
+    def solver_name(self):
+        if self.solver in self._solvers:
+            return self._solvers[self.solver]
+
+        return None
+
+
 class MatchingRecord(db.Model):
     """
     Store matching data for an individual selector
@@ -4098,6 +4130,9 @@ class MatchingRecord(db.Model):
     project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
                               backref=db.backref('student_matches', lazy='dynamic'))
 
+    # keep copy of original project assignment, can use later to revert
+    original_project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+
     # assigned supervisor (redundant with project, but allows us to attach a backref from the
     # supervisor's FacultyData record)
     supervisor_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
@@ -4112,6 +4147,8 @@ class MatchingRecord(db.Model):
     marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
                              backref=db.backref('marker_matches', lazy='dynamic'))
 
+    # keep copy of original marker assignment, can use later to revert
+    original_marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

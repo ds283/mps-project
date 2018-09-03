@@ -313,19 +313,18 @@ class User(db.Model, UserMixin):
 
     # allow user objects to get all project classes so that we can render
     # a 'Convenor' menu in the navbar for all admin users
-    def get_project_classes(self):
+    @property
+    def all_project_classes(self):
         """
         Get available project classes
         :return:
         """
-
         return ProjectClass.query.filter_by(active=True)
 
 
     # build a name for this user
     @property
     def name(self):
-
         prefix = ''
 
         if self.faculty_data is not None and self.faculty_data.use_academic_title:
@@ -342,13 +341,11 @@ class User(db.Model, UserMixin):
 
     @property
     def name_and_username(self):
-
         return self.name + ' (' + self.username + ')'
 
 
     @property
     def active_label(self):
-
         if self.active:
             return '<span class="label label-success">Active</a>'
 
@@ -602,14 +599,12 @@ class FacultyData(db.Model):
 
 
     def projects_offered(self, pclass):
-
         return Project.query.filter(Project.active,
                                     Project.owner_id == self.id,
                                     Project.project_classes.any(id=pclass.id)).count()
 
 
     def projects_offered_label(self, pclass):
-
         n = self.projects_offered(pclass)
 
         if n == 0:
@@ -620,7 +615,6 @@ class FacultyData(db.Model):
 
     @property
     def projects_unofferable(self):
-
         unofferable = 0
         for proj in self.projects:
             if proj.active and not proj.is_offerable:
@@ -631,7 +625,6 @@ class FacultyData(db.Model):
 
     @property
     def projects_unofferable_label(self):
-
         n = self.projects_unofferable
 
         if n == 0:
@@ -738,7 +731,6 @@ class FacultyData(db.Model):
 
 
     def enrolled_labels(self, pclass):
-
         record = self.get_enrollment_record(pclass)
 
         if record is None:
@@ -748,7 +740,6 @@ class FacultyData(db.Model):
 
 
     def get_enrollment_record(self, pclass):
-
         return self.enrollments.filter_by(pclass_id=pclass.id).first()
 
 
@@ -774,9 +765,9 @@ class FacultyData(db.Model):
         Return list of projects for which this faculty member is a convenor
         :return:
         """
-
         pcls = self.convenor_for.all() + self.coconvenor_for.all()
-        return set(pcls)
+        pcl_set = set(pcls)
+        return pcl_set
 
 
     def add_convenorship(self, pclass):
@@ -797,7 +788,6 @@ class FacultyData(db.Model):
         """
 
         # currently our only task is to remove system messages emplaced by this user in their role as convenor
-
         for item in MessageOfTheDay.query.filter_by(user_id=self.id).all():
 
             # if no assigned classes then this is a broadcast message; move on
@@ -1414,18 +1404,20 @@ class ProjectClass(db.Model):
 
     @property
     def convenor_email(self):
-
         return self.convenor.user.email
 
 
     @property
     def convenor_name(self):
-
         return self.convenor.user.name
 
 
     def is_convenor(self, id):
-
+        """
+        Determine whether a given user 'id' is a convenor for this project class
+        :param id:
+        :return:
+        """
         if self.convenor_id == id:
             return True
 
@@ -1436,7 +1428,6 @@ class ProjectClass(db.Model):
 
 
     def make_CSS_style(self):
-
         if self.colour is None:
             return None
 
@@ -1745,6 +1736,16 @@ class ProjectClassConfig(db.Model):
             if data not in self.golive_required:      # don't object if we are generating a duplicate request
 
                 self.golive_required.append(data)
+
+
+    @property
+    def has_matches(self):
+        query = self.matching_attempts.subquery()
+        count = db.session.query(sqlalchemy.func.count(query.c.id)) \
+            .filter(query.c.published == True) \
+            .scalar()
+
+        return count > 0
 
 
 class EnrollmentRecord(db.Model):
@@ -4113,6 +4114,15 @@ class MatchingAttempt(db.Model):
         return None
 
 
+    @property
+    def available_pclasses(self):
+        configs = self.config_members.subquery()
+        pclass_ids = db.session.query(configs.c.pclass_id).distinct().subquery()
+
+        return db.session.query(ProjectClass) \
+            .join(pclass_ids, ProjectClass.id == pclass_ids.c.pclass_id).all()
+
+
 class MatchingRecord(db.Model):
     """
     Store matching data for an individual selector
@@ -4161,6 +4171,7 @@ class MatchingRecord(db.Model):
 
     # keep copy of original marker assignment, can use later to revert
     original_marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

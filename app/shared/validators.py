@@ -37,7 +37,7 @@ def validate_is_convenor(pclass):
     """
 
     # if logged in user is convenor for this class, or is an admin user, then all is OK
-    if pclass.is_convenor(current_user.id) \
+    if not pclass.is_convenor(current_user.id) \
             and not current_user.has_role('admin') \
             and not current_user.has_role('root'):
 
@@ -100,15 +100,36 @@ def validate_is_admin_or_convenor():
     return False
 
 
-def validate_is_project_owner(proj):
+def validate_is_project_owner(project):
     """
     Validate that the logged-in user is the project owner
-    :param proj:
+    :param project:
     :return:
     """
 
-    if proj.owner_id == current_user.id:
+    if project.owner_id == current_user.id:
         return True
 
     flash('This operation is available only to the project owner.', 'error')
+    return False
+
+
+def validate_match_inspector(record):
+    """
+    Validate that the logged-in user is entitled to view the match inspector for a given matching attempt
+    :param record:
+    :return:
+    """
+    if current_user.has_role('root') or current_user.has_role('admin'):
+        return True
+
+    if current_user.has_role('faculty'):
+        for pclass in record.available_pclasses:
+            if pclass.is_convenor(current_user.id):
+                return True
+
+        flash('The match owner has not yet made this match available to project convenors.', 'info')
+        return False
+
+    flash('This operation is available only to administrative users and project convennors.', 'error')
     return False

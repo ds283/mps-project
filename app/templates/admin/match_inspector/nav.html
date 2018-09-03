@@ -5,7 +5,7 @@
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li {% if pane == 'student' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.match_student_view', id=record.id) }}">
+            <a href="{{ url_for('admin.match_student_view', id=record.id, text=text, url=url) }}">
                 Student view
                 {% if record.student_issues %}
                     <i class="fa fa-exclamation-triangle"></i>
@@ -13,7 +13,7 @@
             </a>
         </li>
         <li {% if pane == 'faculty' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.match_faculty_view', id=record.id) }}">
+            <a href="{{ url_for('admin.match_faculty_view', id=record.id, text=text, url=url) }}">
                 Faculty view
                 {% if record.faculty_issues %}
                     <i class="fa fa-exclamation-triangle"></i>
@@ -21,7 +21,7 @@
             </a>
         </li>
         <li {% if pane == 'dists' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.match_dists_view', id=record.id) }}">
+            <a href="{{ url_for('admin.match_dists_view', id=record.id, text=text, url=url) }}">
                 Distributions
             </a>
         </li>

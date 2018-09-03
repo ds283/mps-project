@@ -51,6 +51,7 @@ on
     <span class="label label-default">Unknown</span>
 {% endif %}
 {% if m.last_edited_by is not none %}
+    <p></p>
     Last edited by 
     <a href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
     {% if m.last_edit_timestamp is not none %}
@@ -171,10 +172,9 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
-    
         {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
             <li>
-                <a href="{{ url_for('admin.match_student_view', id=m.id) }}">
+                <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
                     Inspect match
                 </a>
             </li>
@@ -193,11 +193,36 @@ _menu = \
                 </a>
             </li>
         {% else %}
-            <li>
-                <a href="{{ url_for('admin.delete_match', id=m.id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>
+            {% if current_user.has_role('root') or current_user.id == m.creator_id %}
+                <li>
+                    <a href="{{ url_for('admin.delete_match', id=m.id) }}">
+                        <i class="fa fa-trash"></i> Delete
+                    </a>
+                </li>
+            {% else %}
+                <li class="disabled">
+                    <a><i class="fa fa-trash"></i> Delete</a>
+                </li>
+            {% endif %}
+        {% endif %}
+        
+        {% if current_user.has_role('root') %}
+            <li role="separator" class="divider">
+            <li class="dropdown-header">Superuser functions</li>
+            
+            {% if m.published %}
+                <li>
+                    <a href="{{ url_for('admin.unpublish_match', id=m.id) }}">
+                        Unpublish
+                    </a>
+                </li>
+            {% else %}
+                <li>
+                    <a href="{{ url_for('admin.publish_match', id=m.id) }}">
+                        Publish to convenors
+                    </a>
+                </li>
+            {% endif %}
         {% endif %}
     </ul>
 </div>
@@ -208,7 +233,7 @@ _name = \
 """
 <div>
     {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
-        <a href="{{ url_for('admin.match_student_view', id=m.id) }}">{{ m.name }}</a>
+        <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">{{ m.name }}</a>
         {% if not m.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
@@ -230,17 +255,21 @@ _name = \
         <span class="label label-default"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
     {% endif %}
 {% endif %}
+<p></p>
+{% if m.published and current_user.has_role('root') %}
+    <span class="label label-primary">Published</a>
+{% endif %}
 """
 
 
-def matches_data(matches):
+def matches_data(matches, text=None, url=None):
     """
     Build AJAX JSON payload
     :param matches:
     :return:
     """
 
-    data = [{'name': render_template_string(_name, m=m),
+    data = [{'name': render_template_string(_name, m=m, text=text, url=url),
              'status': render_template_string(_status, m=m),
              'score': {
                  'display': render_template_string(_score, m=m),
@@ -248,6 +277,6 @@ def matches_data(matches):
              },
              'timestamp': render_template_string(_timestamp, m=m),
              'info': render_template_string(_info, m=m),
-             'menu': render_template_string(_menu, m=m)} for m in matches]
+             'menu': render_template_string(_menu, m=m, text=text, url=url)} for m in matches]
 
     return jsonify(data)

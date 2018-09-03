@@ -53,4 +53,13 @@
             </div>
         </div>
     </div>
+    {% if config.has_matches %}
+        <div class="panel panel-danger">
+            <div class="panel-heading">Proposed matches are available to view</div>
+            <div class="panel-body">
+                <p>An administrator has published one or more proposals for selector/project matches.</p>
+                <a href="{{ url_for('convenor.audit_matches', pclass_id=config.project_class.id) }}">View or edit proposed matches...</a>
+            </div>
+        </div>
+    {% endif %}
 {% endmacro %}

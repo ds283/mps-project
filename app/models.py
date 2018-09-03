@@ -3552,6 +3552,9 @@ class MatchingAttempt(db.Model):
     config_members = db.relationship('ProjectClassConfig', secondary=match_configs, lazy='dynamic',
                                       backref=db.backref('matching_attempts', lazy='dynamic'))
 
+    # flag attempts that have been published to convenors for comments
+    published = db.Column(db.Boolean())
+
 
     # CELERY TASK DATA
 

@@ -3179,6 +3179,7 @@ def create_match():
                                celery_id=uuid,
                                finished=False,
                                outcome=None,
+                               published=False,
                                construct_time=None,
                                compute_time=None,
                                ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,

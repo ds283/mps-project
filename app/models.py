@@ -3127,21 +3127,30 @@ class SelectionRecord(db.Model):
         if hint < SelectionRecord.SELECTION_HINT_NEUTRAL or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
             return
 
-        self.hint = hint
+        if self.hint == hint:
+            return
 
         if hint == SelectionRecord.SELECTION_HINT_REQUIRE:
-            # remove any other 'require' rags
+
+            # count number of other 'require' flags attached to this selector
+            count = 0
             for item in self.owner.selections:
                 if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
-                    item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
+                    count += 1
 
-        if hint == SelectionRecord.SELECTION_HINT_FORBID:
-            # remove any other 'require' rags
-            for item in self.owner.selections:
-                if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_FORBID:
-                    item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
+            # if too many, remove one
+            target = self.owner.config.project_class.submissions
+            if count >= target:
+                for item in self.owner.selections:
+                    if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+                        item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
+                        count -= 1
+
+                        if count < target:
+                            break
 
         # note database has to be committed separately
+        self.hint = hint
 
 
 class EmailLog(db.Model):

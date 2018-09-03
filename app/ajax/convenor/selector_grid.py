@@ -25,10 +25,9 @@ _selections = \
             {% set project = item.liveproject %}
             <div class="dropdown">
                 {% set style = project.group.make_CSS_style() %}
-                <a class="label label-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
-                    #{{ item.rank }} {{ item.format_project|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}
-                    <span class="caret"></span>
-                </a>
+                <a class="label label-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">#{{ item.rank }}
+                    {{ item.format_project|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}
+                <span class="caret"></span></a>
                 <ul class="dropdown-menu">
                     {% set menu_items = item.menu_order %}
                     {% for mi in menu_items %}
@@ -45,6 +44,9 @@ _selections = \
                         {% endif %}
                     {% endfor %}
                 </ul>
+                {% if item.converted_from_bookmark %}
+                    <span class="label label-warning">Bookmark</span>
+                {% endif %}
             </div>
         {% endif %}
     {% endfor %}

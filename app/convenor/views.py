@@ -184,7 +184,7 @@ _marker_menu = \
     </a>
 {% else %}
     <a class="btn btn-default btn-sm disabled">
-        <i class="fa fa-plus"></i> Can't attach
+        <i class="fa fa-ban"></i> Can't attach
     </a>
 {% endif %}
 """

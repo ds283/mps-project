@@ -18,6 +18,8 @@ from ..task_queue import progress_update
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
+from celery import group, chain
+
 import pulp
 import pulp.solvers as solvers
 import itertools
@@ -721,7 +723,6 @@ def register_matching_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def create_match(self, id):
-
         self.update_state(state='STARTED',
                           meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
 
@@ -839,3 +840,77 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         return record.score
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert_record(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(MatchingRecord).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingRecord record from database')
+            return
+
+        try:
+            record.project_id = record.original_project_id
+            record.supervisor_id = record.project.owner_id
+            record.marker_id = record.original_marker_id
+            record.rank = record.selector.project_rank(record.original_project_id)
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert_finalize(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(MatchingAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            return
+
+        try:
+            record.last_edit_id = None
+            record.last_edit_timestamp = None
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(MatchingAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            return
+
+        wg = group(revert_record.si(r.id) for r in record.records.all())
+        seq = chain(wg, revert_finalize.si(id))
+
+        seq.apply_async()

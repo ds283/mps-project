@@ -3411,6 +3411,7 @@ def perform_delete_match(id):
 
     url = request.args.get('url', None)
     if url is None:
+        # TODO consider an alternative implementation here
         url = url_for('admin.manage_matching')
 
     if not record.finished:
@@ -3433,6 +3434,83 @@ def perform_delete_match(id):
         flash('Could not delete match "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+
+    return redirect(url)
+
+
+@admin.route('/revert_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def revert_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Could not revert match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Could not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    title = 'Revert match'
+    panel_title = 'Revert match <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_revert_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to revert the matching ' \
+              '<strong>{name}</strong> to its original state.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Revert match'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_revert_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_revert_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        # TODO consider an alternative implementation here
+        url = url_for('admin.manage_matching')
+
+    if not record.finished:
+        flash('Could not revert match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Could not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    # hand off revert job to asynchronous queue
+    celery = current_app.extensions['celery']
+    revert = celery.tasks['app.tasks.matching.revert']
+
+    tk_name = 'Revert {name}'.format(name=record.name)
+    tk_description = 'Revert matching to its original state'
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                revert.si(record.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
 
     return redirect(url)
 

@@ -790,9 +790,9 @@ def register_matching_tasks(celery):
 
         with Timer() as solve_time:
             if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
-                output = prob.solve(solvers.PULP_CBC_CMD())
+                output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=600, fracGap=0.01))
             elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
-                output = prob.solve(solvers.COIN_CMD())
+                output = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=600, fracGap=0.01))
             elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
                 output = prob.solve(solvers.GLPK_CMD())
             else:

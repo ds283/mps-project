@@ -3091,7 +3091,7 @@ def terminate_background_task(id):
         return redirect(request.referrer)
 
     celery = current_app.extensions['celery']
-    celery.control.revoke(record.id)
+    celery.control.revoke(record.id, terminate=True, signal='SIGUSR1')
 
     try:
         # update progress bar
@@ -3352,7 +3352,7 @@ def perform_terminate_match(id):
         return redirect(url)
 
     celery = current_app.extensions['celery']
-    celery.control.revoke(record.celery_id)
+    celery.control.revoke(record.celery_id, terminate=True, signal='SIGUSR1')
 
     try:
         progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)

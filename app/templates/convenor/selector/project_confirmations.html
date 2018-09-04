@@ -5,6 +5,8 @@
 {% endblock %}
 
 {% block bodyblock %}
+    {% set config = project.config %}
+    {% set lifecycle = config.lifecycle %}
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
@@ -33,7 +35,7 @@
                                             Deconfirm <span class="caret"></span>
                                         </a>
                                         <ul class="dropdown-menu">
-                                            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                            {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-clock-o"></i> Make pending
@@ -75,7 +77,7 @@
                                             Confirm <span class="caret"></span>
                                         </a>
                                         <ul class="dropdown-menu">
-                                            {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                            {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                                 <li>
                                                     <a href="{{ url_for('convenor.confirm', sid=sel.id, pid=project.id) }}">
                                                         <i class="fa fa-check"></i> Confirm
@@ -108,7 +110,7 @@
             </div>
 
             <div>
-                <a href="{{ url_for('convenor.liveprojects', id=project.config.project_class.id) }}">
+                <a href="{{ url_for('convenor.liveprojects', id=config.project_class.id) }}">
                     <i class="fa fa-backward"></i> Return to dashboard
                 </a>
             </div>

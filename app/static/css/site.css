@@ -31,6 +31,14 @@ p.copyright {
     margin-right: 5px;
 }
 
+.match-assign-button {
+    display: inline-block;
+}
+
+.rank-hint-button {
+    display: inline-block;
+}
+
 .btn-table-block {
     margin-top: 5px;
 }
@@ -78,6 +86,10 @@ p.copyright {
 }
 
 .bookmark-table {
+    margin-bottom: 1%;
+}
+
+.hints-table {
     margin-bottom: 1%;
 }
 

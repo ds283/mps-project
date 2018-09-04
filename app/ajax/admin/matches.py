@@ -28,21 +28,36 @@ _status = \
     {% else %}
         <span class="label label-danger">Unknown outcome</span>
     {% endif %}
+    <p></p>
+    {% if m.is_modified %}
+        <span class="label label-warning">Modified</span>
+    {% else %}
+        <span class="label label-success">Original</span>
+    {% endif %}
 {% else %}
     <span class="label label-success">In progress</span>
 {% endif %}
-    """
-
-
-_owner = \
-"""
-<a href="mailto:{{ m.owner.email }}">{{ m.owner.name }}</a>
 """
 
 
 _timestamp = \
 """
-{{ m.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+Created by
+<a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
+on
+{% if m.creation_timestamp is not none %}
+    {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+{% else %}
+    <span class="label label-default">Unknown</span>
+{% endif %}
+{% if m.last_edited_by is not none %}
+    <p></p>
+    Last edited by 
+    <a href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
+    {% if m.last_edit_timestamp is not none %}
+        {{ m.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+    {% endif %}
+{% endif %}
 """
 
 
@@ -61,10 +76,22 @@ _info = \
     <span class="label label-default">Apply programme prefs</span>
 {% endif %}
 <span class="label label-info">Marker multiplicity {{ m.max_marking_multiplicity }}</span>
-<span class="label label-info">Memory {{ m.years_memory }} yr</span>
+<p></p>
+<span class="label label-success">Solver {{ m.solver_name }}</span>
 <span class="label label-default">Levelling {{ m.levelling_bias }}</span>
 <span class="label label-default">Group {{ m.intra_group_tension }}</span>
 <span class="label label-default">Programme {{ m.programme_bias }}</span>
+<span class="label label-default">Bookmarks {{ m.bookmark_bias }}</span>
+<p></p>
+{% if m.use_hints %}
+    <span class="label label-success"><i class="fa fa-check"></i> Use hints</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Ignore hints</span>
+{% endif %}
+<span class="label label-default">Encourage {{ m.encourage_bias }}</span>
+<span class="label label-default">Discourage {{ m.discourage_bias }}</span>
+<span class="label label-default">Strong encourage {{ m.strong_encourage_bias }}</span>
+<span class="label label-default">Strong discourage {{ m.strong_discourage_bias }}</span>
 {% if not m.ignore_programme_prefs %}
     <p></p>
     {% set outcome = m.prefer_programme_status %}
@@ -119,12 +146,13 @@ _info = \
 _score = \
 """
 {% if m.outcome == m.OUTCOME_OPTIMAL %}
-    <span class="label label-success">{{ m.score }} original</span>
+    <span class="label label-success">Score {{ m.score }} original</span>
     {% if m.current_score %}
-        <span class="label label-primary">{{ m.current_score|round(precision=2) }} current</span>
+        <span class="label label-primary">Score {{ m.current_score|round(precision=2) }} now</span>
     {% else %}
         <span class="label label-warning">Current score undefined</span>
     {% endif %}
+    <p></p>
     <span class="label label-info">&delta; max {{ m.delta_max }}</span>
     <span class="label label-info">&delta; min {{ m.delta_min }}</span>
     <span class="label label-primary">CATS max {{ m.CATS_max }}</span>
@@ -144,20 +172,14 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
-    
         {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
             <li>
-                <a href="{{ url_for('admin.match_student_view', id=m.id) }}">
-                    Inspect match
+                <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
+                    <i class="fa fa-search"></i> Inspect match
                 </a>
             </li>
-        {% else %}
-            <li class="disabled">
-                <a>Inspect match</a>
-            </li>
-        {% endif %}
-    
-        <li role="separator" class="divider">
+            <li role="separator" class="divider">
+        {% endif %}    
         
         {% if not m.finished %}
             <li>
@@ -166,12 +188,49 @@ _menu = \
                 </a>
             </li>
         {% else %}
-            <li>
-                <a href="{{ url_for('admin.delete_match', id=m.id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>
-        {% endif %}
+            {% if current_user.has_role('root') or current_user.id == m.creator_id %}
+                <li>
+                    <a href="{{ url_for('admin.delete_match', id=m.id) }}">
+                        <i class="fa fa-trash"></i> Delete
+                    </a>
+                </li>
+            {% else %}
+                <li class="disabled">
+                    <a><i class="fa fa-trash"></i> Delete</a>
+                </li>
+            {% endif %}
+            
+            {% if m.is_modified %}
+                <li>
+                    <a href="{{ url_for('admin.revert_match', id=m.id) }}">
+                        <i class="fa fa-undo"></i> Revert to original
+                    </a>
+                </li>
+            {% else %}
+                <li class="disabled">
+                    <a><i class="fa fa-undo"></i> Revert to original</a>
+                </li>
+            {% endif %}
+            
+            {% if current_user.has_role('root') %}
+                <li role="separator" class="divider">
+                <li class="dropdown-header">Superuser functions</li>
+                
+                {% if m.published %}
+                    <li>
+                        <a href="{{ url_for('admin.unpublish_match', id=m.id) }}">
+                            Unpublish
+                        </a>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{{ url_for('admin.publish_match', id=m.id) }}">
+                            Publish to convenors
+                        </a>
+                    </li>
+                {% endif %}
+            {% endif %}            
+        {% endif %}        
     </ul>
 </div>
 """
@@ -181,7 +240,7 @@ _name = \
 """
 <div>
     {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
-        <a href="{{ url_for('admin.match_student_view', id=m.id) }}">{{ m.name }}</a>
+        <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">{{ m.name }}</a>
         {% if not m.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
@@ -189,33 +248,42 @@ _name = \
         {{ m.name }}
     {% endif %}
 </div>
+<p></p>
+{% for config in m.config_members %}
+    {% set pclass = config.project_class %}
+    {{ pclass.make_label(pclass.abbreviation)|safe }}
+{% endfor %}
 {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
+    <p></p>
     {% if m.construct_time %}
-        <span class="label label-default">Construct {{ m.formatted_construct_time }}</span>
+        <span class="label label-default"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
     {% endif %}
     {% if m.compute_time %}
-        <span class="label label-default">Compute {{ m.formatted_compute_time }}</span>
+        <span class="label label-default"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
     {% endif %}
+{% endif %}
+<p></p>
+{% if m.published and current_user.has_role('root') %}
+    <span class="label label-primary">Published</a>
 {% endif %}
 """
 
 
-def matches_data(matches):
+def matches_data(matches, text=None, url=None):
     """
     Build AJAX JSON payload
     :param matches:
     :return:
     """
 
-    data = [{'name': render_template_string(_name, m=m),
+    data = [{'name': render_template_string(_name, m=m, text=text, url=url),
              'status': render_template_string(_status, m=m),
-             'owner': render_template_string(_owner, m=m),
              'score': {
                  'display': render_template_string(_score, m=m),
                  'value': float(m.score) if m.outcome == m.OUTCOME_OPTIMAL and m.score is not None else 0
              },
              'timestamp': render_template_string(_timestamp, m=m),
              'info': render_template_string(_info, m=m),
-             'menu': render_template_string(_menu, m=m)} for m in matches]
+             'menu': render_template_string(_menu, m=m, text=text, url=url)} for m in matches]
 
     return jsonify(data)

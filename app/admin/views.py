@@ -46,7 +46,7 @@ from ..shared.utils import get_main_config, get_current_year, home_dashboard, ge
     get_root_dashboard_data, get_automatch_pclasses
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
-from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor
+from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector
 from ..shared.conversions import is_integer
 
 from ..task_queue import register_task, progress_update
@@ -3079,6 +3079,60 @@ def background_ajax():
     return ajax.site.background_task_data(tasks)
 
 
+@admin.route('/terminate_background_task/<string:id>')
+@roles_required('root')
+def terminate_background_task(id):
+
+    record = TaskRecord.query.get_or_404(id)
+
+    if record.state == TaskRecord.SUCCESS or record.state == TaskRecord.FAILURE or record.state == TaskRecord.TERMINATED:
+        flash('Could not terminate background task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    celery.control.revoke(record.id)
+
+    try:
+        # update progress bar
+        progress_update(record.id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+
+        # remove task from database
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not terminate task "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/delete_background_task/<string:id>')
+@roles_required('root')
+def delete_background_task(id):
+
+    record = TaskRecord.query.get_or_404(id)
+
+    if record.status == TaskRecord.PENDING or record.status == TaskRecord.RUNNING:
+        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    try:
+        # remove task from database
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not delete match "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(request.referrer)
+
+
 @admin.route('/notifications_ajax', methods=['GET', 'POST'])
 @login_required
 def notifications_ajax():
@@ -3145,10 +3199,9 @@ def matches_ajax():
         return jsonify({})
 
     current_year = get_current_year()
-
     matches = db.session.query(MatchingAttempt).filter_by(year=current_year).all()
 
-    return ajax.admin.matches_data(matches)
+    return ajax.admin.matches_data(matches, text='matching dashboard', url=url_for('convenor.manage_matching'))
 
 
 @admin.route('/create_match', methods=['GET', 'POST'])
@@ -3167,7 +3220,7 @@ def create_match():
 
     info = get_matching_dashboard_data()
 
-    form = NewMatchForm(request.form)
+    form = NewMatchForm(current_year, request.form)
 
     if form.validate_on_submit():
 
@@ -3179,10 +3232,9 @@ def create_match():
                                celery_id=uuid,
                                finished=False,
                                outcome=None,
-                               timestamp=datetime.now(),
+                               published=False,
                                construct_time=None,
                                compute_time=None,
-                               owner_id=current_user.id,
                                ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
                                ignore_programme_prefs=form.ignore_programme_prefs.data,
                                years_memory=form.years_memory.data,
@@ -3192,7 +3244,50 @@ def create_match():
                                levelling_bias=form.levelling_bias.data,
                                intra_group_tension=form.intra_group_tension.data,
                                programme_bias=form.programme_bias.data,
+                               bookmark_bias=form.bookmark_bias.data,
+                               use_hints=form.use_hints.data,
+                               encourage_bias=form.encourage_bias.data,
+                               discourage_bias=form.discourage_bias.data,
+                               strong_encourage_bias=form.strong_encourage_bias.data,
+                               strong_discourage_bias=form.strong_discourage_bias.data,
+                               solver=form.solver.data,
+                               creation_timestamp=datetime.now(),
+                               creator_id=current_user.id,
+                               last_edit_timestamp=None,
+                               last_edit_id=None,
                                score=None)
+
+        count = 0
+        for pclass in form.pclasses_to_include.data:
+
+            config = db.session.query(ProjectClassConfig) \
+                .filter(ProjectClassConfig.pclass_id == pclass.id) \
+                .order_by(ProjectClassConfig.year == current_year).first()
+
+            if config is not None:
+                if config not in data.config_members:
+                    count += 1
+                    data.config_members.append(config)
+
+        if count == 0:
+            flash('No project classes were specified for inclusion, so no match was computed.', 'error')
+            return redirect(url_for('admin.manage_caching'))
+
+        for match in form.include_matches.data:
+
+            if match not in data.include_matches:
+                ok = True
+                for pclass_a in data.config_members:
+                    for pclass_b in match.config_members:
+                        if pclass_a.id == pclass_b.id:
+                            ok = False
+                            flash('Excluded CATS form matching "{name}" since it contains project class '
+                                  '"{pname}" which overlaps with the current match'.format(name=match.label,
+                                                                                           pname=pclass_a.name))
+                            break
+
+                if ok:
+                    data.include_matches.append(match)
 
         db.session.add(data)
         db.session.commit()
@@ -3203,6 +3298,11 @@ def create_match():
         match_task.apply_async(args=(data.id,), task_id=uuid)
 
         return redirect(url_for('admin.manage_matching'))
+
+    else:
+
+        if request.method == 'GET':
+            form.use_hints.data = True
 
     # estimate equitable CATS loading
     supervising_CATS, marking_CATS, num_supervisors, num_markers = estimate_CATS_load()
@@ -3223,6 +3323,34 @@ def terminate_match(id):
               'error')
         return redirect(request.referrer)
 
+    title = 'Terminate match'
+    panel_title = 'Terminate match <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_terminate_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to terminate the matching job ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Terminate job'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_terminate_match/<int:id>')
+@roles_required('root')
+def perform_terminate_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.manage_matching')
+
+    if record.finished:
+        flash('Could not terminate matching task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(url)
+
     celery = current_app.extensions['celery']
     celery.control.revoke(record.celery_id)
 
@@ -3241,19 +3369,59 @@ def terminate_match(id):
               'Please contact a system administrator.'.format(name=record.name),
               'error')
 
-    return redirect(request.referrer)
+    return redirect(url)
 
 
 @admin.route('/delete_match/<int:id>')
-@roles_required('root')
+@roles_accepted('faculty', 'admin', 'root')
 def delete_match(id):
 
     record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
 
     if not record.finished:
         flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
+
+    title = 'Delete match'
+    panel_title = 'Delete match <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_delete_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to delete the matching ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Delete match'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_delete_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_delete_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        # TODO consider an alternative implementation here
+        url = url_for('admin.manage_matching')
+
+    if not record.finished:
+        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(url)
+
+    if not current_user.has_role('root') and current_user.id != record.creator_id:
+        flash('Match "{name}" cannot be deleted because it belongs to another user')
+        return redirect(url)
 
     try:
         # delete all MatchingRecords associated with this MatchingAttempt
@@ -3267,11 +3435,88 @@ def delete_match(id):
               'Please contact a system administrator.'.format(name=record.name),
               'error')
 
-    return redirect(request.referrer)
+    return redirect(url)
+
+
+@admin.route('/revert_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def revert_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Could not revert match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Could not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    title = 'Revert match'
+    panel_title = 'Revert match <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_revert_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to revert the matching ' \
+              '<strong>{name}</strong> to its original state.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Revert match'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_revert_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_revert_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        # TODO consider an alternative implementation here
+        url = url_for('admin.manage_matching')
+
+    if not record.finished:
+        flash('Could not revert match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Could not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    # hand off revert job to asynchronous queue
+    celery = current_app.extensions['celery']
+    revert = celery.tasks['app.tasks.matching.revert']
+
+    tk_name = 'Revert {name}'.format(name=record.name)
+    tk_description = 'Revert matching to its original state'
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                revert.si(record.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
+
+    return redirect(url)
 
 
 @admin.route('/match_student_view/<int:id>')
-@roles_required('root')
+@roles_accepted('faculty', 'admin', 'root')
 def match_student_view(id):
 
     record = MatchingAttempt.query.get_or_404(id)
@@ -3286,20 +3531,26 @@ def match_student_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
     pclass_filter = request.args.get('pclass_filter')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
 
     # if no state filter supplied, check if one is stored in session
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
         pclass_filter = session['admin_match_pclass_filter']
 
-    pclasses = get_automatch_pclasses()
+    pclasses = record.available_pclasses
 
     return render_template('admin/match_inspector/student.html', pane='student', record=record,
-                           pclasses=pclasses, pclass_filter=pclass_filter)
+                           pclasses=pclasses, pclass_filter=pclass_filter,
+                           text=text, url=url)
 
 
 @admin.route('/match_faculty_view/<int:id>')
-@roles_required('root')
+@roles_accepted('faculty', 'admin', 'root')
 def match_faculty_view(id):
 
     record = MatchingAttempt.query.get_or_404(id)
@@ -3314,7 +3565,12 @@ def match_faculty_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
     pclass_filter = request.args.get('pclass_filter')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
 
     # if no state filter supplied, check if one is stored in session
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
@@ -3323,11 +3579,12 @@ def match_faculty_view(id):
     pclasses = get_automatch_pclasses()
 
     return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record,
-                           pclasses=pclasses, pclass_filter=pclass_filter)
+                           pclasses=pclasses, pclass_filter=pclass_filter,
+                           text=text, url=url)
 
 
 @admin.route('/match_dists_view/<int:id>')
-@roles_required('root')
+@roles_accepted('faculty', 'admin', 'root')
 def match_dists_view(id):
 
     record = MatchingAttempt.query.get_or_404(id)
@@ -3342,7 +3599,12 @@ def match_dists_view(id):
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
     pclass_filter = request.args.get('pclass_filter')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
 
     # if no state filter supplied, check if one is stored in session
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
@@ -3387,14 +3649,18 @@ def match_dists_view(id):
 
     return render_template('admin/match_inspector/dists.html', pane='dists', record=record, pclasses=pclasses,
                            pclass_filter=pclass_filter, CATS_script=CATS_script, CATS_div=CATS_div,
-                           delta_script=delta_script, delta_div=delta_div)
+                           delta_script=delta_script, delta_div=delta_div,
+                           text=text, url=url)
 
 
 @admin.route('/match_student_view_ajax/<int:id>')
-@roles_required('root')
+@roles_accepted('faculty', 'admin', 'root')
 def match_student_view_ajax(id):
 
     record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return jsonify({})
 
     if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         return jsonify({})
@@ -3410,10 +3676,13 @@ def match_student_view_ajax(id):
 
 
 @admin.route('/match_faculty_view_ajax/<int:id>')
-@roles_required('root')
+@roles_accepted('faculty', 'admin', 'root')
 def match_faculty_view_ajax(id):
 
     record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return jsonify({})
 
     if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         return jsonify({})
@@ -3426,10 +3695,14 @@ def match_faculty_view_ajax(id):
 
 
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')
-@roles_required('root')
+@roles_accepted('faculty', 'admin', 'root')
 def reassign_match_project(id, pid):
 
     record = MatchingRecord.query.get_or_404(id)
+
+    if not validate_match_inspector(record.matching_attempt):
+        return redirect(request.referrer)
+
     project = LiveProject.query.get_or_404(pid)
 
     if record.selector.has_submitted:
@@ -3437,6 +3710,10 @@ def reassign_match_project(id, pid):
             record.project_id = project.id
             record.supervisor_id = project.owner_id
             record.rank = record.selector.project_rank(project.id)
+
+            record.matching_attempt.last_edit_id = current_user.id
+            record.matching_attempt.last_edit_timestamp = datetime.now()
+
             db.session.commit()
         else:
             flash("Could not reassign '{proj}' to {name}; this project "
@@ -3448,10 +3725,13 @@ def reassign_match_project(id, pid):
 
 
 @admin.route('/reassign_match_marker/<int:id>/<int:mid>')
-@roles_required('root')
+@roles_accepted('faculty', 'admin', 'root')
 def reassign_match_marker(id, mid):
 
     record = MatchingRecord.query.get_or_404(id)
+
+    if not validate_match_inspector(record.matching_attempt):
+        return redirect(request.referrer)
 
     # check intended mid is in list of attached second markers
     q = record.project.second_markers.subquery()
@@ -3465,6 +3745,10 @@ def reassign_match_marker(id, mid):
 
     elif count == 1:
         record.marker_id = mid
+
+        record.matching_attempt.last_edit_id = current_user.id
+        record.matching_attempt.last_edit_timestamp = datetime.now()
+
         db.session.commit()
 
     else:
@@ -3474,56 +3758,44 @@ def reassign_match_marker(id, mid):
     return redirect(request.referrer)
 
 
-@admin.route('/terminate_background_task/<string:id>')
+@admin.route('/publish_match/<int:id>')
 @roles_required('root')
-def terminate_background_task(id):
+def publish_match(id):
 
-    record = TaskRecord.query.get_or_404(id)
+    record = MatchingAttempt.query.get_or_404(id)
 
-    if record.state == TaskRecord.SUCCESS or record.state == TaskRecord.FAILURE or record.state == TaskRecord.TERMINATED:
-        flash('Could not terminate background task "{name}" because it has finished.'.format(name=record.name),
-              'error')
+    if not record.finished:
+        flash('Match "{name}" cannot be published until it has completed successfully.', 'info')
         return redirect(request.referrer)
 
-    celery = current_app.extensions['celery']
-    celery.control.revoke(record.id)
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
+              'It cannot be shared with convenors.', 'info')
+        return redirect(request.referrer)
 
-    try:
-        # update progress bar
-        progress_update(record.id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
-
-        # remove task from database
-        db.session.delete(record)
-        db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
-        flash('Could not terminate task "{name}" due to a database error. '
-              'Please contact a system administrator.'.format(name=record.name),
-              'error')
+    record.published = True
+    db.session.commit()
 
     return redirect(request.referrer)
 
 
-@admin.route('/delete_background_task/<string:id>')
+@admin.route('/unpublish_match/<int:id>')
 @roles_required('root')
-def delete_background_task(id):
+def unpublish_match(id):
 
-    record = TaskRecord.query.get_or_404(id)
+    record = MatchingAttempt.query.get_or_404(id)
 
-    if record.status == TaskRecord.PENDING or record.status == TaskRecord.RUNNING:
-        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
-              'error')
+    if not record.finished:
+        flash('Match "{name}" cannot be published until it has completed successfully.', 'info')
         return redirect(request.referrer)
 
-    try:
-        # remove task from database
-        db.session.delete(record)
-        db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
-        flash('Could not delete match "{name}" due to a database error. '
-              'Please contact a system administrator.'.format(name=record.name),
-              'error')
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
+              'It cannot be shared with convenors.', 'info')
+        return redirect(request.referrer)
+
+    record.published = False
+    db.session.commit()
 
     return redirect(request.referrer)
 

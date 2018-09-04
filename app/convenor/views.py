@@ -14,13 +14,13 @@ from flask_security import roles_accepted, current_user
 
 from celery import chain
 
-from app.shared.utils import build_enroll_selector_candidates
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
-    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription
+    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, MatchingAttempt, \
+    MatchingRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects, get_convenor_filter_record, filter_second_markers
+    filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
@@ -238,7 +238,7 @@ def overview(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
@@ -247,6 +247,9 @@ def overview(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     # build forms
     golive_form = GoLiveForm(request.form)
@@ -286,7 +289,7 @@ def attached(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
@@ -295,6 +298,9 @@ def attached(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
@@ -323,12 +329,15 @@ def attached_ajax(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     # build list of projects attached to this project class
     pq = db.session.query(Project.id, Project.owner_id).filter(Project.project_classes.any(id=id)).subquery()
@@ -374,7 +383,7 @@ def faculty(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
@@ -401,6 +410,9 @@ def faculty(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
@@ -418,7 +430,7 @@ def faculty_ajax(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
@@ -427,6 +439,9 @@ def faculty_ajax(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     if enroll_filter == 'enrolled':
 
@@ -502,7 +517,7 @@ def selectors(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
@@ -533,6 +548,9 @@ def selectors(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False).all()
@@ -569,7 +587,7 @@ def selectors_ajax(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
@@ -579,6 +597,9 @@ def selectors_ajax(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False)
@@ -618,8 +639,21 @@ def enroll_selectors(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
     cohort_filter = request.args.get('cohort_filter')
@@ -636,16 +670,6 @@ def enroll_selectors(id):
 
     if prog_filter is not None:
         session['convenor_sel_enroll_prog_filter'] = prog_filter
-
-    # get current academic year
-    current_year = get_current_year()
-
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
-
-    if config.selection_closed:
-        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
-        return redirect(request.referrer)
 
     candidates = build_enroll_selector_candidates(config)
 
@@ -681,7 +705,7 @@ def enroll_selectors_ajax(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
@@ -690,6 +714,9 @@ def enroll_selectors_ajax(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     if config.selection_closed:
         return jsonify({})
@@ -706,7 +733,7 @@ def enroll_selectors_ajax(id):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
-    return ajax.convenor.enroll_selectors_data(candidates, config)
+    return app.ajax.convenor.enroll_selectors.enroll_selectors_data(candidates, config)
 
 
 @convenor.route('/enroll_selector/<int:sid>/<int:configid>')
@@ -720,8 +747,11 @@ def enroll_selector(sid, configid):
     """
 
     config = ProjectClassConfig.query.get_or_404(configid)
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
@@ -745,7 +775,7 @@ def delete_selector(sid):
 
     sel = SelectingStudent.query.get_or_404(sid)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
@@ -764,14 +794,14 @@ def delete_selector(sid):
     return redirect(request.referrer)
 
 
-@convenor.route('/submitters/<int:id>')
+@convenor.route('/selector_grid/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def submitters(id):
+def selector_grid(id):
 
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
@@ -780,6 +810,113 @@ def submitters(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('The selector grid view is availably only after student choices are closed', 'error')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
+    if cohort_filter is None and session.get('convenor_sel_grid_cohort_filter'):
+        cohort_filter = session['convenor_sel_grid_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_sel_grid_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_sel_grid_prog_filter'):
+        prog_filter = session['convenor_sel_grid_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_sel_grid_prog_filter'] = prog_filter
+
+    # build a list of live students selecting from this project class
+    selectors = config.selecting_students.filter_by(retired=False).all()
+
+    # build list of available cohorts and degree programmes
+    cohorts = set()
+    programmes = set()
+    for sel in selectors:
+        cohorts.add(sel.student.cohort)
+        programmes.add(sel.student.programme_id)
+
+    # build list of available programmes
+    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    progs = [ rec for rec in all_progs if rec.id in programmes ]
+    groups = ResearchGroup.query.filter_by(active=True).all()
+
+    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/selector_grid.html', pane='selectors', subpane='grid',
+                           pclass=pclass, config=config, fac_data=fac_data,
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           cohort_filter=cohort_filter, prog_filter=prog_filter, groups=groups)
+
+
+@convenor.route('/selector_grid_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selector_grid_ajax(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
+
+    # build a list of live students selecting from this project class
+    selectors = config.selecting_students.filter_by(retired=False)
+
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
+
+    if cohort_flag or prog_flag:
+        selectors = selectors \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id)
+
+    if cohort_flag:
+        selectors = selectors.filter(StudentData.cohort == cohort_value)
+
+    if prog_flag:
+        selectors = selectors.filter(StudentData.programme_id == prog_value)
+
+    return ajax.convenor.selector_grid_data(selectors.all(), config)
+
+
+@convenor.route('/submitters/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def submitters(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
@@ -799,12 +936,15 @@ def submitters_ajax(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     # build a list of live students submitting work for evaluation in this project class
     submitters = config.submitting_students.filter_by(retired=False)
@@ -819,7 +959,7 @@ def liveprojects(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
@@ -836,6 +976,9 @@ def liveprojects(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
@@ -866,7 +1009,7 @@ def liveprojects_ajax(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
@@ -874,6 +1017,9 @@ def liveprojects_ajax(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     # get FilterRecord for currently logged-in user
     filter_record = get_convenor_filter_record(config)
@@ -907,7 +1053,7 @@ def attach_liveproject(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
@@ -916,6 +1062,9 @@ def attach_liveproject(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     # reject if project class is not live
     if not config.live:
@@ -954,12 +1103,15 @@ def attach_liveproject_ajax(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     if not config.live or config.selection_closed:
         return jsonify({})
@@ -1054,6 +1206,9 @@ def attach_liveproject_other_ajax(id):
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     if not config.live or config.selection_closed:
         return jsonify({})
@@ -2002,12 +2157,15 @@ def issue_confirm_requests(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to perform dashboard functions
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
@@ -2046,12 +2204,15 @@ def golive_ajax(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
 
     return ajax.convenor.golive_data(config)
 
@@ -2093,12 +2254,15 @@ def force_confirm_all(id):
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
-    # reject user if not entitled to perform dashboard functions
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     for item in config.golive_required.all():
 
@@ -2118,7 +2282,7 @@ def go_live(id):
     # get details for current pclass configuration
     config = ProjectClassConfig.query.get_or_404(id)
 
-    # reject user if not entitled to perform dashboard functions
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
@@ -2162,7 +2326,7 @@ def close_selections(id):
     # get details for current pclass configuration
     config = ProjectClassConfig.query.get_or_404(id)
 
-    # reject user if not entitled to perform dashboard functions
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
@@ -2534,6 +2698,9 @@ def confirm_rollover(pid, configid):
     # do nothing if a rollover has already been performed (try to make action idempotent in case
     # accidentally invoked twice)
     config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.project_class.name,
                                                                    yeara=year, yearb=year + 1)
@@ -2567,6 +2734,9 @@ def rollover(pid, configid):
     # do nothing if a rollover has already been performed (try to make action idempotent in case
     # accidentally invoked twice)
     config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     if config.id != configid or config.year == year:
         flash('A rollover request was ignored. If you are attempting to rollover the academic year and '
@@ -2640,7 +2810,7 @@ def selector_bookmarks(id):
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
@@ -2654,7 +2824,7 @@ def project_bookmarks(id):
     # id is a LiveProject
     proj = LiveProject.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
         return redirect(request.referrer)
 
@@ -2668,7 +2838,7 @@ def selector_choices(id):
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
@@ -2682,7 +2852,7 @@ def project_choices(id):
     # id is a LiveProject
     proj = LiveProject.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
         return redirect(request.referrer)
 
@@ -2696,7 +2866,7 @@ def selector_confirmations(id):
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
@@ -2710,7 +2880,7 @@ def project_confirmations(id):
     # id is a LiveProject
     proj = LiveProject.query.get_or_404(id)
 
-    # reject user if not entitled to view this dashboard
+    # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
         return home_dashboard()
 
@@ -2829,3 +2999,91 @@ def clear_skill_filters(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@convenor.route('/set_hint/<int:id>/<int:hint>')
+@roles_accepted('faculty', 'admin', 'root')
+def set_hint(id, hint):
+
+    rec = SelectionRecord.query.get_or_404(id)
+    config = rec.owner.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('Selection hints may only be set once student choices are closed and the project class '
+              'is ready to match', 'error')
+        return redirect(request.referrer)
+
+    rec.set_hint(hint)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/hints_list/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def hints_list(id):
+
+    # pid is a ProjectClass
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('Selection hints may only be set once student choices are closed and the project class '
+              'is ready to match', 'error')
+        return redirect(request.referrer)
+
+    hints = db.session.query(SelectionRecord) \
+        .join(SelectingStudent, SelectingStudent.id == SelectionRecord.owner_id) \
+        .filter(SelectingStudent.config_id == config.id) \
+        .filter(SelectionRecord.hint != SelectionRecord.SELECTION_HINT_NEUTRAL).all()
+
+    return render_template('convenor/dashboard/hints_list.html', pclass=pclass, hints=hints)
+
+
+@convenor.route('/audit_matches/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def audit_matches(pclass_id):
+    
+    # pclass_id labels a ProjectClass
+    pclass = ProjectClass.query.get_or_404(pclass_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    return render_template('convenor/matching/audit.html', pclass_id=pclass_id)
+
+
+@convenor.route('/audit_matches_ajax/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def audit_matches_ajax(pclass_id):
+
+    # pclass_id labels a ProjectClass
+    pclass = ProjectClass.query.get_or_404(pclass_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    matches = config.matching_attempts.filter_by(published=True).all()
+
+    return ajax.admin.matches_data(matches, text='matching audit dashboard', url=url_for('convenor.audit_matches', pclass_id=pclass_id))

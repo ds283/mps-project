@@ -22,6 +22,8 @@ from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
 from flask_session import Session
 
+from werkzeug.contrib.profiler import ProfilerMiddleware
+
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task
@@ -67,6 +69,12 @@ def create_app():
 
     # set up CSS and javascript assets
     env = Environment(app)
+
+    if app.config.get('PROFILE_TO_DISK', False):
+        app.config['PROFILE'] = True
+        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=app.config.get('PROFILE_DIRECTORY'))
+
+        print('** Profiling to disk enabled')
 
     from app import models
 

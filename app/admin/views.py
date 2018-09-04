@@ -3201,7 +3201,7 @@ def matches_ajax():
     current_year = get_current_year()
     matches = db.session.query(MatchingAttempt).filter_by(year=current_year).all()
 
-    return ajax.admin.matches_data(matches, text='matching dashboard', url=url_for('convenor.manage_matching'))
+    return ajax.admin.matches_data(matches, text='matching dashboard', url=url_for('admin.manage_matching'))
 
 
 @admin.route('/create_match', methods=['GET', 'POST'])

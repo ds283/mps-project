@@ -458,6 +458,34 @@ def delete_project(id):
     if not validate_is_project_owner(data):
         return redirect(request.referrer)
 
+    title = 'Delete project'
+    panel_title = 'Delete project <strong>{name}</strong>'.format(name=data.name)
+
+    action_url = url_for('faculty.perform_delete_project', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to delete the project ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=data.name)
+    submit_label = 'Delete project'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@faculty.route('/perform_delete_project/<int:id>')
+@roles_required('faculty')
+def perform_delete_project(id):
+
+    # get project details
+    data = Project.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('faculty.edit_projects')
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(data):
+        return redirect(url)
+
     try:
         for item in data.descriptions:
             db.session.delete(item)
@@ -468,7 +496,7 @@ def delete_project(id):
         db.session.rollback()
         raise
 
-    return redirect(request.referrer)
+    return redirect(url)
 
 
 @faculty.route('/add_description/<int:pid>', methods=['GET', 'POST'])
@@ -945,8 +973,8 @@ def project_preview(id):
             # attach first available project class
             form.selector.data = data.project_classes.first()
 
-    text = request.args.get('text')
-    url = request.args.get('url')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
 
     return render_project(data, data.get_description(form.selector.data), form=form, text=text, url=url)
 

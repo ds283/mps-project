@@ -1,0 +1,89 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    View all convenor hints
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="top-return-link">
+                <a href="{{ url_for('convenor.selector_grid', id=pclass.id) }}">
+                    <i class="fa fa-backward"></i> Return to selector grid
+                </a>
+            </div>
+
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    View all convenor hints for <strong>{{ pclass.name }}</strong>
+                </div>
+                <div class="panel-body">
+                    <div class="container-fluid" style="margin-top: 10px;">
+                        <div class="row vertical-top hints-table">
+                            <div class="col-xs-3"><strong>Selector</strong></div>
+                            <div class="col-xs-2"><strong>Rank</strong></div>
+                            <div class="col-xs-7"><strong>Project</strong></div>
+                        </div>
+                        {% for item in hints %}
+                            {% set project = item.liveproject %}
+                            <div class="row vertical-top hints-table">
+                                <div class="col-xs-3">
+                                    {{ item.format_name|safe }}
+                                </div>
+                                <div class="col-xs-2">
+                                    <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
+                                    <div class="rank-hint-button">
+                                        <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                            Hint
+                                            <span class="caret"></span>
+                                        </a>
+                                        <ul class="dropdown-menu">
+                                            {% set menu_items = item.menu_order %}
+                                            {% for mi in menu_items %}
+                                                {% if mi is string %}
+                                                    <li role="separator" class="divider"></li>
+                                                    <li class="dropdown-header">{{ mi }}</li>
+                                                {% elif mi is number %}
+                                                    {% set disabled = (mi == item.hint) %}
+                                                    <li {% if disabled %}class="disabled"{% endif %}>
+                                                        <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                            {{ item.menu_item(mi)|safe }}
+                                                        </a>
+                                                    </li>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-xs-7">
+                                    <div>
+                                        <a href="{{ url_for('faculty.live_project', pid=project.id, text='all hints view', url=url_for('convenor.hints_list', id=pclass.id)) }}">
+                                            {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.liveproject.name }}
+                                        </a>
+                                    </div>
+                                    <div>
+                                        {{ project.group.make_label(project.group.name)|safe }}
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="row vertical-top hints-table">
+                                <div class="col-xs-12">
+                                    <div style="text-align: center; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">Nothing to display</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ url_for('convenor.selector_grid', id=pclass.id) }}">
+                    <i class="fa fa-backward"></i> Return to selector grid
+                </a>
+            </div>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

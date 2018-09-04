@@ -10,7 +10,7 @@
 
 
 from ..models import db, MatchingAttempt, TaskRecord, ProjectClassConfig, LiveProject, SelectingStudent, \
-    User, EnrollmentRecord, MatchingRecord
+    User, EnrollmentRecord, MatchingRecord, SelectionRecord
 
 from ..shared.utils import get_current_year, get_automatch_pclasses
 from ..task_queue import progress_update
@@ -18,7 +18,10 @@ from ..task_queue import progress_update
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
+from celery import group, chain
+
 import pulp
+import pulp.solvers as solvers
 import itertools
 import time
 
@@ -33,30 +36,12 @@ class Timer:
         self.interval = self.end - self.start
 
 
-def _get_current_pclass_config(pclass):
-
-    current_year = get_current_year()
-
-    # get ProjectClassConfig for the current year
-    config = db.session.query(ProjectClassConfig) \
-        .filter_by(pclass_id=pclass.id, year=current_year) \
-        .order_by(ProjectClassConfig.year.desc()).first()
-
-    if config is None:
-        raise RuntimeError('Configuration record for "{name}" '
-                           'and year={yr} is missing'.format(name=pclass.name, yr=current_year))
-
-    return config
-
-
-def _find_mean_project_CATS(pclasses):
+def _find_mean_project_CATS(configs):
 
     CATS_total = 0
     number = 0
 
-    for pclass in pclasses:
-
-        config = _get_current_pclass_config(pclass)
+    for config in configs:
         if config.CATS_supervision is not None:
             CATS_total += config.CATS_supervision
             number += 1
@@ -64,13 +49,13 @@ def _find_mean_project_CATS(pclasses):
     return float(CATS_total)/number
 
 
-def _enumerate_selectors(pclasses):
+def _enumerate_selectors(configs):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
     Also compute assignment multiplicity for each selector, ie. how many projects they should be
     assigned (eg. FYP = 1 but MPP = 2 since projects only last one term)
-    :param pclasses:
+    :param configs:
     :return:
     """
 
@@ -82,9 +67,7 @@ def _enumerate_selectors(pclasses):
 
     selector_dict = {}
 
-    for pclass in pclasses:
-        config = _get_current_pclass_config(pclass)
-
+    for config in configs:
         # get SelectingStudent instances that are not retired and belong to this config instance
         selectors = db.session.query(SelectingStudent) \
             .filter_by(retired=False, config_id=config.id).all()
@@ -93,7 +76,8 @@ def _enumerate_selectors(pclasses):
             sel_to_number[item.id] = number
             number_to_sel[number] = item.id
 
-            multiplicity[number] = pclass.submissions if pclass.submissions >= 1 else 1
+            submissions = config.project_class.submissions
+            multiplicity[number] = submissions if submissions >= 1 else 1
 
             selector_dict[number] = item
 
@@ -102,12 +86,12 @@ def _enumerate_selectors(pclasses):
     return number, sel_to_number, number_to_sel, multiplicity, selector_dict
 
 
-def _enumerate_liveprojects(pclasses):
+def _enumerate_liveprojects(configs):
     """
     Build a list of LiveProjects belonging to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
     Also compute CATS values for supervising and marking each project
-    :param pclasses: 
+    :param configs:
     :return: 
     """
 
@@ -122,9 +106,7 @@ def _enumerate_liveprojects(pclasses):
 
     project_dict = {}
 
-    for pclass in pclasses:
-        config = _get_current_pclass_config(pclass)
-
+    for config in configs:
         # get LiveProject instances that belong to this config instance
         projects = db.session.query(LiveProject) \
             .filter_by(config_id=config.id).all()
@@ -147,11 +129,11 @@ def _enumerate_liveprojects(pclasses):
     return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict
 
 
-def _enumerate_supervising_faculty(pclasses):
+def _enumerate_supervising_faculty(configs):
     """
     Build a list of active, enrolled supervising faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
-    :param pclasses:
+    :param configs:
     :return:
     """
 
@@ -163,11 +145,10 @@ def _enumerate_supervising_faculty(pclasses):
 
     fac_dict = {}
 
-    for pclass in pclasses:
-
+    for config in configs:
         # get EnrollmentRecord instances for this project class
         faculty = db.session.query(EnrollmentRecord) \
-            .filter_by(pclass_id=pclass.id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
+            .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
             .join(User, User.id==EnrollmentRecord.owner_id) \
             .filter(User.active).all()
 
@@ -186,11 +167,11 @@ def _enumerate_supervising_faculty(pclasses):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def _enumerate_marking_faculty(pclasses):
+def _enumerate_marking_faculty(configs):
     """
     Build a list of active, enrolled 2nd-marking faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
-    :param pclasses:
+    :param configs:
     :return:
     """
 
@@ -202,11 +183,10 @@ def _enumerate_marking_faculty(pclasses):
 
     fac_dict = {}
 
-    for pclass in pclasses:
-
+    for config in configs:
         # get EnrollmentRecord instances for this project class
         faculty = db.session.query(EnrollmentRecord) \
-            .filter_by(pclass_id=pclass.id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
+            .filter_by(pclass_id=config.pclass_id, marker_state=EnrollmentRecord.MARKER_ENROLLED) \
             .join(User, User.id == EnrollmentRecord.owner_id) \
             .filter(User.active).all()
 
@@ -225,8 +205,7 @@ def _enumerate_marking_faculty(pclasses):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def _build_ranking_matrix(number_students, student_dict, number_projects, project_dict,
-                          ignore_programme_prefs=False, programme_bias=1.5):
+def _build_ranking_matrix(number_students, student_dict, number_projects, project_dict, record):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
@@ -239,21 +218,51 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
     :return:
     """
 
-    R = {}
-    W = {}
+    R = {}          # R is ranking matrix. Accounts for Forbid hints.
+    W = {}          # W is weights matrix. Accounts for encourage & discourage hints, programme bias and bookmark bias
+    cstr = set()    # cstr is a set of (student, project) pairs that will be converted into Require hints
+
+    ignore_programme_prefs = record.ignore_programme_prefs
+    programme_bias = float(record.programme_bias) if record.programme_bias is not None else 1.0
+    bookmark_bias = float(record.bookmark_bias) if record.bookmark_bias is not None else 1.0
+
+    use_hints = record.use_hints
+    encourage_bias = float(record.encourage_bias)
+    discourage_bias = float(record.discourage_bias)
+    strong_encourage_bias = float(record.strong_encourage_bias)
+    strong_discourage_bias = float(record.strong_discourage_bias)
 
     for i in range(0, number_students):
 
         sel = student_dict[i]
 
         ranks = {}
+        weights = {}
+        require = set()
 
         if sel.has_submitted:
             for item in sel.selections.all():
-                ranks[item.liveproject_id] = item.rank
-        elif sel.has_bookmarks:
-            for item in sel.bookmarks.all():
-                ranks[item.liveproject_id] = item.rank
+                if item.hint != SelectionRecord.SELECTION_HINT_FORBID or not use_hints:
+                    ranks[item.liveproject_id] = item.rank
+
+                w = 1.0
+                if item.converted_from_bookmark:
+                    w = w * bookmark_bias
+                if use_hints:
+                    if item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE:
+                        w = w * encourage_bias
+                    elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
+                        w = w * discourage_bias
+                    elif item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG:
+                        w = w * strong_encourage_bias
+                    elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
+                        w = w * strong_discourage_bias
+
+                weights[item.liveproject_id] = w
+
+                if use_hints and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+                    require.add(item.liveproject_id)
+
         else:
             # no ranking data, so rank all LiveProjects in the right project class equal to 1
             for k in project_dict:
@@ -267,14 +276,20 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
             idx = (i, j)
             proj = project_dict[j]
 
+            val = True
+
             if proj.id in ranks:
                 R[idx] = ranks[proj.id]
             else:
-                # if not selection data all projects are ranked '1', so any of them can be chosen by the solver
+                # if not ranked, prevent solver from making this choice
                 R[idx] = 0
+                val = False
 
             # compute weight for this (student, project) combination
-            w = 1.0
+            if proj.id in weights:
+                w = weights[proj.id]
+            else:
+                w = 0 if val is False else 1.0
 
             # check whether this project has a preference for the degree programme associated with the current selector
             if not ignore_programme_prefs:
@@ -283,7 +298,10 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
 
             W[idx] = w
 
-    return R, W
+            if proj.id in require:
+                cstr.add(idx)
+
+    return R, W, cstr
 
 
 def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict, max_multiplicity):
@@ -363,8 +381,8 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
     return P
 
 
-def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits, multiplicity,
-                         number_lp, number_mark, number_sel, number_sup, record, lp_dict,
+def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
+                         multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
                          sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
                          levelling_bias, intra_group_tension, mean_CATS_per_project):
     """
@@ -386,6 +404,15 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
     :param record:
     :return:
     """
+
+    if not isinstance(levelling_bias, float):
+        levelling_bias = float(levelling_bias)
+
+    if not isinstance(intra_group_tension, float):
+        intra_group_tension = float(intra_group_tension)
+
+    if not isinstance(mean_CATS_per_project, float):
+        mean_CATS_per_project = float(mean_CATS_per_project)
 
     # generate PuLP problem
     prob = pulp.LpProblem(record.name, pulp.LpMaximize)
@@ -409,7 +436,6 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
 
     # we also tension the workload between groups, so that the workload of no one group
     # is pushed too far away from the others, subject to existing CATS caps
-
     supMax = pulp.LpVariable("supMax", lowBound=0, cat=pulp.LpContinuous)
     supMin = pulp.LpVariable("supMin", lowBound=0, cat=pulp.LpContinuous)
 
@@ -421,6 +447,12 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
 
     globalMax = pulp.LpVariable("globalMax", lowBound=0, cat=pulp.LpContinuous)
     globalMin = pulp.LpVariable("globalMin", lowBound=0, cat=pulp.LpContinuous)
+
+    # finally, to spread second-marking tasks fairly among a pool of faculty, where any
+    # particular assignment won't significantly affect markMax/markMin or supMarkMax/supMarkMin,
+    # we add a term to the objective function designed to keep down the maximum number of
+    # projects assigned to any individual faculty member.
+    maxMarking = pulp.LpVariable("maxMarking", lowBound=0, cat=pulp.LpContinuous)
 
     # generate objective function
     objective = 0
@@ -437,36 +469,37 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
     levelling = (supMax - supMin) \
                 + (markMax - markMin) \
                 + (supMarkMax - supMarkMin) \
-                + abs(float(intra_group_tension))*(globalMax - globalMin)
+                + abs(intra_group_tension)*(globalMax - globalMin)
 
-    # no need to add a reward for marker assignments; these only need to satisfy the constraints, and any
-    # one solution is as good as another
+    # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
+    # these only need to satisfy the constraints, and any one solution is as good as another
 
     # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
     # upper and lower limits roughly equal to one ranking place in matching to students
-    prob += objective - abs(float(levelling_bias))*levelling/mean_CATS_per_project, "objective function"
-
+    prob += objective \
+            - abs(levelling_bias) * levelling / mean_CATS_per_project \
+            - abs(levelling_bias) * maxMarking, "objective function"
 
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
 
     # selectors can only be assigned to projects that they have ranked
     # (unless no ranking data was available, in which case all elements of R were set to 1)
     for key in X:
-        prob += X[key] <= float(R[key])
+        prob += X[key] <= R[key]
 
     # markers can only be assigned projects to which they are attached
     for key in Y:
-        prob += Y[key] <= float(M[key])
+        prob += Y[key] <= M[key]
 
     # enforce desired multiplicity for each selector
     for i in range(number_sel):
-        prob += sum(X[(i, j)] for j in range(number_lp)) == float(multiplicity[i])
+        prob += sum(X[(i, j)] for j in range(number_lp)) == multiplicity[i]
 
     # enforce maximum capacity for each project
     # note capacity[j] will be zero if this project is not enforcing an upper limit on capacity
     for j in range(number_lp):
         if capacity[j] != 0:
-            prob += sum(X[(i, j)] for i in range(number_sel)) <= float(capacity[j])
+            prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j]
 
     # number of students assigned to each project must match number of markers assigned to each project,
     # if markers are being used; otherwise, number of markers should be zero
@@ -478,10 +511,11 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
 
         if proj.config.project_class.uses_marker:
             prob += sum(X[(i, j)] for i in range(number_sel)) - \
-                    sum(Y[(i, j)] for i in range(number_mark)) == float(0)
+                    sum(Y[(i, j)] for i in range(number_mark)) == 0
 
         else:
-            prob += sum(Y[(i, j)] for i in range(number_mark)) == float(0)
+            for j in range(number_mark):
+                prob += Y[(i, j)] == 0      # enforce no markers assigned to this project
 
     # CATS assigned to each supervisor must be within bounds
     for i in range(number_sup):
@@ -490,8 +524,8 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
         if not record.ignore_per_faculty_limits and sup_limits[i] > 0:
             lim = sup_limits[i]
 
-        prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
-                    for k in range(number_sel)) <= float(lim)
+        prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
+                    for k in range(number_sel)) <= lim
 
     # CATS assigned to each marker must be within bounds
     for i in range(number_mark):
@@ -500,7 +534,11 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
         if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
             lim = mark_limits[i]
 
-        prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= float(lim)
+        prob += sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim
+
+    # add constraints for any matches marked 'require' by a convenor
+    for idx in cstr:
+        prob += X[idx] == 1
 
 
     # WORKLOAD LEVELLING
@@ -510,9 +548,9 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
     # supMin and supMax should bracket the CATS workload of faculty who supervise only
     if len(sup_only_numbers) > 0:
         for i in sup_only_numbers:
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
+            prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
                         for k in range(number_sel)) <= supMax
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i)]) for j in range(number_lp)
+            prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
                         for k in range(number_sel)) >= supMin
 
         prob += globalMin <= supMin
@@ -526,8 +564,8 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
     # markMin and markMax should bracket the CATS workload of faculty who mark only
     if len(mark_only_numbers) > 0:
         for i in mark_only_numbers:
-            prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= markMax
-            prob += sum(Y[(i, j)] * float(CATS_marker[j]) for j in range(number_lp)) >= markMin
+            prob += sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= markMax
+            prob += sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) >= markMin
 
         prob += globalMin <= markMin
         prob += globalMax >= markMax
@@ -540,12 +578,12 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
     # supMarkMin and supMarkMAx should bracket the CATS workload of faculty who both supervise and mark
     if len(sup_and_mark_numbers) > 0:
         for i1, i2 in sup_and_mark_numbers:
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i1)]) for j in range(number_lp)
+            prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i1)] for j in range(number_lp)
                         for k in range(number_sel)) \
-                    + sum(Y[(i2, j)] * float(CATS_marker[j]) for j in range(number_lp)) <= supMarkMax
-            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * float(P[(j, i1)]) for j in range(number_lp)
+                    + sum(Y[(i2, j)] * CATS_marker[j] for j in range(number_lp)) <= supMarkMax
+            prob += sum(X[(k, j)] * float(CATS_supervisor[j]) * P[(j, i1)] for j in range(number_lp)
                         for k in range(number_sel)) \
-                    + sum(Y[(i2, j)] * float(CATS_marker[j]) for j in range(number_lp)) >= supMarkMin
+                    + sum(Y[(i2, j)] * CATS_marker[j] for j in range(number_lp)) >= supMarkMin
 
         prob += globalMin <= supMarkMin
         prob += globalMax >= supMarkMax
@@ -555,9 +593,18 @@ def _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup
         prob += supMarkMax == 0
         prob += supMarkMin == 0
 
+    # if no constraints have been emitted for the global variables, issue constraints to tie them to zero:
     if global_trivial:
         prob += globalMin == 0
         prob += globalMax == 0
+
+    # maxMarking should be larger than the total number of projects assigned for 2nd marking to
+    # any individual faculty member
+    if number_mark > 0:
+        for i in range(number_mark):
+            prob += sum(Y[(i, j)] for j in range(number_lp)) <= maxMarking
+    else:
+        prob += maxMarking == 0
 
     return prob, X, Y
 
@@ -663,8 +710,10 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
             data = MatchingRecord(matching_id=record.id,
                                   selector_id=number_to_sel[i],
                                   project_id=proj_id,
+                                  original_project_id=proj_id,
                                   supervisor_id=project.owner_id,
                                   marker_id=marker,
+                                  original_marker_id=marker,
                                   submission_period=m+1,
                                   rank=rk)
             db.session.add(data)
@@ -674,7 +723,6 @@ def register_matching_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def create_match(self, id):
-
         self.update_state(state='STARTED',
                           meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
 
@@ -691,18 +739,18 @@ def register_matching_tasks(celery):
 
         try:
             # get list of project classes participating in automatic assignment
-            pclasses = get_automatch_pclasses()
-            mean_CATS_per_project = _find_mean_project_CATS(pclasses)
+            configs = record.config_members
+            mean_CATS_per_project = _find_mean_project_CATS(configs)
 
             # get lists of selectors and liveprojects, together with auxiliary data such as
             # multiplicities (for selectors) and CATS assignments (for projects)
-            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(pclasses)
+            number_sel, sel_to_number, number_to_sel, multiplicity, sel_dict = _enumerate_selectors(configs)
             number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
-                lp_dict = _enumerate_liveprojects(pclasses)
+                lp_dict = _enumerate_liveprojects(configs)
 
             # get supervising faculty and marking faculty lists
-            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = _enumerate_supervising_faculty(pclasses)
-            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = _enumerate_marking_faculty(pclasses)
+            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = _enumerate_supervising_faculty(configs)
+            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = _enumerate_marking_faculty(configs)
 
             # partition faculty into supervisors, markers and supervisors+markers
             supervisors = sup_to_number.keys()
@@ -718,8 +766,7 @@ def register_matching_tasks(celery):
             sup_and_mark_numbers = {(sup_to_number[x], mark_to_number[x]) for x in sup_and_mark}
 
             # build student ranking matrix
-            R, W = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record.ignore_programme_prefs,
-                                         record.programme_bias)
+            R, W, cstr = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record)
 
             # build marker compatibility matrix
             mm = record.max_marking_multiplicity
@@ -734,7 +781,7 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...", autocommit=True)
 
         with Timer() as create_time:
-            prob, X, Y = _create_PuLP_problem(R, M, W, P, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
                                               sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
                                               record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)
@@ -742,7 +789,14 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 
         with Timer() as solve_time:
-            output = prob.solve()
+            if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
+                output = prob.solve(solvers.PULP_CBC_CMD())
+            elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
+                output = prob.solve(solvers.COIN_CMD())
+            elif record.solver == MatchingAttempt.SOLVER_GLPK_CMD:
+                output = prob.solve(solvers.GLPK_CMD())
+            else:
+                output = prob.solve()
 
         state = pulp.LpStatus[output]
 
@@ -786,3 +840,77 @@ def register_matching_tasks(celery):
             raise self.retry()
 
         return record.score
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert_record(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(MatchingRecord).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingRecord record from database')
+            return
+
+        try:
+            record.project_id = record.original_project_id
+            record.supervisor_id = record.project.owner_id
+            record.marker_id = record.original_marker_id
+            record.rank = record.selector.project_rank(record.original_project_id)
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert_finalize(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(MatchingAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            return
+
+        try:
+            record.last_edit_id = None
+            record.last_edit_timestamp = None
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(MatchingAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            return
+
+        wg = group(revert_record.si(r.id) for r in record.records.all())
+        seq = chain(wg, revert_finalize.si(id))
+
+        seq.apply_async()

@@ -62,6 +62,9 @@ academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs')
 # labels and keys for years_history
 matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '4 years'), (5, '5 years')]
 
+# PuLP solver choices
+solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GLPK external command')]
+
 
 ####################
 # ASSOCIATION TABLES
@@ -310,19 +313,18 @@ class User(db.Model, UserMixin):
 
     # allow user objects to get all project classes so that we can render
     # a 'Convenor' menu in the navbar for all admin users
-    def get_project_classes(self):
+    @property
+    def all_project_classes(self):
         """
         Get available project classes
         :return:
         """
-
         return ProjectClass.query.filter_by(active=True)
 
 
     # build a name for this user
     @property
     def name(self):
-
         prefix = ''
 
         if self.faculty_data is not None and self.faculty_data.use_academic_title:
@@ -339,13 +341,11 @@ class User(db.Model, UserMixin):
 
     @property
     def name_and_username(self):
-
         return self.name + ' (' + self.username + ')'
 
 
     @property
     def active_label(self):
-
         if self.active:
             return '<span class="label label-success">Active</a>'
 
@@ -599,14 +599,12 @@ class FacultyData(db.Model):
 
 
     def projects_offered(self, pclass):
-
         return Project.query.filter(Project.active,
                                     Project.owner_id == self.id,
                                     Project.project_classes.any(id=pclass.id)).count()
 
 
     def projects_offered_label(self, pclass):
-
         n = self.projects_offered(pclass)
 
         if n == 0:
@@ -617,7 +615,6 @@ class FacultyData(db.Model):
 
     @property
     def projects_unofferable(self):
-
         unofferable = 0
         for proj in self.projects:
             if proj.active and not proj.is_offerable:
@@ -628,7 +625,6 @@ class FacultyData(db.Model):
 
     @property
     def projects_unofferable_label(self):
-
         n = self.projects_unofferable
 
         if n == 0:
@@ -735,7 +731,6 @@ class FacultyData(db.Model):
 
 
     def enrolled_labels(self, pclass):
-
         record = self.get_enrollment_record(pclass)
 
         if record is None:
@@ -745,7 +740,6 @@ class FacultyData(db.Model):
 
 
     def get_enrollment_record(self, pclass):
-
         return self.enrollments.filter_by(pclass_id=pclass.id).first()
 
 
@@ -771,9 +765,9 @@ class FacultyData(db.Model):
         Return list of projects for which this faculty member is a convenor
         :return:
         """
-
         pcls = self.convenor_for.all() + self.coconvenor_for.all()
-        return set(pcls)
+        pcl_set = set(pcls)
+        return pcl_set
 
 
     def add_convenorship(self, pclass):
@@ -794,7 +788,6 @@ class FacultyData(db.Model):
         """
 
         # currently our only task is to remove system messages emplaced by this user in their role as convenor
-
         for item in MessageOfTheDay.query.filter_by(user_id=self.id).all():
 
             # if no assigned classes then this is a broadcast message; move on
@@ -1411,18 +1404,20 @@ class ProjectClass(db.Model):
 
     @property
     def convenor_email(self):
-
         return self.convenor.user.email
 
 
     @property
     def convenor_name(self):
-
         return self.convenor.user.name
 
 
     def is_convenor(self, id):
-
+        """
+        Determine whether a given user 'id' is a convenor for this project class
+        :param id:
+        :return:
+        """
         if self.convenor_id == id:
             return True
 
@@ -1433,7 +1428,6 @@ class ProjectClass(db.Model):
 
 
     def make_CSS_style(self):
-
         if self.colour is None:
             return None
 
@@ -1742,6 +1736,16 @@ class ProjectClassConfig(db.Model):
             if data not in self.golive_required:      # don't object if we are generating a duplicate request
 
                 self.golive_required.append(data)
+
+
+    @property
+    def has_matches(self):
+        query = self.matching_attempts.subquery()
+        count = db.session.query(sqlalchemy.func.count(query.c.id)) \
+            .filter(query.c.published == True) \
+            .scalar()
+
+        return count > 0
 
 
 class EnrollmentRecord(db.Model):
@@ -2998,6 +3002,16 @@ class Bookmark(db.Model):
     rank = db.Column(db.Integer())
 
 
+    @property
+    def format_project(self):
+        return self.liveproject.name
+
+
+    @property
+    def format_name(self):
+        return self.owner.student.user.name
+
+
 class SelectionRecord(db.Model):
     """
     Model an ordered list of project selections
@@ -3035,8 +3049,109 @@ class SelectionRecord(db.Model):
     SELECTION_HINT_ENCOURAGE_STRONG = 5
     SELECTION_HINT_DISCOURAGE_STRONG = 6
 
+    _icons = {SELECTION_HINT_NEUTRAL: '',
+              SELECTION_HINT_REQUIRE: '<i class="fa fa-check"></i>',
+              SELECTION_HINT_FORBID: '<i class="fa fa-times"></i>',
+              SELECTION_HINT_ENCOURAGE: '<i class="fa fa-plus"></i>',
+              SELECTION_HINT_DISCOURAGE: '<i class="fa fa-minus"></i>',
+              SELECTION_HINT_ENCOURAGE_STRONG: '<i class="fa fa-plus"></i> <i class="fa fa-plus"></i>',
+              SELECTION_HINT_DISCOURAGE_STRONG: '<i class="fa fa-minus"></i> <i class="fa fa-minus"></i>'}
+
+    _menu_items = {SELECTION_HINT_NEUTRAL: 'Neutral',
+                   SELECTION_HINT_REQUIRE: 'Require',
+                   SELECTION_HINT_FORBID: 'Forbid',
+                   SELECTION_HINT_ENCOURAGE: 'Encourage',
+                   SELECTION_HINT_DISCOURAGE: 'Discourage',
+                   SELECTION_HINT_ENCOURAGE_STRONG: 'Strongly encourage',
+                   SELECTION_HINT_DISCOURAGE_STRONG: 'Strongly discourage'}
+
+    _menu_order = [SELECTION_HINT_NEUTRAL,
+                   "Force fit",
+                   SELECTION_HINT_REQUIRE,
+                   SELECTION_HINT_FORBID,
+                   "Fitting hints",
+                   SELECTION_HINT_ENCOURAGE,
+                   SELECTION_HINT_DISCOURAGE,
+                   SELECTION_HINT_ENCOURAGE_STRONG,
+                   SELECTION_HINT_DISCOURAGE_STRONG]
+
     # convenor hint for this match
     hint = db.Column(db.Integer())
+
+
+    @property
+    def format_project(self):
+        if self.hint in self._icons:
+            tag = self._icons[self.hint]
+        else:
+            tag = ''
+
+        if len(tag) > 0:
+            tag += ' '
+
+        return tag + self.liveproject.name
+
+
+    @property
+    def format_name(self):
+        if self.hint in self._icons:
+            tag = self._icons[self.hint]
+        else:
+            tag = ''
+
+        if len(tag) > 0:
+            tag += ' '
+
+        return tag + self.owner.student.user.name
+
+
+    @property
+    def menu_order(self):
+        return self._menu_order
+
+
+    def menu_item(self, number):
+        if number in self._menu_items:
+            if number in self._icons:
+                tag = self._icons[number]
+
+            value = self._menu_items[number]
+            if len(tag) > 0:
+                value = tag + ' ' + value
+
+            return value
+
+        return None
+
+
+    def set_hint(self, hint):
+        if hint < SelectionRecord.SELECTION_HINT_NEUTRAL or hint > SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
+            return
+
+        if self.hint == hint:
+            return
+
+        if hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+
+            # count number of other 'require' flags attached to this selector
+            count = 0
+            for item in self.owner.selections:
+                if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+                    count += 1
+
+            # if too many, remove one
+            target = self.owner.config.project_class.submissions
+            if count >= target:
+                for item in self.owner.selections:
+                    if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+                        item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
+                        count -= 1
+
+                        if count < target:
+                            break
+
+        # note database has to be committed separately
+        self.hint = hint
 
 
 class EmailLog(db.Model):
@@ -3438,6 +3553,9 @@ class MatchingAttempt(db.Model):
     config_members = db.relationship('ProjectClassConfig', secondary=match_configs, lazy='dynamic',
                                       backref=db.backref('matching_attempts', lazy='dynamic'))
 
+    # flag attempts that have been published to convenors for comments
+    published = db.Column(db.Boolean())
+
 
     # CELERY TASK DATA
 
@@ -3457,21 +3575,22 @@ class MatchingAttempt(db.Model):
     OUTCOME_INFEASIBLE = 2
     OUTCOME_UNBOUNDED = 3
     OUTCOME_UNDEFINED = 4
+
+    # outcome of calculation
     outcome = db.Column(db.Integer())
 
-    # timestamp
-    timestamp = db.Column(db.DateTime(), index=True)
+    SOLVER_CBC_PACKAGED = 0
+    SOLVER_CBC_CMD = 1
+    SOLVER_GLPK_CMD = 2
+
+    # which solver to use
+    solver = db.Column(db.Integer())
 
     # time taken to construct the PuLP problem
     construct_time = db.Column(db.Numeric(8, 3))
 
     # time taken by PulP to compute the solution
     compute_time = db.Column(db.Numeric(8, 3))
-
-    # owner
-    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
-                            backref=db.backref('matching_attempts', lazy='dynamic'))
 
 
     # MATCHING OPTIONS
@@ -3493,6 +3612,27 @@ class MatchingAttempt(db.Model):
 
     # maximum multiplicity for 2nd markers
     max_marking_multiplicity = db.Column(db.Integer())
+
+
+    # CONVENOR HINTS
+
+    # enable/disable convenor hints
+    use_hints = db.Column(db.Boolean())
+
+    # bias for 'encourage'
+    encourage_bias = db.Column(db.Numeric(8, 3))
+
+    # bias for 'discourage'
+    discourage_bias = db.Column(db.Numeric(8, 3))
+
+    # bias for 'strong encourage'
+    strong_encourage_bias = db.Column(db.Numeric(8, 3))
+
+    # bias for 'strong discourage'
+    strong_discourage_bias = db.Column(db.Numeric(8, 3))
+
+    # bookmark bias - penalty for using bookmarks rather than a real submission
+    bookmark_bias = db.Column(db.Numeric(8, 3))
 
 
     # WORKLOAD LEVELLING
@@ -3544,6 +3684,24 @@ class MatchingAttempt(db.Model):
 
     # mean CATS per project during matching
     mean_CATS_per_project = db.Column(db.Numeric(8,5))
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False,
+                                 backref=db.backref('matching_attempts', lazy='dynamic'))
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
     def __init__(self, *args, **kwargs):
@@ -3946,6 +4104,30 @@ class MatchingAttempt(db.Model):
         return matched, failed
 
 
+    _solvers = {0: 'PuLP-CBC', 1: 'CBC-CMD', 2: 'GLPK-CMD'}
+
+    @property
+    def solver_name(self):
+        if self.solver in self._solvers:
+            return self._solvers[self.solver]
+
+        return None
+
+
+    @property
+    def available_pclasses(self):
+        configs = self.config_members.subquery()
+        pclass_ids = db.session.query(configs.c.pclass_id).distinct().subquery()
+
+        return db.session.query(ProjectClass) \
+            .join(pclass_ids, ProjectClass.id == pclass_ids.c.pclass_id).all()
+
+
+    @property
+    def is_modified(self):
+        return self.last_edit_timestamp is not None
+
+
 class MatchingRecord(db.Model):
     """
     Store matching data for an individual selector
@@ -3975,6 +4157,9 @@ class MatchingRecord(db.Model):
     project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
                               backref=db.backref('student_matches', lazy='dynamic'))
 
+    # keep copy of original project assignment, can use later to revert
+    original_project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+
     # assigned supervisor (redundant with project, but allows us to attach a backref from the
     # supervisor's FacultyData record)
     supervisor_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
@@ -3988,6 +4173,9 @@ class MatchingRecord(db.Model):
     marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
     marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
                              backref=db.backref('marker_matches', lazy='dynamic'))
+
+    # keep copy of original marker assignment, can use later to revert
+    original_marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
 
 
     def __init__(self, *args, **kwargs):

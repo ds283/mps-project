@@ -2,53 +2,64 @@
     <div class="panel panel-primary">
         <div class="panel-heading"><strong>Student choices are now closed</strong></div>
         <div class="panel-body">
-            <div class="row vertical-align">
-                <div class="col-xs-8">
-                    {% set submitted, missing, total = config.selector_data %}
-                    <div class="row vertical-top">
-                        <div class="col-xs-6"><strong>Have submission data</strong></div>
-                        <div class="col-xs-6"><strong>Missing submission data</strong></div>
-                    </div>
-                    <div class="row vertical-top">
-                        <div class="col-xs-6">
-                            <strong>{{ submitted }}</strong>/{{ total }}
-                            <a class="btn btn-link"
-                                href="{{ url_for('convenor.selectors', id=config.id, state_filter='submitted') }}">
-                                Show ...
-                            </a>
-                        </div>
-                        <div class="col-xs-6">
-                            <strong>{{ missing }}</strong>/{{ total }}
-                            <a class="btn btn-link"
-                                href="{{ url_for('convenor.selectors', id=config.id, state_filter='none') }}">
-                                Show ...
-                            </a>
-                        </div>
-                    </div>
-                    <hr class="intro-divider">
-                    <div class="row vertical-top">
-                        <div class="col-xs-12">
-                            {% if submitted == total %}
-                                <p>All students submitted validated choices before selection closed.</p>
-                            {% elif missing == 0 %}
-                                <p>
-                                    Some students did not submit a validated selection before closure.
-                                    For students who had a list of ranked bookmarks, these lists have been
-                                    converted into submission data. However, these choices will be downweighted
-                                    during matching in order to prioritize rankings from students who
-                                    submitted a correct list of choices.
-                            {% else %}
-                                <p>Some students have missing submission data.</p>
-                                <p>
-                                    These students will be allocated an arbitrary project
-                                    during automated matching.
-                                </p>
-                            {% endif %}
-                        </div>
-                    </div>
+            {% set submitted, missing, total = config.selector_data %}
+            <div class="row vertical-top">
+                <div class="col-xs-6"><strong>Have submission data</strong></div>
+                <div class="col-xs-6"><strong>Missing submission data</strong></div>
+            </div>
+            <div class="row vertical-top">
+                <div class="col-xs-6">
+                    <strong>{{ submitted }}</strong>/{{ total }}
+                    <a class="btn btn-link"
+                        href="{{ url_for('convenor.selectors', id=config.id, state_filter='submitted') }}">
+                        Show ...
+                    </a>
                 </div>
-                <div class="col-xs-4"></div>
+                <div class="col-xs-6">
+                    <strong>{{ missing }}</strong>/{{ total }}
+                    <a class="btn btn-link"
+                        href="{{ url_for('convenor.selectors', id=config.id, state_filter='none') }}">
+                        Show ...
+                    </a>
+                </div>
+            </div>
+            <hr class="intro-divider">
+            <div class="row vertical-top">
+                <div class="col-xs-12">
+                    {% if submitted == total %}
+                        <p>All students submitted validated choices before selection closed.</p>
+                    {% elif missing == 0 %}
+                        <p>
+                            Some students did not submit a validated selection before closure.
+                            For students who had a list of ranked bookmarks, these lists have been
+                            converted into submission data. However, these choices will be downweighted
+                            during matching in order to prioritize rankings from students who
+                            submitted a correct list of choices.
+                    {% else %}
+                        <p>
+                            Some students have missing submission data.
+                            These students will be allocated an arbitrary project
+                            during automated matching.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-xs-12">
+                    <a href="{{ url_for('convenor.selector_grid', id=config.project_class.id) }}">
+                        Show selector grid ...
+                    </a>
+                </div>
             </div>
         </div>
     </div>
+    {% if config.has_matches %}
+        <div class="panel panel-danger">
+            <div class="panel-heading">Proposed matches are available to view</div>
+            <div class="panel-body">
+                <p>An administrator has published one or more proposals for selector/project matches.</p>
+                <a href="{{ url_for('convenor.audit_matches', pclass_id=config.project_class.id) }}">View or edit proposed matches...</a>
+            </div>
+        </div>
+    {% endif %}
 {% endmacro %}

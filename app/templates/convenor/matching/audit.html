@@ -1,7 +1,5 @@
 {% extends "base_app.html" %}
 
-{% import "bootstrap/wtf.html" as wtf %}
-
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
@@ -15,23 +13,21 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#unattached-table').DataTable({
+            $('#matches').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/convenor/unofferable_ajax', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/convenor/audit_matches_ajax/{{ pclass_id }}', dataSrc: '' },
                 columns: [
-                    { data: 'name' },
-                    { data: 'owner',
+                    { data: 'name'},
+                    { data: 'status' },
+                    { data: 'score',
                       render: {
                         _: 'display',
-                        sort: 'sortvalue',
-                        type: 'sortvalue'
-                    } },
-                    { data: 'status' },
-                    { data: 'meeting' },
-                    { data: 'group' },
-                    { data: 'prefer' },
-                    { data: 'skills' },
+                        sort: 'value',
+                        type: 'value'
+                      } },
+                    { data: 'timestamp' },
+                    { data: 'info' },
                     { data: 'menu' }
                 ],
                 deferRender: true
@@ -41,33 +37,25 @@
 {% endblock %}
 
 {% block title %}
-    Unattached projects
+    Audit proposed matches
 {% endblock %}
 
 {% block bodyblock %}
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Unofferable projects</div>
+        <div class="panel-heading">Audit proposed matches</div>
         <div class="panel-body">
-            <table id="unattached-table" class="table table-striped table-bordered">
+            <table id="matches" class="table table-striped table-bordered">
                 <thead>
-                <tr>
-                    <th width="15%"> Name</th>
-                    <th width="12%"> Owner</th>
-                    <th width="8%"> Status</th>
-                    <th width="8%"> Meeting required?</th>
-                    <th width="8%"> Affiliation</th>
-                    <th width="15%"> Prefer degree programmes</th>
-                    <th width="20%"> Transferable skills</th>
-                    <th width="14%"> Actions</th>
-                </tr>
+                    <tr>
+                        <th width="12%"> Name</th>
+                        <th width="8%"> Status</th>
+                        <th width="11%"> Score</th>
+                        <th width="16%"> Timestamp</th>
+                        <th width="38%"> Information</th>
+                        <th width="15%"> Actions</th>
+                    </tr>
                 </thead>
             </table>
-            <div style="text-align: center;">
-                <a href="{{ url_for('convenor.add_project', pclass_id=0) }}" class="btn btn-default btn-lg">
-                    <i class="fa fa-plus"></i>
-                    Add new project
-                </a>
-            </div>
         </div>
     </div>
 {% endblock %}

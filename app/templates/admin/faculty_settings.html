@@ -79,7 +79,7 @@
                 <hr class="intro-divider">
                 <p>You are not currently enrolled for the following project classes</p>
                 <h3>
-                    {% for pclass in current_user.get_project_classes() %}
+                    {% for pclass in current_user.all_project_classes %}
                         {% if not data.is_enrolled(pclass) %}
                             <a class="btn btn-default btn-table-block" href="mailto:{{ pclass.convenor_email }}">
                                 {{ pclass.name }} ({{ pclass.convenor_name }})

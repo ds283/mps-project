@@ -75,10 +75,13 @@ class DevelopmentConfig(Config):
     """
 
     DEBUG = True                                # enable Flask debugger
-    SQLALCHEMY_ECHO = True                      # enable SQLAlchemy logging
+    SQLALCHEMY_ECHO = False                     # disable SQLAlchemy logging (takes a long time to emit all queries)
 
     DEBUG_TB_PROFILER_ENABLED = False           # enable/disable profiling in the Flask debug toolbar
     DEBUG_API_PREFIX = ''                       # no special prefix for API (=Ajax) endpoints
+
+    PROFILE_TO_DISK = False                     # determine whether to use Werkzeug profiler to write a .prof to disc
+    PROFILE_DIRECTORY = "./profiling"           # location of profiling data
 
 
 class ProductionConfig(Config):
@@ -87,6 +90,10 @@ class ProductionConfig(Config):
     """
 
     DEBUG = False
+
+    # determine whether to use Werkzeug profiler to write a .prof to disc
+    PROFILE_TO_DISK = False
+    PROFILE_DIRECTORY = os.environ.get('PROFILE_DIRECTORY') or "./profiling"
 
 
 app_config = {

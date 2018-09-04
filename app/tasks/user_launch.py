@@ -19,14 +19,12 @@ def register_user_launch_tasks(celery):
 
     @celery.task()
     def mark_user_task_started(task_id, name):
-
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Starting task "{name}"'.format(name=name),
                         autocommit=True)
 
 
     @celery.task(bind=True)
     def mark_user_task_ended(self, task_id, name, user_id, notify=False):
-
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Task "{name}" complete'.format(name=name),
                         autocommit=not notify)
 
@@ -42,7 +40,6 @@ def register_user_launch_tasks(celery):
 
     @celery.task(bind=True)
     def mark_user_task_failed(self, task_id, name, user_id):
-
         progress_update(task_id, TaskRecord.FAILURE, 100, "Error while running task '{name}'".format(name=name))
 
         try:

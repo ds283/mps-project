@@ -42,6 +42,20 @@
                             </div>
                         </div>
 
+                        <div class="well {% if form.pclasses_to_include.errors %}has-error{% endif %}">
+                            <p>Select which project classes to include in this match</p>
+                            {% for widget in form.pclasses_to_include %}
+                                {{ wtf.form_field(widget) }}
+                            {% else %}
+                                <span class="label label-danger">No project classes currently available</span>
+                            {% endfor %}
+                            {% if form.pclasses_to_include.errors %}
+                                {% for error in form.pclasses_to_include.errors %}
+                                    <p class="help-block">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
                         <div class="well">
                             <p>Limits</p>
                             {{ wtf.form_field(form.ignore_per_faculty_limits) }}
@@ -49,14 +63,27 @@
                             {{ wtf.form_field(form.marking_limit) }}
                             {{ wtf.form_field(form.max_marking_multiplicity) }}
                             {{ wtf.form_field(form.years_memory) }}
+                            {{ wtf.form_field(form.include_matches) }}
                         </div>
 
                         <div class="well">
                             <p>Optimization settings</p>
                             {{ wtf.form_field(form.ignore_programme_prefs) }}
+                            {{ wtf.form_field(form.programme_bias) }}
                             {{ wtf.form_field(form.levelling_bias) }}
                             {{ wtf.form_field(form.intra_group_tension) }}
-                            {{ wtf.form_field(form.programme_bias) }}
+                            {{ wtf.form_field(form.bookmark_bias) }}
+                            <hr class="intro-divider">
+                            {{ wtf.form_field(form.solver) }}
+                        </div>
+
+                        <div class="well">
+                            <p>Convenor hints</p>
+                            {{ wtf.form_field(form.use_hints) }}
+                            {{ wtf.form_field(form.encourage_bias) }}
+                            {{ wtf.form_field(form.discourage_bias) }}
+                            {{ wtf.form_field(form.strong_encourage_bias) }}
+                            {{ wtf.form_field(form.strong_discourage_bias) }}
                         </div>
 
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}

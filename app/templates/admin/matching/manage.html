@@ -20,7 +20,6 @@
                 columns: [
                     { data: 'name'},
                     { data: 'status' },
-                    { data: 'owner' },
                     { data: 'score',
                       render: {
                         _: 'display',
@@ -38,22 +37,21 @@
 {% endblock %}
 
 {% block title %}
-    Manage automatic matching
+    Automatic matching
 {% endblock %}
 
 {% block bodyblock %}
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Manage automatic matching</div>
+        <div class="panel-heading">Automatic matching</div>
         <div class="panel-body">
             <table id="matches" class="table table-striped table-bordered">
                 <thead>
                     <tr>
                         <th width="12%"> Name</th>
                         <th width="8%"> Status</th>
-                        <th width="12%"> Owner</th>
                         <th width="11%"> Score</th>
-                        <th width="10%"> Timestamp</th>
-                        <th width="32%"> Information</th>
+                        <th width="16%"> Timestamp</th>
+                        <th width="38%"> Information</th>
                         <th width="15%"> Actions</th>
                     </tr>
                 </thead>

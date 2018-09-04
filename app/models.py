@@ -4123,6 +4123,11 @@ class MatchingAttempt(db.Model):
             .join(pclass_ids, ProjectClass.id == pclass_ids.c.pclass_id).all()
 
 
+    @property
+    def is_modified(self):
+        return self.last_edit_timestamp is not None
+
+
 class MatchingRecord(db.Model):
     """
     Store matching data for an individual selector

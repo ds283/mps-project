@@ -29,7 +29,7 @@ _status = \
         <span class="label label-danger">Unknown outcome</span>
     {% endif %}
     <p></p>
-    {% if m.last_edit_timestamp is not none %}
+    {% if m.is_modified %}
         <span class="label label-warning">Modified</span>
     {% else %}
         <span class="label label-success">Original</span>
@@ -175,16 +175,11 @@ _menu = \
         {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
             <li>
                 <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
-                    Inspect match
+                    <i class="fa fa-search"></i> Inspect match
                 </a>
             </li>
-        {% else %}
-            <li class="disabled">
-                <a>Inspect match</a>
-            </li>
-        {% endif %}
-    
-        <li role="separator" class="divider">
+            <li role="separator" class="divider">
+        {% endif %}    
         
         {% if not m.finished %}
             <li>
@@ -204,26 +199,38 @@ _menu = \
                     <a><i class="fa fa-trash"></i> Delete</a>
                 </li>
             {% endif %}
-        {% endif %}
-        
-        {% if current_user.has_role('root') %}
-            <li role="separator" class="divider">
-            <li class="dropdown-header">Superuser functions</li>
             
-            {% if m.published %}
+            {% if m.is_modified %}
                 <li>
-                    <a href="{{ url_for('admin.unpublish_match', id=m.id) }}">
-                        Unpublish
+                    <a href="{{ url_for('admin.revert_match', id=m.id) }}">
+                        <i class="fa fa-undo"></i> Revert to original
                     </a>
                 </li>
             {% else %}
-                <li>
-                    <a href="{{ url_for('admin.publish_match', id=m.id) }}">
-                        Publish to convenors
-                    </a>
+                <li class="disabled">
+                    <a><i class="fa fa-undo"></i> Revert to original</a>
                 </li>
             {% endif %}
-        {% endif %}
+            
+            {% if current_user.has_role('root') %}
+                <li role="separator" class="divider">
+                <li class="dropdown-header">Superuser functions</li>
+                
+                {% if m.published %}
+                    <li>
+                        <a href="{{ url_for('admin.unpublish_match', id=m.id) }}">
+                            Unpublish
+                        </a>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{{ url_for('admin.publish_match', id=m.id) }}">
+                            Publish to convenors
+                        </a>
+                    </li>
+                {% endif %}
+            {% endif %}            
+        {% endif %}        
     </ul>
 </div>
 """

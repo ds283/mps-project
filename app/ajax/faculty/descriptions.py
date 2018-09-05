@@ -11,12 +11,6 @@
 from flask import render_template_string, jsonify, url_for
 
 
-_label = \
-"""
-<a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id) }}">{{ d.label }}</a>
-"""
-
-
 _pclasses = \
 """
 {% set ns = namespace(count=0) %}
@@ -47,9 +41,9 @@ _team = \
 """
 
 
-def descriptions_data(descs, menu, pclass_id=None, create=None):
+def descriptions_data(descs, label, menu, pclass_id=None, create=None):
 
-    data = [{'label': render_template_string(_label, d=d, pclass_id=pclass_id),
+    data = [{'label': render_template_string(label, d=d, pclass_id=pclass_id),
              'pclasses': render_template_string(_pclasses, d=d),
              'team': render_template_string(_team, d=d),
              'capacity': d.capacity,

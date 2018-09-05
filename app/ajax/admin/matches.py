@@ -206,8 +206,8 @@ _menu = \
                         <i class="fa fa-clone"></i> Duplicate
                     </a>
                 </li>
-                <li>
-                    <a href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
+                <li {% if not compare %}class="disabled"{% endif %}>
+                    <a {% if compare %}href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}"{% endif %}>
                         <i class="fa fa-balance-scale"></i> Compare to...
                     </a>
                 </li>
@@ -302,6 +302,8 @@ def matches_data(matches, text=None, url=None):
     :return:
     """
 
+    number = len(matches)
+
     data = [{'name': render_template_string(_name, m=m, text=text, url=url),
              'status': render_template_string(_status, m=m),
              'score': {
@@ -310,6 +312,6 @@ def matches_data(matches, text=None, url=None):
              },
              'timestamp': render_template_string(_timestamp, m=m),
              'info': render_template_string(_info, m=m),
-             'menu': render_template_string(_menu, m=m, text=text, url=url)} for m in matches]
+             'menu': render_template_string(_menu, m=m, text=text, url=url, compare=number>1)} for m in matches]
 
     return jsonify(data)

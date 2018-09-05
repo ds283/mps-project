@@ -50,7 +50,7 @@ _project_menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-                Preview web page
+                <i class="fa fa-search"></i> Preview web page
             </a>
         </li>
 
@@ -71,19 +71,19 @@ _project_menu = \
 
         <li>
             <a href="{{ url_for('convenor.attach_markers', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-pencil"></i> 2nd markers
+                <i class="fa fa-wrench"></i> 2nd markers
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-pencil"></i> Transferable skills
+                <i class="fa fa-wrench"></i> Transferable skills
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-pencil"></i> Degree programmes
+                <i class="fa fa-wrench"></i> Degree programmes
             </a>
         </li>
 
@@ -92,11 +92,11 @@ _project_menu = \
         <li>
         {% if project.active %}
             <a href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=config.pclass_id) }}">
-                Make inactive
+                <i class="fa fa-wrench"></i> Make inactive
             </a>
         {% else %}
             <a href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=config.pclass_id) }}">
-                Make active
+                <i class="fa fa-wrench"></i> Make active
             </a>
         {% endif %}
         </li>
@@ -115,7 +115,7 @@ _unattached_project_menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-                Preview web page
+                <i class="fa fa-search"></i> Preview web page
             </a>
         </li>
 
@@ -136,19 +136,19 @@ _unattached_project_menu = \
 
         <li>
             <a href="{{ url_for('convenor.attach_markers', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> 2nd markers
+                <i class="fa fa-wrench"></i> 2nd markers
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Transferable skills
+                <i class="fa fa-wrench"></i> Transferable skills
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Degree programmes
+                <i class="fa fa-wrench"></i> Degree programmes
             </a>
         </li>
 
@@ -157,11 +157,11 @@ _unattached_project_menu = \
         <li>
         {% if project.active %}
             <a href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=0) }}">
-                Make inactive
+                <i class="fa fa-wrench"></i> Make inactive
             </a>
         {% else %}
             <a href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=0) }}">
-                Make active
+                <i class="fa fa-wrench"></i> Make active
             </a>
         {% endif %}
         </li>

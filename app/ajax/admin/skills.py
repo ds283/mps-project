@@ -29,13 +29,13 @@ _skills_menu = \
             {% if skill.active %}
                 <li>
                     <a href="{{ url_for('admin.deactivate_skill', id=skill.id) }}">
-                        Make inactive
+                        <i class="fa fa-wrench"></i> Make inactive
                     </a>
                 </li>
             {% else %}
                 <li>
                     <a href="{{ url_for('admin.activate_skill', id=skill.id) }}">
-                        Make active
+                        <i class="fa fa-wrench"></i> Make active
                     </a>
                 </li>
             {% endif %}
@@ -66,11 +66,11 @@ _skill_group_menu = \
         <li>
             {% if group.active %}
                 <a href="{{ url_for('admin.deactivate_skill_group', id=group.id) }}">
-                    Make inactive
+                    <i class="fa fa-wrench"></i> Make inactive
                 </a>
             {% else %}
                 <a href="{{ url_for('admin.activate_skill_group', id=group.id) }}">
-                    Make active
+                    <i class="fa fa-wrench"></i> Make active
                 </a>
             {% endif %}
         </li>

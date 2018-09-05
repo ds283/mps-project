@@ -41,11 +41,11 @@ menu = \
             <li {% if user.username == current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
                 {% if user.is_active %}
                     <a {% if user.username != current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.deactivate_user', id=user.id) }}"{% endif %}>
-                        Make inactive
+                        <i class="fa fa-wrench"></i> Make inactive
                     </a>
                 {% else %}
                     <a href="{{ url_for('admin.activate_user', id=user.id) }}">
-                        Make active
+                        <i class="fa fa-wrench"></i> Make active
                     </a>
                 {% endif %}
             </li>

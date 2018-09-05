@@ -27,11 +27,11 @@ _types_menu = \
 
         {% if type.active %}
             <li><a href="{{ url_for('admin.deactivate_degree_type', id=type.id) }}">
-                Make inactive
+                <i class="fa fa-wrench"></i> Make inactive
             </a></li>
         {% else %}
             <li><a href="{{ url_for('admin.activate_degree_type', id=type.id) }}">
-                Make active
+                <i class="fa fa-wrench"></i> Make active
             </a></li>
         {% endif %}
     </ul>

@@ -28,11 +28,11 @@ _supervisors_menu = \
         <li>
             {% if role.active %}
                 <a href="{{ url_for('admin.deactivate_supervisor', id=role.id) }}">
-                    Make inactive
+                    <i class="fa fa-wrench"></i> Make inactive
                 </a>
             {% else %}
                 <a href="{{ url_for('admin.activate_supervisor', id=role.id) }}">
-                    Make active
+                    <i class="fa fa-wrench"></i> Make active
                 </a>
             {% endif %}
         </li>

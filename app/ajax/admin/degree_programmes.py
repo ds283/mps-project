@@ -27,16 +27,16 @@ _programmes_menu = \
 
         {% if programme.active %}
             <li><a href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
-                Make inactive
+                <i class="fa fa-wrench"></i> Make inactive
             </a></li>
         {% else %}
             {% if programme.available %}
                 <li><a href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
-                    Make active
+                    <i class="fa fa-wrench"></i> Make active
                 </a></li>
             {% else %}
                 <li class="disabled"><a>
-                    Degree type inactive
+                    <i class="fa fa-bar"></i> Degree type inactive
                 </a></li>
             {% endif %}
         {% endif %}

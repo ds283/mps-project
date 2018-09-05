@@ -32,17 +32,17 @@ _scheduled_menu_template = \
         <li>
             {% if task.enabled %}
                 <a href="{{ url_for('admin.deactivate_scheduled_task', id=task.id) }}">
-                    Make inactive
+                    <i class="fa fa-wrench"></i> Make inactive
                 </a>
             {% else %}
                 <a href="{{ url_for('admin.activate_scheduled_task', id=task.id) }}">
-                    Make active
+                    <i class="fa fa-wrench"></i> Make active
                 </a>
             {% endif %}
         </li>
         <li>
             <a href="{{ url_for('admin.launch_scheduled_task', id=task.id) }}">
-                Run now
+                <i class="fa fa-angle-double-right"></i> Run now
             </a>
         </li>
     </ul>

@@ -34,16 +34,16 @@ _pclasses_menu = \
 
         {% if pcl.active %}
             <li><a href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
-                Make inactive
+                <i class="fa fa-wrench"></i> Make inactive
             </a></li>
         {% else %}
             {% if pcl.available %}
                 <li><a href="{{ url_for('admin.activate_pclass', id=pcl.id) }}">
-                    Make active
+                    <i class="fa fa-wrench"></i> Make active
                 </a></li>
             {% else %}
                 <li class="disabled"><a>
-                    Programmes inactive
+                    <i class="fa fa-bar"></i> Programmes inactive
                 </a>
                 </li>
             {% endif %}

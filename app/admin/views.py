@@ -1956,9 +1956,9 @@ def confirm_global_rollover():
     panel_title = 'Global rollover of academic year to {yeara}&ndash;{yearb}'.format(yeara=next_year,
                                                                                      yearb=next_year + 1)
     action_url = url_for('admin.perform_global_rollover')
-    message = 'Please confirm that you wish to advance the global academic year to ' \
-              '{yeara}&ndash;{yearb}. ' \
-              'This action cannot be undone.'.format(yeara=next_year, yearb=next_year + 1)
+    message = '<p>Please confirm that you wish to advance the global academic year to ' \
+              '{yeara}&ndash;{yearb}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(yeara=next_year, yearb=next_year + 1)
     submit_label = 'Rollover to {yr}'.format(yr=next_year)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -2132,8 +2132,8 @@ def confirm_delete_all_emails():
     panel_title = 'Confirm delete of all emails retained in log'
 
     action_url = url_for('admin.delete_all_emails')
-    message = 'Please confirm that you wish to delete all emails retained in the log. ' \
-              'This action cannot be undone.'
+    message = '<p>Please confirm that you wish to delete all emails retained in the log.</p>' \
+              '<p>This action cannot be undone.</p>'
     submit_label = 'Delete all'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -2185,8 +2185,8 @@ def confirm_delete_email_cutoff(cutoff):
     panel_title = 'Confirm delete all emails older than {c} week{pl}'.format(c=cutoff, pl=pl)
 
     action_url = url_for('admin.delete_email_cutoff', cutoff=cutoff)
-    message = 'Please confirm that you wish to delete all emails older than {c} week{pl}. ' \
-              'This action cannot be undone.'.format(c=cutoff, pl=pl)
+    message = '<p>Please confirm that you wish to delete all emails older than {c} week{pl}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(c=cutoff, pl=pl)
     submit_label = 'Delete'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -2933,8 +2933,8 @@ def confirm_delete_all_backups():
     panel_title = 'Confirm delete all backups'
 
     action_url = url_for('admin.delete_all_backups')
-    message = 'Please confirm that you wish to delete all backups. ' \
-              'This action cannot be undone.'
+    message = '<p>Please confirm that you wish to delete all backups.</p>' \
+              '<p>This action cannot be undone.</p>'
     submit_label = 'Delete all'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -2988,8 +2988,8 @@ def confirm_delete_backup_cutoff(cutoff):
     panel_title = 'Confirm delete all backups older than {c} week{pl}'.format(c=cutoff, pl=pl)
 
     action_url = url_for('admin.delete_backup_cutoff', cutoff=cutoff)
-    message = 'Please confirm that you wish to delete all backups older than {c} week{pl}. ' \
-              'This action cannot be undone.'.format(c=cutoff, pl=pl)
+    message = '<p>Please confirm that you wish to delete all backups older than {c} week{pl}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(c=cutoff, pl=pl)
     submit_label = 'Delete'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -3049,8 +3049,8 @@ def confirm_delete_backup(id):
     panel_title = 'Confirm delete of backup {d}'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
 
     action_url = url_for('admin.delete_backup', id=id)
-    message = 'Please confirm that you wish to delete the backup {d}. ' \
-              'This action cannot be undone.'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
+    message = '<p>Please confirm that you wish to delete the backup {d}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
     submit_label = 'Delete'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,

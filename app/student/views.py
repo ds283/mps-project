@@ -580,9 +580,9 @@ def clear_submission(sid):
     panel_title = 'Clear submitted preferences for {name}'.format(name=sel.config.project_class.name)
 
     action_url = url_for('student.do_clear_submission', sid=sid)
-    message = 'Please confirm that you wish to clear your submitted preferences for ' \
-              '<strong>{name} {yeara}&ndash;{yearb}</strong>. ' \
-              'This action cannot be undone.'.format(name=sel.config.project_class.name,
+    message = '<p>Please confirm that you wish to clear your submitted preferences for ' \
+              '<strong>{name} {yeara}&ndash;{yearb}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=sel.config.project_class.name,
                                                      yeara=sel.config.year, yearb=sel.config.year+1)
     submit_label = 'Clear submitted preferences'
 

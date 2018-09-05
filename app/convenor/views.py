@@ -1400,11 +1400,11 @@ def add_project(pclass_id):
         if form.submit.data:
             return redirect(url_for('convenor.edit_descriptions', id=data.id, pclass_id=pclass_id, create=1))
         elif form.save_and_exit.data:
-            return redirect(url_for('convenor.attached'))
+            return redirect(url_for('convenor.attached', id=pclass_id))
         elif form.save_and_preview:
             return redirect(url_for('faculty.project_preview', id=data.id,
                                     text='attached projects list',
-                                    url=url_for('convenor.attached')))
+                                    url=url_for('convenor.attached', id=pclass_id)))
         else:
             raise RuntimeError('Unknown submit button in faculty.add_project')
 

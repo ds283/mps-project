@@ -1944,6 +1944,12 @@ def confirm_global_rollover():
     :return:
     """
 
+    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    if not rollover_ready:
+        flash('Can not initiate a rollover of the academic year because not all project classes are ready',
+              'info')
+        return redirect(request.referrer)
+
     next_year = get_current_year() + 1
 
     title = 'Global rollover to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year + 1)
@@ -1968,6 +1974,12 @@ def perform_global_rollover():
     independently by its convenor or an administrator)
     :return:
     """
+
+    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    if not rollover_ready:
+        flash('Can not initiate a rollover of the academic year because not all project classes are ready',
+              'info')
+        return redirect(request.referrer)
 
     next_year = get_current_year() + 1
 

@@ -70,19 +70,27 @@ def _enumerate_selectors(configs):
 
     for config in configs:
         # get SelectingStudent instances that are not retired and belong to this config instance
+
+        # however, we need to remember that for projects marked 'selection_open_to_all',
+        # we should interpret failure to submit choices as an indication that the selector
+        # doesn't wish to participate.
+        # So, in this case, we shouldn't forward to selector for matching.
+        selection_open_to_all = config.project_class.selection_open_to_all
+
         selectors = db.session.query(SelectingStudent) \
             .filter_by(retired=False, config_id=config.id).all()
 
         for item in selectors:
-            sel_to_number[item.id] = number
-            number_to_sel[number] = item.id
+            if item.has_submitted or not selection_open_to_all:
+                sel_to_number[item.id] = number
+                number_to_sel[number] = item.id
 
-            submissions = config.project_class.submissions
-            multiplicity[number] = submissions if submissions >= 1 else 1
+                submissions = config.project_class.submissions
+                multiplicity[number] = submissions if submissions >= 1 else 1
 
-            selector_dict[number] = item
+                selector_dict[number] = item
 
-            number += 1
+                number += 1
 
     return number, sel_to_number, number_to_sel, multiplicity, selector_dict
 

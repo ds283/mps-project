@@ -578,7 +578,7 @@ def selectors(id):
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter)
 
 
@@ -696,7 +696,7 @@ def enroll_selectors(id):
     return render_template('convenor/dashboard/enroll_selectors.html', pane='selectors', subpane='enroll',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter)
 
 
@@ -860,7 +860,7 @@ def selector_grid(id):
     return render_template('convenor/dashboard/selector_grid.html', pane='selectors', subpane='grid',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, groups=groups)
 
 

@@ -321,7 +321,7 @@ def edit_users_students():
 
     return render_template("admin/users_dashboard/students.html", filter=prog_filter, pane='students',
                            prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter,
-                           programmes=programmes, cohorts=cohorts)
+                           programmes=programmes, cohorts=sorted(cohorts))
 
 
 @admin.route('/edit_users_faculty')

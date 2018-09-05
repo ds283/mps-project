@@ -3233,6 +3233,7 @@ def create_match():
                                finished=False,
                                outcome=None,
                                published=False,
+                               selected=False,
                                construct_time=None,
                                compute_time=None,
                                ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
@@ -3381,6 +3382,11 @@ def delete_match(id):
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
         flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
@@ -3407,6 +3413,11 @@ def perform_delete_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -3447,6 +3458,11 @@ def revert_match(id):
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
         flash('Can not revert match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
@@ -3478,6 +3494,11 @@ def perform_revert_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -3524,6 +3545,11 @@ def duplicate_match(id):
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
         flash('Can not duplicate match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
@@ -3533,8 +3559,6 @@ def duplicate_match(id):
         flash('Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
-
-    year = get_current_year()
 
     suffix = 2
     while suffix < 100:
@@ -3579,11 +3603,15 @@ def rename_match(id):
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     url = request.args.get('url', None)
     if url is None:
         url = url_for('admin.manage_matching')
 
-    year = get_current_year()
     form = RenameMatchForm(year, request.form)
     form.record = record
 
@@ -3761,6 +3789,11 @@ def merge_replace_records(src_id, dest_id):
     dest = MatchingRecord.query.get_or_404(dest_id)
 
     if not validate_match_inspector(source.matching_attempt) or not validate_match_inspector(dest.matching_attempt):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     if source.selector_id != dest.selector_id:
@@ -3977,6 +4010,11 @@ def reassign_match_project(id, pid):
     if not validate_match_inspector(record.matching_attempt):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     project = LiveProject.query.get_or_404(pid)
 
     if record.selector.has_submitted:
@@ -4005,6 +4043,11 @@ def reassign_match_marker(id, mid):
     record = MatchingRecord.query.get_or_404(id)
 
     if not validate_match_inspector(record.matching_attempt):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     # check intended mid is in list of attached second markers
@@ -4038,6 +4081,14 @@ def publish_match(id):
 
     record = MatchingAttempt.query.get_or_404(id)
 
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
         flash('Match "{name}" cannot be published until it has completed successfully.', 'info')
         return redirect(request.referrer)
@@ -4059,6 +4110,14 @@ def unpublish_match(id):
 
     record = MatchingAttempt.query.get_or_404(id)
 
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
         flash('Match "{name}" cannot be published until it has completed successfully.', 'info')
         return redirect(request.referrer)
@@ -4069,6 +4128,82 @@ def unpublish_match(id):
         return redirect(request.referrer)
 
     record.published = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/select_match/<int:id>')
+@roles_required('root')
+def select_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Match "{name}" cannot be selected until it has completed successfully.', 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. ',
+              'info')
+        return redirect(request.referrer)
+
+    # determine whether any already-selected projects have allocations for a pclass we own
+    our_pclasses = set()
+    for item in record.available_pclasses:
+        our_pclasses.add(item.id)
+
+    selected_pclasses = set()
+    selected = db.session.query(MatchingAttempt) \
+        .filter_by(year=year, selected=True).all()
+    for match in selected:
+        for item in match.available_pclasses:
+            selected_pclasses.add(item.id)
+
+    intersection = our_pclasses & selected_pclasses
+    if len(intersection) > 0:
+        flash('Cannot select match "{name}" because some project classes it handles are already '
+              'determined by selected matches.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    record.selected = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/deselect_match/<int:id>')
+@roles_required('root')
+def deselect_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Match "{name}" cannot be selected until it has completed successfully.', 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. ',
+              'info')
+        return redirect(request.referrer)
+
+    record.selected = False
     db.session.commit()
 
     return redirect(request.referrer)

@@ -256,17 +256,6 @@ class MainConfig(db.Model):
     # year is the main configuration variable
     year = db.Column(db.Integer(), primary_key=True)
 
-    # which matching configuration did we use to rollover from this year?
-    # null means not committed yet
-    matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'), nullable=True)
-    matching_config = db.relationship('MatchingAttempt', foreign_keys=[matching_id], uselist=False)
-
-
-    @property
-    def matching_is_set(self):
-
-        return self.matching_id is not None
-
 
 class Role(db.Model, RoleMixin):
     """
@@ -1556,9 +1545,14 @@ class ProjectClassConfig(db.Model):
         if self.live and self.selection_closed:
             if self.project_class.do_matching:
                 # check whether a matching configuration has been assigned for the current year
-                current_config = MainConfig.query.order_by(MainConfig.year.desc()).first()
+                matchings = self.matching_attempts.subquery()
+                selected_matchings = db.session.query(sqlalchemy.func.count(matchings.c.id)) \
+                    .filter(matchings.c.selected == True).scalar()
 
-                if current_config.matching_config is not None:
+                if selected_matchings > 1:
+                    raise RuntimeError('Too many selected matchings')
+
+                if selected_matchings == 1:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
                 else:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
@@ -3546,6 +3540,9 @@ class MatchingAttempt(db.Model):
     # a name for this matching attempt
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
 
+    # flag matching attempts that have been selected for use during rollover
+    selected = db.Column(db.Boolean())
+
 
     # PARTICIPATING PCLASSES
 
@@ -3553,7 +3550,7 @@ class MatchingAttempt(db.Model):
     config_members = db.relationship('ProjectClassConfig', secondary=match_configs, lazy='dynamic',
                                       backref=db.backref('matching_attempts', lazy='dynamic'))
 
-    # flag attempts that have been published to convenors for comments
+    # flag matching attempts that have been published to convenors for comments
     published = db.Column(db.Boolean())
 
 

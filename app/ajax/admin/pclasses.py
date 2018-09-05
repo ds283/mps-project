@@ -43,7 +43,7 @@ _pclasses_menu = \
                 </a></li>
             {% else %}
                 <li class="disabled"><a>
-                    <i class="fa fa-bar"></i> Programmes inactive
+                    <i class="fa fa-ban"></i> Programmes inactive
                 </a>
                 </li>
             {% endif %}

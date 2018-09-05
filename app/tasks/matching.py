@@ -948,6 +948,7 @@ def register_matching_tasks(celery):
                                    name=new_name,
                                    config_members=record.config_members,
                                    published=record.published,
+                                   selected=False,
                                    celery_id=None,
                                    finished=record.finished,
                                    outcome=record.outcome,

@@ -36,7 +36,7 @@ _programmes_menu = \
                 </a></li>
             {% else %}
                 <li class="disabled"><a>
-                    <i class="fa fa-bar"></i> Degree type inactive
+                    <i class="fa fa-ban"></i> Degree type inactive
                 </a></li>
             {% endif %}
         {% endif %}

@@ -46,8 +46,10 @@ _project = \
 {% macro project_tag(r, show_period) %}
     {% set adjustable = false %}
     {% if r.selector.has_submitted %}{% set adjustable = true %}{% endif %}
+    {% set pclass = r.selector.config.project_class %}
+    {% set style = pclass.make_CSS_style() %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label {% if r.is_project_overassigned %}label-danger{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}" {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
+        <a class="label {% if r.is_project_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}" {% if not r.is_project_overassigned and style %}style="{{ style }}"{% endif %} {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
             {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }} (No. {{ r.project.number }})
             {% if adjustable %}<span class="caret"></span>{% endif %}
         </a>

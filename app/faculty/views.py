@@ -1183,8 +1183,8 @@ def live_project(pid):
     if not validate_edit_project(data):
         return redirect(request.referrer)
 
-    text = request.args.get('text')
-    url = request.args.get('url')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
 
     return render_project(data, data, text=text, url=url)
 

@@ -178,9 +178,17 @@ def unique_or_original_exam_number(form, field):
                                                                                                  name=rec.user.name))
 
 
-def globally_unique_matching_name(form, field):
-    if MatchingAttempt.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already in use for a matching attempt'.format(name=field.data))
+def globally_unique_matching_name(year, form, field):
+    if MatchingAttempt.query.filter_by(name=field.data, year=year).first():
+        raise ValidationError('{name} is already in use for a matching attempt this year'.format(name=field.data))
+
+
+def unique_or_original_matching_name(year, form, field):
+    if field.data == form.record.name:
+        return
+
+    if MatchingAttempt.query.filter_by(name=field.data, year=year).first():
+        raise ValidationError('{name} is already in use for a matching attempt this year'.format(name=field.data))
 
 
 def valid_json(form, field):

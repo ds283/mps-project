@@ -11,24 +11,6 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
 
-    <link
-            href="https://cdn.pydata.org/bokeh/release/bokeh-0.13.0.min.css"
-            rel="stylesheet" type="text/css">
-    {#    <link#}
-    {#        href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.13.0.min.css"#}
-    {#        rel="stylesheet" type="text/css">#}
-    {#    <link#}
-    {#        href="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.13.0.min.css"#}
-    {#        rel="stylesheet" type="text/css">#}
-
-    <script src="https://cdn.pydata.org/bokeh/release/bokeh-0.13.0.min.js"></script>
-    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-0.13.0.min.js"></script>#}
-    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-0.13.0.min.js"></script>#}
-
-    {% if hist_div is not none and hist_script is not none %}
-        {{ hist_script|safe }}
-    {% endif %}
-
     <script>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 

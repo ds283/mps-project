@@ -170,8 +170,21 @@ def ProjectDescriptionClasses(project_id):
 
 
 def GetAutomatedMatchPClasses():
-    return db.session.query(ProjectClass).filter_by(active=True, do_matching=True)
+    return db.session.query(ProjectClass) \
+        .filter_by(active=True, do_matching=True)
 
 
 def GetMatchingAttempts(year):
-    return db.session.query(MatchingAttempt).filter_by(year=year).order_by(MatchingAttempt.name)
+    return db.session.query(MatchingAttempt) \
+        .filter_by(year=year) \
+        .order_by(MatchingAttempt.name.asc())
+
+
+def GetComparatorMatches(year, self_id, pclasses):
+    q = db.session.query(MatchingAttempt) \
+        .filter(MatchingAttempt.year == year, MatchingAttempt.id != self_id)
+
+    for pid in pclasses:
+        q = q.filter(MatchingAttempt.config_members.any(pclass_id=pid))
+
+    return  q.order_by(MatchingAttempt.name.asc())

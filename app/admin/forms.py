@@ -25,11 +25,12 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_supervisor, unique_or_original_supervisor, globally_unique_role, unique_or_original_role, \
     globally_unique_exam_number, unique_or_original_exam_number, globally_unique_matching_name, \
     globally_unique_supervisor_abbrev, unique_or_original_supervisor_abbrev, value_is_nonnegative, \
+    unique_or_original_matching_name, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
-    GetMatchingAttempts
+    GetMatchingAttempts, GetComparatorMatches
 from ..models import BackupConfiguration, EnrollmentRecord, submission_choices, academic_titles, \
     extent_choices, year_choices, matching_history_choices, solver_choices
 
@@ -695,8 +696,7 @@ class MatchingMixin():
 
     name = StringField('Name',
                        description='Enter a short tag to identify this match',
-                       validators=[InputRequired(message='Please supply a unique name'),
-                                   globally_unique_matching_name])
+                       validators=[InputRequired(message='Please supply a unique name')])
 
     pclasses_to_include = CheckboxQuerySelectMultipleField('Include which project classes',
                                                            query_factory=GetAutomatedMatchPClasses,
@@ -784,3 +784,31 @@ class NewMatchForm(Form, MatchingMixin):
         super().__init__(*args, **kwargs)
 
         self.include_matches.query_factory = partial(GetMatchingAttempts, year)
+        self.name.validators.append(partial(globally_unique_matching_name, year))
+
+
+class RenameMatchForm(Form):
+
+    name = StringField('New name', description='Enter a short tag to identify this match',
+                       validators=[InputRequired(message='Please supply a unique name')])
+
+    submit = SubmitField("Rename match")
+
+    def __init__(self, year, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.name.validators.append(partial(unique_or_original_matching_name, year))
+
+
+class CompareMatchForm(Form):
+
+    target = QuerySelectField('Compare to', query_factory=GetComparatorMatches, get_label='name')
+
+    compare = SubmitField('Compare')
+
+    def __init__(self, year, self_id, pclasses, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.target.query_factory = partial(GetComparatorMatches, year, self_id, pclasses)

@@ -1,0 +1,25 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import on_click_selector_field %}
+
+{% block title %}
+    Compare match
+{% endblock %}
+
+{% block formtitle %}
+    Compare match <strong>{{ record.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.compare_match', id=record.id, text=text, url=url) }}" method="POST" name="compare_form">
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(role_form) }}#}
+
+        {{ on_click_selector_field(form.target, true) }}
+
+        {{ wtf.form_field(form.compare, button_map={'compare': 'primary'}) }}
+    </form>
+{% endblock %}

@@ -24,6 +24,7 @@ import pulp
 import pulp.solvers as solvers
 import itertools
 import time
+from datetime import datetime
 
 
 class Timer:
@@ -914,3 +915,83 @@ def register_matching_tasks(celery):
         seq = chain(wg, revert_finalize.si(id))
 
         seq.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def duplicate(self, id, new_name, current_id):
+        self.update_state(state='STARTED',
+                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(MatchingAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            return
+
+        # encapsulate the whole duplication process in a single transaction, so the process is as close to
+        # atomic as we can make it
+
+        try:
+            # generate a new MatchingRecord
+            data = MatchingAttempt(year=record.year,
+                                   name=new_name,
+                                   config_members=record.config_members,
+                                   published=record.published,
+                                   celery_id=None,
+                                   finished=record.finished,
+                                   outcome=record.outcome,
+                                   solver=record.solver,
+                                   construct_time=record.construct_time,
+                                   compute_time=record.compute_time,
+                                   ignore_per_faculty_limits=record.ignore_per_faculty_limits,
+                                   ignore_programme_prefs=record.ignore_programme_prefs,
+                                   years_memory=record.years_memory,
+                                   supervising_limit=record.supervising_limit,
+                                   marking_limit=record.marking_limit,
+                                   max_marking_multiplicity=record.max_marking_multiplicity,
+                                   use_hints=record.use_hints,
+                                   encourage_bias=record.encourage_bias,
+                                   discourage_bias=record.discourage_bias,
+                                   strong_encourage_bias=record.strong_encourage_bias,
+                                   strong_discourage_bias=record.strong_discourage_bias,
+                                   bookmark_bias=record.bookmark_bias,
+                                   levelling_bias=record.levelling_bias,
+                                   intra_group_tension=record.intra_group_tension,
+                                   programme_bias=record.programme_bias,
+                                   include_matches=record.include_matches,
+                                   score=record.current_score,                                      # note that current score becomes original score
+                                   supervisors=record.supervisors,
+                                   markers=record.markers,
+                                   projects=record.projects,
+                                   mean_CATS_per_project=record.mean_CATS_per_project,
+                                   creator_id=current_id,
+                                   creation_timestamp=datetime.now(),
+                                   last_edit_id=None,
+                                   last_edit_timestamp=None)
+
+            db.session.add(data)
+            db.session.flush()
+
+            # duplicate all matching records
+            for item in record.records:
+                rec = MatchingRecord(matching_id=data.id,
+                                     selector_id=item.selector_id,
+                                     submission_period=item.submission_period,
+                                     project_id=item.project_id,
+                                     original_project_id=item.project_id,
+                                     supervisor_id=item.supervisor_id,
+                                     rank=item.rank,
+                                     marker_id=item.marker_id,
+                                     original_marker_id=item.marker_id)
+                db.session.add(rec)
+
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return None

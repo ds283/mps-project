@@ -16,6 +16,8 @@ from flask_security.utils import config_value, get_message, do_flash, \
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
+from collections import deque
+
 from celery import chain, group
 
 from .actions import register_user, estimate_CATS_load
@@ -34,7 +36,7 @@ from .forms import RoleSelectForm, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
     EditBackupOptionsForm, BackupManageForm, \
     AddRoleForm, EditRoleForm, \
-    NewMatchForm
+    NewMatchForm, RenameMatchForm, CompareMatchForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
@@ -3103,8 +3105,7 @@ def terminate_background_task(id):
     except SQLAlchemyError:
         db.session.rollback()
         flash('Could not terminate task "{name}" due to a database error. '
-              'Please contact a system administrator.'.format(name=record.name),
-              'error')
+              'Please contact a system administrator.'.format(name=record.name), 'error')
 
     return redirect(request.referrer)
 
@@ -3211,7 +3212,6 @@ def create_match():
     Create the 'create match' dashboard view
     :return:
     """
-
     # check that all projects are ready to match
     config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
     if not matching_ready:
@@ -3319,7 +3319,7 @@ def terminate_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if record.finished:
-        flash('Could not terminate matching task "{name}" because it has finished.'.format(name=record.name),
+        flash('Can not terminate matching task "{name}" because it has finished.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
@@ -3347,7 +3347,7 @@ def perform_terminate_match(id):
         url = url_for('admin.manage_matching')
 
     if record.finished:
-        flash('Could not terminate matching task "{name}" because it has finished.'.format(name=record.name),
+        flash('Can not terminate matching task "{name}" because it has finished.'.format(name=record.name),
               'error')
         return redirect(url)
 
@@ -3365,7 +3365,7 @@ def perform_terminate_match(id):
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
-        flash('Could not terminate matching task "{name}" due to a database error. '
+        flash('Can not terminate matching task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
 
@@ -3382,7 +3382,7 @@ def delete_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+        flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
@@ -3415,7 +3415,7 @@ def perform_delete_match(id):
         url = url_for('admin.manage_matching')
 
     if not record.finished:
-        flash('Could not delete match "{name}" because it has not terminated.'.format(name=record.name),
+        flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
         return redirect(url)
 
@@ -3431,7 +3431,7 @@ def perform_delete_match(id):
         db.session.commit()
     except SQLAlchemyError:
         db.session.rollback()
-        flash('Could not delete match "{name}" due to a database error. '
+        flash('Can not delete match "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
 
@@ -3448,12 +3448,12 @@ def revert_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Could not revert match "{name}" because it has not terminated.'.format(name=record.name),
+        flash('Can not revert match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
-        flash('Could not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+        flash('Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
@@ -3486,12 +3486,12 @@ def perform_revert_match(id):
         url = url_for('admin.manage_matching')
 
     if not record.finished:
-        flash('Could not revert match "{name}" because it has not terminated.'.format(name=record.name),
+        flash('Can not revert match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
-        flash('Could not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+        flash('Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
@@ -3513,6 +3513,280 @@ def perform_revert_match(id):
     seq.apply_async(task_id=task_id)
 
     return redirect(url)
+
+
+@admin.route('/duplicate_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def duplicate_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Can not duplicate match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    year = get_current_year()
+
+    suffix = 2
+    while suffix < 100:
+        new_name = '{name} #{suffix}'.format(name=record.name, suffix=suffix)
+
+        if MatchingAttempt.query.filter_by(name=new_name, year=year).first() is None:
+            break
+
+        suffix += 1
+
+    if suffix >= 100:
+        flash('Can not duplicate match "{name}" because a new unique tag could not '
+              'be generated'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    # hand off duplicate job to asynchronous queue
+    celery = current_app.extensions['celery']
+    duplicate = celery.tasks['app.tasks.matching.duplicate']
+
+    tk_name = 'Duplicate {name}'.format(name=record.name)
+    tk_description = 'Duplicate a matching'
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                duplicate.si(record.id, new_name, current_user.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
+
+    return redirect(request.referrer)
+
+
+@admin.route('/rename_match/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def rename_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.manage_matching')
+
+    year = get_current_year()
+    form = RenameMatchForm(year, request.form)
+    form.record = record
+
+    if form.validate_on_submit():
+
+        try:
+            record.name = form.name.data
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash('Could not rename match "{name}" due to a database error. '
+                  'Please contact a system administrator.'.format(name=record.name), 'error')
+
+        return redirect(url)
+
+    return render_template('admin/match_inspector/rename.html', form=form, record=record, url=url)
+
+
+@admin.route('/compare_match/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def compare_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    year = get_current_year()
+    our_pclasses = {x.id for x in record.available_pclasses}
+    form = CompareMatchForm(year, record.id, our_pclasses, request.form)
+
+    if form.validate_on_submit():
+
+        comparator = form.target.data
+        return redirect(url_for('admin.do_compare', id1=id, id2=comparator.id, text=text, url=url))
+
+    return render_template('admin/match_inspector/compare_setup.html', form=form, record=record, text=text, url=url)
+
+
+@admin.route('/do_compare/<int:id1>/<int:id2>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_compare(id1, id2):
+
+    record1 = MatchingAttempt.query.get_or_404(id1)
+    record2 = MatchingAttempt.query.get_or_404(id2)
+
+    if not validate_match_inspector(record1) or not validate_match_inspector(record2):
+        return redirect(request.referrer)
+
+    if not record1.finished:
+        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record1.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record1.name),
+              'error')
+        return redirect(request.referrer)
+
+    if not record2.finished:
+        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record2.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record2.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name),
+              'error')
+        return redirect(request.referrer)
+
+    pclass_filter = request.args.get('pclass_filter')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    # if no state filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('admin_match_pclass_filter'):
+        pclass_filter = session['admin_match_pclass_filter']
+
+    pclasses = record1.available_pclasses
+
+    return render_template('admin/match_inspector/compare.html', record1=record1, record2=record2, text=text, url=url,
+                           pclasses=pclasses, pclass_filter=pclass_filter)
+
+
+@admin.route('/do_compare_ajax/<int:id1>/<int:id2>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_compare_ajax(id1, id2):
+
+    record1 = MatchingAttempt.query.get_or_404(id1)
+    record2 = MatchingAttempt.query.get_or_404(id2)
+
+    if not validate_match_inspector(record1) or not validate_match_inspector(record2):
+        return redirect(request.referrer)
+
+    if not record1.finished:
+        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record1.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record1.name),
+              'error')
+        return redirect(request.referrer)
+
+    if not record2.finished:
+        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record2.name),
+              'error')
+        return redirect(request.referrer)
+
+    if record2.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name),
+              'error')
+        return redirect(request.referrer)
+
+    pclass_filter = request.args.get('pclass_filter')
+    flag, pclass_value = is_integer(pclass_filter)
+
+    # we know record2 has at least the same pclasses included as record1, although it may in fact have more
+    # (there seems no simple query to restrict record2 to have exactly the same pclasses, and anyway there might
+    # be use cases where it's useful to compare a match on a subset to a match on a larger group)
+
+    # that means we need to work through the list of records in record2, pairing them up with records in record1
+    recs1 = deque(record1.records \
+                  .order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc()).all())
+    recs2 = deque(record2.records \
+                  .order_by(MatchingRecord.selector_id.asc(), MatchingRecord.submission_period.asc()).all())
+
+    data = []
+
+    # can assume there will be *some* data in both recs1 and recs2
+    left = recs1.popleft()
+    right = recs2.popleft()
+
+    while left is not None:
+
+        while right.selector_id < left.selector_id:
+            right = recs2.popleft()
+
+        if left.selector_id != right.selector_id:
+            raise RuntimeError('Unexpected discrepancy between LHS and RHS selector_id')
+
+        if left.submission_period != right.submission_period:
+            raise RuntimeError('Unexpected discrepancy between LHS and RHS submission periods')
+
+        if left.project_id != right.project_id or left.marker_id != right.marker_id:
+            if not flag or pclass_value == left.selector.config.pclass_id:
+                data.append((left, right))
+
+        if len(recs1) > 0:
+            left = recs1.popleft()
+            right = recs2.popleft()
+        else:
+            left = None
+
+    return ajax.admin.compare_match_data(data)
+
+
+@admin.route('/merge_replace_records/<int:src_id>/<int:dest_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def merge_replace_records(src_id, dest_id):
+
+    source = MatchingRecord.query.get_or_404(src_id)
+    dest = MatchingRecord.query.get_or_404(dest_id)
+
+    if not validate_match_inspector(source.matching_attempt) or not validate_match_inspector(dest.matching_attempt):
+        return redirect(request.referrer)
+
+    if source.selector_id != dest.selector_id:
+        flash('Cannot merge these matching records because they do not refer to the same selector', 'error')
+        return redirect(request.referrer)
+
+    if source.submission_period != dest.submission_period:
+        flash('Cannot merge these matching records because they do not refer to the same submission period', 'error')
+        return redirect(request.referrer)
+
+    try:
+        dest.project_id = source.project_id
+        dest.supervisor_id = source.supervisor_id
+        dest.marker_id = source.marker_id
+        dest.rank = source.rank
+
+        dest.matching_attempt.last_edit_id = current_user.id
+        dest.matching_attempt.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Can not merge matching records due to a database error. '
+              'Please contact a system administrator.', 'error')
+
+    return redirect(request.referrer)
 
 
 @admin.route('/match_student_view/<int:id>')
@@ -3672,7 +3946,7 @@ def match_student_view_ajax(id):
     if flag:
         data_set = [x for x in data_set if (x[0])[0].selector.config.pclass_id == pclass_value]
 
-    return ajax.admin.match_view_student.student_view_data(data_set)
+    return ajax.admin.student_view_data(data_set)
 
 
 @admin.route('/match_faculty_view_ajax/<int:id>')
@@ -3691,7 +3965,7 @@ def match_faculty_view_ajax(id):
 
     flag, pclass_value = is_integer(pclass_filter)
 
-    return ajax.admin.match_view_faculty.faculty_view_data(record.faculty, record, pclass_value if flag else None)
+    return ajax.admin.faculty_view_data(record.faculty, record, pclass_value if flag else None)
 
 
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')

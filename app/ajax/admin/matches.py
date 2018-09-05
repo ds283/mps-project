@@ -188,6 +188,44 @@ _menu = \
                 </a>
             </li>
         {% else %}
+            {% if m.outcome == m.OUTCOME_OPTIMAL %}
+                <li>
+                    <a href="{{ url_for('admin.rename_match', id=m.id, url=url) }}">
+                        <i class="fa fa-pencil"></i> Rename
+                    </a>
+                </li>
+                {% if m.is_modified %}
+                    <li>
+                        <a href="{{ url_for('admin.revert_match', id=m.id) }}">
+                            <i class="fa fa-undo"></i> Revert to original
+                        </a>
+                    </li>
+                {% endif %}
+                <li>
+                    <a href="{{ url_for('admin.duplicate_match', id=m.id) }}">
+                        <i class="fa fa-clone"></i> Duplicate
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
+                        <i class="fa fa-balance-scale"></i> Compare to...
+                    </a>
+                </li>
+            {% else %}
+                <li class="disabled">
+                    <a><i class="fa fa-pencil"></i> Rename</a>
+                </li>
+                <li class="disabled">
+                    <a><i class="fa fa-undo"></i> Revert to original</a>
+                </li>
+                <li class="disabled">
+                    <a><i class="fa fa-clone"></i> Duplicate</a>
+                </li>
+                <li>
+                    <a><i class="fa fa-balance-scale"></i> Compare to...</a>
+                </li>
+            {% endif %}
+
             {% if current_user.has_role('root') or current_user.id == m.creator_id %}
                 <li>
                     <a href="{{ url_for('admin.delete_match', id=m.id) }}">
@@ -197,18 +235,6 @@ _menu = \
             {% else %}
                 <li class="disabled">
                     <a><i class="fa fa-trash"></i> Delete</a>
-                </li>
-            {% endif %}
-            
-            {% if m.is_modified %}
-                <li>
-                    <a href="{{ url_for('admin.revert_match', id=m.id) }}">
-                        <i class="fa fa-undo"></i> Revert to original
-                    </a>
-                </li>
-            {% else %}
-                <li class="disabled">
-                    <a><i class="fa fa-undo"></i> Revert to original</a>
                 </li>
             {% endif %}
             

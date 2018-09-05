@@ -210,7 +210,7 @@ _desc_menu = \
                 </a>
             </li>
             <li>
-                <a href="{{ url_for('convenor.delete_description', id=d.id, pclass_id=pclass_id) }}">
+                <a href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
                     <i class="fa fa-trash"></i> Delete
                 </a>
             </li>

@@ -128,6 +128,12 @@ _marker_menu = \
 """
 
 
+_desc_label = \
+"""
+<a href="{{ url_for('faculty.edit_description', did=d.id) }}">{{ d.label }}</a>
+"""
+
+
 _desc_menu = \
 """
 <div class="dropdown">
@@ -151,17 +157,17 @@ _desc_menu = \
         
         <li>
             <a href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
-                Duplicate
+                <i class="fa fa-clone"></i> Duplicate
             </a>
         </li>
         <li>
             {% if d.default is none %}
                 <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
-                    Make default
+                    <i class="fa fa-wrench"></i> Make default
                 </a>
             {% else %}
                 <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id) }}">
-                    Remove default
+                    <i class="fa fa-wrench"></i> Remove default
                 </a>
             {% endif %}
         </li>
@@ -304,7 +310,7 @@ def descriptions_ajax(id):
 
     create = request.args.get('create', default=None)
 
-    return ajax.faculty.descriptions_data(descs, _desc_menu, create=create)
+    return ajax.faculty.descriptions_data(descs, _desc_label, _desc_menu, create=create)
 
 
 @faculty.route('/add_project', methods=['GET', 'POST'])

@@ -189,6 +189,13 @@ _marker_menu = \
 {% endif %}
 """
 
+
+_desc_label = \
+"""
+<a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id) }}">{{ d.label }}</a>
+"""
+
+
 _desc_menu = \
 """
     <div class="dropdown">
@@ -203,7 +210,7 @@ _desc_menu = \
                 </a>
             </li>
             <li>
-                <a href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
+                <a href="{{ url_for('convenor.delete_description', id=d.id, pclass_id=pclass_id) }}">
                     <i class="fa fa-trash"></i> Delete
                 </a>
             </li>
@@ -212,17 +219,17 @@ _desc_menu = \
     
             <li>
                 <a href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
-                    Duplicate
+                    <i class="fa fa-clone"></i> Duplicate
                 </a>
             </li>
             <li>
                 {% if d.default is none %}
                     <a href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id, did=d.id) }}">
-                        Make default
+                        <i class="fa fa-wrench"></i> Make default
                     </a>
                 {% else %}
                     <a href="{{ url_for('convenor.make_default_description', pid=d.parent_id, pclass_id=pclass_id) }}">
-                        Remove default
+                        <i class="fa fa-wrench"></i> Remove default
                     </a>
                 {% endif %}
             </li>
@@ -1334,7 +1341,7 @@ def descriptions_ajax(id, pclass_id):
 
     create = request.args.get('create', default=None)
 
-    return ajax.faculty.descriptions_data(descs, _desc_menu, pclass_id, create=create)
+    return ajax.faculty.descriptions_data(descs, _desc_label, _desc_menu, pclass_id=pclass_id, create=create)
 
 
 @convenor.route('/add_project/<int:pclass_id>', methods=['GET', 'POST'])

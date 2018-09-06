@@ -245,13 +245,27 @@ _menu = \
                 {% if m.published %}
                     <li>
                         <a href="{{ url_for('admin.unpublish_match', id=m.id) }}">
-                            Unpublish
+                            <i class="fa fa-stop-circle"></i> Unpublish
                         </a>
                     </li>
                 {% else %}
                     <li>
                         <a href="{{ url_for('admin.publish_match', id=m.id) }}">
-                            Publish to convenors
+                            <i class="fa fa-share"></i> Publish to convenors
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% if m.selected %}
+                    <li>
+                        <a href="{{ url_for('admin.deselect_match', id=m.id) }}">
+                            <i class="fa fa-times"></i> Deselect
+                        </a>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{{ url_for('admin.select_match', id=m.id) }}">
+                            <i class="fa fa-check"></i> Select
                         </a>
                     </li>
                 {% endif %}
@@ -290,7 +304,10 @@ _name = \
 {% endif %}
 <p></p>
 {% if m.published and current_user.has_role('root') %}
-    <span class="label label-primary">Published</a>
+    <span class="label label-primary">Published</span>
+{% endif %}
+{% if m.selected %}
+    <span class="label label-success">Selected</span>
 {% endif %}
 """
 

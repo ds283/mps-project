@@ -62,6 +62,7 @@ def get_root_dashboard_data():
 
     matching_ready = True
     rollover_ready = True
+    rollover_in_progress = False
 
     # loop through all active project classes
     for pclass in pcs:
@@ -79,13 +80,21 @@ def get_root_dashboard_data():
 
             config_list.append((config, total_capacity, total_capacity_bounded))
 
+            # if MainConfig year has already been advanced, then we shouldn't offer
+            # matching or rollover options on the dashboard
+            if config.year < current_year:
+                rollover_in_progress = True
+
             if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
                 matching_ready = False
 
             if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
                 rollover_ready = False
 
-    return config_list, current_year, rollover_ready, matching_ready
+            if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+                rollover_ready = False
+
+    return config_list, current_year, rollover_ready, matching_ready, rollover_in_progress
 
 
 def get_convenor_dashboard_data(pclass, config):
@@ -109,7 +118,7 @@ def get_convenor_dashboard_data(pclass, config):
         .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
 
     sub_count = db.session.query(func.count(SubmittingStudent.id)) \
-        .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
+        .filter(~SubmittingStudent.retired, SubmittingStudent.config_id == config.id).scalar()
 
     live_count = db.session.query(func.count(LiveProject.id)) \
         .filter(LiveProject.config_id == config.id).scalar()
@@ -347,8 +356,8 @@ def build_enroll_selector_candidates(config):
     """
 
     # which year does the project run in, and for how long?
-    year = config.project_class.year
-    extent = config.project_class.extent
+    year = config.start_year
+    extent = config.extent
 
     # earliest year: academic year in which students can be selectors
     first_selector_year = year - 1

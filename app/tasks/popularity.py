@@ -37,7 +37,7 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
 
     self.update_state(state='STARTED',
                       meta='Update {type} ranking for project class "{name}"'.format(type=rank_type,
-                                                                                     name=config.project_class.name))
+                                                                                     name=config.name))
 
     lowest_rank = None
 
@@ -257,7 +257,7 @@ def register_popularity_tasks(celery):
 
         self.update_state(state='STARTED',
                           meta='Update popularity data for project class "{name}"'.format(
-                              name=config.project_class.name))
+                              name=config.name))
 
         # set up group of tasks to update popularity score of each LiveProject on this configuration
         # only need to work with projects that are open for student selections
@@ -430,7 +430,7 @@ def register_popularity_tasks(celery):
 
         self.update_state(state='STARTED',
                           meta='Thin out popularity data for project class "{name}"'.format(
-                              name=config.project_class.name))
+                              name=config.name))
 
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
 

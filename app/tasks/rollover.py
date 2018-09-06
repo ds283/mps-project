@@ -10,16 +10,18 @@
 
 
 from flask import current_app
+from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import db, User, TaskRecord, BackupRecord, ProjectClass, ProjectClassConfig, \
-    SelectingStudent, SubmittingStudent, StudentData
+from ..models import db, User, TaskRecord, BackupRecord, ProjectClassConfig, \
+    SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
+    SubmissionRecord
 
 from ..task_queue import progress_update
 
 from ..shared.utils import get_current_year
 
-from ..shared.convenor import add_selector, add_submitter
+from ..shared.convenor import add_selector, add_blank_submitter
 
 from celery import chain, group
 
@@ -29,7 +31,7 @@ from datetime import datetime
 def register_rollover_tasks(celery):
 
     @celery.task(bind=True)
-    def pclass_rollover(self, task_id, pclass_id, current_id, convenor_id):
+    def pclass_rollover(self, task_id, current_id, convenor_id):
 
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to rollover...', autocommit=True)
 
@@ -38,64 +40,209 @@ def register_rollover_tasks(celery):
 
         # get database records for this project class
         try:
-            pcl = ProjectClass.query.filter_by(id=pclass_id).first()
-            current_config = ProjectClassConfig.query.filter_by(id=current_id).first()
+            config = ProjectClassConfig.query.filter_by(id=current_id).first()
+            convenor = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        # build group of tasks to perform retirements
-        retire_selectors = [retire_selector.si(s.id) for s in current_config.selecting_students]
-        retire_submitters = [retire_submitter.si(s.id) for s in current_config.submitting_students]
+        if convenor is None or config is None:
+            if convenor is not None:
+                convenor.post_message('Rollover failed because some database records could not be loaded.',
+                                      'danger', autocommit=True)
+
+            if config is None:
+                self.update_state('FAILURE', meta='Could not load ProjectClassConfig record from database')
+
+            if convenor is None:
+                self.update_state('FAILURE', meta='Could not load convenor User record from database')
+
+            return rollover_fail.apply_async(args=(task_id, convenor_id))
+
+        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
+            convenor.post_message('Cannot yet rollover for {name} {yra}--{yrb} '
+                                  'because not all selector activities have been '
+                                  'finalised.'.format(name=config.name, yra=year, yrb=year + 1))
+            self.update_state('FAILURE', meta='Selector lifecycle state is not ready for rollover')
+            return rollover_fail.apply_async(args=(task_id, convenor_id))
+
+        if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+            convenor.post_message('Cannot yet rollover for {name} {yra}--{yrb} '
+                                  'because not all submitter activities have been '
+                                  'finalised.'.format(name=config.name, yra=year, yrb=year + 1))
+            self.update_state('FAILURE', meta='Submitter lifecycle state is not ready for rollover')
+            return rollover_fail.apply_async(args=(task_id, convenor_id))
+
+        # find MatchingAttempt that contains allocations for this project class, if used
+        match = None
+        if config.do_matching:
+            match = config.allocated_match
+
+            if match is None:
+                convenor.post_message('Could not find allocated matches for {name} '
+                                      '{yra}--{yrb}'.format(name=config.name, yra=year, yrb=year + 1))
+                self.update_state('FAILURE', meta='Could not find selected MatchingAttempt record')
+                return rollover_fail.apply_async(args=(task_id, convenor_id))
+
+        # build group of tasks to convert SelectingStudent instances from the current config into
+        # SubmittingStudent instances for next year's config
+        convert_selectors = group(convert_selector.s(s.id, match.id if match is not None else None) for s in
+                                  config.selecting_students)
+
+        # build group of tasks to perform attachment of new records;
+        # these will attach all new SelectingStudent instances, and mop up any eligible
+        # SubmittingStudent instances that weren't automatically created by conversion of
+        # SelectingStudent instances
+        attach_group = group(attach_records.s(s.id, year) for s in StudentData.query.all())
+
+        # build group of tasks to perform retirements: these will be done *last*
+        retire_selectors = [retire_selector.s(s.id) for s in config.selecting_students]
+        retire_submitters = [retire_submitter.s(s.id) for s in config.submitting_students]
 
         retire_group = group(retire_selectors+retire_submitters)
 
-        # build group of tasks to perform attachment of new records
-        # each task in the group gets the id of the new ProjectClassConfig record because Celery
-        # forwards the result of the build_new_pclass_config() task
-        attach_group = group(attach_records.s(s.id, year, pclass_id) for s in StudentData.query.all())
+        # build group of tasks to check for faculty re-enrollment after buyout or sabbatical
+        reenroll_query = db.session.query(EnrollmentRecord.id) \
+            .filter(EnrollmentRecord.pclass_id == config.pclass_id,
+                    or_(EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED,
+                        EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED))
+        reenroll_group = group(reenroll_faculty.s(rec.id, year) for rec in reenroll_query.all())
 
         # get backup task from Celery instance
         celery = current_app.extensions['celery']
         backup = celery.tasks['app.tasks.backup.backup']
 
-        seq = chain(rollover_initialize.si(task_id),
-                    backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
-                              description='Rollback snapshot for {proj} rollover to {yr}'.format(proj=pcl.name, yr=year)),
-                    rollover_retire.si(task_id),
-                    retire_group,
-                    build_new_pclass_config.si(task_id, pclass_id, convenor_id, current_id),
-                    attach_group,
-                    rollover_finalize.si(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
+        # omit re-enroll group if it has length zero, otherwise we get an empty list passed into
+        # rollover_finalize()
 
+        seq = chain(rollover_initialize_msg.si(task_id),
+                    backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
+                              description='Rollback snapshot for {proj} rollover to '
+                                          '{yr}'.format(proj=config.name, yr=year)),
+                    rollover_new_config_msg.si(task_id),
+                    build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id))
+
+        if len(convert_selectors) > 0:
+            seq = seq | rollover_convert_msg.s(task_id) | convert_selectors
+
+        if len(attach_group) > 0:
+            seq = seq | rollover_attach_msg.s(task_id) | attach_group
+
+        if len(retire_group) > 0:
+            seq = seq | rollover_retire_msg.s(task_id) | retire_group
+
+        if len(reenroll_group) > 0:
+            seq = seq | rollover_reenroll_msg.s(task_id) | reenroll_group
+
+        seq = (seq | rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
         seq.apply_async()
 
 
     @celery.task()
-    def rollover_initialize(task_id):
-
+    def rollover_initialize_msg(task_id):
         progress_update(task_id, TaskRecord.RUNNING, 5, 'Building rollback snapshot...', autocommit=True)
 
 
+    @celery.task()
+    def rollover_new_config_msg(task_id):
+        progress_update(task_id, TaskRecord.RUNNING, 15, 'Generating database records for new academic year...', autocommit=True)
+
+
     @celery.task(bind=True)
-    def rollover_finalize(self, task_id, convenor_id):
+    def rollover_convert_msg(self, results, task_id):
+        # currently think it's safe to assume results_bundle[0] is new_config_id, since if any previous task in the chain
+        # errored and returned None, execution of the whole chain should have halted
+
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
+
+        progress_update(task_id, TaskRecord.RUNNING, 35, 'Converting selector records into submitter records...', autocommit=True)
+        return new_config_id
+
+
+    @celery.task(bind=True)
+    def rollover_attach_msg(self, results, task_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
+
+        progress_update(task_id, TaskRecord.RUNNING, 55, 'Attaching new student records...', autocommit=True)
+        return new_config_id
+
+
+    @celery.task(bind=True)
+    def rollover_retire_msg(self, results, task_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
+
+        progress_update(task_id, TaskRecord.RUNNING, 75, 'Retiring current student records...', autocommit=True)
+        return new_config_id
+
+
+    @celery.task(bind=True)
+    def rollover_reenroll_msg(self, results, task_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
+
+        progress_update(task_id, TaskRecord.RUNNING, 95, 'Checking for faculty re-enrollments...', autocommit=True)
+        return new_config_id
+
+
+    @celery.task(bind=True)
+    def rollover_finalize(self, results, task_id, convenor_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Rollover complete', autocommit=False)
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
+            config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
         except SQLAlchemyError:
             raise self.retry()
+
+        if config is None:
+            self.update('FAILURE', 'Could not load ProjectClassConfig')
+            return
+
+        self.update_state(state='SUCCESS')
 
         if convenor is not None:
             # ask web page to dynamically hide the rollover panel
             convenor.send_showhide('rollover-panel', 'hide', autocommit=False)
             # send direct message to user announcing successful rollover
-            convenor.post_message('Rollover of academic year is now complete', 'success', autocommit=True)
+            convenor.post_message('Rollover of academic year is now complete', 'success', autocommit=False)
+            convenor.send_replacetext('selector-count', '{c}'.format(c=config.selecting_students.count()), autocommit=False)
+            convenor.send_replacetext('submitter-count', '{c}'.format(c=config.submitting_students.count()), autocommit=False)
+
+        db.session.commit()
 
 
     @celery.task(bind=True)
     def rollover_fail(self, task_id, convenor_id):
-
         progress_update(task_id, TaskRecord.FAILURE, 100, 'Encountered error during rollover', autocommit=False)
 
         try:
@@ -103,87 +250,82 @@ def register_rollover_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
+        self.update_state(state='FAILURE')
+
         if convenor is not None:
             convenor.post_message('Rollover of academic year failed. Please contact a system administrator', 'danger',
                                   autocommit=True)
 
 
-    @celery.task()
-    def rollover_retire(task_id):
-
-        progress_update(task_id, TaskRecord.SUCCESS, 35, 'Retiring current student records...', autocommit=True)
-
-
     @celery.task(bind=True)
-    def retire_selector(self, sid):
-
+    def retire_selector(self, new_config_id, sid):
         # get current configuration record
         try:
             item = SelectingStudent.query.filter_by(id=sid).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        if item is not None:
-            item.retired = True
+        if item is None:
+            self.update_state(state='FAILED',
+                              meta='Could not read SelectingStudent record for sid={id}'.format(id=sid))
+            return
 
-            try:
-                db.session.commit()
-            except SQLAlchemyError:
-                db.session.rollback()
-                raise self.retry()
+        item.retired = True
 
-            self.update_state(state='SUCCESS')
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
-        self.update_state(state='FAILED', meta='Could not not SelectingStudent record for sid={id}'.format(id=sid))
+        self.update_state(state='SUCCESS')
+        return new_config_id
 
 
     @celery.task(bind=True)
-    def retire_submitter(self, sid):
-
+    def retire_submitter(self, new_config_id, sid):
         # get current configuration record
         try:
             item = SubmittingStudent.query.filter_by(id=sid).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        if item is not None:
-            item.retired = True
+        if item is None:
+            self.update_state(state='FAILED',
+                              meta='Could not read SubmittingStudent record for sid={id}'.format(id=sid))
+            return
 
-            try:
-                db.session.commit()
-            except SQLAlchemyError:
-                db.session.rollback()
-                raise self.retry()
+        item.retired = True
 
-            self.update_state(state='SUCCESS')
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
-        self.update_state(state='FAILED', meta='Could not not SubmittingStudent record for sid={id}'.format(id=sid))
+        self.update_state(state='SUCCESS')
+        return new_config_id
 
 
     @celery.task(bind=True)
     def build_new_pclass_config(self, task_id, pclass_id, convenor_id, current_id):
-
-        progress_update(task_id, TaskRecord.RUNNING, 55, 'Generating new live master record...', autocommit=True)
-
         # get new, rolled-over academic year
-        current_year = get_current_year()
+        new_year = get_current_year()
 
         # get current configuration record; makes this task idempotent, so it's safe to run twice or more
         try:
-            current_config = ProjectClassConfig.query.filter_by(id=current_id).first()
+            config = ProjectClassConfig.query.filter_by(id=current_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
         # check whether a new configuration record needs to be inserted;
         # we expect so, but if we are retrying and there is for some reason
         # an already-inserted record then we just want to be idempotent
-        if current_config.year == current_year:
-
-            progress_update(task_id, TaskRecord.RUNNING, 75, 'Attaching new student records...', autocommit=True)
-            return current_config.id
+        if config.year == new_year:
+            return config.id
 
         # generate a new ProjectClassConfig for this year
-        new_config = ProjectClassConfig(year=current_year,
+        new_config = ProjectClassConfig(year=new_year,
                                         pclass_id=pclass_id,
                                         convenor_id=convenor_id,
                                         creator_id=convenor_id,
@@ -193,52 +335,249 @@ def register_rollover_tasks(celery):
                                         live=False,
                                         live_deadline=None,
                                         selection_closed=False,
-                                        feedback_open=False,
-                                        CATS_supervision=current_config.project_class.CATS_supervision,
-                                        CATS_marking=current_config.project_class.CATS_marking,
+                                        CATS_supervision=config.project_class.CATS_supervision,
+                                        CATS_marking=config.project_class.CATS_marking,
                                         submission_period=1)
 
         try:
             db.session.add(new_config)
-            db.session.flush()
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
-            new_config_id = new_config.id
+        self.update_state(state='SUCCESS')
+        return new_config.id
+
+
+    @celery.task(bind=True)
+    def convert_selector(self, new_config_id, sel_id, match_id):
+        match = None
+
+        # get current configuration records
+        try:
+            config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
+            selector = SelectingStudent.query.filter_by(id=sel_id).first()
+            if match_id is not None:
+                match = MatchingAttempt.query.filter_by(id=match_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if config is None:
+            self.update_state('FAILURE', meta='Could not load rolled-over ProjectClassConfig record '
+                                              'while converting selector records')
+            return
+
+        if selector is None:
+            self.update_state('FAILURE', meta='Could not load SelectingStudent record while converting selector records')
+            return
+
+        if match_id is not None and match is None:
+            self.update_state('FAILURE', meta='Could not load MatchingAttempt record while converting selector records')
+            return
+
+        if match is not None:
+            if selector.config.project_class not in match.available_pclasses:
+                self.update_state('FAILURE', meta='Supplied match is not appropriate for the SelectingStudent')
+                return
+
+        if int(selector.config.year) != int(config.year)-int(1):
+            self.update_state('FAILURE', meta='Inconsistent arrangement of years in configuration records')
+            return
+
+        # get list of match records, if one exists
+        match_records = None
+        if match is not None:
+            match_records = match.records.filter_by(selector_id=sel_id).all()
+
+            if len(match_records) == 0:
+                match_records = None
+
+        # if a match has been assigned, use this to generate a SubmittingStudent record
+        if match_records is not None:
+
+            try:
+                student_record = SubmittingStudent(config_id=new_config_id,
+                                                   student_id=selector.student_id,
+                                                   selector_id=selector.id,
+                                                   published=False,
+                                                   retired=False)
+                db.session.add(student_record)
+                db.session.flush()
+
+                for rec in match_records:
+                    sub_record = SubmissionRecord(submission_period=rec.submission_period,
+                                                  owner_id=student_record.id,
+                                                  project_id=rec.project_id,
+                                                  marker_id=rec.marker_id,
+                                                  matching_record_id=rec.id,
+                                                  feedback_open=False)
+                    db.session.add(sub_record)
+
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                return self.retry()
+
+        else:
+
+            try:
+                if selector.academic_year == config.start_year - 1:
+
+                    if config.selection_open_to_all:
+                        # no allocation here means that the selector chose not to participate
+                        pass
+                    else:
+                        if not config.do_matching:
+                            # allocation is being done manually; generate an empty submitter
+                            add_blank_submitter(selector.student, new_config_id, autocommit=False)
+                        else:
+                            self.update_state('FAILURE', meta='Unexpected missing selector allocation')
+                            return
+
+                elif selector.academic_year >= config.start_year:
+
+                    if config.supervisor_carryover:
+
+                        # if possible, we should carry over supervisor allocations from the previous year
+                        prev_record = db.session.query(SubmittingStudent) \
+                            .filter(SubmittingStudent.config_id == selector.config_id,
+                                    SubmittingStudent.student_id == selector.student_id).first()
+
+                        if prev_record is not None:
+                            student_record = SubmittingStudent(config_id=new_config_id,
+                                                               student_id=selector.student_id,
+                                                               selector_id=selector.id,
+                                                               published=False,
+                                                               retired=False)
+                            db.session.add(student_record)
+                            db.session.flush()
+
+                            for rec in prev_record.records:
+                                sub_record = SubmissionRecord(submission_period=rec.submission_period,
+                                                              owner_id=student_record.id,
+                                                              project_id=rec.project_id,
+                                                              marker_id=rec.marker_id,
+                                                              matching_record_id=None,
+                                                              feedback_open=False)
+                                db.session.add(sub_record)
+                        else:
+                            # previous record is missing, for whatever reason, so generate a blank
+                            add_blank_submitter(selector.student, new_config_id, autocommit=False)
+
+                    else:
+                        if not config.do_matching:
+                            # allocation is being done manually; generate an empty selector
+                            add_blank_submitter(selector.student, new_config_id, autocommit=False)
+                        else:
+                            self.update_state('FAILURE', meta='Unexpected missing selector allocation')
+                            return
+
+                else:
+                    self.update_state('FAILURE', meta='Unexpected academic year')
+                    return
+
+            except SQLAlchemyError:
+                db.session.rollback()
+                return self.retry()
+
+        self.update_state(state='SUCCESS')
+        return new_config_id
+
+
+    @celery.task(bind=True)
+    def attach_records(self, new_config_id, sid, current_year):
+        # get current configuration record
+        try:
+            config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
+            student = StudentData.query.filter_by(id=sid).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if config is None:
+            self.update_state('FAILURE', meta='Could not load rolled-over ProjectClassConfig record '
+                                              'while attaching student records')
+            return
+
+        if student is None:
+            self.update_state('FAILURE', meta='Could not load StudentData record while attaching student records')
+            return
+
+        # compute current academic year for this student
+        academic_year = student.academic_year(current_year)
+
+        try:
+            # generate selector records for students:
+            #  - if selection is open to all and this is the academic year before the project starts, or
+            #  - the student is on an appropriate programme and in a suitable academic year
+            if (config.selection_open_to_all and academic_year == config.start_year - 1) or \
+                    (config.start_year - 1 <= academic_year < config.start_year + config.extent - 1
+                     and student.programme in config.programmes):
+
+                # check whether a SelectingStudent has already been generated for this student
+                # (eg. could happen if the task is accidentally run twice)
+
+                # check whether a SubmittingStudent has already been generated for this student
+                query = student.selecting.subquery()
+                count = db.session.query(func.count(query.c.id)) \
+                    .filter(query.c.retired == False, query.c.config_id == new_config_id).scalar()
+
+                if count == 0:
+                    add_selector(student, new_config_id, autocommit=False)
+
+
+            # generate submitter records for students, only if no existing submitter record exists
+            # (eg. generated by conversion from a previous SelectingStudent record)
+            if config.start_year <= academic_year < config.start_year + config.extent \
+                    and student.programme in config.programmes:
+
+                # check whether a SubmittingStudent has already been generated for this student
+                query = student.submitting.subquery()
+                count = db.session.query(func.count(query.c.id)) \
+                    .filter(query.c.retired == False, query.c.config_id == new_config_id).scalar()
+
+                if count == 0:
+                    add_blank_submitter(student, new_config_id, autocommit=False)
 
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()
             raise self.retry()
 
-        progress_update(task_id, TaskRecord.RUNNING, 75, 'Attaching new student records...', autocommit=True)
+        self.update_state(state='SUCCESS')
         return new_config_id
 
 
     @celery.task(bind=True)
-    def attach_records(self, new_config_id, sid, current_year, pclass_id):
+    def reenroll_faculty(self, new_config_id, rec_id, current_year):
 
-        # get current configuration record; makes this task idempotent, so it's safe to run twice or more
+        # get faculty enrollment record
         try:
-            pclass = ProjectClass.query.filter_by(id=pclass_id).first()
-            student = StudentData.query.filter_by(id=sid).first()
+            record = EnrollmentRecord.query.filter_by(id=rec_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        if pclass is None or student is None:
-            self.update_state('FAILURE', meta='Could not load database records while attaching student records')
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load EnrollmentRecord')
             return
 
-        academic_year = current_year - student.cohort + 1
+        if record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            if record.supervisor_renroll is not None and record.supervisor_renroll <= current_year:
+                record.supervisor_state = EnrollmentRecord.SUPERVISOR_ENROLLED
+                record.supervisor_comment = 'Automatically re-enrolled during academic year rollover'
+                # TODO: issue email to faculty member, informing them of re-enrollment
 
-        if pclass.year - 1 <= academic_year < pclass.year + pclass.extent - 1 \
-                and (pclass.selection_open_to_all or student.programme in pclass.programmes):
+        if record.marker_state != EnrollmentRecord.MARKER_ENROLLED:
+            if record.marker_renroll is not None and record.marker_renroll <= current_year:
+                record.supervisor_state = EnrollmentRecord.MARKER_ENROLLED
+                record.marker_comment = 'Automatically re-enrolled during academic year rollover'
+                # TODO: issue email to faculty member, informing them of re-enrollment
 
-            # will be a selecting student
-            add_selector(student, new_config_id, autocommit=False)
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
-        if pclass.year <= academic_year < pclass.year + pclass.extent \
-                and student.programme in pclass.programmes:
-
-            # will be a submitting student
-            add_submitter(student, new_config_id, autocommit=False)
-
-        db.session.commit()
+        self.update_state(state='SUCCESS')
+        return new_config_id

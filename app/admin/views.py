@@ -321,7 +321,7 @@ def edit_users_students():
 
     return render_template("admin/users_dashboard/students.html", filter=prog_filter, pane='students',
                            prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter,
-                           programmes=programmes, cohorts=cohorts)
+                           programmes=programmes, cohorts=sorted(cohorts))
 
 
 @admin.route('/edit_users_faculty')
@@ -1638,7 +1638,6 @@ def add_pclass():
                                     requests_issued=False,
                                     live=False,
                                     selection_closed=False,
-                                    feedback_open=False,
                                     CATS_supervision=data.CATS_supervision,
                                     CATS_marking=data.CATS_marking,
                                     creator_id=current_user.id,
@@ -1944,15 +1943,25 @@ def confirm_global_rollover():
     :return:
     """
 
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+
+    if not rollover_ready:
+        flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
+        return redirect(request.referrer)
+
+    if rollover_in_progress:
+        flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
+        return redirect(request.referrer)
+
     next_year = get_current_year() + 1
 
     title = 'Global rollover to {yeara}&ndash;{yearb}'.format(yeara=next_year, yearb=next_year + 1)
     panel_title = 'Global rollover of academic year to {yeara}&ndash;{yearb}'.format(yeara=next_year,
                                                                                      yearb=next_year + 1)
     action_url = url_for('admin.perform_global_rollover')
-    message = 'Please confirm that you wish to advance the global academic year to ' \
-              '{yeara}&ndash;{yearb}. ' \
-              'This action cannot be undone.'.format(yeara=next_year, yearb=next_year + 1)
+    message = '<p>Please confirm that you wish to advance the global academic year to ' \
+              '{yeara}&ndash;{yearb}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(yeara=next_year, yearb=next_year + 1)
     submit_label = 'Rollover to {yr}'.format(yr=next_year)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -1964,10 +1973,20 @@ def confirm_global_rollover():
 def perform_global_rollover():
     """
     Globally advance the academic year
-    (doesn't actually do anything directly; each project class must be advanced
-    independently by its convenor or an administrator)
+    (doesn't actually do anything directly; the complex parts of rollover are done
+    for each project class at a time decided by its convenor or an administrator)
     :return:
     """
+
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+
+    if not rollover_ready:
+        flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
+        return redirect(request.referrer)
+
+    if rollover_in_progress:
+        flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
+        return redirect(request.referrer)
 
     next_year = get_current_year() + 1
 
@@ -1975,7 +1994,7 @@ def perform_global_rollover():
     db.session.add(new_year)
     db.session.commit()
 
-    return redirect(url_for('home.homepage'))
+    return home_dashboard()
 
 
 @admin.route('/edit_roles')
@@ -2120,8 +2139,8 @@ def confirm_delete_all_emails():
     panel_title = 'Confirm delete of all emails retained in log'
 
     action_url = url_for('admin.delete_all_emails')
-    message = 'Please confirm that you wish to delete all emails retained in the log. ' \
-              'This action cannot be undone.'
+    message = '<p>Please confirm that you wish to delete all emails retained in the log.</p>' \
+              '<p>This action cannot be undone.</p>'
     submit_label = 'Delete all'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -2173,8 +2192,8 @@ def confirm_delete_email_cutoff(cutoff):
     panel_title = 'Confirm delete all emails older than {c} week{pl}'.format(c=cutoff, pl=pl)
 
     action_url = url_for('admin.delete_email_cutoff', cutoff=cutoff)
-    message = 'Please confirm that you wish to delete all emails older than {c} week{pl}. ' \
-              'This action cannot be undone.'.format(c=cutoff, pl=pl)
+    message = '<p>Please confirm that you wish to delete all emails older than {c} week{pl}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(c=cutoff, pl=pl)
     submit_label = 'Delete'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -2921,8 +2940,8 @@ def confirm_delete_all_backups():
     panel_title = 'Confirm delete all backups'
 
     action_url = url_for('admin.delete_all_backups')
-    message = 'Please confirm that you wish to delete all backups. ' \
-              'This action cannot be undone.'
+    message = '<p>Please confirm that you wish to delete all backups.</p>' \
+              '<p>This action cannot be undone.</p>'
     submit_label = 'Delete all'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -2976,8 +2995,8 @@ def confirm_delete_backup_cutoff(cutoff):
     panel_title = 'Confirm delete all backups older than {c} week{pl}'.format(c=cutoff, pl=pl)
 
     action_url = url_for('admin.delete_backup_cutoff', cutoff=cutoff)
-    message = 'Please confirm that you wish to delete all backups older than {c} week{pl}. ' \
-              'This action cannot be undone.'.format(c=cutoff, pl=pl)
+    message = '<p>Please confirm that you wish to delete all backups older than {c} week{pl}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(c=cutoff, pl=pl)
     submit_label = 'Delete'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -3037,8 +3056,8 @@ def confirm_delete_backup(id):
     panel_title = 'Confirm delete of backup {d}'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
 
     action_url = url_for('admin.delete_backup', id=id)
-    message = 'Please confirm that you wish to delete the backup {d}. ' \
-              'This action cannot be undone.'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
+    message = '<p>Please confirm that you wish to delete the backup {d}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(d=backup.date.strftime("%a %d %b %Y %H:%M:%S"))
     submit_label = 'Delete'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -3176,9 +3195,14 @@ def manage_matching():
     """
 
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+
     if not matching_ready:
         flash('Automated matching is not yet available because some project classes are not ready', 'error')
+        return redirect(request.referrer)
+
+    if rollover_in_progress:
+        flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(request.referrer)
 
     info = get_matching_dashboard_data()
@@ -3195,8 +3219,8 @@ def matches_ajax():
     """
 
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
-    if not matching_ready:
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+    if not matching_ready or rollover_in_progress:
         return jsonify({})
 
     current_year = get_current_year()
@@ -3213,9 +3237,14 @@ def create_match():
     :return:
     """
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+
     if not matching_ready:
-        flash('Automated matching is not yet available because some project classes are not ready', 'error')
+        flash('Automated matching is not yet available because some project classes are not ready', 'info')
+        return redirect(request.referrer)
+
+    if rollover_in_progress:
+        flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(request.referrer)
 
     info = get_matching_dashboard_data()
@@ -3233,6 +3262,7 @@ def create_match():
                                finished=False,
                                outcome=None,
                                published=False,
+                               selected=False,
                                construct_time=None,
                                compute_time=None,
                                ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
@@ -3381,6 +3411,11 @@ def delete_match(id):
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
         flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
@@ -3407,6 +3442,11 @@ def perform_delete_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -3447,6 +3487,11 @@ def revert_match(id):
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
         flash('Can not revert match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
@@ -3478,6 +3523,11 @@ def perform_revert_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -3524,6 +3574,11 @@ def duplicate_match(id):
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
         flash('Can not duplicate match "{name}" because it has not terminated.'.format(name=record.name),
               'error')
@@ -3533,8 +3588,6 @@ def duplicate_match(id):
         flash('Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
-
-    year = get_current_year()
 
     suffix = 2
     while suffix < 100:
@@ -3579,11 +3632,15 @@ def rename_match(id):
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
     url = request.args.get('url', None)
     if url is None:
         url = url_for('admin.manage_matching')
 
-    year = get_current_year()
     form = RenameMatchForm(year, request.form)
     form.record = record
 
@@ -3761,6 +3818,11 @@ def merge_replace_records(src_id, dest_id):
     dest = MatchingRecord.query.get_or_404(dest_id)
 
     if not validate_match_inspector(source.matching_attempt) or not validate_match_inspector(dest.matching_attempt):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     if source.selector_id != dest.selector_id:
@@ -3977,6 +4039,18 @@ def reassign_match_project(id, pid):
     if not validate_match_inspector(record.matching_attempt):
         return redirect(request.referrer)
 
+    if record.matching_attempt.selected:
+        flash('Match "{name}" cannot be edited because an administrative user has marked it as '
+              '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+              'info')
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
     project = LiveProject.query.get_or_404(pid)
 
     if record.selector.has_submitted:
@@ -4005,6 +4079,18 @@ def reassign_match_marker(id, mid):
     record = MatchingRecord.query.get_or_404(id)
 
     if not validate_match_inspector(record.matching_attempt):
+        return redirect(request.referrer)
+
+    if record.matching_attempt.selected:
+        flash('Match "{name}" cannot be edited because an administrative user has marked it as '
+              '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+              'info')
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     # check intended mid is in list of attached second markers
@@ -4038,13 +4124,23 @@ def publish_match(id):
 
     record = MatchingAttempt.query.get_or_404(id)
 
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
-        flash('Match "{name}" cannot be published until it has completed successfully.', 'info')
+        flash('Match "{name}" cannot be published until it has '
+              'completed successfully.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
-              'It cannot be shared with convenors.', 'info')
+              'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     record.published = True
@@ -4059,16 +4155,111 @@ def unpublish_match(id):
 
     record = MatchingAttempt.query.get_or_404(id)
 
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
     if not record.finished:
-        flash('Match "{name}" cannot be published until it has completed successfully.', 'info')
+        flash('Match "{name}" cannot be published until it has '
+              'completed successfully.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
-              'It cannot be shared with convenors.', 'info')
+              'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     record.published = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/select_match/<int:id>')
+@roles_required('root')
+def select_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Match "{name}" cannot be selected until it has '
+              'completed successfully.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" did not yield an optimal solution '
+              'and is not available for use during rollover.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not record.is_valid:
+        flash('Match "{name}" cannot be selected because it is not '
+              'in a valid state.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    # determine whether any already-selected projects have allocations for a pclass we own
+    our_pclasses = set()
+    for item in record.available_pclasses:
+        our_pclasses.add(item.id)
+
+    selected_pclasses = set()
+    selected = db.session.query(MatchingAttempt) \
+        .filter_by(year=year, selected=True).all()
+    for match in selected:
+        for item in match.available_pclasses:
+            selected_pclasses.add(item.id)
+
+    intersection = our_pclasses & selected_pclasses
+    if len(intersection) > 0:
+        flash('Cannot select match "{name}" because some project classes it handles are already '
+              'determined by selected matches.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    record.selected = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/deselect_match/<int:id>')
+@roles_required('root')
+def deselect_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Match "{name}" cannot be selected until it has '
+              'completed successfully.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+        flash('Match "{name}" did not yield an optimal solution '
+              'and is not available for use during rollover.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    record.selected = False
     db.session.commit()
 
     return redirect(request.referrer)

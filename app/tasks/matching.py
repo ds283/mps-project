@@ -720,7 +720,6 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
                                   selector_id=number_to_sel[i],
                                   project_id=proj_id,
                                   original_project_id=proj_id,
-                                  supervisor_id=project.owner_id,
                                   marker_id=marker,
                                   original_marker_id=marker,
                                   submission_period=m+1,
@@ -991,7 +990,6 @@ def register_matching_tasks(celery):
                                      submission_period=item.submission_period,
                                      project_id=item.project_id,
                                      original_project_id=item.project_id,
-                                     supervisor_id=item.supervisor_id,
                                      rank=item.rank,
                                      marker_id=item.marker_id,
                                      original_marker_id=item.marker_id)

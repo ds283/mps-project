@@ -1970,8 +1970,8 @@ def confirm_global_rollover():
 def perform_global_rollover():
     """
     Globally advance the academic year
-    (doesn't actually do anything directly; each project class must be advanced
-    independently by its convenor or an administrator)
+    (doesn't actually do anything directly; the complex parts of rollover are done
+    for each project class at a time decided by its convenor or an administrator)
     :return:
     """
 
@@ -1987,7 +1987,7 @@ def perform_global_rollover():
     db.session.add(new_year)
     db.session.commit()
 
-    return redirect(url_for('home.homepage'))
+    return home_dashboard()
 
 
 @admin.route('/edit_roles')

@@ -210,7 +210,7 @@ _desc_menu = \
                 </a>
             </li>
             <li>
-                <a href="{{ url_for('convenor.delete_description', id=d.id, pclass_id=pclass_id) }}">
+                <a href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
                     <i class="fa fa-trash"></i> Delete
                 </a>
             </li>
@@ -578,7 +578,7 @@ def selectors(id):
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter)
 
 
@@ -696,7 +696,7 @@ def enroll_selectors(id):
     return render_template('convenor/dashboard/enroll_selectors.html', pane='selectors', subpane='enroll',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter)
 
 
@@ -740,7 +740,7 @@ def enroll_selectors_ajax(id):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
-    return app.ajax.convenor.enroll_selectors.enroll_selectors_data(candidates, config)
+    return ajax.convenor.enroll_selectors.enroll_selectors_data(candidates, config)
 
 
 @convenor.route('/enroll_selector/<int:sid>/<int:configid>')
@@ -860,7 +860,7 @@ def selector_grid(id):
     return render_template('convenor/dashboard/selector_grid.html', pane='selectors', subpane='grid',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=cohorts, progs=progs,
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, groups=groups)
 
 
@@ -1180,7 +1180,7 @@ def manual_attach_project(id, configid):
 
     if not config.project_class in project.project_classes:
         flash('Project "{p}" is not attached to "{c}". You do not have sufficient privileges to manually attached it; '
-              'please consult with an administrator.'.format(p=project.name, c=config.project_class.name), 'error')
+              'please consult with an administrator.'.format(p=project.name, c=config.name), 'error')
         return redirect(request.referrer)
 
     # get number for this project
@@ -1400,11 +1400,11 @@ def add_project(pclass_id):
         if form.submit.data:
             return redirect(url_for('convenor.edit_descriptions', id=data.id, pclass_id=pclass_id, create=1))
         elif form.save_and_exit.data:
-            return redirect(url_for('convenor.attached'))
+            return redirect(url_for('convenor.attached', id=pclass_id))
         elif form.save_and_preview:
             return redirect(url_for('faculty.project_preview', id=data.id,
                                     text='attached projects list',
-                                    url=url_for('convenor.attached')))
+                                    url=url_for('convenor.attached', id=pclass_id)))
         else:
             raise RuntimeError('Unknown submit button in faculty.add_project')
 
@@ -2305,10 +2305,10 @@ def go_live(id):
         golive_close = celery.tasks['app.tasks.go_live.golive_close']
 
         # register Go Live as a new background task and push it to the celery scheduler
-        task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=config.project_class.name,
+        task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=config.name,
                                                                           yra=year, yrb=year+1),
                                 owner=current_user,
-                                description='Perform Go Live of "{proj}"'.format(proj=config.project_class.name))
+                                description='Perform Go Live of "{proj}"'.format(proj=config.name))
 
         if form.live.data:
             golive.apply_async(args=(task_id, id, current_user.id, form.live_deadline.data, False),
@@ -2344,10 +2344,10 @@ def close_selections(id):
     close_fail = celery.tasks['app.tasks.close_selection.close_fail']
 
     # register as new background task and push to celery scheduler
-    task_id = register_task('Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.project_class.name,
+    task_id = register_task('Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.name,
                                                                                yra=year, yrb=year+1),
                             owner=current_user,
-                            description='Close selections for "{proj}"'.format(proj=config.project_class.name))
+                            description='Close selections for "{proj}"'.format(proj=config.name))
 
     close.apply_async(args=(task_id, config.id, current_user.id),
                       task_id=task_id,
@@ -2696,59 +2696,52 @@ def student_clear_bookmarks(sid):
     return redirect(request.referrer)
 
 
-@convenor.route('/confirm_rollover/<int:pid>/<int:configid>')
+@convenor.route('/confirm_rollover/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def confirm_rollover(pid, configid):
+def confirm_rollover(id):
+
+    # pid is a ProjectClass
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
 
     year = get_current_year()
 
-    # do nothing if a rollover has already been performed (try to make action idempotent in case
-    # accidentally invoked twice)
-    config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
-
-    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.project_class.name,
-                                                                   yeara=year, yearb=year + 1)
-    action_url = url_for('convenor.rollover', pid=pid, configid=configid)
-    message = 'Please confirm that you wish to rollover project class "{proj}" to ' \
-              '{yeara}&ndash;{yearb}'.format(proj=config.project_class.name,
-                                             yeara=year, yearb=year + 1)
+    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
+    action_url = url_for('convenor.rollover', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to rollover project class "{proj}" to ' \
+              '{yeara}&ndash;{yearb}</p>' \
+              '<p>This action cannot be undone.</p>'.format(proj=config.name, yeara=year, yearb=year + 1)
     submit_label = 'Rollover to {yr}'.format(yr=year)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
                            message=message, submit_label=submit_label)
 
 
-@convenor.route('/rollover/<int:pid>/<int:configid>')
+@convenor.route('/rollover/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def rollover(pid, configid):
+def rollover(id):
 
     # pid is a ProjectClass
-    pclass = ProjectClass.query.get_or_404(pid)
+    config = ProjectClassConfig.query.get_or_404(id)
 
-    if not pclass.active:
-        flash('{name} is not an active project class'.format(name=pclass.name), 'error')
-        return home_dashboard()
+    url = request.args.get('url', None)
 
     # validate that logged-in user is a convenor or suitable admin for this project class
-    if not validate_is_convenor(pclass):
-        return home_dashboard()
+    if not validate_is_convenor(config.project_class):
+        return redirect(url) if url is not None else home_dashboard()
 
     year = get_current_year()
-
-    # do nothing if a rollover has already been performed (try to make action idempotent in case
-    # accidentally invoked twice)
-    config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
-
-    if config.id != configid or config.year == year:
+    if config.year == year:
         flash('A rollover request was ignored. If you are attempting to rollover the academic year and '
               'have not managed to do so, please contact a system administrator', 'error')
-        return redirect(url_for('convenor.overview', id=pid))
+        return redirect(url) if url is not None else home_dashboard()
+
+    if not config.project_class.active:
+        flash('{name} is not an active project class'.format(name=config.name), 'error')
+        return redirect(url) if url is not None else home_dashboard()
 
     # get rollover task instance
     celery = current_app.extensions['celery']
@@ -2756,13 +2749,13 @@ def rollover(pid, configid):
     rollover_fail = celery.tasks['app.tasks.rollover.rollover_fail']
 
     # register rollover as a new background task and push it to the celery scheduler
-    task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=pclass.name, yra=year, yrb=year+1),
+    task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year+1),
                             owner=current_user,
-                            description='Perform rollover of "{proj}" to new academic year'.format(proj=pclass.name))
-    rollover.apply_async(args=(task_id, pid, configid, current_user.id), task_id=task_id,
+                            description='Perform rollover of "{proj}" to new academic year'.format(proj=config.name))
+    rollover.apply_async(args=(task_id, id, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 
-    return redirect(url_for('convenor.overview', id=pid))
+    return redirect(url) if url is not None else home_dashboard()
 
 
 @convenor.route('/reset_popularity_data/<int:id>')
@@ -2778,15 +2771,15 @@ def reset_popularity_data(id):
 
     title = 'Delete popularity data'
     panel_title = 'Delete selection popularity data for <strong>{name} {yra}&ndash;{yrb}</strong>'\
-        .format(name=config.project_class.name, yra=config.year+1, yrb=config.year+2)
+        .format(name=config.name, yra=config.year+1, yrb=config.year+2)
 
     action_url = url_for('convenor.perform_reset_popularity_data', id=id)
     message = '<p>Please confirm that you wish to delete all popularity data for ' \
-              '<strong>{name} {yra}&ndash;{yrb}</strong>. ' \
-              'This action cannot be undone.</p>' \
+              '<strong>{name} {yra}&ndash;{yrb}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
               '<p>Afterwards, it will not be possible to analyse ' \
               'historical popularity trends for individual projects offered in this cycle.</p>' \
-        .format(name=config.project_class.name, yra=config.year+1, yrb=config.year+2)
+        .format(name=config.name, yra=config.year+1, yrb=config.year+2)
     submit_label = 'Delete data'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -2807,7 +2800,7 @@ def perform_reset_popularity_data(id):
     db.session.query(PopularityRecord).filter_by(config_id=id).delete()
     db.session.commit()
 
-    return redirect(url_for('convenor.liveprojects', id=config.project_class.id))
+    return redirect(url_for('convenor.liveprojects', id=config.pclass_id))
 
 
 @convenor.route('/selector_bookmarks/<int:id>')

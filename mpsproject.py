@@ -10,6 +10,7 @@
 
 from app import create_app
 from app.models import db, TaskRecord, Notification, MatchingAttempt
+from sqlalchemy.exc import SQLAlchemyError
 
 app, celery = create_app()
 
@@ -20,10 +21,13 @@ with app.app_context():
     Notification.query.delete()
 
     # any in-progress matching attempts will have been aborted when the app crashed or exited
-    in_progress_matching = MatchingAttempt.query.filter_by(finished=False)
-    for item in in_progress_matching:
-        item.finished = True
-        item.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
+    try:
+        in_progress_matching = MatchingAttempt.query.filter_by(finished=False)
+        for item in in_progress_matching:
+            item.finished = True
+            item.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
+    except SQLAlchemyError:
+        pass
 
     db.session.commit()
 

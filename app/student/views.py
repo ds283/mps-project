@@ -69,7 +69,7 @@ def _verify_open(config):
     """
 
     if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash('Project "{name}" is not open for student selections'.format(name=config.project_class.name), 'error')
+        flash('Project "{name}" is not open for student selections'.format(name=config.name), 'error')
         return False
 
     return True
@@ -577,12 +577,12 @@ def clear_submission(sid):
         return redirect(request.referrer)
 
     title = 'Clear submitted preferences'
-    panel_title = 'Clear submitted preferences for {name}'.format(name=sel.config.project_class.name)
+    panel_title = 'Clear submitted preferences for {name}'.format(name=sel.config.name)
 
     action_url = url_for('student.do_clear_submission', sid=sid)
-    message = 'Please confirm that you wish to clear your submitted preferences for ' \
-              '<strong>{name} {yeara}&ndash;{yearb}</strong>. ' \
-              'This action cannot be undone.'.format(name=sel.config.project_class.name,
+    message = '<p>Please confirm that you wish to clear your submitted preferences for ' \
+              '<strong>{name} {yeara}&ndash;{yearb}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=sel.config.name,
                                                      yeara=sel.config.year, yearb=sel.config.year+1)
     submit_label = 'Clear submitted preferences'
 

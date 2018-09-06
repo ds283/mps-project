@@ -1058,7 +1058,7 @@ def confirm_pclass(id):
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
-            project=config.project_class.name, yeara=config.year, yearb=config.year+1))
+            project=config.name, yeara=config.year, yearb=config.year+1))
         return home_dashboard()
 
     if current_user.faculty_data in config.golive_required:
@@ -1070,7 +1070,7 @@ def confirm_pclass(id):
         return home_dashboard()
 
     flash('You have no outstanding confirmation requests for {project} {yeara}-{yearb}'.format(
-        project=config.project_class.name, yeara=config.year, yearb=config.year+1))
+        project=config.name, yeara=config.year, yearb=config.year+1))
 
     return home_dashboard()
 

@@ -39,13 +39,13 @@
         <li {% if pane == 'selectors' %}class="active"{% endif %}><a href="{{ url_for('convenor.selectors', id=pclass.id) }}">
             Students selecting for {{ config.year+1 }}&ndash;{{ config.year+2 }}
             {% if sel_count is defined %}
-                <span class="badge">{{ sel_count }}</span>
+                <span id="selector-count" class="badge">{{ sel_count }}</span>
             {% endif %}
         </a></li>
         <li {% if pane == 'submitters' %}class="active"{% endif %}><a href="{{ url_for('convenor.submitters', id=pclass.id) }}">
             Students submitting in {{ config.year }}&ndash;{{ config.year+1 }}
             {% if sub_count is defined %}
-                <span class="badge">{{ sub_count }}</span>
+                <span id="submitter-count" class="badge">{{ sub_count }}</span>
             {% endif %}
         </a></li>
         {% if live_count is defined %}

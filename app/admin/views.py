@@ -1642,7 +1642,8 @@ def add_pclass():
                                     CATS_marking=data.CATS_marking,
                                     creator_id=current_user.id,
                                     creation_timestamp=datetime.now(),
-                                    submission_period=1)
+                                    submission_period=1,
+                                    feedback_open=False)
 
         data.convenor.add_convenorship(data)
 

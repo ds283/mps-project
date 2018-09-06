@@ -112,8 +112,7 @@ def add_blank_submitter(student, config_id, autocommit=False):
                                   owner_id=submitter.id,
                                   project_id=None,
                                   marker_id=None,
-                                  matching_record_id=None,
-                                  feedback_open=False)
+                                  matching_record_id=None)
         db.session.add(record)
 
     if autocommit:

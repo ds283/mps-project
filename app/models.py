@@ -1514,6 +1514,9 @@ class ProjectClassConfig(db.Model):
     # current submission period
     submission_period = db.Column(db.Integer())
 
+    # flag to indicate whether we are in the feedback/marking phase
+    feedback_open = db.Column(db.Boolean())
+
 
     # WORKLOAD MODEL
 
@@ -1642,6 +1645,8 @@ class ProjectClassConfig(db.Model):
 
     @property
     def submitter_lifecycle(self):
+        current_
+
         return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 
 
@@ -3094,9 +3099,6 @@ class SubmissionRecord(db.Model):
     matching_record_id = db.Column(db.Integer(), db.ForeignKey('matching_records.id'), default=None)
     matching_record = db.relationship('MatchingRecord', foreign_keys=[matching_record_id], uselist=False,
                                       backref=db.backref('submission_record', uselist=False))
-
-    # flag to indicate whether we are in the feedback/marking phase
-    feedback_open = db.Column(db.Boolean())
 
 
     # MARKER FEEDBACK TO STUDENT

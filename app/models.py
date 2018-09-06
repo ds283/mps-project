@@ -12,8 +12,9 @@ from flask import flash
 from flask_security import current_user, UserMixin, RoleMixin
 from flask_sqlalchemy import SQLAlchemy
 
-import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import func, orm
+from sqlalchemy.event import listens_for
+
 from celery import schedules
 
 from .shared.formatters import format_size, format_time
@@ -807,7 +808,7 @@ class FacultyData(db.Model):
         :return:
         """
 
-        return db.session.query(sqlalchemy.func.count(self.second_marker_for.subquery().c.id)).scalar()
+        return db.session.query(func.count(self.second_marker_for.subquery().c.id)).scalar()
 
 
     @property
@@ -1546,7 +1547,7 @@ class ProjectClassConfig(db.Model):
             if self.project_class.do_matching:
                 # check whether a matching configuration has been assigned for the current year
                 matchings = self.matching_attempts.subquery()
-                selected_matchings = db.session.query(sqlalchemy.func.count(matchings.c.id)) \
+                selected_matchings = db.session.query(func.count(matchings.c.id)) \
                     .filter(matchings.c.selected == True).scalar()
 
                 if selected_matchings > 1:
@@ -1621,12 +1622,12 @@ class ProjectClassConfig(db.Model):
 
     @property
     def number_selectors(self):
-        return db.session.query(sqlalchemy.func.count(SelectingStudent.id)).with_parent(self).scalar()
+        return db.session.query(func.count(SelectingStudent.id)).with_parent(self).scalar()
 
 
     @property
     def number_submitters(self):
-        return db.session.query(sqlalchemy.func.count(SubmittingStudent.id)).with_parent(self).scalar()
+        return db.session.query(func.count(SubmittingStudent.id)).with_parent(self).scalar()
 
 
     @property
@@ -1735,7 +1736,7 @@ class ProjectClassConfig(db.Model):
     @property
     def has_matches(self):
         query = self.matching_attempts.subquery()
-        count = db.session.query(sqlalchemy.func.count(query.c.id)) \
+        count = db.session.query(func.count(query.c.id)) \
             .filter(query.c.published == True) \
             .scalar()
 
@@ -2106,7 +2107,7 @@ class Project(db.Model):
     @property
     def is_deletable(self):
 
-        count = db.session.query(sqlalchemy.func.count(self.live_projects.subquery().c.id)).scalar()
+        count = db.session.query(func.count(self.live_projects.subquery().c.id)).scalar()
         return count == 0
 
 
@@ -2214,7 +2215,7 @@ class Project(db.Model):
             # count number of enrollment records for this marker matching the project class, and marked as active
             query = marker.enrollments.subquery()
 
-            num = db.session.query(sqlalchemy.func.count(query.c.id)) \
+            num = db.session.query(func.count(query.c.id)) \
                 .filter(query.c.pclass_id == pclass.id,
                         query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
                 .scalar()
@@ -2246,7 +2247,7 @@ class Project(db.Model):
             # count number of enrollment records for this marker matching the project class, and marked as active
             query = marker.enrollments.subquery()
 
-            num = db.session.query(sqlalchemy.func.count(query.c.id)) \
+            num = db.session.query(func.count(query.c.id)) \
                 .filter(query.c.pclass_id == pclass.id,
                         query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
                 .scalar()
@@ -2274,7 +2275,7 @@ class Project(db.Model):
         enrollments = faculty.enrollments.subquery()
         pclasses = self.project_classes.subquery()
 
-        number = db.session.query(sqlalchemy.func.count(enrollments.c.id)) \
+        number = db.session.query(func.count(enrollments.c.id)) \
             .join(User, User.id == enrollments.c.owner_id) \
             .join(pclasses, pclasses.c.id == enrollments.c.pclass_id) \
             .filter(User.active == True,
@@ -2321,7 +2322,7 @@ class Project(db.Model):
         """
 
         pcls = self.project_classes.subquery()
-        count = db.session.query(sqlalchemy.func.count(pcls.c.id)) \
+        count = db.session.query(func.count(pcls.c.id)) \
             .filter(pcls.c.id == pclass.id).scalar()
 
         if count == 0:
@@ -2621,22 +2622,22 @@ class LiveProject(db.Model):
 
     @property
     def number_bookmarks(self):
-        return db.session.query(sqlalchemy.func.count(Bookmark.id)).filter_by(liveproject_id=self.id).scalar()
+        return db.session.query(func.count(Bookmark.id)).filter_by(liveproject_id=self.id).scalar()
 
 
     @property
     def number_selections(self):
-        return db.session.query(sqlalchemy.func.count(SelectionRecord.id)).filter_by(liveproject_id=self.id).scalar()
+        return db.session.query(func.count(SelectionRecord.id)).filter_by(liveproject_id=self.id).scalar()
 
 
     @property
     def number_pending(self):
-        return db.session.query(sqlalchemy.func.count(self.confirm_waiting.subquery().c.id)).scalar()
+        return db.session.query(func.count(self.confirm_waiting.subquery().c.id)).scalar()
 
 
     @property
     def number_confirmed(self):
-        return db.session.query(sqlalchemy.func.count(self.confirmed_students.subquery().c.id)).scalar()
+        return db.session.query(func.count(self.confirmed_students.subquery().c.id)).scalar()
 
 
     def format_popularity_label(self, css_classes=None):
@@ -2710,9 +2711,9 @@ class LiveProject(db.Model):
     def satisfies_preferences(self, sel):
         prog_query = self.programmes.subquery()
 
-        pref_count = db.session.query(sqlalchemy.func.count(prog_query.c.id)).scalar()
+        pref_count = db.session.query(func.count(prog_query.c.id)).scalar()
 
-        match_count = db.session.query(sqlalchemy.func.count(prog_query.c.id)) \
+        match_count = db.session.query(func.count(prog_query.c.id)) \
             .filter(prog_query.c.id == sel.student.programme_id).scalar()
 
         if match_count == 1:
@@ -2781,12 +2782,12 @@ class SelectingStudent(db.Model):
 
     @property
     def number_pending(self):
-        return db.session.query(sqlalchemy.func.count(self.confirm_requests.subquery().c.id)).scalar()
+        return db.session.query(func.count(self.confirm_requests.subquery().c.id)).scalar()
 
 
     @property
     def number_confirmed(self):
-        return db.session.query(sqlalchemy.func.count(self.confirmed.subquery().c.id)).scalar()
+        return db.session.query(func.count(self.confirmed.subquery().c.id)).scalar()
 
 
     @property
@@ -2809,7 +2810,7 @@ class SelectingStudent(db.Model):
 
     @property
     def number_bookmarks(self):
-        return db.session.query(sqlalchemy.func.count(Bookmark.id)).with_parent(self).scalar()
+        return db.session.query(func.count(Bookmark.id)).with_parent(self).scalar()
 
 
     @property
@@ -2953,6 +2954,38 @@ class SubmittingStudent(db.Model):
     student_id = db.Column(db.Integer(), db.ForeignKey('student_data.id'))
     student = db.relationship('StudentData', foreign_keys=[student_id], uselist=False,
                               backref=db.backref('submitting', lazy='dynamic'))
+
+    # assigned project
+    project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
+                              backref=db.backref('submitting', lazy='dynamic'))
+
+    # assigned marker
+    marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
+                             backref=db.backref('marking', lazy='dynamic'))
+
+    # capture parent SelectingStudent, if one exists
+    selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'), default=None)
+    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False,
+                               backref=db.backref('submitters', lazy='dynamic'))
+
+    # capture parent MatchingRecord, if one exists
+    matching_record_id = db.Column(db.Integer(), db.ForeignKey('matching_records.id'), default=None)
+    matching_record = db.relationship('MatchingRecord', foreign_keys=[matching_record_id], uselist=False,
+                                      backref=db.backref('submitters', lazy='dynamic'))
+
+    # are the assignments published to the student?
+    published = db.Column(db.Boolean())
+
+
+    @property
+    def supervisor(self):
+        """
+        supervisor is just a pass-through to the assigned project owner
+        :return:
+        """
+        return self.project.owner
 
 
     @property
@@ -3769,14 +3802,14 @@ class MatchingAttempt(db.Model):
         CATS_supervisor = 0
         CATS_marker = 0
 
-        for item in self.records.filter_by(supervisor_id=fac.id).all():
+        for item in self.get_supervisor_records(fac).all():
             config = item.project.config
 
             if pclass_id is None or config.pclass_id == pclass_id:
                 if config.CATS_supervision is not None and config.CATS_supervision > 0:
                     CATS_supervisor += config.CATS_supervision
 
-        for item in self.records.filter_by(marker_id=fac.id).all():
+        for item in self.get_marker_records(fac).all():
             config = item.project.config
 
             if pclass_id is None or config.pclass_id == pclass_id:
@@ -3861,17 +3894,22 @@ class MatchingAttempt(db.Model):
 
 
     def get_supervisor_records(self, fac):
-        return self.records.filter_by(supervisor_id=fac.id).order_by(MatchingRecord.submission_period.asc())
+        return self.records \
+            .join(LiveProject, LiveProject.id == MatchingRecord.project_id) \
+            .filter(LiveProject.owner_id == fac.id) \
+            .order_by(MatchingRecord.submission_period.asc())
 
 
     def get_marker_records(self, fac):
-        return self.records.filter_by(marker_id=fac.id).order_by(MatchingRecord.submission_period.asc())
+        return self.records \
+            .filter_by(marker_id=fac.id) \
+            .order_by(MatchingRecord.submission_period.asc())
 
 
     def number_project_assignments(self, project):
         records = self.records.subquery()
 
-        return db.session.query(sqlalchemy.func.count(records.c.id)) \
+        return db.session.query(func.count(records.c.id)) \
             .filter(records.c.project_id == project.id).scalar()
 
 
@@ -4143,33 +4181,24 @@ class MatchingRecord(db.Model):
 
     # owning SelectingStudent
     selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False,
-                               backref=db.backref('matching_records', lazy='dynamic'))
+    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False)
 
     # submission period
     submission_period = db.Column(db.Integer())
 
     # assigned project
     project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
-    project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
-                              backref=db.backref('student_matches', lazy='dynamic'))
+    project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False)
 
     # keep copy of original project assignment, can use later to revert
     original_project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
-
-    # assigned supervisor (redundant with project, but allows us to attach a backref from the
-    # supervisor's FacultyData record)
-    supervisor_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
-    supervisor = db.relationship('FacultyData', foreign_keys=[supervisor_id], uselist=False,
-                                 backref=db.backref('supervisor_matches', lazy='dynamic'))
 
     # rank of this project in the student's selection
     rank = db.Column(db.Integer())
 
     # assigned second marker, or none if second markers are not used
     marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
-    marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
-                             backref=db.backref('marker_matches', lazy='dynamic'))
+    marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False)
 
     # keep copy of original marker assignment, can use later to revert
     original_marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
@@ -4183,6 +4212,29 @@ class MatchingRecord(db.Model):
     @orm.reconstructor
     def _reconstruct(self):
         self.error = None
+
+
+    @property
+    def supervisor(self):
+        """
+        supervisor is just a pass-through to the assigned project owner
+        :return:
+        """
+        if self.project:
+            return self.project.owner
+        return None
+
+
+    @property
+    def supervisor_id(self):
+        """
+        supervisor_id is just a pass-through to the assigned project owner
+
+        :return:
+        """
+        if self.project:
+            return self.project.owner_id
+        return None
 
 
     @property
@@ -4202,7 +4254,7 @@ class MatchingRecord(db.Model):
             return False
 
         records = self.matching_attempt.records.subquery()
-        count = db.session.query(sqlalchemy.func.count(records.c.id)) \
+        count = db.session.query(func.count(records.c.id)) \
             .filter(records.c.selector_id == self.selector_id,
                     records.c.project_id == self.project_id).scalar()
         if count != 1:
@@ -4217,7 +4269,7 @@ class MatchingRecord(db.Model):
                 return False
 
         markers = self.project.second_markers.subquery()
-        count = db.session.query(sqlalchemy.func.count(markers.c.id)) \
+        count = db.session.query(func.count(markers.c.id)) \
             .filter(markers.c.id == self.marker_id).scalar()
         if count != 1:
             self.error = 'Assigned 2nd marker is not compatible with assigned project'
@@ -4408,7 +4460,7 @@ class DatabaseSchedulerEntry(db.Model):
             return self.crontab.schedule
 
 
-@sqlalchemy.event.listens_for(DatabaseSchedulerEntry, 'before_insert')
+@listens_for(DatabaseSchedulerEntry, 'before_insert')
 def _set_entry_changed_date(mapper, connection, target):
 
     target.date_changed = datetime.utcnow()

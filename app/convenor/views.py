@@ -2711,7 +2711,7 @@ def confirm_rollover(pid, configid):
 
     title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.project_class.name,
                                                                    yeara=year, yearb=year + 1)
-    action_url = url_for('convenor.rollover', pid=pid, configid=configid)
+    action_url = url_for('convenor.rollover', pid=pid, configid=configid, url=request.referrer)
     message = 'Please confirm that you wish to rollover project class "{proj}" to ' \
               '{yeara}&ndash;{yearb}'.format(proj=config.project_class.name,
                                              yeara=year, yearb=year + 1)
@@ -2728,13 +2728,15 @@ def rollover(pid, configid):
     # pid is a ProjectClass
     pclass = ProjectClass.query.get_or_404(pid)
 
+    url = request.args.get('url', None)
+
     if not pclass.active:
         flash('{name} is not an active project class'.format(name=pclass.name), 'error')
-        return home_dashboard()
+        return redirect(url) if url is not None else home_dashboard()
 
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(pclass):
-        return home_dashboard()
+        return redirect(url) if url is not None else home_dashboard()
 
     year = get_current_year()
 
@@ -2743,12 +2745,12 @@ def rollover(pid, configid):
     config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
+        return redirect(url) if url is not None else home_dashboard()
 
     if config.id != configid or config.year == year:
         flash('A rollover request was ignored. If you are attempting to rollover the academic year and '
               'have not managed to do so, please contact a system administrator', 'error')
-        return redirect(url_for('convenor.overview', id=pid))
+        return redirect(url) if url is not None else home_dashboard()
 
     # get rollover task instance
     celery = current_app.extensions['celery']
@@ -2762,7 +2764,7 @@ def rollover(pid, configid):
     rollover.apply_async(args=(task_id, pid, configid, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 
-    return redirect(url_for('convenor.overview', id=pid))
+    return redirect(url) if url is not None else home_dashboard()
 
 
 @convenor.route('/reset_popularity_data/<int:id>')

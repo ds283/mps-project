@@ -10,7 +10,7 @@
 
 
 from ..models import db, Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent, \
-    ProjectClassConfig, EnrollmentRecord
+    ProjectClassConfig, EnrollmentRecord, SubmissionRecord
 
 
 def add_liveproject(number, project, config_id, autocommit=False):
@@ -49,7 +49,7 @@ def add_liveproject(number, project, config_id, autocommit=False):
                             enforce_capacity=item.enforce_capacity,
                             capacity=description.capacity,
                             second_markers=item.get_marker_list(config.project_class)
-                            if config.project_class.uses_marker else [],
+                            if config.uses_marker else [],
                             description=description.description,
                             reading=description.reading,
                             team=description.team,
@@ -85,7 +85,7 @@ def add_selector(student, config_id, autocommit=False):
         db.session.commit()
 
 
-def add_submitter(student, config_id, autocommit=False):
+def add_blank_submitter(student, config_id, autocommit=False):
 
     # get StudentData instance
     if isinstance(student, StudentData):
@@ -96,10 +96,24 @@ def add_submitter(student, config_id, autocommit=False):
         if item is None:
             raise KeyError('Missing database record for StudentData id={id}'.format(id=student))
 
+    config = ProjectClassConfig.query.filter_by(id=config_id).one()
+
+    # generate new SubmittingStudent instance
     submitter = SubmittingStudent(config_id=config_id,
                                   student_id=item.id,
+                                  selector_id=None,         # this record not generated from a selector
+                                  published=False,
                                   retired=False)
     db.session.add(submitter)
+    db.session.flush()
+
+    for i in range(0, config.submissions):
+        record = SubmissionRecord(submission_period=i+1,
+                                  owner_id=submitter.id,
+                                  project_id=None,
+                                  marker_id=None,
+                                  matching_record_id=None)
+        db.session.add(record)
 
     if autocommit:
         db.session.commit()

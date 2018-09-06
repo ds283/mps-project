@@ -4022,9 +4022,15 @@ def reassign_match_project(id, pid):
     if not validate_match_inspector(record.matching_attempt):
         return redirect(request.referrer)
 
+    if record.selected:
+        flash('Match "{name}" cannot be edited because an administrative user has marked it as '
+              '"selected" for use during rollover of the academic year.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     project = LiveProject.query.get_or_404(pid)
@@ -4057,9 +4063,15 @@ def reassign_match_marker(id, mid):
     if not validate_match_inspector(record.matching_attempt):
         return redirect(request.referrer)
 
+    if record.selected:
+        flash('Match "{name}" cannot be edited because an administrative user has marked it as '
+              '"selected" for use during rollover of the academic year.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     # check intended mid is in list of attached second markers
@@ -4098,16 +4110,18 @@ def publish_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be published until it has completed successfully.', 'info')
+        flash('Match "{name}" cannot be published until it has '
+              'completed successfully.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
-              'It cannot be shared with convenors.', 'info')
+              'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     record.published = True
@@ -4127,16 +4141,18 @@ def unpublish_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be published until it has completed successfully.', 'info')
+        flash('Match "{name}" cannot be published until it has '
+              'completed successfully.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
-              'It cannot be shared with convenors.', 'info')
+              'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     record.published = False
@@ -4156,16 +4172,23 @@ def select_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be selected until it has completed successfully.', 'info')
+        flash('Match "{name}" cannot be selected until it has '
+              'completed successfully.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
-        flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. ',
-              'info')
+        flash('Match "{name}" did not yield an optimal solution '
+              'and is not available for use during rollover.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not record.is_valid:
+        flash('Match "{name}" cannot be selected because it is not '
+              'in a valid state.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
     # determine whether any already-selected projects have allocations for a pclass we own
@@ -4203,16 +4226,18 @@ def deselect_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be selected until it has completed successfully.', 'info')
+        flash('Match "{name}" cannot be selected until it has '
+              'completed successfully.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
-        flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. ',
-              'info')
+        flash('Match "{name}" did not yield an optimal solution '
+              'and is not available for use during rollover.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     record.selected = False

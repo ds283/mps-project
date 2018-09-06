@@ -74,18 +74,41 @@ def _enumerate_selectors(configs):
         # however, we need to remember that for projects marked 'selection_open_to_all',
         # we should interpret failure to submit choices as an indication that the selector
         # doesn't wish to participate.
-        # So, in this case, we shouldn't forward to selector for matching.
-        selection_open_to_all = config.project_class.selection_open_to_all
+        # So, in this case, we shouldn't forward the selector for matching
+
+        # also, if the project automatically rolls over supervisor assignments,
+        # then failure to submit choices indicates that the selector is happy with their
+        # existing assignment.
+        # So in this case too, we shouldn't forward the selector for matching
+
+        open_to_all = config.selection_open_to_all
+        carryover = config.supervisor_carryover
 
         selectors = db.session.query(SelectingStudent) \
             .filter_by(retired=False, config_id=config.id).all()
 
         for item in selectors:
-            if item.has_submitted or not selection_open_to_all:
+
+            attach = False
+            if item.has_submitted:
+                # always count selectors who have submitted choices
+                attach = True
+            else:
+                if open_to_all and item.academic_year == config.start_year - 1:
+                    # interpret failure to submit as lack of interest
+                    pass
+                elif carryover and config.start_year <= item.academic_year < config.start_year + config.extent:
+                    # interpret failure to submit as evidence student is happy with existing allocation
+                    pass
+                else:
+                    # otherwise, assume a match should be generated
+                    attach = True
+
+            if attach:
                 sel_to_number[item.id] = number
                 number_to_sel[number] = item.id
 
-                submissions = config.project_class.submissions
+                submissions = config.submissions
                 multiplicity[number] = submissions if submissions >= 1 else 1
 
                 selector_dict[number] = item
@@ -336,7 +359,7 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
             idx = (i, j)
             proj = project_dict[j]
 
-            if proj.config.project_class.uses_marker:
+            if proj.config.uses_marker:
 
                 marker_query = proj.second_markers.subquery()
                 count = db.session.query(func.count(marker_query.c.id)) \
@@ -518,7 +541,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
         proj = lp_dict[j]
 
-        if proj.config.project_class.uses_marker:
+        if proj.config.uses_marker:
             prob += sum(X[(i, j)] for i in range(number_sel)) - \
                     sum(Y[(i, j)] for i in range(number_mark)) == 0
 
@@ -700,7 +723,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
                 raise RuntimeError('Inconsistent project lookup when storing PuLP solution')
 
             # assign a marker if one is used
-            if project.config.project_class.uses_marker:
+            if project.config.uses_marker:
                 # pop a 2nd marker from the back of the stack associated with this project
                 if proj_id not in markers:
                     raise RuntimeError('PuLP solution error: marker stack unexpectedly empty or missing')

@@ -59,7 +59,7 @@ def register_close_selection_tasks(celery):
         seq = chain(close_initialize.si(task_id),
                     backup.si(convenor_id, type=BackupRecord.PROJECT_CLOSE_FALLBACK, tag='close',
                               description='Rollback snapshot for '
-                                          '{proj} close {yr}'.format(proj=config.project_class.name, yr=year)),
+                                          '{proj} close {yr}'.format(proj=config.name, yr=year)),
                     selectors_group,
                     close_finalize.si(task_id, config_id, convenor_id)).on_error(close_fail.si(task_id, convenor_id))
 
@@ -89,7 +89,7 @@ def register_close_selection_tasks(celery):
         if convenor is not None:
             # send direct message to user announcing successful
             convenor.post_message('Closure of selection '
-                                  'for "{proj}" {yra}-{yrb} is now complete'.format(proj=config.project_class.name,
+                                  'for "{proj}" {yra}-{yrb} is now complete'.format(proj=config.name,
                                                                                     yra=config.year,
                                                                                     yrb=config.year+1),
                                   'success', autocommit=False)

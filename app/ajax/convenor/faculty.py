@@ -43,7 +43,7 @@ _faculty_menu = \
 
 _golive = \
 """
-{% if config.project_class.require_confirm %}
+{% if config.require_confirm %}
     {% if config.requests_issued %}
         {% if userdata in config.golive_required %}
             <span class="label label-warning"><i class="fa fa-times"></i> Outstanding</span>

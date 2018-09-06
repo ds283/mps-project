@@ -17,14 +17,15 @@ from celery import chain
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, MatchingAttempt, \
-    MatchingRecord
+    MatchingRecord, SubmittingStudent
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates
+    filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates, \
+    build_enroll_submitter_candidates
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
-from ..shared.convenor import add_selector, add_liveproject
+from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 
 from ..task_queue import register_task
@@ -598,7 +599,7 @@ def selectors_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
-    cohort_filter = request.args.get('cohort_filter')
+    cohort_filter = request.args.get('c        ohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
 
@@ -704,7 +705,7 @@ def enroll_selectors(id):
 @roles_accepted('faculty', 'admin', 'root')
 def enroll_selectors_ajax(id):
     """
-    Ajax data point for selectors view
+    Ajax data point for enroll selectors view
     :param id:
     :return:
     """
@@ -740,7 +741,7 @@ def enroll_selectors_ajax(id):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
-    return ajax.convenor.enroll_selectors.enroll_selectors_data(candidates, config)
+    return ajax.convenor.enroll_selectors_data(candidates, config)
 
 
 @convenor.route('/enroll_selector/<int:sid>/<int:configid>')
@@ -762,7 +763,7 @@ def enroll_selector(sid, configid):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if config.selection_closed:
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -786,7 +787,7 @@ def delete_selector(sid):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    if sel.config.selection_closed:
+    if sel.config.selector_lifecycle > SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual deletion of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -916,6 +917,22 @@ def submitters(id):
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    if cohort_filter is None and session.get('convenor_submitters_cohort_filter'):
+        cohort_filter = session['convenor_submitters_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_submitters_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_submitters_prog_filter'):
+        prog_filter = session['convenor_submitters_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_submitters_prog_filter'] = prog_filter
+
     # get current academic year
     current_year = get_current_year()
 
@@ -925,12 +942,26 @@ def submitters(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
+    submitters = config.submitting_students.filter_by(retired=False).all()
+
+    # build list of available cohorts and degree programmes
+    cohorts = set()
+    programmes = set()
+    for sub in submitters:
+        cohorts.add(sub.student.cohort)
+        programmes.add(sub.student.programme_id)
+
+    # build list of available programmes
+    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    progs = [ rec for rec in all_progs if rec.id in programmes ]
+
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
-    return render_template('convenor/dashboard/submitters.html', pane='submitters',
+    return render_template('convenor/dashboard/submitters.html', pane='submitters', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           cohort_filter=cohort_filter, prog_filter=prog_filter)
 
 
 @convenor.route('/submitters_ajax/<int:id>', methods=['GET', 'POST'])
@@ -953,10 +984,189 @@ def submitters_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
     # build a list of live students submitting work for evaluation in this project class
     submitters = config.submitting_students.filter_by(retired=False)
 
-    return ajax.convenor.submitters_data(submitters, config)
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
+
+    if cohort_flag or prog_flag:
+        submitters = submitters \
+            .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+
+    if cohort_flag:
+        submitters = submitters.filter(StudentData.cohort == cohort_value)
+
+    if prog_flag:
+        submitters = submitters.filter(StudentData.programme_id == prog_value)
+
+    return ajax.convenor.submitters_data(submitters.all(), config)
+
+
+@convenor.route('/enroll_submitters/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_submitters(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
+    if cohort_filter is None and session.get('convenor_sub_enroll_cohort_filter'):
+        cohort_filter = session['convenor_sub_enroll_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_sub_enroll_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_sub_enroll_prog_filter'):
+        prog_filter = session['convenor_sub_enroll_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_sub_enroll_prog_filter'] = prog_filter
+
+    candidates = build_enroll_submitter_candidates(config)
+
+    # build list of available cohorts and degree programmes
+    cohorts = set()
+    programmes = set()
+    for student in candidates:
+        cohorts.add(student.cohort)
+        programmes.add(student.programme_id)
+
+    # build list of available programmes
+    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    progs = [ rec for rec in all_progs if rec.id in programmes ]
+
+    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/enroll_submitters.html', pane='submitters', subpane='enroll',
+                           pclass=pclass, config=config, fac_data=fac_data,
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           cohort_filter=cohort_filter, prog_filter=prog_filter)
+
+
+@convenor.route('/enroll_submitters_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_submitters_ajax(id):
+    """
+    Ajax data point for enroll submitters view
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
+
+    if config.selection_closed:
+        return jsonify({})
+
+    candidates = build_enroll_submitter_candidates(config)
+
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
+
+    if cohort_flag:
+        candidates = candidates.filter(StudentData.cohort == cohort_value)
+
+    if prog_flag:
+        candidates = candidates.filter(StudentData.programme_id == prog_value)
+
+    return ajax.convenor.enroll_submitters_data(candidates, config)
+
+
+@convenor.route('/enroll_submitter/<int:sid>/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_submitter(sid, configid):
+    """
+    Manually enroll a student as a submitter
+    :param sid:
+    :param configid:
+    :return:
+    """
+
+    config = ProjectClassConfig.query.get_or_404(configid)
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+        flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
+        return redirect(request.referrer)
+
+    add_blank_submitter(sid, configid, autocommit=True)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/delete_submitter/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_submitter(sid):
+    """
+    Manually delete a submitter
+    :param sid:
+    :return:
+    """
+
+    sub = SubmittingStudent.query.get_or_404(sid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sub.config.project_class):
+        return redirect(request.referrer)
+
+    if sub.config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+        flash('Manual deletion of submitters is only possible during normal project activity', 'error')
+        return redirect(request.referrer)
+
+    try:
+        db.session.delete(sub)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not delete submitter due to a database error. Please contact a system administrator.',
+              'error')
+
+    return redirect(request.referrer)
 
 
 @convenor.route('/liveprojects/<int:id>')

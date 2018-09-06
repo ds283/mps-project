@@ -380,9 +380,6 @@ def build_enroll_selector_candidates(config):
         .join(User, StudentData.id == User.id) \
         .filter(User.active == True)
 
-    c_data = candidates.all()
-    fc_data = fyear_candidates.all()
-
     candidates = candidates.union(fyear_candidates)
 
     # build a list of existing selecting students
@@ -393,6 +390,52 @@ def build_enroll_selector_candidates(config):
     # find students in candidates who are not also in selectors
     missing = candidates.join(selectors, selectors.c.student_id == StudentData.id, isouter=True) \
         .filter(selectors.c.student_id == None)
+
+    return missing
+
+
+def build_enroll_submitter_candidates(config):
+    """
+    Build a query that returns possible candidate for manual enrollment as submitters
+    :param config:
+    :return:
+    """
+
+    # which year does the project run in, and for how long?
+    year = config.start_year
+    extent = config.extent
+
+    # earliest year: academic year in which students can be submitter
+    first_submitter_year = year
+
+    # latest year: last academic year in which students can be a submitter
+    last_submitter_year = year + (extent - 1)
+
+    # build a list of eligible students who are not already attached as submitters
+    candidates = db.session.query(StudentData) \
+        .filter(StudentData.foundation_year == False,
+                config.year - StudentData.cohort + 1 - StudentData.repeated_years >= first_submitter_year,
+                config.year - StudentData.cohort + 1 - StudentData.repeated_years <= last_submitter_year) \
+        .join(User, StudentData.id == User.id) \
+        .filter(User.active == True)
+
+    fyear_candidates = db.session.query(StudentData) \
+        .filter(StudentData.foundation_year == True,
+                config.year - StudentData.cohort - StudentData.repeated_years >= first_submitter_year,
+                config.year - StudentData.cohort - StudentData.repeated_years <= last_submitter_year) \
+        .join(User, StudentData.id == User.id) \
+        .filter(User.active == True)
+
+    candidates = candidates.union(fyear_candidates)
+
+    # build a list of existing selecting students
+    submitters = db.session.query(SubmittingStudent.student_id) \
+        .filter(SubmittingStudent.config_id == config.id,
+                ~SubmittingStudent.retired).subquery()
+
+    # find students in candidates who are not also in selectors
+    missing = candidates.join(submitters, submitters.c.student_id == StudentData.id, isouter=True) \
+        .filter(submitters.c.student_id == None)
 
     return missing
 

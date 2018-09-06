@@ -14,13 +14,13 @@ from flask import render_template_string, jsonify
 
 _enroll_action = \
 """
-<a href="{{ url_for('convenor.enroll_selector', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">
+<a href="{{ url_for('convenor.enroll_submitter', sid=s.id, configid=config.id) }}" class="btn btn-warning btn-sm">
     <i class="fa fa-plus"></i> Manually enroll
 </a>
 """
 
 
-def enroll_selectors_data(students, config):
+def enroll_submitters_data(students, config):
 
     data = [{'name': {
                 'display': s.user.name,

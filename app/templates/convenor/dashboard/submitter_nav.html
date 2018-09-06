@@ -1,0 +1,18 @@
+{% extends "convenor/dashboard/nav.html" %}
+
+{% block tabblock %}
+    {% set lifecycle = config.selector_lifecycle %}
+    {% set show_manual_enroll = (lifecycle <= config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY) %}
+    <ul class="nav nav-tabs dashboard-nav">
+        <li {% if subpane=='list' %}class="active"{% endif %}>
+            <a href="{{ url_for('convenor.submitters', id=pclass.id) }}">
+                Show submitters
+            </a>
+        </li>
+        <li {% if show_manual_enroll %}{% if subpane=='enroll' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
+            <a {% if show_manual_enroll %}href="{{ url_for('convenor.enroll_submitters', id=pclass.id) }}"{% endif %}>
+                Manual enrollment
+            </a>
+        </li>
+    </ul>
+{% endblock %}

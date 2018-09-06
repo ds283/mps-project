@@ -85,8 +85,8 @@ def register_rollover_tasks(celery):
 
         # build group of tasks to convert SelectingStudent instances from the current config into
         # SubmittingStudent instances for next year's config
-        convert_selectors = [convert_selector.s(s.id, match.id if match is not None else None) for s in
-                             config.selecting_students]
+        convert_selectors = group(convert_selector.s(s.id, match.id if match is not None else None) for s in
+                                  config.selecting_students)
 
         # build group of tasks to perform attachment of new records;
         # these will attach all new SelectingStudent instances, and mop up any eligible
@@ -152,18 +152,20 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected return type from convert group')
             return
 
-        progress_update(task_id, TaskRecord.RUNNING, 35, 'Attaching new student records...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 55, 'Attaching new student records...', autocommit=True)
+        # currently think it's safe to assume results_bundle[0] is new_config_id, since if any previous task in the chain
+        # errored and returned None, execution of the whole chain should have halted
         return results_bundle[0]
 
 
     @celery.task()
     def rollover_retire_msg(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 55, 'Retiring current student records...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 75, 'Retiring current student records...', autocommit=True)
 
 
     @celery.task()
     def rollover_reenroll_msg(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 75, 'Checking for faculty re-enrollments...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 95, 'Checking for faculty re-enrollments...', autocommit=True)
 
 
     @celery.task(bind=True)
@@ -277,7 +279,6 @@ def register_rollover_tasks(celery):
                                         live=False,
                                         live_deadline=None,
                                         selection_closed=False,
-                                        feedback_open=False,
                                         CATS_supervision=config.project_class.CATS_supervision,
                                         CATS_marking=config.project_class.CATS_marking,
                                         submission_period=1)
@@ -331,9 +332,7 @@ def register_rollover_tasks(celery):
         # get list of match records, if one exists
         match_records = None
         if match is not None:
-            match_records = db.session.query(MatchingRecord) \
-                .join(match.records) \
-                .filter(MatchingRecord.selector_id == sel_id).all()
+            match_records = match.records.filter_by(selector_id=sel_id).all()
 
             if len(match_records) == 0:
                 match_records = None
@@ -355,7 +354,8 @@ def register_rollover_tasks(celery):
                                                   owner_id=student_record.id,
                                                   project_id=rec.project_id,
                                                   marker_id=rec.marker_id,
-                                                  matching_record_id=rec.id)
+                                                  matching_record_id=rec.id,
+                                                  feedback_open=False)
                     db.session.add(sub_record)
 
                 db.session.commit()
@@ -373,7 +373,7 @@ def register_rollover_tasks(celery):
                         pass
                     else:
                         if not config.do_matching:
-                            # allocation is being done manually; generate an empty selector
+                            # allocation is being done manually; generate an empty submitter
                             add_blank_submitter(selector.student, new_config_id, autocommit=False)
                         else:
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
@@ -391,7 +391,7 @@ def register_rollover_tasks(celery):
                         if prev_record is not None:
                             student_record = SubmittingStudent(config_id=new_config_id,
                                                                student_id=selector.student_id,
-                                                               selector_id=None,
+                                                               selector_id=selector.id,
                                                                published=False,
                                                                retired=False)
                             db.session.add(student_record)
@@ -402,7 +402,8 @@ def register_rollover_tasks(celery):
                                                               owner_id=student_record.id,
                                                               project_id=rec.project_id,
                                                               marker_id=rec.marker_id,
-                                                              matching_record_id=None)
+                                                              matching_record_id=None,
+                                                              feedback_open=False)
                                 db.session.add(sub_record)
                         else:
                             # previous record is missing, for whatever reason, so generate a blank
@@ -461,9 +462,9 @@ def register_rollover_tasks(celery):
                 # (eg. could happen if the task is accidentally run twice)
 
                 # check whether a SubmittingStudent has already been generated for this student
-                count = db.session.query(func.count(SelectingStudent.id)) \
-                        .join(student.selecting) \
-                        .filter(SelectingStudent.retired == False, SelectingStudent.config_id == new_config_id).scalar()
+                query = student.selecting.subquery()
+                count = db.session.query(func.count(query.c.id)) \
+                    .filter(query.c.retired == False, query.c.config_id == new_config_id).scalar()
 
                 if count == 0:
                     add_selector(student, new_config_id, autocommit=False)
@@ -475,9 +476,9 @@ def register_rollover_tasks(celery):
                     and student.programme in config.programmes:
 
                 # check whether a SubmittingStudent has already been generated for this student
-                count = db.session.query(func.count(SubmittingStudent.id)) \
-                        .join(student.submitting) \
-                        .filter(SubmittingStudent.retired == False, SubmittingStudent.config_id == new_config_id).scalar()
+                query = student.submitting.subquery()
+                count = db.session.query(func.count(query.c.id)) \
+                    .filter(query.c.retired == False, query.c.config_id == new_config_id).scalar()
 
                 if count == 0:
                     add_blank_submitter(student, new_config_id, autocommit=False)

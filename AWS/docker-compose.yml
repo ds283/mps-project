@@ -9,7 +9,7 @@ services:
       - DATABASE_URL=mysql+pymysql://mpsproject:Bridle12Way2007@mariadb/mpsproject
       - CELERY_RESULT_BACKEND=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
-      - BACKUP_FOLDER=/home/mpsproject/backup
+      - BACKUP_FOLDER=/home/mpsproject/backups
       - SESSION_REDIS_URL=redis://redis:6379
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance

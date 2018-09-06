@@ -1638,7 +1638,6 @@ def add_pclass():
                                     requests_issued=False,
                                     live=False,
                                     selection_closed=False,
-                                    feedback_open=False,
                                     CATS_supervision=data.CATS_supervision,
                                     CATS_marking=data.CATS_marking,
                                     creator_id=current_user.id,
@@ -1944,10 +1943,14 @@ def confirm_global_rollover():
     :return:
     """
 
-    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+
     if not rollover_ready:
-        flash('Can not initiate a rollover of the academic year because not all project classes are ready',
-              'info')
+        flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
+        return redirect(request.referrer)
+
+    if rollover_in_progress:
+        flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
         return redirect(request.referrer)
 
     next_year = get_current_year() + 1
@@ -1975,10 +1978,14 @@ def perform_global_rollover():
     :return:
     """
 
-    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+
     if not rollover_ready:
-        flash('Can not initiate a rollover of the academic year because not all project classes are ready',
-              'info')
+        flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
+        return redirect(request.referrer)
+
+    if rollover_in_progress:
+        flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
         return redirect(request.referrer)
 
     next_year = get_current_year() + 1
@@ -3188,9 +3195,14 @@ def manage_matching():
     """
 
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+
     if not matching_ready:
         flash('Automated matching is not yet available because some project classes are not ready', 'error')
+        return redirect(request.referrer)
+
+    if rollover_in_progress:
+        flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(request.referrer)
 
     info = get_matching_dashboard_data()
@@ -3207,8 +3219,8 @@ def matches_ajax():
     """
 
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
-    if not matching_ready:
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+    if not matching_ready or rollover_in_progress:
         return jsonify({})
 
     current_year = get_current_year()
@@ -3225,9 +3237,14 @@ def create_match():
     :return:
     """
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+
     if not matching_ready:
-        flash('Automated matching is not yet available because some project classes are not ready', 'error')
+        flash('Automated matching is not yet available because some project classes are not ready', 'info')
+        return redirect(request.referrer)
+
+    if rollover_in_progress:
+        flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(request.referrer)
 
     info = get_matching_dashboard_data()
@@ -4022,9 +4039,10 @@ def reassign_match_project(id, pid):
     if not validate_match_inspector(record.matching_attempt):
         return redirect(request.referrer)
 
-    if record.selected:
+    if record.matching_attempt.selected:
         flash('Match "{name}" cannot be edited because an administrative user has marked it as '
-              '"selected" for use during rollover of the academic year.'.format(name=record.name), 'info')
+              '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+              'info')
         return redirect(request.referrer)
 
     year = get_current_year()
@@ -4063,9 +4081,10 @@ def reassign_match_marker(id, mid):
     if not validate_match_inspector(record.matching_attempt):
         return redirect(request.referrer)
 
-    if record.selected:
+    if record.matching_attempt.selected:
         flash('Match "{name}" cannot be edited because an administrative user has marked it as '
-              '"selected" for use during rollover of the academic year.'.format(name=record.name), 'info')
+              '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+              'info')
         return redirect(request.referrer)
 
     year = get_current_year()

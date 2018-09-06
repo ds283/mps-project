@@ -55,7 +55,7 @@
 
                 {# offer rollover of academic year if available #}
                 {% if config.year < current_year %}
-                    rollover_card(current_year, pclass, config)
+                    {{ rollover_card(current_year, pclass, config) }}
                 {% endif %}
 
                 {# provide summary #}
@@ -79,7 +79,7 @@
 
                 {% elif state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %}
 
-                    {{ selection_closed(config) }}
+                    {{ selection_closed(config, config.year < current_year) }}
 
                 {% else %}
 

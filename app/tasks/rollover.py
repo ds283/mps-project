@@ -95,8 +95,8 @@ def register_rollover_tasks(celery):
         attach_group = group(attach_records.s(s.id, year) for s in StudentData.query.all())
 
         # build group of tasks to perform retirements: these will be done *last*
-        retire_selectors = [retire_selector.si(s.id) for s in config.selecting_students]
-        retire_submitters = [retire_submitter.si(s.id) for s in config.submitting_students]
+        retire_selectors = [retire_selector.s(s.id) for s in config.selecting_students]
+        retire_submitters = [retire_submitter.s(s.id) for s in config.submitting_students]
 
         retire_group = group(retire_selectors+retire_submitters)
 
@@ -105,29 +105,48 @@ def register_rollover_tasks(celery):
             .filter(EnrollmentRecord.pclass_id == config.pclass_id,
                     or_(EnrollmentRecord.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED,
                         EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED))
-        reenroll_group = group(reenroll_faculty.si(rec.id, year) for rec in reenroll_query.all())
+        reenroll_group = group(reenroll_faculty.s(rec.id, year) for rec in reenroll_query.all())
 
         # get backup task from Celery instance
         celery = current_app.extensions['celery']
         backup = celery.tasks['app.tasks.backup.backup']
 
-        seq = chain(rollover_initialize_msg.si(task_id),
-                    backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
-                              description='Rollback snapshot for {proj} rollover to '
-                                          '{yr}'.format(proj=config.name, yr=year)),
-                    rollover_new_config_msg.si(task_id),
-                    build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id),
-                    rollover_convert_msg.s(task_id),
-                    convert_selectors,
-                    rollover_attach_msg.s(task_id),
-                    attach_group,
-                    rollover_retire_msg.si(task_id),
-                    retire_group,
-                    rollover_reenroll_msg.si(task_id),
-                    reenroll_group,
-                    rollover_finalize.si(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
+        # omit re-enroll group if it has length zero, otherwise we get an empty list passed into
+        # rollover_finalize()
 
-        seq.apply_async()
+        if len(reenroll_group) > 0:
+            seq = chain(rollover_initialize_msg.si(task_id),
+                        backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
+                                  description='Rollback snapshot for {proj} rollover to '
+                                              '{yr}'.format(proj=config.name, yr=year)),
+                        rollover_new_config_msg.si(task_id),
+                        build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id),
+                        rollover_convert_msg.s(task_id),
+                        convert_selectors,
+                        rollover_attach_msg.s(task_id),
+                        attach_group,
+                        rollover_retire_msg.s(task_id),
+                        retire_group,
+                        rollover_reenroll_msg.s(task_id),
+                        reenroll_group,
+                        rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
+            seq.apply_async()
+
+        else:
+            seq = chain(rollover_initialize_msg.si(task_id),
+                        backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
+                                  description='Rollback snapshot for {proj} rollover to '
+                                              '{yr}'.format(proj=config.name, yr=year)),
+                        rollover_new_config_msg.si(task_id),
+                        build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id),
+                        rollover_convert_msg.s(task_id),
+                        convert_selectors,
+                        rollover_attach_msg.s(task_id),
+                        attach_group,
+                        rollover_retire_msg.s(task_id),
+                        retire_group,
+                        rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
+            seq.apply_async()
 
 
     @celery.task()
@@ -158,24 +177,48 @@ def register_rollover_tasks(celery):
         return results_bundle[0]
 
 
-    @celery.task()
-    def rollover_retire_msg(task_id):
+    @celery.task(bind=True)
+    def rollover_retire_msg(self, results_bundle, task_id):
+        # need to forward new_config_id to following retire tasks
+        if not isinstance(results_bundle, list):
+            self.update('FAILURE', 'Unexpected return type from attach group')
+            return
+
         progress_update(task_id, TaskRecord.RUNNING, 75, 'Retiring current student records...', autocommit=True)
-
-
-    @celery.task()
-    def rollover_reenroll_msg(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 95, 'Checking for faculty re-enrollments...', autocommit=True)
+        return results_bundle[0]
 
 
     @celery.task(bind=True)
-    def rollover_finalize(self, task_id, convenor_id):
+    def rollover_reenroll_msg(self, results_bundle, task_id):
+        # need to forward new_config_id to following re-enroll tasks
+        if not isinstance(results_bundle, list):
+            self.update('FAILURE', 'Unexpected return type from retire group')
+            return
+
+        progress_update(task_id, TaskRecord.RUNNING, 95, 'Checking for faculty re-enrollments...', autocommit=True)
+        return results_bundle[0]
+
+
+    @celery.task(bind=True)
+    def rollover_finalize(self, results_bundle, task_id, convenor_id):
+        # need to forward new_config_id to count number of selector/submitter records
+        if not isinstance(results_bundle, list):
+            self.update('FAILURE', 'Unexpected return type from retire group')
+            return
+
+        new_config_id = results_bundle[0]
+
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Rollover complete', autocommit=False)
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
+            config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
         except SQLAlchemyError:
             raise self.retry()
+
+        if config is None:
+            self.update('FAILURE', 'Could not load ProjectClassConfig')
+            return
 
         self.update_state(state='SUCCESS')
 
@@ -183,7 +226,11 @@ def register_rollover_tasks(celery):
             # ask web page to dynamically hide the rollover panel
             convenor.send_showhide('rollover-panel', 'hide', autocommit=False)
             # send direct message to user announcing successful rollover
-            convenor.post_message('Rollover of academic year is now complete', 'success', autocommit=True)
+            convenor.post_message('Rollover of academic year is now complete', 'success', autocommit=False)
+            convenor.send_replacetext('selector-count', '{c}'.format(c=config.selecting_students.count()), autocommit=False)
+            convenor.send_replacetext('submitter-count', '{c}'.format(c=config.submitting_students.count()), autocommit=False)
+
+        db.session.commit()
 
 
     @celery.task(bind=True)
@@ -203,7 +250,7 @@ def register_rollover_tasks(celery):
 
 
     @celery.task(bind=True)
-    def retire_selector(self, sid):
+    def retire_selector(self, new_config_id, sid):
         # get current configuration record
         try:
             item = SelectingStudent.query.filter_by(id=sid).first()
@@ -224,11 +271,11 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         self.update_state(state='SUCCESS')
-
+        return new_config_id
 
 
     @celery.task(bind=True)
-    def retire_submitter(self, sid):
+    def retire_submitter(self, new_config_id, sid):
         # get current configuration record
         try:
             item = SubmittingStudent.query.filter_by(id=sid).first()
@@ -249,6 +296,7 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         self.update_state(state='SUCCESS')
+        return new_config_id
 
 
     @celery.task(bind=True)
@@ -489,10 +537,11 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         self.update_state(state='SUCCESS')
+        return new_config_id
 
 
     @celery.task(bind=True)
-    def reenroll_faculty(self, rec_id, current_year):
+    def reenroll_faculty(self, new_config_id, rec_id, current_year):
 
         # get faculty enrollment record
         try:
@@ -523,3 +572,4 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         self.update_state(state='SUCCESS')
+        return new_config_id

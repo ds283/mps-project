@@ -46,7 +46,7 @@
             </div>
             <div class="row">
                 <div class="col-xs-12">
-                    <a href="{{ url_for('convenor.selector_grid', id=config.project_class.id) }}">
+                    <a href="{{ url_for('convenor.selector_grid', id=config.pclass_id) }}">
                         Show selector grid ...
                     </a>
                 </div>
@@ -58,7 +58,7 @@
             <div class="panel-heading">Proposed matches are available to view</div>
             <div class="panel-body">
                 <p>An administrator has published one or more proposals for selector/project matches.</p>
-                <a href="{{ url_for('convenor.audit_matches', pclass_id=config.project_class.id) }}">View or edit proposed matches...</a>
+                <a href="{{ url_for('convenor.audit_matches', pclass_id=config.pclass_id) }}">View or edit proposed matches...</a>
             </div>
         </div>
     {% endif %}

@@ -85,6 +85,9 @@ def get_root_dashboard_data():
             if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
                 rollover_ready = False
 
+            if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+                rollover_ready = False
+
     return config_list, current_year, rollover_ready, matching_ready
 
 
@@ -347,8 +350,8 @@ def build_enroll_selector_candidates(config):
     """
 
     # which year does the project run in, and for how long?
-    year = config.project_class.year
-    extent = config.project_class.extent
+    year = config.start_year
+    extent = config.extent
 
     # earliest year: academic year in which students can be selectors
     first_selector_year = year - 1

@@ -40,11 +40,12 @@ def register_golive_tasks(celery):
 
         if config is None or convenor is None:
             if convenor is not None:
-                convenor.post_message('Go Live failed. Please contact a system administrator', 'danger',
+                convenor.post_message('Go Live failed because some database records could not be loaded.', 'danger',
                                       autocommit=True)
 
             if config is None:
                 self.update_state('FAILURE', meta='Could not load ProjectClassConfig record from database')
+
             if convenor is None:
                 self.update_state('FAILURE', meta='Could not load convenor User record from database')
 
@@ -52,17 +53,24 @@ def register_golive_tasks(celery):
 
         year = config.year
 
-        if config.golive_required.first() is not None:
+        if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED:
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
-                                  'because some confirmation requests are outstanding. '
-                                  'If needed, force all '
-                                  'confirmations and try again.'.format(name=config.project_class.name,
-                                                                        yra=year, yrb=year+1),
+                                  'because confirmation requests have not been '
+                                  'issued.'.format(name=config.name, yra=year, yrb=year + 1),
                                   'warning', autocommit=True)
-            self.update_state('FAILURE', meta='Some Go Live confirmations were still outstanding')
+            self.update_state('FAILURE', meta='Confirmation requests have not been issued')
             return golive_fail.apply_async(args=(task_id, convenor_id))
 
-        pclass_id = config.project_class.id
+        if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
+            convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
+                                  'because not all confirmation reponses have not been '
+                                  'received. If needed, use Force Confirm to remove any blocking '
+                                  'responses.'.format(name=config.name, yra=year, yrb=year + 1),
+                                  'warning', autocommit=True)
+            self.update_state('FAILURE', meta='Some Go Live confirmations are still outstanding')
+            return golive_fail.apply_async(args=(task_id, convenor_id))
+
+        pclass_id = config.pclass_id
 
         # build list of projects to be attached when we go live
         # note that we exclude any projects where the supervisor is not normally enrolled
@@ -86,7 +94,7 @@ def register_golive_tasks(celery):
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
                                   'because there would be no attached projects. If this is not what you expect, '
                                   'check active flags and sabbatical/exemption status for all enrolled faculty.'
-                                  ''.format(name=config.project_class.name, yra=year, yrb=year+1),
+                                  ''.format(name=config.name, yra=year, yrb=year+1),
                                   'error', autocommit=True)
             self.update_state('FAILURE', meta='No attached projects')
             return golive_fail.apply_async(args=(task_id, convenor_id))
@@ -101,7 +109,7 @@ def register_golive_tasks(celery):
         seq = chain(golive_initialize.si(task_id),
                     backup.si(convenor_id, type=BackupRecord.PROJECT_GOLIVE_FALLBACK, tag='golive',
                               description='Rollback snapshot for '
-                                          '{proj} Go Live {yr}'.format(proj=config.project_class.name, yr=year)),
+                                          '{proj} Go Live {yr}'.format(proj=config.name, yr=year)),
                     projects_group,
                     golive_finalize.si(task_id, config_id, convenor_id, deadline)).on_error(golive_fail.si(task_id, convenor_id))
 
@@ -132,7 +140,7 @@ def register_golive_tasks(celery):
         if convenor is not None:
             # send direct message to user announcing successful Go Live event
             convenor.post_message('Go Live "{proj}" '
-                                  'for {yra}-{yrb} is now complete'.format(proj=config.project_class.name,
+                                  'for {yra}-{yrb} is now complete'.format(proj=config.name,
                                                                            yra=config.year,
                                                                            yrb=config.year+1),
                                   'success', autocommit=False)
@@ -185,7 +193,7 @@ def register_golive_tasks(celery):
 
         if convenor is not None:
             convenor.post_message('Student selections for "{name}" {yeara}-{yearb} have now been'
-                                  ' closed'.format(name=config.project_class.name, yeara=config.year,
+                                  ' closed'.format(name=config.name, yeara=config.year,
                                                    yearb=config.year+1), 'success')
 
         db.session.commit()

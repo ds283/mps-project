@@ -1514,9 +1514,6 @@ class ProjectClassConfig(db.Model):
     # current submission period
     submission_period = db.Column(db.Integer())
 
-    # is feedback open for the current submission period?
-    feedback_open = db.Column(db.Boolean())
-
 
     # WORKLOAD MODEL
 
@@ -1525,6 +1522,61 @@ class ProjectClassConfig(db.Model):
 
     # CATS awarded for 2nd marking in this year
     CATS_marking = db.Column(db.Integer())
+
+
+    @property
+    def name(self):
+        return self.project_class.name
+
+
+    @property
+    def uses_marker(self):
+        return self.project_class.uses_marker
+
+
+    @property
+    def do_matching(self):
+        return self.project_class.do_matching
+
+
+    @property
+    def require_confirm(self):
+        return self.project_class.require_confirm
+
+
+    @property
+    def initial_choices(self):
+        return self.project_class.initial_choices
+
+
+    @property
+    def switch_choices(self):
+        return self.project_class.switch_choices
+
+
+    @property
+    def start_year(self):
+        return self.project_class.year
+
+
+    @property
+    def extent(self):
+        return self.project_class.extent
+
+
+    @property
+    def submissions(self):
+        return self.project_class.submissions
+
+
+    @property
+    def selection_open_to_all(self):
+        return self.project_class.selection_open_to_all
+
+
+    @property
+    def supervisor_carryover(self):
+        return self.project_class.supervisor_carryover
 
 
     @property
@@ -1544,19 +1596,16 @@ class ProjectClassConfig(db.Model):
     def selector_lifecycle(self):
         # if gone live and closed, then either we are ready to match or we are read to rollover
         if self.live and self.selection_closed:
-            if self.project_class.do_matching:
+            if self.do_matching:
+
                 # check whether a matching configuration has been assigned for the current year
-                matchings = self.matching_attempts.subquery()
-                selected_matchings = db.session.query(func.count(matchings.c.id)) \
-                    .filter(matchings.c.selected == True).scalar()
+                match = self.allocated_match
 
-                if selected_matchings > 1:
-                    raise RuntimeError('Too many selected matchings')
-
-                if selected_matchings == 1:
+                if match is not None:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
                 else:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+
             else:
                 return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
 
@@ -1566,16 +1615,45 @@ class ProjectClassConfig(db.Model):
 
         # if we get here, project is not open
 
-        if self.project_class.require_confirm:
+        if self.require_confirm:
             if self.requests_issued:
+
                 if self.golive_required.count() > 0:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
                 else:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
+
             else:
+
                 return ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
 
         return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
+
+
+    SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY = 0
+    SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY = 1
+    SUBMITTER_LIFECYCLE_READY_ROLLOVER = 2
+
+
+    @property
+    def submitter_lifecycle(self):
+        return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+
+
+    @property
+    def allocated_match(self):
+        mq = self.matching_attempts.subquery()
+
+        matchings = db.session.query(func.count(mq.c.id)) \
+            .filter(mq.c.selected == True).scalar()
+
+        if matchings > 1:
+            raise RuntimeError('Too many selected matchings')
+
+        if matchings == 0:
+            return None
+
+        return self.matching_attempts.filter_by(selected=True).first()
 
 
     @property
@@ -1715,7 +1793,7 @@ class ProjectClassConfig(db.Model):
         """
 
         # exit if called in error
-        if not self.project_class.require_confirm:
+        if not self.require_confirm:
             return
 
         # select faculty that are enrolled on this particular project class
@@ -1759,7 +1837,7 @@ class EnrollmentRecord(db.Model):
     # pointer to faculty member this record is associated with
     owner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
     owner = db.relationship('FacultyData', uselist=False, foreign_keys=[owner_id],
-                            backref=db.backref('enrollments', lazy='dynamic', cascade='all, delete-orphan'))
+                            backref=db.backref('enrollments', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # enrollment for supervision
     SUPERVISOR_ENROLLED = 1
@@ -2370,7 +2448,7 @@ class ProjectDescription(db.Model):
     # owning project
     parent_id = db.Column(db.Integer(), db.ForeignKey('projects.id'))
     parent = db.relationship('Project', foreign_keys=[parent_id], uselist=False,
-                             backref=db.backref('descriptions', lazy='dynamic', cascade='all, delete-orphan'))
+                             backref=db.backref('descriptions', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # which project classes are associated with this description?
     project_classes = db.relationship('ProjectClass', secondary=description_pclasses, lazy='dynamic',
@@ -2736,10 +2814,10 @@ class SelectingStudent(db.Model):
     __tablename__ = 'selecting_students'
 
 
-    # surrogate key for (config_id, user_id) - need to ensure these remain unique!
     id = db.Column(db.Integer(), primary_key=True)
 
-    retired = db.Column(db.Integer())
+    # retired flag
+    retired = db.Column(db.Boolean())
 
     # key to ProjectClass config record that identifies this year and pclass
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
@@ -2833,7 +2911,7 @@ class SelectingStudent(db.Model):
         Determine whether this is the initial selection or a switch
         :return:
         """
-        return self.academic_year == self.config.project_class.year - 1
+        return self.academic_year == self.config.start_year - 1
 
 
     @property
@@ -2940,10 +3018,10 @@ class SubmittingStudent(db.Model):
     __tablename__ = 'submitting_students'
 
 
-    # surrogate key for (config_id, user_id) - need to ensure these remain unique!
     id = db.Column(db.Integer(), primary_key=True)
 
-    retired = db.Column(db.Integer())
+    # retired flag
+    retired = db.Column(db.Boolean())
 
     # key to ProjectClass config record that identifies this year and pclass
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
@@ -2955,37 +3033,13 @@ class SubmittingStudent(db.Model):
     student = db.relationship('StudentData', foreign_keys=[student_id], uselist=False,
                               backref=db.backref('submitting', lazy='dynamic'))
 
-    # assigned project
-    project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
-    project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
-                              backref=db.backref('submitting', lazy='dynamic'))
-
-    # assigned marker
-    marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
-    marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
-                             backref=db.backref('marking', lazy='dynamic'))
-
     # capture parent SelectingStudent, if one exists
     selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'), default=None)
     selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False,
                                backref=db.backref('submitters', lazy='dynamic'))
 
-    # capture parent MatchingRecord, if one exists
-    matching_record_id = db.Column(db.Integer(), db.ForeignKey('matching_records.id'), default=None)
-    matching_record = db.relationship('MatchingRecord', foreign_keys=[matching_record_id], uselist=False,
-                                      backref=db.backref('submitters', lazy='dynamic'))
-
     # are the assignments published to the student?
     published = db.Column(db.Boolean())
-
-
-    @property
-    def supervisor(self):
-        """
-        supervisor is just a pass-through to the assigned project owner
-        :return:
-        """
-        return self.project.owner
 
 
     @property
@@ -3000,6 +3054,71 @@ class SubmittingStudent(db.Model):
     @property
     def academic_year_label(self):
         return self.student.academic_year_label(self.config.year)
+
+
+class SubmissionRecord(db.Model):
+    """
+    Collect details for a student submission
+    """
+
+    __tablename__ = "submission_records"
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # submission period this record is associated with
+    submission_period = db.Column(db.Integer())
+
+    # id of owning SubmittingStudent
+    owner_id = db.Column(db.Integer(), db.ForeignKey('submitting_students.id'))
+    owner = db.relationship('SubmittingStudent', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('records', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # assigned project
+    project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'), default=None)
+    project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
+                              backref=db.backref('submission_records', lazy='dynamic'))
+
+    # assigned marker
+    marker_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), default=None)
+    marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
+                             backref=db.backref('marking_records', lazy='dynamic'))
+
+    # capture parent MatchingRecord, if one exists
+    matching_record_id = db.Column(db.Integer(), db.ForeignKey('matching_records.id'), default=None)
+    matching_record = db.relationship('MatchingRecord', foreign_keys=[matching_record_id], uselist=False,
+                                      backref=db.backref('submission_record', uselist=False))
+
+
+    # MARKER FEEDBACK TO STUDENT
+
+    # supervisor positive feedback
+    supervisor_positive = db.Column(db.Text())
+
+    # supervisor negative feedback
+    supervisor_negative = db.Column(db.Text())
+
+    # marker positive feedback
+    marker_positive = db.Column(db.Text())
+
+    # marker negative feedback
+    marker_negative = db.Column(db.Text())
+
+
+    # STUDENT FEEDBACK
+
+    # free-form feedback field
+    student_feedback = db.Column(db.Text())
+
+
+    @property
+    def supervisor(self):
+        """
+        supervisor is just a pass-through to the assigned project owner
+        :return:
+        """
+        return self.project.owner
 
 
 class Bookmark(db.Model):
@@ -3018,7 +3137,7 @@ class Bookmark(db.Model):
     # removed from the database
     owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
     owner = db.relationship('SelectingStudent', foreign_keys=[owner_id], uselist=False,
-                           backref=db.backref('bookmarks', lazy='dynamic', cascade='all, delete-orphan'))
+                            backref=db.backref('bookmarks', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # LiveProject we are linking to
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
@@ -3055,7 +3174,7 @@ class SelectionRecord(db.Model):
     # removed from the database
     owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
     owner = db.relationship('SelectingStudent', foreign_keys=[owner_id], uselist=False,
-                           backref=db.backref('selections', lazy='dynamic', cascade='all, delete-orphan'))
+                           backref=db.backref('selections', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # LiveProject we are linking to
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
@@ -3167,7 +3286,7 @@ class SelectionRecord(db.Model):
                     count += 1
 
             # if too many, remove one
-            target = self.owner.config.project_class.submissions
+            target = self.owner.config.submissions
             if count >= target:
                 for item in self.owner.selections:
                     if item.id != self.id and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
@@ -3471,12 +3590,12 @@ class PopularityRecord(db.Model):
     # tag LiveProject to which this record applies
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
     liveproject = db.relationship('LiveProject', uselist=False,
-                                  backref=db.backref('popularity_data', lazy='dynamic', cascade='all, delete-orphan'))
+                                  backref=db.backref('popularity_data', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # tag ProjectClassConfig to which this record applies
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
     config = db.relationship('ProjectClassConfig', uselist=False,
-                             backref=db.backref('popularity_data', lazy='dynamic', cascade='all, delete-orphan'))
+                             backref=db.backref('popularity_data', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # date stamp for this calculation
     datestamp = db.Column(db.DateTime(), index=True)
@@ -3581,9 +3700,9 @@ class MatchingAttempt(db.Model):
 
     # pclasses that are part of this match
     config_members = db.relationship('ProjectClassConfig', secondary=match_configs, lazy='dynamic',
-                                      backref=db.backref('matching_attempts', lazy='dynamic'))
+                                     backref=db.backref('matching_attempts', lazy='dynamic'))
 
-    # flag matching attempts that have been published to convenors for comments
+    # flag whether this attempt has been published to convenors for comments/editing
     published = db.Column(db.Boolean())
 
 
@@ -3813,7 +3932,7 @@ class MatchingAttempt(db.Model):
             config = item.project.config
 
             if pclass_id is None or config.pclass_id == pclass_id:
-                if config.project_class.uses_marker:
+                if config.uses_marker:
                     if config.CATS_marking is not None and config.CATS_marking > 0:
                         CATS_marker += config.CATS_marking
 
@@ -4177,7 +4296,7 @@ class MatchingRecord(db.Model):
     # owning MatchingAttempt
     matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
     matching_attempt = db.relationship('MatchingAttempt', foreign_keys=[matching_id], uselist=False,
-                                       backref=db.backref('records', lazy='dynamic'))
+                                       backref=db.backref('records', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # owning SelectingStudent
     selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))

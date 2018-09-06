@@ -118,7 +118,7 @@ def get_convenor_dashboard_data(pclass, config):
         .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
 
     sub_count = db.session.query(func.count(SubmittingStudent.id)) \
-        .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
+        .filter(~SubmittingStudent.retired, SubmittingStudent.config_id == config.id).scalar()
 
     live_count = db.session.query(func.count(LiveProject.id)) \
         .filter(LiveProject.config_id == config.id).scalar()

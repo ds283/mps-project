@@ -337,7 +337,8 @@ def register_rollover_tasks(celery):
                                         selection_closed=False,
                                         CATS_supervision=config.project_class.CATS_supervision,
                                         CATS_marking=config.project_class.CATS_marking,
-                                        submission_period=1)
+                                        submission_period=1,
+                                        feedback_open=False)
 
         try:
             db.session.add(new_config)
@@ -410,8 +411,7 @@ def register_rollover_tasks(celery):
                                                   owner_id=student_record.id,
                                                   project_id=rec.project_id,
                                                   marker_id=rec.marker_id,
-                                                  matching_record_id=rec.id,
-                                                  feedback_open=False)
+                                                  matching_record_id=rec.id)
                     db.session.add(sub_record)
 
                 db.session.commit()
@@ -458,8 +458,7 @@ def register_rollover_tasks(celery):
                                                               owner_id=student_record.id,
                                                               project_id=rec.project_id,
                                                               marker_id=rec.marker_id,
-                                                              matching_record_id=None,
-                                                              feedback_open=False)
+                                                              matching_record_id=None)
                                 db.session.add(sub_record)
                         else:
                             # previous record is missing, for whatever reason, so generate a blank

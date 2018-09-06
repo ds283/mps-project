@@ -62,6 +62,7 @@ def get_root_dashboard_data():
 
     matching_ready = True
     rollover_ready = True
+    rollover_in_progress = False
 
     # loop through all active project classes
     for pclass in pcs:
@@ -79,6 +80,11 @@ def get_root_dashboard_data():
 
             config_list.append((config, total_capacity, total_capacity_bounded))
 
+            # if MainConfig year has already been advanced, then we shouldn't offer
+            # matching or rollover options on the dashboard
+            if config.year < current_year:
+                rollover_in_progress = True
+
             if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
                 matching_ready = False
 
@@ -88,7 +94,7 @@ def get_root_dashboard_data():
             if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
                 rollover_ready = False
 
-    return config_list, current_year, rollover_ready, matching_ready
+    return config_list, current_year, rollover_ready, matching_ready, rollover_in_progress
 
 
 def get_convenor_dashboard_data(pclass, config):

@@ -1,4 +1,4 @@
-{% macro selection_closed(config) %}
+{% macro selection_closed(config, rollover_in_progress) %}
     <div class="panel panel-primary">
         <div class="panel-heading"><strong>Student choices are now closed</strong></div>
         <div class="panel-body">
@@ -53,7 +53,7 @@
             </div>
         </div>
     </div>
-    {% if config.has_matches %}
+    {% if config.has_matches and not rollover_in_progress %}
         <div class="panel panel-danger">
             <div class="panel-heading">Proposed matches are available to view</div>
             <div class="panel-body">

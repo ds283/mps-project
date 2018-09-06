@@ -1580,6 +1580,11 @@ class ProjectClassConfig(db.Model):
 
 
     @property
+    def programmes(self):
+        return self.project_class.programmes
+
+
+    @property
     def _selection_open(self):
         return self.live and not self.selection_closed
 
@@ -3089,6 +3094,9 @@ class SubmissionRecord(db.Model):
     matching_record_id = db.Column(db.Integer(), db.ForeignKey('matching_records.id'), default=None)
     matching_record = db.relationship('MatchingRecord', foreign_keys=[matching_record_id], uselist=False,
                                       backref=db.backref('submission_record', uselist=False))
+
+    # flag to indicate whether we are in the feedback/marking phase
+    feedback_open = db.Column(db.Boolean())
 
 
     # MARKER FEEDBACK TO STUDENT

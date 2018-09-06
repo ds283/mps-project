@@ -1,6 +1,6 @@
 {% macro root_dashboard_card(root_dash_data) %}
 
-    {% set config_list, current_year, rollover_ready, matching_ready = root_dash_data %}
+    {% set config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = root_dash_data %}
 
     <div class="well">
         <p><span class="dashboard-project-title">System administrator dashboard</span></p>
@@ -50,10 +50,12 @@
                                 <span class="label label-success"><i class="fa fa-check"></i> Matching ready</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
                                 <span class="label label-primary">Selection closed</span>
-                                {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                                {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER and not (config.year < current_year) %}
                                     <span class="label label-success"><i class="fa fa-check"></i> Rollover ready</span>
                                 {% else %}
-                                    <span class="label label-success"><i class="fa fa-check"></i> Matching selected</span>
+                                    {% if config.do_matching %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Matching selected</span>
+                                    {% endif %}
                                 {% endif %}
                             {% else %}
                                 <span class="label label-danger">Unknown selector lifecycle state</span>
@@ -84,11 +86,11 @@
             </div>
         </div>
 
-        {% if matching_ready %}
+        {% if matching_ready and not rollover_in_progress %}
             <div class="panel panel-warning">
                 <div class="panel-heading">Perform automatic matching</div>
                 <div class="panel-body">
-                    <div class="row">
+                    <div class="row vertical-bottom">
                         <div class="col-xs-8">
                             All projects that participate in automatic matching are now ready.
                         </div>
@@ -104,11 +106,11 @@
             </div>
         {% endif %}
 
-        {% if rollover_ready %}
+        {% if rollover_ready and not rollover_in_progress %}
             <div class="panel panel-danger">
                 <div class="panel-heading">Rollover academic year</div>
                 <div class="panel-body">
-                    <div class="row">
+                    <div class="row vertical-bottom">
                         <div class="col-xs-8">
                             All projects are now in a rollover state.
                         </div>

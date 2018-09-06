@@ -740,7 +740,7 @@ def enroll_selectors_ajax(id):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
-    return app.ajax.convenor.enroll_selectors.enroll_selectors_data(candidates, config)
+    return ajax.convenor.enroll_selectors.enroll_selectors_data(candidates, config)
 
 
 @convenor.route('/enroll_selector/<int:sid>/<int:configid>')
@@ -2696,25 +2696,24 @@ def student_clear_bookmarks(sid):
     return redirect(request.referrer)
 
 
-@convenor.route('/confirm_rollover/<int:pid>/<int:configid>')
+@convenor.route('/confirm_rollover/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
-def confirm_rollover(pid, configid):
+def confirm_rollover(id):
+
+    # pid is a ProjectClass
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # validate that logged-in user is a convenor or suitable admin for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
 
     year = get_current_year()
 
-    # do nothing if a rollover has already been performed (try to make action idempotent in case
-    # accidentally invoked twice)
-    config = ProjectClassConfig.query.filter_by(pclass_id=pid).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
-
-    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name,
-                                                                   yeara=year, yearb=year + 1)
-    action_url = url_for('convenor.rollover', pid=pid, configid=configid, url=request.referrer)
-    message = 'Please confirm that you wish to rollover project class "{proj}" to ' \
-              '{yeara}&ndash;{yearb}'.format(proj=config.name,
-                                             yeara=year, yearb=year + 1)
+    title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
+    action_url = url_for('convenor.rollover', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to rollover project class "{proj}" to ' \
+              '{yeara}&ndash;{yearb}</p>' \
+              '<p>This action cannot be undone.</p>'.format(proj=config.name, yeara=year, yearb=year + 1)
     submit_label = 'Rollover to {yr}'.format(yr=year)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
@@ -2735,7 +2734,7 @@ def rollover(id):
         return redirect(url) if url is not None else home_dashboard()
 
     year = get_current_year()
-    if config.year != year:
+    if config.year == year:
         flash('A rollover request was ignored. If you are attempting to rollover the academic year and '
               'have not managed to do so, please contact a system administrator', 'error')
         return redirect(url) if url is not None else home_dashboard()
@@ -2752,7 +2751,7 @@ def rollover(id):
     # register rollover as a new background task and push it to the celery scheduler
     task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year+1),
                             owner=current_user,
-                            description='Perform rollover of "{proj}" to new academic year'.format(proj=pclass.name))
+                            description='Perform rollover of "{proj}" to new academic year'.format(proj=config.name))
     rollover.apply_async(args=(task_id, id, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 

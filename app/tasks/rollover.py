@@ -114,39 +114,27 @@ def register_rollover_tasks(celery):
         # omit re-enroll group if it has length zero, otherwise we get an empty list passed into
         # rollover_finalize()
 
-        if len(reenroll_group) > 0:
-            seq = chain(rollover_initialize_msg.si(task_id),
-                        backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
-                                  description='Rollback snapshot for {proj} rollover to '
-                                              '{yr}'.format(proj=config.name, yr=year)),
-                        rollover_new_config_msg.si(task_id),
-                        build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id),
-                        rollover_convert_msg.s(task_id),
-                        convert_selectors,
-                        rollover_attach_msg.s(task_id),
-                        attach_group,
-                        rollover_retire_msg.s(task_id),
-                        retire_group,
-                        rollover_reenroll_msg.s(task_id),
-                        reenroll_group,
-                        rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
-            seq.apply_async()
+        seq = chain(rollover_initialize_msg.si(task_id),
+                    backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
+                              description='Rollback snapshot for {proj} rollover to '
+                                          '{yr}'.format(proj=config.name, yr=year)),
+                    rollover_new_config_msg.si(task_id),
+                    build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id))
 
-        else:
-            seq = chain(rollover_initialize_msg.si(task_id),
-                        backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
-                                  description='Rollback snapshot for {proj} rollover to '
-                                              '{yr}'.format(proj=config.name, yr=year)),
-                        rollover_new_config_msg.si(task_id),
-                        build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id),
-                        rollover_convert_msg.s(task_id),
-                        convert_selectors,
-                        rollover_attach_msg.s(task_id),
-                        attach_group,
-                        rollover_retire_msg.s(task_id),
-                        retire_group,
-                        rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
-            seq.apply_async()
+        if len(convert_selectors) > 0:
+            seq = seq | rollover_convert_msg.s(task_id) | convert_selectors
+
+        if len(attach_group) > 0:
+            seq = seq | rollover_attach_msg.s(task_id) | attach_group
+
+        if len(retire_group) > 0:
+            seq = seq | rollover_retire_msg.s(task_id) | retire_group
+
+        if len(reenroll_group) > 0:
+            seq = seq | rollover_reenroll_msg.s(task_id) | reenroll_group
+
+        seq = (seq | rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
+        seq.apply_async()
 
 
     @celery.task()
@@ -158,55 +146,75 @@ def register_rollover_tasks(celery):
     def rollover_new_config_msg(task_id):
         progress_update(task_id, TaskRecord.RUNNING, 15, 'Generating database records for new academic year...', autocommit=True)
 
-    @celery.task()
-    def rollover_convert_msg(new_config_id, task_id):
+
+    @celery.task(bind=True)
+    def rollover_convert_msg(self, results, task_id):
+        # currently think it's safe to assume results_bundle[0] is new_config_id, since if any previous task in the chain
+        # errored and returned None, execution of the whole chain should have halted
+
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
+
         progress_update(task_id, TaskRecord.RUNNING, 35, 'Converting selector records into submitter records...', autocommit=True)
         return new_config_id
 
 
     @celery.task(bind=True)
-    def rollover_attach_msg(self, results_bundle, task_id):
-        # need to forward new_config_id to following attach tasks
-        if not isinstance(results_bundle, list):
-            self.update('FAILURE', 'Unexpected return type from convert group')
-            return
+    def rollover_attach_msg(self, results, task_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 55, 'Attaching new student records...', autocommit=True)
-        # currently think it's safe to assume results_bundle[0] is new_config_id, since if any previous task in the chain
-        # errored and returned None, execution of the whole chain should have halted
-        return results_bundle[0]
+        return new_config_id
 
 
     @celery.task(bind=True)
-    def rollover_retire_msg(self, results_bundle, task_id):
-        # need to forward new_config_id to following retire tasks
-        if not isinstance(results_bundle, list):
-            self.update('FAILURE', 'Unexpected return type from attach group')
-            return
+    def rollover_retire_msg(self, results, task_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 75, 'Retiring current student records...', autocommit=True)
-        return results_bundle[0]
+        return new_config_id
 
 
     @celery.task(bind=True)
-    def rollover_reenroll_msg(self, results_bundle, task_id):
-        # need to forward new_config_id to following re-enroll tasks
-        if not isinstance(results_bundle, list):
-            self.update('FAILURE', 'Unexpected return type from retire group')
-            return
+    def rollover_reenroll_msg(self, results, task_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 95, 'Checking for faculty re-enrollments...', autocommit=True)
-        return results_bundle[0]
+        return new_config_id
 
 
     @celery.task(bind=True)
-    def rollover_finalize(self, results_bundle, task_id, convenor_id):
-        # need to forward new_config_id to count number of selector/submitter records
-        if not isinstance(results_bundle, list):
-            self.update('FAILURE', 'Unexpected return type from retire group')
-            return
-
-        new_config_id = results_bundle[0]
+    def rollover_finalize(self, results, task_id, convenor_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Rollover complete', autocommit=False)
 

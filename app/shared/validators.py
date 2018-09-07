@@ -161,3 +161,17 @@ def validate_submission_marker(record):
 
     flash('Only 2nd markers can perform this operation', 'error')
     return False
+
+
+def validate_submission_viewable(record):
+    """
+    Validate that the logged-in user is entitled to view a SubmissionRecord instance
+    :param record:
+    :return:
+    """
+
+    if record.project.owner_id == current_user.id or record.marker_id == current_user.id:
+        return True
+
+    flash('Only supervisors or 2nd markers can perform this operation', 'error')
+    return False

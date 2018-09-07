@@ -78,7 +78,15 @@
                                             {{ rec.project.name }} (No. {{ rec.project.number }})
                                         </a>
                                         {% if rec.supervisor_submitted %}
-                                            <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                            <div>
+                                                <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                            </div>
+                                        {% else %}
+                                            {% if period.closed %}
+                                                <div>
+                                                    <span class="label label-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                                </div>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                     <td>
@@ -131,7 +139,15 @@
                                             {{ rec.project.name }} (No. {{ rec.project.number }})
                                         </a>
                                         {% if rec.marker_submitted %}
-                                            <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                            <div>
+                                                <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                            </div>
+                                        {% else %}
+                                            {% if period.closed %}
+                                                <div>
+                                                    <span class="label label-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                                </div>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                     <td>

@@ -1147,7 +1147,9 @@ def enroll_submitter(sid, configid):
         flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
         return redirect(request.referrer)
 
-    add_blank_submitter(sid, configid, autocommit=True)
+    old_config = ProjectClassConfig.query(pclass_id=config.pclass_id, year=config.year-1).first()
+
+    add_blank_submitter(sid, old_config.id if old_config is not None else None, configid, autocommit=True)
 
     return redirect(request.referrer)
 

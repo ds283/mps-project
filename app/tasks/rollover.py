@@ -85,14 +85,14 @@ def register_rollover_tasks(celery):
 
         # build group of tasks to convert SelectingStudent instances from the current config into
         # SubmittingStudent instances for next year's config
-        convert_selectors = group(convert_selector.s(s.id, match.id if match is not None else None) for s in
+        convert_selectors = group(convert_selector.s(current_id, s.id, match.id if match is not None else None) for s in
                                   config.selecting_students)
 
         # build group of tasks to perform attachment of new records;
         # these will attach all new SelectingStudent instances, and mop up any eligible
         # SubmittingStudent instances that weren't automatically created by conversion of
         # SelectingStudent instances
-        attach_group = group(attach_records.s(s.id, year) for s in StudentData.query.all())
+        attach_group = group(attach_records.s(current_id, s.id, year) for s in StudentData.query.all())
 
         # build group of tasks to perform retirements: these will be done *last*
         retire_selectors = [retire_selector.s(s.id) for s in config.selecting_students]
@@ -365,7 +365,7 @@ def register_rollover_tasks(celery):
 
 
     @celery.task(bind=True)
-    def convert_selector(self, new_config_id, sel_id, match_id):
+    def convert_selector(self, new_config_id, old_config_id, sel_id, match_id):
         match = None
 
         # get current configuration records
@@ -424,7 +424,19 @@ def register_rollover_tasks(celery):
                                                   owner_id=student_record.id,
                                                   project_id=rec.project_id,
                                                   marker_id=rec.marker_id,
-                                                  matching_record_id=rec.id)
+                                                  selection_config_id=old_config_id,
+                                                  matching_record_id=rec.id,
+                                                  supervisor_positive=None,
+                                                  supervisor_negative=None,
+                                                  supervisor_submitted=False,
+                                                  supervisor_timestamp=None,
+                                                  marker_positive=None,
+                                                  marker_negative=None,
+                                                  marker_submitted=False,
+                                                  marker_timestamp=None,
+                                                  student_feedback=None,
+                                                  acknowledge_feedback=False,
+                                                  faculty_response=None)
                     db.session.add(sub_record)
 
                 db.session.commit()
@@ -443,7 +455,7 @@ def register_rollover_tasks(celery):
                     else:
                         if not config.do_matching:
                             # allocation is being done manually; generate an empty submitter
-                            add_blank_submitter(selector.student, new_config_id, autocommit=False)
+                            add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
                         else:
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
                             return
@@ -471,16 +483,28 @@ def register_rollover_tasks(celery):
                                                               owner_id=student_record.id,
                                                               project_id=rec.project_id,
                                                               marker_id=rec.marker_id,
-                                                              matching_record_id=None)
+                                                              selection_config_id=old_config_id,
+                                                              matching_record_id=None,
+                                                              supervisor_positive=None,
+                                                              supervisor_negative=None,
+                                                              supervisor_submitted=False,
+                                                              supervisor_timestamp=None,
+                                                              marker_positive=None,
+                                                              marker_negative=None,
+                                                              marker_submitted=False,
+                                                              marker_timestamp=None,
+                                                              student_feedback=None,
+                                                              acknowledge_feedback=False,
+                                                              faculty_response=None)
                                 db.session.add(sub_record)
                         else:
                             # previous record is missing, for whatever reason, so generate a blank
-                            add_blank_submitter(selector.student, new_config_id, autocommit=False)
+                            add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
 
                     else:
                         if not config.do_matching:
                             # allocation is being done manually; generate an empty selector
-                            add_blank_submitter(selector.student, new_config_id, autocommit=False)
+                            add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
                         else:
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
                             return
@@ -498,7 +522,7 @@ def register_rollover_tasks(celery):
 
 
     @celery.task(bind=True)
-    def attach_records(self, new_config_id, sid, current_year):
+    def attach_records(self, new_config_id, old_config_id, sid, current_year):
         # get current configuration record
         try:
             config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
@@ -549,7 +573,7 @@ def register_rollover_tasks(celery):
                     .filter(query.c.retired == False, query.c.config_id == new_config_id).scalar()
 
                 if count == 0:
-                    add_blank_submitter(student, new_config_id, autocommit=False)
+                    add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
 
             db.session.commit()
         except SQLAlchemyError:

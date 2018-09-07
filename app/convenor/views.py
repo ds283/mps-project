@@ -269,9 +269,11 @@ def overview(id):
     feedback_form = OpenFeedbackForm(request.form)
 
     if config.requests_issued:
+        issue_form.request_deadline.label.text = 'The current deadline for responses is'
         issue_form.requests_issued.label.text = 'Save changes'
 
     if period.feedback_open:
+        feedback_form.feedback_deadline.label.text = 'The current deadline for feedback is'
         feedback_form.open_feedback.label.text = 'Save changes'
 
     if request.method == 'GET':
@@ -2387,22 +2389,15 @@ def remove_all_markers(proj_id, pclass_id):
 def issue_confirm_requests(id):
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
-
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
     if issue_form.is_submitted() and issue_form.requests_issued.data is True:
-
         # set request deadline and issue requests if needed
 
         # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
@@ -2484,24 +2479,16 @@ def unofferable_ajax():
 def force_confirm_all(id):
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
-
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     for item in config.golive_required.all():
-
         config.golive_required.remove(item)
 
     db.session.commit()
-
     flash('All outstanding confirmation requests have been removed.', 'success')
 
     return redirect(request.referrer)
@@ -3312,3 +3299,73 @@ def audit_matches_ajax(pclass_id):
     matches = config.matching_attempts.filter_by(published=True).all()
 
     return ajax.admin.matches_data(matches, text='matching audit dashboard', url=url_for('convenor.audit_matches', pclass_id=pclass_id))
+
+
+@convenor.route('/open_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def open_feedback(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
+            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
+        return redirect(request.referrer)
+
+    feedback_form = OpenFeedbackForm(request.form)
+
+    if feedback_form.is_submitted() and feedback_form.open_feedback.data is True:
+        # set feedback deadline and mark feedback open
+
+        period = config.periods.filter_by(submission_period=config.submission_period).first()
+
+        period.feedback_open = True
+        period.feedback_deadline = feedback_form.feedback_deadline.data
+
+        if period.feedback_id is None:
+            period.feedback_id = current_user.id
+
+        if period.feedback_timestamp is None:
+            period.feedback_timestamp = datetime.now()
+
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/close_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def close_feedback(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be closed at this stage in the project lifecycle.', 'info')
+        return redirect(request.referrer)
+
+    if config.submission_period > config.submissions:
+        flash('Feedback close request ignored because "{name}" is already in a rollover state.'.format(name=config.name),
+              'info')
+        return request.referrer
+
+    period = config.periods.filter_by(submission_period=config.submission_period).first()
+
+    period.closed = True
+    period.closed_id = current_user.id
+    period.closed_timestamp = datetime.now()
+
+    db.session.commit()
+
+    return redirect(request.referrer)

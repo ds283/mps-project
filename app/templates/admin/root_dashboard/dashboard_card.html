@@ -32,6 +32,7 @@
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_MARKING_FEEDBACK_ACTIVITY %}
                                 <span class="label label-warning">Marking/feedback #{{ config.submission_period }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                                <span class="label label-success">Submissions complete</span>
                             {% else %}
                                 <span class="label label-danger">Unknown submitted lifecycle state</span>
                             {% endif %}

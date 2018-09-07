@@ -8,7 +8,7 @@
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
 {% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity %}
 {% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking %}
-{% from "convenor/dashboard/overview_cards/period_closed.html" import period_closed %}
+{% from "convenor/dashboard/overview_cards/submitter_rollover.html" import submitter_rollover %}
 
 
 {% block scripts %}
@@ -69,16 +69,16 @@
                 {% set state = config.selector_lifecycle %}
                 {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
 
-                    {{ issue_confirmations(pclass, issue_form, capacity_data, sel_count) }}
+                    {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}
 
                 {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
 
                     {# if we get here then we can assume requests have been issued because of the outermost if #}
-                    {{ waiting_confirmations(pclass, config, issue_form, capacity_data, sel_count) }}
+                    {{ waiting_confirmations(config, issue_form, capacity_data, sel_count) }}
 
                 {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
 
-                    {{ golive(pclass, config, golive_form, capacity_data, sel_count) }}
+                    {{ golive(config, golive_form, capacity_data, sel_count) }}
 
                 {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
 
@@ -113,9 +113,9 @@
 
                     {{ feedback_marking(config, feedback_form) }}
 
-                {% elif state == config.SUBMITTER_LIFECYCLE_READY_ADVANCE_PERIOD or state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                {% elif state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
 
-                    {{ period_closed(config) }}
+                    {{ submitter_rollover(config) }}
 
                 {% else %}
 

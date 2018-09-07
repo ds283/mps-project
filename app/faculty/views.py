@@ -24,7 +24,7 @@ from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescri
 
 from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_second_markers
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
-    validate_submission_supervisor, validate_submission_marker
+    validate_submission_supervisor, validate_submission_marker, validate_submission_viewable
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
@@ -1232,6 +1232,20 @@ def supervisor_edit_feedback(id):
     if not validate_submission_supervisor(record):
         return redirect(request.referrer)
 
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if period.closed:
+        flash('Can not edit feedback for this submission because the convenor has closed this submission period.',
+              'error')
+        return redirect(request.referrer)
+
+    if not period.feedback_open:
+        flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
+              'period for feedback and marking.',
+              'error')
+        return redirect(request.referrer)
+
     form = SupervisorFeedbackForm(request.form)
 
     url = request.args.get('url', None)
@@ -1270,6 +1284,20 @@ def marker_edit_feedback(id):
     record = SubmissionRecord.query.get_or_404(id)
 
     if not validate_submission_marker(record):
+        return redirect(request.referrer)
+
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if period.closed:
+        flash('Can not edit feedback for this submission because the convenor has closed this submission period.',
+              'error')
+        return redirect(request.referrer)
+
+    if not period.feedback_open:
+        flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
+              'period for feedback and marking.',
+              'error')
         return redirect(request.referrer)
 
     form = MarkerFeedbackForm(request.form)
@@ -1392,7 +1420,7 @@ def view_feedback(id):
     # id is a SubmissionRecord instance
     record = SubmissionRecord.query.get_or_404(id)
 
-    if not validate_submission_supervisor(record) and not validate_submission_marker(record):
+    if not validate_submission_viewable(record):
         return redirect(request.referrer)
 
     return render_template('faculty/dashboard/view_feedback.html', record=record, text='home dashboard',

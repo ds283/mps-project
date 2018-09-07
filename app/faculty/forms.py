@@ -184,7 +184,11 @@ class DescriptionSelectorForm(Form, DescriptionSelectorMixin):
 
 class FeedbackMixin():
 
-    positive = TextAreaField('Positive aspects', render_kw={"rows": 10})
+    positive = TextAreaField('Positive aspects', render_kw={"rows": 10},
+                             description='Your feedback can be structured using Markdown, or use LaTeX formatting '
+                                         'and mathematical markup. The display uses the same rendering pipeline '
+                                         'used for project descriptions, so anything that works there will work here. '
+                                         'You can preview your feedback before submitting it.')
 
     negative = TextAreaField('Negative aspects', render_kw={"rows": 10})
 

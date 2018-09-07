@@ -95,16 +95,19 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="pull-right">
-                                            {% if not period.closed and period.feedback_open %}
-                                                <a href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id) }}" class="btn btn-sm {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
+                                        <div style="text-align: right;" class="pull-right">
+                                            {% if (period.feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
+                                                <a href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
+                                                {% if valid %}
+                                                    <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
+                                                {% endif %}
                                                 {% if not rec.supervisor_submitted %}
-                                                    <a href="{{ url_for('faculty.supervisor_submit_feedback', id=rec.id) }}" class="btn btn-sm btn-success">Submit feedback</a>
+                                                    <a href="{{ url_for('faculty.supervisor_submit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-success">Submit feedback</a>
                                                 {% else %}
-                                                    <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=rec.id) }}" class="btn btn-sm btn-default">Unsubmit feedback</a>
+                                                    <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit feedback</a>
                                                 {% endif %}
                                             {% elif period.closed %}
-                                                <a href="{{ url_for('faculty.view_feedback', id=rec.id) }}" class="btn btn-sm btn-default">View feedback</a>
+                                                <a href="{{ url_for('faculty.view_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-default">View feedback</a>
                                             {% endif %}
                                         </div>
                                     </td>
@@ -156,16 +159,19 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <div class="pull-right">
-                                            {% if not period.closed and period.feedback_open %}
-                                                <a href="{{ url_for('faculty.marker_edit_feedback', id=rec.id) }}" class="btn btn-sm {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
+                                        <div style="text-align: right;" class="pull-right">
+                                            {% if (period.feedback_open and not period.closed) or (period.closed and not rec.marker_submitted) %}
+                                                <a href="{{ url_for('faculty.marker_edit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
+                                                {% if valid %}
+                                                    <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
+                                                {% endif %}
                                                 {% if not rec.marker_submitted %}
-                                                    <a href="{{ url_for('faculty.marker_submit_feedback', id=rec.id) }}" class="btn btn-sm btn-success">Submit feedback</a>
+                                                    <a href="{{ url_for('faculty.marker_submit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-success">Submit feedback</a>
                                                 {% else %}
-                                                    <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=rec.id) }}" class="btn btn-sm btn-default">Unsubmit feedback</a>
+                                                    <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit feedback</a>
                                                 {% endif %}
                                             {% elif period.closed %}
-                                                <a href="{{ url_for('faculty.view_feedback', id=rec.id) }}" class="btn btn-sm btn-default">View feedback</a>
+                                                <a href="{{ url_for('faculty.view_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-default">View feedback</a>
                                             {% endif %}
                                         </div>
                                     </td>

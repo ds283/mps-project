@@ -1235,14 +1235,14 @@ def supervisor_edit_feedback(id):
     config = record.owner.config
     period = config.get_period(record.submission_period)
 
-    if period.closed:
-        flash('Can not edit feedback for this submission because the convenor has closed this submission period.',
-              'error')
-        return redirect(request.referrer)
-
     if not period.feedback_open:
         flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
               'period for feedback and marking.',
+              'error')
+        return redirect(request.referrer)
+
+    if period.closed and record.supervisor_submitted:
+        flash('It is not possible to edit feedback after the convenor has closed this submission period.',
               'error')
         return redirect(request.referrer)
 
@@ -1274,7 +1274,8 @@ def supervisor_edit_feedback(id):
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit supervisor feedback',
                            formtitle='Edit supervisor feedback for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(name=record.owner.student.user.name),
-                           submit_url=url_for('faculty.supervisor_edit_feedback', id=id, url=url))
+                           submit_url=url_for('faculty.supervisor_edit_feedback', id=id, url=url),
+                           period=period, record=record)
 
 
 @faculty.route('/marker_edit_feedback/<int:id>', methods=['GET', 'POST'])
@@ -1289,14 +1290,14 @@ def marker_edit_feedback(id):
     config = record.owner.config
     period = config.get_period(record.submission_period)
 
-    if period.closed:
-        flash('Can not edit feedback for this submission because the convenor has closed this submission period.',
-              'error')
-        return redirect(request.referrer)
-
     if not period.feedback_open:
         flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
               'period for feedback and marking.',
+              'error')
+        return redirect(request.referrer)
+
+    if period.closed and record.marker_submitted:
+        flash('It is not possible to edit feedback after the convenor has closed this submission period.',
               'error')
         return redirect(request.referrer)
 
@@ -1327,7 +1328,8 @@ def marker_edit_feedback(id):
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit marker feedback',
                            formtitle='Edit marker feedback for <strong>{num}</strong>'.format(num=record.owner.student.exam_number),
-                           submit_url=url_for('faculty.marker_edit_feedback', id=id, url=url))
+                           submit_url=url_for('faculty.marker_edit_feedback', id=id, url=url),
+                           period=period, record=record)
 
 
 @faculty.route('/supervisor_submit_feedback/<int:id>')
@@ -1340,6 +1342,13 @@ def supervisor_submit_feedback(id):
         return redirect(request.referrer)
 
     if record.supervisor_submitted:
+        return redirect(request.referrer)
+
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if not period.feedback_open:
+        flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(request.referrer)
 
     if not record.is_supervisor_valid:
@@ -1365,6 +1374,13 @@ def supervisor_unsubmit_feedback(id):
     if not record.supervisor_submitted:
         return redirect(request.referrer)
 
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if period.closed:
+        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
+        return redirect(request.referrer)
+
     record.supervisor_submitted = False
     record.supervisor_timestamp = None
     db.session.commit()
@@ -1382,6 +1398,13 @@ def marker_submit_feedback(id):
         return redirect(request.referrer)
 
     if record.marker_submitted:
+        return redirect(request.referrer)
+
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if not period.feedback_open:
+        flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(request.referrer)
 
     if not record.is_marker_valid:
@@ -1407,6 +1430,13 @@ def marker_unsubmit_feedback(id):
     if not record.marker_submitted:
         return redirect(request.referrer)
 
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if period.closed:
+        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
+        return redirect(request.referrer)
+
     record.marker_submitted = False
     record.marker_timestamp = None
     db.session.commit()
@@ -1423,5 +1453,7 @@ def view_feedback(id):
     if not validate_submission_viewable(record):
         return redirect(request.referrer)
 
+    preview = request.args.get('preview', None)
+
     return render_template('faculty/dashboard/view_feedback.html', record=record, text='home dashboard',
-                           url=request.referrer)
+                           url=request.referrer, preview=preview)

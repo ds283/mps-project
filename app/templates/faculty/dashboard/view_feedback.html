@@ -1,5 +1,21 @@
 {% extends "base_app.html" %}
 
+{% block scripts %}
+    {{ super() }}
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/latest.js?config=TeX-MML-AM_CHTML' async></script>
+
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            extensions: ["tex2jax.js", "AMSmath.js"],
+            jax: ["input/TeX", "output/HTML-CSS"],
+            tex2jax: {
+                displayMath: [ ['$$','$$'], ["\[","\]"] ],
+                processEscapes: true
+            },
+        });
+    </script>
+{% endblock %}
+
 {% block bodyblock %}
     <div class="row">
         <div class="col-xs-2"></div>
@@ -12,7 +28,7 @@
                 </div>
             {% endif %}
 
-            {% if record.supervisor_submitted %}
+            {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
                 <div class="panel panel-default">
                     <div class="panel-heading">Supervisor feedback</div>
                     <div class="panel-body">
@@ -34,7 +50,7 @@
                 </div>
             {% endif %}
 
-            {% if record.marker_submitted %}
+            {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
                 <div class="panel panel-default">
                     <div class="panel-heading">Marker feedback</div>
                     <div class="panel-body">

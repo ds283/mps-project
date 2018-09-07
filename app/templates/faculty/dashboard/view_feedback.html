@@ -17,8 +17,8 @@
                     <div class="panel-heading">Supervisor feedback</div>
                     <div class="panel-body">
                         {% if record.supervisor_timestamp %}
-                            <div class="well">
-                                Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            <div class="pull-right">
+                                <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                             </div>
                         {% endif %}
                         <span class="dashboard-subtitle">Positive aspects</span>
@@ -39,8 +39,8 @@
                     <div class="panel-heading">Marker feedback</div>
                     <div class="panel-body">
                         {% if record.marker_timestamp %}
-                            <div class="well">
-                                Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            <div class="pull-right">
+                                <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                             </div>
                         {% endif %}
                         <span class="dashboard-subtitle">Positive aspects</span>

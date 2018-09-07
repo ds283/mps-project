@@ -1638,8 +1638,7 @@ class ProjectClassConfig(db.Model):
 
     SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY = 0
     SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY = 1
-    SUBMITTER_LIFECYCLE_READY_ADVANCE_PERIOD = 2
-    SUBMITTER_LIFECYCLE_READY_ROLLOVER = 3
+    SUBMITTER_LIFECYCLE_READY_ROLLOVER = 2
 
 
     @property
@@ -1674,7 +1673,12 @@ class ProjectClassConfig(db.Model):
         if self.submission_period >= self.submissions:
             return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 
-        return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ADVANCE_PERIOD
+        # we don't want to be in this position; we may as well advance the submission period
+        # and return PROJECT_ACTIVITY
+        self.submission_period += 1
+        db.session.commit()
+
+        return ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
 
     @property

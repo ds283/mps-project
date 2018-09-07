@@ -3,11 +3,11 @@
 
 {% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
 
-{% macro issue_confirmations(pclass, issue_form, capacity_data, sel_count) %}
+{% macro issue_confirmations(config, issue_form, capacity_data, sel_count) %}
     <div class="panel panel-danger">
         <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
         <div class="panel-body">
-            <form action="{{ url_for('convenor.issue_confirm_requests', id=pclass.id) }}"
+            <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}"
                   method="POST" name="issue-form">
                 Confirmation requests have not yet been issued to faculty.
                 <hr class="intro-divider">

@@ -11,18 +11,20 @@
                 </div>
                 <div class="col-xs-3">
                     <div class="pull-right">
-                        <a href="#"
+                        <a href="{{ url_for('convenor.close_feedback', id=config.id) }}"
                            class="btn btn-danger">
-                            Close feedback period
+                            {% if config.submission_period == config.submissions %}
+                                Close feedback
+                            {% else %}
+                                Close feedback and move to period #{{ config.submission_period+1 }}
+                            {% endif %}
                         </a>
                     </div>
                 </div>
             </div>
             <hr class="intro-divider">
-            <form action="#"
+            <form action="{{ url_for('convenor.open_feedback', id=config.id) }}"
                   method="POST" name="issue-form">
-                The current deadline for feedback is
-                <hr class="intro-divider">
                 {{ date_field(feedback_form.feedback_deadline) }}
                 <div class="row">
                     <div class="col-xs-12">

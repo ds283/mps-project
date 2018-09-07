@@ -3163,6 +3163,11 @@ class SubmissionRecord(db.Model):
     marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
                              backref=db.backref('marking_records', lazy='dynamic'))
 
+    # link to ProjectClassConfig that selections were drawn from; used to offer a list of LiveProjects
+    # if the convenor wishes to reassign
+    selection_config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    selection_config = db.relationship('ProjectClassConfig', foreign_keys=[selection_config_id], uselist=None)
+
     # capture parent MatchingRecord, if one exists
     matching_record_id = db.Column(db.Integer(), db.ForeignKey('matching_records.id'), default=None)
     matching_record = db.relationship('MatchingRecord', foreign_keys=[matching_record_id], uselist=False,
@@ -3177,17 +3182,35 @@ class SubmissionRecord(db.Model):
     # supervisor negative feedback
     supervisor_negative = db.Column(db.Text())
 
+    # supervisor submitted?
+    supervisor_submitted = db.Column(db.Boolean())
+
+    # supervisor submission datestamp
+    supervisor_timestamp = db.Column(db.DateTime())
+
     # marker positive feedback
     marker_positive = db.Column(db.Text())
 
     # marker negative feedback
     marker_negative = db.Column(db.Text())
 
+    # marker submitted?
+    marker_submitted = db.Column(db.Boolean())
+
+    # marker submission timestamp
+    marker_timestamp = db.Column(db.DateTime())
+
 
     # STUDENT FEEDBACK
 
     # free-form feedback field
     student_feedback = db.Column(db.Text())
+
+    # faculty acknowledge
+    acknowledge_feedback = db.Column(db.Boolean())
+
+    # faculty response
+    faculty_response = db.Column(db.Text())
 
 
     @property

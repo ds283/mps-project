@@ -56,6 +56,11 @@ p.copyright {
     font-weight: lighter;
 }
 
+.dashboard-subtitle {
+    font-size: 22px;
+    font-weight: lighter;
+}
+
 .dashboard-button {
     margin-top: 8px;
 }

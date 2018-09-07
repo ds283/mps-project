@@ -55,10 +55,10 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th width="15%">Name</th>
-                                <th width="15%">Marker</th>
-                                <th width="45%">Project</th>
-                                <th width="25%"></th>
+                                <th width="20%">Name</th>
+                                <th width="20%">Marker</th>
+                                <th width="40%">Project</th>
+                                <th width="20%"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -67,8 +67,13 @@
                                 <tr>
                                     <td>
                                         <a href="mailto:{{ rec.owner.student.user.email }}">{{ rec.owner.student.user.name }}</a>
-                                        {{ rec.owner.student.cohort_label|safe }}
-                                        {{ rec.owner.student.programme.label|safe }}
+                                        <div>
+                                            {{ rec.owner.student.cohort_label|safe }}
+                                            {{ rec.owner.student.programme.label|safe }}
+                                            {% if not rec.owner.published %}
+                                                <span class="label label-warning">Not published</span>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                     <td>
                                         <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
@@ -118,10 +123,10 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th width="15%">Exam number</th>
-                                <th width="15%">Supervisor</th>
-                                <th width="45%">Project</th>
-                                <th width="25%"></th>
+                                <th width="20%">Exam number</th>
+                                <th width="20%">Supervisor</th>
+                                <th width="40%">Project</th>
+                                <th width="20%"></th>
                             </tr>
                         </thead>
                         <tbody>

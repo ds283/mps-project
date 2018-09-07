@@ -3161,6 +3161,17 @@ class SubmittingStudent(db.Model):
         return self.student.academic_year_label(self.config.year)
 
 
+    def get_assignment(self, period):
+        records = self.records.filter_by(submission_period=period).all()
+
+        if len(records) == 0:
+            return None
+        elif len(records) == 1:
+            return records[0]
+
+        raise RuntimeError('Too many projects assigned for this submission period')
+
+
 class SubmissionRecord(db.Model):
     """
     Collect details for a student submission

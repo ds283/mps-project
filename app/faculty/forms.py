@@ -9,7 +9,7 @@
 #
 
 from flask_security.forms import Form
-from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, DateField, BooleanField
+from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
@@ -156,40 +156,6 @@ class EditDescriptionForm(Form, DescriptionMixin, EditFormMixin):
                                              project_unique_or_original_label],
                         description='Enter a short label to identify this description in the list. '
                                     'The label will not be visible to students.')
-
-
-class RolloverForm(Form):
-
-    # rollover action button
-    rollover = SubmitField('Rollover')
-
-
-class GoLiveForm(Form):
-
-    # normal Go Live option
-    live = SubmitField('Go live')
-
-    # go live and close option
-    live_and_close = SubmitField('Go live and immediately close')
-
-    # deadline field
-    live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
-
-
-class CloseStudentSelectionsForm(Form):
-
-    close = SubmitField('Close student selections')
-
-
-class IssueFacultyConfirmRequestForm(Form):
-
-    requests_issued = SubmitField('Issue confirmation requests')
-    request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
-
-
-class ConfirmAllRequestsForm(Form):
-
-    confirm_all = SubmitField('Confirm all outstanding projects')
 
 
 class SkillSelectorMixin():

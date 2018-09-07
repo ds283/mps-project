@@ -1,0 +1,37 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import date_field %}
+
+{% macro feedback_marking(config, feedback_form) %}
+    <div class="panel panel-warning">
+        <div class="panel-heading"><strong>Feedback and marking underway: submission period #{{ config.submission_period }}</strong></div>
+        <div class="panel-body">
+            <div class="row vertical-top">
+                <div class="col-xs-9">
+                    Feedback and marking are currently underway.
+                </div>
+                <div class="col-xs-3">
+                    <div class="pull-right">
+                        <a href="#"
+                           class="btn btn-danger">
+                            Close feedback period
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr class="intro-divider">
+            <form action="#"
+                  method="POST" name="issue-form">
+                The current deadline for feedback is
+                <hr class="intro-divider">
+                {{ date_field(feedback_form.feedback_deadline) }}
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="pull-right">
+                            {{ wtf.form_field(feedback_form.open_feedback, button_map={'open_feedback': 'default'}) }}
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endmacro %}

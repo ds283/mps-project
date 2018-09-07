@@ -1514,9 +1514,7 @@ class ProjectClassConfig(db.Model):
     # current submission period
     submission_period = db.Column(db.Integer())
 
-    # flag to indicate whether we are in the feedback/marking phase
-    feedback_open = db.Column(db.Boolean())
-
+    # 'periods' member construted by backreference from SubmissionPeriodRecord below
 
     # WORKLOAD MODEL
 
@@ -1640,14 +1638,43 @@ class ProjectClassConfig(db.Model):
 
     SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY = 0
     SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY = 1
-    SUBMITTER_LIFECYCLE_READY_ROLLOVER = 2
+    SUBMITTER_LIFECYCLE_READY_ADVANCE_PERIOD = 2
+    SUBMITTER_LIFECYCLE_READY_ROLLOVER = 3
 
 
     @property
     def submitter_lifecycle(self):
-        current_
+        if self.submission_period > self.submissions:
+            return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 
-        return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+        # get submission period data for current period
+        period = self.periods.filter_by(submission_period=self.submission_period).first()
+
+        if period is None:
+            # allow period record to be auto-generated
+            period = SubmissionPeriodRecord(config_id=self.id,
+                                            submission_period=self.submission_period,
+                                            feedback_open=False,
+                                            feedback_id=None,
+                                            feedback_timestamp=None,
+                                            feedback_deadline=None,
+                                            closed=False,
+                                            closed_id=None,
+                                            closed_timestamp=None)
+            db.session.add(period)
+            db.session.commit()
+
+        if not period.feedback_open:
+            return self.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+
+        if period.feedback_open and not period.closed:
+            return self.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+
+        # can assume period.closed at this point
+        if self.submission_period >= self.submissions:
+            return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+
+        return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ADVANCE_PERIOD
 
 
     @property
@@ -1829,6 +1856,47 @@ class ProjectClassConfig(db.Model):
             .scalar()
 
         return count > 0
+
+
+class SubmissionPeriodRecord(db.Model):
+    """
+    Capture details about a submission period
+    """
+
+    __tablename__ = 'submission_periods'
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent ProjecClassConfig
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', foreign_keys=[config_id], uselist=False,
+                             backref=db.backref('periods', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # submission period
+    submission_period = db.Column(db.Integer())
+
+    # has feedback been opened in this period
+    feedback_open = db.Column(db.Boolean())
+
+    # who opened feedback?
+    feedback_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    feedback_by = db.relationship('User', uselist=False, foreign_keys=[feedback_id])
+
+    # feedback opened timestamp
+    feedback_timestamp = db.Column(db.DateTime())
+
+    # deadline for feedback to be submitted
+    feedback_deadline = db.Column(db.DateTime())
+
+    # has this period been closed?
+    closed = db.Column(db.Boolean())
+
+    # who closed the period?
+    closed_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    closed_by = db.relationship('User', uselist=False, foreign_keys=[closed_id])
+
+    # closed timestamp
+    closed_timestamp = db.Column(db.DateTime())
 
 
 class EnrollmentRecord(db.Model):

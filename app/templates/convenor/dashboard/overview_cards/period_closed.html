@@ -1,0 +1,24 @@
+{% macro period_closed(config) %}
+    <div class="panel panel-primary">
+        <div class="panel-heading"><strong>Submission period #{{ config.submission_period }} is now closed</strong></div>
+        <div class="panel-body">
+            {% if config.submission_period < config.submissions %}
+                <div class="row vertical-top">
+                    <div class="col-xs-9">
+                        Advance submission period.
+                    </div>
+                    <div class="col-xs-3">
+                        <div class="pull-right">
+                            <a href="#"
+                               class="btn btn-danger">
+                                Move to period #{{ config.submission_period+1 }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <p>All project activity for this cycle is now complete.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}

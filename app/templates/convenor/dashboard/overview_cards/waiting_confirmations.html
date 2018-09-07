@@ -25,6 +25,7 @@
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.issue_confirm_requests', id=pclass.id) }}"
                   method="POST" name="issue-form">
+                The current deadline for confirmation responses is
                 {{ date_field(issue_form.request_deadline) }}
                 <div class="row">
                     <div class="col-xs-12">

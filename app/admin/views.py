@@ -42,7 +42,7 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
-    LiveProject
+    LiveProject, SubmissionPeriodRecord
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -1628,6 +1628,7 @@ def add_pclass():
                             creation_timestamp=datetime.now())
         db.session.add(data)
         db.session.flush()
+        data.convenor.add_convenorship(data)
 
         # generate a corresponding configuration record for the current academic year
         current_year = get_current_year()
@@ -1642,12 +1643,22 @@ def add_pclass():
                                     CATS_marking=data.CATS_marking,
                                     creator_id=current_user.id,
                                     creation_timestamp=datetime.now(),
-                                    submission_period=1,
-                                    feedback_open=False)
-
-        data.convenor.add_convenorship(data)
-
+                                    submission_period=1)
         db.session.add(config)
+        db.session.flush()
+
+        for k in range(0, config.submissions):
+            period = SubmissionPeriodRecord(config_id=config.id,
+                                            submission_period=k+1,
+                                            feedback_open=False,
+                                            feedback_id=None,
+                                            feedback_timestamp=None,
+                                            feedback_deadline=None,
+                                            closed=False,
+                                            closed_id=None,
+                                            closed_timestamp=None)
+            db.session.add(period)
+
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))

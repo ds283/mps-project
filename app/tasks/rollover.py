@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..models import db, User, TaskRecord, BackupRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
-    SubmissionRecord
+    SubmissionRecord, SubmissionPeriodRecord
 
 from ..task_queue import progress_update
 
@@ -314,34 +314,47 @@ def register_rollover_tasks(celery):
 
         # get current configuration record; makes this task idempotent, so it's safe to run twice or more
         try:
-            config = ProjectClassConfig.query.filter_by(id=current_id).first()
+            old_config = ProjectClassConfig.query.filter_by(id=current_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
         # check whether a new configuration record needs to be inserted;
         # we expect so, but if we are retrying and there is for some reason
         # an already-inserted record then we just want to be idempotent
-        if config.year == new_year:
-            return config.id
+        if old_config.year == new_year:
+            return old_config.id
 
         # generate a new ProjectClassConfig for this year
-        new_config = ProjectClassConfig(year=new_year,
-                                        pclass_id=pclass_id,
-                                        convenor_id=convenor_id,
-                                        creator_id=convenor_id,
-                                        creation_timestamp=datetime.now(),
-                                        requests_issued=False,
-                                        request_deadline=None,
-                                        live=False,
-                                        live_deadline=None,
-                                        selection_closed=False,
-                                        CATS_supervision=config.project_class.CATS_supervision,
-                                        CATS_marking=config.project_class.CATS_marking,
-                                        submission_period=1,
-                                        feedback_open=False)
-
         try:
+            new_config = ProjectClassConfig(year=new_year,
+                                            pclass_id=pclass_id,
+                                            convenor_id=convenor_id,
+                                            creator_id=convenor_id,
+                                            creation_timestamp=datetime.now(),
+                                            requests_issued=False,
+                                            request_deadline=None,
+                                            live=False,
+                                            live_deadline=None,
+                                            selection_closed=False,
+                                            CATS_supervision=old_config.project_class.CATS_supervision,
+                                            CATS_marking=old_config.project_class.CATS_marking,
+                                            submission_period=1,
+                                            feedback_open=False)
             db.session.add(new_config)
+            db.session.flush()
+
+            for k in range(0, new_config.submissions):
+                period = SubmissionPeriodRecord(config_id=cnew_onfig.id,
+                                                submission_period=k + 1,
+                                                feedback_open=False,
+                                                feedback_id=None,
+                                                feedback_timestamp=None,
+                                                feedback_deadline=None,
+                                                closed=False,
+                                                closed_id=None,
+                                                closed_timestamp=None)
+                db.session.add(period)
+
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()

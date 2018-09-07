@@ -34,8 +34,8 @@ import app.ajax as ajax
 
 from . import convenor
 
-from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFacultyConfirmRequestForm, \
-    SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
+from ..faculty.forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
+from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm
 
 from datetime import date, datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -259,12 +259,20 @@ def overview(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
+    period = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+
     # build forms
     golive_form = GoLiveForm(request.form)
     issue_form = IssueFacultyConfirmRequestForm(request.form)
+    feedback_form = OpenFeedbackForm(request.form)
 
     if config.requests_issued:
         issue_form.requests_issued.label.text = 'Save changes'
+
+    if period.feedback_open:
+        feedback_form.open_feedback.label.text = 'Save changes'
 
     if request.method == 'GET':
         if config.request_deadline is not None:
@@ -277,11 +285,16 @@ def overview(id):
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
+        if period.feedback_deadline is not None:
+            feedback_form.feedback_deadline.data = period.feedback_deadline
+        else:
+            feedback_form.feedback_deadline.data = date.today() + timedelta(weeks=3)
+
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
     capacity_data = get_capacity_data(pclass)
 
     return render_template('convenor/dashboard/overview.html', pane='overview',
-                           golive_form=golive_form, issue_form=issue_form,
+                           golive_form=golive_form, issue_form=issue_form, feedback_form=feedback_form,
                            pclass=pclass, config=config, current_year=current_year,
                            fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count, capacity_data=capacity_data)

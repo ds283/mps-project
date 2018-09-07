@@ -26,22 +26,6 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#golive-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'ftip',
-                stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/golive_ajax/{{ pclass.id }}', dataSrc: '' },
-                columns: [
-                    { data: 'name',
-                      render: {
-                        _: 'display',
-                        sort: 'sortstring' }
-                    },
-                    { data: 'email' },
-                    { data: 'projects' }
-                ],
-                deferRender: true
-            });
-
             $('.date').datepicker({
                 format: 'dd/mm/yyyy',
                 todayHighlight: true

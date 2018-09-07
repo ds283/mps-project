@@ -14,5 +14,5 @@ from .enroll_selectors import enroll_selectors_data
 from .enroll_submitters import enroll_submitters_data
 from .submitters import submitters_data
 from .liveprojects import liveprojects_data
-from .golive import golive_data
+from .outstanding_confirm import outstanding_confirm_data
 from .selector_grid import selector_grid_data

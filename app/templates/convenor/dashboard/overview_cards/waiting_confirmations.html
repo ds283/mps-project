@@ -10,8 +10,11 @@
 
             <div class="row vertical-top">
                 <div class="col-xs-9">
-                    Confirmations are outstanding from
-                    <strong>{{ config.golive_required.count() }} faculty</strong>.
+                    <p>
+                        Confirmations are outstanding from
+                        <strong>{{ config.golive_required.count() }} faculty</strong>.
+                    </p>
+                    <p><a href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">View outstanding responses...</a></p>
                 </div>
                 <div class="col-xs-3">
                     <div class="pull-right">
@@ -34,20 +37,6 @@
                     </div>
                 </div>
             </form>
-
-            {# display list of faculty with outstanding confirm requests #}
-            {% if config.golive_required.first() %}
-                <hr class="intro-divider">
-                <table id="golive-table" class="table table-striped">
-                    <thead>
-                    <tr>
-                        <th width="40%"> Name</th>
-                        <th width="20%"> Email</th>
-                        <th width="40%"> Projects</th>
-                    </tr>
-                    </thead>
-                </table>
-            {% endif %}
         </div>
     </div>
     <hr class="intro-divider">

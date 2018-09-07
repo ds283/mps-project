@@ -2419,29 +2419,37 @@ def issue_confirm_requests(id):
     return redirect(request.referrer)
 
 
-@convenor.route('/golive_ajax/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/outstanding_confirm/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def outstanding_confirm(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/dashboard/outstanding_confirm.html', config=config, pclass=config.project_class)
+
+
+@convenor.route('/outstanding_confirm_ajax/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def golive_ajax(id):
+def outstanding_confirm_ajax(id):
     """
     Ajax data point for waiting-to-go-live faculty list on dashboard
     :param id:
     :return:
     """
 
-    # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return jsonify({})
-
-    return ajax.convenor.golive_data(config)
+    return ajax.convenor.outstanding_confirm_data(config)
 
 
 @convenor.route('/show_unofferable')
@@ -2473,7 +2481,6 @@ def unofferable_ajax():
                                    url=url_for('convenor.show_unofferable'))
 
 
-
 @convenor.route('/force_confirm_all/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def force_confirm_all(id):
@@ -2485,13 +2492,33 @@ def force_confirm_all(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    for item in config.golive_required.all():
-        config.golive_required.remove(item)
-
+    config.golive_required = []
     db.session.commit()
+
     flash('All outstanding confirmation requests have been removed.', 'success')
 
     return redirect(request.referrer)
+
+
+@convenor.route('/force_confirm/<int:id>/<int:uid>')
+@roles_accepted('faculty', 'admin', 'root')
+def force_confirm(id, uid):
+
+    # get details for project class
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    faculty = FacultyData.query.get_or_404(uid)
+
+    if faculty in config.golive_required:
+        config.golive_required.remove(faculty)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
 
 
 @convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])

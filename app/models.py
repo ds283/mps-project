@@ -17,7 +17,7 @@ from sqlalchemy.event import listens_for
 
 from celery import schedules
 
-from .shared.formatters import format_size, format_time
+from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.colours import get_text_colour
 
 from datetime import date, datetime, timedelta
@@ -1647,7 +1647,7 @@ class ProjectClassConfig(db.Model):
             return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 
         # get submission period data for current period
-        period = self.periods.filter_by(submission_period=self.submission_period).first()
+        period = self.current_period
 
         if period is None:
             # allow period record to be auto-generated
@@ -1703,14 +1703,7 @@ class ProjectClassConfig(db.Model):
             return '<invalid>'
 
         delta = self.request_deadline.date() - date.today()
-        days = delta.days
-
-        str = '{days} day'.format(days=days)
-
-        if days != 1:
-            str += 's'
-
-        return str
+        return format_readable_time(delta.seconds)
 
 
     @property
@@ -1719,24 +1712,7 @@ class ProjectClassConfig(db.Model):
             return '<invalid>'
 
         delta = self.live_deadline.date() - date.today()
-        days = delta.days
-
-        if days > 7:
-
-            weeks = int(days/7)
-            str = '{weeks} week'.format(weeks=weeks)
-
-            if weeks != 1:
-                str += 's'
-
-            return str
-
-        str = '{days} day'.format(days=days)
-
-        if days != 1:
-            str += 's'
-
-        return str
+        return format_readable_time(delta)
 
 
     @property
@@ -1862,6 +1838,18 @@ class ProjectClassConfig(db.Model):
         return count > 0
 
 
+    def get_period(self, n):
+        if n <= 0 or n > self.submissions:
+            return None
+
+        return self.periods.filter_by(submission_period=n).first()
+
+
+    @property
+    def current_period(self):
+        return self.get_period(self.submission_period)
+
+
 class SubmissionPeriodRecord(db.Model):
     """
     Capture details about a submission period
@@ -1871,7 +1859,7 @@ class SubmissionPeriodRecord(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
-    # parent ProjecClassConfig
+    # parent ProjectClassConfig
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
     config = db.relationship('ProjectClassConfig', foreign_keys=[config_id], uselist=False,
                              backref=db.backref('periods', lazy='dynamic', cascade='all, delete, delete-orphan'))
@@ -1901,6 +1889,41 @@ class SubmissionPeriodRecord(db.Model):
 
     # closed timestamp
     closed_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def time_to_feedback_deadline(self):
+        if self.feedback_deadline is None:
+            return '<invalid>'
+
+        delta = self.feedback_deadline.date() - date.today()
+        return format_readable_time(delta)
+
+
+    def get_supervisor_records(self, fac):
+        # querying for the SubmissionRecords attached to a given faculty member requires a join
+        # to the liveprojects table
+        students = self.config.submitting_students.subquery()
+
+        return db.session.query(SubmissionRecord) \
+            .join(students, students.c.id == SubmissionRecord.owner_id) \
+            .filter(SubmissionRecord.submission_period == self.submission_period) \
+            .join(LiveProject) \
+            .filter(LiveProject.owner_id == fac.id) \
+            .join(User, User.id == students.c.student_id) \
+            .order_by(SubmissionRecord.submission_period.asc(), LiveProject.number.asc(),
+                      User.last_name.asc(), User.first_name.asc()).all()
+
+
+    def get_marker_records(self, fac):
+        students = self.config.submitting_students.subquery()
+
+        return db.session.query(SubmissionRecord) \
+            .join(students, students.c.id == SubmissionRecord.owner_id) \
+            .filter(SubmissionRecord.submission_period == self.submission_period) \
+            .filter(SubmissionRecord.marker_id == fac.id) \
+            .join(StudentData, StudentData.id == students.c.student_id) \
+            .order_by(SubmissionRecord.submission_period.asc(), StudentData.exam_number).all()
 
 
 class EnrollmentRecord(db.Model):
@@ -3224,6 +3247,28 @@ class SubmissionRecord(db.Model):
         :return:
         """
         return self.project.owner
+
+
+    @property
+    def is_supervisor_valid(self):
+        if self.supervisor_positive is None or len(self.supervisor_positive) == 0:
+            return False
+
+        if self.supervisor_negative is None or len(self.supervisor_negative) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def is_marker_valid(self):
+        if self.marker_positive is None or len(self.marker_positive) == 0:
+            return False
+
+        if self.marker_negative is None or len(self.marker_negative) == 0:
+            return False
+
+        return True
 
 
 class Bookmark(db.Model):

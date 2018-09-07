@@ -180,3 +180,22 @@ class DescriptionSelectorForm(Form, DescriptionSelectorMixin):
         super().__init__(*args, **kwargs)
 
         self.selector.query_factory = partial(ProjectDescriptionClasses, project_id)
+
+
+class FeedbackMixin():
+
+    positive = TextAreaField('Positive aspects', render_kw={"rows": 10})
+
+    negative = TextAreaField('Negative aspects', render_kw={"rows": 10})
+
+    save_feedback = SubmitField('Save changes')
+
+
+class SupervisorFeedbackForm(Form, FeedbackMixin):
+
+    pass
+
+
+class MarkerFeedbackForm(Form, FeedbackMixin):
+
+    pass

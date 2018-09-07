@@ -1,0 +1,85 @@
+{% extends "base_app.html" %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            {% if text and url %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            {% if record.supervisor_submitted %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">Supervisor feedback</div>
+                    <div class="panel-body">
+                        {% if record.supervisor_timestamp %}
+                            <div class="well">
+                                Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            </div>
+                        {% endif %}
+                        <span class="dashboard-subtitle">Positive aspects</span>
+                        {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                        <hr class="intro-divider">
+                        <span class="dashboard-subtitle">Negative aspects</span>
+                        {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                    </div>
+                </div>
+            {% else %}
+                <div class="well">
+                    No supervisor feedback has been recorded.
+                </div>
+            {% endif %}
+
+            {% if record.marker_submitted %}
+                <div class="panel panel-default">
+                    <div class="panel-heading">Marker feedback</div>
+                    <div class="panel-body">
+                        {% if record.marker_timestamp %}
+                            <div class="well">
+                                Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            </div>
+                        {% endif %}
+                        <span class="dashboard-subtitle">Positive aspects</span>
+                        {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                        <hr class="intro-divider">
+                        <span class="dashboard-subtitle">Negative aspects</span>
+                        {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                    </div>
+                </div>
+            {% else %}
+                <div class="well">
+                    No marker feedback has been recorded.
+                </div>
+            {% endif %}
+
+            {% if record.student_feedback %}
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        Student feedback to supervisor
+                        {% if record.acknowledge_feedback %}
+                            <span class="label label-success">Acknowledged</span>
+                        {% else %}
+                            <span class="label label-default">Not yet acknowledged</span>
+                        {% endif %}
+                    </div>
+                    <div class="panel-body">
+                        {{ record.student_feedback|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if text and url %}
+                <div>
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

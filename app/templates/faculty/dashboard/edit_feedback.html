@@ -1,0 +1,22 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ formtitle|safe }}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ submit_url }}" method="POST" name="feedback_form">
+        {{ form.hidden_tag() }}
+
+        {{ wtf.form_field(form.positive) }}
+        {{ wtf.form_field(form.negative) }}
+
+        {{ wtf.form_field(form.save_feedback) }}
+    </form>
+{% endblock %}

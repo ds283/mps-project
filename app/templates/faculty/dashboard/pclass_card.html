@@ -1,8 +1,14 @@
 {% from "faculty/macros.html" import project_metadata %}
 
+{% from "faculty/dashboard/selector_card.html" import selector_card %}
+{% from "faculty/dashboard/submitter_card.html" import submitter_card %}
+
 {% macro pclass_card(config, live_projects) %}
 
     {% set pclass = config.project_class %}
+    {% set sel_state = config.selector_lifecycle %}
+    {% set sub_state = config.submitter_lifecycle %}
+
     <div class="well">
         <div class="row vertical-align">
             <div class="col-xs-12">
@@ -17,7 +23,7 @@
                 </a></span>
             </div>
             <div class="col-xs-6">
-                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                     <div class="pull-right">
                         <span class="label label-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
                         {% if config.live_deadline %}
@@ -44,185 +50,11 @@
             </div>
         {% endif %}
 
-        {% set nproj = current_user.faculty_data.projects_offered(pclass) %}
-        {% if nproj == 1 %}
-            {% set nproj_plural = '' %}
-        {% else %}
-            {% set nproj_plural = 's' %}
-        {% endif %}
-        {% set state = config.selector_lifecycle %}
-        <div class="panel
-            {% if nproj == 0 %}
-                panel-danger
-            {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                panel-success
-            {% elif state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-                panel-primary
-            {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
-                panel-warning
-            {% else %}
-                panel-info
-            {% endif %}
-            ">
+        {{ selector_card(config, sel_state, live_projects, current_user) }}
 
-            <div class="panel-heading">
-                <strong>
-                    {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                        Waiting to begin project lifecycle for this year
-                    {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                        Project confirmation is required
-                    {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                        Status
-                    {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                        Student selections are open
-                    {% elif state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %}
-                        Student selections are now closed
-                    {% endif %}
-                </strong>
-            </div>
-
-            <div class="panel-body">
-
-                {# show confirmation request if one is active #}
-                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
-                        <div class="panel-body">
-                            <p>Please review your projects to ensure the descriptions are up-to-date,
-                            and those you wish to offer next year are active and attached to
-                            the correct project classes.</p>
-                            {% if config.request_deadline %}
-                                <p>The project convenor has set a deadline of
-                                    <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-                                    <strong>{{ config.time_to_request_deadline }}</strong> from now.
-                                </p>
-                                <p>After the deadline, projects will be finalized and
-                                    made avaliable to the students for selection.
-                                </p>
-                            {% endif %}
-                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-danger">Confirm</a>
-                        </div>
-                    </div>
-                {% endif %}
-
-                {# show basic details about this project #}
-                <div class="row vertical-align">
-                    <div class="col-xs-9">
-                        {% if nproj == 0 %}
-                        <div class="has-error">
-                        <div class="help-block">
-                        <strong>
-                        {% endif %}
-                        {{ nproj }} active project{{ nproj_plural }} attached to this project class.
-                        {% if nproj == 0 %}
-                        </strong>
-                        </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    <div class="col-xs-3">
-                        <span class="pull-right">
-                            <a href="{{ url_for('faculty.edit_projects') }}" class="btn {% if nproj==0 %}btn-danger{% else %}btn-default{% endif %}">Edit my projects</a>
-                        </span>
-                    </div>
-                </div>
-
-                {# show details about projects on the live system #}
-                {% set number_live_projects = live_projects.count() %}
-                {% if number_live_projects == 1 %}
-                    {% set number_live_plural = '' %}
-                {% else %}
-                    {% set number_live_plural = 's' %}
-                {% endif %}
-                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and live_projects.first() %}
-                    <hr class="intro-divider">
-                    <p>You have <strong>{{ number_live_projects }}</strong> project{{ number_live_plural }}
-                        on the live system for students making selections for {{ config.year+1 }}&ndash;{{ config.year+2 }}.</p>
-                    <div class="container-fluid">
-                        <div class="row fac-project-table">
-                            <div class="col-xs-3"><strong>Name</strong></div>
-                            <div class="col-xs-3"><strong>Info</strong></div>
-                            <div class="col-xs-3"><strong>Meeting requests</strong></div>
-                            <div class="col-xs-3"><strong>Meetings confirmed</strong></div>
-                        </div>
-                        {% for project in live_projects %}
-                            <div class="row fac-project-table">
-                                <div class="col-xs-3">
-                                    <a href="{{ url_for('faculty.live_project', pid=project.id, text='dashboard', url=url_for('faculty.dashboard')) }}">
-                                        {{ project.name }}
-                                    </a>
-                                </div>
-                                <div class="col-xs-3">
-                                    {{ project_metadata(project) }}
-                                </div>
-                                <div class="col-xs-3 faculty-confirm-area">
-                                    {% for sel in project.confirm_waiting %}
-                                        {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
-                                        {#  for some reason, we need the explicit stlye attribute #}
-                                        <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                            <a class="label label-success dropdown-toggle"
-                                                    type="button" data-toggle="dropdown">
-                                                {{ sel.student.user.name }} <span class="caret"></span>
-                                            </a>
-                                            <ul class="dropdown-menu">
-                                                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                                    <li>
-                                                        <a href="{{ url_for('faculty.confirm', sid=sel.id, pid=project.id) }}">
-                                                            <i class="fa fa-check"></i> Confirm
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a href="{{ url_for('faculty.cancel_confirm', sid=sel.id, pid=project.id) }}">
-                                                            <i class="fa fa-trash"></i> Delete
-                                                        </a>
-                                                    </li>
-                                                {% else %}
-                                                    <li class="disabled">
-                                                        <a>
-                                                            <i class="fa fa-check"></i> Confirm
-                                                        </a>
-                                                    </li>
-                                                    <li class="disabled">
-                                                        <a>
-                                                            <i class="fa fa-trash"></i> Delete
-                                                        </a>
-                                                    </li>
-                                                {% endif %}
-                                            </ul>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                                <div class="col-xs-3 faculty-confirm-area">
-                                    {% for sel in project.confirmed_students %}
-                                        {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
-                                        {#  for some reason, we need the explicit stlye attribute #}
-                                        <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                            <a class="label label-warning dropdown-toggle"
-                                                    type="button" data-toggle="dropdown">
-                                                {{ sel.student.user.name }} <span class="caret"></span>
-                                            </a>
-                                            <ul class="dropdown-menu">
-                                                <li>
-                                                    <a href="{{ url_for('faculty.deconfirm_to_pending', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fa fa-clock-o"></i> Make pending
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('faculty.deconfirm', sid=sel.id, pid=project.id) }}">
-                                                        <i class="fa fa-trash"></i> Delete
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-
-            </div>
-        </div>
+        {% for n in range(config.submissions) %}
+            {{ submitter_card(config, sub_state, n, current_user) }}
+        {% endfor %}
     </div>
 
 {% endmacro %}

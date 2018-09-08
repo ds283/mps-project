@@ -1,0 +1,29 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    Edit response to student feedback
+{% endblock %}
+
+{% block formtitle %}
+    Edit response to student feedback
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ submit_url }}" method="POST" name="feedback_form">
+        {{ form.hidden_tag() }}
+
+        <div class="panel panel-default">
+            <div class="panel-heading">Student feedback</div>
+            <div class="panel-body">
+                {{ record.student_feedback|dealingwithdollars|markdown|bclean|blinkify|safe }}
+            </div>
+        </div>
+
+        {{ wtf.form_field(form.feedback) }}
+
+        {{ wtf.form_field(form.save_changes, button_map={'save_changes': 'primary'}) }}
+        {{ wtf.form_field(form.save_preview, button_map={'save_preview': 'default'}) }}
+    </form>
+{% endblock %}

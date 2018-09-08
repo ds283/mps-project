@@ -123,8 +123,12 @@ def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
                                   marker_submitted=False,
                                   marker_timestamp=None,
                                   student_feedback=None,
+                                  student_feedback_submitted=False,
+                                  student_feedback_timestamp=None,
                                   acknowledge_feedback=False,
-                                  faculty_response=None)
+                                  faculty_response=None,
+                                  faculty_response_submitted=False,
+                                  faculty_response_timestamp=None)
         db.session.add(record)
 
     if autocommit:

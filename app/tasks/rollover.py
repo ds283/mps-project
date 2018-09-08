@@ -435,8 +435,12 @@ def register_rollover_tasks(celery):
                                                   marker_submitted=False,
                                                   marker_timestamp=None,
                                                   student_feedback=None,
+                                                  student_feedback_submitted=False,
+                                                  student_feedback_timestamp=None,
                                                   acknowledge_feedback=False,
-                                                  faculty_response=None)
+                                                  faculty_response=None,
+                                                  faculty_response_submitted=False,
+                                                  faculty_response_timestamp=None)
                     db.session.add(sub_record)
 
                 db.session.commit()
@@ -494,8 +498,12 @@ def register_rollover_tasks(celery):
                                                               marker_submitted=False,
                                                               marker_timestamp=None,
                                                               student_feedback=None,
+                                                              student_feedback_submitted=False,
+                                                              student_feedback_timestamp=None,
                                                               acknowledge_feedback=False,
-                                                              faculty_response=None)
+                                                              faculty_response=None,
+                                                              faculty_response_submitted=False,
+                                                              faculty_response_timestamp=None)
                                 db.session.add(sub_record)
                         else:
                             # previous record is missing, for whatever reason, so generate a blank

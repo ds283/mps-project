@@ -10,7 +10,7 @@
 
 import os
 
-from flask import Flask, current_app, request
+from flask import Flask, current_app, request, session
 from flask_migrate import Migrate
 from flask_security import current_user, SQLAlchemyUserDatastore, Security
 from flask_bootstrap import Bootstrap
@@ -53,7 +53,7 @@ def create_app():
     mail = Mail(app)
     bleach = Bleach(app)
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
-    session = Session(app)
+    ext_session = Session(app)
 
     if config_name == 'development':
         toolbar = DebugToolbarExtension(app)
@@ -172,6 +172,17 @@ def create_app():
         l2m_obj = latex2markdown.LaTeX2Markdown(latex_string)
         mathjax_string = l2m_obj.to_markdown()
         return mathjax_string
+
+
+    @app.context_processor
+    def check_fake_login():
+        if session.get('previous_login', None) is not None:
+            real_id = session['previous_login']
+            real_user = db.session.query(User).filter_by(id=real_id).first()
+        else:
+            real_user = None
+
+        return {'real_user': real_user}
 
 
     # IMPORT BLUEPRINTS

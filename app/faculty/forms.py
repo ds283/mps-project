@@ -203,3 +203,20 @@ class SupervisorFeedbackForm(Form, FeedbackMixin):
 class MarkerFeedbackForm(Form, FeedbackMixin):
 
     pass
+
+
+class SupervisorResponseMixin():
+
+    feedback = TextAreaField('Enter your response', render_kw={'rows': 5},
+                             description='Your feedback can be structured using Markdown, or use LaTeX formatting '
+                                         'and mathematical markup. Preview by looking at the feedback page for this '
+                                         'project.')
+
+    save_changes = SubmitField('Save changes')
+
+    save_preview = SubmitField('Save changes and preview')
+
+
+class SupervisorResponseForm(Form, SupervisorResponseMixin):
+
+    pass

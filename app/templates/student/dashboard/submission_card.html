@@ -47,10 +47,30 @@
                             <div class="col-xs-3">
                                 <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
                             </div>
-                            <div class="col-xs-7">
+                            <div class="col-xs-5">
                                 {{ record.project.name }} (No. {{ record.project.number }})
+                                <div>
+                                    {% if record.student_feedback_submitted and record.acknowledge_feedback %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
+                                    {% endif %}
+                                    {% if record.faculty_response_submitted %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Supervisor response</span>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <div class="col-xs-2"></div>
+                            <div class="col-xs-4">
+                                <div style="text-align: right;" class="pull-right">
+                                    {% if period.closed and record.supervisor_submitted or record.marker_submitted %}
+                                        <a href="{{ url_for('student.view_feedback', id=record.id) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
+                                    {% endif %}
+                                    {% if period.closed and not record.student_feedback_submitted %}
+                                        <a href="{{ url_for('student.edit_feedback', id=record.id) }}" class="btn btn-sm btn-default btn-table-block">Edit my feedback</a>
+                                        {% if record.is_student_valid %}
+                                            <a href="{{ url_for('student.submit_feedback', id=record.id) }}" class="btn btn-sm btn-success btn-table-block">Submit my feedback</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
                         {% else %}
                             <div class="col-xs-12">
                                 <div style="text-align: left; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">

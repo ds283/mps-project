@@ -28,16 +28,9 @@
                 </div>
             {% endif %}
 
-            {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
+            {% if record.supervisor_submitted %}
                 <div class="panel panel-default">
-                    <div class="panel-heading">
-                        Supervisor feedback
-                        {% if record.supervisor_timestamp %}
-                            <div class="pull-right">
-                                <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                            </div>
-                        {% endif %}
-                    </div>
+                    <div class="panel-heading">Supervisor feedback on project and marked report</div>
                     <div class="panel-body">
                         <span class="dashboard-subtitle">Positive aspects</span>
                         {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
@@ -54,14 +47,7 @@
 
             {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
                 <div class="panel panel-default">
-                    <div class="panel-heading">
-                        Marker feedback
-                        {% if record.marker_timestamp %}
-                            <div class="pull-right">
-                                <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                            </div>
-                        {% endif %}
-                    </div>
+                    <div class="panel-heading">Marker feedback on marked report</div>
                     <div class="panel-body">
                         <span class="dashboard-subtitle">Positive aspects</span>
                         {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
@@ -76,31 +62,35 @@
                 </div>
             {% endif %}
 
-            {% if record.student_feedback %}
+            {% if record.student_feedback_submitted or (record.student_feedback and preview) %}
                 <div class="panel panel-success">
                     <div class="panel-heading">
-                        Student feedback to supervisor
+                        My feedback
                         <div class="pull-right">
                             {% if record.acknowledge_feedback %}
                                 <span class="label label-success">Acknowledged</span>
                             {% else %}
                                 <span class="label label-default">Not yet acknowledged</span>
                             {% endif %}
-                            <span class="label label-default">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                         </div>
                     </div>
                     <div class="panel-body">
                         {{ record.student_feedback|dealingwithdollars|markdown|bclean|blinkify|safe }}
                     </div>
-                    {% if not record.acknowledge_feedback %}
-                        <div class="panel-footer">
-                            <a href="{{ url_for('faculty.supervisor_acknowledge_feedback', id=record.id) }}" class="btn btn-sm btn-primary">Acknowledge</a>
-                        </div>
-                    {% elif record.faculty_response_submitted or (record.faculty_response and preview) %}
+                    {% if record.faculty_response_submitted %}
                         <div class="panel-footer">
                             {{ record.faculty_response|dealingwithdollars|markdown|bclean|blinkify|safe }}
                         </div>
                     {% endif %}
+                </div>
+            {% else %}
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        My feedback
+                    </div>
+                    <div class="panel-body">
+                        <span class="small">You have not yet entered any feedback.</span>
+                    </div>
                 </div>
             {% endif %}
 

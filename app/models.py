@@ -3244,11 +3244,23 @@ class SubmissionRecord(db.Model):
     # free-form feedback field
     student_feedback = db.Column(db.Text())
 
+    # student feedback submitted
+    student_feedback_submitted = db.Column(db.Text())
+
+    # student feedback timestamp
+    student_feedback_timestamp = db.Column(db.DateTime())
+
     # faculty acknowledge
     acknowledge_feedback = db.Column(db.Boolean())
 
     # faculty response
     faculty_response = db.Column(db.Text())
+
+    # faculty response submitted
+    faculty_response_submitted = db.Column(db.Boolean())
+
+    # faculty response timestamp
+    faculty_response_timestamp = db.Column(db.DateTime())
 
 
     @property
@@ -3280,6 +3292,27 @@ class SubmissionRecord(db.Model):
             return False
 
         return True
+
+
+    @property
+    def is_student_valid(self):
+        if self.student_feedback is None or len(self.student_feedback) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def is_response_valid(self):
+        if self.faculty_response is None or len(self.faculty_response) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def is_valid(self):
+        return self.is_supervisor_valid or self.is_marker_valid
 
 
 class Bookmark(db.Model):

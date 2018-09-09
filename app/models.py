@@ -822,9 +822,66 @@ class FacultyData(db.Model):
         num = self.number_marker
 
         if num == 0:
-            return '<span class="label label-default"><i class="fa fa-times"></i> 0 marker</span>'
+            return '<span class="label label-default"><i class="fa fa-times"></i> Marker for 0</span>'
 
-        return '<span class="label label-success"><i class="fa fa-check"></i> {n} marker</span>'.format(n=num)
+        return '<span class="label label-success"><i class="fa fa-check"></i> Marker for {n}</span>'.format(n=num)
+
+
+    @property
+    def supervisor_assignments(self):
+        """
+        Return a list of current SubmissionRecord instances for which we are supervisor
+        :return:
+        """
+        lp_query = self.live_projects.subquery()
+
+        return db.session.query(SubmissionRecord) \
+            .join(lp_query, lp_query.c.id == SubmissionRecord.project_id) \
+            .filter(SubmissionRecord.retired==False) \
+            .order_by(SubmissionRecord.submission_period.asc())
+
+
+    @property
+    def marker_assignments(self):
+        """
+        Return a list of current SubmissionRecord instances for which we are 2nd marker
+        :return:
+        """
+        return self.marking_records \
+            .filter_by(retired=False) \
+            .order_by(SubmissionRecord.submission_period.asc())
+
+
+    @property
+    def CATS_assignment(self):
+        """
+        Return (supervising CATS, marking CATS) for the current year
+        :return:
+        """
+
+        supv = self.supervisor_assignments
+        mark = self.marker_assignments
+
+        supv_CATS = [x.supervising_CATS for x in supv]
+        supv_CATS_clean = [x for x in supv_CATS if x is not None]
+
+        mark_CATS = [x.marking_CATS for x in mark]
+        mark_CATS_clean = [x for x in mark_CATS if x is not None]
+
+        return sum(supv_CATS_clean), sum(mark_CATS_clean)
+
+
+    @property
+    def has_late_feedback(self):
+        supervisor_late = [x.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE for x in
+                           self.supervisor_assignments]
+
+        marker_late = [x.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE for x in
+                       self.supervisor_assignments]
+
+        reponse_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE for x in self.marker_assignments]
+
+        return any(supervisor_late) or any(marker_late) or any(reponse_late)
 
 
 class StudentData(db.Model):
@@ -1514,7 +1571,7 @@ class ProjectClassConfig(db.Model):
     # current submission period
     submission_period = db.Column(db.Integer())
 
-    # 'periods' member construted by backreference from SubmissionPeriodRecord below
+    # 'periods' member constructed by backreference from SubmissionPeriodRecord below
 
     # WORKLOAD MODEL
 
@@ -1652,6 +1709,7 @@ class ProjectClassConfig(db.Model):
         if period is None:
             # allow period record to be auto-generated
             period = SubmissionPeriodRecord(config_id=self.id,
+                                            retired=False,
                                             submission_period=self.submission_period,
                                             feedback_open=False,
                                             feedback_id=None,
@@ -1808,7 +1866,6 @@ class ProjectClassConfig(db.Model):
         Generate sign-off requests to all active faculty
         :return:
         """
-
         # exit if called in error
         if not self.require_confirm:
             return
@@ -1829,7 +1886,7 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def has_matches(self):
+    def has_published_matches(self):
         query = self.matching_attempts.subquery()
         count = db.session.query(func.count(query.c.id)) \
             .filter(query.c.published == True) \
@@ -1865,7 +1922,10 @@ class SubmissionPeriodRecord(db.Model):
                              backref=db.backref('periods', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # submission period
-    submission_period = db.Column(db.Integer())
+    submission_period = db.Column(db.Integer(), index=True)
+
+    # retired flag, set by rollover code
+    retired = db.Column(db.Boolean(), index=True)
 
     # has feedback been opened in this period
     feedback_open = db.Column(db.Boolean())
@@ -2922,7 +2982,7 @@ class SelectingStudent(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # retired flag
-    retired = db.Column(db.Boolean())
+    retired = db.Column(db.Boolean(), index=True)
 
     # key to ProjectClass config record that identifies this year and pclass
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
@@ -3126,7 +3186,7 @@ class SubmittingStudent(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # retired flag
-    retired = db.Column(db.Boolean())
+    retired = db.Column(db.Boolean(), index=True)
 
     # key to ProjectClass config record that identifies this year and pclass
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
@@ -3178,12 +3238,23 @@ class SubmittingStudent(db.Model):
 
 
     @property
-    def has_late_feedback(self):
+    def supervisor_feedback_late(self):
         supervisor_states = [r.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
-        marker_states = [r.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
         response_states = [r.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
 
-        return any(supervisor_states) or any(marker_states) or any(response_states)
+        return any(supervisor_states) or any(response_states)
+
+
+    @property
+    def marker_feedback_late(self):
+        marker_states = [r.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
+
+        return any(marker_states)
+
+
+    @property
+    def has_late_feedback(self):
+        return self.supervisor_feedback_late or self.marker_feedback_late
 
 
 class SubmissionRecord(db.Model):
@@ -3198,7 +3269,10 @@ class SubmissionRecord(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # submission period this record is associated with
-    submission_period = db.Column(db.Integer())
+    submission_period = db.Column(db.Integer(), index=True)
+
+    # retired flag, set by rollover code
+    retired = db.Column(db.Boolean(), index=True)
 
     # id of owning SubmittingStudent
     owner_id = db.Column(db.Integer(), db.ForeignKey('submitting_students.id'))
@@ -3395,6 +3469,36 @@ class SubmissionRecord(db.Model):
     @property
     def has_feedback(self):
         return self.supervisor_submitted or self.marker_submitted
+
+
+    @property
+    def supervising_CATS(self):
+        if self.selection_config:
+            return self.selection_config.CATS_supervision
+
+        current_config = self.owner.config
+        config = ProjectClassConfig.query.filter_by(year=current_config.year-1,
+                                                    pclass_id=current_config.pclass_id).first()
+
+        if config is not None:
+            return config.CATS_supervision
+
+        return None
+
+
+    @property
+    def marking_CATS(self):
+        if self.selection_config:
+            return self.selection_config.CATS_marking
+
+        current_config = self.owner.config
+        config = ProjectClassConfig.query.filter_by(year=current_config.year-1,
+                                                    pclass_id=current_config.pclass_id).first()
+
+        if config is not None:
+            return config.CATS_marking
+
+        return None
 
 
 class Bookmark(db.Model):
@@ -4310,7 +4414,7 @@ class MatchingAttempt(db.Model):
 
     def is_project_overassigned(self, project):
         count = self.number_project_assignments(project)
-        if project.enforce_capacity and project.capacity > 0 and count > project.capacity:
+        if project.enforce_capacity and 0 < project.capacity < count:
             return True
 
         return False

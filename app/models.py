@@ -3172,6 +3172,11 @@ class SubmittingStudent(db.Model):
         raise RuntimeError('Too many projects assigned for this submission period')
 
 
+    @property
+    def ordered_assignments(self):
+        return self.records.order_by(SubmissionRecord.submission_period.asc())
+
+
 class SubmissionRecord(db.Model):
     """
     Collect details for a student submission

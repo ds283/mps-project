@@ -476,6 +476,10 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter):
     elif state_filter == 'unpublished':
         submitters = submitters.filter(SubmittingStudent.published == False)
         data = submitters.all()
+    elif state_filter == 'late-feedback':
+        data = [x for x in submitters.all() if x.has_late_feedback]
+    elif state_filter == 'no-late-feedback':
+        data = [x for x in submitters.all() if not x.has_late_feedback]
     else:
         data = submitters.all()
 

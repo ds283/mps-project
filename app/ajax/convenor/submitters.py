@@ -26,12 +26,29 @@ _published = \
 
 _projects = \
 """
+{% macro feedback_state_tag(obj, state, label) %}
+    {% if state == obj.FEEDBACK_NOT_YET %}
+        <span class="label label-default">{{ label }} not yet required</span>
+    {% elif state == obj.FEEDBACK_WAITING %}
+        <span class="label label-default">{{ label }} to do</span>
+    {% elif state == obj.FEEDBACK_SUBMITTED %}
+        <span class="label label-success">{{ label }} submitted</span>        
+    {% elif state == obj.FEEDBACK_ENTERED %}
+        <span class="label label-warning">{{ label }} in progress</span>        
+    {% elif state == obj.FEEDBACK_LATE %}
+        <span class="label label-danger">{{ label }} late</span>
+    {% else %}
+        <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
+    {% endif %}        
+{% endmacro %}
 {% macro project_tag(r, show_period) %}
     {% set pclass = r.owner.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
-    <div class="assignment-label" style="display: inline-block;">
-        <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}
+    <div>
+        <span class="label assignment-label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}
             {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
+        {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
+        {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
 {% set recs = sub.ordered_assignments.all() %}
@@ -39,6 +56,7 @@ _projects = \
     {{ project_tag(recs[0], false) }}
 {% elif recs|length > 1 %}
     {% for rec in sub.ordered_assignments %}
+        {% if loop.index > 1 %}<p></p>{% endif %}
         {{ project_tag(rec, true) }}
     {% endfor %}
 {% else %}
@@ -49,17 +67,34 @@ _projects = \
 
 _markers = \
 """
+{% macro feedback_state_tag(obj, state, label) %}
+    {% if state == obj.FEEDBACK_NOT_YET %}
+        <span class="label label-default">{{ label }} not yet required</span>
+    {% elif state == obj.FEEDBACK_WAITING %}
+        <span class="label label-default">{{ label }} to do</span>
+    {% elif state == obj.FEEDBACK_SUBMITTED %}
+        <span class="label label-success">{{ label }} submitted</span>        
+    {% elif state == obj.FEEDBACK_ENTERED %}
+        <span class="label label-warning">{{ label }} in progress</span>        
+    {% elif state == obj.FEEDBACK_LATE %}
+        <span class="label label-danger">{{ label }} late</span>
+    {% else %}
+        <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
+    {% endif %}        
+{% endmacro %}
 {% macro marker_tag(r, show_period) %}
-    <div class="assignment-label" style="display: inline-block;">
-        <span class="label label-default" >{% if show_period %}#{{ r.submission_period }}: {% endif %}
+    <div>
+        <span class="label assignment-label label-default" >{% if show_period %}#{{ r.submission_period }}: {% endif %}
             {{ r.marker.user.name }}</span>
+        {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}
 {% set recs = sub.ordered_assignments.all() %}
 {% if recs|length == 1 %}
-    {{ project_tag(recs[0], false) }}
+    {{ marker_tag(recs[0], false) }}
 {% elif recs|length > 1 %}
     {% for rec in sub.ordered_assignments %}
+        {% if loop.index > 1 %}<p></p>{% endif %}
         {{ marker_tag(rec, true) }}
     {% endfor %}
 {% else %}

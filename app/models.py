@@ -3177,6 +3177,15 @@ class SubmittingStudent(db.Model):
         return self.records.order_by(SubmissionRecord.submission_period.asc())
 
 
+    @property
+    def has_late_feedback(self):
+        supervisor_states = [r.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
+        marker_states = [r.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
+        response_states = [r.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
+
+        return any(supervisor_states) or any(marker_states) or any(response_states)
+
+
 class SubmissionRecord(db.Model):
     """
     Collect details for a student submission
@@ -3278,6 +3287,15 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def period(self):
+        """
+        Returns SubmissionPeriodRecord for the submission period associated with this SubmissionRecord
+        :return:
+        """
+        return self.owner.config.get_period(self.submission_period)
+
+
+    @property
     def is_supervisor_valid(self):
         if self.supervisor_positive is None or len(self.supervisor_positive) == 0:
             return False
@@ -3318,6 +3336,60 @@ class SubmissionRecord(db.Model):
     @property
     def is_feedback_valid(self):
         return self.is_supervisor_valid or self.is_marker_valid
+
+
+    FEEDBACK_NOT_YET = 0
+    FEEDBACK_SUBMITTED = 1
+    FEEDBACK_WAITING = 2
+    FEEDBACK_ENTERED = 3
+    FEEDBACK_LATE = 4
+
+
+    def _feedback_state(self, valid):
+        period = self.period
+
+        if not period.feedback_open:
+            return SubmissionRecord.FEEDBACK_NOT_YET
+
+        if self.supervisor_submitted:
+            return SubmissionRecord.FEEDBACK_SUBMITTED
+
+        if valid:
+            return SubmissionRecord.FEEDBACK_ENTERED
+
+        if not period.closed:
+            return SubmissionRecord.FEEDBACK_WAITING
+
+        return SubmissionRecord.FEEDBACK_LATE
+
+
+    @property
+    def supervisor_feedback_state(self):
+        return self._feedback_state(self.is_supervisor_valid)
+
+
+    @property
+    def marker_feedback_state(self):
+        return self._feedback_state(self.is_marker_valid)
+
+
+    @property
+    def supervisor_response_state(self):
+        period = self.period
+
+        if not period.feedback_open or not self.student_feedback_submitted:
+            return SubmissionRecord.FEEDBACK_NOT_YET
+
+        if self.faculty_response_submitted:
+            return SubmissionRecord.FEEDBACK_SUBMITTED
+
+        if self.is_response_valid:
+            return SubmissionRecord.FEEDBACK_ENTERED
+
+        if not period.closed:
+            return SubmissionRecord.FEEDBACK_WAITING
+
+        return SubmissionRecord.FEEDBACK_LATE
 
 
 class Bookmark(db.Model):

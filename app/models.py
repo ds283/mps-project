@@ -3392,6 +3392,11 @@ class SubmissionRecord(db.Model):
         return SubmissionRecord.FEEDBACK_LATE
 
 
+    @property
+    def has_feedback(self):
+        return self.supervisor_submitted or self.marker_submitted
+
+
 class Bookmark(db.Model):
     """
     Model an (orderable) bookmark

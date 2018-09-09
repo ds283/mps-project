@@ -124,6 +124,22 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+        
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">View feedback</li>
+        {% set recs = sub.ordered_assignments.all() %}
+        {% for r in recs %}
+            {% set disabled = not r.has_feedback %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view') }}"{% endif %}>
+                    Period #{{ r.submission_period }}
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>No periods</a>
+            </li>
+        {% endfor %}
     </ul>
 </div>
 """

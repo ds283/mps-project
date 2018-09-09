@@ -39,6 +39,10 @@ p.copyright {
     display: inline-block;
 }
 
+.assignment-label {
+    display: inline-block;
+}
+
 .btn-table-block {
     margin-top: 5px;
 }

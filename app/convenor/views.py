@@ -16,12 +16,11 @@ from celery import chain
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
-    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, MatchingAttempt, \
-    MatchingRecord, SubmittingStudent
+    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates, \
-    build_enroll_submitter_candidates
+    build_enroll_submitter_candidates, build_submitters_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
@@ -802,7 +801,7 @@ def delete_selector(sid):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    if sel.config.selector_lifecycle > SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+    if sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual deletion of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -948,6 +947,12 @@ def submitters(id):
     if prog_filter is not None:
         session['convenor_submitters_prog_filter'] = prog_filter
 
+    if state_filter is None and session.get('convenor_submitters_state_filter'):
+        state_filter = session['convenor_submitters_state_filter']
+
+    if state_filter is not None:
+        session['convenor_submitters_state_filter'] = state_filter
+
     # get current academic year
     current_year = get_current_year()
 
@@ -976,7 +981,7 @@ def submitters(id):
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
-                           cohort_filter=cohort_filter, prog_filter=prog_filter)
+                           cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter)
 
 
 @convenor.route('/submitters_ajax/<int:id>', methods=['GET', 'POST'])
@@ -1001,25 +1006,11 @@ def submitters_ajax(id):
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
 
-    # build a list of live students submitting work for evaluation in this project class
-    submitters = config.submitting_students.filter_by(retired=False)
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter)
 
-    # filter by cohort and programme if required
-    cohort_flag, cohort_value = is_integer(cohort_filter)
-    prog_flag, prog_value = is_integer(prog_filter)
-
-    if cohort_flag or prog_flag:
-        submitters = submitters \
-            .join(StudentData, StudentData.id == SubmittingStudent.student_id)
-
-    if cohort_flag:
-        submitters = submitters.filter(StudentData.cohort == cohort_value)
-
-    if prog_flag:
-        submitters = submitters.filter(StudentData.programme_id == prog_value)
-
-    return ajax.convenor.submitters_data(submitters.all(), config)
+    return ajax.convenor.submitters_data(data, config)
 
 
 @convenor.route('/enroll_submitters/<int:id>')
@@ -3392,6 +3383,106 @@ def close_feedback(id):
     period.closed = True
     period.closed_id = current_user.id
     period.closed_timestamp = datetime.now()
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('publish_assignment/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def publish_assignment(id):
+
+    # id is a SubmittingStudent
+    sub = SubmittingStudent.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for this SubmittingStudent
+    if not validate_is_convenor(sub.config.project_class):
+        return redirect(request.referrer)
+
+    if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to publish an assignment to students')
+        return redirect(request.referrer)
+
+    sub.published = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('unpublish_assignment/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def unpublish_assignment(id):
+
+    # id is a SubmittingStudent
+    sub = SubmittingStudent.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for this SubmittingStudent
+    if not validate_is_convenor(sub.config.project_class):
+        return redirect(request.referrer)
+
+    if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to publish an assignment to students')
+        return redirect(request.referrer)
+
+    sub.published = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('publish_all_assignments/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def publish_all_assignments(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to publish an assignment to students')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter)
+
+    for sel in data:
+        sel.published = True
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('unpublish_all_assignments/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def unpublish_all_assignments(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to unpublish an assignment')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter)
+
+    for sel in data:
+        sel.published = False
 
     db.session.commit()
 

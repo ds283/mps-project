@@ -449,3 +449,34 @@ def get_automatch_pclasses():
     pclasses = db.session.query(ProjectClass).filter_by(active=True, do_matching=True).all()
 
     return pclasses
+
+
+def build_submitters_data(config, cohort_filter, prog_filter, state_filter):
+
+    # build a list of live students submitting work for evaluation in this project class
+    submitters = config.submitting_students.filter_by(retired=False)
+
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
+
+    if cohort_flag or prog_flag:
+        submitters = submitters \
+            .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+
+    if cohort_flag:
+        submitters = submitters.filter(StudentData.cohort == cohort_value)
+
+    if prog_flag:
+        submitters = submitters.filter(StudentData.programme_id == prog_value)
+
+    if state_filter == 'published':
+        submitters = submitters.filter(SubmittingStudent.published == True)
+        data = submitters.all()
+    elif state_filter == 'unpublished':
+        submitters = submitters.filter(SubmittingStudent.published == False)
+        data = submitters.all()
+    else:
+        data = submitters.all()
+
+    return data

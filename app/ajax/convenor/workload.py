@@ -1,5 +1,5 @@
 #
-# Created by David Seery on 05/06/2018.
+# Created by David Seery on 09/09/2018.
 # Copyright (c) 2018 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
@@ -9,19 +9,6 @@
 #
 
 from flask import render_template_string, jsonify
-
-
-_cohort = \
-"""
-{{ sub.student.programme.label|safe }}
-{{ sub.student.cohort_label|safe }}
-{{ sub.academic_year_label|safe }}
-"""
-
-
-_published = \
-"""
-"""
 
 
 _projects = \
@@ -46,12 +33,12 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <span class="label assignment-label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}
-            {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
+            {{ r.owner.student.user.name }}</span>
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
-{% set recs = sub.ordered_assignments.all() %}
+{% set recs = f.supervisor_assignments.all() %}
 {% if recs|length == 1 %}
     {{ project_tag(recs[0], false) }}
 {% elif recs|length > 1 %}
@@ -60,12 +47,12 @@ _projects = \
         {{ project_tag(rec, true) }}
     {% endfor %}
 {% else %}
-    <span class="label label-danger">None</span>
+    <span class="label label-info">None</span>
 {% endif %}
 """
 
 
-_markers = \
+_marking = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
@@ -83,90 +70,51 @@ _markers = \
     {% endif %}        
 {% endmacro %}
 {% macro marker_tag(r, show_period) %}
+    {% set pclass = r.owner.config.project_class %}
+    {% set style = pclass.make_CSS_style() %}
     <div>
-        <span class="label assignment-label label-default" >{% if show_period %}#{{ r.submission_period }}: {% endif %}
-            {{ r.marker.user.name }}</span>
-        {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
+        <span class="label assignment-label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}
+            {{ r.owner.student.user.name }}</span>
+        {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
+        {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
-{% set recs = sub.ordered_assignments.all() %}
+{% set recs = f.marker_assignments.all() %}
 {% if recs|length == 1 %}
     {{ marker_tag(recs[0], false) }}
 {% elif recs|length > 1 %}
-    {% for rec in sub.ordered_assignments %}
+    {% for rec in recs %}
         {% if loop.index > 1 %}<p></p>{% endif %}
         {{ marker_tag(rec, true) }}
     {% endfor %}
 {% else %}
-    <span class="label label-danger">None</span>
+    <span class="label label-info">None</span>
 {% endif %}
 """
 
 
-_menu = \
+_workload = \
 """
-<div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        {% if sub.published %}
-            <li>
-                <a href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
-                    <i class="fa fa-eye-slash"></i> Unpublish
-                </a>
-            </li>
-        {% else %}
-            <li>
-                <a href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
-                    <i class="fa fa-eye"></i> Publish to student
-                </a>
-            </li>
-        {% endif %}
-        
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">View feedback</li>
-        {% set recs = sub.ordered_assignments.all() %}
-        {% for r in recs %}
-            {% set disabled = not r.has_feedback %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view') }}"{% endif %}>
-                    Period #{{ r.submission_period }}
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a>No periods</a>
-            </li>
-        {% endfor %}
-    </ul>
-</div>
+<span class="label label-info">Supv {{ CATS_sup }}</span>
+<span class="label label-info">Mark {{ CATS_mark }}</span>
+<span class="label label-primary">Total {{ CATS_sup+CATS_mark }}</span>
 """
 
 
-_name = \
-"""
-<a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
-<div>
-{% if sub.published %}
-    <span class="label label-success"><i class="fa fa-eye"></i> Published</span>
-{% else %}
-    <span class="label label-warning"><i class="fa fa-eye-slash"></i> Unpublished</span>
-{% endif %}
-</div>
-"""
+def faculty_workload_data(faculty, pclass, config):
 
+    data = []
 
-def submitters_data(students, config):
+    for u, d in faculty:
 
-    data = [{'name': {
-                'display': render_template_string(_name, sub=s),
-                'sortstring': s.student.user.last_name + s.student.user.first_name
-             },
-             'cohort': render_template_string(_cohort, sub=s),
-             'projects': render_template_string(_projects, sub=s),
-             'markers': render_template_string(_markers, sub=s),
-             'menu': render_template_string(_menu, sub=s)} for s in students]
+        CATS_sup, CATS_mark = d.CATS_assignment
+
+        data.append({'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
+                              'sortvalue': u.last_name + u.first_name},
+                     'projects': render_template_string(_projects, f=d),
+                     'marking': render_template_string(_marking, f=d),
+                     'workload': {'display': render_template_string(_workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark,
+                                                                    f=d),
+                                  'sortvalue': CATS_sup+CATS_mark}})
 
     return jsonify(data)

@@ -16,3 +16,4 @@ from .submitters import submitters_data
 from .liveprojects import liveprojects_data
 from .outstanding_confirm import outstanding_confirm_data
 from .selector_grid import selector_grid_data
+from .workload import faculty_workload_data

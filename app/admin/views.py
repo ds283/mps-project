@@ -1649,6 +1649,7 @@ def add_pclass():
 
         for k in range(0, config.submissions):
             period = SubmissionPeriodRecord(config_id=config.id,
+                                            retired=False,
                                             submission_period=k+1,
                                             feedback_open=False,
                                             feedback_id=None,

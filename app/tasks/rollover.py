@@ -344,7 +344,8 @@ def register_rollover_tasks(celery):
             db.session.flush()
 
             for k in range(0, new_config.submissions):
-                period = SubmissionPeriodRecord(config_id=cnew_onfig.id,
+                period = SubmissionPeriodRecord(config_id=new_config.id,
+                                                retired=False,
                                                 submission_period=k + 1,
                                                 feedback_open=False,
                                                 feedback_id=None,
@@ -421,6 +422,7 @@ def register_rollover_tasks(celery):
 
                 for rec in match_records:
                     sub_record = SubmissionRecord(submission_period=rec.submission_period,
+                                                  retired=False,
                                                   owner_id=student_record.id,
                                                   project_id=rec.project_id,
                                                   marker_id=rec.marker_id,
@@ -484,6 +486,7 @@ def register_rollover_tasks(celery):
 
                             for rec in prev_record.records:
                                 sub_record = SubmissionRecord(submission_period=rec.submission_period,
+                                                              retired=False,
                                                               owner_id=student_record.id,
                                                               project_id=rec.project_id,
                                                               marker_id=rec.marker_id,

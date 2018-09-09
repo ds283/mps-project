@@ -72,7 +72,7 @@ _projects = \
 
 def faculty_data(faculty, pclass, config):
 
-    data = [{'name': {'display': u.name,
+    data = [{'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                       'sortstring': u.last_name + u.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,

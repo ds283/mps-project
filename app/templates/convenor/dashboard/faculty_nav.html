@@ -1,0 +1,16 @@
+{% extends "convenor/dashboard/nav.html" %}
+
+{% block tabblock %}
+    <ul class="nav nav-tabs dashboard-nav">
+        <li {% if subpane=='list' %}class="active"{% endif %}>
+            <a href="{{ url_for('convenor.faculty', id=pclass.id) }}">
+                Faculty list
+            </a>
+        </li>
+        <li {% if subpane=='workload' %}class="active"{% endif %}>
+            <a href="{{ url_for('convenor.faculty_workload', id=pclass.id) }}">
+                Workload summary
+            </a>
+        </li>
+    </ul>
+{% endblock %}

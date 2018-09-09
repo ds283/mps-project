@@ -48,7 +48,7 @@ _projects = \
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
-{% set recs = f.supervisor_assignments.all() %}
+{% set recs = f.supervisor_assignments(config.pclass_id).all() %}
 {% if recs|length >= 1 %}
     {% for rec in recs %}
         {% if loop.index > 1 %}<p></p>{% endif %}
@@ -96,7 +96,7 @@ _marking = \
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}
-{% set recs = f.marker_assignments.all() %}
+{% set recs = f.marker_assignments(config.pclass_id).all() %}
 {% if recs|length >= 1 %}
     {% for rec in recs %}
         {% if loop.index > 1 %}<p></p>{% endif %}
@@ -122,7 +122,7 @@ def faculty_workload_data(faculty, config):
 
     for u, d in faculty:
 
-        CATS_sup, CATS_mark = d.CATS_assignment
+        CATS_sup, CATS_mark = d.CATS_assignment(config.pclass_id)
 
         data.append({'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                               'sortvalue': u.last_name + u.first_name},

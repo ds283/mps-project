@@ -827,8 +827,7 @@ class FacultyData(db.Model):
         return '<span class="label label-success"><i class="fa fa-check"></i> Marker for {n}</span>'.format(n=num)
 
 
-    @property
-    def supervisor_assignments(self):
+    def supervisor_assignments(self, pclass_id):
         """
         Return a list of current SubmissionRecord instances for which we are supervisor
         :return:
@@ -837,30 +836,34 @@ class FacultyData(db.Model):
 
         return db.session.query(SubmissionRecord) \
             .join(lp_query, lp_query.c.id == SubmissionRecord.project_id) \
-            .filter(SubmissionRecord.retired==False) \
+            .filter(SubmissionRecord.retired == False) \
+            .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
+            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
+            .filter(ProjectClassConfig.pclass_id == pclass_id) \
             .order_by(SubmissionRecord.submission_period.asc())
 
 
-    @property
-    def marker_assignments(self):
+    def marker_assignments(self, pclass_id):
         """
         Return a list of current SubmissionRecord instances for which we are 2nd marker
         :return:
         """
         return self.marking_records \
             .filter_by(retired=False) \
+            .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
+            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
+            .filter(ProjectClassConfig.pclass_id == pclass_id) \
             .order_by(SubmissionRecord.submission_period.asc())
 
 
-    @property
-    def CATS_assignment(self):
+    def CATS_assignment(self, pclass_id):
         """
         Return (supervising CATS, marking CATS) for the current year
         :return:
         """
 
-        supv = self.supervisor_assignments
-        mark = self.marker_assignments
+        supv = self.supervisor_assignments(pclass_id)
+        mark = self.marker_assignments(pclass_id)
 
         supv_CATS = [x.supervising_CATS for x in supv]
         supv_CATS_clean = [x for x in supv_CATS if x is not None]
@@ -871,15 +874,15 @@ class FacultyData(db.Model):
         return sum(supv_CATS_clean), sum(mark_CATS_clean)
 
 
-    @property
-    def has_late_feedback(self):
-        supervisor_late = [x.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE for x in
-                           self.supervisor_assignments]
+    def has_late_feedback(self, pclass_id):
+        supervisor_late = [x.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE
+                           for x in self.supervisor_assignments(pclass_id)]
 
-        marker_late = [x.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE for x in
-                       self.supervisor_assignments]
+        marker_late = [x.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE
+                       for x in self.supervisor_assignments(pclass_id)]
 
-        reponse_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE for x in self.marker_assignments]
+        reponse_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
+                        for x in self.marker_assignments(pclass_id)]
 
         return any(supervisor_late) or any(marker_late) or any(reponse_late)
 

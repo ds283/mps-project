@@ -32,19 +32,27 @@ _projects = \
     {% set pclass = r.owner.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div>
-        <span class="label assignment-label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}
-            {{ r.owner.student.user.name }}</span>
+        <div class="dropdown assignment-label">
+            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {{ r.owner.student.user.name }}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                </li>
+            </ul>
+        </div>
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
 {% set recs = f.supervisor_assignments.all() %}
-{% if recs|length == 1 %}
-    {{ project_tag(recs[0], false) }}
-{% elif recs|length > 1 %}
+{% if recs|length >= 1 %}
     {% for rec in recs %}
         {% if loop.index > 1 %}<p></p>{% endif %}
-        {{ project_tag(rec, true) }}
+        {{ project_tag(rec, config.submissions > 1) }}
     {% endfor %}
 {% else %}
     <span class="label label-info">None</span>
@@ -73,19 +81,26 @@ _marking = \
     {% set pclass = r.owner.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div>
-        <span class="label assignment-label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}
-            {{ r.owner.student.user.name }}</span>
-        {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
-        {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
+        <div class="dropdown assignment-label">
+            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {{ r.owner.student.user.name }}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                </li>
+            </ul>
+        </div>
+        {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}
 {% set recs = f.marker_assignments.all() %}
-{% if recs|length == 1 %}
-    {{ marker_tag(recs[0], false) }}
-{% elif recs|length > 1 %}
+{% if recs|length >= 1 %}
     {% for rec in recs %}
         {% if loop.index > 1 %}<p></p>{% endif %}
-        {{ marker_tag(rec, true) }}
+        {{ marker_tag(rec, config.submissions > 1) }}
     {% endfor %}
 {% else %}
     <span class="label label-info">None</span>
@@ -101,7 +116,7 @@ _workload = \
 """
 
 
-def faculty_workload_data(faculty, pclass, config):
+def faculty_workload_data(faculty, config):
 
     data = []
 
@@ -111,8 +126,8 @@ def faculty_workload_data(faculty, pclass, config):
 
         data.append({'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                               'sortvalue': u.last_name + u.first_name},
-                     'projects': render_template_string(_projects, f=d),
-                     'marking': render_template_string(_marking, f=d),
+                     'projects': render_template_string(_projects, f=d, config=config),
+                     'marking': render_template_string(_marking, f=d, config=config),
                      'workload': {'display': render_template_string(_workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark,
                                                                     f=d),
                                   'sortvalue': CATS_sup+CATS_mark}})

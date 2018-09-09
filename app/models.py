@@ -3316,7 +3316,7 @@ class SubmissionRecord(db.Model):
 
 
     @property
-    def is_valid(self):
+    def is_feedback_valid(self):
         return self.is_supervisor_valid or self.is_marker_valid
 
 

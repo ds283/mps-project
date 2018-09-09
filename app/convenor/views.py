@@ -3638,4 +3638,4 @@ def faculty_workload_ajax(id):
     else:
         data = faculty.all()
 
-    return ajax.convenor.faculty_workload_data(data, pclass, config)
+    return ajax.convenor.faculty_workload_data(data, config)

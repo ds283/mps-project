@@ -45,8 +45,18 @@ _projects = \
     {% set pclass = r.owner.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div>
-        <span class="label assignment-label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}
-            {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
+        <div class="dropdown assignment-label">
+            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {{ r.supervisor.user.name }} (No. {{ r.project.number }}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                </li>
+            </ul>
+        </div>
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
@@ -84,8 +94,18 @@ _markers = \
 {% endmacro %}
 {% macro marker_tag(r, show_period) %}
     <div>
-        <span class="label assignment-label label-default" >{% if show_period %}#{{ r.submission_period }}: {% endif %}
-            {{ r.marker.user.name }}</span>
+        <div class="dropdown assignment-label">
+            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {{ r.marker.user.name }}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                </li>
+            </ul>
+        </div>
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}

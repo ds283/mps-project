@@ -1232,8 +1232,7 @@ def supervisor_edit_feedback(id):
     if not validate_submission_supervisor(record):
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if not period.feedback_open:
         flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
@@ -1285,8 +1284,7 @@ def marker_edit_feedback(id):
     if not validate_submission_marker(record):
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if not period.feedback_open:
         flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
@@ -1341,8 +1339,7 @@ def supervisor_submit_feedback(id):
     if record.supervisor_submitted:
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if not period.feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
@@ -1371,8 +1368,7 @@ def supervisor_unsubmit_feedback(id):
     if not record.supervisor_submitted:
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if period.closed:
         flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
@@ -1397,8 +1393,7 @@ def marker_submit_feedback(id):
     if record.marker_submitted:
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if not period.feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
@@ -1427,8 +1422,7 @@ def marker_unsubmit_feedback(id):
     if not record.marker_submitted:
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if period.closed:
         flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
@@ -1453,8 +1447,7 @@ def supervisor_acknowledge_feedback(id):
     if record.acknowledge_feedback:
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if not period.feedback_open:
         flash('It is not possible to submit before the feedback period has opened.', 'error')
@@ -1499,8 +1492,7 @@ def edit_response(id):
     if not validate_submission_supervisor(record):
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if not period.closed:
         flash('It is only possible to give respond to feedback from your student when '
@@ -1552,8 +1544,7 @@ def submit_response(id):
     if not validate_submission_supervisor(record):
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
+    period = record.period
 
     if record.faculty_response_submitted:
         return redirect(request.referrer)

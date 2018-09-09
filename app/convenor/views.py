@@ -16,7 +16,8 @@ from celery import chain
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
-    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent
+    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
+    SubmissionRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates, \
@@ -3389,7 +3390,7 @@ def close_feedback(id):
     return redirect(request.referrer)
 
 
-@convenor.route('publish_assignment/<int:id>')
+@convenor.route('/publish_assignment/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def publish_assignment(id):
 
@@ -3410,7 +3411,7 @@ def publish_assignment(id):
     return redirect(request.referrer)
 
 
-@convenor.route('unpublish_assignment/<int:id>')
+@convenor.route('/unpublish_assignment/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def unpublish_assignment(id):
 
@@ -3431,7 +3432,7 @@ def unpublish_assignment(id):
     return redirect(request.referrer)
 
 
-@convenor.route('publish_all_assignments/<int:id>')
+@convenor.route('/publish_all_assignments/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def publish_all_assignments(id):
 
@@ -3460,7 +3461,7 @@ def publish_all_assignments(id):
     return redirect(request.referrer)
 
 
-@convenor.route('unpublish_all_assignments/<int:id>')
+@convenor.route('/unpublish_all_assignments/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def unpublish_all_assignments(id):
 
@@ -3487,3 +3488,22 @@ def unpublish_all_assignments(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@convenor.route('/view_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def view_feedback(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for the project class associated with this submission record
+    if not validate_is_convenor(rec.owner.config.project_class):
+        return redirect(request.referrer)
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    return render_template('faculty/dashboard/view_feedback.html', record=rec, text=text, url=url)

@@ -42,6 +42,11 @@ _projects = \
                 <li>
                     <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
                 </li>
+                
+                {% set disabled = r.period.feedback_open %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view') }}"{% endif %}>Manually reassign</a>
+                </li>
             </ul>
         </div>
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
@@ -90,6 +95,11 @@ _marking = \
             <ul class="dropdown-menu">
                 <li>
                     <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                </li>
+                
+                {% set disabled = r.period.feedback_open %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view') }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>

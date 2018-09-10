@@ -48,12 +48,17 @@ _projects = \
         <div class="dropdown assignment-label">
             <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
-                {{ r.supervisor.user.name }} (No. {{ r.project.number }}
+                {{ r.supervisor.user.name }} (No. {{ r.project.number }})
                 <span class="caret"></span>
             </a>
             <ul class="dropdown-menu">
                 <li>
-                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view') }}">Show feedback</a>
+                </li>
+                
+                {% set disabled = r.period.feedback_open %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view') }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>
@@ -102,7 +107,12 @@ _markers = \
             </a>
             <ul class="dropdown-menu">
                 <li>
-                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view') }}">Show feedback</a>
+                </li>
+                
+                {% set disabled = r.period.feedback_open %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view') }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>
@@ -144,10 +154,26 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+
+        {% set recs = sub.ordered_assignments.all() %}
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Manual reassignment</li>
+        {% for r in recs %}
+            {% set disabled = r.period.feedback_open %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view') }}"{% endif %}>
+                    Period #{{ r.submission_period }}
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>No periods</a>
+            </li>
+        {% endfor %}
         
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">View feedback</li>
-        {% set recs = sub.ordered_assignments.all() %}
         {% for r in recs %}
             {% set disabled = not r.has_feedback %}
             <li {% if disabled %}class="disabled"{% endif %}>

@@ -3475,13 +3475,20 @@ class SubmissionRecord(db.Model):
 
 
     @property
-    def supervising_CATS(self):
+    def previous_config(self):
         if self.selection_config:
-            return self.selection_config.CATS_supervision
+            return self.selection_config
 
         current_config = self.owner.config
         config = ProjectClassConfig.query.filter_by(year=current_config.year-1,
                                                     pclass_id=current_config.pclass_id).first()
+
+        return config
+
+
+    @property
+    def supervising_CATS(self):
+        config = self.previous_config
 
         if config is not None:
             return config.CATS_supervision
@@ -3491,12 +3498,7 @@ class SubmissionRecord(db.Model):
 
     @property
     def marking_CATS(self):
-        if self.selection_config:
-            return self.selection_config.CATS_marking
-
-        current_config = self.owner.config
-        config = ProjectClassConfig.query.filter_by(year=current_config.year-1,
-                                                    pclass_id=current_config.pclass_id).first()
+        config = self.previous_config
 
         if config is not None:
             return config.CATS_marking

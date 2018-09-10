@@ -35,7 +35,7 @@ import app.ajax as ajax
 from . import convenor
 
 from ..faculty.forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
-from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm
+from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerForm
 
 from datetime import date, datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -3662,12 +3662,23 @@ def manual_assign(id):
               'because feedback is already open'.format(period=rec.period.submission_period), 'error')
         return redirect(request.referrer)
 
+    form = AssignMarkerForm(rec.project, request.form)
+
+    if form.validate_on_submit():
+        rec.marker = form.marker.data
+        db.session.commit()
+
+    else:
+        if request.method == 'GET':
+            form.marker.data = rec.marker
+
     text = request.args.get('text', None)
     url = request.args.get('url', None)
     if url is None:
         url = request.referrer
 
-    return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=config, url=url, text=text)
+    return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=config, url=url, text=text,
+                           form=form)
 
 
 @convenor.route('/manual_assign_ajax/<int:id>')

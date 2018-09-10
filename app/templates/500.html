@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    500: Internal server error
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="well">
+                <div class="dashboard-subtitle" style="margin-bottom: 20px;">Apologies. Something has gone wrong</div>
+                <p>
+                    An unexpected error has occurred. Please leave a few minutes, and then
+                    try your operation again.
+                </p>
+                <p>
+                    A system administrator has already been notified of this error, but
+                    please contact us yourself if you continue to encounter errors.
+                </p>
+                <p>
+                    <a href="{{ home_dashboard_url }}">Click here to return to your dashboard</a>.
+                </p>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    404: File not found
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="well">
+                <div class="dashboard-subtitle" style="margin-bottom: 20px;">Apologies. Something has gone wrong</div>
+                <p>
+                    We weren't able to find a file you were looking for. If you're certain it
+                    should be here, please contact a system administrator. Otherwise you can
+                    <a href="{{ home_dashboard_url }}">return to your dashboard</a>.
+                </p>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

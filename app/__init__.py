@@ -10,7 +10,7 @@
 
 import os
 
-from flask import Flask, current_app, request, session
+from flask import Flask, current_app, request, session, render_template
 from flask_migrate import Migrate
 from flask_security import current_user, SQLAlchemyUserDatastore, Security
 from flask_bootstrap import Bootstrap
@@ -191,6 +191,17 @@ def create_app():
     @app.context_processor
     def inject_home_dashboard_url():
         return {'home_dashboard_url': home_dashboard_url()}
+
+
+    @app.errorhandler(404)
+    def not_found_error(error):
+        return render_template('404.html'), 404
+
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        return render_template('500.html'), 500
 
 
     # IMPORT BLUEPRINTS

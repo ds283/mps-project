@@ -2118,7 +2118,7 @@ class Supervisor(db.Model):
     # role name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
 
-    # role abbrevation
+    # role abbreviation
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
 
     # colour string

@@ -297,6 +297,10 @@ def register_rollover_tasks(celery):
 
         item.retired = True
 
+        # retire all SubmissionRecords:
+        for rec in item.records:
+            rec.retired = True
+
         try:
             db.session.commit()
         except SQLAlchemyError:
@@ -355,6 +359,10 @@ def register_rollover_tasks(celery):
                                                 closed_id=None,
                                                 closed_timestamp=None)
                 db.session.add(period)
+
+            # retire old SubmissionPeriodRecords:
+            for rec in old_config.periods:
+                rec.retired = True
 
             db.session.commit()
         except SQLAlchemyError:

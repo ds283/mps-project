@@ -1192,7 +1192,6 @@ def live_project(pid):
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
-
     if url is None:
         url = request.referrer
 

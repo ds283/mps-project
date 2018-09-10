@@ -3639,3 +3639,175 @@ def faculty_workload_ajax(id):
         data = faculty.all()
 
     return ajax.convenor.faculty_workload_data(data, config)
+
+
+@convenor.route('/manual_assign/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def manual_assign(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=config, url=url, text=text)
+
+
+@convenor.route('/manual_assign_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def manual_assign_ajax(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return jsonify({})
+
+    if not validate_is_convenor(config.project_class):
+        return jsonify({})
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return jsonify({})
+
+    data = config.live_projects.all()
+
+    return ajax.convenor.manual_assign_data(data, rec)
+
+
+@convenor.route('/assign_revert/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def assign_revert(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    if rec.matching_record is None:
+        flash('Can not revert assignment for submission period #{period} '
+              'because automatic data could not be found'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    rec.project_id = rec.matching_record.project_id
+    rec.marker_id = rec.matching_record.marker_id
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/assign_from_selection/<int:id>/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def assign_from_selection(id, sel_id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    if rec.matching_record is None:
+        flash('Can not revert assignment for submission period #{period} '
+              'because automatic data could not be found'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    sel = SelectionRecord.query.get_or_404(sel_id)
+
+    rec.project_id = sel.liveproject_id
+
+    if rec.marker not in sel.liveproject.second_markers:
+        markers = sel.liveproject.second_markers.all()
+        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
+
+        rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/assign_liveproject/<int:id>/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def assign_liveproject(id, pid):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    lp = LiveProject.query.get_or_404(pid)
+
+    if lp.config_id != config.id:
+        flash('Can not assign LiveProject #{num} for submission period #{period} because '
+              'their configuration data do not agree'.format(num=lp.number, period=rec.period.submission_period),
+              'error')
+        return redirect(request.referrer)
+
+    rec.project_id = lp.id
+
+    if rec.marker not in lp.second_markers:
+        markers = lp.second_markers.all()
+        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
+
+        rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
+
+    db.session.commit()
+
+    return redirect(request.referrer)

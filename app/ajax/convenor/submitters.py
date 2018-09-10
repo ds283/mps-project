@@ -53,12 +53,12 @@ _projects = \
             </a>
             <ul class="dropdown-menu">
                 <li>
-                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view') }}">Show feedback</a>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
                 </li>
                 
                 {% set disabled = r.period.feedback_open %}
                 <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view') }}"{% endif %}>Manually reassign</a>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>
@@ -98,6 +98,7 @@ _markers = \
     {% endif %}        
 {% endmacro %}
 {% macro marker_tag(r, show_period) %}
+    {% set pclass = r.owner.config.project_class %}
     <div>
         <div class="dropdown assignment-label">
             <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
@@ -107,12 +108,12 @@ _markers = \
             </a>
             <ul class="dropdown-menu">
                 <li>
-                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view') }}">Show feedback</a>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
                 </li>
                 
                 {% set disabled = r.period.feedback_open %}
                 <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view') }}"{% endif %}>Manually reassign</a>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>
@@ -156,13 +157,14 @@ _menu = \
         {% endif %}
 
         {% set recs = sub.ordered_assignments.all() %}
+        {% set pclass = sub.config.project_class %}
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Manual reassignment</li>
         {% for r in recs %}
             {% set disabled = r.period.feedback_open %}
             <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view') }}"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
                     Period #{{ r.submission_period }}
                 </a>
             </li>
@@ -177,7 +179,7 @@ _menu = \
         {% for r in recs %}
             {% set disabled = not r.has_feedback %}
             <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view') }}"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
                     Period #{{ r.submission_period }}
                 </a>
             </li>

@@ -40,12 +40,12 @@ _projects = \
             </a>
             <ul class="dropdown-menu">
                 <li>
-                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Show feedback</a>
                 </li>
                 
                 {% set disabled = r.period.feedback_open %}
                 <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view') }}"{% endif %}>Manually reassign</a>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>
@@ -94,12 +94,12 @@ _marking = \
             </a>
             <ul class="dropdown-menu">
                 <li>
-                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view') }}">Show feedback</a>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Show feedback</a>
                 </li>
                 
                 {% set disabled = r.period.feedback_open %}
                 <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view') }}"{% endif %}>Manually reassign</a>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>

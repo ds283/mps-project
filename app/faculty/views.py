@@ -13,7 +13,7 @@ from flask_security import roles_required, roles_accepted, current_user
 
 from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
-    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, SubmittingStudent
+    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord
 
 import app.ajax as ajax
 
@@ -22,7 +22,7 @@ from . import faculty
 from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm, \
     DescriptionSelectorForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
 
-from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_second_markers
+from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_second_markers
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
@@ -237,9 +237,7 @@ def projects_ajax():
     pq = Project.query.filter_by(owner_id=current_user.id)
     data = [(p, None) for p in pq.all()]
 
-    return ajax.project.build_data(data, _project_menu,
-                                   text='projects list',
-                                   url=url_for('faculty.edit_projects'))
+    return ajax.project.build_data(data, _project_menu, text='projects list', url=url_for('faculty.edit_projects'))
 
 
 @faculty.route('/second_marker')
@@ -1530,7 +1528,7 @@ def edit_response(id):
 
     return render_template('faculty/dashboard/edit_response.html', form=form, record=record,
                            submit_url = url_for('faculty.edit_response', id=id, url=url),
-                           text='home dashboard', url=request.referrer)
+                           text='home dashboard', url=home_dashboard_url())
 
 
 @faculty.route('/submit_response/<int:id>')

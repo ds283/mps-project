@@ -79,7 +79,7 @@
                                         <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard') }}">
+                                        <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=home_dashboard_url) }}">
                                             {{ rec.project.name }} (No. {{ rec.project.number }})
                                         </a>
                                         <div>
@@ -156,7 +156,7 @@
                                         <a href="mailto:{{ rec.project.owner.user.email }}">{{ rec.project.owner.user.name }}</a>
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard') }}">
+                                        <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=home_dashboard_url) }}">
                                             {{ rec.project.name }} (No. {{ rec.project.number }})
                                         </a>
                                         <div>

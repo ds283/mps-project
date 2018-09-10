@@ -26,8 +26,8 @@ from werkzeug.contrib.profiler import ProfilerMiddleware
 
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay, Notification
-from .task_queue import make_celery, register_task
-from app.task_queue import background_task
+from .task_queue import make_celery, register_task, background_task
+from .shared.utils import home_dashboard_url
 import app.tasks as tasks
 
 from mdx_smartypants import makeExtension
@@ -183,6 +183,11 @@ def create_app():
             real_user = None
 
         return {'real_user': real_user}
+
+
+    @app.context_processor
+    def inject_home_dashboard_url():
+        return {'home_dashboard_url': home_dashboard_url()}
 
 
     # IMPORT BLUEPRINTS

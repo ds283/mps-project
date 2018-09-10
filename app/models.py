@@ -17,6 +17,8 @@ from sqlalchemy.event import listens_for
 
 from celery import schedules
 
+from .cache import cache
+
 from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.colours import get_text_colour
 
@@ -2085,6 +2087,24 @@ class EnrollmentRecord(db.Model):
         return self.supervisor_label() + ' ' + self.marker_label()
 
 
+@listens_for(EnrollmentRecord, 'before_update')
+def _EnrollmentRecord_update_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable)
+    cache.delete_memoized(_Project_num_markers, pclass_id=target.pclass_id)
+
+
+@listens_for(EnrollmentRecord, 'before_insert')
+def _EnrollmentRecord_insert_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable)
+    cache.delete_memoized(_Project_num_markers, pclass_id=target.pclass_id)
+
+
+@listens_for(EnrollmentRecord, 'before_delete')
+def _EnrollmentRecord_update_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable)
+    cache.delete_memoized(_Project_num_markers, pclass_id=target.pclass_id)
+
+
 class Supervisor(db.Model):
     """
     Model a supervision team member
@@ -2169,6 +2189,74 @@ class Supervisor(db.Model):
         return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
+@cache.memoize()
+def _Project_is_offerable(pid=None):
+    """
+    Determine whether a given Project instance is offerable.
+    Must be implemented as a simple function to work well with Flask-Caching.
+    This is quite annoying but there seems no reliable workaround, and we can't live without caching.
+    :param pid:
+    :return:
+    """
+    project = db.session.query(Project).filter_by(id=pid).one()
+    error = None
+
+    if not project.project_classes.filter(ProjectClass.active).first():
+        return False, "No active project types assigned to project"
+
+    if project.group is None:
+        return False, "No active research group affiliated with project"
+
+    # for each project class we are attached to, check whether enough 2nd markers have been assigned
+    # and whether a project description is available
+    for pclass in project.project_classes:
+        if pclass.uses_marker:
+            if project.num_markers(pclass) < pclass.number_markers:
+                return False, "Too few 2nd markers assigned for '{name}'".format(name=pclass.name)
+
+        desc = project.get_description(pclass)
+
+        if desc is None:
+            return False, "No project description assigned for '{name}'".format(name=pclass.name)
+
+        if not desc.team.filter(Supervisor.active).first():
+            return False, "No active supervisory roles assigned for '{name}'".format(name=pclass.name)
+
+        if project.enforce_capacity:
+            if desc.capacity is None or desc.capacity <= 0:
+                return False, "Capacity is zero or unset for '{name}', " \
+                              "but enforcement is enabled".format(name=pclass.name)
+
+    return True, error
+
+
+@cache.memoize()
+def _Project_num_markers(pid=None, pclass_id=None):
+    number = 0
+    project = db.session.query(Project).filter_by(id=pid).one()
+
+    for marker in project.second_markers:
+
+        # ignore inactive users
+        if not marker.user.active:
+            break
+
+        # count number of enrollment records for this marker matching the project class, and marked as active
+        query = marker.enrollments.subquery()
+
+        num = db.session.query(func.count(query.c.id)) \
+            .filter(query.c.pclass_id == pclass_id,
+                    query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+            .scalar()
+
+        if num == 1:
+            number += 1
+        elif num > 1:
+            raise RuntimeError('Inconsistent enrollment records')
+
+    return number
+
+
 class Project(db.Model):
     """
     Model a project
@@ -2236,7 +2324,7 @@ class Project(db.Model):
 
     # 'descriptions' field is established by backreference from ProjectDescription
     # (this works well but is a bit awkward because it creates a circular dependency between
-    # Project and ProjectDescription which we solve using post_upddate
+    # Project and ProjectDescription which we solve using the SQLAlchemy post_update option)
 
     # link to default description, if one exists
     default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
@@ -2312,41 +2400,13 @@ class Project(db.Model):
         Determine whether this project is available for selection
         :return:
         """
-        if not self.project_classes.filter(ProjectClass.active).first():
-            self.error = "No active project types assigned to project"
-            return False
+        flag, error = _Project_is_offerable(pid=self.id)
 
-        if self.group is None:
-            self.error = "No active research group affiliated with project"
-            return False
+        if not flag:
+            self.error = error
 
-        # for each project class we are attached to, check whether enough 2nd markers have been assigned
-        # and whether a project description is available
-        for pclass in self.project_classes:
+        return flag
 
-            if pclass.uses_marker:
-                if self.num_markers(pclass) < pclass.number_markers:
-                    self.error = "Too few 2nd markers assigned for '{name}'".format(name=pclass.name)
-                    return False
-
-            desc = self.get_description(pclass)
-
-            if desc is None:
-                self.error = "No project description assigned for '{name}'".format(name=pclass.name)
-                return False
-
-            if not desc.team.filter(Supervisor.active).first():
-                self.error = "No active supervisory roles assigned for '{name}'".format(name=pclass.name)
-                return False
-
-            if self.enforce_capacity:
-
-                if desc.capacity is None or desc.capacity <= 0:
-                    self.error = "Capacity is zero or unset for '{name}', " \
-                                 "but enforcement is enabled".format(name=pclass.name)
-                    return False
-
-        return True
 
 
     @property
@@ -2442,28 +2502,7 @@ class Project(db.Model):
         :param pclass:
         :return:
         """
-        number = 0
-
-        for marker in self.second_markers:
-
-            # ignore inactive users
-            if not marker.user.active:
-                break
-
-            # count number of enrollment records for this marker matching the project class, and marked as active
-            query = marker.enrollments.subquery()
-
-            num = db.session.query(func.count(query.c.id)) \
-                .filter(query.c.pclass_id == pclass.id,
-                        query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
-                .scalar()
-
-            if num == 1:
-                number += 1
-            elif num > 1:
-                raise RuntimeError('Inconsistent enrollment records')
-
-        return number
+        return _Project_num_markers(pid=self.id, pclass_id=pclass.id)
 
 
     def get_marker_list(self, pclass):
@@ -2594,6 +2633,19 @@ class Project(db.Model):
         return desc.capacity
 
 
+@listens_for(Project, 'before_update')
+def _Project_update_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable, pid=target.id)
+    cache.delete_memoized(_Project_num_markers, pid=target.id)
+
+
+@listens_for(Project, 'before_insert')
+def _Project_insert_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable, pid=target.id)
+    cache.delete_memoized(_Project_num_markers, pid=target.id)
+
+
+
 class ProjectDescription(db.Model):
     """
     Capture a project description. Projects can have multiple descriptions, each
@@ -2646,6 +2698,24 @@ class ProjectDescription(db.Model):
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
+
+
+@listens_for(ProjectDescription, 'before_update')
+def _ProjectDescription_update_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable, pid=target.parent_id)
+    cache.delete_memoized(_Project_num_markers, pid=target.parent_id)
+
+
+@listens_for(ProjectDescription, 'before_insert')
+def _ProjectDescription_insert_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable, pid=target.parent_id)
+    cache.delete_memoized(_Project_num_markers, pid=target.parent_id)
+
+
+@listens_for(ProjectDescription, 'before_delete')
+def _ProjectDescription_insert_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable, pid=target.parent_id)
+    cache.delete_memoized(_Project_num_markers, pid=target.parent_id)
 
 
 class LiveProject(db.Model):

@@ -50,6 +50,10 @@ class Config(object):
     SESSION_REDIS_URL = os.environ.get('SESSION_REDIS_URL') or 'redis://localhost:6379'
     SESSION_REDIS = redis.from_url(SESSION_REDIS_URL)
 
+    # Flask-Caching
+    CACHE_TYPE = 'redis'
+    CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379'
+
     # MPS-Project configuration
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'
     ASSETS_FOLDER = os.environ.get('ASSETS_FOLDER') or 'assets'

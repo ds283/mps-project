@@ -12,9 +12,11 @@ services:
       - BACKUP_FOLDER=/home/mpsproject/backups
       - SESSION_REDIS_URL=redis://redis:6379
       - CACHE_REDIS_URL=redis://redis:6379
+      - LOG_FILE=/home/mpsproject/logs/mps_project.log
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
       - /data/mpsproject/backups:/home/mpsproject/backups
+      - /data/mpsproject/logs:/home/mpsproject/logs
     links:
       - mariadb
       - redis

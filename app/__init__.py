@@ -73,11 +73,31 @@ def create_app():
     # set up CSS and javascript assets
     env = Environment(app)
 
+    if not app.debug:
+        from logging import ERROR, INFO, Formatter
+        from logging.handlers import SMTPHandler, RotatingFileHandler
+
+        mail_handler = SMTPHandler(mailhost=(app.config['MAIL_SERVER'], app.config['MAIL_PORT']),
+                                   fromaddr=app.config['MAIL_DEFAULT_SENDER'],
+                                   toaddrs=app.config['ADMIN_EMAIL'],
+                                   subject='MPS Project Manager live exception reported',
+                                   credentials=(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD']),
+                                   secure=())
+        mail_handler.setLevel(ERROR)
+        app.logger.addHandler(mail_handler)
+
+        file_handler = RotatingFileHandler(app.config['LOG_FILE'], 'a', 1 * 1024 * 1024, 10)
+        file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+        app.logger.setLevel(INFO)
+        file_handler.setLevel(INFO)
+        app.logger.addHandler(file_handler)
+        app.logger.info('MPS Project Manager starting')
+
     if app.config.get('PROFILE_TO_DISK', False):
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=app.config.get('PROFILE_DIRECTORY'))
 
-        print('** Profiling to disk enabled')
+        app.logger.info('Profiling to disk enabled')
 
     from app import models
 

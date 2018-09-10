@@ -2312,7 +2312,6 @@ class Project(db.Model):
         Determine whether this project is available for selection
         :return:
         """
-
         if not self.project_classes.filter(ProjectClass.active).first():
             self.error = "No active project types assigned to project"
             return False
@@ -2352,24 +2351,20 @@ class Project(db.Model):
 
     @property
     def is_deletable(self):
-
         count = db.session.query(func.count(self.live_projects.subquery().c.id)).scalar()
         return count == 0
 
 
     def add_skill(self, skill):
-
         self.skills.append(skill)
 
 
     def remove_skill(self, skill):
-
         self.skills.remove(skill)
 
 
     @property
     def ordered_skills(self):
-
         return self.skills \
             .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
             .order_by(SkillGroup.name.asc(),
@@ -2377,17 +2372,14 @@ class Project(db.Model):
 
 
     def add_programme(self, prog):
-
         self.programmes.append(prog)
 
 
     def remove_programme(self, prog):
-
         self.programmes.remove(prog)
 
 
     def remove_project_class(self, pclass):
-
         self.project_classes.remove(pclass)
 
 
@@ -2426,10 +2418,12 @@ class Project(db.Model):
         """
 
         available_programmes = self.available_degree_programmes
+        if available_programmes is None:
+            self.programmes = []
+            return
 
         for prog in self.programmes:
-
-            if available_programmes is None or prog not in available_programmes:
+            if prog not in available_programmes:
                 self.remove_programme(prog)
 
 
@@ -2439,7 +2433,6 @@ class Project(db.Model):
         :param faculty:
         :return:
         """
-
         return faculty in self.second_markers
 
 
@@ -2449,7 +2442,6 @@ class Project(db.Model):
         :param pclass:
         :return:
         """
-
         number = 0
 
         for marker in self.second_markers:

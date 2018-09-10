@@ -16,15 +16,16 @@ from celery import chain
 
 from ..models import db, User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
-    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, MatchingAttempt, \
-    MatchingRecord
+    PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
+    SubmissionRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates
+    filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates, \
+    build_enroll_submitter_candidates, build_submitters_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
-from ..shared.convenor import add_selector, add_liveproject
+from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
 
 from ..task_queue import register_task
@@ -33,8 +34,8 @@ import app.ajax as ajax
 
 from . import convenor
 
-from ..faculty.forms import AddProjectForm, EditProjectForm, GoLiveForm, IssueFacultyConfirmRequestForm, \
-    SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
+from ..faculty.forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
+from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerForm
 
 from datetime import date, datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -258,12 +259,22 @@ def overview(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
+    period = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+
     # build forms
     golive_form = GoLiveForm(request.form)
     issue_form = IssueFacultyConfirmRequestForm(request.form)
+    feedback_form = OpenFeedbackForm(request.form)
 
     if config.requests_issued:
+        issue_form.request_deadline.label.text = 'The current deadline for responses is'
         issue_form.requests_issued.label.text = 'Save changes'
+
+    if period.feedback_open:
+        feedback_form.feedback_deadline.label.text = 'The current deadline for feedback is'
+        feedback_form.open_feedback.label.text = 'Save changes'
 
     if request.method == 'GET':
         if config.request_deadline is not None:
@@ -276,11 +287,16 @@ def overview(id):
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
+        if period.feedback_deadline is not None:
+            feedback_form.feedback_deadline.data = period.feedback_deadline
+        else:
+            feedback_form.feedback_deadline.data = date.today() + timedelta(weeks=3)
+
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
     capacity_data = get_capacity_data(pclass)
 
     return render_template('convenor/dashboard/overview.html', pane='overview',
-                           golive_form=golive_form, issue_form=issue_form,
+                           golive_form=golive_form, issue_form=issue_form, feedback_form=feedback_form,
                            pclass=pclass, config=config, current_year=current_year,
                            fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count, capacity_data=capacity_data)
@@ -423,7 +439,7 @@ def faculty(id):
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
-    return render_template('convenor/dashboard/faculty.html', pane='faculty',
+    return render_template('convenor/dashboard/faculty.html', pane='faculty', subpane='list',
                            pclass=pclass, config=config, current_year=current_year,
                            faculty=faculty, fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
                            live_count=live_count, proj_count=proj_count,
@@ -598,7 +614,7 @@ def selectors_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
-    cohort_filter = request.args.get('cohort_filter')
+    cohort_filter = request.args.get('c        ohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
 
@@ -704,7 +720,7 @@ def enroll_selectors(id):
 @roles_accepted('faculty', 'admin', 'root')
 def enroll_selectors_ajax(id):
     """
-    Ajax data point for selectors view
+    Ajax data point for enroll selectors view
     :param id:
     :return:
     """
@@ -740,7 +756,7 @@ def enroll_selectors_ajax(id):
     if prog_flag:
         candidates = candidates.filter(StudentData.programme_id == prog_value)
 
-    return ajax.convenor.enroll_selectors.enroll_selectors_data(candidates, config)
+    return ajax.convenor.enroll_selectors_data(candidates, config)
 
 
 @convenor.route('/enroll_selector/<int:sid>/<int:configid>')
@@ -762,7 +778,7 @@ def enroll_selector(sid, configid):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    if config.selection_closed:
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -786,7 +802,7 @@ def delete_selector(sid):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    if sel.config.selection_closed:
+    if sel.config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
         flash('Manual deletion of selectors is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
@@ -916,6 +932,28 @@ def submitters(id):
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    if cohort_filter is None and session.get('convenor_submitters_cohort_filter'):
+        cohort_filter = session['convenor_submitters_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_submitters_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_submitters_prog_filter'):
+        prog_filter = session['convenor_submitters_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_submitters_prog_filter'] = prog_filter
+
+    if state_filter is None and session.get('convenor_submitters_state_filter'):
+        state_filter = session['convenor_submitters_state_filter']
+
+    if state_filter is not None:
+        session['convenor_submitters_state_filter'] = state_filter
+
     # get current academic year
     current_year = get_current_year()
 
@@ -925,12 +963,26 @@ def submitters(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
+    submitters = config.submitting_students.filter_by(retired=False).all()
+
+    # build list of available cohorts and degree programmes
+    cohorts = set()
+    programmes = set()
+    for sub in submitters:
+        cohorts.add(sub.student.cohort)
+        programmes.add(sub.student.programme_id)
+
+    # build list of available programmes
+    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    progs = [ rec for rec in all_progs if rec.id in programmes ]
+
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
-    return render_template('convenor/dashboard/submitters.html', pane='submitters',
+    return render_template('convenor/dashboard/submitters.html', pane='submitters', subpane='list',
                            pclass=pclass, config=config, fac_data=fac_data,
                            current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter)
 
 
 @convenor.route('/submitters_ajax/<int:id>', methods=['GET', 'POST'])
@@ -953,10 +1005,177 @@ def submitters_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    # build a list of live students submitting work for evaluation in this project class
-    submitters = config.submitting_students.filter_by(retired=False)
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
 
-    return ajax.convenor.submitters_data(submitters, config)
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter)
+
+    return ajax.convenor.submitters_data(data, config)
+
+
+@convenor.route('/enroll_submitters/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_submitters(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
+    if cohort_filter is None and session.get('convenor_sub_enroll_cohort_filter'):
+        cohort_filter = session['convenor_sub_enroll_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_sub_enroll_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_sub_enroll_prog_filter'):
+        prog_filter = session['convenor_sub_enroll_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_sub_enroll_prog_filter'] = prog_filter
+
+    candidates = build_enroll_submitter_candidates(config)
+
+    # build list of available cohorts and degree programmes
+    cohorts = set()
+    programmes = set()
+    for student in candidates:
+        cohorts.add(student.cohort)
+        programmes.add(student.programme_id)
+
+    # build list of available programmes
+    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    progs = [ rec for rec in all_progs if rec.id in programmes ]
+
+    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/enroll_submitters.html', pane='submitters', subpane='enroll',
+                           pclass=pclass, config=config, fac_data=fac_data,
+                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           cohort_filter=cohort_filter, prog_filter=prog_filter)
+
+
+@convenor.route('/enroll_submitters_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_submitters_ajax(id):
+    """
+    Ajax data point for enroll submitters view
+    :param id:
+    :return:
+    """
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
+
+    if config.selection_closed:
+        return jsonify({})
+
+    candidates = build_enroll_submitter_candidates(config)
+
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
+
+    if cohort_flag:
+        candidates = candidates.filter(StudentData.cohort == cohort_value)
+
+    if prog_flag:
+        candidates = candidates.filter(StudentData.programme_id == prog_value)
+
+    return ajax.convenor.enroll_submitters_data(candidates, config)
+
+
+@convenor.route('/enroll_submitter/<int:sid>/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def enroll_submitter(sid, configid):
+    """
+    Manually enroll a student as a submitter
+    :param sid:
+    :param configid:
+    :return:
+    """
+
+    config = ProjectClassConfig.query.get_or_404(configid)
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+        flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
+        return redirect(request.referrer)
+
+    old_config = ProjectClassConfig.query(pclass_id=config.pclass_id, year=config.year-1).first()
+
+    add_blank_submitter(sid, old_config.id if old_config is not None else None, configid, autocommit=True)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/delete_submitter/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_submitter(sid):
+    """
+    Manually delete a submitter
+    :param sid:
+    :return:
+    """
+
+    sub = SubmittingStudent.query.get_or_404(sid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sub.config.project_class):
+        return redirect(request.referrer)
+
+    if sub.config.submitter_lifecycle > ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY:
+        flash('Manual deletion of submitters is only possible during normal project activity', 'error')
+        return redirect(request.referrer)
+
+    try:
+        db.session.delete(sub)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Could not delete submitter due to a database error. Please contact a system administrator.',
+              'error')
+
+    return redirect(request.referrer)
 
 
 @convenor.route('/liveprojects/<int:id>')
@@ -2162,22 +2381,15 @@ def remove_all_markers(proj_id, pclass_id):
 def issue_confirm_requests(id):
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
-        return redirect(request.referrer)
-
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
     if issue_form.is_submitted() and issue_form.requests_issued.data is True:
-
         # set request deadline and issue requests if needed
 
         # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
@@ -2199,29 +2411,37 @@ def issue_confirm_requests(id):
     return redirect(request.referrer)
 
 
-@convenor.route('/golive_ajax/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/outstanding_confirm/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def outstanding_confirm(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/dashboard/outstanding_confirm.html', config=config, pclass=config.project_class)
+
+
+@convenor.route('/outstanding_confirm_ajax/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def golive_ajax(id):
+def outstanding_confirm_ajax(id):
     """
     Ajax data point for waiting-to-go-live faculty list on dashboard
     :param id:
     :return:
     """
 
-    # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return jsonify({})
-
-    return ajax.convenor.golive_data(config)
+    return ajax.convenor.outstanding_confirm_data(config)
 
 
 @convenor.route('/show_unofferable')
@@ -2253,33 +2473,44 @@ def unofferable_ajax():
                                    url=url_for('convenor.show_unofferable'))
 
 
-
 @convenor.route('/force_confirm_all/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def force_confirm_all(id):
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
-    if not validate_is_convenor(pclass):
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
-
-    for item in config.golive_required.all():
-
-        config.golive_required.remove(item)
-
+    config.golive_required = []
     db.session.commit()
 
     flash('All outstanding confirmation requests have been removed.', 'success')
 
     return redirect(request.referrer)
+
+
+@convenor.route('/force_confirm/<int:id>/<int:uid>')
+@roles_accepted('faculty', 'admin', 'root')
+def force_confirm(id, uid):
+
+    # get details for project class
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    faculty = FacultyData.query.get_or_404(uid)
+
+    if faculty in config.golive_required:
+        config.golive_required.remove(faculty)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
 
 
 @convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])
@@ -3087,3 +3318,507 @@ def audit_matches_ajax(pclass_id):
     matches = config.matching_attempts.filter_by(published=True).all()
 
     return ajax.admin.matches_data(matches, text='matching audit dashboard', url=url_for('convenor.audit_matches', pclass_id=pclass_id))
+
+
+@convenor.route('/open_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def open_feedback(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
+            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
+        return redirect(request.referrer)
+
+    feedback_form = OpenFeedbackForm(request.form)
+
+    if feedback_form.is_submitted() and feedback_form.open_feedback.data is True:
+        # set feedback deadline and mark feedback open
+
+        period = config.periods.filter_by(submission_period=config.submission_period).first()
+
+        period.feedback_open = True
+        period.feedback_deadline = feedback_form.feedback_deadline.data
+
+        if period.feedback_id is None:
+            period.feedback_id = current_user.id
+
+        if period.feedback_timestamp is None:
+            period.feedback_timestamp = datetime.now()
+
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/close_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def close_feedback(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    state = config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be closed at this stage in the project lifecycle.', 'info')
+        return redirect(request.referrer)
+
+    if config.submission_period > config.submissions:
+        flash('Feedback close request ignored because "{name}" is already in a rollover state.'.format(name=config.name),
+              'info')
+        return request.referrer
+
+    period = config.periods.filter_by(submission_period=config.submission_period).first()
+
+    period.closed = True
+    period.closed_id = current_user.id
+    period.closed_timestamp = datetime.now()
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/publish_assignment/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def publish_assignment(id):
+
+    # id is a SubmittingStudent
+    sub = SubmittingStudent.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for this SubmittingStudent
+    if not validate_is_convenor(sub.config.project_class):
+        return redirect(request.referrer)
+
+    if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to publish an assignment to students')
+        return redirect(request.referrer)
+
+    sub.published = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/unpublish_assignment/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def unpublish_assignment(id):
+
+    # id is a SubmittingStudent
+    sub = SubmittingStudent.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for this SubmittingStudent
+    if not validate_is_convenor(sub.config.project_class):
+        return redirect(request.referrer)
+
+    if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to publish an assignment to students')
+        return redirect(request.referrer)
+
+    sub.published = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/publish_all_assignments/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def publish_all_assignments(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to publish an assignment to students')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter)
+
+    for sel in data:
+        sel.published = True
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/unpublish_all_assignments/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def unpublish_all_assignments(id):
+
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to unpublish an assignment')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter)
+
+    for sel in data:
+        sel.published = False
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/view_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def view_feedback(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for the project class associated with this submission record
+    if not validate_is_convenor(rec.owner.config.project_class):
+        return redirect(request.referrer)
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    return render_template('faculty/dashboard/view_feedback.html', record=rec, text=text, url=url)
+
+
+@convenor.route('/faculty_workload/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def faculty_workload(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    enroll_filter = request.args.get('enroll_filter')
+    state_filter = request.args.get('state_filter')
+
+    if state_filter == 'no-projects':
+        enroll_filter = 'enrolled'
+
+    if enroll_filter is None and session.get('convenor_faculty_enroll_filter'):
+        enroll_filter = session['convenor_faculty_enroll_filter']
+
+    if enroll_filter is not None:
+        session['convenor_faculty_enroll_filter'] = enroll_filter
+
+    if state_filter is None and session.get('convenor_faculty_state_filter'):
+        state_filter = session['convenor_faculty_state_filter']
+
+    if state_filter is not None:
+        session['convenor_faculty_state_filter'] = state_filter
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/workload.html', pane='faculty', subpane='workload',
+                           pclass=pclass, config=config, current_year=current_year,
+                           faculty=faculty, fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
+                           live_count=live_count, proj_count=proj_count,
+                           enroll_filter=enroll_filter, state_filter=state_filter)
+
+
+@convenor.route('faculty_workload_ajax/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def faculty_workload_ajax(id):
+
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    enroll_filter = request.args.get('enroll_filter')
+    state_filter = request.args.get('state_filter')
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
+
+    if enroll_filter == 'enrolled':
+
+        # build a list of only enrolled faculty, together with their FacultyData records
+        faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
+            .filter(EnrollmentRecord.pclass_id == id).subquery()
+
+        # get User, FacultyData pairs for this list
+        faculty = db.session.query(User, FacultyData) \
+            .join(FacultyData, FacultyData.id == User.id) \
+            .join(faculty_ids, User.id == faculty_ids.c.owner_id)
+
+    elif enroll_filter == 'not-enrolled':
+
+        # build a list of only enrolled faculty, together with their FacultyData records
+        faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
+            .filter(EnrollmentRecord.pclass_id == id).subquery()
+
+        # join to main User and FacultyData records and select pairs that have no counterpart in faculty_ids
+        faculty = db.session.query(User, FacultyData) \
+            .join(FacultyData, FacultyData.id == User.id) \
+            .join(faculty_ids, faculty_ids.c.owner_id == User.id, isouter=True) \
+            .filter(faculty_ids.c.owner_id == None)
+
+    elif enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt' \
+            or enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt':
+
+        faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
+            .filter(EnrollmentRecord.pclass_id == id)
+
+        if enroll_filter == 'supv-active':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+        elif enroll_filter == 'supv-sabbatical':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_SABBATICAL)
+        elif enroll_filter == 'supv-exempt':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_EXEMPT)
+        elif enroll_filter == 'mark-active':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+        elif enroll_filter == 'mark-sabbatical':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
+        elif enroll_filter == 'mark-exempt':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
+
+        faculty_ids_q = faculty_ids.subquery()
+
+        # get User, FacultyData pairs for this list
+        faculty = db.session.query(User, FacultyData) \
+            .join(FacultyData, FacultyData.id == User.id) \
+            .join(faculty_ids_q, User.id == faculty_ids_q.c.owner_id)
+
+    else:
+
+        # build list of all active faculty, together with their FacultyData records
+        faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
+
+    # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
+    if state_filter == 'no-late-feedback':
+        data = [ rec for rec in faculty.all() if not rec[1].has_late_feedback ]
+    elif state_filter == 'late-feedback':
+        data = [ rec for rec in faculty.all() if rec[1].has_late_feedback ]
+    else:
+        data = faculty.all()
+
+    return ajax.convenor.faculty_workload_data(data, config)
+
+
+@convenor.route('/manual_assign/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def manual_assign(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    form = AssignMarkerForm(rec.project, request.form)
+
+    if form.validate_on_submit():
+        rec.marker = form.marker.data
+        db.session.commit()
+
+    else:
+        if request.method == 'GET':
+            form.marker.data = rec.marker
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=config, url=url, text=text,
+                           form=form)
+
+
+@convenor.route('/manual_assign_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def manual_assign_ajax(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return jsonify({})
+
+    if not validate_is_convenor(config.project_class):
+        return jsonify({})
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return jsonify({})
+
+    data = config.live_projects.all()
+
+    return ajax.convenor.manual_assign_data(data, rec)
+
+
+@convenor.route('/assign_revert/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def assign_revert(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    if rec.matching_record is None:
+        flash('Can not revert assignment for submission period #{period} '
+              'because automatic data could not be found'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    rec.project_id = rec.matching_record.project_id
+    rec.marker_id = rec.matching_record.marker_id
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/assign_from_selection/<int:id>/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def assign_from_selection(id, sel_id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    if rec.matching_record is None:
+        flash('Can not revert assignment for submission period #{period} '
+              'because automatic data could not be found'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    sel = SelectionRecord.query.get_or_404(sel_id)
+
+    rec.project_id = sel.liveproject_id
+
+    if rec.marker not in sel.liveproject.second_markers:
+        markers = sel.liveproject.second_markers.all()
+        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
+
+        rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/assign_liveproject/<int:id>/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def assign_liveproject(id, pid):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for submission period #{period} '
+              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    lp = LiveProject.query.get_or_404(pid)
+
+    if lp.config_id != config.id:
+        flash('Can not assign LiveProject #{num} for submission period #{period} because '
+              'their configuration data do not agree'.format(num=lp.number, period=rec.period.submission_period),
+              'error')
+        return redirect(request.referrer)
+
+    rec.project_id = lp.id
+
+    if rec.marker not in lp.second_markers:
+        markers = lp.second_markers.all()
+        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
+
+        rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
+
+    db.session.commit()
+
+    return redirect(request.referrer)

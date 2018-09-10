@@ -88,16 +88,20 @@
 
                     {% set pclass = config.project_class %}
                     <div class="well">
-                        <div class="row vertical-align">
-                            <div class="col-xs-10">
+                        <div class="row vertical-top">
+                            <div class="col-xs-6">
                                 <span class="dashboard-project-title">{{ pclass.name }}</span>
                             </div>
-                            <div class="col-xs-2">
-                                {% if pclass.programmes %}
-                                    {% for programme in pclass.programmes %}
-                                        {{ programme.label|safe }}
-                                    {% endfor %}
-                                {% endif %}
+                            <div class="col-xs-6">
+                                {# suspect text-align is a hack here, but has desired effect and #}
+                                {# I'm unclear what the 'official' method would be #}
+                                <div class="pull-right" style="text-align: right;">
+                                    {% if pclass.programmes %}
+                                        {% for programme in pclass.programmes %}
+                                            {{ programme.label|safe }}
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         <div class="row vertical-top">
@@ -130,17 +134,19 @@
                                 {% endif %}
                             </div>
                             <div class="col-xs-5">
-                                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                    <div class="pull-right">
-                                        <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
-                                        {% if config.live_deadline %}
-                                            <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
-                                        {% endif %}
-                                    </div>
-                                {% else %}
-                                    <div class="pull-right">
-                                        <span class="label label-default">Student choices not open</span>
-                                    </div>
+                                {% if sel %}
+                                    {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                        <div class="pull-right">
+                                            <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                                            {% if config.live_deadline %}
+                                                <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <div class="pull-right">
+                                            <span class="label label-default">Student choices not open</span>
+                                        </div>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </div>
@@ -152,7 +158,9 @@
                         {% endif %}
 
                         {% if sub %}
-                            {{ submission_card(config, sel) }}
+                            {% for n in range(config.submissions) %}
+                                {{ submission_card(config, sub, n) }}
+                            {% endfor %}
                         {% endif %}
 
                     </div>

@@ -28,12 +28,13 @@
                             {% set sel_state = config.selector_lifecycle %}
                             {% set sub_state = config.submitter_lifecycle %}
                             {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
-                                <span class="label label-primary">Submission period #{{ config.submission_period }}</span>
-                            {% elif sub_state == config.SUBMITTER_LIFECYCLE_MARKING_FEEDBACK_ACTIVITY %}
+                                <span class="label label-success">Submission period #{{ config.submission_period }}</span>
+                            {% elif sub_state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
                                 <span class="label label-warning">Marking/feedback #{{ config.submission_period }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                                <span class="label label-primary">Submissions complete</span>
                             {% else %}
-                                <span class="label label-danger">Unknown submitted lifecycle state</span>
+                                <span class="label label-danger">Unknown submitted lifecycle state {{ sub_state }}</span>
                             {% endif %}
                             {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
                                 <span class="label label-default">Confirmations not issued</span>
@@ -58,7 +59,7 @@
                                     {% endif %}
                                 {% endif %}
                             {% else %}
-                                <span class="label label-danger">Unknown selector lifecycle state</span>
+                                <span class="label label-danger">Unknown selector lifecycle state {{ sel_state }}</span>
                             {% endif %}
 
                             {% set num_sel = config.number_selectors %}

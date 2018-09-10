@@ -3,19 +3,22 @@
 
 {% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
 
-{% macro waiting_confirmations(pclass, config, issue_form, capacity_data, sel_count) %}
+{% macro waiting_confirmations(config, issue_form, capacity_data, sel_count) %}
     <div class="panel panel-info">
         <div class="panel-heading"><strong>Student choices are not yet live</strong></div>
         <div class="panel-body">
 
             <div class="row vertical-top">
                 <div class="col-xs-9">
-                    Confirmations are outstanding from
-                    <strong>{{ config.golive_required.count() }} faculty</strong>.
+                    <p>
+                        Confirmations are outstanding from
+                        <strong>{{ config.golive_required.count() }} faculty</strong>.
+                    </p>
+                    <p><a href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">View outstanding responses...</a></p>
                 </div>
                 <div class="col-xs-3">
                     <div class="pull-right">
-                        <a href="{{ url_for('convenor.force_confirm_all', id=pclass.id) }}"
+                        <a href="{{ url_for('convenor.force_confirm_all', id=config.id) }}"
                            class="btn btn-danger">
                             Force confirm all
                         </a>
@@ -23,7 +26,7 @@
                 </div>
             </div>
             <hr class="intro-divider">
-            <form action="{{ url_for('convenor.issue_confirm_requests', id=pclass.id) }}"
+            <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}"
                   method="POST" name="issue-form">
                 {{ date_field(issue_form.request_deadline) }}
                 <div class="row">
@@ -34,22 +37,9 @@
                     </div>
                 </div>
             </form>
-
-            {# display list of faculty with outstanding confirm requests #}
-            {% if config.golive_required.first() %}
-                <hr class="intro-divider">
-                <table id="golive-table" class="table table-striped">
-                    <thead>
-                    <tr>
-                        <th width="40%"> Name</th>
-                        <th width="20%"> Email</th>
-                        <th width="40%"> Projects</th>
-                    </tr>
-                    </thead>
-                </table>
-            {% endif %}
         </div>
     </div>
     <hr class="intro-divider">
+    <div class="dashboard-subtitle">Approximate student capacities</div>
     {{ prelive_capacity(capacity_data, sel_count) }}
 {% endmacro %}

@@ -6,6 +6,10 @@
 {% from "convenor/dashboard/overview_cards/golive.html" import golive %}
 {% from "convenor/dashboard/overview_cards/selection_open.html" import selection_open %}
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
+{% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity %}
+{% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking %}
+{% from "convenor/dashboard/overview_cards/submitter_rollover.html" import submitter_rollover %}
+
 
 {% block scripts %}
     {{ super() }}
@@ -22,22 +26,6 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#golive-table').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'ftip',
-                stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/golive_ajax/{{ pclass.id }}', dataSrc: '' },
-                columns: [
-                    { data: 'name',
-                      render: {
-                        _: 'display',
-                        sort: 'sortstring' }
-                    },
-                    { data: 'email' },
-                    { data: 'projects' }
-                ],
-                deferRender: true
-            });
-
             $('.date').datepicker({
                 format: 'dd/mm/yyyy',
                 todayHighlight: true
@@ -52,34 +40,66 @@
         <div class="col-xs-10">
             <div class="well">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
+            </div>
 
-                {# offer rollover of academic year if available #}
-                {% if config.year < current_year %}
-                    {{ rollover_card(current_year, pclass, config) }}
-                {% endif %}
+            {# offer rollover of academic year if available #}
+            {% if config.year < current_year %}
+                {{ rollover_card(current_year, pclass, config) }}
+            {% endif %}
 
+            {# SELECTING #}
+            <div class="well">
                 {# provide summary #}
                 {% set state = config.selector_lifecycle %}
                 {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
 
-                    {{ issue_confirmations(pclass, issue_form, capacity_data, sel_count) }}
+                    {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}
 
                 {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
 
                     {# if we get here then we can assume requests have been issued because of the outermost if #}
-                    {{ waiting_confirmations(pclass, config, issue_form, capacity_data, sel_count) }}
+                    {{ waiting_confirmations(config, issue_form, capacity_data, sel_count) }}
 
                 {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
 
-                    {{ golive(pclass, config, golive_form, capacity_data, sel_count) }}
+                    {{ golive(config, golive_form, capacity_data, sel_count) }}
 
                 {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
 
                     {{ selection_open(config) }}
 
-                {% elif state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %}
+                {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
 
                     {{ selection_closed(config, config.year < current_year) }}
+
+                {% else %}
+
+                    <div class="panel panel-danger">
+                        <div class="panel-heading">Error</div>
+                        <div class="panel-body">
+                            <strong>Error:</strong>
+                            Unknown project lifecycle state {{ state }}
+                        </div>
+                    </div>
+
+                {% endif %}
+            </div>
+
+            {# SUBMITTING #}
+            <div class="well">
+                {# provide summary #}
+                {% set state = config.submitter_lifecycle %}
+                {% if state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
+
+                    {{ project_activity(config, feedback_form) }}
+
+                {% elif state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
+
+                    {{ feedback_marking(config, feedback_form) }}
+
+                {% elif state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+
+                    {{ submitter_rollover(config) }}
 
                 {% else %}
 

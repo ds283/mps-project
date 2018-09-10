@@ -85,7 +85,7 @@ def add_selector(student, config_id, autocommit=False):
         db.session.commit()
 
 
-def add_blank_submitter(student, config_id, autocommit=False):
+def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False):
 
     # get StudentData instance
     if isinstance(student, StudentData):
@@ -96,12 +96,12 @@ def add_blank_submitter(student, config_id, autocommit=False):
         if item is None:
             raise KeyError('Missing database record for StudentData id={id}'.format(id=student))
 
-    config = ProjectClassConfig.query.filter_by(id=config_id).one()
+    config = ProjectClassConfig.query.filter_by(id=new_config_id).one()
 
     # generate new SubmittingStudent instance
-    submitter = SubmittingStudent(config_id=config_id,
+    submitter = SubmittingStudent(config_id=new_config_id,
                                   student_id=item.id,
-                                  selector_id=None,         # this record not generated from a selector
+                                  selector_id=None,  # this record not generated from a selector
                                   published=False,
                                   retired=False)
     db.session.add(submitter)
@@ -109,11 +109,27 @@ def add_blank_submitter(student, config_id, autocommit=False):
 
     for i in range(0, config.submissions):
         record = SubmissionRecord(submission_period=i+1,
+                                  retired=False,
                                   owner_id=submitter.id,
                                   project_id=None,
                                   marker_id=None,
+                                  selection_config_id=old_config_id,
                                   matching_record_id=None,
-                                  feedback_open=False)
+                                  supervisor_positive=None,
+                                  supervisor_negative=None,
+                                  supervisor_submitted=False,
+                                  supervisor_timestamp=None,
+                                  marker_positive=None,
+                                  marker_negative=None,
+                                  marker_submitted=False,
+                                  marker_timestamp=None,
+                                  student_feedback=None,
+                                  student_feedback_submitted=False,
+                                  student_feedback_timestamp=None,
+                                  acknowledge_feedback=False,
+                                  faculty_response=None,
+                                  faculty_response_submitted=False,
+                                  faculty_response_timestamp=None)
         db.session.add(record)
 
     if autocommit:

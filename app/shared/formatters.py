@@ -9,10 +9,18 @@
 #
 
 
+from datetime import timedelta
+
+
 _kb = 1024
 _Mb = 1024*_kb
 _Gb = 1024*_Mb
 _Tb = 1024*_Gb
+
+_minute = 60
+_hour = 60*60
+_day = 24*60*60
+_week = 7*24*60*60
 
 
 def format_size(s):
@@ -36,14 +44,46 @@ def format_time(seconds):
 
     res = ''
 
-    if seconds > 60*60*24:
-        days, seconds = divmod(seconds, 60*60*24)
+    if seconds > _week:
+        weeks, seconds = divmod(seconds, _week)
+        res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}w'.format(n=weeks)
+    if seconds > _day:
+        days, seconds = divmod(seconds, _day)
         res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}d'.format(n=days)
-    if seconds > 60*60:
-        hours, seconds = divmod(seconds, 60*60)
+    if seconds > _hour:
+        hours, seconds = divmod(seconds, _hour)
         res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}h'.format(n=hours)
-    if seconds > 60:
-        minutes, seconds = divmod(seconds, 60)
+    if seconds > _minute:
+        minutes, seconds = divmod(seconds, _minute)
         res = (res + ' ' if len(res) > 0 else '') + '{n:.0f}m'.format(n=minutes)
 
     return (res + ' ' if len(res) > 0 else '') + '{n:.3f}s'.format(n=seconds)
+
+
+def format_readable_time(seconds):
+
+    if isinstance(seconds, timedelta):
+        seconds = seconds.days*_day + seconds.seconds
+
+    if seconds > _week:
+        weeks, seconds = divmod(seconds, _week)
+        pl = '' if weeks == 1 else 's'
+        return '{weeks} week{pl}'.format(weeks=weeks, pl=pl)
+
+    if seconds > _day:
+        days, seconds = divmod(seconds, _day)
+        pl = '' if days == 1 else 's'
+        return '{days} day{pl}'.format(days=days, pl=pl)
+
+    if seconds > _hour:
+        hours, seconds = divmod(seconds, _hour)
+        pl = '' if hours == 1 else 's'
+        return '{hours} hour{pl}'.format(hours=hours, pl=pl)
+
+    if seconds > _minute:
+        minutes, seconds = divmod(seconds, _minutes)
+        pl = '' if minutes == 1 else 's'
+        return '{minutes} minute{pl}'.format(minutes=minutes, pl=pl)
+
+    pl = '' if seconds == 1 else 's'
+    return '{seconds} second{pl}'.format(seconds=seconds, pl=pl)

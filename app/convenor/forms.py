@@ -1,0 +1,61 @@
+#
+# Created by David Seery on 07/09/2018.
+# Copyright (c) 2018 University of Sussex. All rights reserved.
+#
+# This file is part of the MPS-Project platform developed in
+# the School of Mathematics & Physical Sciences, University of Sussex.
+#
+# Contributors: David Seery <D.Seery@sussex.ac.uk>
+#
+
+from flask_security.forms import Form
+from wtforms import SubmitField, DateField
+from wtforms.validators import InputRequired
+from wtforms_alchemy import QuerySelectField
+
+from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel
+from functools import partial
+
+
+class GoLiveForm(Form):
+
+    # normal Go Live option
+    live = SubmitField('Go live')
+
+    # go live and close option
+    live_and_close = SubmitField('Go live and immediately close')
+
+    # deadline field
+    live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+
+
+class IssueFacultyConfirmRequestForm(Form):
+
+    # deadline for confirmation responses
+    request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+
+    # submit button: issue requests
+    requests_issued = SubmitField('Issue confirmation requests')
+
+
+class OpenFeedbackForm(Form):
+
+    # deadline for feedback
+    feedback_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+
+    # submit button: open feedback
+    open_feedback = SubmitField('Open feedback period')
+
+
+class AssignMarkerForm(Form):
+
+    # 2nd marker
+    marker = QuerySelectField('Assign 2nd marker', query_factory=MarkerQuery, get_label=BuildMarkerLabel)
+
+
+    def __init__(self, live_project, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.marker.query_factory = partial(MarkerQuery, live_project)
+        self.marker.get_label = partial(BuildMarkerLabel, live_project.config.pclass_id)

@@ -39,6 +39,10 @@ p.copyright {
     display: inline-block;
 }
 
+.assignment-label {
+    display: inline-block;
+}
+
 .btn-table-block {
     margin-top: 5px;
 }
@@ -53,6 +57,11 @@ p.copyright {
 
 .dashboard-project-title {
     font-size: 32px;
+    font-weight: lighter;
+}
+
+.dashboard-subtitle {
+    font-size: 22px;
     font-weight: lighter;
 }
 
@@ -123,6 +132,10 @@ p.copyright {
     background-color: #f2dede;
     /*border-width: 3px;*/
     margin: 3px;
+}
+
+.top-row-button {
+    margin-bottom: 10px;
 }
 
 .table-button {

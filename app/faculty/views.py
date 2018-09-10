@@ -13,17 +13,18 @@ from flask_security import roles_required, roles_accepted, current_user
 
 from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
-    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription
+    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord
 
 import app.ajax as ajax
 
 from . import faculty
 
 from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm, \
-    DescriptionSelectorForm
+    DescriptionSelectorForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
 
-from ..shared.utils import home_dashboard, get_root_dashboard_data, filter_second_markers
-from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner
+from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_second_markers
+from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
+    validate_submission_supervisor, validate_submission_marker, validate_submission_viewable
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
@@ -236,9 +237,7 @@ def projects_ajax():
     pq = Project.query.filter_by(owner_id=current_user.id)
     data = [(p, None) for p in pq.all()]
 
-    return ajax.project.build_data(data, _project_menu,
-                                   text='projects list',
-                                   url=url_for('faculty.edit_projects'))
+    return ajax.project.build_data(data, _project_menu, text='projects list', url=url_for('faculty.edit_projects'))
 
 
 @faculty.route('/second_marker')
@@ -1191,6 +1190,8 @@ def live_project(pid):
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
 
     return render_project(data, data, text=text, url=url)
 
@@ -1217,3 +1218,355 @@ def past_projects_ajax():
     past_projects = LiveProject.query.filter_by(owner_id=current_user.id)
 
     return ajax.faculty.pastproject_data(past_projects)
+
+
+@faculty.route('/supervisor_edit_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_required('faculty')
+def supervisor_edit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_supervisor(record):
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if not period.feedback_open:
+        flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
+              'period for feedback and marking.',
+              'error')
+        return redirect(request.referrer)
+
+    if period.closed and record.supervisor_submitted:
+        flash('It is not possible to edit feedback after the convenor has closed this submission period.',
+              'error')
+        return redirect(request.referrer)
+
+    form = SupervisorFeedbackForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        record.supervisor_positive = form.positive.data
+        record.supervisor_negative = form.negative.data
+
+        if record.supervisor_submitted:
+            record.supervisor_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url)
+
+    else:
+
+        if request.method == 'GET':
+            form.positive.data = record.supervisor_positive
+            form.negative.data = record.supervisor_negative
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Edit supervisor feedback',
+                           formtitle='Edit supervisor feedback for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(name=record.owner.student.user.name),
+                           submit_url=url_for('faculty.supervisor_edit_feedback', id=id, url=url),
+                           period=period, record=record)
+
+
+@faculty.route('/marker_edit_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_required('faculty')
+def marker_edit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_marker(record):
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if not period.feedback_open:
+        flash('Can not edit feedback for this submission because the convenor has not yet opened this submission '
+              'period for feedback and marking.',
+              'error')
+        return redirect(request.referrer)
+
+    if period.closed and record.marker_submitted:
+        flash('It is not possible to edit feedback after the convenor has closed this submission period.',
+              'error')
+        return redirect(request.referrer)
+
+    form = MarkerFeedbackForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        record.marker_positive = form.positive.data
+        record.marker_negative = form.negative.data
+
+        if record.marker_submitted:
+            record.marker_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url)
+
+    else:
+
+        if request.method == 'GET':
+            form.positive.data = record.marker_positive
+            form.negative.data = record.marker_negative
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Edit marker feedback',
+                           formtitle='Edit marker feedback for <strong>{num}</strong>'.format(num=record.owner.student.exam_number),
+                           submit_url=url_for('faculty.marker_edit_feedback', id=id, url=url),
+                           period=period, record=record)
+
+
+@faculty.route('/supervisor_submit_feedback/<int:id>')
+@roles_required('faculty')
+def supervisor_submit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_supervisor(record):
+        return redirect(request.referrer)
+
+    if record.supervisor_submitted:
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if not period.feedback_open:
+        flash('It is not possible to submit before the feedback period has opened.', 'error')
+        return redirect(request.referrer)
+
+    if not record.is_supervisor_valid:
+        flash('Cannot submit feedback because it is still incomplete.', 'error')
+        return redirect(request.referrer)
+
+    record.supervisor_submitted = True
+    record.supervisor_timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/supervisor_unsubmit_feedback/<int:id>')
+@roles_required('faculty')
+def supervisor_unsubmit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_supervisor(record):
+        return redirect(request.referrer)
+
+    if not record.supervisor_submitted:
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if period.closed:
+        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
+        return redirect(request.referrer)
+
+    record.supervisor_submitted = False
+    record.supervisor_timestamp = None
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/marker_submit_feedback/<int:id>')
+@roles_required('faculty')
+def marker_submit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_marker(record):
+        return redirect(request.referrer)
+
+    if record.marker_submitted:
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if not period.feedback_open:
+        flash('It is not possible to submit before the feedback period has opened.', 'error')
+        return redirect(request.referrer)
+
+    if not record.is_marker_valid:
+        flash('Cannot submit feedback because it is still incomplete.', 'error')
+        return redirect(request.referrer)
+
+    record.marker_submitted = True
+    record.marker_timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/marker_unsubmit_feedback/<int:id>')
+@roles_required('faculty')
+def marker_unsubmit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_marker(record):
+        return redirect(request.referrer)
+
+    if not record.marker_submitted:
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if period.closed:
+        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
+        return redirect(request.referrer)
+
+    record.marker_submitted = False
+    record.marker_timestamp = None
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/supervisor_acknowledge_feedback/<int:id>')
+@roles_required('faculty')
+def supervisor_acknowledge_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_supervisor(record):
+        return redirect(request.referrer)
+
+    if record.acknowledge_feedback:
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if not period.feedback_open:
+        flash('It is not possible to submit before the feedback period has opened.', 'error')
+        return redirect(request.referrer)
+
+    if not record.student_feedback_submitted:
+        flash('Cannot acknowledge student feedback because none has been submitted.', 'error')
+        return redirect(request.referrer)
+
+    record.acknowledge_feedback = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/view_feedback/<int:id>')
+@roles_required('faculty')
+def view_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_viewable(record):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    preview = request.args.get('preview', None)
+
+    return render_template('faculty/dashboard/view_feedback.html', record=record, text='home dashboard',
+                           url=url, preview=preview)
+
+
+@faculty.route('/edit_response/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty')
+def edit_response(id):
+
+    # id identifies a SubmissionRecord
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_supervisor(record):
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if not period.closed:
+        flash('It is only possible to give respond to feedback from your student when '
+              'their own marks and feedback are available. '
+              'Try again when this submission period is closed.', 'info')
+        return redirect(request.referrer)
+
+    if period.closed and record.faculty_response_submitted:
+        flash('It is not possible to edit your response once it has been submitted', 'info')
+        return redirect(request.referrer)
+
+    if period.closed and not record.student_feedback_submitted:
+        flash('It is not possible to write a response to feedback from your student before '
+              'they have submitted it.', 'info')
+        return redirect(request.referrer)
+
+    form = SupervisorResponseForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        record.faculty_response = form.feedback.data
+        db.session.commit()
+
+        if form.save_preview.data:
+            return redirect(url_for('faculty.view_feedback', id=id, url=url, preview=1))
+        else:
+            return redirect(url)
+
+    else:
+
+        if request.method == 'GET':
+            form.feedback.data = record.faculty_response
+
+    return render_template('faculty/dashboard/edit_response.html', form=form, record=record,
+                           submit_url = url_for('faculty.edit_response', id=id, url=url),
+                           text='home dashboard', url=home_dashboard_url())
+
+
+@faculty.route('/submit_response/<int:id>')
+@roles_accepted('faculty')
+def submit_response(id):
+
+    # id identifies a SubmissionRecord
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_submission_supervisor(record):
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if record.faculty_response_submitted:
+        return redirect(request.referrer)
+
+    if not period.closed:
+        flash('It is only possible to give respond to feedback from your student when '
+              'their own marks and feedback are available. '
+              'Try again when this submission period is closed.', 'info')
+        return redirect(request.referrer)
+
+    if period.closed and record.faculty_response_submitted:
+        flash('It is not possible to edit your response once it has been submitted', 'info')
+        return redirect(request.referrer)
+
+    if period.closed and not record.student_feedback_submitted:
+        flash('It is not possible to write a response to feedback from your student before '
+              'they have submitted it.', 'info')
+        return redirect(request.referrer)
+
+    if not record.is_response_valid:
+        flash('Cannot submit your feedback because it is incomplete.', 'info')
+        return redirect(request.referrer)
+
+    record.faculty_response_submitted = True
+    record.faculty_response_timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(request.referrer)

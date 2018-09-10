@@ -1,0 +1,40 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import date_field %}
+
+{% macro feedback_marking(config, feedback_form) %}
+    <div class="panel panel-danger">
+        <div class="panel-heading"><strong>Feedback and marking underway: submission period #{{ config.submission_period }}</strong></div>
+        <div class="panel-body">
+            <div class="row vertical-top">
+                <div class="col-xs-9">
+                    Feedback and marking are currently underway.
+                    These are released to students when the feedback period closes.
+                </div>
+                <div class="col-xs-3">
+                    <div class="pull-right">
+                        <a href="{{ url_for('convenor.close_feedback', id=config.id) }}"
+                           class="btn btn-danger">
+                            {% if config.submission_period == config.submissions %}
+                                Close feedback
+                            {% else %}
+                                Close feedback and move to period #{{ config.submission_period+1 }}
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr class="intro-divider">
+            <form action="{{ url_for('convenor.open_feedback', id=config.id) }}"
+                  method="POST" name="issue-form">
+                {{ date_field(feedback_form.feedback_deadline) }}
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="pull-right">
+                            {{ wtf.form_field(feedback_form.open_feedback, button_map={'open_feedback': 'default'}) }}
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endmacro %}

@@ -1,0 +1,214 @@
+{% extends "base_app.html" %}
+
+{% from "macros.html" import on_click_selector_field %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#manual-assign-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/convenor/manual_assign_ajax/{{ rec.id }}', dataSrc: '' },
+                columns: [
+                    { data: 'project' },
+                    { data: 'supervisor',
+                      render: {
+                        _: 'display',
+                        sort: 'sortstring' }
+                    },
+                    { data: 'workload',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue' }
+                    },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Manually assign project
+{% endblock %}
+
+{% macro faculty_data(fac) %}
+    <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+    {% set CATS_supv, CATS_mark = fac.CATS_assignment(config.pclass_id) %}
+    <div>
+        <span class="label label-info">Supv {{ CATS_supv }}</span>
+        <span class="label label-info">Mark {{ CATS_mark }}</span>
+        <span class="label label-primary">Total {{ CATS_supv+CATS_mark }}</span>
+    </div>
+{% endmacro %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            {% if url and text %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    Manually assign project for <i class="fa fa-user"></i> <strong>{{ rec.owner.student.user.name }}</strong>,
+                    submission period <strong>#{{ rec.submission_period }}</strong>
+                </div>
+                <div class="panel-body">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Existing allocation</div>
+                        <div class="panel-body">
+                            <div class="row vertical-align final-selection-table">
+                                <div class="col-xs-6"><strong>Project</strong></div>
+                                <div class="col-xs-3"><strong>Supervisor</strong></div>
+                                <div class="col-xs-3"><strong>Marker</strong></div>
+                            </div>
+                            {% for item in rec.owner.records %}
+                                <div class="row vertical-align final-selection-table">
+                                    <div class="col-xs-6">
+                                        <span class="label label-default">#{{ item.submission_period }}</span>
+                                        {% if item.submission_period == rec.submission_period %}<i class="fa fa-check"></i>{% endif %}
+                                        <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                            {{ item.project.name }}
+                                        </a>
+                                    </div>
+                                    <div class="col-xs-3">
+                                        {{ faculty_data(item.project.owner) }}
+                                    </div>
+                                    <div class="col-xs-3">
+                                        {{ faculty_data(item.marker) }}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <span class="label label-danger">Error: missing content</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% if rec.owner.selector is not none %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading"><i class="fa fa-user"></i> {{ rec.owner.student.user.name }} &ndash; ranked project selection</div>
+                            <div class="panel-body">
+                                {% if rec.owner.selector.has_submitted %}
+                                    <div class="row vertical-align final-selection-table">
+                                        <div class="col-xs-6"><strong>Project</strong></div>
+                                        <div class="col-xs-6"><strong>Supervisor</strong></div>
+                                    </div>
+                                    {% for item in rec.owner.selector.ordered_selection.all() %}
+                                        <div class="row vertical-align final-selection-table">
+                                            <div class="col-xs-6">
+                                                <span class="label label-success">#{{ item.rank }}</span>
+                                                <a href="{{ url_for('faculty.live_project', pid=item.liveproject_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                    {{ item.format_project }}
+                                                </a>
+                                                {% if item.converted_from_bookmark %}
+                                                    <span class="label label-warning">Bookmark</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-xs-4">
+                                                {{ faculty_data(item.liveproject.owner) }}
+                                            </div>
+                                            <div class="col-xs-2">
+                                                <div class="pull-right">
+                                                    <a href="{{ url_for('convenor.assign_from_selection', id=rec.id, sel_id=item.id) }}" class="btn btn-default btn-sm">Assign</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% else %}
+                                        <span class="label label-danger">Error: missing content</span>
+                                    {% endfor %}
+                                {% else %}
+                                    Did not submit a valid project selection.
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if rec.matching_record is not none %}
+                        {% set item = rec.matching_record %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Automatic matching proposal</div>
+                            <div class="panel-body">
+                                <div class="row vertical-align final-selection-table">
+                                    <div class="col-xs-5"><strong>Project</strong></div>
+                                    <div class="col-xs-1"><strong>Rank</strong></div>
+                                    <div class="col-xs-3"><strong>Supervisor</strong></div>
+                                    <div class="col-xs-3"><strong>Marker</strong></div>
+                                </div>
+                                <div class="row vertical-align final-selection-table">
+                                    <div class="col-xs-5">
+                                        <span class="label label-default">#{{ item.submission_period }}</span>
+                                        <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                            {{ item.project.name }}
+                                        </a>
+                                    </div>
+                                    <div class="col-xs-1"><span class="label label-success">#{{ item.rank }}</span></div>
+                                    <div class="col-xs-3">
+                                        {{ faculty_data(item.project.owner) }}
+                                    </div>
+                                    <div class="col-xs-3">
+                                        {{ faculty_data(item.marker) }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-footer">
+                                <div class="row">
+                                    <div class="col-xs-12">
+                                        <div class="pull-right">
+                                            <a href="{{ url_for('convenor.assign_revert', id=rec.id) }}" class="btn btn-default btn-sm">Revert</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <hr class="intro-divider">
+                    <p>Alternatively, select a project by hand from the full list:</p>
+
+                    <table id="manual-assign-table" class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th width="35%"> Project</th>
+                            <th width="25%"> Supervisor</th>
+                            <th width="25%"> Current workload</th>
+                            <th width="15%"> Actions</th>
+                        </tr>
+                        </thead>
+                    </table>
+
+                    <hr class="intro-divider">
+                    <form action="{{ url_for('convenor.manual_assign', id=rec.id) }}" name="marker-assign-form" method="POST">
+                        {{ form.hidden_tag() }}
+                        {{ on_click_selector_field(form.marker, true) }}
+                    </form>
+                </div>
+            </div>
+
+            {% if url and text %}
+                <div>
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

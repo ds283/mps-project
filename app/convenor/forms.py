@@ -11,6 +11,10 @@
 from flask_security.forms import Form
 from wtforms import SubmitField, DateField
 from wtforms.validators import InputRequired
+from wtforms_alchemy import QuerySelectField
+
+from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel
+from functools import partial
 
 
 class GoLiveForm(Form):
@@ -41,3 +45,17 @@ class OpenFeedbackForm(Form):
 
     # submit button: open feedback
     open_feedback = SubmitField('Open feedback period')
+
+
+class AssignMarkerForm(Form):
+
+    # 2nd marker
+    marker = QuerySelectField('Assign 2nd marker', query_factory=MarkerQuery, get_label=BuildMarkerLabel)
+
+
+    def __init__(self, live_project, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        self.marker.query_factory = partial(MarkerQuery, live_project)
+        self.marker.get_label = partial(BuildMarkerLabel, live_project.config.pclass_id)

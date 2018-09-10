@@ -1,3 +1,5 @@
+{% from "faculty/macros.html" import project_metadata %}
+
 {% macro selector_card(config, sel_state, live_projects, current_user) %}
     {% set pclass = config.project_class %}
 

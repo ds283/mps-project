@@ -102,6 +102,13 @@ class ProductionConfig(Config):
     PROFILE_TO_DISK = False
     PROFILE_DIRECTORY = os.environ.get('PROFILE_DIRECTORY') or "./profiling"
 
+    # get SQLAlchemy to record metadata about query performance, so we can identify very slow queries
+    SQLALCHEMY_RECORD_QUERIES = True
+
+    # slow database query threshold (in seconds)
+    # queries that take longer than this are logged
+    DATABASE_QUERY_TIMEOUT = 0.5
+
 
 app_config = {
     'development': DevelopmentConfig,

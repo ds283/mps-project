@@ -31,7 +31,7 @@ def add_liveproject(number, project, config_id, autocommit=False):
 
     description = item.get_description(config.project_class)
     if description is None:
-        raise KeyError('Missing description for Project id={id}, ProjectClass id={pid}'.format(id=project.id,
+        raise KeyError('Missing description for Project id={id}, ProjectClass id={pid}'.format(id=item.id,
                                                                                                pid=config.pclass_id))
 
     # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;

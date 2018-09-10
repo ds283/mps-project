@@ -10,6 +10,10 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - BACKUP_FOLDER=/home/mpsproject/backups
+      - DATABASE_USER=mpsproject
+      - DATABASE_PASSWORD=Bridle12Way2007
+      - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
+      - DATABASE_HOSTNAME=mariadb
       - SESSION_REDIS_URL=redis://redis:6379
       - CACHE_REDIS_URL=redis://redis:6379
       - LOG_FILE=/home/mpsproject/logs/mps_project.log
@@ -57,9 +61,12 @@ services:
       - DATABASE_PASSWORD=Bridle12Way2007
       - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
       - DATABASE_HOSTNAME=mariadb
+      - CACHE_REDIS_URL=redis://redis:6379
+      - LOG_FILE=/home/mpsproject/logs/mps_project.log
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
       - /data/mpsproject/backups:/home/mpsproject/backups
+      - /data/mpsproject/logs:/home/mpsproject/logs
     links:
       - mariadb
       - redis
@@ -79,8 +86,11 @@ services:
       - DATABASE_URL=mysql+pymysql://mpsproject:Bridle12Way2007@mariadb/mpsproject
       - CELERY_RESULT_BACKEND=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
+      - CACHE_REDIS_URL=redis://redis:6379
+      - LOG_FILE=/home/mpsproject/logs/mps_project.log
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
+      - /data/mpsproject/logs:/home/mpsproject/logs
     links:
       - mariadb
       - redis
@@ -100,8 +110,11 @@ services:
       - DATABASE_URL=mysql+pymysql://mpsproject:Bridle12Way2007@mariadb/mpsproject
       - CELERY_RESULT_BACKEND=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
+      - CACHE_REDIS_URL=redis://redis:6379
+      - LOG_FILE=/home/mpsproject/logs/mps_project.log
     volumes:
-     - /data/mpsproject/instance:/home/mpsproject/instance
+      - /data/mpsproject/instance:/home/mpsproject/instance
+      - /data/mpsproject/logs:/home/mpsproject/logs
     links:
       - mariadb
       - redis

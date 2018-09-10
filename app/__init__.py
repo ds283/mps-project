@@ -22,6 +22,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
 from flask_session import Session
 from .cache import cache
+from flask_sqlalchemy import get_debug_queries
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
@@ -223,6 +224,16 @@ def create_app():
         db.session.rollback()
         return render_template('500.html'), 500
 
+    if not app.debug:
+        @app.after_request
+        def after_request(response):
+            timeout = app.config['DATABASE_QUERY_TIMEOUT']
+
+            for query in get_debug_queries():
+                if query.duration >= timeout:
+                    app.logger.warning("SLOW QUERY: %s\nParameters: %s\nDuration: %fs\nContext: %s\n" % (
+                    query.statement, query.parameters, query.duration, query.context))
+            return response
 
     # IMPORT BLUEPRINTS
 

@@ -9,7 +9,7 @@
 #
 
 from flask_security.forms import Form
-from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, DateField, BooleanField
+from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField
 
@@ -158,40 +158,6 @@ class EditDescriptionForm(Form, DescriptionMixin, EditFormMixin):
                                     'The label will not be visible to students.')
 
 
-class RolloverForm(Form):
-
-    # rollover action button
-    rollover = SubmitField('Rollover')
-
-
-class GoLiveForm(Form):
-
-    # normal Go Live option
-    live = SubmitField('Go live')
-
-    # go live and close option
-    live_and_close = SubmitField('Go live and immediately close')
-
-    # deadline field
-    live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
-
-
-class CloseStudentSelectionsForm(Form):
-
-    close = SubmitField('Close student selections')
-
-
-class IssueFacultyConfirmRequestForm(Form):
-
-    requests_issued = SubmitField('Issue confirmation requests')
-    request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
-
-
-class ConfirmAllRequestsForm(Form):
-
-    confirm_all = SubmitField('Confirm all outstanding projects')
-
-
 class SkillSelectorMixin():
 
     selector = QuerySelectField('Skill group', query_factory=GetSkillGroups, get_label='name')
@@ -214,3 +180,43 @@ class DescriptionSelectorForm(Form, DescriptionSelectorMixin):
         super().__init__(*args, **kwargs)
 
         self.selector.query_factory = partial(ProjectDescriptionClasses, project_id)
+
+
+class FeedbackMixin():
+
+    positive = TextAreaField('Positive aspects', render_kw={"rows": 10},
+                             description='Your feedback can be structured using Markdown, or use LaTeX formatting '
+                                         'and mathematical markup. The display uses the same rendering pipeline '
+                                         'used for project descriptions, so anything that works there will work here. '
+                                         'You can preview your feedback before submitting it.')
+
+    negative = TextAreaField('Negative aspects', render_kw={"rows": 10})
+
+    save_feedback = SubmitField('Save changes')
+
+
+class SupervisorFeedbackForm(Form, FeedbackMixin):
+
+    pass
+
+
+class MarkerFeedbackForm(Form, FeedbackMixin):
+
+    pass
+
+
+class SupervisorResponseMixin():
+
+    feedback = TextAreaField('Enter your response', render_kw={'rows': 5},
+                             description='Your feedback can be structured using Markdown, or use LaTeX formatting '
+                                         'and mathematical markup. Preview by looking at the feedback page for this '
+                                         'project.')
+
+    save_changes = SubmitField('Save changes')
+
+    save_preview = SubmitField('Save changes and preview')
+
+
+class SupervisorResponseForm(Form, SupervisorResponseMixin):
+
+    pass

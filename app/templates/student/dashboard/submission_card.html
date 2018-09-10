@@ -1,8 +1,100 @@
-{% macro submission_card(config, sub) %}
+{% macro submission_card(config, sub, n) %}
+    {% set period = config.get_period(n+1) %}
+    {% if period %}
+        <div class="panel
+            {% if n+1 == config.submission_period %}
+                {% if period.closed %}
+                    panel-primary
+                {% elif period.feedback_open %}
+                    panel-info
+                {% else %}
+                    panel-success
+                {% endif %}
+            {% else %}
+                panel-default
+            {% endif %}
+        ">
+            <div class="panel-heading">
+                {% if period.submission_period == config.submission_period %}
+                    <strong>Submission period #{{ n+1 }}</strong>
+                {% else %}
+                    Submission period #{{ n+1 }}
+                {% endif %}
+            </div>
+            <div class="panel-body">
+                {% if period.closed %}
+                    <p>Activity for this submission period is now closed.</p>
+                {% else %}
+                    {% if period.feedback_open %}
+                        <p>Marking and feedback for this submission period is now underway.</p>
+                    {% else %}
+                        {% if period.submission_period > config.submission_period %}
+                            <p>Activity for this period has not yet commenced.</p>
+                        {% elif period.submission_period == config.submission_period %}
+                            <p>Normal project activity is underway</p>
+                        {% else %}
+                            <span class="label label-danger">Error: Submission period lifecycle inconsistent</span>
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+                <hr class="intro-divider">
 
-    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading"><strong>Project details</strong></div>
-        <div class="panel-body"></div>
-    </div>
-
+                {# show assignments #}
+                {% set record = sub.get_assignment(period.submission_period) %}
+                {% if record %}
+                    <div class="row vertical-top">
+                        {% if sub.published %}
+                            <div class="col-xs-3">
+                                <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
+                            </div>
+                            <div class="col-xs-5">
+                                {{ record.project.name }} (No. {{ record.project.number }})
+                                <div>
+                                    {% if record.student_feedback_submitted and record.acknowledge_feedback %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
+                                    {% endif %}
+                                    {% if record.faculty_response_submitted %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Supervisor response</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-xs-4">
+                                <div style="text-align: right;" class="pull-right">
+                                    {% if period.closed and record.supervisor_submitted or record.marker_submitted %}
+                                        <a href="{{ url_for('student.view_feedback', id=record.id) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
+                                    {% endif %}
+                                    {% if period.closed and not record.student_feedback_submitted %}
+                                        <a href="{{ url_for('student.edit_feedback', id=record.id) }}" class="btn btn-sm btn-default btn-table-block">Edit my feedback</a>
+                                        {% if record.is_student_valid %}
+                                            <a href="{{ url_for('student.submit_feedback', id=record.id) }}" class="btn btn-sm btn-success btn-table-block">Submit my feedback</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="col-xs-12">
+                                <div style="text-align: left; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">
+                                    <p><strong>To be announced.</strong></p>
+                                    <p>
+                                        Your project assignment will probably be released in a few days.
+                                        Please contact the course convenor if you can still see this notice
+                                        later than a few days after the start of term.
+                                    </p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">No projects assigned</div>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Submission period #{{ n+1 }}</strong></div>
+            <div class="panel-body">
+                <span class="label label-danger">Error: Could not read period record</span>
+            </div>
+        </div>
+    {% endif %}
 {% endmacro %}

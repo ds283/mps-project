@@ -32,24 +32,29 @@ def get_current_year():
     return get_main_config().year
 
 
-def home_dashboard():
-
+def home_dashboard_url():
     if current_user.has_role('faculty'):
-
-        return redirect(url_for('faculty.dashboard'))
+        return url_for('faculty.dashboard')
 
     elif current_user.has_role('student'):
-
-        return redirect(url_for('student.dashboard'))
+        return url_for('student.dashboard')
 
     elif current_user.has_role('office'):
-
-        return redirect(url_for('office.dashboard'))
+        return url_for('office.dashboard')
 
     else:
+        return None
 
-        flash('Your role could not be identified. Please contact the system administrator.')
-        return redirect(url_for('auth.logged_out'))
+
+
+def home_dashboard():
+    url = home_dashboard_url()
+
+    if url is not None:
+        return redirect(url)
+
+    flash('Your role could not be identified. Please contact the system administrator.')
+    return redirect(url_for('auth.logged_out'))
 
 
 def get_root_dashboard_data():
@@ -380,9 +385,6 @@ def build_enroll_selector_candidates(config):
         .join(User, StudentData.id == User.id) \
         .filter(User.active == True)
 
-    c_data = candidates.all()
-    fc_data = fyear_candidates.all()
-
     candidates = candidates.union(fyear_candidates)
 
     # build a list of existing selecting students
@@ -397,6 +399,52 @@ def build_enroll_selector_candidates(config):
     return missing
 
 
+def build_enroll_submitter_candidates(config):
+    """
+    Build a query that returns possible candidate for manual enrollment as submitters
+    :param config:
+    :return:
+    """
+
+    # which year does the project run in, and for how long?
+    year = config.start_year
+    extent = config.extent
+
+    # earliest year: academic year in which students can be submitter
+    first_submitter_year = year
+
+    # latest year: last academic year in which students can be a submitter
+    last_submitter_year = year + (extent - 1)
+
+    # build a list of eligible students who are not already attached as submitters
+    candidates = db.session.query(StudentData) \
+        .filter(StudentData.foundation_year == False,
+                config.year - StudentData.cohort + 1 - StudentData.repeated_years >= first_submitter_year,
+                config.year - StudentData.cohort + 1 - StudentData.repeated_years <= last_submitter_year) \
+        .join(User, StudentData.id == User.id) \
+        .filter(User.active == True)
+
+    fyear_candidates = db.session.query(StudentData) \
+        .filter(StudentData.foundation_year == True,
+                config.year - StudentData.cohort - StudentData.repeated_years >= first_submitter_year,
+                config.year - StudentData.cohort - StudentData.repeated_years <= last_submitter_year) \
+        .join(User, StudentData.id == User.id) \
+        .filter(User.active == True)
+
+    candidates = candidates.union(fyear_candidates)
+
+    # build a list of existing selecting students
+    submitters = db.session.query(SubmittingStudent.student_id) \
+        .filter(SubmittingStudent.config_id == config.id,
+                ~SubmittingStudent.retired).subquery()
+
+    # find students in candidates who are not also in selectors
+    missing = candidates.join(submitters, submitters.c.student_id == StudentData.id, isouter=True) \
+        .filter(submitters.c.student_id == None)
+
+    return missing
+
+
 def get_automatch_pclasses():
     """
     Build a list of pclasses that participate in automatic matching
@@ -406,3 +454,38 @@ def get_automatch_pclasses():
     pclasses = db.session.query(ProjectClass).filter_by(active=True, do_matching=True).all()
 
     return pclasses
+
+
+def build_submitters_data(config, cohort_filter, prog_filter, state_filter):
+
+    # build a list of live students submitting work for evaluation in this project class
+    submitters = config.submitting_students.filter_by(retired=False)
+
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
+
+    if cohort_flag or prog_flag:
+        submitters = submitters \
+            .join(StudentData, StudentData.id == SubmittingStudent.student_id)
+
+    if cohort_flag:
+        submitters = submitters.filter(StudentData.cohort == cohort_value)
+
+    if prog_flag:
+        submitters = submitters.filter(StudentData.programme_id == prog_value)
+
+    if state_filter == 'published':
+        submitters = submitters.filter(SubmittingStudent.published == True)
+        data = submitters.all()
+    elif state_filter == 'unpublished':
+        submitters = submitters.filter(SubmittingStudent.published == False)
+        data = submitters.all()
+    elif state_filter == 'late-feedback':
+        data = [x for x in submitters.all() if x.has_late_feedback]
+    elif state_filter == 'no-late-feedback':
+        data = [x for x in submitters.all() if not x.has_late_feedback]
+    else:
+        data = submitters.all()
+
+    return data

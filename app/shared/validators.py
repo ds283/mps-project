@@ -133,3 +133,45 @@ def validate_match_inspector(record):
 
     flash('This operation is available only to administrative users and project convennors.', 'error')
     return False
+
+
+def validate_submission_supervisor(record):
+    """
+    Validate that the logged-in user is the project supervisor for a SubmissionRecord instance
+    :param record:
+    :return:
+    """
+
+    if record.project.owner_id == current_user.id:
+        return True
+
+    flash('Only project supervisors can perform this operation', 'error')
+    return False
+
+
+def validate_submission_marker(record):
+    """
+    Validate that the logged-in user is the assigned marker for a SubmissionRecord instance
+    :param record:
+    :return:
+    """
+
+    if record.marker_id == current_user.id:
+        return True
+
+    flash('Only 2nd markers can perform this operation', 'error')
+    return False
+
+
+def validate_submission_viewable(record):
+    """
+    Validate that the logged-in user is entitled to view a SubmissionRecord instance
+    :param record:
+    :return:
+    """
+
+    if record.project.owner_id == current_user.id or record.marker_id == current_user.id:
+        return True
+
+    flash('Only supervisors or 2nd markers can perform this operation', 'error')
+    return False

@@ -16,16 +16,28 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from . import student
 
-from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
-    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord
+from .forms import StudentFeedbackForm
 
-from ..shared.utils import home_dashboard, filter_projects
+from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
+    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord
+
+from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects
 
 import app.ajax as ajax
 
 import re
 from datetime import date, datetime
 import parse
+
+
+def _verify_submitter(rec):
+
+    if rec.owner.student_id != current_user.id:
+        flash('You do not have permission to view feedback for this user. '
+              'If you believe this is incorrect, contract the system administrator.', 'error')
+        return False
+
+    return True
 
 
 def _verify_selector(sel):
@@ -598,7 +610,6 @@ def do_clear_submission(sid):
 
     # verify logged-in user is the selector
     if current_user.id != sel.student_id:
-
         flash('You do not have permission to clear project preferences for this selector.', 'error')
         return home_dashboard()
 
@@ -621,4 +632,109 @@ def view_selection(sid):
     if not _verify_selector(sel):
         return redirect(request.referrer)
 
-    return render_template('student/choices.html', sel=sel, )
+    return render_template('student/choices.html', sel=sel)
+
+
+@student.route('/view_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('student')
+def view_feedback(id):
+
+    # id identifies a SubmissionRecord
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not _verify_submitter(record):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if not period.closed:
+        flash('It is only possible to view feedback after the convenor has made it available. '
+              'Try again when this submission period is closed.', 'info')
+        return redirect(url)
+
+    return render_template('student/dashboard/view_feedback.html', record=record, period=period,
+                           text='home dashboard', url=url)
+
+
+@student.route('/edit_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('student')
+def edit_feedback(id):
+
+    # id identifies a SubmissionRecord
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not _verify_submitter(record):
+        return redirect(request.referrer)
+
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if not period.closed:
+        flash('It is only possible to give feedback to your supervisor once your own marks and feedback are available. '
+              'Try again when this submission period is closed.', 'info')
+        return redirect(request.referrer)
+
+    if period.closed and record.student_feedback_submitted:
+        flash('It is not possible to edit your feedback once it has been submitted', 'info')
+        return redirect(request.referrer)
+
+    form = StudentFeedbackForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        record.student_feedback = form.feedback.data
+        db.session.commit()
+
+        if form.save_preview.data:
+            return redirect(url_for('student.view_feedback', id=id, url=url, preview=1))
+        else:
+            return redirect(url)
+
+    else:
+
+        if request.method == 'GET':
+            form.feedback.data = record.student_feedback
+
+    return render_template('student/dashboard/edit_feedback.html', form=form,
+                           submit_url=url_for('student.edit_feedback', id=id, url=url),
+                           text='home dashboard', url=home_dashboard_url())
+
+
+@student.route('/submit_feedback/<int:id>')
+@roles_accepted('student')
+def submit_feedback(id):
+
+    # id identifies a SubmissionRecord
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if not _verify_submitter(record):
+        return redirect(request.referrer)
+
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
+
+    if record.student_feedback_submitted:
+        return redirect(request.referrer)
+
+    if not period.closed:
+        flash('It is only possible to give feedback to your supervisor once your own marks and feedback are available. '
+              'Try again when this submission period is closed.', 'info')
+        return redirect(request.referrer)
+
+    if not record.is_student_valid:
+        flash('Cannot submit your feedback because it is incomplete.', 'info')
+        return redirect(request.referrer)
+
+    record.student_feedback_submitted = True
+    record.student_feedback_timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(request.referrer)

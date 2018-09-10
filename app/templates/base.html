@@ -505,9 +505,16 @@
         <br/>
         {% block bodyblock %}{% endblock %}
     </div>
-    <nav class="navbar navbar-default navbar-fixed-bottom" role="navigation">
+    <nav class="navbar {% if real_user %}navbar-inverse{% else %}navbar-default{% endif %} navbar-fixed-bottom" role="navigation">
         <div class="navbar-header footer-bar">
-            <p class="copyright text-muted small">Copyright (c) 2018 University of Sussex</p>
+            <div class="container">
+                <span class="copyright navbar-text text-muted small">Copyright (c) 2018 University of Sussex</span>
+                {% if real_user %}
+                    <span class="navbar-text small" style="float: right;">You
+                        are viewing as <i class="fa fa-user"></i>
+                        {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}">Return to my normal role</a></span>
+                {% endif %}
+            </div>
         </div>
     </nav>
 {% endblock %}

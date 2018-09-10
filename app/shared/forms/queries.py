@@ -188,3 +188,16 @@ def GetComparatorMatches(year, self_id, pclasses):
         q = q.filter(MatchingAttempt.config_members.any(pclass_id=pid))
 
     return  q.order_by(MatchingAttempt.name.asc())
+
+
+def MarkerQuery(live_project):
+    return live_project.second_markers \
+        .join(User, User.id == FacultyData.id) \
+        .filter(User.active == True) \
+        .order_by(User.last_name.asc(), User.first_name.asc())
+
+
+def BuildMarkerLabel(pclass_id, fac):
+    CATS_supv, CATS_mark = fac.CATS_assignment(pclass_id)
+    return '{name} (CATS: {supv} supv, {mark} mark, {tot} total)'.format(name=fac.user.name, supv=CATS_supv,
+                                                                         mark=CATS_mark, tot=CATS_supv+CATS_mark)

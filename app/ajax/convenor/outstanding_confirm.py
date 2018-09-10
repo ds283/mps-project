@@ -17,11 +17,18 @@ _projects = \
 {{ f.projects_unofferable_label|safe }}
 """
 
-def golive_data(config):
+
+_menu = \
+"""
+<a href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}" class="btn btn-sm btn-table-block btn-warning">Force confirm</a>
+"""
+
+def outstanding_confirm_data(config):
 
     data = [{'name': {'display': f.user.name,
                       'sortstring': f.user.last_name + f.user.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
-             'projects': render_template_string(_projects, f=f, pclass=config.project_class)} for f in config.golive_required]
+             'projects': render_template_string(_projects, f=f, pclass=config.project_class),
+             'menu': render_template_string(_menu, config=config, f=f)} for f in config.golive_required]
 
     return jsonify(data)

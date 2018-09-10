@@ -1,0 +1,29 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ formtitle|safe }}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ submit_url }}" method="POST" name="feedback_form">
+        {{ form.hidden_tag() }}
+
+        {% if period.closed %}
+            <div class="alert alert-danger">
+                The convenor has closed this submission period. You are still able to enter and edit feedback,
+                but once submitted it will not be possible to make further edits, or to unsubmit.
+            </div>
+        {% endif %}
+
+        {{ wtf.form_field(form.positive) }}
+        {{ wtf.form_field(form.negative) }}
+
+        {{ wtf.form_field(form.save_feedback) }}
+    </form>
+{% endblock %}

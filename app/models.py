@@ -17,7 +17,7 @@ from sqlalchemy.event import listens_for
 
 from celery import schedules
 
-from .shared.formatters import format_size, format_time
+from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.colours import get_text_colour
 
 from datetime import date, datetime, timedelta
@@ -822,9 +822,69 @@ class FacultyData(db.Model):
         num = self.number_marker
 
         if num == 0:
-            return '<span class="label label-default"><i class="fa fa-times"></i> 0 marker</span>'
+            return '<span class="label label-default"><i class="fa fa-times"></i> Marker for 0</span>'
 
-        return '<span class="label label-success"><i class="fa fa-check"></i> {n} marker</span>'.format(n=num)
+        return '<span class="label label-success"><i class="fa fa-check"></i> Marker for {n}</span>'.format(n=num)
+
+
+    def supervisor_assignments(self, pclass_id):
+        """
+        Return a list of current SubmissionRecord instances for which we are supervisor
+        :return:
+        """
+        lp_query = self.live_projects.subquery()
+
+        return db.session.query(SubmissionRecord) \
+            .join(lp_query, lp_query.c.id == SubmissionRecord.project_id) \
+            .filter(SubmissionRecord.retired == False) \
+            .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
+            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
+            .filter(ProjectClassConfig.pclass_id == pclass_id) \
+            .order_by(SubmissionRecord.submission_period.asc())
+
+
+    def marker_assignments(self, pclass_id):
+        """
+        Return a list of current SubmissionRecord instances for which we are 2nd marker
+        :return:
+        """
+        return self.marking_records \
+            .filter_by(retired=False) \
+            .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
+            .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
+            .filter(ProjectClassConfig.pclass_id == pclass_id) \
+            .order_by(SubmissionRecord.submission_period.asc())
+
+
+    def CATS_assignment(self, pclass_id):
+        """
+        Return (supervising CATS, marking CATS) for the current year
+        :return:
+        """
+
+        supv = self.supervisor_assignments(pclass_id)
+        mark = self.marker_assignments(pclass_id)
+
+        supv_CATS = [x.supervising_CATS for x in supv]
+        supv_CATS_clean = [x for x in supv_CATS if x is not None]
+
+        mark_CATS = [x.marking_CATS for x in mark]
+        mark_CATS_clean = [x for x in mark_CATS if x is not None]
+
+        return sum(supv_CATS_clean), sum(mark_CATS_clean)
+
+
+    def has_late_feedback(self, pclass_id):
+        supervisor_late = [x.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE
+                           for x in self.supervisor_assignments(pclass_id)]
+
+        marker_late = [x.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE
+                       for x in self.supervisor_assignments(pclass_id)]
+
+        reponse_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
+                        for x in self.marker_assignments(pclass_id)]
+
+        return any(supervisor_late) or any(marker_late) or any(reponse_late)
 
 
 class StudentData(db.Model):
@@ -1514,6 +1574,7 @@ class ProjectClassConfig(db.Model):
     # current submission period
     submission_period = db.Column(db.Integer())
 
+    # 'periods' member constructed by backreference from SubmissionPeriodRecord below
 
     # WORKLOAD MODEL
 
@@ -1642,7 +1703,43 @@ class ProjectClassConfig(db.Model):
 
     @property
     def submitter_lifecycle(self):
-        return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+        if self.submission_period > self.submissions:
+            return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+
+        # get submission period data for current period
+        period = self.current_period
+
+        if period is None:
+            # allow period record to be auto-generated
+            period = SubmissionPeriodRecord(config_id=self.id,
+                                            retired=False,
+                                            submission_period=self.submission_period,
+                                            feedback_open=False,
+                                            feedback_id=None,
+                                            feedback_timestamp=None,
+                                            feedback_deadline=None,
+                                            closed=False,
+                                            closed_id=None,
+                                            closed_timestamp=None)
+            db.session.add(period)
+            db.session.commit()
+
+        if not period.feedback_open:
+            return self.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+
+        if period.feedback_open and not period.closed:
+            return self.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY
+
+        # can assume period.closed at this point
+        if self.submission_period >= self.submissions:
+            return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+
+        # we don't want to be in this position; we may as well advance the submission period
+        # and return PROJECT_ACTIVITY
+        self.submission_period += 1
+        db.session.commit()
+
+        return ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
 
 
     @property
@@ -1667,14 +1764,7 @@ class ProjectClassConfig(db.Model):
             return '<invalid>'
 
         delta = self.request_deadline.date() - date.today()
-        days = delta.days
-
-        str = '{days} day'.format(days=days)
-
-        if days != 1:
-            str += 's'
-
-        return str
+        return format_readable_time(delta.seconds)
 
 
     @property
@@ -1683,24 +1773,7 @@ class ProjectClassConfig(db.Model):
             return '<invalid>'
 
         delta = self.live_deadline.date() - date.today()
-        days = delta.days
-
-        if days > 7:
-
-            weeks = int(days/7)
-            str = '{weeks} week'.format(weeks=weeks)
-
-            if weeks != 1:
-                str += 's'
-
-            return str
-
-        str = '{days} day'.format(days=days)
-
-        if days != 1:
-            str += 's'
-
-        return str
+        return format_readable_time(delta)
 
 
     @property
@@ -1796,7 +1869,6 @@ class ProjectClassConfig(db.Model):
         Generate sign-off requests to all active faculty
         :return:
         """
-
         # exit if called in error
         if not self.require_confirm:
             return
@@ -1817,13 +1889,104 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def has_matches(self):
+    def has_published_matches(self):
         query = self.matching_attempts.subquery()
         count = db.session.query(func.count(query.c.id)) \
             .filter(query.c.published == True) \
             .scalar()
 
         return count > 0
+
+
+    def get_period(self, n):
+        if n <= 0 or n > self.submissions:
+            return None
+
+        return self.periods.filter_by(submission_period=n).first()
+
+
+    @property
+    def current_period(self):
+        return self.get_period(self.submission_period)
+
+
+class SubmissionPeriodRecord(db.Model):
+    """
+    Capture details about a submission period
+    """
+
+    __tablename__ = 'submission_periods'
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent ProjectClassConfig
+    config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    config = db.relationship('ProjectClassConfig', foreign_keys=[config_id], uselist=False,
+                             backref=db.backref('periods', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # submission period
+    submission_period = db.Column(db.Integer(), index=True)
+
+    # retired flag, set by rollover code
+    retired = db.Column(db.Boolean(), index=True)
+
+    # has feedback been opened in this period
+    feedback_open = db.Column(db.Boolean())
+
+    # who opened feedback?
+    feedback_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    feedback_by = db.relationship('User', uselist=False, foreign_keys=[feedback_id])
+
+    # feedback opened timestamp
+    feedback_timestamp = db.Column(db.DateTime())
+
+    # deadline for feedback to be submitted
+    feedback_deadline = db.Column(db.DateTime())
+
+    # has this period been closed?
+    closed = db.Column(db.Boolean())
+
+    # who closed the period?
+    closed_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    closed_by = db.relationship('User', uselist=False, foreign_keys=[closed_id])
+
+    # closed timestamp
+    closed_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def time_to_feedback_deadline(self):
+        if self.feedback_deadline is None:
+            return '<invalid>'
+
+        delta = self.feedback_deadline.date() - date.today()
+        return format_readable_time(delta)
+
+
+    def get_supervisor_records(self, fac):
+        # querying for the SubmissionRecords attached to a given faculty member requires a join
+        # to the liveprojects table
+        students = self.config.submitting_students.subquery()
+
+        return db.session.query(SubmissionRecord) \
+            .join(students, students.c.id == SubmissionRecord.owner_id) \
+            .filter(SubmissionRecord.submission_period == self.submission_period) \
+            .join(LiveProject) \
+            .filter(LiveProject.owner_id == fac.id) \
+            .join(User, User.id == students.c.student_id) \
+            .order_by(SubmissionRecord.submission_period.asc(), LiveProject.number.asc(),
+                      User.last_name.asc(), User.first_name.asc()).all()
+
+
+    def get_marker_records(self, fac):
+        students = self.config.submitting_students.subquery()
+
+        return db.session.query(SubmissionRecord) \
+            .join(students, students.c.id == SubmissionRecord.owner_id) \
+            .filter(SubmissionRecord.submission_period == self.submission_period) \
+            .filter(SubmissionRecord.marker_id == fac.id) \
+            .join(StudentData, StudentData.id == students.c.student_id) \
+            .order_by(SubmissionRecord.submission_period.asc(), StudentData.exam_number).all()
 
 
 class EnrollmentRecord(db.Model):
@@ -2822,7 +2985,7 @@ class SelectingStudent(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # retired flag
-    retired = db.Column(db.Boolean())
+    retired = db.Column(db.Boolean(), index=True)
 
     # key to ProjectClass config record that identifies this year and pclass
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
@@ -3026,7 +3189,7 @@ class SubmittingStudent(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # retired flag
-    retired = db.Column(db.Boolean())
+    retired = db.Column(db.Boolean(), index=True)
 
     # key to ProjectClass config record that identifies this year and pclass
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
@@ -3061,6 +3224,42 @@ class SubmittingStudent(db.Model):
         return self.student.academic_year_label(self.config.year)
 
 
+    def get_assignment(self, period):
+        records = self.records.filter_by(submission_period=period).all()
+
+        if len(records) == 0:
+            return None
+        elif len(records) == 1:
+            return records[0]
+
+        raise RuntimeError('Too many projects assigned for this submission period')
+
+
+    @property
+    def ordered_assignments(self):
+        return self.records.order_by(SubmissionRecord.submission_period.asc())
+
+
+    @property
+    def supervisor_feedback_late(self):
+        supervisor_states = [r.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
+        response_states = [r.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
+
+        return any(supervisor_states) or any(response_states)
+
+
+    @property
+    def marker_feedback_late(self):
+        marker_states = [r.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
+
+        return any(marker_states)
+
+
+    @property
+    def has_late_feedback(self):
+        return self.supervisor_feedback_late or self.marker_feedback_late
+
+
 class SubmissionRecord(db.Model):
     """
     Collect details for a student submission
@@ -3073,7 +3272,10 @@ class SubmissionRecord(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # submission period this record is associated with
-    submission_period = db.Column(db.Integer())
+    submission_period = db.Column(db.Integer(), index=True)
+
+    # retired flag, set by rollover code
+    retired = db.Column(db.Boolean(), index=True)
 
     # id of owning SubmittingStudent
     owner_id = db.Column(db.Integer(), db.ForeignKey('submitting_students.id'))
@@ -3090,13 +3292,15 @@ class SubmissionRecord(db.Model):
     marker = db.relationship('FacultyData', foreign_keys=[marker_id], uselist=False,
                              backref=db.backref('marking_records', lazy='dynamic'))
 
+    # link to ProjectClassConfig that selections were drawn from; used to offer a list of LiveProjects
+    # if the convenor wishes to reassign
+    selection_config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))
+    selection_config = db.relationship('ProjectClassConfig', foreign_keys=[selection_config_id], uselist=None)
+
     # capture parent MatchingRecord, if one exists
     matching_record_id = db.Column(db.Integer(), db.ForeignKey('matching_records.id'), default=None)
     matching_record = db.relationship('MatchingRecord', foreign_keys=[matching_record_id], uselist=False,
                                       backref=db.backref('submission_record', uselist=False))
-
-    # flag to indicate whether we are in the feedback/marking phase
-    feedback_open = db.Column(db.Boolean())
 
 
     # MARKER FEEDBACK TO STUDENT
@@ -3107,17 +3311,47 @@ class SubmissionRecord(db.Model):
     # supervisor negative feedback
     supervisor_negative = db.Column(db.Text())
 
+    # supervisor submitted?
+    supervisor_submitted = db.Column(db.Boolean())
+
+    # supervisor submission datestamp
+    supervisor_timestamp = db.Column(db.DateTime())
+
     # marker positive feedback
     marker_positive = db.Column(db.Text())
 
     # marker negative feedback
     marker_negative = db.Column(db.Text())
 
+    # marker submitted?
+    marker_submitted = db.Column(db.Boolean())
+
+    # marker submission timestamp
+    marker_timestamp = db.Column(db.DateTime())
+
 
     # STUDENT FEEDBACK
 
     # free-form feedback field
     student_feedback = db.Column(db.Text())
+
+    # student feedback submitted
+    student_feedback_submitted = db.Column(db.Text())
+
+    # student feedback timestamp
+    student_feedback_timestamp = db.Column(db.DateTime())
+
+    # faculty acknowledge
+    acknowledge_feedback = db.Column(db.Boolean())
+
+    # faculty response
+    faculty_response = db.Column(db.Text())
+
+    # faculty response submitted
+    faculty_response_submitted = db.Column(db.Boolean())
+
+    # faculty response timestamp
+    faculty_response_timestamp = db.Column(db.DateTime())
 
 
     @property
@@ -3127,6 +3361,149 @@ class SubmissionRecord(db.Model):
         :return:
         """
         return self.project.owner
+
+
+    @property
+    def period(self):
+        """
+        Returns SubmissionPeriodRecord for the submission period associated with this SubmissionRecord
+        :return:
+        """
+        return self.owner.config.get_period(self.submission_period)
+
+
+    @property
+    def is_supervisor_valid(self):
+        if self.supervisor_positive is None or len(self.supervisor_positive) == 0:
+            return False
+
+        if self.supervisor_negative is None or len(self.supervisor_negative) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def is_marker_valid(self):
+        if self.marker_positive is None or len(self.marker_positive) == 0:
+            return False
+
+        if self.marker_negative is None or len(self.marker_negative) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def is_student_valid(self):
+        if self.student_feedback is None or len(self.student_feedback) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def is_response_valid(self):
+        if self.faculty_response is None or len(self.faculty_response) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def is_feedback_valid(self):
+        return self.is_supervisor_valid or self.is_marker_valid
+
+
+    FEEDBACK_NOT_YET = 0
+    FEEDBACK_SUBMITTED = 1
+    FEEDBACK_WAITING = 2
+    FEEDBACK_ENTERED = 3
+    FEEDBACK_LATE = 4
+
+
+    def _feedback_state(self, valid):
+        period = self.period
+
+        if not period.feedback_open:
+            return SubmissionRecord.FEEDBACK_NOT_YET
+
+        if self.supervisor_submitted:
+            return SubmissionRecord.FEEDBACK_SUBMITTED
+
+        if valid:
+            return SubmissionRecord.FEEDBACK_ENTERED
+
+        if not period.closed:
+            return SubmissionRecord.FEEDBACK_WAITING
+
+        return SubmissionRecord.FEEDBACK_LATE
+
+
+    @property
+    def supervisor_feedback_state(self):
+        return self._feedback_state(self.is_supervisor_valid)
+
+
+    @property
+    def marker_feedback_state(self):
+        return self._feedback_state(self.is_marker_valid)
+
+
+    @property
+    def supervisor_response_state(self):
+        period = self.period
+
+        if not period.feedback_open or not self.student_feedback_submitted:
+            return SubmissionRecord.FEEDBACK_NOT_YET
+
+        if self.faculty_response_submitted:
+            return SubmissionRecord.FEEDBACK_SUBMITTED
+
+        if self.is_response_valid:
+            return SubmissionRecord.FEEDBACK_ENTERED
+
+        if not period.closed:
+            return SubmissionRecord.FEEDBACK_WAITING
+
+        return SubmissionRecord.FEEDBACK_LATE
+
+
+    @property
+    def has_feedback(self):
+        return self.supervisor_submitted or self.marker_submitted
+
+
+    @property
+    def previous_config(self):
+        if self.selection_config:
+            return self.selection_config
+
+        current_config = self.owner.config
+        config = ProjectClassConfig.query.filter_by(year=current_config.year-1,
+                                                    pclass_id=current_config.pclass_id).first()
+
+        return config
+
+
+    @property
+    def supervising_CATS(self):
+        config = self.previous_config
+
+        if config is not None:
+            return config.CATS_supervision
+
+        return None
+
+
+    @property
+    def marking_CATS(self):
+        config = self.previous_config
+
+        if config is not None:
+            return config.CATS_marking
+
+        return None
 
 
 class Bookmark(db.Model):
@@ -4042,7 +4419,7 @@ class MatchingAttempt(db.Model):
 
     def is_project_overassigned(self, project):
         count = self.number_project_assignments(project)
-        if project.enforce_capacity and project.capacity > 0 and count > project.capacity:
+        if project.enforce_capacity and 0 < project.capacity < count:
             return True
 
         return False

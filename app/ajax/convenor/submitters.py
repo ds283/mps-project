@@ -13,18 +13,208 @@ from flask import render_template_string, jsonify
 
 _cohort = \
 """
-{{ sel.student.programme.label|safe }}
-{{ sel.academic_year_label|safe }}
-{{ sel.student.cohort_label|safe }}
+{{ sub.student.programme.label|safe }}
+{{ sub.student.cohort_label|safe }}
+{{ sub.academic_year_label|safe }}
+"""
+
+
+_published = \
+"""
+"""
+
+
+_projects = \
+"""
+{% macro feedback_state_tag(obj, state, label) %}
+    {% if state == obj.FEEDBACK_NOT_YET %}
+        <span class="label label-default">{{ label }} not yet required</span>
+    {% elif state == obj.FEEDBACK_WAITING %}
+        <span class="label label-default">{{ label }} to do</span>
+    {% elif state == obj.FEEDBACK_SUBMITTED %}
+        <span class="label label-success">{{ label }} submitted</span>        
+    {% elif state == obj.FEEDBACK_ENTERED %}
+        <span class="label label-warning">{{ label }} in progress</span>        
+    {% elif state == obj.FEEDBACK_LATE %}
+        <span class="label label-danger">{{ label }} late</span>
+    {% else %}
+        <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
+    {% endif %}        
+{% endmacro %}
+{% macro project_tag(r, show_period) %}
+    {% set pclass = r.owner.config.project_class %}
+    {% set style = pclass.make_CSS_style() %}
+    <div>
+        <div class="dropdown assignment-label">
+            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {{ r.supervisor.user.name }} (No. {{ r.project.number }})
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                </li>
+                
+                {% set disabled = r.period.feedback_open %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
+                </li>
+            </ul>
+        </div>
+        {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
+        {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
+    </div>
+{% endmacro %}
+{% set recs = sub.ordered_assignments.all() %}
+{% if recs|length == 1 %}
+    {{ project_tag(recs[0], false) }}
+{% elif recs|length > 1 %}
+    {% for rec in recs %}
+        {% if loop.index > 1 %}<p></p>{% endif %}
+        {{ project_tag(rec, true) }}
+    {% endfor %}
+{% else %}
+    <span class="label label-danger">None</span>
+{% endif %}
+"""
+
+
+_markers = \
+"""
+{% macro feedback_state_tag(obj, state, label) %}
+    {% if state == obj.FEEDBACK_NOT_YET %}
+        <span class="label label-default">{{ label }} not yet required</span>
+    {% elif state == obj.FEEDBACK_WAITING %}
+        <span class="label label-default">{{ label }} to do</span>
+    {% elif state == obj.FEEDBACK_SUBMITTED %}
+        <span class="label label-success">{{ label }} submitted</span>        
+    {% elif state == obj.FEEDBACK_ENTERED %}
+        <span class="label label-warning">{{ label }} in progress</span>        
+    {% elif state == obj.FEEDBACK_LATE %}
+        <span class="label label-danger">{{ label }} late</span>
+    {% else %}
+        <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
+    {% endif %}        
+{% endmacro %}
+{% macro marker_tag(r, show_period) %}
+    {% set pclass = r.owner.config.project_class %}
+    <div>
+        <div class="dropdown assignment-label">
+            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                {{ r.marker.user.name }}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                </li>
+                
+                {% set disabled = r.period.feedback_open %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
+                </li>
+            </ul>
+        </div>
+        {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
+    </div>
+{% endmacro %}
+{% set recs = sub.ordered_assignments.all() %}
+{% if recs|length == 1 %}
+    {{ marker_tag(recs[0], false) }}
+{% elif recs|length > 1 %}
+    {% for rec in sub.ordered_assignments %}
+        {% if loop.index > 1 %}<p></p>{% endif %}
+        {{ marker_tag(rec, true) }}
+    {% endfor %}
+{% else %}
+    <span class="label label-danger">None</span>
+{% endif %}
+"""
+
+
+_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right">
+        {% if sub.published %}
+            <li>
+                <a href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
+                    <i class="fa fa-eye-slash"></i> Unpublish
+                </a>
+            </li>
+        {% else %}
+            <li>
+                <a href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
+                    <i class="fa fa-eye"></i> Publish to student
+                </a>
+            </li>
+        {% endif %}
+
+        {% set recs = sub.ordered_assignments.all() %}
+        {% set pclass = sub.config.project_class %}
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Manual reassignment</li>
+        {% for r in recs %}
+            {% set disabled = r.period.feedback_open %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                    Period #{{ r.submission_period }}
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>No periods</a>
+            </li>
+        {% endfor %}
+        
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">View feedback</li>
+        {% for r in recs %}
+            {% set disabled = not r.has_feedback %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                    Period #{{ r.submission_period }}
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>No periods</a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+"""
+
+
+_name = \
+"""
+<a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
+<div>
+{% if sub.published %}
+    <span class="label label-success"><i class="fa fa-eye"></i> Published</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-eye-slash"></i> Unpublished</span>
+{% endif %}
+</div>
 """
 
 
 def submitters_data(students, config):
 
     data = [{'name': {
-                'display': s.student.user.name,
+                'display': render_template_string(_name, sub=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
              },
-             'cohort': render_template_string(_cohort, sel=s)} for s in students]
+             'cohort': render_template_string(_cohort, sub=s),
+             'projects': render_template_string(_projects, sub=s),
+             'markers': render_template_string(_markers, sub=s),
+             'menu': render_template_string(_menu, sub=s)} for s in students]
 
     return jsonify(data)

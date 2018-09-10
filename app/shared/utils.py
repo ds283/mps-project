@@ -32,24 +32,29 @@ def get_current_year():
     return get_main_config().year
 
 
-def home_dashboard():
-
+def home_dashboard_url():
     if current_user.has_role('faculty'):
-
-        return redirect(url_for('faculty.dashboard'))
+        return url_for('faculty.dashboard')
 
     elif current_user.has_role('student'):
-
-        return redirect(url_for('student.dashboard'))
+        return url_for('student.dashboard')
 
     elif current_user.has_role('office'):
-
-        return redirect(url_for('office.dashboard'))
+        return url_for('office.dashboard')
 
     else:
+        return None
 
-        flash('Your role could not be identified. Please contact the system administrator.')
-        return redirect(url_for('auth.logged_out'))
+
+
+def home_dashboard():
+    url = home_dashboard_url()
+
+    if url is not None:
+        return redirect(url)
+
+    flash('Your role could not be identified. Please contact the system administrator.')
+    return redirect(url_for('auth.logged_out'))
 
 
 def get_root_dashboard_data():

@@ -21,7 +21,7 @@ from .forms import StudentFeedbackForm
 from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord
 
-from ..shared.utils import home_dashboard, filter_projects
+from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects
 
 import app.ajax as ajax
 
@@ -705,7 +705,7 @@ def edit_feedback(id):
 
     return render_template('student/dashboard/edit_feedback.html', form=form,
                            submit_url=url_for('student.edit_feedback', id=id, url=url),
-                           text='home dashboard', url=request.referrer)
+                           text='home dashboard', url=home_dashboard_url())
 
 
 @student.route('/submit_feedback/<int:id>')

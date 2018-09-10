@@ -322,7 +322,7 @@ def view_project(sid, pid):
     db.session.commit()
 
     # build list of keywords
-    keywords = [ kw.strip() for kw in re.split(";.", project.keywords) ]
+    keywords = [ kw.strip() for kw in re.split("[;,]", project.keywords) ]
 
     return render_template('student/show_project.html', title=project.name, sel=sel, project=project, desc=project,
                            keywords=keywords, text='project list',

@@ -4059,7 +4059,7 @@ def reassign_match_project(id, pid):
         return redirect(request.referrer)
 
     year = get_current_year()
-    if record.year != year:
+    if record.matching_attempt.year != year:
         flash('Match "{name}" can no longer be edited because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -4069,7 +4069,6 @@ def reassign_match_project(id, pid):
     if record.selector.has_submitted:
         if record.selector.is_project_submitted(project):
             record.project_id = project.id
-            record.supervisor_id = project.owner_id
             record.rank = record.selector.project_rank(project.id)
 
             record.matching_attempt.last_edit_id = current_user.id
@@ -4101,7 +4100,7 @@ def reassign_match_marker(id, mid):
         return redirect(request.referrer)
 
     year = get_current_year()
-    if record.year != year:
+    if record.matching_attempt.year != year:
         flash('Match "{name}" can no longer be edited because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)

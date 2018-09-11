@@ -889,7 +889,6 @@ def register_matching_tasks(celery):
 
         try:
             record.project_id = record.original_project_id
-            record.supervisor_id = record.project.owner_id
             record.marker_id = record.original_marker_id
             record.rank = record.selector.project_rank(record.original_project_id)
             db.session.commit()

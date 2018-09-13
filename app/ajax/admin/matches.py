@@ -92,13 +92,29 @@ _info = \
 <span class="label label-default">Discourage <i class="fa fa-times"></i> {{ m.discourage_bias }}</span>
 <span class="label label-default">Strong encourage <i class="fa fa-times"></i> {{ m.strong_encourage_bias }}</span>
 <span class="label label-default">Strong discourage <i class="fa fa-times"></i> {{ m.strong_discourage_bias }}</span>
+<p></p>
 {% if not m.ignore_programme_prefs %}
-    <p></p>
     {% set outcome = m.prefer_programme_status %}
     {% if outcome is not none %}
         {% set match, fail = outcome %}
-        <span class="label label-success">Matched {{ match }} programme prefs</span>
-        <span class="label {% if fail > 0 %}label-warning{% else %}label-success{% endif %}">Failed {{ fail }} programme prefs</span>
+        {% set match_pl = 's' %}{% if match == 1 %}{% set match_pl = '' %}{% endif %}
+        {% set outcome_pl = 's' %}{% if outcome == 1 %}{% set outcome_pl = '' %}{% endif %}
+        <div>
+            <span class="label {% if match > 0 %}label-success{% else %}label-default{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
+            <span class="label {% if fail > 0 %}label-warning{% elif match > 0 %}label-success{% else %}label-default{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>
+        </div>
+    {% endif %}
+{% endif %}
+{% if m.use_hints %}
+    {% set outcome = m.hint_status %}
+    {% if outcome is not none %}
+        {% set satisfied, violated = outcome %}
+        {% set satisfied_pl = 's' %}{% if satisfied == 1 %}{% set satisfied_pl = '' %}{% endif %}
+        {% set violated_pl = 's' %}{% if violated == 1 %}{% set violated_pl = '' %}{% endif %}
+        <div>
+            <span class="label {% if satisfied > 0 %}label-success{% else %}label-default{% endif %}">Satisfied {{ satisfied }} hint{{ satisfied_pl }}</span>
+            <span class="label {% if violated > 0 %}label-warning{% elif satisfied > 0 %}label-success{% else %}label-default{% endif %}">Violated {{ violated }} hint{{ violated_pl }}</span>
+        </div>
     {% endif %}
 {% endif %}
 <p></p>

@@ -45,7 +45,10 @@ _selections = \
                     {% endfor %}
                 </ul>
                 {% if item.converted_from_bookmark %}
-                    <span class="label label-warning">Bookmark</span>
+                    <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Bookmark</span>
+                {% endif %}
+                {% if item.hint != item.SELECTION_HINT_NEUTRAL %}
+                    <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Hint</span>
                 {% endif %}
             </div>
         {% endif %}

@@ -50,7 +50,7 @@
 
                 {# show supervisor assignments #}
                 <span class="dashboard-subtitle">Supervising</span>
-                {% set records = period.get_supervisor_records(current_user.faculty_data) %}
+                {% set records = period.get_supervisor_records(current_user.faculty_data.id) %}
                 {% if records|length > 0 %}
                     <table class="table table-striped">
                         <thead>
@@ -134,7 +134,7 @@
 
                 {# show marker assignments #}
                 <span class="dashboard-subtitle">2nd marking</span>
-                {% set records = period.get_marker_records(current_user.faculty_data) %}
+                {% set records = period.get_marker_records(current_user.faculty_data.id) %}
                 {% if records|length > 0 %}
                     <table class="table table-striped">
                         <thead>

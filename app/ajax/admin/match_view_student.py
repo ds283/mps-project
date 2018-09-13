@@ -49,10 +49,11 @@ _project = \
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label {% if r.is_project_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}" {% if not r.is_project_overassigned and style %}style="{{ style }}"{% endif %} {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>
-            {% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }} (No. {{ r.project.number }})
-            {% if adjustable %}<span class="caret"></span>{% endif %}
-        </a>
+        <a class="label {% if r.is_project_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
+                {% if not r.is_project_overassigned and style %}style="{{ style }}"{% endif %}
+                {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
+            (No. {{ r.project.number }})
+            {% if adjustable %}<span class="caret"></span>{% endif %}</a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selection %}
             <ul class="dropdown-menu">
@@ -63,11 +64,21 @@ _project = \
                     <li {% if disabled %}class="disabled"{% endif %}>
                         <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                            #{{ item.rank }}:
-                           {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.liveproject.name }} 
+                           {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project|safe }} 
                         </a>
                     </li> 
                 {% endfor %}
             </ul>
+        {% endif %}
+        {% set outcome = r.hint_status %}
+        {% if outcome is not none %}
+            {% set satisfied, violated = outcome %}
+            {% if satisfied|length > 0 %}
+                <span class="label label-success">{% for i in range(satisfied|length) %}<i class="fa fa-check"></i>{% endfor %}</span>
+            {% endif %}
+            {% if violated|length > 0 %}
+                <span class="label label-warning">{% for i in range(violated|length) %}<i class="fa fa-times"></i>{% endfor %}</span>
+            {% endif %}
         {% endif %}
     </div>
 {% endmacro %}

@@ -4239,13 +4239,13 @@ class MatchingAttempt(db.Model):
     # plus another term (the 'intra group tension') that tensions all groups together. 'Group' here means
     # faculty that supervise only, mark only, or supervise and mark. Each group will typically have a different
     # median workload.)
-    levelling_bias = db.Column(db.Numeric(8,3))
+    levelling_bias = db.Column(db.Numeric(8, 3))
 
     # intra-group tensioning
-    intra_group_tension = db.Column(db.Numeric(8,3))
+    intra_group_tension = db.Column(db.Numeric(8, 3))
 
     # programme matching bias
-    programme_bias = db.Column(db.Numeric(8,3))
+    programme_bias = db.Column(db.Numeric(8, 3))
 
     # other MatchingAttempts to include in CATS calcualtions
     include_matches = db.relationship('MatchingAttempt', secondary=match_balancing,
@@ -4612,12 +4612,62 @@ class MatchingAttempt(db.Model):
         if self.levelling_bias is None or self.mean_CATS_per_project is None or self.intra_group_tension is None:
             return None
 
+        # build objective function: this is the reward function that measures how well the student
+        # allocations match their preferences; corresponds to
+        #   objective += X[idx] * W[idx] / R[idx]
+        # in app/tasks/matching.py
         scores = [x.current_score for x in self.records]
         if None in scores:
             scores = [x for x in scores if x is not None]
 
         objective = sum(scores)
 
+        # break up subscribed faculty in a list of markers only, supervisors only, and markers and supervisors
+        mark_only, sup_and_mark, sup_only = self._faculty_groups
+
+        sup_CATS = self._get_group_CATS(sup_only)
+        mark_CATS = self._get_group_CATS(mark_only)
+        sup_mark_CATS = self._get_group_CATS(sup_and_mark)
+
+        globalMin = None
+        globalMax = None
+
+        # compute max(CATS) - min(CATS) values for each group, and also the global max and min cats
+        sup_diff, globalMax, globalMin = self._compute_group_max_min(sup_CATS, globalMax, globalMin)
+        mark_diff, globalMax, globalMin = self._compute_group_max_min(mark_CATS, globalMax, globalMin)
+        sup_mark_diff, globalMax, globalMin = self._compute_group_max_min(sup_mark_CATS, globalMax, globalMin)
+
+        # finally compute the largest number of projects that anyone is scheduled to 2nd mark
+        maxMarking = self._max_marking_allocation
+
+        global_diff = 0
+        if globalMax is not None and globalMin is not None:
+            global_diff = globalMax - globalMin
+
+        levelling = sup_diff + mark_diff + sup_mark_diff + abs(float(self.intra_group_tension))*global_diff
+
+        return objective - abs(float(self.levelling_bias))*levelling/float(self.mean_CATS_per_project) \
+                         - abs(float(self.levelling_bias))*maxMarking
+
+
+    def _compute_group_max_min(self, CATS_list, globalMax, globalMin):
+        if len(CATS_list) == 0:
+            return 0, globalMax, globalMin
+
+        largest = max(CATS_list)
+        smallest = min(CATS_list)
+
+        if globalMax is None or largest > globalMax:
+            globalMax = largest
+
+        if globalMin is None or smallest < globalMin:
+            globalMin = smallest
+
+        return largest - smallest, globalMax, globalMin
+
+
+    @property
+    def _faculty_groups(self):
         sup_dict = {x.id: x for x in self.supervisors}
         mark_dict = {x.id: x for x in self.markers}
 
@@ -4633,54 +4683,19 @@ class MatchingAttempt(db.Model):
         mark_only = [sup_dict[i] for i in mark_only_ids]
         sup_and_mark = [sup_dict[i] for i in sup_and_mark_ids]
 
+        return mark_only, sup_and_mark, sup_only
+
+
+    def _get_group_CATS(self, group):
         fsum = lambda x: x[0] + x[1]
 
-        sup_CATS = [fsum(self.get_faculty_CATS(x)) for x in sup_only]
-        mark_CATS = [fsum(self.get_faculty_CATS(x)) for x in mark_only]
-        sup_mark_CATS = [fsum(self.get_faculty_CATS(x)) for x in sup_and_mark]
+        return [fsum(self.get_faculty_CATS(x)) for x in group]
 
-        minList = []
-        maxList = []
 
-        if len(sup_CATS) > 0:
-            supMax = max(sup_CATS)
-            supMin = min(sup_CATS)
-
-            maxList.append(supMax)
-            minList.append(supMin)
-        else:
-            supMax = 0.0
-            supMin = 0.0
-
-        if len(mark_CATS) > 0:
-            markMax = max(mark_CATS)
-            markMin = min(mark_CATS)
-
-            maxList.append(markMax)
-            minList.append(markMin)
-        else:
-            markMax = 0.0
-            markMin = 0.0
-
-        if len(sup_mark_CATS) > 0:
-            supMarkMax = max(sup_mark_CATS)
-            supMarkMin = min(sup_mark_CATS)
-
-            maxList.append(supMarkMax)
-            minList.append(supMarkMin)
-        else:
-            supMarkMax = 0.0
-            supMarkMin = 0.0
-
-        globalMin = min(minList) if len(minList) > 0 else 0.0
-        globalMax = max(maxList) if len(maxList) > 0 else 0.0
-
-        levelling = (supMax - supMin) \
-                    + (markMax - markMin) \
-                    + (supMarkMax - supMarkMin) \
-                    + abs(float(self.intra_group_tension)) * (globalMax - globalMin)
-
-        return objective - abs(float(self.levelling_bias))*levelling/float(self.mean_CATS_per_project)
+    @property
+    def _max_marking_allocation(self):
+        allocs = [len(self.get_marker_records(fac).all()) for fac in self.markers]
+        return max(allocs)
 
 
     @property
@@ -4727,6 +4742,97 @@ class MatchingAttempt(db.Model):
     @property
     def is_modified(self):
         return self.last_edit_timestamp is not None
+
+
+@cache.memoize()
+def _MatchingRecord_current_score(id):
+    obj = db.session.query(MatchingRecord).filter_by(id=id).one()
+
+    # return None is SelectingStudent record is missing
+    if obj.selector is None:
+        return None
+
+    # return None if SelectingStudent has no submission records.
+    # This happens if they didn't submit a choices list and have no bookmarks.
+    # In this case we had to set thank rank matrix to 1 for all suitable projects, in order that
+    # an allocation could be made (because of the constraint that allocation <= rank).
+    # Also weight is 1 so we always score 1
+    if not obj.selector.has_submitted:
+        return 1.0
+
+    # find selection record corresponding to our project
+    record = obj.selector.selections.filter_by(liveproject_id=obj.project_id).first()
+
+    # if there isn't one, presumably a convenor has reallocated us to a project for which
+    # we score 0
+    if record is None:
+        return 0.0
+
+    # if hint is forbid, we contribute nothing
+    if record.hint == SelectionRecord.SELECTION_HINT_FORBID:
+        return 0.0
+
+    # score is 1/rank of assigned project, weighted
+    weight = 1.0
+
+    # downweight by penalty factor if selection record was converted from a bookmark
+    if record.converted_from_bookmark:
+        weight *= float(obj.matching_attempt.bookmark_bias)
+
+    # upweight by encourage/discourage bias terms, if needed
+    if obj.matching_attempt.use_hints:
+        if record.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE:
+            weight *= float(obj.matching_attempt.encourage_bias)
+        elif record.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
+            weight *= float(obj.matching_attempt.discourage_bias)
+        elif record.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG:
+            weight *= float(obj.matching_attempt.strong_encourage_bias)
+        elif record.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
+            weight *= float(obj.matching_attempt.strong_discourage_bias)
+
+    # upweight by programme bias, if this is not disabled
+    if not obj.matching_attempt.ignore_programme_prefs:
+        if obj.project.satisfies_preferences(obj.selector):
+            weight *= float(obj.matching_attempt.programme_bias)
+
+    return weight / float(record.rank)
+
+
+@cache.memoize()
+def _MatchingRecord_is_valid(id):
+    obj = db.session.query(MatchingRecord).filter_by(id=id).one()
+
+    if obj.supervisor_id == obj.marker_id:
+        return False, 'Supervisor and marker are the same'
+
+    if (obj.selector.has_submitted or obj.selector.has_bookmarks) \
+            and obj.selector.project_rank(obj.project_id) is None:
+        return False, "Assigned project does not appear in this selector's choices"
+
+    if obj.project.config_id != obj.selector.config_id:
+        return False, 'Assigned project does not belong to the correct class for this selector'
+
+    records = obj.matching_attempt.records.subquery()
+    count = db.session.query(func.count(records.c.id)) \
+        .filter(records.c.selector_id == obj.selector_id,
+                records.c.project_id == obj.project_id).scalar()
+    if count != 1:
+        # only refuse to validate if we are the first member of the multiplet
+        # this prevents errors being reported multiple times
+        lo_rec = obj.matching_attempt.records \
+            .filter_by(selector_id=obj.selector_id, project_id=obj.project_id) \
+            .order_by(MatchingRecord.submission_period.asc()).first()
+
+        if lo_rec is not None and lo_rec.submission_period == obj.submission_period:
+            return False, 'Project "{name}" is duplicated in multiple submission periods'.format(name=obj.project.name)
+
+    markers = obj.project.second_markers.subquery()
+    count = db.session.query(func.count(markers.c.id)) \
+        .filter(markers.c.id == obj.marker_id).scalar()
+    if count != 1:
+        return False, 'Assigned 2nd marker is not compatible with assigned project'
+
+    return True, None
 
 
 class MatchingRecord(db.Model):
@@ -4805,43 +4911,12 @@ class MatchingRecord(db.Model):
 
     @property
     def is_valid(self):
+        flag, error = _MatchingRecord_is_valid(self.id)
 
-        if self.supervisor_id == self.marker_id:
-            self.error = 'Supervisor and marker are the same'
-            return False
+        if not flag:
+            self.error = error
 
-        if (self.selector.has_submitted or self.selector.has_bookmarks) \
-                and self.selector.project_rank(self.project_id) is None:
-            self.error = "Assigned project does not appear in this selector's choices"
-            return False
-
-        if self.project.config_id != self.selector.config_id:
-            self.error = 'Assigned project does not belong to the correct class for this selector'
-            return False
-
-        records = self.matching_attempt.records.subquery()
-        count = db.session.query(func.count(records.c.id)) \
-            .filter(records.c.selector_id == self.selector_id,
-                    records.c.project_id == self.project_id).scalar()
-        if count != 1:
-            # only refuse to validate if we are the first member of the multiplet
-            # this prevents errors being reported multiple times
-            lo_rec = self.matching_attempt.records \
-                .filter_by(selector_id=self.selector_id, project_id=self.project_id) \
-                .order_by(MatchingRecord.submission_period.asc()).first()
-
-            if lo_rec is not None and lo_rec.submission_period == self.submission_period:
-                self.error = 'Project "{name}" is duplicated in multiple submission periods'.format(name=self.project.name)
-                return False
-
-        markers = self.project.second_markers.subquery()
-        count = db.session.query(func.count(markers.c.id)) \
-            .filter(markers.c.id == self.marker_id).scalar()
-        if count != 1:
-            self.error = 'Assigned 2nd marker is not compatible with assigned project'
-            return False
-
-        return True
+        return flag
 
 
     @property
@@ -4876,17 +4951,25 @@ class MatchingRecord(db.Model):
 
     @property
     def current_score(self):
-        if self.rank is None:
-            return None
+        return _MatchingRecord_current_score(self.id)
 
-        # score is 1/rank of assigned project, weighted
-        weight = 1.0
 
-        if not self.matching_attempt.ignore_programme_prefs:
-            if self.project.satisfies_preferences(self.selector):
-                weight *= self.matching_attempt.programme_bias
+@listens_for(MatchingRecord, 'before_update')
+def _MatchingRecord_update_handler(mapper, connection, target):
+    cache.delete_memoized(_MatchingRecord_current_score, target.id)
+    cache.delete_memoized(_MatchingRecord_is_valid, target.id)
 
-        return weight / float(self.rank)
+
+@listens_for(MatchingRecord, 'before_insert')
+def _MatchingRecord_insert_handler(mapper, connection, target):
+    cache.delete_memoized(_MatchingRecord_current_score, target.id)
+    cache.delete_memoized(_MatchingRecord_is_valid, target.id)
+
+
+@listens_for(MatchingRecord, 'before_delete')
+def _MatchingRecord_update_handler(mapper, connection, target):
+    cache.delete_memoized(_MatchingRecord_current_score, target.id)
+    cache.delete_memoized(_MatchingRecord_is_valid, target.id)
 
 
 # ############################

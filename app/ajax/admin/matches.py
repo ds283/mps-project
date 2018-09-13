@@ -63,35 +63,35 @@ on
 
 _info = \
 """
-<span class="label label-primary">Supervisor {{ m.supervising_limit }} CATS</span>
-<span class="label label-info">2nd mark {{ m.marking_limit }} CATS</span>
+<span class="label label-primary">Supervisor <i class="fa fa-chevron-circle-down"></i> {{ m.supervising_limit }} CATS</span>
+<span class="label label-info">2nd mark <i class="fa fa-chevron-circle-down"></i> {{ m.marking_limit }} CATS</span>
 {% if m.ignore_per_faculty_limits %}
-    <span class="label label-warning">Ignore per-faculty limits</span>
+    <span class="label label-warning"><i class="fa fa-times"></i> Ignore per-faculty limits</span>
 {% else %}
-    <span class="label label-default">Apply per-faculty limits</span>
+    <span class="label label-default"><i class="fa fa-check"></i> Apply per-faculty limits</span>
 {% endif %}
 {% if m.ignore_programme_prefs %}
-    <span class="label label-warning">Ignore programmes prefs/span>
+    <span class="label label-warning"><i class="fa fa-times"></i> Ignore programmes prefs/span>
 {% else %}
-    <span class="label label-default">Apply programme prefs</span>
+    <span class="label label-default"><i class="fa fa-check"></i> Apply programme prefs</span>
 {% endif %}
-<span class="label label-info">Marker multiplicity {{ m.max_marking_multiplicity }}</span>
+<span class="label label-info">Marker multiplicity <i class="fa fa-chevron-circle-down"></i> {{ m.max_marking_multiplicity }}</span>
 <p></p>
 <span class="label label-success">Solver {{ m.solver_name }}</span>
-<span class="label label-default">Levelling {{ m.levelling_bias }}</span>
-<span class="label label-default">Group {{ m.intra_group_tension }}</span>
-<span class="label label-default">Programme {{ m.programme_bias }}</span>
-<span class="label label-default">Bookmarks {{ m.bookmark_bias }}</span>
+<span class="label label-default">Levelling <i class="fa fa-times"></i> {{ m.levelling_bias }}</span>
+<span class="label label-default">Group <i class="fa fa-times"></i> {{ m.intra_group_tension }}</span>
+<span class="label label-default">Programme <i class="fa fa-times"></i> {{ m.programme_bias }}</span>
+<span class="label label-default">Bookmarks <i class="fa fa-times"></i> {{ m.bookmark_bias }}</span>
 <p></p>
 {% if m.use_hints %}
     <span class="label label-success"><i class="fa fa-check"></i> Use hints</span>
 {% else %}
     <span class="label label-warning"><i class="fa fa-times"></i> Ignore hints</span>
 {% endif %}
-<span class="label label-default">Encourage {{ m.encourage_bias }}</span>
-<span class="label label-default">Discourage {{ m.discourage_bias }}</span>
-<span class="label label-default">Strong encourage {{ m.strong_encourage_bias }}</span>
-<span class="label label-default">Strong discourage {{ m.strong_discourage_bias }}</span>
+<span class="label label-default">Encourage <i class="fa fa-times"></i> {{ m.encourage_bias }}</span>
+<span class="label label-default">Discourage <i class="fa fa-times"></i> {{ m.discourage_bias }}</span>
+<span class="label label-default">Strong encourage <i class="fa fa-times"></i> {{ m.strong_encourage_bias }}</span>
+<span class="label label-default">Strong discourage <i class="fa fa-times"></i> {{ m.strong_discourage_bias }}</span>
 {% if not m.ignore_programme_prefs %}
     <p></p>
     {% set outcome = m.prefer_programme_status %}
@@ -147,8 +147,9 @@ _score = \
 """
 {% if m.outcome == m.OUTCOME_OPTIMAL %}
     <span class="label label-success">Score {{ m.score }} original</span>
-    {% if m.current_score %}
-        <span class="label label-primary">Score {{ m.current_score|round(precision=2) }} now</span>
+    {% set score = m.current_score %}
+    {% if score %}
+        <span class="label label-primary">Score {{ score|round(precision=2) }} now</span>
     {% else %}
         <span class="label label-warning">Current score undefined</span>
     {% endif %}

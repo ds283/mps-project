@@ -2003,9 +2003,15 @@ def perform_global_rollover():
 
     next_year = get_current_year() + 1
 
-    new_year = MainConfig(year=next_year)
-    db.session.add(new_year)
-    db.session.commit()
+    try:
+        new_year = MainConfig(year=next_year)
+        db.session.add(new_year)
+
+        db.session.query(MatchingAttempt).filter_by(selected=False).delete()
+        db.session.commit()
+    except SQLAlchemyError:
+        flash('Could not complete rollover due to database error. Please check the logs.', 'error')
+        db.session.rollback()
 
     return home_dashboard()
 

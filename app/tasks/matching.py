@@ -279,16 +279,16 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
 
                 w = 1.0
                 if item.converted_from_bookmark:
-                    w = w * bookmark_bias
+                    w *= bookmark_bias
                 if use_hints:
                     if item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE:
-                        w = w * encourage_bias
+                        w *= encourage_bias
                     elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
-                        w = w * discourage_bias
+                        w *= discourage_bias
                     elif item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG:
-                        w = w * strong_encourage_bias
+                        w *= strong_encourage_bias
                     elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
-                        w = w * strong_discourage_bias
+                        w *= strong_discourage_bias
 
                 weights[item.liveproject_id] = w
 

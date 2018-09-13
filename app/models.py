@@ -966,11 +966,12 @@ class StudentData(db.Model):
             text = 'Y{y}'.format(y=self.academic_year(current_year))
             type = 'info'
 
-        if self.foundation_year:
-            text += ' +F'
+        if not current_user.has_role('student'):
+            if self.foundation_year:
+                text += ' +F'
 
-        if self.repeated_years > 0:
-            text += ' +{n}'.format(n=self.repeated_years)
+            if self.repeated_years > 0:
+                text += ' +{n}'.format(n=self.repeated_years)
 
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
 

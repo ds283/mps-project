@@ -98,7 +98,7 @@ _info = \
     {% if outcome is not none %}
         {% set match, fail = outcome %}
         {% set match_pl = 's' %}{% if match == 1 %}{% set match_pl = '' %}{% endif %}
-        {% set outcome_pl = 's' %}{% if outcome == 1 %}{% set outcome_pl = '' %}{% endif %}
+        {% set fail_pl = 's' %}{% if fail == 1 %}{% set fail_pl = '' %}{% endif %}
         <div>
             <span class="label {% if match > 0 %}label-success{% else %}label-default{% endif %}">Matched {{ match }} programme pref{{ match_pl }}</span>
             <span class="label {% if fail > 0 %}label-warning{% elif match > 0 %}label-success{% else %}label-default{% endif %}">Failed {{ fail }} programme pref{{ fail_pl }}</span>

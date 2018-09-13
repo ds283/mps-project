@@ -28,7 +28,7 @@ _projects = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        <span class="label label-default">{{ label }} not yet required</span>
+        {# <span class="label label-default">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
         <span class="label label-default">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
@@ -46,33 +46,62 @@ _projects = \
     {% set style = pclass.make_CSS_style() %}
     <div>
         <div class="dropdown assignment-label">
-            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
-                {% if show_period %}#{{ r.submission_period }}: {% endif %}
+            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle"
+                    {% if style %}style="{{ style }}"{% endif %}
+                    type="button" data-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.supervisor.user.name }} (No. {{ r.project.number }})
-                <span class="caret"></span>
-            </a>
+            <span class="caret"></span></a>
             <ul class="dropdown-menu">
                 <li>
                     <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
                 </li>
                 
-                {% set disabled = r.period.feedback_open %}
+                {% set disabled = r.period.feedback_open or r.student_engaged %}
                 <li {% if disabled %}class="disabled"{% endif %}>
                     <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>
+        {% if sub.published %}
+            <div class="dropdown assignment-label">
+                <a class="label {% if r.student_engaged %}label-success{% else %}label-warning{% endif %} btn-table-block dropdown-toggle"
+                        type="button" data-toggle="dropdown">{% if r.student_engaged %}<i class="fa fa-check"></i> Started{% else %}<i class="fa fa-times"></i> Waiting{% endif %}
+                <span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    {% if r.submission_period > r.owner.config.submission_period %}
+                        <li class="disabled">
+                            <a>Submission period not yet open</a>
+                        </li>
+                    {% elif not r.student_engaged %}
+                        <li>
+                            <a href="{{ url_for('convenor.mark_started', id=r.id) }}">
+                                <i class="fa fa-check"></i> Mark as started
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="disabled">
+                            <a><i class="fa fa-check"></i> Already started</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+{% endmacro %}
+{% macro tag(r, show_period) %}
+    <div>
+        {{ project_tag(r, show_period) }}
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
 {% set recs = sub.ordered_assignments.all() %}
 {% if recs|length == 1 %}
-    {{ project_tag(recs[0], false) }}
+    {{ tag(recs[0], false) }}
 {% elif recs|length > 1 %}
     {% for rec in recs %}
         {% if loop.index > 1 %}<p></p>{% endif %}
-        {{ project_tag(rec, true) }}
+        {{ tag(rec, true) }}
     {% endfor %}
 {% else %}
     <span class="label label-danger">None</span>
@@ -84,7 +113,7 @@ _markers = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        <span class="label label-default">{{ label }} not yet required</span>
+        {# <span class="label label-default">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
         <span class="label label-default">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
@@ -198,7 +227,7 @@ _name = \
 <a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
 <div>
 {% if sub.published %}
-    <span class="label label-success"><i class="fa fa-eye"></i> Published</span>
+    <span class="label label-primary"><i class="fa fa-eye"></i> Published</span>
 {% else %}
     <span class="label label-warning"><i class="fa fa-eye-slash"></i> Unpublished</span>
 {% endif %}

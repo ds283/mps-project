@@ -79,24 +79,28 @@
             <div class="well">
                 <p>Filter by state</p>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_fitler=cohort_fitler, prog_filter=prog_filter, state_filter='all') }}">
+                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_fitler, prog_filter=prog_filter, state_filter='all') }}">
                     All
                 </a>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter == 'published' %}btn-primary{% else %}btn-default{% endif %}"
-                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_fitler=cohort_fitler, prog_filter=prog_filter, state_filter='published') }}">
+                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_fitler, prog_filter=prog_filter, state_filter='published') }}">
                     Published
                 </a>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter == 'unpublished' %}btn-primary{% else %}btn-default{% endif %}"
-                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_fitler=cohort_fitler, prog_filter=prog_filter, state_filter='unpublished') }}">
+                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_fitler, prog_filter=prog_filter, state_filter='unpublished') }}">
                     Unpublished
                 </a>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter == 'late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
-                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_fitler=cohort_fitler, prog_filter=prog_filter, state_filter='late-feedback') }}">
+                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_fitler, prog_filter=prog_filter, state_filter='late-feedback') }}">
                     Has late feedback
                 </a>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter == 'no-late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
-                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_fitler=cohort_fitler, prog_filter=prog_filter, state_filter='no-late-feedback') }}">
+                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_fitler, prog_filter=prog_filter, state_filter='no-late-feedback') }}">
                     Has no late feedback
+                </a>
+                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
+                   href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_fitler, prog_filter=prog_filter, state_filter='not-started') }}">
+                    Not started
                 </a>
             </div>
 

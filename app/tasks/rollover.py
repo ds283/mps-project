@@ -342,12 +342,16 @@ def register_rollover_tasks(celery):
                                             selection_closed=False,
                                             CATS_supervision=old_config.project_class.CATS_supervision,
                                             CATS_marking=old_config.project_class.CATS_marking,
-                                            submission_period=1,
-                                            feedback_open=False)
+                                            submission_period=1)
             db.session.add(new_config)
             db.session.flush()
 
-            for k in range(0, new_config.submissions):
+            # generate new submission periods
+            num_submissions = old_config.submissions
+            if num_submissions is None or num_submissions == 0:
+                raise RuntimeError('Submissions field set incorrectly')
+
+            for k in range(num_submissions):
                 period = SubmissionPeriodRecord(config_id=new_config.id,
                                                 retired=False,
                                                 submission_period=k + 1,
@@ -436,6 +440,7 @@ def register_rollover_tasks(celery):
                                                   marker_id=rec.marker_id,
                                                   selection_config_id=old_config_id,
                                                   matching_record_id=rec.id,
+                                                  student_engaged=False,
                                                   supervisor_positive=None,
                                                   supervisor_negative=None,
                                                   supervisor_submitted=False,
@@ -500,6 +505,7 @@ def register_rollover_tasks(celery):
                                                               marker_id=rec.marker_id,
                                                               selection_config_id=old_config_id,
                                                               matching_record_id=None,
+                                                              student_engaged=False,
                                                               supervisor_positive=None,
                                                               supervisor_negative=None,
                                                               supervisor_submitted=False,

@@ -115,6 +115,7 @@ def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
                                   marker_id=None,
                                   selection_config_id=old_config_id,
                                   matching_record_id=None,
+                                  student_engaged=False,
                                   supervisor_positive=None,
                                   supervisor_negative=None,
                                   supervisor_submitted=False,

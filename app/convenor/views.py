@@ -259,6 +259,7 @@ def overview(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
+    # get record for current submission period
     period = config.periods.filter_by(submission_period=config.submission_period).first()
     if period is None:
         flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
@@ -268,6 +269,7 @@ def overview(id):
     issue_form = IssueFacultyConfirmRequestForm(request.form)
     feedback_form = OpenFeedbackForm(request.form)
 
+    # change labels and text depending on current lifecycle state
     if config.requests_issued:
         issue_form.request_deadline.label.text = 'The current deadline for responses is'
         issue_form.requests_issued.label.text = 'Save changes'
@@ -3402,7 +3404,7 @@ def publish_assignment(id):
         return redirect(request.referrer)
 
     if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to publish an assignment to students')
+        flash('It is now too late to publish an assignment to students', 'error')
         return redirect(request.referrer)
 
     sub.published = True
@@ -3423,7 +3425,7 @@ def unpublish_assignment(id):
         return redirect(request.referrer)
 
     if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to publish an assignment to students')
+        flash('It is now too late to publish an assignment to students', 'error')
         return redirect(request.referrer)
 
     sub.published = False
@@ -3444,7 +3446,7 @@ def publish_all_assignments(id):
         return redirect(request.referrer)
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to publish an assignment to students')
+        flash('It is now too late to publish an assignment to students', 'error')
         return redirect(request.referrer)
 
     cohort_filter = request.args.get('cohort_filter')
@@ -3473,7 +3475,7 @@ def unpublish_all_assignments(id):
         return redirect(request.referrer)
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to unpublish an assignment')
+        flash('It is now too late to unpublish an assignment', 'error')
         return redirect(request.referrer)
 
     cohort_filter = request.args.get('cohort_filter')
@@ -3485,6 +3487,34 @@ def unpublish_all_assignments(id):
     for sel in data:
         sel.published = False
 
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/mark_started/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def mark_started(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for the project class associated with this submission record
+    if not validate_is_convenor(rec.owner.config.project_class):
+        return redirect(request.referrer)
+
+    if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to mark a submission period as started', 'error')
+        return redirect(request.referrer)
+
+    if rec.submission_period > rec.owner.config.submission_period:
+        flash('Cannot mark this submission period as started because it is not yet open', 'error')
+        return redirect(request.referrer)
+
+    if not rec.owner.published:
+        flash('Cannot mark this submission period as started because it is not published to the submitter', 'error')
+
+    rec.student_engaged = True
     db.session.commit()
 
     return redirect(request.referrer)
@@ -3632,9 +3662,9 @@ def faculty_workload_ajax(id):
 
     # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
     if state_filter == 'no-late-feedback':
-        data = [ rec for rec in faculty.all() if not rec[1].has_late_feedback ]
+        data = [rec for rec in faculty.all() if not rec[1].has_late_feedback]
     elif state_filter == 'late-feedback':
-        data = [ rec for rec in faculty.all() if rec[1].has_late_feedback ]
+        data = [rec for rec in faculty.all() if rec[1].has_late_feedback]
     else:
         data = faculty.all()
 
@@ -3660,6 +3690,11 @@ def manual_assign(id):
     if rec.period.feedback_open:
         flash('Can not reassign for submission period #{period} '
               'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        return redirect(request.referrer)
+
+    if rec.student_engaged:
+        flash('Can not reassign for submission period #{period} '
+              'because the project is already marked as started'.format(period=rec.period.submission_period), 'error')
         return redirect(request.referrer)
 
     form = AssignMarkerForm(rec.project, request.form)

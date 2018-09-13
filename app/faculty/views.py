@@ -1570,3 +1570,31 @@ def submit_response(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@faculty.route('/mark_started/<int:id>')
+@roles_accepted('faculty')
+def mark_started(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # reject is logged-in user is not a convenor for the project class associated with this submission record
+    if not validate_submission_supervisor(rec):
+        return redirect(request.referrer)
+
+    if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to mark a submission period as started', 'error')
+        return redirect(request.referrer)
+
+    if rec.submission_period > rec.owner.config.submission_period:
+        flash('Cannot mark this submission period as started because it is not yet open', 'error')
+        return redirect(request.referrer)
+
+    if not rec.owner.published:
+        flash('Cannot mark this submission period as started because it is not published to the submitter', 'error')
+
+    rec.student_engaged = True
+    db.session.commit()
+
+    return redirect(request.referrer)

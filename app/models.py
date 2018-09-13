@@ -3330,6 +3330,12 @@ class SubmittingStudent(db.Model):
         return self.supervisor_feedback_late or self.marker_feedback_late
 
 
+    @property
+    def has_not_started_flags(self):
+        return self.records.filter(SubmissionRecord.submission_period <= self.config.submission_period,
+                                   SubmissionRecord.student_engaged == False).count() > 0
+
+
 class SubmissionRecord(db.Model):
     """
     Collect details for a student submission
@@ -3373,6 +3379,12 @@ class SubmissionRecord(db.Model):
                                       backref=db.backref('submission_record', uselist=False))
 
 
+    # LIFECYCLE DATA
+
+    # has the project started? Helpful for convenor and senior tutor reports
+    student_engaged = db.Column(db.Boolean())
+
+
     # MARKER FEEDBACK TO STUDENT
 
     # supervisor positive feedback
@@ -3406,7 +3418,7 @@ class SubmissionRecord(db.Model):
     student_feedback = db.Column(db.Text())
 
     # student feedback submitted
-    student_feedback_submitted = db.Column(db.Text())
+    student_feedback_submitted = db.Column(db.Boolean())
 
     # student feedback timestamp
     student_feedback_timestamp = db.Column(db.DateTime())

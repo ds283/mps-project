@@ -485,6 +485,8 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter):
         data = [x for x in submitters.all() if x.has_late_feedback]
     elif state_filter == 'no-late-feedback':
         data = [x for x in submitters.all() if not x.has_late_feedback]
+    elif state_filter == 'not-started':
+        data = [x for x in submitters.all() if x.has_not_started_flags]
     else:
         data = submitters.all()
 

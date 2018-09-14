@@ -1,0 +1,28 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    429: Too many requests
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="well">
+                <div class="dashboard-subtitle" style="margin-bottom: 20px;">You've sent too many requests recently.</div>
+                <p>
+                    To protect outselves from denial-of-service attacks, and to limit the number of
+                    attempts an attacker could have to guess your password by brute-force, we limit
+                    the number of times you can access the website. You've been sending a lot of requests
+                    recently and the limiting threshold has been reached.
+                </p>
+                <p>
+                    If you don't think you were doing anything unusual, contact a system administrator
+                    and explain what has happened. Otherwise, wait a while and your access to the service
+                    will bre restored
+                </p>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

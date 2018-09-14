@@ -38,6 +38,8 @@ services:
   nginx:
 
     image: 801384587375.dkr.ecr.eu-west-1.amazonaws.com/nginx:latest
+    environment:
+      - API_KEY='8e8116d37510b15b73aa5f9ec3246884'
     ports:
       - '80:8000'
       - '443:443'

@@ -1,4 +1,4 @@
-FROM python:3.6-slim-stretch
+FROM pypy:3-6-slim-jessie
 
 RUN apt-get update && apt-get install -qq -y build-essential gcc mariadb-client libssl-dev libglpk-dev glpk-utils coinor-cbc --no-install-recommends
 
@@ -8,7 +8,7 @@ RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 500 mpsprojec
 WORKDIR /home/mpsproject
 
 COPY requirements.txt requirements.txt
-RUN python -m venv venv
+RUN pypy3 -m venv venv
 RUN venv/bin/pip install -r requirements.txt
 RUN venv/bin/pip install gunicorn
 

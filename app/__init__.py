@@ -75,7 +75,6 @@ def create_app():
         api_toolbar = DebugAPIExtension(app)
 
         panels = list(app.config['DEBUG_TB_PANELS'])
-        panels.append('flask_debugtoolbar_lineprofilerpanel.panels.LineProfilerPanel')
         panels.append('flask_debug_api.BrowseAPIPanel')
         app.config['DEBUG_TB_PANELS'] = panels
 

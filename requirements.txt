@@ -26,6 +26,7 @@ Flask-Caching==1.4.0
 Flask-Debug-API==0.1.0
 Flask-DebugToolbar==0.10.1
 Flask-DebugToolbar-LineProfilerPanel==1.0.2
+Flask-Limiter==1.0.1
 Flask-Login==0.4.1
 Flask-Mail==0.9.1
 Flask-Markdown==0.3
@@ -49,6 +50,7 @@ Jinja2==2.10
 jsmin==2.2.2
 kombu==4.2.1
 latex2markdown==0.2.1
+limits==1.3
 line-profiler==2.1.2
 Mako==1.0.7
 Markdown==2.6.11

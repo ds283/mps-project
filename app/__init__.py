@@ -21,6 +21,10 @@ from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
 from flask_session import Session
+from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
 from flask_sqlalchemy import get_debug_queries
 
@@ -58,6 +62,8 @@ def create_app():
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
     ext_session = Session(app)
     cache.init_app(app)
+    app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
+    limiter = Limiter(app, key_func=get_remote_address)
 
     if config_name == 'development':
         toolbar = DebugToolbarExtension(app)
@@ -217,6 +223,11 @@ def create_app():
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('404.html'), 404
+
+
+    @app.errorhandler(429)
+    def rate_limit_error(error):
+        return render_template('429.html'), 429
 
 
     @app.errorhandler(500)

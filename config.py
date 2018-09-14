@@ -58,7 +58,6 @@ class Config(object):
     # Flask-Limiter
     RATELIMIT_DEFAULT = "600/day;60/hour"
     RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_REDIS_URL') or 'redis://localhost:6379'
-    RATELIMIT_KEY_PREFIX = 'rate_limit'
 
     # logging
     LOG_FILE = os.environ.get('LOG_FILE') or 'logs/mps_project.log'

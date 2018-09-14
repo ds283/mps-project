@@ -2237,18 +2237,17 @@ def _Project_num_markers(pid, pclass_id):
     project = db.session.query(Project).filter_by(id=pid).one()
 
     for marker in project.second_markers:
-
         # ignore inactive users
         if not marker.user.active:
             break
 
         # count number of enrollment records for this marker matching the project class, and marked as active
-        query = marker.enrollments.subquery()
+        query = marker.enrollments \
+            .filter_by(pclass_id=pclass_id,
+                       marker_state=EnrollmentRecord.MARKER_ENROLLED) \
+            .subquery()
 
-        num = db.session.query(func.count(query.c.id)) \
-            .filter(query.c.pclass_id == pclass_id,
-                    query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
-            .scalar()
+        num = db.session.query(func.count(query.c.id)).scalar()
 
         if num == 1:
             number += 1
@@ -2596,24 +2595,28 @@ class Project(db.Model):
         :return:
         """
 
-        pcls = self.project_classes.subquery()
-        count = db.session.query(func.count(pcls.c.id)) \
-            .filter(pcls.c.id == pclass.id).scalar()
+        # pcls = self.project_classes.subquery()
+        # count = db.session.query(func.count(pcls.c.id)) \
+        #     .filter(pcls.c.id == pclass.id).scalar()
+        #
+        # if count == 0:
+        #     raise RuntimeError('Cannot get description for non-associated project class')
+        # elif count > 1:
+        #     raise RuntimeError('Inconsistent project class associations')
+        #
+        # count = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).count()
+        #
+        # if count == 0:
+        #     # return default is one is available, otherwise none
+        #     return self.default
+        # if count > 1:
+        #     raise RuntimeError('Inconsistent project description assignment of project classes')
 
-        if count == 0:
-            raise RuntimeError('Cannot get description for non-associated project class')
-        elif count > 1:
-            raise RuntimeError('Inconsistent project class associations')
+        desc = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
+        if desc is not None:
+            return desc
 
-        count = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).count()
-
-        if count == 0:
-            # return default is one is available, otherwise none
-            return self.default
-        if count > 1:
-            raise RuntimeError('Inconsistent project description assignment of project classes')
-
-        return self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
+        return self.default
 
 
     def get_capacity(self, pclass):

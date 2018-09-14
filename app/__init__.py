@@ -27,6 +27,7 @@ from flask_limiter.util import get_remote_address
 from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
 from flask_sqlalchemy import get_debug_queries
+from flask_profiler import Profiler
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
@@ -62,9 +63,13 @@ def create_app():
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
     ext_session = Session(app)
     cache.init_app(app)
+    profiler = Profiler(app)
+
+    # set up Flask-Limiter
     app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
     limiter = Limiter(app, key_func=get_remote_address)
 
+    # add debug toolbar if in debug mode
     if config_name == 'development':
         toolbar = DebugToolbarExtension(app)
         api_toolbar = DebugAPIExtension(app)
@@ -100,6 +105,7 @@ def create_app():
         app.logger.addHandler(file_handler)
         app.logger.info('MPS Project Manager starting')
 
+    # use Werkzeug built-in profiler if profile-to-disk is enabled
     if app.config.get('PROFILE_TO_DISK', False):
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, profile_dir=app.config.get('PROFILE_DIRECTORY'))

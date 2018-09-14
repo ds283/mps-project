@@ -3,9 +3,13 @@
 .idea
 .vscode
 .DS_Store
+AWS
 backups
+database\ copies
+logs
+mongodb
+mysql
+nginx
+profiling
 thirdparty
 venv
-mysql
-database\ copies
-nginx

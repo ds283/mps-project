@@ -26,12 +26,14 @@ Flask-Caching==1.4.0
 Flask-Debug-API==0.1.0
 Flask-DebugToolbar==0.10.1
 Flask-DebugToolbar-LineProfilerPanel==1.0.2
+Flask-HTTPAuth==3.2.4
 Flask-Limiter==1.0.1
 Flask-Login==0.4.1
 Flask-Mail==0.9.1
 Flask-Markdown==0.3
 Flask-Migrate==2.2.1
 Flask-Principal==0.4.0
+flask-profiler==1.6
 Flask-Security==3.0.0
 Flask-Session==0.3.1
 Flask-SQLAlchemy==2.3.2
@@ -69,6 +71,7 @@ ptyprocess==0.6.0
 PuLP==1.6.8
 pycparser==2.18
 Pygments==2.2.0
+pymongo==3.7.1
 PyMySQL==0.9.2
 pyparsing==2.2.0
 python-dateutil==2.7.3

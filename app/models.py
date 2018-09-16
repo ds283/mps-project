@@ -21,6 +21,7 @@ from .cache import cache
 
 from .shared.formatters import format_size, format_time, format_readable_time
 from .shared.colours import get_text_colour
+from .shared.sqlalchemy import get_count
 
 from datetime import date, datetime, timedelta
 import json
@@ -2219,7 +2220,7 @@ def _Project_is_offerable(pid):
     """
     project = db.session.query(Project).filter_by(id=pid).one()
 
-    if not project.project_classes.filter(ProjectClass.active).first():
+    if get_count(project.project_classes.filter(ProjectClass.active)) == 0:
         return False, "No active project types assigned to project"
 
     if project.group is None:
@@ -2237,7 +2238,7 @@ def _Project_is_offerable(pid):
         if desc is None:
             return False, "No project description assigned for '{name}'".format(name=pclass.name)
 
-        if not desc.team.filter(Supervisor.active).first():
+        if get_count(desc.team.filter(Supervisor.active)) == 0:
             return False, "No active supervisory roles assigned for '{name}'".format(name=pclass.name)
 
         if project.enforce_capacity:
@@ -2250,28 +2251,16 @@ def _Project_is_offerable(pid):
 
 @cache.memoize()
 def _Project_num_markers(pid, pclass_id):
-    number = 0
     project = db.session.query(Project).filter_by(id=pid).one()
 
-    for marker in project.second_markers:
-        # ignore inactive users
-        if not marker.user.active:
-            break
+    query = project.second_markers \
+        .join(User, User.id == FacultyData.id) \
+        .filter(User.active == True) \
+        .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
+        .filter(EnrollmentRecord.pclass_id == pclass_id,
+                EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
 
-        # count number of enrollment records for this marker matching the project class, and marked as active
-        query = marker.enrollments \
-            .filter_by(pclass_id=pclass_id,
-                       marker_state=EnrollmentRecord.MARKER_ENROLLED) \
-            .subquery()
-
-        num = db.session.query(func.count(query.c.id)).scalar()
-
-        if num == 1:
-            number += 1
-        elif num > 1:
-            raise RuntimeError('Inconsistent enrollment records')
-
-    return number
+    return get_count(query)
 
 
 class Project(db.Model):

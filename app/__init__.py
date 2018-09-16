@@ -63,11 +63,14 @@ def create_app():
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
     ext_session = Session(app)
     cache.init_app(app)
-    profiler = Profiler(app)
 
-    # set up Flask-Limiter
-    app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
-    limiter = Limiter(app, key_func=get_remote_address)
+    # add endpoint profiler and rate limiter in production mode
+    if config_name == 'production':
+        profiler = Profiler(app)
+
+        # set up Flask-Limiter
+        app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
+        limiter = Limiter(app, key_func=get_remote_address)
 
     # add debug toolbar if in debug mode
     if config_name == 'development':

@@ -1504,6 +1504,24 @@ class ProjectClass(db.Model):
         return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
+@listens_for(ProjectClass, 'before_update')
+def _ProjectClass_update_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable)
+    cache.delete_memoized(_Project_num_markers)
+
+
+@listens_for(ProjectClass, 'before_insert')
+def _ProjectClass_insert_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable)
+    cache.delete_memoized(_Project_num_markers)
+
+
+@listens_for(ProjectClass, 'before_delete')
+def _ProjectClass_update_handler(mapper, connection, target):
+    cache.delete_memoized(_Project_is_offerable)
+    cache.delete_memoized(_Project_num_markers)
+
+
 class ProjectClassConfig(db.Model):
     """
     Model current configuration options for each project class
@@ -2017,7 +2035,7 @@ class EnrollmentRecord(db.Model):
     supervisor_choices = {(SUPERVISOR_ENROLLED, 'Normally enrolled'),
                           (SUPERVISOR_SABBATICAL, 'On sabbatical or buy-out'),
                           (SUPERVISOR_EXEMPT, 'Exempt')}
-    supervisor_state = db.Column(db.Integer())
+    supervisor_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemptions)
     supervisor_comment = db.Column(db.String(DEFAULT_STRING_LENGTH))
@@ -2032,7 +2050,7 @@ class EnrollmentRecord(db.Model):
     marker_choices = {(MARKER_ENROLLED, 'Normally enrolled'),
                       (MARKER_SABBATICAL, 'On sabbatical or buy-out'),
                       (MARKER_EXEMPT, 'Exempt')}
-    marker_state = db.Column(db.Integer())
+    marker_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemption)
     marker_comment = db.Column(db.String(DEFAULT_STRING_LENGTH))
@@ -2200,7 +2218,6 @@ def _Project_is_offerable(pid):
     :return:
     """
     project = db.session.query(Project).filter_by(id=pid).one()
-    error = None
 
     if not project.project_classes.filter(ProjectClass.active).first():
         return False, "No active project types assigned to project"
@@ -2228,7 +2245,7 @@ def _Project_is_offerable(pid):
                 return False, "Capacity is zero or unset for '{name}', " \
                               "but enforcement is enabled".format(name=pclass.name)
 
-    return True, error
+    return True, None
 
 
 @cache.memoize()

@@ -3,25 +3,25 @@ task_definition:
   services:
     web:
       cpu_shares: 256
-      mem_limit: 400m
+      mem_limit: 0.9G
     nginx:
       cpu_shares: 256
-      mem_limit: 400m
+      mem_limit: 0.9G
     worker:
       cpu_shares: 256
-      mem_limit: 400m
+      mem_limit: 0.9G
     scheduler:
       cpu_shares: 256
-      mem_limit: 400m
+      mem_limit: 0.9G
     flower:
       cpu_shares: 256
-      mem_limit: 400m
+      mem_limit: 0.9G
     mariadb:
       cpu_shares: 256
-      mem_limit: 400m
+      mem_limit: 0.9G
     redis:
       cpu_shares: 256
-      mem_limit: 400m
+      mem_limit: 0.9G
     mongodb:
       cpu_shares: 256
-      mem_limit: 400m
+      mem_limit: 0.9G

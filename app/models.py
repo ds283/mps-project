@@ -810,8 +810,7 @@ class FacultyData(db.Model):
         Determine the number of projects to which we are attached as a 2nd marker
         :return:
         """
-
-        return db.session.query(func.count(self.second_marker_for.subquery().c.id)).scalar()
+        return get_count(self.second_marker_for)
 
 
     @property
@@ -1766,18 +1765,7 @@ class ProjectClassConfig(db.Model):
 
     @property
     def allocated_match(self):
-        mq = self.matching_attempts.subquery()
-
-        matchings = db.session.query(func.count(mq.c.id)) \
-            .filter(mq.c.selected == True).scalar()
-
-        if matchings > 1:
-            raise RuntimeError('Too many selected matchings')
-
-        if matchings == 0:
-            return None
-
-        return self.matching_attempts.filter_by(selected=True).first()
+        return self.matching_attempts.filter_by(selected=True).one()
 
 
     @property
@@ -1800,12 +1788,14 @@ class ProjectClassConfig(db.Model):
 
     @property
     def number_selectors(self):
-        return db.session.query(func.count(SelectingStudent.id)).with_parent(self).scalar()
+        query = db.session.query(SelectingStudent).with_parent(self)
+        return get_count(query)
 
 
     @property
     def number_submitters(self):
-        return db.session.query(func.count(SubmittingStudent.id)).with_parent(self).scalar()
+        query = db.session.query(SubmittingStudent).with_parent(self)
+        return get_count(query)
 
 
     @property
@@ -1912,12 +1902,8 @@ class ProjectClassConfig(db.Model):
 
     @property
     def has_published_matches(self):
-        query = self.matching_attempts.subquery()
-        count = db.session.query(func.count(query.c.id)) \
-            .filter(query.c.published == True) \
-            .scalar()
-
-        return count > 0
+        query = self.matching_attempts.filter_by(published=True)
+        return get_count(query) > 0
 
 
     def get_period(self, n):
@@ -2414,8 +2400,7 @@ class Project(db.Model):
 
     @property
     def is_deletable(self):
-        count = db.session.query(func.count(self.live_projects.subquery().c.id)).scalar()
-        return count == 0
+        return get_count(self.live_projects) == 0
 
 
     def add_skill(self, skill):
@@ -2515,29 +2500,14 @@ class Project(db.Model):
         :param pclass:
         :return:
         """
+        query = self.second_markers \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active == True) \
+            .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
+            .filter(EnrollmentRecord.pclass_id == pclass.id,
+                    EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
 
-        markers = []
-
-        for marker in self.second_markers:
-
-            # ignore inactive users
-            if not marker.user.active:
-                break
-
-            # count number of enrollment records for this marker matching the project class, and marked as active
-            query = marker.enrollments.subquery()
-
-            num = db.session.query(func.count(query.c.id)) \
-                .filter(query.c.pclass_id == pclass.id,
-                        query.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
-                .scalar()
-
-            if num == 1:
-                markers.append(marker)
-            elif num > 1:
-                raise RuntimeError('Inconsistent enrollment records')
-
-        return markers
+        return query.all()
 
 
     def can_enroll_marker(self, faculty):
@@ -2550,19 +2520,18 @@ class Project(db.Model):
         if self.is_second_marker(faculty):
             return False
 
+        if not faculty.user.active:
+            return False
+
         # need to determine whether this faculty member is enrolled as a second marker for any project
         # class we are attached to
-        enrollments = faculty.enrollments.subquery()
         pclasses = self.project_classes.subquery()
 
-        number = db.session.query(func.count(enrollments.c.id)) \
-            .join(User, User.id == enrollments.c.owner_id) \
-            .join(pclasses, pclasses.c.id == enrollments.c.pclass_id) \
-            .filter(User.active == True,
-                    enrollments.c.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
-            .scalar()
+        query = faculty.enrollments \
+            .join(pclasses, pclasses.c.id == EnrollmentRecord.owner_id) \
+            .filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
 
-        return number > 0
+        return get_count(query) > 9
 
 
     def add_marker(self, faculty):
@@ -2600,23 +2569,6 @@ class Project(db.Model):
         :param pclass:
         :return:
         """
-
-        # pcls = self.project_classes.subquery()
-        # count = db.session.query(func.count(pcls.c.id)) \
-        #     .filter(pcls.c.id == pclass.id).scalar()
-        #
-        # if count == 0:
-        #     raise RuntimeError('Cannot get description for non-associated project class')
-        # elif count > 1:
-        #     raise RuntimeError('Inconsistent project class associations')
-        #
-        # count = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).count()
-        #
-        # if count == 0:
-        #     # return default is one is available, otherwise none
-        #     return self.default
-        # if count > 1:
-        #     raise RuntimeError('Inconsistent project description assignment of project classes')
 
         desc = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
         if desc is not None:
@@ -2947,22 +2899,22 @@ class LiveProject(db.Model):
 
     @property
     def number_bookmarks(self):
-        return db.session.query(func.count(Bookmark.id)).filter_by(liveproject_id=self.id).scalar()
+        return get_count(self.bookmarks)
 
 
     @property
     def number_selections(self):
-        return db.session.query(func.count(SelectionRecord.id)).filter_by(liveproject_id=self.id).scalar()
+        return get_count(self.selections)
 
 
     @property
     def number_pending(self):
-        return db.session.query(func.count(self.confirm_waiting.subquery().c.id)).scalar()
+        return get_count(self.confirm_waiting)
 
 
     @property
     def number_confirmed(self):
-        return db.session.query(func.count(self.confirmed_students.subquery().c.id)).scalar()
+        return get_count(self.confirmed_students)
 
 
     def format_popularity_label(self, css_classes=None):
@@ -3034,20 +2986,16 @@ class LiveProject(db.Model):
 
 
     def satisfies_preferences(self, sel):
-        prog_query = self.programmes.subquery()
+        number_preferences = get_count(self.programmes)
+        number_matches = get_count(self.programmes.filter_by(id=sel.student.programme_id))
 
-        pref_count = db.session.query(func.count(prog_query.c.id)).scalar()
-
-        match_count = db.session.query(func.count(prog_query.c.id)) \
-            .filter(prog_query.c.id == sel.student.programme_id).scalar()
-
-        if match_count == 1:
+        if number_matches == 1:
             return True
 
-        if match_count > 1:
+        if number_matches > 1:
             raise RuntimeError('Inconsistent number of degree preferences match a single SelectingStudent')
 
-        if match_count == 0 and pref_count == 0:
+        if number_matches == 0 and number_preferences == 0:
             return None
 
         return False
@@ -3107,12 +3055,12 @@ class SelectingStudent(db.Model):
 
     @property
     def number_pending(self):
-        return db.session.query(func.count(self.confirm_requests.subquery().c.id)).scalar()
+        return get_count(self.confirm_requests)
 
 
     @property
     def number_confirmed(self):
-        return db.session.query(func.count(self.confirmed.subquery().c.id)).scalar()
+        return get_count(self.confirmed)
 
 
     @property
@@ -3135,7 +3083,7 @@ class SelectingStudent(db.Model):
 
     @property
     def number_bookmarks(self):
-        return db.session.query(func.count(Bookmark.id)).with_parent(self).scalar()
+        return get_count(self.bookmarks)
 
 
     @property
@@ -4286,10 +4234,7 @@ def _MatchingAttempt_hint_status(id):
 def _MatchingAttempt_number_project_assignments(id, project_id):
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
-    records = obj.records.subquery()
-
-    return db.session.query(func.count(records.c.id)) \
-        .filter(records.c.project_id == project_id).scalar()
+    return get_count(obj.records.filter_by(project_id=project_id))
 
 
 @cache.memoize()
@@ -4952,12 +4897,12 @@ def _MatchingRecord_is_valid(id):
     if obj.project.config_id != obj.selector.config_id:
         return False, 'Assigned project does not belong to the correct class for this selector'
 
-    records = obj.matching_attempt.records.subquery()
-    count = db.session.query(func.count(records.c.id)) \
-        .filter(records.c.selector_id == obj.selector_id,
-                records.c.project_id == obj.project_id).scalar()
+    # check whether this project is also assigned to the same selector in another submission period
+    count = get_count(obj.matching_attempt.records.filter_by(selector_id=obj.selector_id,
+                                                             project_id=obj.project_id))
+
     if count != 1:
-        # only refuse to validate if we are the first member of the multiplet
+        # only refuse to validate if we are the first member of the multiplet;
         # this prevents errors being reported multiple times
         lo_rec = obj.matching_attempt.records \
             .filter_by(selector_id=obj.selector_id, project_id=obj.project_id) \
@@ -4966,9 +4911,9 @@ def _MatchingRecord_is_valid(id):
         if lo_rec is not None and lo_rec.submission_period == obj.submission_period:
             return False, 'Project "{name}" is duplicated in multiple submission periods'.format(name=obj.project.name)
 
-    markers = obj.project.second_markers.subquery()
-    count = db.session.query(func.count(markers.c.id)) \
-        .filter(markers.c.id == obj.marker_id).scalar()
+    # check whether the assigned marker is compatible with this project
+    count = get_count(obj.project.second_markers.filter(id=obj.marker_id))
+
     if count != 1:
         return False, 'Assigned 2nd marker is not compatible with assigned project'
 

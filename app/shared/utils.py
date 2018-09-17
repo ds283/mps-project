@@ -18,17 +18,16 @@ from app.models import db, MainConfig, ProjectClass, ProjectClassConfig, User, F
     MatchingAttempt, MatchingRecord
 
 from .conversions import is_integer
+from .sqlalchemy import get_count
 
 from sqlalchemy import func
 
 
 def get_main_config():
-
     return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
 
 
 def get_current_year():
-
     return get_main_config().year
 
 
@@ -58,7 +57,6 @@ def home_dashboard():
 
 
 def get_root_dashboard_data():
-
     current_year = get_current_year()
 
     pcs = db.session.query(ProjectClass).filter_by(active=True).all()
@@ -110,23 +108,17 @@ def get_convenor_dashboard_data(pclass, config):
     :return:
     """
 
-    fac_query = db.session.query(func.count(User.id)). \
-        filter(User.active).join(FacultyData, FacultyData.id == User.id)
+    fac_query = db.session.query(User) \
+        .filter_by(active=True) \
+        .join(FacultyData, FacultyData.id == User.id)
 
-    fac_total = fac_query.scalar()
-    fac_count = fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)).scalar()
+    fac_total = get_count(fac_query)
+    fac_count = get_count(fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
 
-    proj_count = db.session.query(func.count(Project.id)) \
-        .filter(Project.project_classes.any(id=pclass.id)).scalar()
-
-    sel_count = db.session.query(func.count(SelectingStudent.id)) \
-        .filter(~SelectingStudent.retired, SelectingStudent.config_id == config.id).scalar()
-
-    sub_count = db.session.query(func.count(SubmittingStudent.id)) \
-        .filter(~SubmittingStudent.retired, SubmittingStudent.config_id == config.id).scalar()
-
-    live_count = db.session.query(func.count(LiveProject.id)) \
-        .filter(LiveProject.config_id == config.id).scalar()
+    proj_count = get_count(db.session.query(Project).filter(Project.project_classes.any(id=pclass.id)))
+    sel_count = get_count(config.selecting_students.filter_by(retired=False))
+    sub_count = get_count(config.submitting_students.filter_by(retired=False))
+    live_count = get_count(config.live_projects)
 
     return (fac_count, fac_total), live_count, proj_count, sel_count, sub_count
 
@@ -167,18 +159,18 @@ def _compute_group_capacity_data(pclass, group):
                 capacity_bounded = False
 
     # get number of enrolled faculty belonging to this research group
-    enrolled = db.session.query(func.count(EnrollmentRecord.id)) \
-        .filter(EnrollmentRecord.pclass_id == pclass.id) \
-        .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
-        .join(User, User.id == EnrollmentRecord.owner_id) \
-        .filter(FacultyData.affiliations.any(id=group.id),
-                User.active == True).scalar()
+    enrolled = get_count(db.session.query(EnrollmentRecord.id) \
+                         .filter(EnrollmentRecord.pclass_id == pclass.id) \
+                         .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
+                         .join(User, User.id == EnrollmentRecord.owner_id) \
+                         .filter(FacultyData.affiliations.any(id=group.id),
+                                 User.active == True))
 
     # get total number of faculty belonging to this research group
-    total = db.session.query(func.count(FacultyData.id)) \
-        .join(User, User.id == FacultyData.id) \
-        .filter(FacultyData.affiliations.any(id=group.id),
-                User.active == True).scalar()
+    total = get_count(db.session.query(FacultyData.id) \
+                      .join(User, User.id == FacultyData.id) \
+                      .filter(FacultyData.affiliations.any(id=group.id),
+                              User.active == True))
 
     return project_count, len(faculty), enrolled, total, capacity, capacity_bounded
 
@@ -216,7 +208,7 @@ def get_capacity_data(pclass):
 
 def get_matching_dashboard_data():
     year = get_current_year()
-    matches = db.session.query(func.count(MatchingAttempt.id)).filter_by(year=year).scalar()
+    matches = get_count(db.session.query(MatchingAttempt).filter_by(year=year))
 
     return matches
 

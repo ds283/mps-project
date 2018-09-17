@@ -14,6 +14,8 @@ from sqlalchemy import func
 
 from ..models import db, BackupConfiguration, BackupRecord
 
+from .sqlalchemy import get_count
+
 from datetime import datetime
 from os import path, remove
 
@@ -25,21 +27,19 @@ def get_backup_config():
     """
 
     # get number of configuration records; should be exactly 1
-    num = db.session.query(func.count(BackupConfiguration.id)).scalar()
+    num = get_count(db.session.query(BackupConfiguration))
 
     if num == 0:
-
         # no configuration record is present; generate a default
         data = BackupConfiguration(keep_hourly=7, keep_daily=2, limit=None, last_changed=datetime.now())
         db.session.add(data)
         db.session.commit()
 
     elif num > 1:
-
         # remove all but most-recently-edited configuration
         keep_id = db.session.query(BackupConfiguration.id).order_by(BackupConfiguration.last_changed.desc()).scalar()
 
-        BackupConfiguration.query().filter(~BackupConfiguration.id==keep_id).delete()
+        BackupConfiguration.query().filter(~BackupConfiguration.id == keep_id).delete()
         db.session.commit()
 
     config = db.session.query(BackupConfiguration).one()
@@ -54,10 +54,9 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
     """
 
     # get number of configuration records; should be exactly 1
-    num = db.session.query(func.count(BackupConfiguration.id)).scalar()
+    num = get_count(db.session.query(BackupConfiguration))
 
     if num == 0:
-
         # no configuration record is present; generate a default
         data = BackupConfiguration(keep_hourly=keep_hourly, keep_daily=keep_daily,
                                    limit=limit, units=units, last_changed=datetime.now())
@@ -66,7 +65,6 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
         return
 
     elif num > 1:
-
         # remove all but most-recently-edited configuration
         keep_id = db.session.query(BackupConfiguration.id).order_by(BackupConfiguration.last_changed.desc()).scalar()
 
@@ -84,17 +82,14 @@ def set_backup_config(keep_hourly, keep_daily, limit, units):
 
 
 def get_backup_count():
-
-    return db.session.query(func.count(BackupRecord.id)).scalar()
+    return get_count(db.session.query(BackupRecord))
 
 
 def get_backup_size():
-
     return db.session.query(func.sum(BackupRecord.archive_size)).scalar()
 
 
 def remove_backup(id):
-
     record = db.session.query(BackupRecord).filter_by(id=id).first()
 
     if record is None:

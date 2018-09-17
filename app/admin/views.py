@@ -50,6 +50,7 @@ from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector
 from ..shared.conversions import is_integer
+from ..shared.sqlalchemy import get_count
 
 from ..task_queue import register_task, progress_update
 
@@ -4112,8 +4113,7 @@ def reassign_match_marker(id, mid):
         return redirect(request.referrer)
 
     # check intended mid is in list of attached second markers
-    q = record.project.second_markers.subquery()
-    count = db.session.query(func.count(q.c.id)).filter(q.c.id == mid).scalar()
+    count = get_count(record.project.second_markers.filter(id=mid))
 
     if count == 0:
         marker = FacultyData.query.get_or_404(mid)

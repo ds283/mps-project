@@ -19,7 +19,7 @@ _project_name = \
         {{ project.name }}
     </a>
     {% if not is_offerable and project.error %}
-        <p class="help-block">Warning: {{ project.error }}</p>
+        <p class="help-block">Error: {{ project.error }}</p>
     {% endif %}
 </div>
 """

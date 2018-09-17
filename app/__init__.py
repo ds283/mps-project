@@ -22,10 +22,9 @@ from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
 from flask_session import Session
 from flask import Flask
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
+from .limiter import limiter
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 
@@ -69,8 +68,9 @@ def create_app():
         profiler = Profiler(app)
 
         # set up Flask-Limiter
+
         app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
-        limiter = Limiter(app, key_func=get_remote_address)
+        limiter.init_app(app)
 
     # add debug toolbar if in debug mode
     if config_name == 'development':

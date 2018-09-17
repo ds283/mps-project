@@ -20,8 +20,8 @@ from ..models import db, User, TaskRecord, BackupRecord, ProjectClassConfig, \
 from ..task_queue import progress_update
 
 from ..shared.utils import get_current_year
-
 from ..shared.convenor import add_selector, add_blank_submitter
+from ..shared.sqlalchemy import get_count
 
 from celery import chain, group
 
@@ -579,10 +579,7 @@ def register_rollover_tasks(celery):
                 # (eg. could happen if the task is accidentally run twice)
 
                 # check whether a SubmittingStudent has already been generated for this student
-                query = student.selecting.subquery()
-                count = db.session.query(func.count(query.c.id)) \
-                    .filter(query.c.retired == False, query.c.config_id == new_config_id).scalar()
-
+                count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
                 if count == 0:
                     add_selector(student, new_config_id, autocommit=False)
 
@@ -593,10 +590,7 @@ def register_rollover_tasks(celery):
                     and student.programme in config.programmes:
 
                 # check whether a SubmittingStudent has already been generated for this student
-                query = student.submitting.subquery()
-                count = db.session.query(func.count(query.c.id)) \
-                    .filter(query.c.retired == False, query.c.config_id == new_config_id).scalar()
-
+                count = get_count(student.submitting.filter(retired=False, config_id=new_config_id))
                 if count == 0:
                     add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
 

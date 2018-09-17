@@ -53,7 +53,8 @@ class Config(object):
     # Flask-Caching
     CACHE_TYPE = 'redis'
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379'
-    CACHE_DEFAULT_TIMEOUT = 600 # default timeout = 600 seconds = 10 minutes
+    # CACHE_DEFAULT_TIMEOUT = 600 # default timeout = 600 seconds = 10 minutes
+    # CACHE_DEFAULT_TIMEOUT = 0 # don't expire cache entries
 
     # Flask-Limiter
     RATELIMIT_DEFAULT = "600/day;60/hour"

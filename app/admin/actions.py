@@ -17,6 +17,7 @@ from flask_security.confirmable import generate_confirmation_link
 
 from ..models import db, ProjectClass, ProjectClassConfig, EnrollmentRecord, FacultyData, SelectingStudent, User
 from ..shared.utils import get_current_year
+from ..shared.sqlalchemy import get_count
 
 from sqlalchemy import func
 
@@ -99,8 +100,8 @@ def estimate_CATS_load():
                                'and year={yr} is missing'.format(name=pclass.name, yr=year))
 
         # find number of selectors for this project class
-        num_selectors = db.session.query(func.count(SelectingStudent.id)) \
-            .filter_by(retired=False, config_id=config.id).scalar()
+        num_selectors = get_count(db.session.query(SelectingStudent).filter_by(retired=False,
+                                                                               config_id=config.id))
 
         if config.CATS_supervision is not None and config.CATS_supervision > 0:
             supervising_CATS += config.CATS_supervision * num_selectors

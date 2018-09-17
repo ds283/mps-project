@@ -12,7 +12,7 @@
 from ..models import db, MatchingAttempt, TaskRecord, ProjectClassConfig, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord
 
-from ..shared.utils import get_current_year, get_automatch_pclasses
+from ..shared.sqlalchemy import get_count
 from ..task_queue import progress_update
 
 from sqlalchemy import func
@@ -360,11 +360,7 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
             proj = project_dict[j]
 
             if proj.config.uses_marker:
-
-                marker_query = proj.second_markers.subquery()
-                count = db.session.query(func.count(marker_query.c.id)) \
-                    .filter(marker_query.c.id == fac.id) \
-                    .scalar()
+                count = get_count(proj.second_markers.filter(id=fac.id))
 
                 if count == 1:
                     M[idx] = max_multiplicity

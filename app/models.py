@@ -2439,7 +2439,6 @@ class Project(db.Model):
         :param data:
         :return:
         """
-
         # get list of active degree programmes relevant for our degree classes;
         # to do this we have to build a rather complex UNION query
         queries = []
@@ -2505,7 +2504,8 @@ class Project(db.Model):
             .filter(User.active == True) \
             .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
             .filter(EnrollmentRecord.pclass_id == pclass.id,
-                    EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+                    EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
 
         return query.all()
 
@@ -2516,7 +2516,6 @@ class Project(db.Model):
         :param faculty:
         :return:
         """
-
         if self.is_second_marker(faculty):
             return False
 
@@ -2528,7 +2527,7 @@ class Project(db.Model):
         pclasses = self.project_classes.subquery()
 
         query = faculty.enrollments \
-            .join(pclasses, pclasses.c.id == EnrollmentRecord.owner_id) \
+            .join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id) \
             .filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
 
         return get_count(query) > 0
@@ -2540,7 +2539,6 @@ class Project(db.Model):
         :param faculty:
         :return:
         """
-
         if self.is_second_marker(faculty):
             return
 
@@ -2554,7 +2552,6 @@ class Project(db.Model):
         :param faculty:
         :return:
         """
-
         if not self.is_second_marker(faculty):
             return
 
@@ -2569,7 +2566,6 @@ class Project(db.Model):
         :param pclass:
         :return:
         """
-
         desc = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
         if desc is not None:
             return desc
@@ -2583,7 +2579,6 @@ class Project(db.Model):
         :param pclass:
         :return:
         """
-
         desc = self.get_description(pclass)
 
         if desc is None:

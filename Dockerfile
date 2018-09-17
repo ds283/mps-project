@@ -10,7 +10,7 @@ WORKDIR /home/mpsproject
 COPY requirements.txt requirements.txt
 RUN pypy3 -m venv venv
 RUN venv/bin/pip install -r requirements.txt
-RUN venv/bin/pip install gunicorn
+RUN venv/bin/pip install waitress
 
 COPY app app
 COPY migrations migrations

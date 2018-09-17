@@ -1765,7 +1765,7 @@ class ProjectClassConfig(db.Model):
 
     @property
     def allocated_match(self):
-        return self.matching_attempts.filter_by(selected=True).one()
+        return self.matching_attempts.filter_by(selected=True).first()
 
 
     @property
@@ -2531,7 +2531,7 @@ class Project(db.Model):
             .join(pclasses, pclasses.c.id == EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
 
-        return get_count(query) > 9
+        return get_count(query) > 0
 
 
     def add_marker(self, faculty):
@@ -4912,7 +4912,7 @@ def _MatchingRecord_is_valid(id):
             return False, 'Project "{name}" is duplicated in multiple submission periods'.format(name=obj.project.name)
 
     # check whether the assigned marker is compatible with this project
-    count = get_count(obj.project.second_markers.filter(id=obj.marker_id))
+    count = get_count(obj.project.second_markers.filter_by(id=obj.marker_id))
 
     if count != 1:
         return False, 'Assigned 2nd marker is not compatible with assigned project'

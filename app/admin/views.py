@@ -20,6 +20,7 @@ from collections import deque
 
 from celery import chain, group
 
+from ..limiter import limiter
 from .actions import register_user, estimate_CATS_load
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
@@ -3174,6 +3175,7 @@ def delete_background_task(id):
 
 
 @admin.route('/notifications_ajax', methods=['GET', 'POST'])
+@limiter.exempt
 @login_required
 def notifications_ajax():
     """

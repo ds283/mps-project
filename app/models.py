@@ -601,7 +601,7 @@ class FacultyData(db.Model):
         n = self.projects_offered(pclass)
 
         if n == 0:
-            return '<span class="label label-warning"><i class="fa fa-times"></i> {n} available</span>'.format(n=n)
+            return '<span class="label label-danger"><i class="fa fa-times"></i> 0 available</span>'
 
         return '<span class="label label-primary"><i class="fa fa-check"></i> {n} available</span>'.format(n=n)
 
@@ -621,7 +621,7 @@ class FacultyData(db.Model):
         n = self.projects_unofferable
 
         if n == 0:
-            return '<span class="label label-default"><i class="fa fa-check"></i> {n} unofferable</span>'.format(n=n)
+            return '<span class="label label-default"><i class="fa fa-check"></i> 0 unofferable</span>'
 
         return '<span class="label label-warning"><i class="fa fa-times"></i> {n} unofferable</span>'.format(n=n)
 

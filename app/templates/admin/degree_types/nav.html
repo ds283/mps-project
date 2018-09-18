@@ -2,14 +2,14 @@
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        <li {% if subpane=='degrees' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_degree_types') }}">
-                Degree types
-            </a>
-        </li>
         <li {% if subpane=='programmes' %}class="active"{% endif %}>
             <a href="{{ url_for('admin.edit_degree_programmes') }}">
                 Degree programmes
+            </a>
+        </li>
+        <li {% if subpane=='degrees' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_degree_types') }}">
+                Degree types
             </a>
         </li>
     </ul>

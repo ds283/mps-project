@@ -1535,6 +1535,13 @@ class ProjectClass(db.Model):
         return False
 
 
+    @property
+    def ordered_programmes(self):
+        return self.programmes \
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+            .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
+
+
     def make_CSS_style(self):
         if self.colour is None:
             return None
@@ -1719,6 +1726,11 @@ class ProjectClassConfig(db.Model):
     @property
     def programmes(self):
         return self.project_class.programmes
+
+
+    @property
+    def ordered_programmes(self):
+        return self.project_class.ordered_programmes
 
 
     @property
@@ -2480,6 +2492,13 @@ class Project(db.Model):
 
     def remove_programme(self, prog):
         self.programmes.remove(prog)
+
+
+    @property
+    def ordered_programmes(self):
+        return self.programmes \
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+            .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
 
 
     def remove_project_class(self, pclass):

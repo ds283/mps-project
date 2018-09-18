@@ -176,7 +176,7 @@
                                         <div class="row sm-gap-below vertical-top">
                                             <div class="col-xs-3">Prefer degree programmes</div>
                                             <div class="col-xs-9">
-                                                {% for programme in project.programmes %}
+                                                {% for programme in project.ordered_programmes %}
                                                     {% if programme.active %}
                                                         <span class="label label-default project-label">{{ programme.full_name }}</span>
                                                     {% endif %}

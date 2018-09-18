@@ -2,14 +2,14 @@
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
-        <li {% if subpane=='groups' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_skill_groups') }}">
-                Skill groups
-            </a>
-        </li>
         <li {% if subpane=='skills' %}class="active"{% endif %}>
             <a href="{{ url_for('admin.edit_skills') }}">
                 Skills
+            </a>
+        </li>
+        <li {% if subpane=='groups' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_skill_groups') }}">
+                Skill groups
             </a>
         </li>
     </ul>

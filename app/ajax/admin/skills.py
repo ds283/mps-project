@@ -87,6 +87,15 @@ _active = \
 {% endif %}
 """
 
+_include_name = \
+"""
+{% if g.add_group %}
+    <span class="label label-success"><i class="fa fa-check"></i> Yes</span>
+{% else %}
+    <span class="label label-default"><i class="fa fa-times"></i> No</span>
+{% endif %}
+"""
+
 
 def skills_data(skills):
 
@@ -103,7 +112,7 @@ def skill_groups_data(groups):
     data = [{'name': g.name,
              'colour': g.make_label(g.colour),
              'active': render_template_string(_active, a=g),
-             'include': 'Yes' if g.add_group else 'No',
+             'include': render_template_string(_include_name, g=g),
              'menu': render_template_string(_skill_group_menu, group=g)} for g in groups]
 
     return jsonify(data)

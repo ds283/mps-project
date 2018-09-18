@@ -263,6 +263,7 @@ def overview(id):
     period = config.periods.filter_by(submission_period=config.submission_period).first()
     if period is None:
         flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     # build forms
     golive_form = GoLiveForm(request.form)

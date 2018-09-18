@@ -68,7 +68,6 @@ def create_app():
         profiler = Profiler(app)
 
         # set up Flask-Limiter
-
         app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
         limiter.init_app(app)
 
@@ -121,6 +120,13 @@ def create_app():
     # we don't override any of Security's internal forms, but we do replace its create user funciton
     # that automatically uses our own replacements
     security = Security(app, user_datastore)
+    if config_name == 'production':
+        # set up more stringent limits for login view and forgot-password view
+        # add to a particular view function.
+        login = app.view_functions['security.login']
+        forgot = app.view_functions['security.forgot_password']
+        limiter.limit("50/day;5/minute")(login)
+        limiter.limit("50/day;5/minute")(forgot)
 
     # set up celery and store in extensions dictionary
     celery = make_celery(app)

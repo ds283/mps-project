@@ -3127,7 +3127,8 @@ def terminate_background_task(id):
 
     record = TaskRecord.query.get_or_404(id)
 
-    if record.state == TaskRecord.SUCCESS or record.state == TaskRecord.FAILURE or record.state == TaskRecord.TERMINATED:
+    if record.state == TaskRecord.SUCCESS or record.state == TaskRecord.FAILURE \
+            or record.state == TaskRecord.TERMINATED:
         flash('Could not terminate background task "{name}" because it has finished.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
@@ -3176,12 +3177,16 @@ def delete_background_task(id):
 
 @admin.route('/notifications_ajax', methods=['GET', 'POST'])
 @limiter.exempt
-@login_required
 def notifications_ajax():
     """
     Retrieve all notifications for the current user
     :return:
     """
+    # return empty JSON if not logged in; we don't want this endpoint to require that the user is logged in,
+    # otherwise we will end up triggering 'you do not have sufficient privileges to view this resource' errors
+    # when the session ends but a webpage is still open
+    if not current_user.is_authenticated:
+        return jsonify({})
 
     # get timestamp that client wants messages from, if provided
     since = request.args.get('since', 0.0, type=float)
@@ -3196,7 +3201,7 @@ def notifications_ajax():
     for n in notifications:
 
         if n.type == Notification.USER_MESSAGE \
-            or n.type == Notification.SHOW_HIDE_REQUEST \
+                or n.type == Notification.SHOW_HIDE_REQUEST \
                 or n.type == Notification.REPLACE_TEXT_REQUEST:
 
             n.remove_on_pageload = True

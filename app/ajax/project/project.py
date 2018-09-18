@@ -63,7 +63,7 @@ _project_meetingreqd = \
 
 _project_prefer = \
 """
-{% for programme in project.programmes %}
+{% for programme in project.ordered_programmes %}
     {% if programme.active %}
         {{ programme.short_label|safe }}
     {% endif %}

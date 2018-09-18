@@ -97,7 +97,7 @@
                                 {# I'm unclear what the 'official' method would be #}
                                 <div class="pull-right" style="text-align: right;">
                                     {% if pclass.programmes %}
-                                        {% for programme in pclass.programmes %}
+                                        {% for programme in pclass.ordered_programmes %}
                                             {{ programme.label|safe }}
                                         {% endfor %}
                                     {% endif %}

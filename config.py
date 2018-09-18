@@ -56,7 +56,7 @@ class Config(object):
     CACHE_DEFAULT_TIMEOUT = 86400                   # default timeout = 86400 seconds = 24 hours
 
     # Flask-Limiter
-    RATELIMIT_DEFAULT = "600/day;60/hour"
+    RATELIMIT_DEFAULT = "600/day;120/hour"
     RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_REDIS_URL') or 'redis://localhost:6379'
 
     # logging

@@ -987,7 +987,16 @@ class DegreeType(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
+    # degree type label (MSc, MPhys, BSc, etc.)
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # degree type abbreviation
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True, unique=True)
+
+    # colour
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # active flag
     active = db.Column(db.Boolean())
 
     # created by
@@ -1010,7 +1019,6 @@ class DegreeType(db.Model):
         Disable this degree type
         :return:
         """
-
         self.active = False
 
         # disable any degree programmes that depend on this degree type
@@ -1023,8 +1031,30 @@ class DegreeType(db.Model):
         Enable this degree type
         :return:
         """
-
         self.active = True
+
+
+    def make_CSS_style(self):
+        if self.colour is None:
+            return None
+
+        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+
+
+    def make_label(self, text=None):
+        """
+        Make appropriately coloured label
+        :param text:
+        :return:
+        """
+        if text is None:
+            text = self.abbreviation
+
+        style = self.make_CSS_style()
+        if style is None:
+            return '<span class="label label-default">{msg}</span>'.format(msg=text)
+
+        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
 class DegreeProgramme(db.Model):
@@ -1037,9 +1067,19 @@ class DegreeProgramme(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
 
+    # programme name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+
+    # programme abbreviation
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+
+    # show degree type in name
+    show_type = db.Column(db.Boolean())
+
+    # active flag
     active = db.Column(db.Boolean())
 
+    # degree type
     type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'), index=True)
     degree_type = db.relationship('DegreeType', backref=db.backref('degree_programmes', lazy='dynamic'))
 
@@ -1063,7 +1103,6 @@ class DegreeProgramme(db.Model):
         Disable this degree programme
         :return:
         """
-
         self.active = False
 
         # disable any project classes that depend on this programme
@@ -1076,7 +1115,6 @@ class DegreeProgramme(db.Model):
         Enable this degree programme
         :return:
         """
-
         if self.available:
             self.active = True
 
@@ -1087,21 +1125,34 @@ class DegreeProgramme(db.Model):
         Determine whether this degree programme is available for use (or activation)
         :return:
         """
-
         # ensure degree type is active
         return self.degree_type.active
 
 
     @property
     def full_name(self):
+        if self.show_type:
+            return '{p} {t}'.format(p=self.name, t=self.degree_type.name)
 
-        return '{p} {t}'.format(p=self.name, t=self.degree_type.name)
+        return self.name
+
+
+    @property
+    def short_name(self):
+        if self.show_type:
+            return '{p} {t}'.format(p=self.abbreviation, t=self.degree_type.abbreviation)
+
+        return self.abbreviation
 
 
     @property
     def label(self):
+        return self.degree_type.make_label(self.full_name)
 
-        return '<span class="label label-default">{n}</span>'.format(n=self.full_name)
+
+    @property
+    def short_label(self):
+        return self.degree_type.make_label(self.short_name)
 
 
 class SkillGroup(db.Model):
@@ -1285,7 +1336,6 @@ class TransferableSkill(db.Model):
         Make a label
         :return:
         """
-
         if self.group is None:
             if user_classes is None:
                 classes = 'label label-default'
@@ -1295,6 +1345,11 @@ class TransferableSkill(db.Model):
             return '<span class="{cls}">{name}</span>'.format(name=self.name, cls=classes)
 
         return self.group.make_skill_label(self.name, user_classes=user_classes)
+
+
+    @property
+    def short_label(self):
+        return self.group.make_label(self.name)
 
 
 class ProjectClass(db.Model):

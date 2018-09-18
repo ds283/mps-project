@@ -55,12 +55,22 @@ def unique_or_original_email(form, field):
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
 
 
+def globally_unique_group_name(form, field):
+    if ResearchGroup.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
+
+
+def unique_or_original_group_name(form, field):
+    if field.data != form.group.name and ResearchGroup.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
+
+
 def globally_unique_group_abbreviation(form, field):
     if ResearchGroup.query.filter_by(abbreviation=field.data).first():
         raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
 
 
-def unique_or_original_abbreviation(form, field):
+def unique_or_original_group_abbreviation(form, field):
     if field.data != form.group.abbreviation and ResearchGroup.query.filter_by(abbreviation=field.data).first():
         raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
 
@@ -75,6 +85,16 @@ def unique_or_original_degree_type(form, field):
         raise ValidationError('{name} is already associated with a degree type'.format(name=field.data))
 
 
+def globally_unique_degree_abbreviation(form, field):
+    if DegreeType.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('{name} is already associated with a degree type'.format(name=field.data))
+
+
+def unique_or_original_degree_abbreviation(form, field):
+    if field.data != form.degree_type.abbreviation and DegreeType.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('{name} is already associated with a degree type'.format(name=field.data))
+
+
 def globally_unique_degree_programme(form, field):
     degree_type = form.degree_type.data
     if DegreeProgramme.query.filter_by(name=field.data, type_id=degree_type.id).first():
@@ -85,6 +105,19 @@ def unique_or_original_degree_programme(form, field):
     degree_type = form.degree_type.data
     if (field.data != form.programme.name or degree_type.id != form.programme.type_id) and \
             DegreeProgramme.query.filter_by(name=field.data, type_id=degree_type.id).first():
+        raise ValidationError('{name} is already associated with a degree programme of the same type'.format(name=field.data))
+
+
+def globally_unique_programme_abbreviation(form, field):
+    degree_type = form.degree_type.data
+    if DegreeProgramme.query.filter_by(abbreviation=field.data, type_id=degree_type.id).first():
+        raise ValidationError('{name} is already associated with a degree programme of the same type'.format(name=field.data))
+
+
+def unique_or_original_programme_abbreviation(form, field):
+    degree_type = form.degree_type.data
+    if (field.data != form.programme.abbreviation or degree_type.id != form.programme.type_id) and \
+            DegreeProgramme.query.filter_by(abbreviation=field.data, type_id=degree_type.id).first():
         raise ValidationError('{name} is already associated with a degree programme of the same type'.format(name=field.data))
 
 

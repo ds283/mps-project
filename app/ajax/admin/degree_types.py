@@ -38,6 +38,7 @@ _types_menu = \
 </div>
 """
 
+
 _active = \
 """
 {% if t.active %}
@@ -48,10 +49,17 @@ _active = \
 """
 
 
+_name = \
+"""
+{{ t.name }} {{ t.make_label()|safe }}
+"""
+
+
 def degree_types_data(types):
 
-    data = [{'name': t.name,
+    data = [{'name': render_template_string(_name, t=t),
              'active': render_template_string(_active, t=t),
+             'colour': t.make_label(t.colour),
              'menu': render_template_string(_types_menu, type=t)} for t in types]
 
     return jsonify(data)

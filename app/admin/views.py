@@ -1139,6 +1139,8 @@ def add_degree_type():
 
     if form.validate_on_submit():
         degree_type = DegreeType(name=form.name.data,
+                                 abbreviation=form.abbreviation.data,
+                                 colour=form.colour.data,
                                  active=True,
                                  creator_id=current_user.id,
                                  creation_timestamp=datetime.now())
@@ -1159,21 +1161,23 @@ def edit_degree_type(id):
     :return:
     """
 
-    degree_type = DegreeType.query.get_or_404(id)
-    form = EditDegreeTypeForm(obj=degree_type)
+    type = DegreeType.query.get_or_404(id)
+    form = EditDegreeTypeForm(obj=type)
 
-    form.degree_type = degree_type
+    form.degree_type = type
 
     if form.validate_on_submit():
-        degree_type.name = form.name.data
-        degree_type.last_edit_id = current_user.id
-        degree_type.last_edit_timestamp = datetime.now()
+        type.name = form.name.data
+        type.abbreviation = form.abbreviation.data
+        type.colour = form.colour.data
+        type.last_edit_id = current_user.id
+        type.last_edit_timestamp = datetime.now()
 
         db.session.commit()
 
         return redirect(url_for('admin.edit_degree_types'))
 
-    return render_template('admin/degree_types/edit_degree.html', type_form=form, type=degree_type, title='Edit degree type')
+    return render_template('admin/degree_types/edit_degree.html', type_form=form, type=type, title='Edit degree type')
 
 
 @admin.route('/make_type_active/<int:id>')
@@ -1227,6 +1231,8 @@ def add_degree_programme():
     if form.validate_on_submit():
         degree_type = form.degree_type.data
         programme = DegreeProgramme(name=form.name.data,
+                                    abbreviation=form.abbreviation.data,
+                                    show_type=form.show_type.data,
                                     active=True,
                                     type_id=degree_type.id,
                                     creator_id=current_user.id,
@@ -1255,6 +1261,8 @@ def edit_degree_programme(id):
 
     if form.validate_on_submit():
         programme.name = form.name.data
+        programme.abbreviation = form.abbreviation.data
+        programme.show_type = form.show_type.data
         programme.type_id = form.degree_type.data.id
         programme.last_edit_id = current_user.id
         programme.last_edit_timestamp = datetime.now()

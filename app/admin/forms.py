@@ -17,9 +17,13 @@ from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_username, \
-    unique_or_original_email, globally_unique_group_abbreviation, unique_or_original_abbreviation, \
-    globally_unique_degree_type, unique_or_original_degree_type, globally_unique_degree_programme, \
-    unique_or_original_degree_programme, globally_unique_transferable_skill, unique_or_original_transferable_skill, \
+    unique_or_original_email, globally_unique_group_name, unique_or_original_group_name, \
+    globally_unique_group_abbreviation, unique_or_original_group_abbreviation, \
+    globally_unique_degree_type, unique_or_original_degree_type,\
+    globally_unique_degree_abbreviation, unique_or_original_degree_abbreviation,\
+    globally_unique_degree_programme, unique_or_original_degree_programme, \
+    globally_unique_programme_abbreviation, unique_or_original_programme_abbreviation, \
+    globally_unique_transferable_skill, unique_or_original_transferable_skill, \
     globally_unique_skill_group, unique_or_original_skill_group, globally_unique_project_class, \
     unique_or_original_project_class, globally_unique_project_class_abbrev, unique_or_original_project_class_abbrev, \
     globally_unique_supervisor, unique_or_original_supervisor, globally_unique_role, unique_or_original_role, \
@@ -223,16 +227,17 @@ class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixin, FirstLastNa
     pass
 
 
-class ResearchGroupForm():
-
-    name = StringField('Name', validators=[InputRequired(message='Name is required')])
+class ResearchGroupMixin():
 
     website = StringField('Website', description='Optional.')
 
     colour = StringField('Colour', description='Assign a colour to help students identify this research group.')
 
 
-class AddResearchGroupForm(Form, ResearchGroupForm):
+class AddResearchGroupForm(Form, ResearchGroupMixin):
+
+    name = StringField('Name', validators=[InputRequired(message='Name is required'),
+                                           globally_unique_group_name])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
                                                            globally_unique_group_abbreviation])
@@ -240,41 +245,65 @@ class AddResearchGroupForm(Form, ResearchGroupForm):
     submit = SubmitField('Add new group')
 
 
-class EditResearchGroupForm(Form, ResearchGroupForm, EditFormMixin):
+class EditResearchGroupForm(Form, ResearchGroupMixin, EditFormMixin):
+
+    name = StringField('Name', validators=[InputRequired(message='Name is required'),
+                                           unique_or_original_group_name])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
-                                                           unique_or_original_abbreviation])
-    name = StringField('Name', validators=[InputRequired(message='Name is required')])
+                                                           unique_or_original_group_abbreviation])
 
 
-class AddDegreeTypeForm(Form):
+class DegreeTypeMixin():
+
+    colour = StringField('Colour', description='Assign a colour to help identify this degree type.')
+
+
+class AddDegreeTypeForm(Form, DegreeTypeMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree type name is required'),
                                            globally_unique_degree_type])
 
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           globally_unique_degree_abbreviation])
+
     submit = SubmitField('Add new degree type')
 
 
-class EditDegreeTypeForm(Form, EditFormMixin):
+class EditDegreeTypeForm(Form, DegreeTypeMixin, EditFormMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree type name is required'),
                                            unique_or_original_degree_type])
 
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           unique_or_original_degree_abbreviation])
 
-class AddDegreeProgrammeForm(Form):
+
+class DegreeProgrammeMixin():
 
     degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
+
+    show_type = BooleanField('Show degree type in name')
+
+
+class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):
+
     name = StringField('Name', validators=[InputRequired(message='Degree programme name is required'),
                                            globally_unique_degree_programme])
+
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           globally_unique_programme_abbreviation])
 
     submit = SubmitField('Add new degree programme')
 
 
-class EditDegreeProgrammeForm(Form, EditFormMixin):
+class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, EditFormMixin):
 
-    degree_type = QuerySelectField('Degree type', query_factory=GetActiveDegreeTypes, get_label='name')
     name = StringField('Name', validators=[InputRequired(message='Degree programme name is required'),
                                            unique_or_original_degree_programme])
+
+    abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           unique_or_original_programme_abbreviation])
 
 
 class TransferableSkillMixin():

@@ -44,6 +44,7 @@ _programmes_menu = \
 </div>
 """
 
+
 _active = \
 """
 {% if p.active %}
@@ -54,10 +55,27 @@ _active = \
 """
 
 
+_show_type = \
+"""
+{% if p.show_type %}
+    <span class="label label-success"><i class="fa fa-check"></i> Yes</span>
+{% else %}
+    <span class="label label-default"><i class="fa fa-times"></i> No</span>
+{% endif %}
+"""
+
+
+_name = \
+"""
+{{ p.name }} {{ p.short_label|safe }}
+"""
+
+
 def degree_programmes_data(programmes):
 
-    data = [{'name': p.name,
+    data = [{'name': render_template_string(_name, p=p),
              'type': p.degree_type.name,
+             'show_type': render_template_string(_show_type, p=p),
              'active': render_template_string(_active, p=p),
              'menu': render_template_string(_programmes_menu, programme=p)} for p in programmes]
 

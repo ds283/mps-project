@@ -65,7 +65,7 @@ _project_prefer = \
 """
 {% for programme in project.programmes %}
     {% if programme.active %}
-        {{ programme.label|safe }}
+        {{ programme.short_label|safe }}
     {% endif %}
 {% endfor %}
 """
@@ -74,7 +74,7 @@ _project_skills = \
 """
 {% for skill in skills %}
     {% if skill.is_active %}
-      {{ skill.make_label()|safe }}
+      {{ skill.short_label|safe }}
     {% endif %}
 {% endfor %}
 """

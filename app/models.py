@@ -1041,7 +1041,7 @@ class DegreeType(db.Model):
         return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
 
 
-    def make_label(self, text=None):
+    def make_label(self, text=None, user_classes=None):
         """
         Make appropriately coloured label
         :param text:
@@ -1050,11 +1050,16 @@ class DegreeType(db.Model):
         if text is None:
             text = self.abbreviation
 
+        if user_classes is None:
+            classes = 'label label-default'
+        else:
+            classes = 'label label-default {cls}'.format(cls=user_classes)
+
         style = self.make_CSS_style()
         if style is None:
-            return '<span class="label label-default">{msg}</span>'.format(msg=text)
+            return '<span class="{cls}">{msg}</span>'.format(msg=text, cls=classes)
 
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
+        return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=style)
 
 
 class DegreeProgramme(db.Model):
@@ -1145,6 +1150,13 @@ class DegreeProgramme(db.Model):
         return self.abbreviation
 
 
+    def make_label(self, text=None, user_classes=None):
+        if text is None:
+            text = self.full_name
+
+        return self.degree_type.make_label(text=text, user_classes=user_classes)
+
+
     @property
     def label(self):
         return self.degree_type.make_label(self.full_name)
@@ -1197,7 +1209,6 @@ class SkillGroup(db.Model):
         Enable this skill group and cascade, ie. enable any transferable skills associated with this group
         :return:
         """
-
         self.active = True
 
         for skill in self.skills:
@@ -1209,7 +1220,6 @@ class SkillGroup(db.Model):
         Disable this skill group and cascade, ie. disable any transferable skills associated with this group
         :return:
         """
-
         self.active = False
 
         for skill in self.skills:
@@ -1217,7 +1227,6 @@ class SkillGroup(db.Model):
 
 
     def make_CSS_style(self):
-
         if self.colour is None:
             return None
 
@@ -1231,20 +1240,19 @@ class SkillGroup(db.Model):
         :param text:
         :return:
         """
-
         if text is None:
             text = self.name
 
-        css_style = self.make_CSS_style()
         if user_classes is None:
             classes = 'label label-default'
         else:
             classes = 'label label-default {cls}'.format(cls=user_classes)
 
-        if css_style is None:
+        style = self.make_CSS_style()
+        if style is None:
                 return '<span class="{cls}">{msg}</span>'.format(msg=text, cls=classes)
 
-        return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=css_style)
+        return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=style)
 
 
     def make_skill_label(self, skill, user_classes=None):
@@ -1253,7 +1261,6 @@ class SkillGroup(db.Model):
         :param skill:
         :return:
         """
-
         if self.add_group:
             label = self.name + ': '
         else:

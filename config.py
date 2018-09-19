@@ -45,6 +45,8 @@ class Config(object):
 
     SECURITY_USER_IDENTITY_ATTRIBUTES = ['email', 'username']
 
+    SECURITY_UNAUTHORIZED_VIEW = "/"
+
     # Flask-Session
     SESSION_TYPE = 'redis'
     SESSION_REDIS_URL = os.environ.get('SESSION_REDIS_URL') or 'redis://localhost:6379'

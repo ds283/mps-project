@@ -191,10 +191,7 @@ def GetComparatorMatches(year, self_id, pclasses):
 
 
 def MarkerQuery(live_project):
-    return live_project.second_markers \
-        .join(User, User.id == FacultyData.id) \
-        .filter(User.active == True) \
-        .order_by(User.last_name.asc(), User.first_name.asc())
+    return live_project.marker_list_query
 
 
 def BuildMarkerLabel(pclass_id, fac):

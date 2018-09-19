@@ -91,8 +91,12 @@
                     Has late feedback
                 </a>
                 <a class="btn btn-sm grouped-button-margin {% if state_filter == 'no-late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
-                   href="{{ url_for('convenor.faculty_workload', id=pclass.id, rog_filter=prog_filter, state_filter='no-late-feedback') }}">
+                   href="{{ url_for('convenor.faculty_workload', id=pclass.id, prog_filter=prog_filter, state_filter='no-late-feedback') }}">
                     Has no late feedback
+                </a>
+                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
+                   href="{{ url_for('convenor.faculty_workload', id=pclass.id, prog_filter=prog_filter, state_filter='not-started') }}">
+                    Not started
                 </a>
             </div>
 

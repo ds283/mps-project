@@ -590,7 +590,7 @@ def register_rollover_tasks(celery):
                     and student.programme in config.programmes:
 
                 # check whether a SubmittingStudent has already been generated for this student
-                count = get_count(student.submitting.filter(retired=False, config_id=new_config_id))
+                count = get_count(student.submitting.filter_by(retired=False, config_id=new_config_id))
                 if count == 0:
                     add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
 

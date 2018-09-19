@@ -55,6 +55,8 @@ def create_app():
     app.config.from_pyfile('config.py')
     app.config.from_pyfile('mail.py')
 
+    app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
+
     db.init_app(app)
     migrate = Migrate(app, db)
     bootstrap = Bootstrap(app)
@@ -72,7 +74,6 @@ def create_app():
         profiler = Profiler(app)
 
         # set up Flask-Limiter
-        app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
         limiter.init_app(app)
 
     # add debug toolbar if in debug mode

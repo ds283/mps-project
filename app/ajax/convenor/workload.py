@@ -15,7 +15,7 @@ _projects = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        <span class="label label-default">{{ label }} not yet required</span>
+        {# <span class="label label-default">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
         <span class="label label-default">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
@@ -43,12 +43,36 @@ _projects = \
                     <a href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Show feedback</a>
                 </li>
                 
-                {% set disabled = r.period.feedback_open %}
+                {% set disabled = r.period.feedback_open or r.student_engaged %}
                 <li {% if disabled %}class="disabled"{% endif %}>
                     <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
                 </li>
             </ul>
         </div>
+        {% if r.owner.published %}
+            <div class="dropdown assignment-label">
+                <a class="label {% if r.student_engaged %}label-success{% else %}label-warning{% endif %} btn-table-block dropdown-toggle"
+                        type="button" data-toggle="dropdown">{% if r.student_engaged %}<i class="fa fa-check"></i> Started{% else %}<i class="fa fa-times"></i> Waiting{% endif %}
+                <span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    {% if r.submission_period > r.owner.config.submission_period %}
+                        <li class="disabled">
+                            <a>Submission period not yet open</a>
+                        </li>
+                    {% elif not r.student_engaged %}
+                        <li>
+                            <a href="{{ url_for('convenor.mark_started', id=r.id) }}">
+                                <i class="fa fa-check"></i> Mark as started
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="disabled">
+                            <a><i class="fa fa-check"></i> Already started</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
         {{ feedback_state_tag(r, r.supervisor_feedback_state, 'Feedback') }}
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
@@ -69,7 +93,7 @@ _marking = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
     {% if state == obj.FEEDBACK_NOT_YET %}
-        <span class="label label-default">{{ label }} not yet required</span>
+        {# <span class="label label-default">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
         <span class="label label-default">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}

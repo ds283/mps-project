@@ -20,7 +20,8 @@ from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
-from flask_session import Session
+from flask_kvsession import KVSessionExtension
+from simplekv.memory.redisstore import RedisStore
 from flask import Flask
 from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
@@ -60,7 +61,10 @@ def create_app():
     mail = Mail(app)
     bleach = Bleach(app)
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
-    ext_session = Session(app)
+
+    session_store = RedisStore(app.config['SESSION_REDIS'])
+    ext_session = KVSessionExtension(session_store, app)
+
     cache.init_app(app)
 
     # add endpoint profiler and rate limiter in production mode

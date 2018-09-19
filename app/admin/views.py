@@ -4128,7 +4128,7 @@ def reassign_match_marker(id, mid):
         return redirect(request.referrer)
 
     # check intended mid is in list of attached second markers
-    count = get_count(record.project.second_markers.filter(id=mid))
+    count = get_count(record.project.marker_list_query.filter_by(id=mid))
 
     if count == 0:
         marker = FacultyData.query.get_or_404(mid)

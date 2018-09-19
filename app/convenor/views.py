@@ -261,7 +261,7 @@ def overview(id):
 
     # get record for current submission period
     period = config.periods.filter_by(submission_period=config.submission_period).first()
-    if period is None:
+    if period is None and config.submissions > 0:
         flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
@@ -275,7 +275,7 @@ def overview(id):
         issue_form.request_deadline.label.text = 'The current deadline for responses is'
         issue_form.requests_issued.label.text = 'Save changes'
 
-    if period.feedback_open:
+    if period is not None and period.feedback_open:
         feedback_form.feedback_deadline.label.text = 'The current deadline for feedback is'
         feedback_form.open_feedback.label.text = 'Save changes'
 
@@ -290,7 +290,7 @@ def overview(id):
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
-        if period.feedback_deadline is not None:
+        if period is not None and period.feedback_deadline is not None:
             feedback_form.feedback_deadline.data = period.feedback_deadline
         else:
             feedback_form.feedback_deadline.data = date.today() + timedelta(weeks=3)
@@ -3663,9 +3663,11 @@ def faculty_workload_ajax(id):
 
     # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
     if state_filter == 'no-late-feedback':
-        data = [rec for rec in faculty.all() if not rec[1].has_late_feedback]
+        data = [rec for rec in faculty.all() if not rec[1].has_late_feedback(pclass.id)]
     elif state_filter == 'late-feedback':
-        data = [rec for rec in faculty.all() if rec[1].has_late_feedback]
+        data = [rec for rec in faculty.all() if rec[1].has_late_feedback(pclass.id)]
+    elif state_filter == 'not-started':
+        data = [rec for rec in faculty.all() if rec[1].has_not_started_flags(pclass.id)]
     else:
         data = faculty.all()
 
@@ -3753,14 +3755,14 @@ def assign_revert(id):
     # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
     config = rec.previous_config
     if config is None:
-        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        flash('Can not revert assignment because the list of available Live Projects could not be found', 'error')
         return redirect(request.referrer)
 
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     if rec.period.feedback_open:
-        flash('Can not reassign for submission period #{period} '
+        flash('Can not revert assignment for submission period #{period} '
               'because feedback is already open'.format(period=rec.period.submission_period), 'error')
         return redirect(request.referrer)
 
@@ -3807,10 +3809,9 @@ def assign_from_selection(id, sel_id):
 
     rec.project_id = sel.liveproject_id
 
-    if rec.marker not in sel.liveproject.second_markers:
-        markers = sel.liveproject.second_markers.all()
+    markers = sel.liveproject.marker_list
+    if rec.marker not in markers:
         sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
-
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
 
     db.session.commit()
@@ -3849,10 +3850,9 @@ def assign_liveproject(id, pid):
 
     rec.project_id = lp.id
 
-    if rec.marker not in lp.second_markers:
-        markers = lp.second_markers.all()
+    markers = lp.marker_list
+    if rec.marker not in markers:
         sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
-
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
 
     db.session.commit()

@@ -360,7 +360,7 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
             proj = project_dict[j]
 
             if proj.config.uses_marker:
-                count = get_count(proj.second_markers.filter(id=fac.id))
+                count = get_count(proj.marker_list_query.filter_by(marker_id=fac.id))
 
                 if count == 1:
                     M[idx] = max_multiplicity

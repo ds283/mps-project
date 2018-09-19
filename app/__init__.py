@@ -240,18 +240,18 @@ def create_app():
 
     @app.errorhandler(404)
     def not_found_error(error):
-        return render_template('errora/404.html'), 404
+        return render_template('errors/404.html'), 404
 
 
     @app.errorhandler(429)
     def rate_limit_error(error):
-        return render_template('errora/429.html'), 429
+        return render_template('errors/429.html'), 429
 
 
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()
-        return render_template('errora/500.html'), 500
+        return render_template('errors/500.html'), 500
 
     if not app.debug:
         @app.after_request

@@ -178,7 +178,7 @@
                                             <div class="col-xs-9">
                                                 {% for programme in project.ordered_programmes %}
                                                     {% if programme.active %}
-                                                        <span class="label label-default project-label">{{ programme.full_name }}</span>
+                                                        {{ programme.make_label(user_classes="project-label")|safe }}
                                                     {% endif %}
                                                 {% endfor %}
                                             </div>

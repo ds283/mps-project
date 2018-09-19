@@ -9,7 +9,7 @@
 #
 
 import os
-import redis
+from redis import StrictRedis
 
 # get absolute path of the directory containing this file;
 # used to locate a local database if we are using a backend
@@ -47,10 +47,9 @@ class Config(object):
 
     SECURITY_UNAUTHORIZED_VIEW = "/"
 
-    # Flask-Session
-    SESSION_TYPE = 'redis'
+    # Flask-KVSession
     SESSION_REDIS_URL = os.environ.get('SESSION_REDIS_URL') or 'redis://localhost:6379'
-    SESSION_REDIS = redis.from_url(SESSION_REDIS_URL)
+    SESSION_REDIS = StrictRedis.from_url(SESSION_REDIS_URL)
 
     # Flask-Caching
     CACHE_TYPE = 'redis'

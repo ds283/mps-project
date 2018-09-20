@@ -9,4 +9,5 @@ while true; do
     echo Upgrade command failed, retrying in 5 secs...
     sleep 5
 done
-waitress-serve --port 5000 mpsproject:app
+
+pypy3 serve.py

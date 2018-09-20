@@ -43,6 +43,8 @@ services:
     ports:
       - '80:8000'
       - '443:443'
+    volumes:
+      - /data/mpsproject/logs:/home/mpsproject/logs
     links:
       - web
       - flower
@@ -172,6 +174,9 @@ services:
   redis:
 
     image: redis:latest
+    ports:
+      # expose 6379; should be closed for production deployment
+      - '6379:6379'
     logging:
       driver: awslogs
       options:

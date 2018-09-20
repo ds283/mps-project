@@ -10,6 +10,7 @@
 
 import os
 from redis import StrictRedis
+from datetime import timedelta
 
 # get absolute path of the directory containing this file;
 # used to locate a local database if we are using a backend
@@ -51,10 +52,13 @@ class Config(object):
     SESSION_REDIS_URL = os.environ.get('SESSION_REDIS_URL') or 'redis://localhost:6379'
     SESSION_REDIS = StrictRedis.from_url(SESSION_REDIS_URL)
 
+    SESSION_SET_TTL = True
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)      # sessions expire after 30 minutes
+
     # Flask-Caching
     CACHE_TYPE = 'redis'
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379'
-    CACHE_DEFAULT_TIMEOUT = 86400                   # default timeout = 86400 seconds = 24 hours
+    CACHE_DEFAULT_TIMEOUT = 86400                           # default timeout = 86400 seconds = 24 hours
 
     # Flask-Limiter
     RATELIMIT_DEFAULT = "600/day;120/hour"

@@ -10,9 +10,9 @@
 
 import os
 
-from flask import Flask, current_app, request, session, render_template
+from flask import Flask, current_app, request, session, render_template, flash, redirect, url_for
 from flask_migrate import Migrate
-from flask_security import current_user, SQLAlchemyUserDatastore, Security
+from flask_security import current_user, SQLAlchemyUserDatastore, Security, logout_user
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
 from flask_assets import Environment
@@ -31,7 +31,6 @@ from flask_profiler import Profiler
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
-
 from config import app_config
 from .models import db, User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
@@ -43,6 +42,9 @@ from mdx_smartypants import makeExtension
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
 import latex2markdown
+
+from time import time
+from datetime import timedelta
 
 
 def create_app():
@@ -70,6 +72,7 @@ def create_app():
     cache.init_app(app)
 
     # add endpoint profiler and rate limiter in production mode
+    # also add handler to direct Waitress logging output to the console
     if config_name == 'production':
         profiler = Profiler(app)
 
@@ -157,7 +160,6 @@ def create_app():
     # make Flask-Security use deferred email sender
     @security.send_mail_task
     def delay_flask_security_mail(msg):
-
         # get send-log-email celery task
         celery = current_app.extensions['celery']
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
@@ -171,24 +173,51 @@ def create_app():
 
     @security.login_context_processor
     def login_context_processor():
-
         # build list of system messages to consider displaying on login screen
         messages = []
         for message in MessageOfTheDay.query.filter_by(show_login=True).all():
-
             if message.project_classes.first() is None:
-
                 messages.append(message)
 
         return dict(messages=messages)
 
-
     @app.before_request
-    def remove_stale_notifications():
+    def before_request_handler():
+        fresh = session.get('_fresh', None)
+        if fresh is False:
+            if request.endpoint == '/login':
+                return
 
-        if current_user.is_authenticated and request.endpoint is not None and 'ajax' not in request.endpoint:
-            Notification.query.filter_by(remove_on_pageload=True).delete()
-            db.session.commit()
+            # assume this is because the session record in the backend has been destroyed due to inactivity
+            logout_user()
+            flash('To protect your account you have been logged out due to inactivity. '
+                  'To continue, please re-enter your login details.',
+                  'info')
+            return redirect(url_for('security.login'))
+
+        if current_user.is_authenticated:
+            if request.endpoint is not None and 'ajax' not in request.endpoint:
+                # regenerate session to reset timeout due to inactivity
+                session_lifetime = app.config.get('PERSISTENT_SESSION_LIFETIME', timedelta(minutes=30))
+
+                session.regenerate()
+                session['timeout'] = int(time()) + session_lifetime.seconds
+                session['issued_timeout_prompt'] = False
+
+                Notification.query.filter_by(remove_on_pageload=True).delete()
+                db.session.commit()
+
+            else:
+                timeout = session.get('timeout', None)
+                issued = session.get('issued_timeout_prompt', False)
+                if timeout is not None:
+                    time_left = timeout - int(time())
+                    if time_left < 95 and not issued:
+                        current_user.post_message('Your login will expire in 90 seconds because of inactivity.'
+                                                  '<input type="button" value = "Refresh" onclick="history.go(0)" />', 'info',
+                                                  autocommit=True)
+                        session['issued_timeout_prompt'] = True
+
 
     @app.template_filter('dealingwithdollars')
     def dealingwithdollars(latex_string):
@@ -254,6 +283,7 @@ def create_app():
         db.session.rollback()
         return render_template('errors/500.html'), 500
 
+
     if not app.debug:
         @app.after_request
         def after_request(response):
@@ -264,6 +294,7 @@ def create_app():
                     app.logger.warning("SLOW QUERY: %s\nParameters: %s\nDuration: %fs\nContext: %s\n" % (
                     query.statement, query.parameters, query.duration, query.context))
             return response
+
 
     # IMPORT BLUEPRINTS
 

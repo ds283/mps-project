@@ -187,20 +187,24 @@ def create_app():
     def before_request_handler():
         fresh = session.get('_fresh', None)
         if fresh is False:
-            if request.endpoint == '/login':
+            if request.endpoint == 'security.login':
                 return
 
-            # assume this is because the session record in the backend has been destroyed due to inactivity
+            # assume this is because the session record in the backend has been destroyed due to inactivity;
+            # may not be most efficient approach, but suggested here:
+            #   https://github.com/mbr/flask-kvsession/issues/23
+            # note mention of issues with session getting lost when issuing multiple
+            # reloads quickly
             logout_user()
             flash('To protect your account you have been logged out due to inactivity. '
                   'To continue, please re-enter your login details.',
                   'info')
-            return redirect(url_for('security.login'))
+            return redirect(url_for('security.login', next=url_for('home.homepage')))
 
         if current_user.is_authenticated:
             if request.endpoint is not None and 'ajax' not in request.endpoint:
                 # regenerate session to reset timeout due to inactivity
-                session_lifetime = app.config.get('PERSISTENT_SESSION_LIFETIME', timedelta(minutes=30))
+                session_lifetime = app.config.get('PERMANENT_SESSION_LIFETIME', timedelta(minutes=30))
 
                 session.regenerate()
                 session['timeout'] = int(time()) + session_lifetime.seconds
@@ -215,9 +219,9 @@ def create_app():
                 if timeout is not None:
                     time_left = timeout - int(time())
                     if time_left < 95 and not issued:
-                        current_user.post_message('Your login will expire in 90 seconds because of inactivity.'
-                                                  '<input type="button" value = "Refresh" onclick="history.go(0)" />', 'info',
-                                                  autocommit=True)
+                        current_user.post_message('Your login will expire in 90 seconds because of inactivity. '
+                                                  '<a href="#" onclick="history.go(0)">Reload this page...</a>.', 'info',
+                                                  remove_on_load=True, autocommit=True)
                         session['issued_timeout_prompt'] = True
 
 

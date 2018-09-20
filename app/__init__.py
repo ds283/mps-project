@@ -22,6 +22,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
 from flask_kvsession import KVSessionExtension
 from simplekv.memory.redisstore import RedisStore
+from simplekv.decorator import PrefixDecorator
 from flask import Flask
 from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
@@ -67,7 +68,8 @@ def create_app():
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
 
     session_store = RedisStore(app.config['SESSION_REDIS'])
-    ext_session = KVSessionExtension(session_store, app)
+    prefixed_store = PrefixDecorator('session_', session_store)
+    ext_session = KVSessionExtension(prefixed_store, app)
 
     cache.init_app(app)
 

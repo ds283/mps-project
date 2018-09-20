@@ -147,7 +147,8 @@
                         alert_class = payload.type
                     }
 
-                    message_area.append('<div class="alert ' + alert_class + '" data-uuid="' + notification.uuid + '">' +
+                    message_area.append('<div class="alert ' + alert_class + ' alert-dismissible" data-uuid="' + notification.uuid + '" role="alert">' +
+                            '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' +
                             payload.message +
                             '</div>');
 

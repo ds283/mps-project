@@ -13,6 +13,7 @@ import os
 from flask import Flask, current_app, request, session, render_template, flash, redirect, url_for
 from flask_migrate import Migrate
 from flask_security import current_user, SQLAlchemyUserDatastore, Security, logout_user
+from flask_login.signals import user_logged_in
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
 from flask_assets import Environment
@@ -186,7 +187,7 @@ def create_app():
     @app.before_request
     def before_request_handler():
         fresh = session.get('_fresh', None)
-        if fresh is False:
+        if fresh is False and 'ajax' not in request.endpoint:
             if request.endpoint == 'security.login':
                 return
 
@@ -204,13 +205,18 @@ def create_app():
         if current_user.is_authenticated:
             if request.endpoint is not None and 'ajax' not in request.endpoint:
                 # regenerate session to reset timeout due to inactivity
-                session_lifetime = app.config.get('PERMANENT_SESSION_LIFETIME', timedelta(minutes=30))
+                session_lifetime = app.config.get('PERMANENT_SESSION_LIFETIME', timedelta(minutes=20))
 
                 session.regenerate()
                 session['timeout'] = int(time()) + session_lifetime.seconds
                 session['issued_timeout_prompt'] = False
 
-                Notification.query.filter_by(remove_on_pageload=True).delete()
+                to_remove = Notification.query.filter_by(remove_on_pageload=True)
+                for n in to_remove.all():
+                    current_app.logger.info('Removing notification for {name}:'.format(name=n.user.name))
+                    current_app.logger.info('-- payload = {p}'.format(p=n.payload))
+
+                to_remove.delete()
                 db.session.commit()
 
             else:
@@ -220,7 +226,7 @@ def create_app():
                     time_left = timeout - int(time())
                     if time_left < 95 and not issued:
                         current_user.post_message('Your login will expire in 90 seconds because of inactivity. '
-                                                  '<a href="#" onclick="history.go(0)">Reload this page...</a>.', 'info',
+                                                  '<a href="javascript:window.location.reload();">Reload this page...</a>.', 'info',
                                                   remove_on_load=True, autocommit=True)
                         session['issued_timeout_prompt'] = True
 
@@ -301,6 +307,11 @@ def create_app():
                     query.statement, query.parameters, query.duration, query.context))
             return response
 
+
+    @user_logged_in.connect_via(app)
+    def login_callback(self, user):
+        # clear notifications for the user who has just logged in
+        Notification.query.filter_by(user_id=user.id).delete()
 
     # IMPORT BLUEPRINTS
 

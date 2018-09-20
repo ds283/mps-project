@@ -4320,8 +4320,11 @@ def login_as(id):
 
     # store previous login identifier
     # this is OK provided we only ever use server-side sessions for security, so that the session
-    # variables are not editable by
+    # variables can not be edited, inspected or faked by the user
     session['previous_login'] = current_user.id
+
+    current_app.logger.info('{real} used superuser powers to log in as '
+                            'alternative user {fake}'.format(real=current_user.name, fake=user.name))
 
     login_user(user, remember=False)
     # don't commit changes to database to avoid confusing this with a real login

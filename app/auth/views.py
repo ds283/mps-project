@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, redirect, url_for, flash, session
+from flask import render_template, redirect, url_for, flash, session, current_app
 from flask_security import login_required, current_user, logout_user, login_user
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -29,6 +29,9 @@ def logout():
     if prev_id is not None and isinstance(prev_id, int):
         try:
             user = db.session.query(User).filter_by(id=prev_id).one()
+
+            current_app.logger.info('{real} reverted to viewing the site as themselves (previously viewing as '
+                                    'alternative user {fake}'.format(real=user.name, fake=current_user.name))
 
             login_user(user)
             return redirect(url_for('admin.edit_users'))

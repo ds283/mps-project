@@ -6,7 +6,7 @@
 {% block scripts %}
     {{ super() }}
     {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
-        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
 
     {% assets filters="jsmin", output="gen/bootstrap-colorpicker-min.js", "js/bootstrap-colorpicker.js" -%}

@@ -3,6 +3,6 @@
 {% block styles %}
     {{ super() }}
     {% assets filters="cssmin", output="gen/site-min.css", "css/site.css" -%}
-        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
 {%- endblock %}

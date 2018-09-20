@@ -15,7 +15,7 @@
     {{ super() }}
 
     {% assets filters="cssmin", output="gen/bootstrap-datepicker3-min.css", "css/bootstrap-datepicker3.css" -%}
-        <link rel="stylesheet" href="{{ ASSET_URL }}"/>
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
     {% endassets %}
 
     {% assets filters="jsmin", output="gen/bootstrap-datepicker-min.js", "js/bootstrap-datepicker.js" -%}

@@ -3199,7 +3199,7 @@ def notifications_ajax():
     # get timestamp that client wants messages from, if provided
     since = request.args.get('since', 0.0, type=float)
 
-    # query for all tasks associated with the current user
+    # query for all notifications associated with the current user
     notifications = current_user.notifications \
         .filter(Notification.timestamp >= since) \
         .order_by(Notification.timestamp.asc()).all()
@@ -3208,12 +3208,19 @@ def notifications_ajax():
     modified = False
     for n in notifications:
 
+        current_app.logger.info('Issued notification for {name}:'.format(name=n.user.name))
+        current_app.logger.info('-- payload = {p}'.format(p=n.payload))
+        current_app.logger.info('-- notification issued at {time}, client requesting '
+                                'messages since {since}'.format(time=n.timestamp, since=since))
+
         if n.type == Notification.USER_MESSAGE \
                 or n.type == Notification.SHOW_HIDE_REQUEST \
                 or n.type == Notification.REPLACE_TEXT_REQUEST:
 
             n.remove_on_pageload = True
             modified = True
+
+            current_app.logger.info('-- tagged for removal on next page load')
 
     if modified:
         db.session.commit()

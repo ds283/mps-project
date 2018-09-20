@@ -53,7 +53,7 @@ class Config(object):
     SESSION_REDIS = StrictRedis.from_url(SESSION_REDIS_URL)
 
     SESSION_SET_TTL = True
-    PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)      # sessions expire after 30 minutes
+    PERMANENT_SESSION_LIFETIME = timedelta(minutes=20)      # sessions expire after 20 minutes
 
     # Flask-Caching
     CACHE_TYPE = 'redis'

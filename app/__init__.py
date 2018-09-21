@@ -187,13 +187,20 @@ def create_app():
     @app.before_request
     def before_request_handler():
         fresh = session.get('_fresh', None)
-        if fresh is False and 'ajax' not in request.endpoint:
+        if fresh is False and request.endpoint is not None and 'ajax' not in request.endpoint:
+
+            # if we are on the login view, do nothing.
+            # any redirect risks creating an redirection cycle
             if request.endpoint == 'security.login':
                 return
 
-            # assume this is because the session record in the backend has been destroyed due to inactivity;
-            # may not be most efficient approach, but suggested here:
+            # we are trying to look at some other view, but our login is stale.
+            # assume this is because the session record in the backend has been destroyed due to inactivity.
+
+            # to handle resetting the inactivity timer we use the approach suggested here
+            # (probably not the most efficient)
             #   https://github.com/mbr/flask-kvsession/issues/23
+
             # note mention of issues with session getting lost when issuing multiple
             # reloads quickly
             logout_user()

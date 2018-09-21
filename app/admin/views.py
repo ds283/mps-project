@@ -3207,20 +3207,12 @@ def notifications_ajax():
     # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
     modified = False
     for n in notifications:
-
-        current_app.logger.info('Issued notification for {name}:'.format(name=n.user.name))
-        current_app.logger.info('-- payload = {p}'.format(p=n.payload))
-        current_app.logger.info('-- notification issued at {time}, client requesting '
-                                'messages since {since}'.format(time=n.timestamp, since=since))
-
         if n.type == Notification.USER_MESSAGE \
                 or n.type == Notification.SHOW_HIDE_REQUEST \
                 or n.type == Notification.REPLACE_TEXT_REQUEST:
 
             n.remove_on_pageload = True
             modified = True
-
-            current_app.logger.info('-- tagged for removal on next page load')
 
     if modified:
         db.session.commit()

@@ -9,8 +9,7 @@
 #
 
 import os
-from redis import StrictRedis
-from datetime import timedelta
+from pymongo import MongoClient
 
 # get absolute path of the directory containing this file;
 # used to locate a local database if we are using a backend
@@ -48,12 +47,11 @@ class Config(object):
 
     SECURITY_UNAUTHORIZED_VIEW = "/"
 
-    # Flask-KVSession
-    SESSION_REDIS_URL = os.environ.get('SESSION_REDIS_URL') or 'redis://localhost:6379'
-    SESSION_REDIS = StrictRedis.from_url(SESSION_REDIS_URL)
-
-    SESSION_SET_TTL = True
-    PERMANENT_SESSION_LIFETIME = timedelta(minutes=4)      # sessions expire after 20 minutes
+    # Flask-Sessionstores
+    SESSION_TYPE = 'mongodb'
+    SESSION_MONGO_URL = os.environ.get('SESSION_MONGO_URL') or 'mongodb://mpsproject:Bridle12Way2007@localhost:27017'
+    SESSION_MONGODB = MongoClient(host=SESSION_MONGO_URL)
+    SESSION_PERMANENT = False
 
     # Flask-Caching
     CACHE_TYPE = 'redis'

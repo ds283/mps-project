@@ -14,7 +14,7 @@ services:
       - DATABASE_PASSWORD=Bridle12Way2007
       - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
       - DATABASE_HOSTNAME=mariadb
-      - SESSION_REDIS_URL=redis://redis:6379
+      - SESSION_MONGO_URL=mongodb://mpsproject:Bridle12Way2007@mongodb:27017
       - CACHE_REDIS_URL=redis://redis:6379
       - RATELIMIT_REDIS_URL=redis://redis:6379
       - PROFILER_MONGODB_URL=mongodb://mpsproject:Bridle12Way2007@mongodb:27017
@@ -174,9 +174,6 @@ services:
   redis:
 
     image: redis:latest
-    ports:
-      # expose 6379; should be closed for production deployment
-      - '6379:6379'
     logging:
       driver: awslogs
       options:

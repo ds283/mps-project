@@ -49,7 +49,7 @@ class Config(object):
 
     SECURITY_USER_IDENTITY_ATTRIBUTES = ['email', 'username']
 
-    SECURITY_UNAUTHORIZED_VIEW = "/"
+    SECURITY_UNAUTHORIZED_VIEW = "home.homepage"
 
     # Flask-Sessionstores
     SESSION_TYPE = 'mongodb'

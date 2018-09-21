@@ -21,9 +21,7 @@ from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
-from flask_kvsession import KVSessionExtension
-from simplekv.memory.redisstore import RedisStore
-from simplekv.decorator import PrefixDecorator
+from flask_sessionstore import Session
 from flask import Flask
 from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
@@ -68,9 +66,7 @@ def create_app():
     bleach = Bleach(app)
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
 
-    session_store = RedisStore(app.config['SESSION_REDIS'])
-    prefixed_store = PrefixDecorator('session_', session_store)
-    ext_session = KVSessionExtension(prefixed_store, app)
+    session_store = Session(app)
 
     cache.init_app(app)
 
@@ -184,58 +180,13 @@ def create_app():
 
         return dict(messages=messages)
 
+
     @app.before_request
     def before_request_handler():
-        fresh = session.get('_fresh', None)
-        if fresh is False and request.endpoint is not None and 'ajax' not in request.endpoint:
-
-            # if we are on the login view, do nothing.
-            # any redirect risks creating an redirection cycle
-            if request.endpoint == 'security.login':
-                return
-
-            # we are trying to look at some other view, but our login is stale.
-            # assume this is because the session record in the backend has been destroyed due to inactivity.
-
-            # to handle resetting the inactivity timer we use the approach suggested here
-            # (probably not the most efficient)
-            #   https://github.com/mbr/flask-kvsession/issues/23
-
-            # note mention of issues with session getting lost when issuing multiple
-            # reloads quickly
-            logout_user()
-            flash('To protect your account you have been logged out due to inactivity. '
-                  'To continue, please re-enter your login details.',
-                  'info')
-            return redirect(url_for('security.login', next=url_for('home.homepage')))
-
         if current_user.is_authenticated:
             if request.endpoint is not None and 'ajax' not in request.endpoint:
-                # regenerate session to reset timeout due to inactivity
-                session_lifetime = app.config.get('PERMANENT_SESSION_LIFETIME', timedelta(minutes=20))
-
-                session.regenerate()
-                session['timeout'] = int(time()) + session_lifetime.seconds
-                session['issued_timeout_prompt'] = False
-
-                to_remove = Notification.query.filter_by(remove_on_pageload=True)
-                for n in to_remove.all():
-                    current_app.logger.info('Removing notification for {name}:'.format(name=n.user.name))
-                    current_app.logger.info('-- payload = {p}'.format(p=n.payload))
-
-                to_remove.delete()
+                Notification.query.filter_by(remove_on_pageload=True).delete()
                 db.session.commit()
-
-            else:
-                timeout = session.get('timeout', None)
-                issued = session.get('issued_timeout_prompt', False)
-                if timeout is not None:
-                    time_left = timeout - int(time())
-                    if time_left < 95 and not issued:
-                        current_user.post_message('Your login will expire in 90 seconds because of inactivity. '
-                                                  '<a href="javascript:window.location.reload();">Reload this page...</a>.', 'info',
-                                                  remove_on_load=True, autocommit=True)
-                        session['issued_timeout_prompt'] = True
 
 
     @app.template_filter('dealingwithdollars')

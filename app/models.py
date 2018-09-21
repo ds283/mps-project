@@ -397,11 +397,6 @@ class User(db.Model, UserMixin):
         if autocommit:
             db.session.commit()
 
-        current_app.logger.info('Received new notification for {name}: "{msg}"'.format(name=self.name, msg=message))
-        current_app.logger.info('-- timestamp = {time}, flags = '
-                                '{flags}'.format(time=data.timestamp,
-                                                 flags='remove-no-pageload' if remove_on_load else 'none'))
-
 
     def send_showhide(self, html_id, action, autocommit=False):
         """

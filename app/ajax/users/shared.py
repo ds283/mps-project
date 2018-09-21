@@ -19,18 +19,18 @@ menu = \
             <li class="dropdown-header">Edit</li>
             <li>
                 <a href="{{ url_for('admin.edit_user', id=user.id, pane=pane) }}">
-                    <i class="fa fa-pencil"></i> Account settings
+                    <i class="fa fa-cogs"></i> Account settings
                 </a>
             </li>
             {% if user.has_role('faculty') %}
                 <li>
                     <a href="{{ url_for('admin.edit_affiliations', id=user.id, pane=pane) }}">
-                        <i class="fa fa-pencil"></i> Affiliations
+                        <i class="fa fa-cogs"></i> Affiliations
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('admin.edit_enrollments', id=user.id, pane=pane) }}">
-                        <i class="fa fa-pencil"></i> Enrollments
+                        <i class="fa fa-cogs"></i> Enrollments
                     </a>
                 </li>
             {% endif %}
@@ -54,11 +54,15 @@ menu = \
             {% if not user.has_role('student') and not user.has_role('root') %}
                 {% if user.has_role('admin') %}
                     <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
-                        <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>Remove admin</a>
+                        <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>
+                            <i class="fa fa-wrench"></i> Remove admin
+                        </a>
                     </li>
                 {% else %}
                     <li {% if not user.is_active %}class="disabled"{% endif %}>
-                        <a {% if user.is_active %}href="{{ url_for('admin.make_admin', id=user.id) }}{% endif %}">Make admin</a>
+                        <a {% if user.is_active %}href="{{ url_for('admin.make_admin', id=user.id) }}{% endif %}">
+                            <i class="fa fa-wrench"></i> Make admin
+                        </a>
                     </li>
                 {% endif %}
             {% endif %}
@@ -66,11 +70,15 @@ menu = \
             {% if current_user.has_role('root') and not user.has_role('student') %}
                 {% if user.has_role('root') %}
                     <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
-                        <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>Remove sysadmin</a>
+                        <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>
+                            <i class="fa fa-wrench"></i> Remove sysadmin
+                        </a>
                     </li>
                 {% else %}
                     <li {% if not user.is_active %}class="disabled"{% endif %}>
-                        <a {% if user.is_active %}href="{{ url_for('admin.make_root', id=user.id) }}{% endif %}">Make sysadmin</a>
+                        <a {% if user.is_active %}href="{{ url_for('admin.make_root', id=user.id) }}{% endif %}">
+                            <i class="fa fa-wrench"></i> Make sysadmin
+                        </a>
                     </li>
                 {% endif %}
             {% endif %}
@@ -79,11 +87,15 @@ menu = \
             {% if not user.has_role('student') %}
                 {% if user.has_role('exec') %}
                     <li>
-                        <a href="{{ url_for('admin.remove_exec', id=user.id) }}">Remove executive</a>
+                        <a href="{{ url_for('admin.remove_exec', id=user.id) }}">
+                            <i class="fa fa-wrench"></i> Remove executive
+                        </a>
                     </li>
                 {% else %}
                     <li>
-                        <a href="{{ url_for('admin.make_exec', id=user.id) }}">Make executive</a>
+                        <a href="{{ url_for('admin.make_exec', id=user.id) }}">
+                            <i class="fa fa-wrench"></i> Make executive
+                        </a>
                     </li>
                 {% endif %}
             {% endif %}
@@ -92,7 +104,9 @@ menu = \
                 <li role="separator" class="divider"></li>
                 <li class="dropdown-header">Superuser functions</li>
                 <li>
-                    <a href="{{ url_for('admin.login_as', id=user.id) }}">Login as user</a>
+                    <a href="{{ url_for('admin.login_as', id=user.id) }}">
+                        <i class="fa fa-user"></i> Login as user
+                    </a>
                 </li>
             {% endif %}
         </ul>

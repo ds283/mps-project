@@ -31,7 +31,7 @@ from flask_profiler import Profiler
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
-from config import app_config
+from config import app_config, revision
 from .models import db, User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
 from .shared.utils import home_dashboard_url
@@ -223,14 +223,14 @@ def create_app():
 
 
     @app.context_processor
-    def check_fake_login():
+    def global_context():
         if session.get('previous_login', None) is not None:
             real_id = session['previous_login']
             real_user = db.session.query(User).filter_by(id=real_id).first()
         else:
             real_user = None
 
-        return {'real_user': real_user}
+        return {'real_user': real_user, 'website_revision': revision}
 
 
     @app.context_processor

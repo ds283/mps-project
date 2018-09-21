@@ -282,7 +282,7 @@
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
             <li role="separator" class="divider"></li>
             <li><a href="{{ url_for('convenor.show_unofferable', id=0) }}">
-                Unofferable projects
+                <i class="fa fa-exclamation-circle"></i> Unofferable projects
             </a></li>
         {% endif %}
         </ul>
@@ -300,7 +300,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="#">Physics & Astronomy project management</a>
+                <a class="navbar-brand" href="{{ home_dashboard_url }}">Physics & Astronomy project management</a>
             </div>
 
             <!-- Collect nav links and other content into a menu for mobile devices -->
@@ -350,7 +350,7 @@
                             <ul class="dropdown-menu">
                                 {% if current_user.has_role('admin') or current_user.has_role('root') %}
                                     <li><a href="{{ url_for('admin.edit_users') }}">
-                                        <i class="fa fa-wrench"></i> Users
+                                        <i class="fa fa-users"></i> Users
                                     </a></li>
                                     <li role="separator" class="divider"></li>
                                 {% endif %}
@@ -361,22 +361,22 @@
                                 <li role="separator" class="divider"></li>
                                 <li class="dropdown-header">Project components</li>
                                 <li><a href="{{ url_for('admin.edit_skills') }}">
-                                    <i class="fa fa-wrench"></i> Transferable skills
+                                    <i class="fa fa-cogs"></i> Transferable skills
                                 </a></li>
                                 <li><a href="{{ url_for('admin.edit_supervisors') }}">
-                                    <i class="fa fa-wrench"></i> Supervisory team
+                                    <i class="fa fa-cogs"></i> Supervisory team
                                 </a></li>
                                 {% if current_user.has_role('root') %}
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Sysadmin only</li>
                                     <li><a href="{{ url_for('admin.edit_project_classes') }}">
-                                        <i class="fa fa-wrench"></i> Project types
+                                        <i class="fa fa-cogs"></i> Project types
                                     </a></li>
                                     <li><a href="{{ url_for('admin.edit_groups') }}">
-                                        <i class="fa fa-wrench"></i> Research groups
+                                        <i class="fa fa-cogs"></i> Research groups
                                     </a></li>
                                     <li><a href="{{ url_for('admin.edit_degree_programmes') }}">
-                                        <i class="fa fa-wrench"></i> Degree programmes
+                                        <i class="fa fa-cogs"></i> Degree programmes
                                     </a></li>
                                 {% endif %}
                             </ul>
@@ -392,7 +392,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('admin.edit_roles') }}">
-                                    <i class="fa fa-wrench"></i> Roles
+                                    <i class="fa fa-cogs"></i> Roles
                                 </a></li>
                                 <li><a href="{{ url_for('admin.email_log') }}">
                                     <i class="fa fa-wrench"></i> Email log
@@ -434,18 +434,18 @@
                                     <li class="dropdown-header">Faculty options</li>
                                     <li>
                                         <a href="{{ url_for('admin.faculty_settings') }}">
-                                            <i class="fa fa-user"></i> Settings
+                                            <i class="fa fa-cogs"></i> Settings
                                         </a>
                                     </li>
                                     <li>
                                         <a href="{{ url_for('faculty.affiliations') }}">
-                                            <i class="fa fa-pencil"></i> Research affiliations
+                                            <i class="fa fa-cogs"></i> Research affiliations
                                         </a>
                                     </li>
                                 {% endif %}
                                 <li>
                                     <a href="{{ url_for_security('change_password') }}">
-                                        <i class="fa fa-pencil"></i> Change password
+                                        <i class="fa fa-cogs"></i> Change password
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>
@@ -509,7 +509,7 @@
     <nav class="navbar {% if real_user %}navbar-inverse{% else %}navbar-default{% endif %} navbar-fixed-bottom" role="navigation">
         <div class="navbar-header footer-bar">
             <div class="container">
-                <span class="copyright navbar-text text-muted small">Copyright (c) 2018 University of Sussex</span>
+                <span class="copyright navbar-text text-muted small">Rev {{ website_revision }} | Copyright (c) 2018 University of Sussex</span>
                 {% if real_user %}
                     <span class="navbar-text small" style="float: right;">You
                         are viewing as <i class="fa fa-user"></i>

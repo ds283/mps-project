@@ -17,9 +17,22 @@
                 {% for config, capacity, bounded in config_list %}
                     {% set pclass = config.project_class %}
                     <div class="row vertical-top root-dashboard-table">
-                        <div class="col-xs-3"><a href="{{ url_for('convenor.overview', id=pclass.id) }}">{{ pclass.name }}</a></div>
+                        <div class="col-xs-3">
+                            {% set style = pclass.make_CSS_style() %}
+                            <a href="{{ url_for('convenor.overview', id=pclass.id) }}" {% if style %}class="label label-default" style="{{ style }}"{% endif %}>
+                                {{ pclass.name }}
+                            </a>
+                        </div>
                         <div class="col-xs-2"><a href="mailto:{{ pclass.convenor_email }}">{{ pclass.convenor_name }}</a></div>
-                        <div class="col-xs-2">{{ config.year }}&ndash;{{ config.year+1 }}</div>
+                        <div class="col-xs-2">
+                            {% if config.year == current_year %}
+                                <span class="label label-default">{{ config.year }}&ndash;{{ config.year+1 }}</span>
+                                <span class="label label-success"><i class="fa fa-check"></i> Current</span>
+                            {% else %}
+                                <span class="label label-default">{{ config.year }}&ndash;{{ config.year+1 }}</span>
+                                <span class="label label-success"><i class="fa fa-exclamation-triangle"> Not current</span>
+                            {% endif %}
+                        </div>
                         <div class="col-xs-5">
                             {% if config.year < current_year %}
                                 <span class="label label-danger"><i class="fa fa-check"></i> Rollover available</span>

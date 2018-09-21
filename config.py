@@ -17,6 +17,10 @@ from pymongo import MongoClient
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
+# website revision number
+revision = '2018.9.1'
+
+
 class Config(object):
     """
     Common configuration options

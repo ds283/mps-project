@@ -23,11 +23,11 @@ _faculty_menu = \
         <li>
             {% if userdata.is_enrolled(pclass) %}
                 <a href="{{ url_for('convenor.unenroll', userid=user.id, pclassid=pclass.id) }}">
-                    Remove enrollment
+                    <i class="fa fa-trash"></i> Remove enrollment
                 </a>
             {% else %}
                 <a href="{{ url_for('convenor.enroll', userid=user.id, pclassid=pclass.id) }}">
-                    Enroll
+                    <i class="fa fa-plus"></i> Enroll
                 </a>
             {% endif %}
         </li>

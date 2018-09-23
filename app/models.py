@@ -2103,9 +2103,9 @@ class EnrollmentRecord(db.Model):
     SUPERVISOR_ENROLLED = 1
     SUPERVISOR_SABBATICAL = 2
     SUPERVISOR_EXEMPT = 3
-    supervisor_choices = {(SUPERVISOR_ENROLLED, 'Normally enrolled'),
+    supervisor_choices = [(SUPERVISOR_ENROLLED, 'Normally enrolled'),
                           (SUPERVISOR_SABBATICAL, 'On sabbatical or buy-out'),
-                          (SUPERVISOR_EXEMPT, 'Exempt')}
+                          (SUPERVISOR_EXEMPT, 'Exempt')]
     supervisor_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemptions)
@@ -2118,9 +2118,9 @@ class EnrollmentRecord(db.Model):
     MARKER_ENROLLED = 1
     MARKER_SABBATICAL = 2
     MARKER_EXEMPT = 3
-    marker_choices = {(MARKER_ENROLLED, 'Normally enrolled'),
+    marker_choices = [(MARKER_ENROLLED, 'Normally enrolled'),
                       (MARKER_SABBATICAL, 'On sabbatical or buy-out'),
-                      (MARKER_EXEMPT, 'Exempt')}
+                      (MARKER_EXEMPT, 'Exempt')]
     marker_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemption)

@@ -56,12 +56,12 @@
                 {% if pclasses is not none and pclasses|length > 0 %}
                     <p>Filter by enrollment</p>
                     <a href="{{ url_for('admin.edit_users_faculty', pclass_filter='all', group_filter=group_filter) }}"
-                       class="btn btn-sm grouped-button-margin {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for pclass in pclasses %}
                         <a href="{{ url_for('admin.edit_users_faculty', pclass_filter=pclass.id, group_filter=group_filter) }}"
-                           class="btn btn-sm grouped-button-margin {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ pclass.name }}
                         </a>
                     {% endfor %}
@@ -72,12 +72,12 @@
 
                     <p>Filter by research group affiliation</p>
                     <a href="{{ url_for('admin.edit_users_faculty', pclass_filter=pclass_filter, group_filter='all') }}"
-                       class="btn btn-sm grouped-button-margin {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if group_filter is none or group_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for group in groups %}
                         <a href="{{ url_for('admin.edit_users_faculty', pclass_filter=pclass_filter, group_filter=group.id) }}"
-                           class="btn btn-sm grouped-button-margin {% if group_filter == group.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                           class="btn btn-sm filter-btn {% if group_filter == group.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ group.name }}
                         </a>
                     {% endfor %}

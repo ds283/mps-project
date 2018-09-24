@@ -136,6 +136,10 @@ class FacultyDataMixin():
                                 description='Leave blank for default assignment',
                                 validators=[Optional()])
 
+    CATS_presentation = IntegerField('Guideline number of CATS available for presentation assessment',
+                                     description='Leave blank for default assignment',
+                                     validators=[Optional()])
+
     office = StringField('Office', validators=[InputRequired(message='Please enter your office details to help '
                                                                     'students find you')])
 
@@ -331,10 +335,11 @@ class ProjectClassMixin():
 
     do_matching = BooleanField('Participate in automated global matching of faculty to projects')
 
-    number_markers = IntegerField('Number of 2nd markers required per project',
-                                  description='More than one 2nd marker is required per project to allow sufficient '
+    number_assessors = IntegerField('Number of assessors required per project. Assessors are used to assign '
+                                    '2nd markers and presentation assessors.',
+                                    description='More than one assessor is required per project to allow sufficient '
                                               'flexibility during matching.',
-                                  validators=[NotOptionalIf(do_matching)])
+                                    validators=[NotOptionalIf(do_matching)])
 
     year = SelectField('Runs in year', choices=year_choices, coerce=int,
                        description='Select the academic year in which students join the project.')

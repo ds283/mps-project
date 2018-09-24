@@ -78,6 +78,18 @@
                    class="btn btn-sm {% if enroll_filter == 'mark-exempt' %}btn-primary{% else %}btn-default{% endif %}">
                     Marker exempt
                 </a>
+                <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='pres-active', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'pres-active' %}btn-primary{% else %}btn-default{% endif %}">
+                    Presentations active
+                </a>
+                <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='pres-sabbatical', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'pres-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
+                    Presentations sabbatical
+                </a>
+                <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='pres-exempt', state_filter=state_filter) }}"
+                   class="btn btn-sm {% if enroll_filter == 'pres-exempt' %}btn-primary{% else %}btn-default{% endif %}">
+                    Presentations exempt
+                </a>
             </div>
 
             <div class="well">

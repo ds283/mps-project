@@ -21,7 +21,7 @@ _affiliations = \
 
 _status = \
 """
-{% if proj.is_second_marker(f) %}
+{% if proj.is_assessor(f) %}
     <span class="label label-success"><i class="fa fa-check"></i> Attached</span>
 {% else %}
     <span class="label label-default"><i class-"fa fa-times"></i> Not attached</span>

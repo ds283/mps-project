@@ -22,7 +22,7 @@ from . import faculty
 from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm, \
     DescriptionSelectorForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
 
-from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_second_markers
+from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
@@ -63,8 +63,8 @@ _project_menu = \
         </li>
 
         <li>
-            <a href="{{ url_for('faculty.attach_markers', id=project.id) }}">
-                <i class="fa fa-wrench"></i> 2nd markers
+            <a href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
+                <i class="fa fa-wrench"></i> Assessors
             </a>
         </li>
 
@@ -111,13 +111,13 @@ _project_menu = \
 
 _marker_menu = \
 """
-{% if proj.is_second_marker(f) %}
-    <a href="{{ url_for('faculty.remove_marker', proj_id=proj.id, mid=f.id) }}"
+{% if proj.is_assessor(f) %}
+    <a href="{{ url_for('faculty.remove_assessor', proj_id=proj.id, mid=f.id) }}"
        class="btn btn-sm btn-default">
         <i class="fa fa-trash"></i> Remove
     </a>
 {% elif proj.can_enroll_marker(f) %}
-    <a href="{{ url_for('faculty.add_marker', proj_id=proj.id, mid=f.id) }}"
+    <a href="{{ url_for('faculty.add_assessor', proj_id=proj.id, mid=f.id) }}"
        class="btn btn-sm btn-default">
         <i class="fa fa-plus"></i> Attach
     </a>
@@ -240,9 +240,9 @@ def projects_ajax():
     return ajax.project.build_data(data, _project_menu, text='projects list', url=url_for('faculty.edit_projects'))
 
 
-@faculty.route('/second_marker')
+@faculty.route('/assessor_for')
 @roles_required('faculty')
-def second_marker():
+def assessor_for():
 
     pclass_filter = request.args.get('pclass_filter')
 
@@ -257,21 +257,21 @@ def second_marker():
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
     pclasses = ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc()).all()
 
-    return render_template('faculty/second_marker.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
+    return render_template('faculty/assessor_for.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
 
 
 @faculty.route('/marking_ajax', methods=['GET', 'POST'])
 @roles_required('faculty')
 def marking_ajax():
     """
-    Ajax data point for Marking pool view
+    Ajax data point for Assessor pool view
     :return:
     """
 
     pclass_filter = request.args.get('pclass_filter')
     flag, pclass_value = is_integer(pclass_filter)
 
-    pq = current_user.faculty_data.second_marker_for
+    pq = current_user.faculty_data.assessor_for
     if flag:
         pq = pq.filter(Project.project_classes.any(id=pclass_value))
 
@@ -801,9 +801,9 @@ def remove_programme(id, prog_id):
     return redirect(request.referrer)
 
 
-@faculty.route('/attach_markers/<int:id>')
+@faculty.route('/attach_assessors/<int:id>')
 @roles_required('faculty')
-def attach_markers(id):
+def attach_assessors(id):
 
     # get project details
     proj = Project.query.get_or_404(id)
@@ -849,14 +849,14 @@ def attach_markers(id):
     # second markers
     pclasses = proj.project_classes.filter_by(active=True, uses_marker=True).all()
 
-    return render_template('faculty/attach_markers.html', data=proj, groups=groups, pclasses=pclasses,
+    return render_template('faculty/attach_assesors.html', data=proj, groups=groups, pclasses=pclasses,
                            state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter,
                            create=create)
 
 
-@faculty.route('/attach_markers_ajax/<int:id>')
+@faculty.route('/attach_assessors_ajax/<int:id>')
 @roles_required('faculty')
-def attach_markers_ajax(id):
+def attach_assessors_ajax(id):
 
     # get project details
     proj = Project.query.get_or_404(id)
@@ -869,14 +869,14 @@ def attach_markers_ajax(id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    faculty = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+    faculty = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     return ajax.project.build_marker_data(faculty, proj, _marker_menu)
 
 
-@faculty.route('/add_marker/<int:proj_id>/<int:mid>')
+@faculty.route('/add_assessor/<int:proj_id>/<int:mid>')
 @roles_required('faculty')
-def add_marker(proj_id, mid):
+def add_assessor(proj_id, mid):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)
@@ -887,14 +887,14 @@ def add_marker(proj_id, mid):
 
     marker = FacultyData.query.get_or_404(mid)
 
-    proj.add_marker(marker)
+    proj.add_assessor(marker)
 
     return redirect(request.referrer)
 
 
-@faculty.route('/remove_marker/<int:proj_id>/<int:mid>')
+@faculty.route('/remove_assessor/<int:proj_id>/<int:mid>')
 @roles_required('faculty')
-def remove_marker(proj_id, mid):
+def remove_assessor(proj_id, mid):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)
@@ -905,14 +905,14 @@ def remove_marker(proj_id, mid):
 
     marker = FacultyData.query.get_or_404(mid)
 
-    proj.remove_marker(marker)
+    proj.remove_assessor(marker)
 
     return redirect(request.referrer)
 
 
-@faculty.route('/attach_all_markers/<int:proj_id>')
+@faculty.route('/attach_all_assessors/<int:proj_id>')
 @roles_required('faculty')
-def attach_all_markers(proj_id):
+def attach_all_assessors(proj_id):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)
@@ -925,17 +925,17 @@ def attach_all_markers(proj_id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    markers = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+    markers = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     for marker in markers:
-        proj.add_marker(marker)
+        proj.add_assessor(marker)
 
     return redirect(request.referrer)
 
 
-@faculty.route('/remove_all_markers/<int:proj_id>')
+@faculty.route('/remove_all_assessors/<int:proj_id>')
 @roles_required('faculty')
-def remove_all_markers(proj_id):
+def remove_all_assessors(proj_id):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)
@@ -948,10 +948,10 @@ def remove_all_markers(proj_id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    markers = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+    markers = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     for marker in markers:
-        proj.remove_marker(marker)
+        proj.remove_assessor(marker)
 
     return redirect(request.referrer)
 
@@ -1011,7 +1011,8 @@ def dashboard():
     for record in current_user.faculty_data.enrollments:
 
         if (record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-            or record.marker_state == EnrollmentRecord.MARKER_ENROLLED) and record.pclass.active:
+            or record.marker_state == EnrollmentRecord.MARKER_ENROLLED
+            or record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED) and record.pclass.active:
             config = record.pclass.configs.order_by(ProjectClassConfig.year.desc()).first()
 
             # get live projects belonging to both this config item and the active user

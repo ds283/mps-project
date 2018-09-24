@@ -270,8 +270,8 @@ class Role(db.Model, RoleMixin):
     __tablename__ = 'roles'
 
     id = db.Column(db.Integer(), primary_key=True)
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
-    description = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
 class User(db.Model, UserMixin):
@@ -283,13 +283,13 @@ class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer(), primary_key=True)
-    email = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True, unique=True)
+    email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
 
-    username = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True, unique=True)
-    password = db.Column(db.String(PASSWORD_HASH_LENGTH))
+    username = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
+    password = db.Column(db.String(PASSWORD_HASH_LENGTH, collation='utf8_bin'))
 
-    first_name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
-    last_name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    first_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
+    last_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
     active = db.Column(db.Boolean())
 
@@ -449,13 +449,13 @@ class ResearchGroup(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # abbreviation for use in space-limited contexts
-    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True, unique=True)
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
 
     # long-form name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # optional website
-    website = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    website = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # active flag
     active = db.Column(db.Boolean())
@@ -547,7 +547,7 @@ class FacultyData(db.Model):
     use_academic_title = db.Column(db.Boolean())
 
     # office location
-    office = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    office = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
     # PROJECT SETTINGS
@@ -1001,10 +1001,10 @@ class DegreeType(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # degree type label (MSc, MPhys, BSc, etc.)
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # degree type abbreviation
-    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True, unique=True)
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
 
     # colour
     colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
@@ -1086,10 +1086,10 @@ class DegreeProgramme(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # programme name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
     # programme abbreviation
-    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
     # show degree type in name
     show_type = db.Column(db.Boolean())
@@ -1191,7 +1191,7 @@ class SkillGroup(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of skill group
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # active?
     active = db.Column(db.Boolean())
@@ -1295,7 +1295,7 @@ class TransferableSkill(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # name of skill
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
     # skill group
     group_id = db.Column(db.Integer(), db.ForeignKey('skill_groups.id'))
@@ -1383,10 +1383,10 @@ class ProjectClass(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # project class name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # user-facing abbreviatiaon
-    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # active?
     active = db.Column(db.Boolean())
@@ -2128,7 +2128,7 @@ class EnrollmentRecord(db.Model):
     supervisor_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemptions)
-    supervisor_comment = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    supervisor_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # sabbatical auto re-enroll year (after sabbatical)
     supervisor_reenroll = db.Column(db.Integer())
@@ -2146,7 +2146,7 @@ class EnrollmentRecord(db.Model):
     marker_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemption)
-    marker_comment = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    marker_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # marker auto re-enroll year (after sabbatical)
     marker_reenroll = db.Column(db.Integer())
@@ -2164,7 +2164,7 @@ class EnrollmentRecord(db.Model):
     presentations_state = db.Column(db.Integer(), index=True)
 
     # comment (eg. can be used to note circumstances of exemption)
-    presentations_comment = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    presentations_comment = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # marker auto re-enroll year (after sabbatical)
     presentations_reenroll = db.Column(db.Integer())
@@ -2262,10 +2262,10 @@ class Supervisor(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # role name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
 
     # role abbreviation
-    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # colour string
     colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
@@ -2393,7 +2393,7 @@ class Project(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # project name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
     # active flag
     active = db.Column(db.Boolean())
@@ -2406,7 +2406,7 @@ class Project(db.Model):
     # TAGS AND METADATA
 
     # free keywords describing scientific area
-    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # which research group is associated with this project?
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
@@ -2777,7 +2777,7 @@ class ProjectDescription(db.Model):
                                       backref=db.backref('descriptions', lazy='dynamic'))
 
     # label
-    label = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # description
     description = db.Column(db.Text())
@@ -2862,7 +2862,7 @@ class LiveProject(db.Model):
     number = db.Column(db.Integer())
 
     # project name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
     # which faculty member owns this project?
     owner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
@@ -2873,7 +2873,7 @@ class LiveProject(db.Model):
     # TAGS AND METADATA
 
     # free keywords describing scientific area
-    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # which research group is associated with this project?
     group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
@@ -3924,13 +3924,13 @@ class EmailLog(db.Model):
     user = db.relationship('User', uselist=False, backref=db.backref('emails', lazy='dynamic'))
 
     # recipient as a string, used if user_id could not be determined
-    recipient = db.Column(db.String(DEFAULT_STRING_LENGTH), nullable=True)
+    recipient = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), nullable=True)
 
     # date of sending attempt
     send_date = db.Column(db.DateTime(), index=True)
 
     # subject
-    subject = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    subject = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # message body (text)
     body = db.Column(db.Text())
@@ -3971,7 +3971,7 @@ class MessageOfTheDay(db.Model):
     dismissible = db.Column(db.Boolean())
 
     # title
-    title = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    title = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # message text
     body = db.Column(db.Text())
@@ -4045,7 +4045,7 @@ class BackupRecord(db.Model):
     owner = db.relationship('User', backref=db.backref('backups', lazy='dynamic'))
 
     # optional text description
-    description = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # date of backup
     date = db.Column(db.DateTime(), index=True)
@@ -4064,7 +4064,7 @@ class BackupRecord(db.Model):
     type = db.Column(db.Integer())
 
     # filename
-    filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    filename = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # uncompressed database size, in bytes
     db_size = db.Column(db.Integer())
@@ -4110,7 +4110,7 @@ class TaskRecord(db.Model):
 
 
     # unique identifier used by task queue
-    id = db.Column(db.String(DEFAULT_STRING_LENGTH), primary_key=True)
+    id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), primary_key=True)
 
     # task owner
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -4120,10 +4120,10 @@ class TaskRecord(db.Model):
     start_date = db.Column(db.DateTime())
 
     # task name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
     # optional task description
-    description = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # status flag
     PENDING = 0
@@ -4142,7 +4142,7 @@ class TaskRecord(db.Model):
     progress = db.Column(db.Integer())
 
     # progress message
-    message = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    message = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
 class Notification(db.Model):
@@ -4165,7 +4165,7 @@ class Notification(db.Model):
     user = db.relationship('User', uselist=False, backref=db.backref('notifications', lazy='dynamic'))
 
     # uuid identifies a set of notifications (eg. task progress updates for the same task, or messages for the same subject)
-    uuid = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    uuid = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
     # timestamp
     timestamp = db.Column(db.Integer(), index=True, default=time)
@@ -4209,7 +4209,7 @@ class PopularityRecord(db.Model):
     datestamp = db.Column(db.DateTime(), index=True)
 
     # UUID identifying all popularity records in a group
-    uuid = db.Column(db.String(DEFAULT_STRING_LENGTH), index=True)
+    uuid = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
 
 
     # COMMON DATA
@@ -4477,7 +4477,7 @@ class MatchingAttempt(db.Model):
                                   backref=db.backref('matching_attempts', lazy='dynamic'))
 
     # a name for this matching attempt
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
 
     # flag matching attempts that have been selected for use during rollover
     selected = db.Column(db.Boolean())
@@ -4497,7 +4497,7 @@ class MatchingAttempt(db.Model):
 
     # Celery taskid, used in case we need to revoke the task;
     # typically this will be a UUID
-    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # finished executing?
     finished = db.Column(db.Boolean())
@@ -5373,12 +5373,12 @@ class DatabaseSchedulerEntry(db.Model):
     __tablename__ = 'celery_schedules'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255))
-    task = db.Column(db.String(255))
+    name = db.Column(db.String(255, collation='utf8_bin'))
+    task = db.Column(db.String(255, collation='utf8_bin'))
     interval_id = db.Column(db.Integer, db.ForeignKey('celery_intervals.id'))
     crontab_id = db.Column(db.Integer, db.ForeignKey('celery_crontabs.id'))
     arguments = db.Column(db.String(255), default='[]')
-    keyword_arguments = db.Column(db.String(255), default='{}')
+    keyword_arguments = db.Column(db.String(255, collation='utf8_bin'), default='{}')
     queue = db.Column(db.String(255))
     exchange = db.Column(db.String(255))
     routing_key = db.Column(db.String(255))

@@ -335,10 +335,10 @@ class ProjectClassMixin():
 
     do_matching = BooleanField('Participate in automated global matching of faculty to projects')
 
-    number_assessors = IntegerField('Number of assessors required per project. Assessors are used to assign '
-                                    '2nd markers and presentation assessors.',
-                                    description='More than one assessor is required per project to allow sufficient '
-                                              'flexibility during matching.',
+    number_assessors = IntegerField('Number of assessors required per project',
+                                    description='Assessors are used to assign 2nd markers and presentation assessors. '
+                                                'Significantly more than one assessor is required per project to allow '
+                                                'sufficient flexibility during matching.',
                                     validators=[NotOptionalIf(do_matching)])
 
     year = SelectField('Runs in year', choices=year_choices, coerce=int,

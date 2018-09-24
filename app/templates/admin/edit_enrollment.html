@@ -33,6 +33,15 @@
         </div>
     {% endif %}
 
+    {% if record.pclass.uses_presentations %}
+        <div class="well">
+            <p><strong>Role: Presentation assessor</strong></p>
+            {{ wtf.form_field(form.presentations_state) }}
+            {{ wtf.form_field(form.presentations_reenroll) }}
+            {{ wtf.form_field(form.presentations_comment) }}
+        </div>
+    {% endif %}
+
     {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

@@ -73,7 +73,12 @@ _status = \
 _workload = \
 """
 <span class="label label-primary">Supv: {{ p.CATS_supervision }}</span>
-<span class="label label-info">2nd: {{ p.CATS_marking }}</span>
+{% if p.uses_marker %}
+    <span class="label label-info">Mark: {{ p.CATS_marking }}</span>
+{% endif %}
+{% if p.uses_presentations %}
+    <span class="label label-info">Pres: {{ p.CATS_presentation }}</span>
+{% endif %}
 """
 
 _popularity = \
@@ -104,6 +109,9 @@ _submissions = \
 <span class="label label-primary">{{ p.submissions }}/yr</span>
 {% if p.uses_marker %}
     <span class="label label-info">2nd marked</span>
+{% endif %}
+{% if p.uses_presentations %}
+    <span class="label label-info">Presentations</span>
 {% endif %}
 """
 

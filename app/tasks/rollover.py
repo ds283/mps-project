@@ -342,6 +342,7 @@ def register_rollover_tasks(celery):
                                             selection_closed=False,
                                             CATS_supervision=old_config.project_class.CATS_supervision,
                                             CATS_marking=old_config.project_class.CATS_marking,
+                                            CATS_presentation=old_config.project_class.CATS_presentation,
                                             submission_period=1)
             db.session.add(new_config)
             db.session.flush()
@@ -624,8 +625,14 @@ def register_rollover_tasks(celery):
 
         if record.marker_state != EnrollmentRecord.MARKER_ENROLLED:
             if record.marker_renroll is not None and record.marker_renroll <= current_year:
-                record.supervisor_state = EnrollmentRecord.MARKER_ENROLLED
+                record.marker_state = EnrollmentRecord.MARKER_ENROLLED
                 record.marker_comment = 'Automatically re-enrolled during academic year rollover'
+                # TODO: issue email to faculty member, informing them of re-enrollment
+
+        if record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
+            if record.presentations_renroll is not None and record.presentations_renroll <= current_year:
+                record.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
+                record.presentations_comment = 'Automatically re-enrolled during academic year rollover'
                 # TODO: issue email to faculty member, informing them of re-enrollment
 
         try:

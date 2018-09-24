@@ -1403,6 +1403,9 @@ class ProjectClass(db.Model):
     # are the submissions second marked?
     uses_marker = db.Column(db.Boolean())
 
+    # are the presentations?
+    uses_presentations = db.Column(db.Boolean())
+
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
 
@@ -1438,6 +1441,9 @@ class ProjectClass(db.Model):
 
     # CATS awarded for 2nd marking
     CATS_marking = db.Column(db.Integer())
+
+    # CATS awarded for presentation assessment
+    CATS_presentation = db.Column(db.Integer())
 
 
     # AUTOMATED MATCHING
@@ -1676,6 +1682,7 @@ class ProjectClassConfig(db.Model):
 
     # 'periods' member constructed by backreference from SubmissionPeriodRecord below
 
+
     # WORKLOAD MODEL
 
     # CATS awarded for supervising in this year
@@ -1683,6 +1690,9 @@ class ProjectClassConfig(db.Model):
 
     # CATS awarded for 2nd marking in this year
     CATS_marking = db.Column(db.Integer())
+
+    # CATS awarded for presentation assssment in this year
+    CATS_presentation = db.Column(db.Integer())
 
 
     @property
@@ -2099,6 +2109,9 @@ class EnrollmentRecord(db.Model):
     owner = db.relationship('FacultyData', uselist=False, foreign_keys=[owner_id],
                             backref=db.backref('enrollments', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
+
+    # SUPERVISOR STATUS
+
     # enrollment for supervision
     SUPERVISOR_ENROLLED = 1
     SUPERVISOR_SABBATICAL = 2
@@ -2113,6 +2126,9 @@ class EnrollmentRecord(db.Model):
 
     # sabbatical auto re-enroll year (after sabbatical)
     supervisor_reenroll = db.Column(db.Integer())
+
+
+    # MARKER STATUS
 
     # enrollment for 2nd marking
     MARKER_ENROLLED = 1
@@ -2129,6 +2145,25 @@ class EnrollmentRecord(db.Model):
     # marker auto re-enroll year (after sabbatical)
     marker_reenroll = db.Column(db.Integer())
 
+
+    # PRESENTATION ASSESSOR STATUS
+
+    # enrollment for assessing talks
+    PRESENTATIONS_ENROLLED = 1
+    PRESENTATIONS_SABBATICAL = 2
+    PRESENTATIONS_EXEMPT = 3
+    presentations_choices = [(MARKER_ENROLLED, 'Normally enrolled'),
+                             (MARKER_SABBATICAL, 'On sabbatical or buy-out'),
+                             (MARKER_EXEMPT, 'Exempt')]
+    presentations_state = db.Column(db.Integer(), index=True)
+
+    # comment (eg. can be used to note circumstances of exemption)
+    presentations_comment = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # marker auto re-enroll year (after sabbatical)
+    presentations_reenroll = db.Column(db.Integer())
+
+
     # METADATA
 
     # created by
@@ -2144,6 +2179,18 @@ class EnrollmentRecord(db.Model):
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        if self.supervisor_state is None:
+            self.supervisor_state = EnrollmentRecord.SUPERVISOR_ENROLLED
+
+        if self.marker_state is None:
+            self.marker_state = EnrollmentRecord.MARKER_ENROLLED
+
+        if self.presentations_state is None:
+            self.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
 
 
     def supervisor_label(self):

@@ -351,6 +351,8 @@ class ProjectClassMixin():
 
     uses_marker = BooleanField('Submissions are second-marked')
 
+    uses_presentations = BooleanField('Includes one or more assessed presentations')
+
     initial_choices = IntegerField('Number of initial project preferences',
                                    description='Select number of preferences students should list before joining.')
 
@@ -363,6 +365,9 @@ class ProjectClassMixin():
 
     CATS_marking = IntegerField('CATS awarded for project 2nd marking',
                                 validators=[Optional()])
+
+    CATS_presentation = IntegerField('CATS awarded for assessing presentations',
+                                     validators=[Optional()])
 
     hourly_choices = [(1, '1 day'),
                       (2, '2 days'),
@@ -652,6 +657,8 @@ class EditBackupOptionsForm(Form, BackupOptionsMixin):
 
 class EnrollmentRecordMixin():
 
+    # SUPERVISOR
+
     supervisor_state = RadioField('Project supervision status', choices=EnrollmentRecord.supervisor_choices, coerce=int)
 
     supervisor_reenroll = IntegerField('Re-enroll in academic year',
@@ -663,6 +670,9 @@ class EnrollmentRecordMixin():
                                        description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
                                        validators=[Optional()])
 
+
+    # MARKER
+
     marker_state = RadioField('2nd marker status', choices=EnrollmentRecord.marker_choices, coerce=int)
 
     marker_reenroll = IntegerField('Re-enroll in academic year',
@@ -673,6 +683,22 @@ class EnrollmentRecordMixin():
     marker_comment = TextAreaField('Comment', render_kw={"rows": 3},
                                    description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
                                    validators=[Optional()])
+
+
+    # PRESENTATIONS
+
+    presentations_state = RadioField('2nd marker status', choices=EnrollmentRecord.presentations_choices, coerce=int)
+
+    presentations_reenroll = IntegerField('Re-enroll in academic year',
+                                         description='Optional. For faculty on sabbatical or buy-outs, enter a year '
+                                                     'in which automatic re-enrollment should occur.',
+                                         validators=[Optional()])
+
+    presentations_comment = TextAreaField('Comment', render_kw={"rows": 3},
+                                         description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
+                                         validators=[Optional()])
+
+
 
 class EnrollmentRecordForm(Form, EnrollmentRecordMixin, EditFormMixin):
 

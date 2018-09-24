@@ -868,6 +868,11 @@ def edit_enrollment(id, returnid):
             else form.marker_reenroll.data
         record.marker_comment = form.marker_comment.data
 
+        record.presentations_state = form.presentations_state.data
+        record.presentations_reenroll = None if record.presentations_state != EnrollmentRecord.PRESENTATIONS_SABBATICAL \
+            else form.presentations_reenroll.data
+        record.presentations_comment = form.presentations_comment.data
+
         record.last_edit_id = current_user.id
         record.last_edit_timestamp = datetime.now()
 
@@ -1623,6 +1628,7 @@ def add_pclass():
                             supervisor_carryover=form.supervisor_carryover.data,
                             submissions=form.submissions.data,
                             uses_marker=form.uses_marker.data,
+                            uses_presentations=form.uses_presentations.data,
                             convenor=form.convenor.data,
                             coconvenors=coconvenors,
                             selection_open_to_all=form.selection_open_to_all.data,
@@ -1632,6 +1638,7 @@ def add_pclass():
                             active=True,
                             CATS_supervision=form.CATS_supervision.data,
                             CATS_marking=form.CATS_marking.data,
+                            CATS_presentation=form.CATS_presentation.data,
                             keep_hourly_popularity=form.keep_hourly_popularity.data,
                             keep_daily_popularity=form.keep_daily_popularity.data,
                             creator_id=current_user.id,
@@ -1651,6 +1658,7 @@ def add_pclass():
                                     selection_closed=False,
                                     CATS_supervision=data.CATS_supervision,
                                     CATS_marking=data.CATS_marking,
+                                    CATS_presentation=data.CATS_presentation,
                                     creator_id=current_user.id,
                                     creation_timestamp=datetime.now(),
                                     submission_period=1)
@@ -1718,6 +1726,7 @@ def edit_pclass(id):
         data.supervisor_carryover = form.supervisor_carryover.data
         data.submissions = form.submissions.data
         data.uses_marker = form.uses_marker.data
+        data.uses_presentations = form.uses_presentations.data
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
         data.selection_open_to_all = form.selection_open_to_all.data
@@ -1726,6 +1735,7 @@ def edit_pclass(id):
         data.switch_choices = form.switch_choices.data
         data.CATS_supervision = form.CATS_supervision.data
         data.CATS_marking = form.CATS_marking.data
+        data.CATS_presentation = form.CATS_presentation.data
         data.keep_hourly_popularity = form.keep_hourly_popularity.data
         data.keep_daily_popularity = form.keep_daily_popularity.data
         data.last_edit_id = current_user.id

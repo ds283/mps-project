@@ -188,6 +188,9 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=mpsproject
       - MONGO_INITDB_ROOT_PASSWORD=Bridle12Way2007
       - MONGO_INITDB_DATABASE=flask_profiler
+    ports:
+      # export 27017; should be closed for production deployment
+      - 27017:27017
     volumes:
       - /data/mpsproject/mongodb:/data/db
     logging:

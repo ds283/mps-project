@@ -130,6 +130,9 @@
                 {% if user_form.CATS_marking %}
                     {{ wtf.form_field(user_form.CATS_marking) }}
                 {% endif %}
+                {% if user_form.CATS_presentation %}
+                    {{ wtf.form_field(user_form.CATS_presentation) }}
+                {% endif %}
             </div>
         {% endif %}
 

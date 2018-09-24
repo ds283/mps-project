@@ -20,7 +20,7 @@ from ..models import db, User, FacultyData, StudentData, TransferableSkill, Proj
     SubmissionRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
-    filter_projects, get_convenor_filter_record, filter_second_markers, build_enroll_selector_candidates, \
+    filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
     build_enroll_submitter_candidates, build_submitters_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open
@@ -71,8 +71,8 @@ _project_menu = \
         </li>
 
         <li>
-            <a href="{{ url_for('convenor.attach_markers', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-wrench"></i> 2nd markers
+            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=config.pclass_id) }}">
+                <i class="fa fa-wrench"></i> Assessors
             </a>
         </li>
 
@@ -136,8 +136,8 @@ _unattached_project_menu = \
         </li>
 
         <li>
-            <a href="{{ url_for('convenor.attach_markers', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-wrench"></i> 2nd markers
+            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0) }}">
+                <i class="fa fa-wrench"></i> Assessors
             </a>
         </li>
 
@@ -173,13 +173,13 @@ _unattached_project_menu = \
 
 _marker_menu = \
 """
-{% if proj.is_second_marker(f) %}
-    <a href="{{ url_for('convenor.remove_marker', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
+{% if proj.is_assessor(f) %}
+    <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
        class="btn btn-sm btn-default">
         <i class="fa fa-trash"></i> Remove
     </a>
 {% elif proj.can_enroll_marker(f) %}
-    <a href="{{ url_for('convenor.add_marker', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
+    <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
        class="btn btn-sm btn-default">
         <i class="fa fa-plus"></i> Attach
     </a>
@@ -493,7 +493,8 @@ def faculty_ajax(id):
             .filter(faculty_ids.c.owner_id == None)
 
     elif enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt' \
-            or enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt':
+            or enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt' \
+            or enroll_filter == 'pres-active' or enroll_filter == 'pres-sabbatical' or enroll_filter == 'pres-exempt':
 
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id)
@@ -510,6 +511,12 @@ def faculty_ajax(id):
             faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
         elif enroll_filter == 'mark-exempt':
             faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
+        elif enroll_filter == 'pres-active':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_ENROLLED)
+        elif enroll_filter == 'pres-sabbatical':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_SABBATICAL)
+        elif enroll_filter == 'pres-exempt':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_EXEMPT)
 
         faculty_ids_q = faculty_ids.subquery()
 
@@ -2158,9 +2165,9 @@ def remove_programme(id, pclass_id, prog_id):
     return redirect(request.referrer)
 
 
-@convenor.route('/attach_markers/<int:id>/<int:pclass_id>')
+@convenor.route('/attach_assessors/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def attach_markers(id, pclass_id):
+def attach_assessors(id, pclass_id):
 
     # get project details
     proj = Project.query.get_or_404(id)
@@ -2217,14 +2224,14 @@ def attach_markers(id, pclass_id):
     # second markers
     pclasses = proj.project_classes.filter_by(active=True, uses_marker=True).all()
 
-    return render_template('convenor/attach_markers.html', data=proj, pclass_id=pclass_id, groups=groups, pclasses=pclasses,
+    return render_template('convenor/attach_assessors.html', data=proj, pclass_id=pclass_id, groups=groups, pclasses=pclasses,
                            state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter,
                            create=create)
 
 
-@convenor.route('/attach_markers_ajax/<int:id>/<int:pclass_id>')
+@convenor.route('/attach_assessors_ajax/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def attach_markers_ajax(id, pclass_id):
+def attach_assessors_ajax(id, pclass_id):
 
     # get project details
     proj = Project.query.get_or_404(id)
@@ -2248,14 +2255,14 @@ def attach_markers_ajax(id, pclass_id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    faculty = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+    faculty = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     return ajax.project.build_marker_data(faculty, proj, _marker_menu, pclass_id)
 
 
-@convenor.route('/add_marker/<int:proj_id>/<int:pclass_id>/<int:mid>')
+@convenor.route('/add_assessor/<int:proj_id>/<int:pclass_id>/<int:mid>')
 @roles_accepted('faculty', 'admin', 'root')
-def add_marker(proj_id, pclass_id, mid):
+def add_assessor(proj_id, pclass_id, mid):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)
@@ -2277,14 +2284,14 @@ def add_marker(proj_id, pclass_id, mid):
 
     marker = FacultyData.query.get_or_404(mid)
 
-    proj.add_marker(marker)
+    proj.add_assessor(marker)
 
     return redirect(request.referrer)
 
 
-@convenor.route('/remove_marker/<int:proj_id>/<int:pclass_id>/<int:mid>')
+@convenor.route('/remove_assessor/<int:proj_id>/<int:pclass_id>/<int:mid>')
 @roles_accepted('faculty', 'admin', 'root')
-def remove_marker(proj_id, pclass_id, mid):
+def remove_assessor(proj_id, pclass_id, mid):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)
@@ -2306,14 +2313,14 @@ def remove_marker(proj_id, pclass_id, mid):
 
     marker = FacultyData.query.get_or_404(mid)
 
-    proj.remove_marker(marker)
+    proj.remove_assessor(marker)
 
     return redirect(request.referrer)
 
 
-@convenor.route('/attach_all_markers/<int:proj_id>/<int:pclass_id>')
+@convenor.route('/attach_all_assessors/<int:proj_id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def attach_all_markers(proj_id, pclass_id):
+def attach_all_assessors(proj_id, pclass_id):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)
@@ -2337,17 +2344,17 @@ def attach_all_markers(proj_id, pclass_id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    markers = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+    markers = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     for marker in markers:
-        proj.add_marker(marker)
+        proj.add_assessor(marker)
 
     return redirect(request.referrer)
 
 
-@convenor.route('/remove_all_markers/<int:proj_id>/<int:pclass_id>')
+@convenor.route('/remove_all_assessors/<int:proj_id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def remove_all_markers(proj_id, pclass_id):
+def remove_all_assessors(proj_id, pclass_id):
 
     # get project details
     proj = Project.query.get_or_404(proj_id)
@@ -2371,10 +2378,10 @@ def remove_all_markers(proj_id, pclass_id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    markers = filter_second_markers(proj, state_filter, pclass_filter, group_filter)
+    markers = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     for marker in markers:
-        proj.remove_marker(marker)
+        proj.remove_assessor(marker)
 
     return redirect(request.referrer)
 
@@ -3631,7 +3638,8 @@ def faculty_workload_ajax(id):
             .filter(faculty_ids.c.owner_id == None)
 
     elif enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt' \
-            or enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt':
+            or enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt' \
+            or enroll_filter == 'pres-active' or enroll_filter == 'pres-sabbatical' or enroll_filter == 'pres-exempt':
 
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id)
@@ -3648,6 +3656,12 @@ def faculty_workload_ajax(id):
             faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)
         elif enroll_filter == 'mark-exempt':
             faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
+        elif enroll_filter == 'pres-active':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_ENROLLED)
+        elif enroll_filter == 'pres-sabbatical':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_SABBATICAL)
+        elif enroll_filter == 'pres-exempt':
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_EXEMPT)
 
         faculty_ids_q = faculty_ids.subquery()
 
@@ -3809,7 +3823,7 @@ def assign_from_selection(id, sel_id):
 
     rec.project_id = sel.liveproject_id
 
-    markers = sel.liveproject.marker_list
+    markers = sel.liveproject.assessor_list
     if rec.marker not in markers:
         sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
@@ -3850,7 +3864,7 @@ def assign_liveproject(id, pid):
 
     rec.project_id = lp.id
 
-    markers = lp.marker_list
+    markers = lp.assessor_list
     if rec.marker not in markers:
         sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None

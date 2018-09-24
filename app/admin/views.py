@@ -180,6 +180,7 @@ def create_faculty(role):
                            show_popularity=form.show_popularity.data,
                            CATS_supervision=form.CATS_supervision.data,
                            CATS_marking=form.CATS_marking.data,
+                           CATS_presentation=form.CATS_presentation,
                            office=form.office.data,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now())
@@ -692,6 +693,7 @@ def edit_faculty(id):
         data.enforce_capacity = form.enforce_capacity.data
         data.show_popularity = form.show_popularity.data
         data.CATS_supervision = form.CATS_supervision.data
+        data.CATS_presentation = form.CATS_presentation
         data.CATS_marking = form.CATS_marking.data
         data.office = form.office.data
         data.last_edit_id = current_user.id
@@ -1621,7 +1623,7 @@ def add_pclass():
                             abbreviation=form.abbreviation.data,
                             colour=form.colour.data,
                             do_matching=form.do_matching.data,
-                            number_markers=form.number_markers.data,
+                            number_assessors=form.number_assessors.data,
                             year=form.year.data,
                             extent=form.extent.data,
                             require_confirm=form.require_confirm.data,
@@ -1685,7 +1687,7 @@ def add_pclass():
     else:
 
         if request.method == 'GET':
-            form.number_markers.data = current_app.config['DEFAULT_SECOND_MARKERS']
+            form.number_assessors.data = current_app.config['DEFAULT_ASSESSORS']
             form.uses_marker.data = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
@@ -1720,7 +1722,7 @@ def edit_pclass(id):
         data.year = form.year.data
         data.colour = form.colour.data
         data.do_matching = form.do_matching.data
-        data.number_markers = form.number_markers.data
+        data.number_assessors = form.number_assessors.data
         data.extent = form.extent.data
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data
@@ -1753,8 +1755,8 @@ def edit_pclass(id):
     else:
 
         if request.method == 'GET':
-            if form.number_markers.data is None:
-                form.number_markers.data = current_app.config['DEFAULT_SECOND_MARKERS']
+            if form.number_assessors.data is None:
+                form.number_assessors.data = current_app.config['DEFAULT_ASSESSORS']
             if form.uses_marker.data is None:
                 form.uses_marker.data = True
 
@@ -3379,7 +3381,8 @@ def create_match():
             form.use_hints.data = True
 
     # estimate equitable CATS loading
-    supervising_CATS, marking_CATS, num_supervisors, num_markers = estimate_CATS_load()
+    supervising_CATS, marking_CATS, presentation_CATS, \
+        num_supervisors, num_markers, num_presentations = estimate_CATS_load()
 
     return render_template('admin/matching/create.html', pane='create', info=info, form=form,
                            supervising_CATS=supervising_CATS, marking_CATS=marking_CATS,
@@ -4137,7 +4140,7 @@ def reassign_match_marker(id, mid):
         return redirect(request.referrer)
 
     # check intended mid is in list of attached second markers
-    count = get_count(record.project.marker_list_query.filter_by(id=mid))
+    count = get_count(record.project.assessor_list_query.filter_by(id=mid))
 
     if count == 0:
         marker = FacultyData.query.get_or_404(mid)

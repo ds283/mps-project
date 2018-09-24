@@ -20,88 +20,90 @@
 
     <div class="well">
         {% if data and data.enrollments and data.enrollments.first() %}
-            <p>You are currently enrolled for the following project classes</p>
+            <p><strong>You are currently enrolled for the following project classes</strong></p>
             {% for record in data.enrollments %}
                 {% if loop.index > 1 %}
                     <hr class="intro-divider">
                 {% endif %}
                 {% set pclass = record.pclass %}
                 {% set style = pclass.make_CSS_style() %}
-                <div class="row vertical-top">
-                    <div class="col-xs-5">
-                        <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block"
-                           {% if style %}style="{{ style }}"{% endif %}
-                           href="mailto:{{ pclass.convenor_email }}">
-                            {{ pclass.name }} ({{ pclass.convenor_name }})
-                        </a>
+                <div class="row vertical-top" style="margin-bottom: 5px;">
+                    <div class="col-xs-12">
+                        <h4>
+                            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block"
+                               {% if style %}style="{{ style }}"{% endif %}
+                               href="mailto:{{ pclass.convenor_email }}">
+                                {{ pclass.name }} ({{ pclass.convenor_name }})
+                            </a>
+                        </h4>
                     </div>
-                    <div class="col-xs-7">
-                        <div class="row" style="margin-bottom: 10px;">
-                            <div class="col-xs-4">
-                                Supervising
-                            </div>
-                            <div class="col-xs-8">
-                                {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
-                                    <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
-                                {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                                    <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
-                                    {% if record.supervisor_reenroll is not none %}
-                                        <span class="label label-info">ends {{ record.supervisor_reenroll }}</span>
-                                    {% else %}
-                                        <span class="label label-warning">no end date</span>
-                                    {% endif %}
-                                {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                                    <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
-                                {% else %}
-                                    <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% if record.pclass.uses_marker %}
-                            <div class="row" style="margin-bottom: 10px;">
-                                <div class="col-xs-4">
-                                    2nd-marking
-                                </div>
-                                <div class="col-xs-8">
-                                        {% if record.marker_state == record.MARKER_ENROLLED %}
-                                            <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
-                                        {% elif record.marker_state == record.MARKER_SABBATICAL %}
-                                            <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
-                                            {% if record.marker_reenroll is not none %}
-                                                <span class="label label-info">ends {{ record.marker_reenroll }}</span>
-                                            {% else %}
-                                                <span class="label label-warning">no end date</span>
-                                            {% endif %}
-                                        {% elif record.marker_state == record.MARKER_EXEMPT %}
-                                            <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
-                                        {% else %}
-                                            <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
-                                        {% endif %}
-                                </div>
-                            </div>
+                </div>
+                <div class="row vertical-top" style="margin-bottom: 5px;">
+                    <div class="col-xs-4">
+                        Supervising
+                    </div>
+                    <div class="col-xs-4">
+                        2nd-marking
+                    </div>
+                    <div class="col-xs-4">
+                        Presentation assessment
+                    </div>
+                </div>
+                <div class="row vertical-top">
+                    <div class="col-xs-4">
+                        {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
+                            <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
+                        {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                            <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
+                            {% if record.supervisor_reenroll is not none %}
+                                <span class="label label-info">ends {{ record.supervisor_reenroll }}</span>
+                            {% else %}
+                                <span class="label label-warning">no end date</span>
+                            {% endif %}
+                        {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                            <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
+                        {% else %}
+                            <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
                         {% endif %}
+                    </div>
+                    <div class="col-xs-4">
+                        {% if record.pclass.uses_marker %}
+                            {% if record.marker_state == record.MARKER_ENROLLED %}
+                                <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
+                            {% elif record.marker_state == record.MARKER_SABBATICAL %}
+                                <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
+                                {% if record.marker_reenroll is not none %}
+                                    <span class="label label-info">ends {{ record.marker_reenroll }}</span>
+                                {% else %}
+                                    <span class="label label-warning">no end date</span>
+                                {% endif %}
+                            {% elif record.marker_state == record.MARKER_EXEMPT %}
+                                <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
+                            {% else %}
+                                <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="label label-default">Not used for this project class</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-xs-4">
                         {% if record.pclass.uses_presentations %}
-                            <div class="row" style="margin-bottom: 10px;">
-                                <div class="col-xs-4">
-                                    Presentation assessment
-                                </div>
-                                <div class="col-xs-8">
-                                    {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
-                                        <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
-                                    {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
-                                        <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
-                                        {% if record.presentations_reenroll is not none %}
-                                            <span class="label label-info">ends {{ record.presentations_reenroll }}</span>
-                                        {% else %}
-                                            <span class="label label-warning">no end date</span>
-                                        {% endif %}
-                                    {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
-                                        <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
-                                    {% else %}
-                                        <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
-                                    {% endif %}
-                                </div>
-                            </div>
+                            {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
+                                <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
+                            {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
+                                <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
+                                {% if record.presentations_reenroll is not none %}
+                                    <span class="label label-info">ends {{ record.presentations_reenroll }}</span>
+                                {% else %}
+                                    <span class="label label-warning">no end date</span>
+                                {% endif %}
+                            {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
+                                <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
+                            {% else %}
+                                <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="label label-default">Not used for this project class</span>
                         {% endif %}
                     </div>
                 </div>
@@ -153,11 +155,21 @@
     </div>
 
     <div class="well">
-        <p>Workload model</p>
+        <p>Workload model: guideline CATS</p>
 
-        <div class="row vertical-align">
+        <div class="row vertical-top" style="margin-bottom: 5px;">
             <div class="col-xs-4">
-                <strong>Guideline CATS for supervision:</strong>
+                Supervising
+            </div>
+            <div class="col-xs-4">
+                2nd-marking
+            </div>
+            <div class="col-xs-4">
+                Presentation assessment
+            </div>
+        </div>
+        <div class="row vertical-top">
+            <div class="col-xs-4">
                 {% if data.CATS_supervision is none or data.CATS_supervision == 0 %}
                     <span class="label label-default">Default</span>
                 {% else %}
@@ -165,7 +177,6 @@
                 {% endif %}
             </div>
             <div class="col-xs-4">
-            <strong>Guideline CATS for marking:</strong>
                 {% if data.CATS_marking is none or data.CATS_marking == 0 %}
                     <span class="label label-default">Default</span>
                 {% else %}
@@ -173,7 +184,6 @@
                 {% endif %}
             </div>
             <div class="col-xs-4">
-            <strong>Guideline CATS for presentation assessment:</strong>
                 {% if data.CATS_presentation is none or data.CATS_presentation == 0 %}
                     <span class="label label-default">Default</span>
                 {% else %}

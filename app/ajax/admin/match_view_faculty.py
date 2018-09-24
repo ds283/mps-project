@@ -104,8 +104,8 @@ _marking = \
         </a>
         <ul class="dropdown-menu">
             <li class="dropdown-header">Reassign 2nd marker</li>
-            {% set marker_list = r.project.marker_list %}
-            {% for marker in marker_list %}
+            {% set assessor_list = r.project.assessor_list %}
+            {% for marker in assessor_list %}
                 {% set disabled = false %}
                 {% if marker.id == r.marker_id %}{% set disabled = true %}{% endif %}
                 <li {% if disabled %}class="disabled"{% endif %}>

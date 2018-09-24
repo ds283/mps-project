@@ -266,7 +266,7 @@ def filter_projects(plist, groups, skills, getter=None):
     return projects
 
 
-def build_second_marker_query(proj, state_filter, pclass_filter, group_filter):
+def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
     """
     Build a query for FacultyData records suitable to populate the 2nd marker view
     :param proj:
@@ -279,13 +279,13 @@ def build_second_marker_query(proj, state_filter, pclass_filter, group_filter):
     # build base query -- either all users, or attached users, or not attached faculty
     if state_filter == 'attached':
         # build list of all active faculty users who are attached
-        query = proj.second_markers \
+        query = proj.assessors \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True, User.id != proj.owner_id)
 
     elif state_filter == 'not-attached':
         # build list of all active faculty users who are not attached
-        attached_query = proj.second_markers.subquery()
+        attached_query = proj.assessors.subquery()
 
         query = db.session.query(FacultyData) \
             .join(User, User.id == FacultyData.id) \
@@ -316,9 +316,9 @@ def build_second_marker_query(proj, state_filter, pclass_filter, group_filter):
     return query
 
 
-def filter_second_markers(proj, state_filter, pclass_filter, group_filter):
+def filter_assessors(proj, state_filter, pclass_filter, group_filter):
     """
-    Build a list of FacultyData records suitable for the 2nd marker table
+    Build a list of FacultyData records suitable for the assessor table
     :param pclass_filter:
     :param proj:
     :param state_filter:
@@ -326,7 +326,7 @@ def filter_second_markers(proj, state_filter, pclass_filter, group_filter):
     :return:
     """
 
-    query = build_second_marker_query(proj, state_filter, pclass_filter, group_filter)
+    query = build_assessor_query(proj, state_filter, pclass_filter, group_filter)
 
     return query.all()
 

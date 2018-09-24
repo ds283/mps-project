@@ -12,7 +12,7 @@ from flask import flash, current_app
 from flask_security import current_user, UserMixin, RoleMixin
 from flask_sqlalchemy import SQLAlchemy
 
-from sqlalchemy import func, orm
+from sqlalchemy import orm, or_
 from sqlalchemy.event import listens_for
 
 from celery import schedules
@@ -138,10 +138,10 @@ project_programmes = db.Table('project_to_programmes',
                               db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
                               db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
-# association table giving 2nd markers
-second_markers = db.Table('project_to_markers',
-                          db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
-                          db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+# association table giving assessors
+assessors = db.Table('project_to_assessors',
+                     db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                     db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
 # association table matching project descriptions to supervision team
 description_supervisors = db.Table('description_to_supervisors',
@@ -177,10 +177,10 @@ live_project_supervision = db.Table('live_project_to_supervision',
                                     db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                                     db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
 
-# association table giving 2nd markers
-live_second_markers = db.Table('live_project_to_markers',
-                               db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                               db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+# association table giving assessors
+live_assessors = db.Table('live_project_to_assessors',
+                          db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                          db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
 
 # LIVE STUDENT ASSOCIATIONS
@@ -573,6 +573,9 @@ class FacultyData(db.Model):
     # 2nd-marking CATS capacity
     CATS_marking = db.Column(db.Integer())
 
+    # presentation assessment CATS capacity
+    CATS_presentation = db.Column(db.Integer())
+
 
     # METADATA
 
@@ -711,6 +714,9 @@ class FacultyData(db.Model):
                                   marker_state=EnrollmentRecord.MARKER_ENROLLED,
                                   marker_comment=None,
                                   marker_reenroll=None,
+                                  presentations_state=EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                                  presentations_comment=None,
+                                  presentations_reenroll=None,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now(),
                                   last_edit_id=None,
@@ -805,12 +811,12 @@ class FacultyData(db.Model):
 
 
     @property
-    def number_marker(self):
+    def number_assessor(self):
         """
-        Determine the number of projects to which we are attached as a 2nd marker
+        Determine the number of projects to which we are attached as an assessor
         :return:
         """
-        return get_count(self.second_marker_for)
+        return get_count(self.assessor_for)
 
 
     @property
@@ -824,9 +830,9 @@ class FacultyData(db.Model):
         num = self.number_marker
 
         if num == 0:
-            return '<span class="label label-default"><i class="fa fa-times"></i> Marker for 0</span>'
+            return '<span class="label label-default"><i class="fa fa-times"></i> Assessor for 0</span>'
 
-        return '<span class="label label-success"><i class="fa fa-check"></i> Marker for {n}</span>'.format(n=num)
+        return '<span class="label label-success"><i class="fa fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
     def supervisor_assignments(self, pclass_id):
@@ -1452,8 +1458,8 @@ class ProjectClass(db.Model):
     # does it participate in the global automated matching, or is matching manual?
     do_matching = db.Column(db.Boolean())
 
-    # number of 2nd markers that should be specified per project
-    number_markers = db.Column(db.Integer())
+    # number of assessors that should be specified per project
+    number_assessors = db.Column(db.Integer())
 
 
     # PERSONNEL
@@ -1590,21 +1596,21 @@ class ProjectClass(db.Model):
 def _ProjectClass_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_markers)
+        cache.delete_memoized(_Project_num_assessors)
 
 
 @listens_for(ProjectClass, 'before_insert')
 def _ProjectClass_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_markers)
+        cache.delete_memoized(_Project_num_assessors)
 
 
 @listens_for(ProjectClass, 'before_delete')
 def _ProjectClass_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_markers)
+        cache.delete_memoized(_Project_num_assessors)
 
 
 class ProjectClassConfig(db.Model):
@@ -2228,21 +2234,21 @@ class EnrollmentRecord(db.Model):
 def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_markers)
+        cache.delete_memoized(_Project_num_assessors)
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
 def _EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_markers)
+        cache.delete_memoized(_Project_num_assessors)
 
 
 @listens_for(EnrollmentRecord, 'before_delete')
 def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_markers)
+        cache.delete_memoized(_Project_num_assessors)
 
 
 class Supervisor(db.Model):
@@ -2346,12 +2352,12 @@ def _Project_is_offerable(pid):
     if project.group is None:
         return False, "No active research group affiliated with project"
 
-    # for each project class we are attached to, check whether enough 2nd markers have been assigned
+    # for each project class we are attached to, check whether enough assessors have been assigned
     # and whether a project description is available
     for pclass in project.project_classes:
         if pclass.uses_marker:
-            if project.num_markers(pclass) < pclass.number_markers:
-                return False, "Too few 2nd markers assigned for '{name}'".format(name=pclass.name)
+            if project.num_assessors(pclass) < pclass.number_assessors:
+                return False, "Too few assessors assigned for '{name}'".format(name=pclass.name)
 
         desc = project.get_description(pclass)
 
@@ -2370,9 +2376,9 @@ def _Project_is_offerable(pid):
 
 
 @cache.memoize()
-def _Project_num_markers(pid, pclass_id):
+def _Project_num_assessors(pid, pclass_id):
     project = db.session.query(Project).filter_by(id=pid).one()
-    return get_count(project.marker_list_query(pclass_id))
+    return get_count(project.assessor_list_query(pclass_id))
 
 
 class Project(db.Model):
@@ -2433,9 +2439,9 @@ class Project(db.Model):
     # impose limitation on capacity
     enforce_capacity = db.Column(db.Boolean())
 
-    # table of allowed 2nd markers
-    second_markers = db.relationship('FacultyData', secondary=second_markers, lazy='dynamic',
-                                     backref=db.backref('second_marker_for', lazy='dynamic'))
+    # table of allowed assessors
+    assessors = db.relationship('FacultyData', secondary=assessors, lazy='dynamic',
+                                backref=db.backref('assessor_for', lazy='dynamic'))
 
 
     # PROJECT DESCRIPTION
@@ -2607,58 +2613,59 @@ class Project(db.Model):
                 self.remove_programme(prog)
 
 
-    def is_second_marker(self, faculty):
+    def is_assessor(self, faculty):
         """
         Determine whether a given FacultyData instance is a 2nd marker for this project
         :param faculty:
         :return:
         """
-        return faculty in self.second_markers
+        return faculty in self.assessors
 
 
-    def num_markers(self, pclass):
+    def num_assessors(self, pclass):
         """
-        Determine the number of 2nd markers enrolled who are available for a given project class
+        Determine the number of assessors enrolled who are available for a given project class
         :param pclass:
         :return:
         """
-        return _Project_num_markers(self.id, pclass.id)
+        return _Project_num_assessors(self.id, pclass.id)
 
 
-    def marker_list_query(self, pclass):
+    def assessor_list_query(self, pclass):
         if isinstance(pclass, int):
             pclass_id = pclass
         else:
             pclass_id = pclass.id
 
-        query = self.second_markers \
+        query = self.assessors \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True) \
             .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
             .filter(EnrollmentRecord.pclass_id == pclass_id,
-                    EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+                    or_(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
+                        EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)) \
             .order_by(User.last_name.asc(), User.first_name.asc())
 
         return query
 
 
-    def get_marker_list(self, pclass):
+    def get_assessor_list(self, pclass):
         """
-        Build a list of FacultyData objects for 2nd markers attached to this project who are
+        Build a list of FacultyData objects for assessors attached to this project who are
         available for a given project class
         :param pclass:
         :return:
         """
-        return self.marker_list_query(pclass).all()
+        return self.assessor_list_query(pclass).all()
 
 
     def can_enroll_marker(self, faculty):
         """
-        Determine whether a given FacultyData instance can be enrolled as a 2nd marker for this project
+        Determine whether a given FacultyData instance can be enrolled as an assessor for this project
         :param faculty:
         :return:
         """
-        if self.is_second_marker(faculty):
+        if self.is_assessor(faculty):
             return False
 
         if not faculty.user.active:
@@ -2670,34 +2677,35 @@ class Project(db.Model):
 
         query = faculty.enrollments \
             .join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id) \
-            .filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+            .filter(or_(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
+                        EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED))
 
         return get_count(query) > 0
 
 
-    def add_marker(self, faculty):
+    def add_assessor(self, faculty):
         """
         Add a FacultyData instance as a 2nd marker
         :param faculty:
         :return:
         """
-        if self.is_second_marker(faculty):
+        if self.is_assessor(faculty):
             return
 
-        self.second_markers.append(faculty)
+        self.assessors.append(faculty)
         db.session.commit()
 
 
-    def remove_marker(self, faculty):
+    def remove_assessor(self, faculty):
         """
         Remove a FacultyData instance as a 2nd marker
         :param faculty:
         :return:
         """
-        if not self.is_second_marker(faculty):
+        if not self.is_assessor(faculty):
             return
 
-        self.second_markers.remove(faculty)
+        self.assessors.remove(faculty)
         db.session.commit()
 
 
@@ -2735,7 +2743,7 @@ def _Project_update_handler(mapper, connection, target):
         cache.delete_memoized(_Project_is_offerable, target.id)
 
         for pclass in target.project_classes:
-            cache.delete_memoized(_Project_num_markers, target.id, pclass.id)
+            cache.delete_memoized(_Project_num_assessors, target.id, pclass.id)
 
 
 @listens_for(Project, 'before_insert')
@@ -2744,7 +2752,7 @@ def _Project_insert_handler(mapper, connection, target):
         cache.delete_memoized(_Project_is_offerable, target.id)
 
         for pclass in target.project_classes:
-            cache.delete_memoized(_Project_num_markers, target.id, pclass.id)
+            cache.delete_memoized(_Project_num_assessors, target.id, pclass.id)
 
 
 
@@ -2808,7 +2816,7 @@ def _ProjectDescription_update_handler(mapper, connection, target):
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
         for pclass in target.parent.project_classes:
-            cache.delete_memoized(_Project_num_markers, target.parent_id, pclass.id)
+            cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
 
 
 @listens_for(ProjectDescription, 'before_insert')
@@ -2817,7 +2825,7 @@ def _ProjectDescription_insert_handler(mapper, connection, target):
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
         for pclass in target.parent.project_classes:
-            cache.delete_memoized(_Project_num_markers, target.parent_id, pclass.id)
+            cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
 
 
 @listens_for(ProjectDescription, 'before_delete')
@@ -2826,7 +2834,7 @@ def _ProjectDescription_insert_handler(mapper, connection, target):
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
         for pclass in target.parent.project_classes:
-            cache.delete_memoized(_Project_num_markers, target.parent_id, pclass.id)
+            cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
 
 
 class LiveProject(db.Model):
@@ -2897,9 +2905,9 @@ class LiveProject(db.Model):
     # maximum number of students
     capacity = db.Column(db.Integer())
 
-    # table of allowed 2nd markers
-    second_markers = db.relationship('FacultyData', secondary=live_second_markers, lazy='dynamic',
-                                     backref=db.backref('second_marker_for_live', lazy='dynamic'))
+    # table of allowed assessors
+    assessors = db.relationship('FacultyData', secondary=live_assessors, lazy='dynamic',
+                                backref=db.backref('assessor_for_live', lazy='dynamic'))
 
 
     # PROJECT DESCRIPTION
@@ -3144,16 +3152,16 @@ class LiveProject(db.Model):
 
 
     @property
-    def marker_list_query(self):
-        return self.second_markers \
+    def assessor_list_query(self):
+        return self.assessors \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True) \
             .order_by(User.last_name.asc(), User.first_name.asc())
 
 
     @property
-    def marker_list(self):
-        return self.marker_list_query.all()
+    def assessor_list(self):
+        return self.assessor_list_query.all()
 
 
 class SelectingStudent(db.Model):
@@ -5073,7 +5081,7 @@ def _MatchingRecord_is_valid(id):
             return False, 'Project "{name}" is duplicated in multiple submission periods'.format(name=obj.project.name)
 
     # check whether the assigned marker is compatible with this project
-    count = get_count(obj.project.marker_list_query.filter_by(id=obj.marker_id))
+    count = get_count(obj.project.assessor_list_query.filter_by(id=obj.marker_id))
 
     if count != 1:
         return False, 'Assigned 2nd marker is not compatible with assigned project'

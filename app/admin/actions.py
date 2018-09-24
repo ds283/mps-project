@@ -84,9 +84,11 @@ def estimate_CATS_load():
 
     supervising_CATS = 0
     marking_CATS = 0
+    presentation_CATS = 0
 
     supervising_faculty = set()
     marking_faculty = set()
+    presentation_faculty = set()
 
     for pclass in pclasses:
 
@@ -128,4 +130,15 @@ def estimate_CATS_load():
             for item in markers:
                 marking_faculty.add(item.owner_id)
 
-    return supervising_CATS, marking_CATS, len(supervising_faculty), len(marking_faculty)
+        if pclass.uses_presentations:
+            # find assessor faculty enrolled for this project
+            markers = db.session.query(EnrollmentRecord) \
+                .filter_by(pclass_id=pclass.id, presentations_state=EnrollmentRecord.PRESENTATIONS_ENROLLED) \
+                .join(User, User.id == EnrollmentRecord.owner_id) \
+                .filter(User.active).all()
+
+            for item in markers:
+                presentation_faculty.add(item.owner_id)
+
+    return supervising_CATS, marking_CATS, presentation_CATS, \
+           len(supervising_faculty), len(marking_faculty), len(presentation_faculty)

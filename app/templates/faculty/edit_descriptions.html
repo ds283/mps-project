@@ -67,8 +67,8 @@
     </div>
 
     {% if create %}
-        <a href="{{ url_for('faculty.attach_markers', id=project.id, create=1) }}" class="btn btn-primary">
-            Next: Attach 2nd markers
+        <a href="{{ url_for('faculty.attach_assessors', id=project.id, create=1) }}" class="btn btn-primary">
+            Next: Attach assessors
         </a>
         <a href="{{ url_for('faculty.edit_projects') }}" class="btn btn-default">
             Save and exit

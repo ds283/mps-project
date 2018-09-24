@@ -46,22 +46,22 @@
 {% endblock %}
 
 {% block title %}
-    My 2nd-marking pool attachments
+    My assessor pool attachments
 {% endblock %}
 
 {% block bodyblock %}
    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Projects for which I am in the 2nd-marking pool</div>
+        <div class="panel-heading">Projects for which I am in the assessor pool</div>
         <div class="panel-body">
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="well">
                     <p>Filter by project type</p>
-                    <a href="{{ url_for('faculty.second_marker', pclass_filter='all') }}"
+                    <a href="{{ url_for('faculty.assessor_for', pclass_filter='all') }}"
                        class="btn btn-sm grouped-button-margin {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for pclass in pclasses %}
-                        <a href="{{ url_for('faculty.second_marker', pclass_filter=pclass.id) }}"
+                        <a href="{{ url_for('faculty.assessor_for', pclass_filter=pclass.id) }}"
                            class="btn btn-sm grouped-button-margin {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ pclass.name }}
                         </a>

@@ -56,12 +56,12 @@
             {% if cohorts and cohorts is not none and cohorts|length > 1 %}
                 <div class="well">
                     <p>Filter by cohort</p>
-                    <a class="btn btn-sm grouped-button-margin {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                    <a class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
                         href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter='all', prog_filter=prog_filter) }}">
                         All
                     </a>
                     {% for cohort in cohorts %}
-                        <a class="btn btn-sm grouped-button-margin {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}"
+                        <a class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}"
                             href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort, prog_filter=prog_filter) }}">
                             {{ cohort }}
                         </a>
@@ -72,12 +72,12 @@
             {% if progs and progs is not none and progs|length > 1 %}
                 <div class="well">
                     <p>Filter by degree programme</p>
-                    <a class="btn btn-sm grouped-button-margin {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                    <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
                         href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter='all') }}">
                         All
                     </a>
                     {% for prog in progs %}
-                        <a class="btn btn-sm grouped-button-margin {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}"
+                        <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}"
                             href="{{ url_for('convenor.enroll_selectors', id=pclass.id, cohort_filter=cohort_filter, prog_filter=prog.id) }}">
                             {{ prog.full_name }}
                         </a>

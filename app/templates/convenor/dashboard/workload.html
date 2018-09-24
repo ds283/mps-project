@@ -43,70 +43,70 @@
             <div class="well">
                 <p>Filter by enrollment status</p>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='all', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter is none or enroll_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter is none or enroll_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                     All
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='enrolled', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'enrolled' %}btn-primary{% else %}btn-default{% endif %}">
                     Enrolled
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='not-enrolled', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'not-enrolled' %}btn-primary{% else %}btn-default{% endif %}">
                     Not enrolled
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='supv-active', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'supv-active' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'supv-active' %}btn-primary{% else %}btn-default{% endif %}">
                     Supervisor active
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='supv-sabbatical', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'supv-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'supv-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
                     Supervisor sabbatical
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='supv-exempt', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'supv-exempt' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'supv-exempt' %}btn-primary{% else %}btn-default{% endif %}">
                     Supervisor exempt
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='mark-active', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'mark-active' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'mark-active' %}btn-primary{% else %}btn-default{% endif %}">
                     Marker active
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='mark-sabbatical', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'mark-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'mark-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
                     Marker sabbatical
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='mark-exempt', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'mark-exempt' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'mark-exempt' %}btn-primary{% else %}btn-default{% endif %}">
                     Marker exempt
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='pres-active', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'pres-active' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'pres-active' %}btn-primary{% else %}btn-default{% endif %}">
                     Presentations active
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='pres-sabbatical', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'pres-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'pres-sabbatical' %}btn-primary{% else %}btn-default{% endif %}">
                     Presentations sabbatical
                 </a>
                 <a href="{{ url_for('convenor.faculty_workload', id=pclass.id, enroll_filter='pres-exempt', state_filter=state_filter) }}"
-                   class="btn btn-sm {% if enroll_filter == 'pres-exempt' %}btn-primary{% else %}btn-default{% endif %}">
+                   class="btn btn-sm filter-btn {% if enroll_filter == 'pres-exempt' %}btn-primary{% else %}btn-default{% endif %}">
                     Presentations exempt
                 </a>
             </div>
 
             <div class="well">
                 <p>Filter by state</p>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
                    href="{{ url_for('convenor.faculty_workload', id=pclass.id, prog_filter=prog_filter, state_filter='all') }}">
                     All
                 </a>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter == 'late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
                    href="{{ url_for('convenor.faculty_workload', id=pclass.id, prog_filter=prog_filter, state_filter='late-feedback') }}">
                     Has late feedback
                 </a>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'no-late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter == 'no-late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
                    href="{{ url_for('convenor.faculty_workload', id=pclass.id, prog_filter=prog_filter, state_filter='no-late-feedback') }}">
                     Has no late feedback
                 </a>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
                    href="{{ url_for('convenor.faculty_workload', id=pclass.id, prog_filter=prog_filter, state_filter='not-started') }}">
                     Not started
                 </a>

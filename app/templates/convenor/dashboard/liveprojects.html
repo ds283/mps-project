@@ -100,23 +100,23 @@
 
             <div class="well">
                 <p>Filter by status</p>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='all') }}">
                     All
                 </a>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'submitted' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter == 'submitted' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='submitted') }}">
                     Has selections
                 </a>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'bookmarks' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter == 'bookmarks' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='bookmarks') }}">
                     Has bookmarks only
                 </a>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'none' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter == 'none' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='none') }}">
                     No bookmarks
                 </a>
-                <a class="btn btn-sm grouped-button-margin {% if state_filter == 'confirmations' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if state_filter == 'confirmations' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('convenor.liveprojects', id=pclass.id, state_filter='confirmations') }}">
                     Confirmations outstanding
                 </a>

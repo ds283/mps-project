@@ -64,12 +64,12 @@
                 {% if programmes is not none and programmes|length > 0 %}
                     <p>Filter by programme</p>
                     <a href="{{ url_for('admin.edit_users_students', prog_filter='all', cohort_filter=cohort_filter, year_filter=year_filter) }}"
-                       class="btn btn-sm grouped-button-margin {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for prog in programmes %}
                         <a href="{{ url_for('admin.edit_users_students', prog_filter=prog.id, cohort_filter=cohort_filter, year_filter=year_filter) }}"
-                           class="btn btn-sm grouped-button-margin {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                           class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ prog.full_name }}
                         </a>
                     {% endfor %}
@@ -80,12 +80,12 @@
 
                     <p>Filter by cohort</p>
                     <a href="{{ url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter='all', year_filter=year_filter) }}"
-                       class="btn btn-sm grouped-button-margin {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for cohort in cohorts %}
                         <a href="{{ url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort|string, year_filter=year_filter) }}"
-                           class="btn btn-sm grouped-button-margin {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}">
+                           class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ cohort }}
                         </a>
                     {% endfor %}
@@ -95,27 +95,27 @@
 
                 <p>Filter by academic year</p>
                     <a href="{{ url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='all') }}"
-                       class="btn btn-sm grouped-button-margin {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     <a href="{{ url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='1') }}"
-                       class="btn btn-sm grouped-button-margin {% if year_filter == '1' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == '1' %}btn-primary{% else %}btn-default{% endif %}">
                         Y1
                     </a>
                     <a href="{{ url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='2') }}"
-                       class="btn btn-sm grouped-button-margin {% if year_filter == '2' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == '2' %}btn-primary{% else %}btn-default{% endif %}">
                         Y2
                     </a>
                     <a href="{{ url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='3') }}"
-                       class="btn btn-sm grouped-button-margin {% if year_filter == '3' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == '3' %}btn-primary{% else %}btn-default{% endif %}">
                         Y3
                     </a>
                     <a href="{{ url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='4') }}"
-                       class="btn btn-sm grouped-button-margin {% if year_filter == '4' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == '4' %}btn-primary{% else %}btn-default{% endif %}">
                         Y4
                     </a>
                     <a href="{{ url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter='grad') }}"
-                       class="btn btn-sm grouped-button-margin {% if year_filter == 'grad' %}btn-primary{% else %}btn-default{% endif %}">
+                       class="btn btn-sm filter-btn {% if year_filter == 'grad' %}btn-primary{% else %}btn-default{% endif %}">
                         Graduated
                     </a>
             </div>

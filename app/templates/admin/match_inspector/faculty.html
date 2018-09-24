@@ -59,12 +59,12 @@
         <div class="panel-body">
             <div class="well">
                 <p>Filter by project class</p>
-                <a class="btn btn-sm grouped-button-margin {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
                     href="{{ url_for('admin.match_faculty_view', id=record.id, pclass_filter='all', text=text, url=url) }}">
                     All
                 </a>
                 {% for pclass in pclasses %}
-                    <a class="btn btn-sm grouped-button-margin {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}"
+                    <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}"
                         href="{{ url_for('admin.match_faculty_view', id=record.id, pclass_filter=pclass.id, text=text, url=url) }}">
                         {{ pclass.name }}
                     </a>

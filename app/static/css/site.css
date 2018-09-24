@@ -75,6 +75,10 @@ p.copyright {
     font-weight: lighter;
 }
 
+.filter-btn {
+    margin-bottom: 5px;
+}
+
 .vertical-align {
     display: flex;
     align-items: center;

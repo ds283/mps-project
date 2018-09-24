@@ -1,6 +1,8 @@
 from __future__ import with_statement
 from alembic import context
+from alembic.ddl.impl import _type_comparators
 from sqlalchemy import engine_from_config, pool
+from sqlalchemy.sql import sqltypes
 from logging.config import fileConfig
 import logging
 
@@ -26,6 +28,40 @@ target_metadata = current_app.extensions['migrate'].db.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+
+_compare_attrs = {
+    sqltypes._Binary: ('length', ),
+    sqltypes.Date: (),
+    sqltypes.DateTime: ('fsp', 'timezone'),
+    sqltypes.Integer: ('display_width', 'unsigned', 'zerofill'),
+    sqltypes.String: ('binary', 'charset', 'collation', 'length', 'unicode'),
+}
+
+
+def db_compare_type(context, inspected_column,
+                    metadata_column, inspected_type, metadata_type):
+    # return True if the types are different, False if not, or None
+    # to allow the default implementation to compare these TYPES
+    expected = metadata_column.type
+    migrated = inspected_column.type
+
+    # this extends the logic in alembic.ddl.impl.DefaultImpl.compare_type
+    type_affinity = migrated._type_affinity
+    compare_attrs = _compare_attrs.get(type_affinity, None)
+    if compare_attrs is not None:
+        if type(expected) != type(migrated):
+            return True
+        for attr in compare_attrs:
+            if getattr(expected, attr, None) != getattr(migrated, attr, None):
+                return True
+        return False
+
+    # fall back to limited alembic type comparison
+    comparator = _type_comparators.get(type_affinity, None)
+    if comparator is not None:
+        return comparator(expected, migrated)
+    raise AssertionError('Unsupported DB type comparison.')
 
 
 def run_migrations_offline():
@@ -72,6 +108,7 @@ def run_migrations_online():
     connection = engine.connect()
     context.configure(connection=connection,
                       target_metadata=target_metadata,
+                      compare_type=db_compare_type,
                       process_revision_directives=process_revision_directives,
                       **current_app.extensions['migrate'].configure_args)
 

@@ -1503,6 +1503,11 @@ class ProjectClass(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    @orm.reconstructor
+    def reconstruct(self):
+        self.validate_presentations()
+
+
     def disable(self):
         """
         Disable this project class

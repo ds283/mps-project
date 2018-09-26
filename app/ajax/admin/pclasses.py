@@ -14,7 +14,7 @@ from flask import render_template_string, jsonify
 _pclasses_programmes = \
 """
 {% for programme in pcl.programmes %}
-    {{ programme.label|safe }}
+    {{ programme.short_label|safe }}
 {% endfor %}
 """
 

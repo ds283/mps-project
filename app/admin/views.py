@@ -29,7 +29,7 @@ from .forms import RoleSelectForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
     AddTransferableSkillForm, EditTransferableSkillForm, AddSkillGroupForm, EditSkillGroupForm, \
-    AddProjectClassForm, EditProjectClassForm, \
+    AddProjectClassForm, EditProjectClassForm, ProjectClassPresentationsForm, \
     AddSupervisorForm, EditSupervisorForm, \
     FacultySettingsForm, EnrollmentRecordForm, EmailLogForm, \
     AddMessageForm, EditMessageForm, \
@@ -1680,6 +1680,7 @@ def add_pclass():
                                             closed_timestamp=None)
             db.session.add(period)
 
+        data.validate_presentations()
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))
@@ -1748,6 +1749,7 @@ def edit_pclass(id):
             old_convenor.remove_convenorship(data)
             data.convenor.add_convenorship(data)
 
+        data.validate_presentations()
         db.session.commit()
 
         return redirect(url_for('admin.edit_project_classes'))
@@ -1794,6 +1796,29 @@ def deactivate_pclass(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/pclass_presentations/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def pclass_presentations(id):
+    """
+    Set up the presentation pattern for a pclass, that is, which submission periods have presentations
+    incorporated
+    :param id:
+    :return:
+    """
+
+    data = ProjectClass.query.get_or_404(id)
+    form = ProjectClassPresentationsForm(data.submissions, obj=data)
+
+    if form.validate_on_submit():
+        data.presentation_list = form.presentation_list.data
+        data.validate_presentations()
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_project_classes'))
+
+    return render_template('admin/pclass_presentations.html', form=form, pclass=data)
 
 
 @admin.route('/edit_supervisors')

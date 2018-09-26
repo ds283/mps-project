@@ -1,0 +1,37 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Set up presentations
+{% endblock %}
+
+{% block formtitle %}
+    {% if pclass %}
+        Set up presentations for project class <strong>{{ pclass.name }}</strong>
+    {% else %}
+        Set up presentations
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.pclass_presentations', id=pclass.id) }}" method="POST" name="presentations_form">
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(role_form) }}#}
+
+        <p><strong>{{ form.presentation_list.label }}</strong></p>
+        {% for widget in form.presentation_list %}
+            {{ wtf.form_field(widget) }}
+        {% endfor %}
+        {% if form.presentation_list.errors %}
+            {% for error in form.presentation_list.errors %}
+                <p class="help-block">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

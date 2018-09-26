@@ -38,7 +38,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
 from ..models import BackupConfiguration, EnrollmentRecord, submission_choices, academic_titles, \
     extent_choices, year_choices, matching_history_choices, solver_choices
 
-from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
+from ..shared.forms.fields import EditFormMixin, CheckboxSelectMultipleField, CheckboxQuerySelectMultipleField
 
 from functools import partial
 
@@ -438,6 +438,22 @@ class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
                                                            unique_or_original_project_class_abbrev])
+
+
+class ProjectClassPresentationsMixin():
+
+    presentation_list = CheckboxSelectMultipleField('Which submission periods include presentations?',
+                                                    choices=[], coerce=int)
+
+
+class ProjectClassPresentationsForm(Form, ProjectClassPresentationsMixin, EditFormMixin):
+
+    def __init__(self, periods, *args, **kwargs):
+
+        super().__init__(*args, **kwargs)
+
+        choices = [(n, 'Submission period #{n}'.format(n=n)) for n in range(1, periods+1)]
+        self.presentation_list.choices = choices
 
 
 class SupervisorMixin():

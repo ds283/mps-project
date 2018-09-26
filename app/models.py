@@ -827,7 +827,7 @@ class FacultyData(db.Model):
         :return:
         """
 
-        num = self.number_marker
+        num = self.number_assessor
 
         if num == 0:
             return '<span class="label label-default"><i class="fa fa-times"></i> Assessor for 0</span>'

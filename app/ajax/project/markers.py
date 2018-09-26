@@ -53,7 +53,7 @@ _enrollments = \
 
 _attached = \
 """
-<span class="label label-default">{{ f.number_marker }}</span>
+<span class="label label-default">{{ f.number_assessor }}</span>
 """
 
 

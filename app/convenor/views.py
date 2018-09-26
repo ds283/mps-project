@@ -534,7 +534,7 @@ def faculty_ajax(id):
     if state_filter == 'no-projects':
         data = [ rec for rec in faculty.all() if rec[1].projects_offered(pclass) == 0 ]
     elif state_filter == 'no-marker':
-        data = [ rec for rec in faculty.all() if rec[1].number_marker == 0 ]
+        data = [ rec for rec in faculty.all() if rec[1].number_assessor == 0 ]
     elif state_filter == 'unofferable':
         data = [ rec for rec in faculty.all() if rec[1].projects_unofferable > 0 ]
     else:

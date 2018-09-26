@@ -512,11 +512,11 @@ def faculty_ajax(id):
         elif enroll_filter == 'mark-exempt':
             faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
         elif enroll_filter == 'pres-active':
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_ENROLLED)
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
         elif enroll_filter == 'pres-sabbatical':
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_SABBATICAL)
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL)
         elif enroll_filter == 'pres-exempt':
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_EXEMPT)
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT)
 
         faculty_ids_q = faculty_ids.subquery()
 
@@ -3657,11 +3657,11 @@ def faculty_workload_ajax(id):
         elif enroll_filter == 'mark-exempt':
             faculty_ids = faculty_ids.filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_EXEMPT)
         elif enroll_filter == 'pres-active':
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_ENROLLED)
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)
         elif enroll_filter == 'pres-sabbatical':
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_SABBATICAL)
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL)
         elif enroll_filter == 'pres-exempt':
-            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATION_EXEMPT)
+            faculty_ids = faculty_ids.filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT)
 
         faculty_ids_q = faculty_ids.subquery()
 

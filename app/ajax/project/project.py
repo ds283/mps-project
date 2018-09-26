@@ -33,7 +33,7 @@ _project_status = \
         <span class="label label-warning"><i class="fa fa-times"></i> Project inactive</span>
     {% endif %}
     {% if enrollment and enrollment is not none %}
-        {{ enrollment.supervisor_label()|safe }}
+        {{ enrollment.supervisor_label|safe }}
     {% endif %}
 {% else %}
     <span class="label label-danger">Not available</span>

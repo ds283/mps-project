@@ -9,8 +9,13 @@
 #
 
 
-from wtforms import widgets, SubmitField
+from wtforms import widgets, SubmitField, SelectMultipleField
 from wtforms_alchemy import QuerySelectMultipleField
+
+
+class CheckboxSelectMultipleField(SelectMultipleField):
+    widget = widgets.ListWidget(prefix_label=False)
+    option_widget = widgets.CheckboxInput()
 
 
 class CheckboxQuerySelectMultipleField(QuerySelectMultipleField):

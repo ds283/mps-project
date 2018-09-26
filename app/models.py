@@ -8,12 +8,13 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import flash, current_app
+from flask import flash
 from flask_security import current_user, UserMixin, RoleMixin
 from flask_sqlalchemy import SQLAlchemy
 
 from sqlalchemy import orm, or_
 from sqlalchemy.event import listens_for
+from sqlalchemy_utils.types import ScalarListType
 
 from celery import schedules
 
@@ -735,7 +736,7 @@ class FacultyData(db.Model):
         if record is None:
             return '<span class="label label-warning">Not enrolled</span>'
 
-        return record.enrolled_labels()
+        return record.enrolled_labels
 
 
     def get_enrollment_record(self, pclass):
@@ -1409,8 +1410,11 @@ class ProjectClass(db.Model):
     # are the submissions second marked?
     uses_marker = db.Column(db.Boolean())
 
-    # are the presentations?
+    # are there presentations?
     uses_presentations = db.Column(db.Boolean())
+
+    # what is the pattern of presentations among the submission periods?
+    presentation_list = db.Column(ScalarListType(int))
 
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
@@ -1533,6 +1537,9 @@ class ProjectClass(db.Model):
         if not self.programmes.filter(DegreeProgramme.active).first():
             return False
 
+        if self.uses_presentations and (self.presentation_list is None or len(self.presentation_list) == 0):
+            return False
+
         return True
 
 
@@ -1590,6 +1597,17 @@ class ProjectClass(db.Model):
             return '<span class="label label-default">{msg}</span>'.format(msg=text)
 
         return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
+
+
+    def validate_presentations(self):
+        if not self.uses_presentations:
+            return
+
+        if self.presentation_list is None or len(self.presentation_list) == 0:
+            self.presentation_list = [1]
+            return
+
+        self.presentation_list = [n for n in self.presentation_list if 1 <= n <= self.submissions]
 
 
 @listens_for(ProjectClass, 'before_update')
@@ -2199,35 +2217,52 @@ class EnrollmentRecord(db.Model):
             self.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
 
 
+    @property
     def supervisor_label(self):
 
         if self.supervisor_state == self.SUPERVISOR_ENROLLED:
-            return '<span class="label label-success"><i class="fa fa-check"></i> Supv active</span>'
+            return '<span class="label label-success"><i class="fa fa-check"></i> Supervisor: active</span>'
         elif self.supervisor_state == self.SUPERVISOR_SABBATICAL:
-            return '<span class="label label-warning"><i class="fa fa-times"></i> Supv sabbat{year}</span>'.format(
+            return '<span class="label label-warning"><i class="fa fa-times"></i> Supervisor: sab{year}</span>'.format(
                 year='' if self.supervisor_reenroll is None else ' ({yr})'.format(yr=self.supervisor_reenroll))
         elif self.supervisor_state == self.SUPERVISOR_EXEMPT:
-            return '<span class="label label-danger"><i class="fa fa-times"></i> Supv exempt</span>'
+            return '<span class="label label-danger"><i class="fa fa-times"></i> Supervisor: exempt</span>'
 
         return ''
 
 
+    @property
     def marker_label(self):
 
         if self.marker_state == EnrollmentRecord.MARKER_ENROLLED:
-            return '<span class="label label-success"><i class="fa fa-check"></i> 2nd mk active</span>'
+            return '<span class="label label-success"><i class="fa fa-check"></i> Marker: active</span>'
         elif self.marker_state == EnrollmentRecord.MARKER_SABBATICAL:
-            return '<span class="label label-warning"><i class="fa fa-times"></i> 2nd mk sabbat{year}</span>'.format(
+            return '<span class="label label-warning"><i class="fa fa-times"></i> Marker: sab{year}</span>'.format(
                 year='' if self.marker_reenroll is None else ' ({yr})'.format(yr=self.marker_reenroll))
         elif self.marker_state == EnrollmentRecord.MARKER_EXEMPT:
-            return '<span class="label label-danger"><i class="fa fa-times"></i> 2nd mk exempt</span>'
+            return '<span class="label label-danger"><i class="fa fa-times"></i> Marker: exempt</span>'
 
         return ''
 
 
+    @property
+    def presentation_label(self):
+
+        if self.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
+            return '<span class="label label-success"><i class="fa fa-check"></i> Presentations: active</span>'
+        elif self.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL:
+            return '<span class="label label-warning"><i class="fa fa-times"></i> Presentations: sab{year}</span>'.format(
+                year='' if self.marker_reenroll is None else ' ({yr})'.format(yr=self.marker_reenroll))
+        elif self.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT:
+            return '<span class="label label-danger"><i class="fa fa-times"></i> Presentations: exempt</span>'
+
+        return ''
+
+
+    @property
     def enrolled_labels(self):
 
-        return self.supervisor_label() + ' ' + self.marker_label()
+        return self.supervisor_label + ' ' + self.marker_label + ' ' + self.presentation_label
 
 
 @listens_for(EnrollmentRecord, 'before_update')
@@ -4655,7 +4690,6 @@ class MatchingAttempt(db.Model):
 
     @orm.reconstructor
     def _reconstruct(self):
-
         self._selector_list = None
         self._faculty_list = None
         self._CATS_list = None

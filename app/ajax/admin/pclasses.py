@@ -28,9 +28,21 @@ _pclasses_menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
-                <i class="fa fa-pencil"></i> Edit project class
+                <i class="fa fa-cogs"></i> Settings
             </a>
         </li>
+        
+        {% if pcl.uses_presentations %}
+            <li>
+                <a href="{{ url_for('admin.pclass_presentations', id=pcl.id) }}">
+                    <i class="fa fa-cogs"></i> Set up presentations
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a><i class="fa fa-cogs"></i> Presentations not used</a>
+            </li>
+        {% endif %}
 
         {% if pcl.active %}
             <li><a href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
@@ -111,7 +123,9 @@ _submissions = \
     <span class="label label-info">2nd marked</span>
 {% endif %}
 {% if p.uses_presentations %}
-    <span class="label label-info">Presentations</span>
+    {% for n in p.presentation_list %}
+        <span class="label label-info">Presentation: Prd #{{ n }}</span>
+    {% endfor %}
 {% endif %}
 """
 

@@ -352,8 +352,10 @@ def register_rollover_tasks(celery):
             if num_submissions is None or num_submissions == 0:
                 raise RuntimeError('Submissions field set incorrectly')
 
-            for k in range(num_submissions):
+            for template in old_config.periods:
                 period = SubmissionPeriodRecord(config_id=new_config.id,
+                                                name=template.name,
+                                                has_presentation=template.has_presentation,
                                                 retired=False,
                                                 submission_period=k + 1,
                                                 feedback_open=False,

@@ -14,7 +14,6 @@ from flask_sqlalchemy import SQLAlchemy
 
 from sqlalchemy import orm, or_
 from sqlalchemy.event import listens_for
-from sqlalchemy_utils.types import ScalarListType
 
 from celery import schedules
 
@@ -50,9 +49,6 @@ PASSWORD_HASH_LENGTH = 255
 # length of project description fields
 DESCRIPTION_STRING_LENGTH = 8000
 
-
-# labels and keys for 'submissions' field
-submission_choices = [(0, 'None'), (1, 'One (yearly)'), (2, 'Two (termly)')]
 
 # labels and keys for 'year' field; it's not possible to join in Y1; treat students as
 # joining in Y2
@@ -1404,17 +1400,11 @@ class ProjectClass(db.Model):
     # how many years does the project extend? usually 1, but RP is more
     extent = db.Column(db.Integer())
 
-    # how many submissions per year does this project have?
-    submissions = db.Column(db.Integer())
-
     # are the submissions second marked?
     uses_marker = db.Column(db.Boolean())
 
     # are there presentations?
     uses_presentations = db.Column(db.Boolean())
-
-    # what is the pattern of presentations among the submission periods?
-    presentation_list = db.Column(ScalarListType(int))
 
     # how many initial_choices should students make?
     initial_choices = db.Column(db.Integer())
@@ -1508,6 +1498,11 @@ class ProjectClass(db.Model):
         self.validate_presentations()
 
 
+    @property
+    def submissions(self):
+        return get_count(self.periods)
+
+
     def disable(self):
         """
         Disable this project class
@@ -1542,8 +1537,9 @@ class ProjectClass(db.Model):
         if not self.programmes.filter(DegreeProgramme.active).first():
             return False
 
-        if self.uses_presentations and (self.presentation_list is None or len(self.presentation_list) == 0):
-            return False
+        if self.uses_presentations:
+            if get_count(self.periods.filter_by(has_presentation=True)) == 0:
+                return False
 
         return True
 
@@ -1604,15 +1600,43 @@ class ProjectClass(db.Model):
         return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
+    def validate_periods(self):
+        if self.periods is None or get_count(self.periods) == 0 and current_user is not None:
+            data = SubmissionPeriodDefinition(owner_id=self.id,
+                                              period=1,
+                                              name=None,
+                                              has_presentation=self.uses_presentations,
+                                              creator_id=current_user.id,
+                                              creation_timestamp=datetime.now())
+            self.periods = [data]
+            db.session.commit()
+
+        expected = 1
+        modified = False
+        for item in self.periods.order_by(SubmissionPeriodDefinition.period.asc()).all():
+            if item.period != expected:
+                item.period = expected
+                modified = True
+
+            expected += 1
+
+        if modified:
+            db.session.commit()
+
+
     def validate_presentations(self):
         if not self.uses_presentations:
             return
 
-        if self.presentation_list is None or len(self.presentation_list) == 0:
-            self.presentation_list = [1]
+        self.validate_periods()
+        number_with_presentations = get_count(self.periods.filter_by(has_presentation=True))
+
+        if number_with_presentations > 0:
             return
 
-        self.presentation_list = [n for n in self.presentation_list if 1 <= n <= self.submissions]
+        data = self.periods.first()
+        data.has_presentation = True
+        db.session.commit()
 
 
 @listens_for(ProjectClass, 'before_update')
@@ -1634,6 +1658,49 @@ def _ProjectClass_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
         cache.delete_memoized(_Project_num_assessors)
+
+
+class SubmissionPeriodDefinition(db.Model):
+    """
+    Record the configuration of an individual submission period
+    """
+
+    __tablename__ = 'period_definitions'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link to parent ProjectClass
+    owner_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
+    owner = db.relationship('ProjectClass', uselist=False, backref=db.backref('periods', lazy='dynamic',
+                                                                              cascade='all, delete, delete-orphan'))
+
+    # numerical submission period
+    period = db.Column(db.Integer())
+
+    # alternative textual name; can be left null if not used
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # does this period have a presentation submission?
+    has_presentation = db.Column(db.Boolean())
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
 class ProjectClassConfig(db.Model):
@@ -1790,6 +1857,11 @@ class ProjectClassConfig(db.Model):
 
 
     @property
+    def periods(self):
+        return self.project_class.periods
+
+
+    @property
     def _selection_open(self):
         return self.live and not self.selection_closed
 
@@ -1854,8 +1926,12 @@ class ProjectClassConfig(db.Model):
         period = self.current_period
 
         if period is None:
+            template = self.periods.filter_by(period=self.submission_period).one()
+
             # allow period record to be auto-generated
             period = SubmissionPeriodRecord(config_id=self.id,
+                                            name=template.name,
+                                            has_presentation=template.has_presentation,
                                             retired=False,
                                             submission_period=self.submission_period,
                                             feedback_open=False,
@@ -2057,6 +2133,13 @@ class SubmissionPeriodRecord(db.Model):
 
     # submission period
     submission_period = db.Column(db.Integer(), index=True)
+
+    # alternative textual name for this period (eg. "Autumn Term", "Spring Term");
+    # can be null if not used
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # does this submission period have an associated presentation assessment
+    has_presentation = db.Column(db.Boolean())
 
     # retired flag, set by rollover code
     retired = db.Column(db.Boolean(), index=True)

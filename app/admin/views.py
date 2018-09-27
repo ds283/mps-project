@@ -29,7 +29,7 @@ from .forms import RoleSelectForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
     AddTransferableSkillForm, EditTransferableSkillForm, AddSkillGroupForm, EditSkillGroupForm, \
-    AddProjectClassForm, EditProjectClassForm, ProjectClassPresentationsForm, \
+    AddProjectClassForm, EditProjectClassForm, AddSubmissionPeriodForm, EditSubmissionPeriodForm, \
     AddSupervisorForm, EditSupervisorForm, \
     FacultySettingsForm, EnrollmentRecordForm, EmailLogForm, \
     AddMessageForm, EditMessageForm, \
@@ -43,7 +43,7 @@ from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGro
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
-    LiveProject, SubmissionPeriodRecord
+    LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -1667,8 +1667,10 @@ def add_pclass():
         db.session.add(config)
         db.session.flush()
 
-        for k in range(0, config.submissions):
+        for template in config.periods.all():
             period = SubmissionPeriodRecord(config_id=config.id,
+                                            name=template.name,
+                                            has_presentation=template.has_presentation,
                                             retired=False,
                                             submission_period=k+1,
                                             feedback_open=False,
@@ -1680,8 +1682,8 @@ def add_pclass():
                                             closed_timestamp=None)
             db.session.add(period)
 
-        data.validate_presentations()
         db.session.commit()
+        data.validate_presentations()
 
         return redirect(url_for('admin.edit_project_classes'))
 
@@ -1749,8 +1751,8 @@ def edit_pclass(id):
             old_convenor.remove_convenorship(data)
             data.convenor.add_convenorship(data)
 
-        data.validate_presentations()
         db.session.commit()
+        data.validate_presentations()
 
         return redirect(url_for('admin.edit_project_classes'))
 
@@ -1798,27 +1800,111 @@ def deactivate_pclass(id):
     return redirect(request.referrer)
 
 
-@admin.route('/pclass_presentations/<int:id>', methods=['GET', 'POST'])
+@admin.route('/edit_submission_periods/<int:id>')
 @roles_required('root')
-def pclass_presentations(id):
+def edit_submission_periods(id):
     """
-    Set up the presentation pattern for a pclass, that is, which submission periods have presentations
+    Set up submission periods for a given project class
     incorporated
     :param id:
     :return:
     """
 
     data = ProjectClass.query.get_or_404(id)
-    form = ProjectClassPresentationsForm(data.submissions, obj=data)
+    return render_template('admin/edit_periods.html', pclass=data)
+
+
+@admin.route('/submission_periods_ajax/<int:id>')
+@roles_required('root')
+def submission_periods_ajax(id):
+    """
+    Return AJAX data for the submission periods table
+    :param id:
+    :return:
+    """
+
+    data = ProjectClass.query.get_or_404(id)
+    periods = data.periods.all()
+
+    return ajax.admin.periods_data(periods)
+
+
+@admin.route('/add_period/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def add_period(id):
+    """
+    Add a new submission period configuration to the given project class
+    :param id:
+    :return:
+    """
+
+    pclass = ProjectClass.query.get_or_404(id)
+    form = AddSubmissionPeriodForm(form=request.form)
 
     if form.validate_on_submit():
-        data.presentation_list = form.presentation_list.data
-        data.validate_presentations()
+        data = SubmissionPeriodDefinition(owner_id=pclass.id,
+                                          period=pclass.submissions+1,
+                                          name=form.name.data,
+                                          has_presentation=form.has_presentation.data,
+                                          creator_id=current_user.id,
+                                          creation_timestamp=datetime.now())
+        pclass.periods.append(data)
+
         db.session.commit()
+        pclass.validate_presentations()
 
-        return redirect(url_for('admin.edit_project_classes'))
+        return redirect(url_for('admin.edit_submission_periods', id=pclass.id))
 
-    return render_template('admin/pclass_presentations.html', form=form, pclass=data)
+    return render_template('admin/edit_period.html', form=form, pclass_id=pclass.id,
+                           title='Add new submission period')
+
+
+@admin.route('/edit_period/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_period(id):
+    """
+    Edit an existing submission period configuration
+    :param id:
+    :return:
+    """
+
+    data = SubmissionPeriodDefinition.query.get_or_404(id)
+    form = EditSubmissionPeriodForm(obj=data)
+
+    if form.validate_on_submit():
+        data.name = form.name.data
+        data.has_presentation = form.has_presentation.data
+
+        data.last_edit_id = current_user.id,
+        data.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+        data.owner.validate_presentations()
+
+        return redirect(url_for('admin.edit_submission_periods', id=data.id))
+
+    return render_template('admin/edit_period.html', form=form, period=data,
+                           title='Edit submission period')
+
+
+@admin.route('/delete_period/<int:id>')
+@roles_required('root')
+def delete_period(id):
+    """
+    Delete a submission period configuration
+    :param id:
+    :return:
+    """
+
+    data = SubmissionPeriodDefinition.query.get_or_404(id)
+    pclass = data.owner
+
+    db.session.delete(data)
+    db.session.commit()
+    pclass.validate_presentations()
+
+    return redirect(request.referrer)
+
 
 
 @admin.route('/edit_supervisors')
@@ -2082,7 +2168,7 @@ def roles_ajax():
     :return:
     """
 
-    roles = db.session.query(Role)
+    roles = db.session.query(Role).all()
     return ajax.admin.roles_data(roles)
 
 

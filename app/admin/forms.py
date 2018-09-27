@@ -35,10 +35,10 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches
-from ..models import BackupConfiguration, EnrollmentRecord, submission_choices, academic_titles, \
+from ..models import BackupConfiguration, EnrollmentRecord, academic_titles, \
     extent_choices, year_choices, matching_history_choices, solver_choices
 
-from ..shared.forms.fields import EditFormMixin, CheckboxSelectMultipleField, CheckboxQuerySelectMultipleField
+from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
 from functools import partial
 
@@ -351,9 +351,6 @@ class ProjectClassMixin():
 
     supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')
 
-    submissions = SelectField('Submissions per year', choices=submission_choices, coerce=int,
-                              description='Select number of marked reports submitted per academic year.')
-
     uses_marker = BooleanField('Submissions are second-marked')
 
     uses_presentations = BooleanField('Includes one or more assessed presentations')
@@ -407,7 +404,7 @@ class ProjectClassMixin():
                                            description='Co-convenors have the same administrative privileges '
                                                        'as convenors, but are not identified to students. '
                                                        'For example, they might be previous convenors who are '
-                                                       'assisting with administration.',
+                                                       'helping with administration during a transition period.',
                                            validators=[Optional()])
 
     selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',
@@ -440,20 +437,23 @@ class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
                                                            unique_or_original_project_class_abbrev])
 
 
-class ProjectClassPresentationsMixin():
+class SubmissionPeriodMixin():
 
-    presentation_list = CheckboxSelectMultipleField('Which submission periods include presentations?',
-                                                    choices=[], coerce=int)
+    name = StringField('Name', description='Optional. Enter an alternatve text name for this submission '
+                                           'period, such as "Autumn Term"',
+                       validators=[Optional()])
+
+    has_presentation = BooleanField('This submission period includes a presentation assessment')
 
 
-class ProjectClassPresentationsForm(Form, ProjectClassPresentationsMixin, EditFormMixin):
+class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin):
 
-    def __init__(self, periods, *args, **kwargs):
+    submit = SubmitField('Add new submission period')
 
-        super().__init__(*args, **kwargs)
 
-        choices = [(n, 'Submission period #{n}'.format(n=n)) for n in range(1, periods+1)]
-        self.presentation_list.choices = choices
+class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, EditFormMixin):
+
+    pass
 
 
 class SupervisorMixin():

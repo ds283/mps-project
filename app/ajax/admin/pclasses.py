@@ -26,23 +26,22 @@ _pclasses_menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+        <li class="dropdown-header">Edit</li>
+        
         <li>
             <a href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
                 <i class="fa fa-cogs"></i> Settings
             </a>
         </li>
         
-        {% if pcl.uses_presentations %}
-            <li>
-                <a href="{{ url_for('admin.pclass_presentations', id=pcl.id) }}">
-                    <i class="fa fa-cogs"></i> Set up presentations
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a><i class="fa fa-cogs"></i> Presentations not used</a>
-            </li>
-        {% endif %}
+        <li>
+            <a href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
+                <i class="fa fa-cogs"></i> Submission periods
+            </a>
+        </li>
+        
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Admin</a>
 
         {% if pcl.active %}
             <li><a href="{{ url_for('admin.deactivate_pclass', id=pcl.id) }}">
@@ -123,8 +122,10 @@ _submissions = \
     <span class="label label-info">2nd marked</span>
 {% endif %}
 {% if p.uses_presentations %}
-    {% for n in p.presentation_list %}
-        <span class="label label-info">Presentation: Prd #{{ n }}</span>
+    {% for item in p.periods.all() %}
+        {% if item.has_presentation %}
+            <span class="label label-info">Presentation: Prd #{{ item.period }}</span>
+        {% endif %}
     {% endfor %}
 {% endif %}
 """

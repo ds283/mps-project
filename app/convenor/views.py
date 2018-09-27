@@ -3705,13 +3705,13 @@ def manual_assign(id):
         return redirect(request.referrer)
 
     if rec.period.feedback_open:
-        flash('Can not reassign for submission period #{period} '
-              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        flash('Can not reassign for {name} '
+              'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     if rec.student_engaged:
-        flash('Can not reassign for submission period #{period} '
-              'because the project is already marked as started'.format(period=rec.period.submission_period), 'error')
+        flash('Can not reassign for {name} '
+              'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     form = AssignMarkerForm(rec.project, request.form)
@@ -3750,8 +3750,8 @@ def manual_assign_ajax(id):
         return jsonify({})
 
     if rec.period.feedback_open:
-        flash('Can not reassign for submission period #{period} '
-              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        flash('Can not reassign for {name} '
+              'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return jsonify({})
 
     data = config.live_projects.all()
@@ -3776,13 +3776,13 @@ def assign_revert(id):
         return redirect(request.referrer)
 
     if rec.period.feedback_open:
-        flash('Can not revert assignment for submission period #{period} '
-              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        flash('Can not revert assignment for {name} '
+              'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     if rec.matching_record is None:
-        flash('Can not revert assignment for submission period #{period} '
-              'because automatic data could not be found'.format(period=rec.period.submission_period), 'error')
+        flash('Can not revert assignment for {name} '
+              'because automatic data could not be found'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     rec.project_id = rec.matching_record.project_id
@@ -3810,13 +3810,13 @@ def assign_from_selection(id, sel_id):
         return redirect(request.referrer)
 
     if rec.period.feedback_open:
-        flash('Can not reassign for submission period #{period} '
-              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        flash('Can not reassign for {name} '
+              'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     if rec.matching_record is None:
-        flash('Can not revert assignment for submission period #{period} '
-              'because automatic data could not be found'.format(period=rec.period.submission_period), 'error')
+        flash('Can not revert assignment for {name} '
+              'because automatic data could not be found'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     sel = SelectionRecord.query.get_or_404(sel_id)
@@ -3850,15 +3850,15 @@ def assign_liveproject(id, pid):
         return redirect(request.referrer)
 
     if rec.period.feedback_open:
-        flash('Can not reassign for submission period #{period} '
-              'because feedback is already open'.format(period=rec.period.submission_period), 'error')
+        flash('Can not reassign for {name} '
+              'because feedback is already open'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
     lp = LiveProject.query.get_or_404(pid)
 
     if lp.config_id != config.id:
-        flash('Can not assign LiveProject #{num} for submission period #{period} because '
-              'their configuration data do not agree'.format(num=lp.number, period=rec.period.submission_period),
+        flash('Can not assign LiveProject #{num} for {name} because '
+              'their configuration data do not agree'.format(num=lp.number, name=rec.period.display_name),
               'error')
         return redirect(request.referrer)
 

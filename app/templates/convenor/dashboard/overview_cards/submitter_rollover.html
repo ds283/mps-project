@@ -1,6 +1,6 @@
 {% macro submitter_rollover(config) %}
     <div class="panel panel-primary">
-        <div class="panel-heading"><strong>Submission period #{{ config.submission_period }} is now closed</strong></div>
+        <div class="panel-heading"><strong>{{ config.current_period.display_name|safe }} is now closed</strong></div>
         <div class="panel-body">
             <p>Project activity for this cycle is now complete.</p>
         </div>

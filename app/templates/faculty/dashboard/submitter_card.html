@@ -16,9 +16,9 @@
         ">
             <div class="panel-heading">
                 {% if period.submission_period == config.submission_period %}
-                    <strong>Submission period #{{ n+1 }}</strong>
+                    <strong>{{ period.display_name|safe }}</strong>
                 {% else %}
-                    Submission period #{{ n+1 }}
+                    {{ period.display_name|safe }}
                 {% endif %}
             </div>
             <div class="panel-body">

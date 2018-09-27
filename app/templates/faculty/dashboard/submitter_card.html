@@ -40,7 +40,7 @@
                         {% if period.submission_period > config.submission_period %}
                             <p>Activity for this period has not yet commenced.</p>
                         {% elif period.submission_period == config.submission_period %}
-                            <p>Normal project activity is underway</p>
+                            <p>Normal project activity is underway.</p>
                         {% else %}
                             <span class="label label-danger">Error: Submission period lifecycle inconsistent</span>
                         {% endif %}

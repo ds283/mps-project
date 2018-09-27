@@ -41,9 +41,9 @@
                             {% set sel_state = config.selector_lifecycle %}
                             {% set sub_state = config.submitter_lifecycle %}
                             {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
-                                <span class="label label-success">Submission period #{{ config.submission_period }}</span>
+                                <span class="label label-success">{{ config.current_period.display_name|safe }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
-                                <span class="label label-warning">Marking/feedback #{{ config.submission_period }}</span>
+                                <span class="label label-warning">Marking/feedback: {{ config.current_period.display_name|safe }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
                                 <span class="label label-primary">Submissions complete</span>
                             {% else %}

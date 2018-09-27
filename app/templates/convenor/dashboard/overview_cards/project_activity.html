@@ -3,7 +3,7 @@
 
 {% macro project_activity(config, feedback_form) %}
     <div class="panel panel-success">
-        <div class="panel-heading"><strong>Project activity underway: submission period #{{ config.submission_period }}</strong></div>
+        <div class="panel-heading"><strong>Project activity underway: {{ config.current_period.display_name|safe }}</strong></div>
         <div class="panel-body">
             <form action="{{ url_for('convenor.open_feedback', id=config.id) }}"
                   method="POST" name="feedback-form">

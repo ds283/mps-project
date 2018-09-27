@@ -1703,6 +1703,14 @@ class SubmissionPeriodDefinition(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    @property
+    def display_name(self):
+        if self.name is not None and len(self.name) > 0:
+            return self.name
+
+        return 'Submission Period #{n}'.format(n=self.submission_period)
+
+
 class ProjectClassConfig(db.Model):
     """
     Model current configuration options for each project class
@@ -2166,6 +2174,14 @@ class SubmissionPeriodRecord(db.Model):
 
     # closed timestamp
     closed_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def display_name(self):
+        if self.name is not None and len(self.name) > 0:
+            return self.name
+
+        return 'Submission Period #{n}'.format(n=self.submission_period)
 
 
     @property

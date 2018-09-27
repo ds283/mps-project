@@ -3,7 +3,7 @@
 
 {% macro feedback_marking(config, feedback_form) %}
     <div class="panel panel-danger">
-        <div class="panel-heading"><strong>Feedback and marking underway: submission period #{{ config.submission_period }}</strong></div>
+        <div class="panel-heading"><strong>Feedback and marking underway: {{ config.current_period.display_name|safe }}</strong></div>
         <div class="panel-body">
             <div class="row vertical-top">
                 <div class="col-xs-9">

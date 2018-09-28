@@ -1882,7 +1882,7 @@ def edit_period(id):
         db.session.commit()
         data.owner.validate_presentations()
 
-        return redirect(url_for('admin.edit_submission_periods', id=data.id))
+        return redirect(url_for('admin.edit_submission_periods', id=data.owner.id))
 
     return render_template('admin/edit_period.html', form=form, period=data,
                            title='Edit submission period')

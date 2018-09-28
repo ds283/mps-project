@@ -1609,16 +1609,6 @@ class ProjectClass(db.Model):
 
 
     def validate_periods(self):
-        if self.periods is None or get_count(self.periods) == 0 and current_user is not None:
-            data = SubmissionPeriodDefinition(owner_id=self.id,
-                                              period=1,
-                                              name=None,
-                                              has_presentation=self.uses_presentations,
-                                              creator_id=current_user.id,
-                                              creation_timestamp=datetime.now())
-            self.periods = [data]
-            db.session.commit()
-
         expected = 1
         modified = False
         for item in self.periods.order_by(SubmissionPeriodDefinition.period.asc()).all():

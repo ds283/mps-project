@@ -1608,7 +1608,20 @@ class ProjectClass(db.Model):
         return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
 
 
-    def validate_periods(self):
+    def validate_periods(self, minimum_expected=0):
+        if (self.periods is None or get_count(self.periods) == 0) and minimum_expected > 0:
+            if current_user is not None:
+                data = SubmissionPeriodDefinition(owner_id=self.id,
+                                                  period=1,
+                                                  name=None,
+                                                  has_presentation=self.uses_presentations,
+                                                  creator_id=current_user.id,
+                                                  creation_timestamp=datetime.now())
+                self.periods = [data]
+                db.session.commit()
+            else:
+                raise RuntimeError('Cannot insert missing SubmissionPeriodDefinition')
+
         expected = 1
         modified = False
         for item in self.periods.order_by(SubmissionPeriodDefinition.period.asc()).all():
@@ -1626,7 +1639,7 @@ class ProjectClass(db.Model):
         if not self.uses_presentations:
             return
 
-        self.validate_periods()
+        self.validate_periods(minimum_expected=1)
         number_with_presentations = get_count(self.periods.filter_by(has_presentation=True))
 
         if number_with_presentations > 0:

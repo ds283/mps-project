@@ -37,13 +37,14 @@ from .forms import RoleSelectForm, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
     EditBackupOptionsForm, BackupManageForm, \
     AddRoleForm, EditRoleForm, \
-    NewMatchForm, RenameMatchForm, CompareMatchForm
+    NewMatchForm, RenameMatchForm, CompareMatchForm, \
+    AddPresentationAssessmentForm, EditPresentationAssessmentForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
-    LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition
+    LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, PresentationSession
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -2089,7 +2090,7 @@ def confirm_global_rollover():
     :return:
     """
 
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
 
     if not rollover_ready:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
@@ -2124,7 +2125,7 @@ def perform_global_rollover():
     :return:
     """
 
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
 
     if not rollover_ready:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
@@ -3352,7 +3353,7 @@ def manage_matching():
     """
 
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
 
     if not matching_ready:
         flash('Automated matching is not yet available because some project classes are not ready', 'error')
@@ -3376,7 +3377,7 @@ def matches_ajax():
     """
 
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
     if not matching_ready or rollover_in_progress:
         return jsonify({})
 
@@ -3394,7 +3395,7 @@ def create_match():
     :return:
     """
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = get_root_dashboard_data()
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
 
     if not matching_ready:
         flash('Automated matching is not yet available because some project classes are not ready', 'info')
@@ -4419,6 +4420,102 @@ def deselect_match(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/manage_assessments')
+@roles_required('root')
+def manage_assessments():
+    """
+    Create the 'manage assessments' view
+    :return:
+    """
+
+    # check that assessment events are actually required
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+
+    if not assessments:
+        flash('Presentation assessments are not currently required', 'error')
+        return redirect(request.referrer)
+
+    return render_template('admin/presentations/manage.html')
+
+
+@admin.route('/presentation_assessments_ajax')
+@roles_required('root')
+def presentation_assessments_ajax():
+    """
+    AJAX endpoint to generate data for populating the 'manage assessments' view
+    :return:
+    """
+
+    # check that assessment events are actually required
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+    if not assessments:
+        return jsonify({})
+
+    current_year = get_current_year()
+    assessments = db.session.query(PresentationAssessment).filter_by(year=current_year).all()
+
+    return ajax.admin.presentation_assessments_data(assessments, text='presentation assessments list',
+                                                    url=url_for('admin.manage_assessments'))
+
+
+@admin.route('/add_assessment', methods=['GET', 'POST'])
+@roles_required('root')
+def add_assessment():
+    """
+    Add a new named assessment
+    :return:
+    """
+
+    current_year = get_current_year()
+    form = AddPresentationAssessmentForm(current_year, request.form)
+
+    if form.validate_on_submit():
+        data = PresentationAssessment(name=form.name.data,
+                                      year=current_year,
+                                      creator_id=current_user.id,
+                                      creation_timestamp=datetime.now())
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.manage_assessments'))
+
+    return render_template('admin/presentations/edit_assessment.html', form=form,
+                           title='Add new presentation assessment event')
+
+
+@admin.route('/edit_assessment/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_assessment(id):
+    """
+    Edit an existing named assessment
+    :return:
+    """
+
+    current_year = get_current_year()
+    data = PresentationAssessment.query.get_or_404(id)
+
+    if data.year != current_year:
+        flash('Cannot edit presentation assessment {name} because it does not '
+              'belong to the current year'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    form = EditPresentationAssessmentForm(current_year, obj=data)
+    form.assessment = data
+
+    if form.validate_on_submit():
+        data.name = form.name.data
+
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.manage_assessments'))
+
+    return render_template('admin/presentations/edit_assessment.html', form=form, assessment=data,
+                           title='Edit existing presentation assessment event')
 
 
 @admin.route('/launch_test_task')

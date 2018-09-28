@@ -1,6 +1,6 @@
 {% macro root_dashboard_card(root_dash_data) %}
 
-    {% set config_list, current_year, rollover_ready, matching_ready, rollover_in_progress = root_dash_data %}
+    {% set config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = root_dash_data %}
 
     <div class="well">
         <p><span class="dashboard-project-title">System administrator dashboard</span></p>
@@ -99,6 +99,26 @@
                 {% endfor %}
             </div>
         </div>
+
+        {% if assessments %}
+            <div class="panel panel-info">
+                <div class="panel-heading">Presentation assessments</div>
+                <div class="panel-body">
+                    <div class="row vertical-bottom">
+                        <div class="col-xs-8">
+                            Some active project classes use presentations.
+                        </div>
+                        <div class="col-xs-4">
+                            <div class="pull-right">
+                                <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-default">
+                                    Manage assessments
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
 
         {% if matching_ready and not rollover_in_progress %}
             <div class="panel panel-warning">

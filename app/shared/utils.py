@@ -67,8 +67,13 @@ def get_root_dashboard_data():
     rollover_ready = True
     rollover_in_progress = False
 
+    presentation_assessments = False
+
     # loop through all active project classes
     for pclass in pcs:
+
+        if pclass.uses_presentations:
+            presentation_assessments = True
 
         # get current configuration record for this project class
         config = db.session.query(ProjectClassConfig) \
@@ -97,7 +102,7 @@ def get_root_dashboard_data():
             if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
                 rollover_ready = False
 
-    return config_list, current_year, rollover_ready, matching_ready, rollover_in_progress
+    return config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, presentation_assessments
 
 
 def get_convenor_dashboard_data(pclass, config):

@@ -21,3 +21,4 @@ from .match_view_student import student_view_data
 from .match_view_faculty import faculty_view_data
 from .compare_matches import compare_match_data
 from .periods import periods_data
+from .presentations import presentation_assessments_data

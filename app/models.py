@@ -2354,7 +2354,7 @@ class EnrollmentRecord(db.Model):
         elif self.supervisor_state == self.SUPERVISOR_EXEMPT:
             return '<span class="label label-danger"><i class="fa fa-times"></i> Supervisor: exempt</span>'
 
-        return ''
+        return '<span class="label label-danger">Unknown state</span>'
 
 
     @property
@@ -2368,7 +2368,7 @@ class EnrollmentRecord(db.Model):
         elif self.marker_state == EnrollmentRecord.MARKER_EXEMPT:
             return '<span class="label label-danger"><i class="fa fa-times"></i> Marker: exempt</span>'
 
-        return ''
+        return '<span class="label label-danger">Unknown state</span>'
 
 
     @property
@@ -2378,17 +2378,22 @@ class EnrollmentRecord(db.Model):
             return '<span class="label label-success"><i class="fa fa-check"></i> Presentations: active</span>'
         elif self.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL:
             return '<span class="label label-warning"><i class="fa fa-times"></i> Presentations: sab{year}</span>'.format(
-                year='' if self.marker_reenroll is None else ' ({yr})'.format(yr=self.marker_reenroll))
+                year='' if self.presentations_reenroll is None else ' ({yr})'.format(yr=self.presentations_reenroll))
         elif self.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT:
             return '<span class="label label-danger"><i class="fa fa-times"></i> Presentations: exempt</span>'
 
-        return ''
+        return '<span class="label label-danger">Unknown state</span>'
 
 
     @property
     def enrolled_labels(self):
+        label = self.supervisor_label
+        if self.pclass.uses_marker:
+            label += ' ' + self.marker_label
+        if self.pclass.uses_presentations:
+            label += ' ' + self.presentation_label
 
-        return self.supervisor_label + ' ' + self.marker_label + ' ' + self.presentation_label
+        return label
 
 
 @listens_for(EnrollmentRecord, 'before_update')

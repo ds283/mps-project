@@ -31,7 +31,7 @@ def logout():
             user = db.session.query(User).filter_by(id=prev_id).one()
 
             current_app.logger.info('{real} reverted to viewing the site as themselves (previously viewing as '
-                                    'alternative user {fake}'.format(real=user.name, fake=current_user.name))
+                                    'alternative user {fake})'.format(real=user.name, fake=current_user.name))
 
             login_user(user)
             return redirect(url_for('admin.edit_users'))

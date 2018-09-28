@@ -248,6 +248,14 @@ project_matching_table = db.Table('match_config_projects',
                                   db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True))
 
 
+# PRESENTATIONS
+
+# link presentation assessments to submission periods
+assessment_to_periods = db.Table('assessment_to_periods',
+                                 db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
+                                 db.Column('period_id', db.Integer(), db.ForeignKey('submission_periods.id'), primary_key=True))
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -1673,8 +1681,8 @@ class SubmissionPeriodDefinition(db.Model):
 
     # link to parent ProjectClass
     owner_id = db.Column(db.Integer(), db.ForeignKey('project_classes.id'))
-    owner = db.relationship('ProjectClass', uselist=False, backref=db.backref('periods', lazy='dynamic',
-                                                                              cascade='all, delete, delete-orphan'))
+    owner = db.relationship('ProjectClass', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('periods', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # numerical submission period
     period = db.Column(db.Integer())
@@ -1802,6 +1810,11 @@ class ProjectClassConfig(db.Model):
     @property
     def name(self):
         return self.project_class.name
+
+
+    @property
+    def abbreviation(self):
+        return self.project_class.abbreviation
 
 
     @property
@@ -2217,6 +2230,12 @@ class SubmissionPeriodRecord(db.Model):
             .filter(SubmissionRecord.marker_id == fac_id) \
             .join(StudentData, StudentData.id == students.c.student_id) \
             .order_by(SubmissionRecord.submission_period.asc(), StudentData.exam_number).all()
+
+
+    @property
+    def label(self):
+        return self.config.project_class.make_label(self.config.abbreviation + ': ' + self.display_name)
+
 
 
 class EnrollmentRecord(db.Model):
@@ -5425,6 +5444,109 @@ def _MatchingRecord_update_handler(mapper, connection, target):
 
         cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
         cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+
+
+class PresentationAssessment(db.Model):
+    """
+    Store data for a presentation assessment
+    """
+
+    __tablename__ = 'presentation_assessments'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # year should match an available year in MainConfig
+    year = db.Column(db.Integer(), db.ForeignKey('main_config.year'))
+    main_config = db.relationship('MainConfig', foreign_keys=[year], uselist=False,
+                                  backref=db.backref('presentation_assessments', lazy='dynamic'))
+
+    # name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
+
+    # submission sessions to which we are attached
+    submission_periods = db.relationship('SubmissionPeriodRecord', secondary=assessment_to_periods, lazy='dynamic',
+                                         backref=db.backref('presentation_assessments', lazy='dynamic'))
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False,
+                                 backref=db.backref('presentation_assessments', lazy='dynamic'))
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+class PresentationSession(db.Model):
+    """
+    Store data about a presentation session
+    """
+
+    __tablename__ = 'presentation_sessions'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # assessment this session is part of
+    owner_id = db.Column(db.Integer(), db.ForeignKey('presentation_assessments.id'))
+    owner = db.relationship('PresentationAssessment', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('sessions', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # session date
+    date = db.Column(db.Date())
+
+    # morning or afternoon
+    MORNING_SESSION = 0
+    AFTERNOON_SESSION = 1
+
+    SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
+                       AFTERNOON_SESSION: 'afternoon'}
+
+    session_type = db.Column(db.Integer())
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False,
+                                 backref=db.backref('presentation_sessions', lazy='dynamic'))
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def label(self):
+        return '<span class="label label-info">{date} {tag}</span>'.format(date=self.date.strftime("%Y-%m-%d"),
+                                                                           tag=self.session_type_text)
+
+
+    @property
+    def session_type_text(self):
+        if self.session_type in PresentationSession.SESSION_TO_TEXT:
+            return PresentationSession.SESSION_TO_TEXT[self.session_type]
+
+        return '<unknown>'
 
 
 # ############################

@@ -30,6 +30,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_exam_number, unique_or_original_exam_number, globally_unique_matching_name, \
     globally_unique_supervisor_abbrev, unique_or_original_supervisor_abbrev, value_is_nonnegative, \
     unique_or_original_matching_name, \
+    globally_unique_assessment_name, unique_or_original_assessment_name, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -847,13 +848,13 @@ class MatchingMixin():
                                         validators=[InputRequired(message='Please specify a bias')])
 
     solver = SelectField('Solver', choices=solver_choices, coerce=int,
-                         description='The optimizer can use a number of differnet solvers. If in doubt, use the '
+                         description='The optimizer can use a number of different solvers. If in doubt, use the '
                                      'packaged CBC solver.')
 
 
 class NewMatchForm(Form, MatchingMixin):
 
-    submit = SubmitField("Create new match")
+    submit = SubmitField('Create new match')
 
     def __init__(self, year, *args, **kwargs):
 
@@ -868,7 +869,8 @@ class RenameMatchForm(Form):
     name = StringField('New name', description='Enter a short tag to identify this match',
                        validators=[InputRequired(message='Please supply a unique name')])
 
-    submit = SubmitField("Rename match")
+    submit = SubmitField('Rename match')
+
 
     def __init__(self, year, *args, **kwargs):
 
@@ -883,8 +885,34 @@ class CompareMatchForm(Form):
 
     compare = SubmitField('Compare')
 
+
     def __init__(self, year, self_id, pclasses, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
         self.target.query_factory = partial(GetComparatorMatches, year, self_id, pclasses)
+
+
+class PresentationAssessmentMixin():
+
+    name = StringField('Name', description='Enter a short name to identify this assessment event',
+                       validators=[InputRequired(message='Please supply a unique name')])
+
+
+class AddPresentationAssessmentForm(Form, PresentationAssessmentMixin):
+
+    submit = SubmitField('Add new assessment')
+
+
+    def __init__(self, year, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.name.validators.append(partial(globally_unique_assessment_name, year))
+
+
+class EditPresentationAssessmentForm(Form, PresentationAssessmentMixin, EditFormMixin):
+
+    def __init__(self, year, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.name.validators.append(partial(unique_or_original_assessment_name, year))

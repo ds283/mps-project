@@ -1,0 +1,38 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if assessment %}
+        Edit presentation assessment event <strong>{{ assessment.name }}</strong>
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if assessment %}
+        <form action="{{ url_for('admin.edit_assessment', id=assessment.id) }}" method="POST" name="assessment_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_assessment') }}" method="POST" name="form">
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.form_field(form.name) }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(assessment) }}
+{% endblock %}

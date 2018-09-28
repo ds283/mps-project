@@ -17,7 +17,7 @@ from zxcvbn import zxcvbn
 
 from app.models import Project, ProjectDescription
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
-    Supervisor, Role, StudentData, MatchingAttempt
+    Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment
 
 from flask import current_app
 from werkzeug.local import LocalProxy
@@ -224,6 +224,46 @@ def unique_or_original_matching_name(year, form, field):
         raise ValidationError('{name} is already in use for a matching attempt this year'.format(name=field.data))
 
 
+def globally_unique_project(form, field):
+    if Project.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a project'.format(name=field.data))
+
+
+def unique_or_original_project(form, field):
+    if field.data != form.project.name and Project.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already associated with a project'.format(name=field.data))
+
+
+def project_unique_label(form, field):
+    if ProjectDescription.query.filter_by(parent_id=form.project_id, label=field.data).first():
+        raise ValidationError('{name} is already used as a label for this project'.format(name=field.data))
+
+
+def project_unique_or_original_label(form, field):
+
+    if field.data != form.desc.label and ProjectDescription.query \
+            .filter_by(parent_id=form.project_id, label=field.data).first():
+        raise ValidationError('{name} is already used as a label for this project'.format(name=field.data))
+
+
+def value_is_nonnegative(form, field):
+    if field.data < 0:
+        raise ValidationError('Please enter a non-negative value')
+
+
+def globally_unique_assessment_name(year, form, field):
+    if PresentationAssessment.query.filter_by(name=field.data, year=year).first():
+        raise ValidationError('{name} is already in use as an assessment name for this year'.format(name=field.data))
+
+
+def unique_or_original_assessment_name(year, form, field):
+    if field.data == form.assessment.name:
+        return
+
+    if PresentationAssessment.query.filter_by(name=field.data, year=year).first():
+        raise ValidationError('{name} is already in use as an assessment name for this year'.format(name=field.data))
+
+
 def valid_json(form, field):
     try:
         json_obj = json.loads(field.data)
@@ -318,34 +358,3 @@ class NotOptionalIf(Optional):
 
         if not bool(other_field.data):
             super(NotOptionalIf, self).__call__(form, field)
-
-
-def globally_unique_project(form, field):
-
-    if Project.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a project'.format(name=field.data))
-
-
-def unique_or_original_project(form, field):
-
-    if field.data != form.project.name and Project.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a project'.format(name=field.data))
-
-
-def project_unique_label(form, field):
-
-    if ProjectDescription.query.filter_by(parent_id=form.project_id, label=field.data).first():
-        raise ValidationError('{name} is already used as a label for this project'.format(name=field.data))
-
-
-def project_unique_or_original_label(form, field):
-
-    if field.data != form.desc.label and ProjectDescription.query \
-            .filter_by(parent_id=form.project_id, label=field.data).first():
-        raise ValidationError('{name} is already used as a label for this project'.format(name=field.data))
-
-
-def value_is_nonnegative(form, field):
-
-    if field.data < 0:
-        raise ValidationError('Please enter a non-negative value')

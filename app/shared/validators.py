@@ -12,6 +12,7 @@
 from flask import flash
 from flask_login import current_user
 
+from .utils import get_current_year, get_root_dashboard_data
 from ..models import ProjectClassConfig
 
 
@@ -175,3 +176,26 @@ def validate_submission_viewable(record):
 
     flash('Only supervisors or 2nd markers can perform this operation', 'error')
     return False
+
+
+def validate_using_assessment():
+    # check that assessment events are actually required
+    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+
+    if not assessments:
+        flash('Presentation assessments are not currently required', 'error')
+        return False
+
+    return True
+
+
+def validate_assessment(data, current_year=None):
+    if current_year is None:
+        current_year = get_current_year()
+
+    if data.year != current_year:
+        flash('Cannot edit presentation assessment {name} because it does not '
+              'belong to the current year'.format(name=data.name), 'info')
+        return False
+
+    return True

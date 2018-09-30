@@ -12,7 +12,7 @@ from flask import request
 from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, get_form_field_label
 from flask_security.forms import password_length, email_required, email_validator, EqualTo
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
-    TextAreaField, DateTimeField, FloatField, RadioField
+    TextAreaField, DateField, DateTimeField, FloatField, RadioField
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
@@ -37,7 +37,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches
 from ..models import BackupConfiguration, EnrollmentRecord, academic_titles, \
-    extent_choices, year_choices, matching_history_choices, solver_choices
+    extent_choices, year_choices, matching_history_choices, solver_choices, session_choices
 
 from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -916,3 +916,21 @@ class EditPresentationAssessmentForm(Form, PresentationAssessmentMixin, EditForm
         super().__init__(*args, **kwargs)
 
         self.name.validators.append(partial(unique_or_original_assessment_name, year))
+
+
+class SessionMixin():
+
+    date = DateField('Date', format='%d/%m/%Y', validators=[InputRequired()],
+                     description='Specify the date for this session')
+
+    session_type = SelectField('Session type', choices=session_choices, coerce=int)
+
+
+class AddSessionForm(Form, SessionMixin):
+
+    submit = SubmitField('Add session')
+
+
+class EditSessionForm(Form, SessionMixin, EditFormMixin):
+
+    pass

@@ -66,6 +66,9 @@ matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '
 # PuLP solver choices
 solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GLPK external command')]
 
+# session types
+session_choices = [(0, 'Morning'), (1, 'Afternoon')]
+
 
 ####################
 # ASSOCIATION TABLES
@@ -5496,6 +5499,11 @@ class PresentationAssessment(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    @property
+    def ordered_sessions(self):
+        return self.sessions.order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+
+
 class PresentationSession(db.Model):
     """
     Store data about a presentation session
@@ -5522,6 +5530,9 @@ class PresentationSession(db.Model):
     SESSION_TO_TEXT = {MORNING_SESSION: 'morning',
                        AFTERNOON_SESSION: 'afternoon'}
 
+    SESSION_LABEL_TYPES = {MORNING_SESSION: 'label-success',
+                           AFTERNOON_SESSION: 'label-primary'}
+
     session_type = db.Column(db.Integer())
 
 
@@ -5545,16 +5556,40 @@ class PresentationSession(db.Model):
 
     @property
     def label(self):
-        return '<span class="label label-info">{date} {tag}</span>'.format(date=self.date.strftime("%Y-%m-%d"),
-                                                                           tag=self.session_type_text)
+        if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
+            label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
+        else:
+            label_type = 'label-default'
+
+        return '<span class="label {type}">{date} {tag}</span>'.format(type=label_type,
+                                                                       date=self.date.strftime("%d/%m/%Y"),
+                                                                       tag=self.session_type_string)
 
 
     @property
-    def session_type_text(self):
+    def date_as_string(self):
+        return self.date.strftime("%a %d %b %Y")
+
+
+    @property
+    def session_type_string(self):
         if self.session_type in PresentationSession.SESSION_TO_TEXT:
             return PresentationSession.SESSION_TO_TEXT[self.session_type]
 
         return '<unknown>'
+
+
+    @property
+    def session_type_label(self):
+        if self.session_type in PresentationSession.SESSION_TO_TEXT:
+            if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
+                label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
+            else:
+                label_type = 'label-default'
+
+            return '<span class="label {type}">{tag}</span>'.format(type=label_type, tag=self.session_type_string)
+
+        return '<span class="label label-danger">Unknown session type</span>'
 
 
 # ############################

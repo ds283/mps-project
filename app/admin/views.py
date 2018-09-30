@@ -38,26 +38,28 @@ from .forms import RoleSelectForm, \
     EditBackupOptionsForm, BackupManageForm, \
     AddRoleForm, EditRoleForm, \
     NewMatchForm, RenameMatchForm, CompareMatchForm, \
-    AddPresentationAssessmentForm, EditPresentationAssessmentForm
+    AddPresentationAssessmentForm, EditPresentationAssessmentForm, \
+    AddSessionForm, EditSessionForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
-    LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, PresentationSession
+    LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
+    PresentationSession
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
-from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector
+from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector, \
+    validate_using_assessment, validate_assessment
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
 
 from ..task_queue import register_task, progress_update
 
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import func
 import app.ajax as ajax
 
 from . import admin
@@ -1673,7 +1675,7 @@ def add_pclass():
                                             name=template.name,
                                             has_presentation=template.has_presentation,
                                             retired=False,
-                                            submission_period=k+1,
+                                            submission_period=template.period,
                                             feedback_open=False,
                                             feedback_id=None,
                                             feedback_timestamp=None,
@@ -3980,7 +3982,7 @@ def merge_replace_records(src_id, dest_id):
         return redirect(request.referrer)
 
     year = get_current_year()
-    if record.year != year:
+    if dest.matching_attempt.year != year:
         flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
@@ -4429,12 +4431,7 @@ def manage_assessments():
     Create the 'manage assessments' view
     :return:
     """
-
-    # check that assessment events are actually required
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
-
-    if not assessments:
-        flash('Presentation assessments are not currently required', 'error')
+    if not validate_using_assessment():
         return redirect(request.referrer)
 
     return render_template('admin/presentations/manage.html')
@@ -4447,26 +4444,24 @@ def presentation_assessments_ajax():
     AJAX endpoint to generate data for populating the 'manage assessments' view
     :return:
     """
-
-    # check that assessment events are actually required
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
-    if not assessments:
+    if not validate_using_assessment():
         return jsonify({})
 
     current_year = get_current_year()
     assessments = db.session.query(PresentationAssessment).filter_by(year=current_year).all()
 
-    return ajax.admin.presentation_assessments_data(assessments, text='presentation assessments list',
-                                                    url=url_for('admin.manage_assessments'))
+    return ajax.admin.presentation_assessments_data(assessments)
 
 
 @admin.route('/add_assessment', methods=['GET', 'POST'])
 @roles_required('root')
 def add_assessment():
     """
-    Add a new named assessment
+    Add a new named assessment event
     :return:
     """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
 
     current_year = get_current_year()
     form = AddPresentationAssessmentForm(current_year, request.form)
@@ -4489,16 +4484,16 @@ def add_assessment():
 @roles_required('root')
 def edit_assessment(id):
     """
-    Edit an existing named assessment
+    Edit an existing named assessment event
     :return:
     """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
 
-    current_year = get_current_year()
     data = PresentationAssessment.query.get_or_404(id)
 
-    if data.year != current_year:
-        flash('Cannot edit presentation assessment {name} because it does not '
-              'belong to the current year'.format(name=data.name), 'info')
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
         return redirect(request.referrer)
 
     form = EditPresentationAssessmentForm(current_year, obj=data)
@@ -4516,6 +4511,182 @@ def edit_assessment(id):
 
     return render_template('admin/presentations/edit_assessment.html', form=form, assessment=data,
                            title='Edit existing presentation assessment event')
+
+
+@admin.route('/delete_assessment/<int:id>')
+@roles_required('root')
+def delete_assessment(id):
+    """
+    Delete an existing assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    title = 'Delete presentation assessment'
+    panel_title = 'Delete presentation assessment <strong>{name}</strong>'.format(name=data.name)
+
+    action_url = url_for('admin.perform_delete_assessment', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to delete the assessment ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=data.name)
+    submit_label = 'Delete assessment'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_delete_assessment/<int:id>')
+@roles_required('root')
+def perform_delete_assessment(id):
+    """
+    Delete an existing assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', url_for('admin.manage_assessments'))
+
+    db.session.delete(data)
+    db.session.commit()
+
+    return redirect(url)
+
+
+@admin.route('/assessment_manage_sessions/<int:id>')
+@roles_required('root')
+def assessment_manage_sessions(id):
+    """
+    Manage dates for an existing assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    return render_template('admin/presentations/manage_sessions.html', assessment=data)
+
+
+@admin.route('/attach_sessions_ajax/<int:id>')
+@roles_required('root')
+def attach_sessions_ajax(id):
+    if not validate_using_assessment():
+        return jsonify({})
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    if not validate_assessment(data):
+        return jsonify({})
+
+    return ajax.admin.assessment_sessions_data(data.sessions)
+
+
+@admin.route('/add_session/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def add_session(id):
+    """
+    Attach a new session to the specified assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    form = AddSessionForm(request.form)
+
+    if form.validate_on_submit():
+        sess = PresentationSession(owner_id=data.id,
+                                   date=form.date.data,
+                                   session_type=form.session_type.data,
+                                   creator_id=current_user.id,
+                                   creation_timestamp=datetime.now())
+        db.session.add(sess)
+        db.session.commit()
+
+        return redirect(url_for('admin.assessment_manage_sessions', id=id))
+
+    return render_template('admin/presentations/edit_session.html', form=form, assessment=data)
+
+
+@admin.route('/edit_session/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_session(id):
+    """
+    Edit an existing assessment event session
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    sess = PresentationSession.query.get_or_404(id)
+
+    if not validate_assessment(sess.owner):
+        return redirect(request.referrer)
+
+    form = EditSessionForm(obj=sess)
+    form.session = sess
+
+    if form.validate_on_submit():
+        sess.date = form.date.data
+        sess.session_type = form.session_type.data
+
+        sess.last_edit_id = current_user.id
+        sess.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.assessment_manage_sessions', id=id))
+
+    return render_template('admin/presentations/edit_session.html', form=form, assessment=sess.owner, sess=sess)
+
+
+@admin.route('/delete_session/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def delete_session(id):
+    """
+    Delete the specified session from an assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    sess = PresentationSession.query.get_or_404(id)
+
+    if not validate_assessment(sess.owner):
+        return redirect(request.referrer)
+
+    db.session.delete(sess)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
 
 
 @admin.route('/launch_test_task')

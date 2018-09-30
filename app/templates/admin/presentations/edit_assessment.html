@@ -19,7 +19,7 @@
     {% if assessment %}
         <form action="{{ url_for('admin.edit_assessment', id=assessment.id) }}" method="POST" name="assessment_form">
     {% else %}
-        <form action="{{ url_for('admin.add_assessment') }}" method="POST" name="form">
+        <form action="{{ url_for('admin.add_assessment') }}" method="POST" name="assessment_form">
     {% endif %}
 
         {{ form.hidden_tag() }}

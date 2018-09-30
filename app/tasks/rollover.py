@@ -357,7 +357,7 @@ def register_rollover_tasks(celery):
                                                 name=template.name,
                                                 has_presentation=template.has_presentation,
                                                 retired=False,
-                                                submission_period=k + 1,
+                                                submission_period=template.period,
                                                 feedback_open=False,
                                                 feedback_id=None,
                                                 feedback_timestamp=None,

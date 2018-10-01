@@ -35,7 +35,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
-    GetMatchingAttempts, GetComparatorMatches
+    GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName
 from ..models import BackupConfiguration, EnrollmentRecord, academic_titles, \
     extent_choices, year_choices, matching_history_choices, solver_choices, session_choices
 
@@ -857,11 +857,16 @@ class NewMatchForm(Form, MatchingMixin):
     submit = SubmitField('Create new match')
 
     def __init__(self, year, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
+        self._year = year
+
         self.include_matches.query_factory = partial(GetMatchingAttempts, year)
-        self.name.validators.append(partial(globally_unique_matching_name, year))
+
+
+    @staticmethod
+    def validate_name(form, field):
+        return globally_unique_assessment_name(form._year, form, field)
 
 
 class RenameMatchForm(Form):
@@ -873,10 +878,14 @@ class RenameMatchForm(Form):
 
 
     def __init__(self, year, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
-        self.name.validators.append(partial(unique_or_original_matching_name, year))
+        self._year = year
+
+
+    @staticmethod
+    def validate_name(form, field):
+        return unique_or_original_matching_name(form._year, form, field)
 
 
 class CompareMatchForm(Form):
@@ -887,7 +896,6 @@ class CompareMatchForm(Form):
 
 
     def __init__(self, year, self_id, pclasses, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         self.target.query_factory = partial(GetComparatorMatches, year, self_id, pclasses)
@@ -898,24 +906,42 @@ class PresentationAssessmentMixin():
     name = StringField('Name', description='Enter a short name to identify this assessment event',
                        validators=[InputRequired(message='Please supply a unique name')])
 
+    submission_periods = CheckboxQuerySelectMultipleField('Select the submission periods for which project '
+                                                          'presentations will be given',
+                                                          query_factory=None, get_label=BuildSubmissionPeriodName)
+
 
 class AddPresentationAssessmentForm(Form, PresentationAssessmentMixin):
 
     submit = SubmitField('Add new assessment')
 
 
-    def __init__(self, year, *args, **kwargs):
+    def __init__(self, year, assessment_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.name.validators.append(partial(globally_unique_assessment_name, year))
+        self._year = year
+
+        self.submission_periods.query_factory = partial(GetUnattachedSubmissionPeriods, assessment_id)
+
+
+    @staticmethod
+    def validate_name(form, field):
+        return globally_unique_assessment_name(form._year, form, field)
 
 
 class EditPresentationAssessmentForm(Form, PresentationAssessmentMixin, EditFormMixin):
 
-    def __init__(self, year, *args, **kwargs):
+    def __init__(self, year, assessment_id, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.name.validators.append(partial(unique_or_original_assessment_name, year))
+        self._year = year
+
+        self.submission_periods.query_factory = partial(GetUnattachedSubmissionPeriods, assessment_id)
+
+
+    @staticmethod
+    def validate_name(form, field):
+        return unique_or_original_assessment_name(form._year, form, field)
 
 
 class SessionMixin():

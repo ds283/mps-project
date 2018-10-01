@@ -30,47 +30,50 @@ _periods = \
 
 _sessions = \
 """
-{% for session in a.ordered_sessions %}
+{% set sessions = a.ordered_sessions.all() %}
+{% for session in sessions %}
     {{ session.label|safe }}
 {% endfor %}
-<p></p>
-{% set errors = a.errors %}
-{% set warnings = a.warnings %}
-{% if errors|length == 1 %}
-    <span class="label label-danger">1 error</span>
-{% elif errors|length > 1 %}
-    <span class="label label-danger">{{ errors|length }} errors</span>
-{% else %}
-    <span class="label label-success">0 errors</span>
-{% endif %}
-{% if warnings|length == 1 %}
-    <span class="label label-warning">1 warning</span>
-{% elif warnings|length > 1 %}
-    <span class="label label-warning">{{ warnings|length }} warnings</span>
-{% else %}
-    <span class="label label-success">0 warnings</span>
-{% endif %}
-{% if errors|length > 0 %}
-    <div class="has-error">
-        {% for item in errors %}
-            {% if loop.index <= 10 %}
-                <p class="help-block">{{ item }}</p>
-            {% elif loop.index == 11 %}
-                <p class="help-block">...</p>
-            {% endif %}            
-        {% endfor %}
-    </div>
-{% endif %}
-{% if warnings|length > 0 %}
-    <div class="has-error">
-        {% for item in warnings %}
-            {% if loop.index <= 10 %}
-                <p class="help-block">{{ item }}</p>
-            {% elif loop.index == 11 %}
-                <p class="help-block">...</p>
-            {% endif %}
-        {% endfor %}
-    </div>
+{% if sessions|length > 0 %}
+    <p></p>
+    {% set errors = a.errors %}
+    {% set warnings = a.warnings %}
+    {% if errors|length == 1 %}
+        <span class="label label-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="label label-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="label label-success">0 errors</span>
+    {% endif %}
+    {% if warnings|length == 1 %}
+        <span class="label label-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="label label-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="label label-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="has-error">
+            {% for item in errors %}
+                {% if loop.index <= 10 %}
+                    <p class="help-block">{{ item }}</p>
+                {% elif loop.index == 11 %}
+                    <p class="help-block">...</p>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="has-error">
+            {% for item in warnings %}
+                {% if loop.index <= 10 %}
+                    <p class="help-block">{{ item }}</p>
+                {% elif loop.index == 11 %}
+                    <p class="help-block">...</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
 {% endif %}
 """
 

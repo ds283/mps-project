@@ -34,7 +34,7 @@ _faculty_menu = \
         {% set record = userdata.get_enrollment_record(pclass) %}
         <li {% if record is none %}class="disabled"{% endif %}>
             <a {% if record is not none %}href="{{ url_for('admin.edit_enrollment', id=record.id, returnid=1) }}"{% endif %}>
-                <i class="fa fa-pencil"></i> Edit enrollment
+                <i class="fa fa-cogs"></i> Edit enrollment
             </a>
         </li>
     </ul>

@@ -111,13 +111,13 @@ _menu = \
         {% if student.number_pending > 0 or student.number_confirmed > 0 %}
             <li>
                 <a href="{{ url_for('convenor.selector_confirmations', id=student.id) }}">
-                    <i class="fa fa-pencil"></i> Show confirmations
+                    <i class="fa fa-cogs"></i> Show confirmations
                 </a>
             </li>
         {% else %}
             <li class="disabled">
                 <a>
-                    <i class="fa fa-pencil"></i> Show confirmations
+                    <i class="fa fa-cogs"></i> Show confirmations
                 </a>
             </li>
         {% endif %}

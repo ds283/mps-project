@@ -33,7 +33,7 @@ _menu = \
         <li class="dropdown-header">Edit session</li>
         <li>
             <a href="{{ url_for('admin.edit_session', id=s.id) }}">
-                <i class="fa fa-pencil"></i> Settings
+                <i class="fa fa-cogs"></i> Settings
             </a>
         </li>
         <li>

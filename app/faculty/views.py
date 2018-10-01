@@ -52,7 +52,7 @@ _project_menu = \
 
         <li>
             <a href="{{ url_for('faculty.edit_project', id=project.id) }}">
-                <i class="fa fa-pencil"></i> Project settings
+                <i class="fa fa-cogs"></i> Settings
             </a>
         </li>
         
@@ -64,19 +64,19 @@ _project_menu = \
 
         <li>
             <a href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
-                <i class="fa fa-wrench"></i> Assessors
+                <i class="fa fa-cogs"></i> Assessors
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('faculty.attach_skills', id=project.id) }}">
-                <i class="fa fa-wrench"></i> Transferable skills
+                <i class="fa fa-cogs"></i> Transferable skills
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('faculty.attach_programmes', id=project.id) }}">
-                <i class="fa fa-wrench"></i> Degree programmes
+                <i class="fa fa-cogs"></i> Degree programmes
             </a>
         </li>
 

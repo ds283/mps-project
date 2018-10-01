@@ -1668,7 +1668,7 @@ def _ProjectClass_insert_handler(mapper, connection, target):
 
 
 @listens_for(ProjectClass, 'before_delete')
-def _ProjectClass_update_handler(mapper, connection, target):
+def _ProjectClass_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
         cache.delete_memoized(_Project_num_assessors)
@@ -2414,7 +2414,7 @@ def _EnrollmentRecord_insert_handler(mapper, connection, target):
 
 
 @listens_for(EnrollmentRecord, 'before_delete')
-def _EnrollmentRecord_update_handler(mapper, connection, target):
+def _EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable)
         cache.delete_memoized(_Project_num_assessors)
@@ -2998,7 +2998,7 @@ def _ProjectDescription_insert_handler(mapper, connection, target):
 
 
 @listens_for(ProjectDescription, 'before_delete')
-def _ProjectDescription_insert_handler(mapper, connection, target):
+def _ProjectDescription_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
@@ -4071,7 +4071,7 @@ def _SelectionRecord_insert_handler(mapper, connection, target):
 
 
 @listens_for(SelectionRecord, 'before_delete')
-def _SelectionRecord_update_handler(mapper, connection, target):
+def _SelectionRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_MatchingAttempt_current_score)
         cache.delete_memoized(_MatchingAttempt_hint_status)
@@ -5155,7 +5155,7 @@ def _MatchingAttempt_insert_handler(mapper, connection, target):
 
 
 @listens_for(MatchingAttempt, 'before_delete')
-def _MatchingAttempt_update_handler(mapper, connection, target):
+def _MatchingAttempt_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_MatchingAttempt_current_score, target.id)
         cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.id)
@@ -5443,7 +5443,7 @@ def _MatchingRecord_insert_handler(mapper, connection, target):
 
 
 @listens_for(MatchingRecord, 'before_delete')
-def _MatchingRecord_update_handler(mapper, connection, target):
+def _MatchingRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_MatchingRecord_current_score, target.id)
         cache.delete_memoized(_MatchingRecord_is_valid, target.id)
@@ -5455,6 +5455,24 @@ def _MatchingRecord_update_handler(mapper, connection, target):
 
         cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
         cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+
+
+@cache.memoize()
+def _PresentationAssessment_is_valid(id):
+    obj = db.session.query(PresentationAssessment).filter_by(id=id).one()
+
+    errors = {}
+    warnings = {}
+
+    for sess in obj.sessions:
+        if not sess.is_valid:
+            errors[('basic', sess.id)] \
+                = '{date}: {err}'.format(date=sess.short_date_as_string, err=sess.error)
+
+    if len(errors) > 0 or len(warnings) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
 
 
 class PresentationAssessment(db.Model):
@@ -5499,9 +5517,94 @@ class PresentationAssessment(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
     @property
     def ordered_sessions(self):
         return self.sessions.order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+
+
+    @property
+    def is_valid(self):
+        """
+        Perform validation
+        :return:
+        """
+
+        flag, self._errors, self._warnings = _PresentationAssessment_is_valid(self.id)
+        self._validated = True
+
+        return flag
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
+
+
+@listens_for(PresentationAssessment, 'before_update')
+def _PresentationAssessment_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.id)
+
+
+@listens_for(PresentationAssessment, 'before_insert')
+def _PresentationAssessment_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.id)
+
+
+@listens_for(PresentationAssessment, 'before_delete')
+def _PresentationAssessment_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.id)
+
+
+@cache.memoize()
+def _PresentationSession_is_valid(id):
+    obj = db.session.query(PresentationSession).filter_by(id=id).one()
+
+    if obj.date.weekday() >= 5:
+        return False, 'Session scheduled on a weekend'
+
+    # check how many sessions are assigned to this date and morning/afternoon
+    count = get_count(obj.owner.sessions.filter_by(date=obj.date, session_type=obj.session_type))
+
+    if count != 1:
+        lo_rec = obj.owner.sessions \
+            .filter_by(date=obj.date, session_type=obj.session_type) \
+            .order_by(PresentationSession.date.asc(),
+                      PresentationSession.session_type.asc()).first()
+
+        if lo_rec is not None:
+            if lo_rec.id == obj.id:
+                return False, 'A duplicate copy of this session exists'
+            else:
+                return False, 'This session is a duplicate'
+
+    return True, None
 
 
 class PresentationSession(db.Model):
@@ -5554,6 +5657,16 @@ class PresentationSession(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.error = None
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self.error = None
+
+
     @property
     def label(self):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
@@ -5562,13 +5675,18 @@ class PresentationSession(db.Model):
             label_type = 'label-default'
 
         return '<span class="label {type}">{date} {tag}</span>'.format(type=label_type,
-                                                                       date=self.date.strftime("%d/%m/%Y"),
+                                                                       date=self.short_date_as_string,
                                                                        tag=self.session_type_string)
 
 
     @property
     def date_as_string(self):
         return self.date.strftime("%a %d %b %Y")
+
+
+    @property
+    def short_date_as_string(self):
+        return self.date.strftime("%d/%m/%Y")
 
 
     @property
@@ -5590,6 +5708,52 @@ class PresentationSession(db.Model):
             return '<span class="label {type}">{tag}</span>'.format(type=label_type, tag=self.session_type_string)
 
         return '<span class="label label-danger">Unknown session type</span>'
+
+
+    @property
+    def is_valid(self):
+        flag, self.error = _PresentationSession_is_valid(self.id)
+
+        return flag
+
+
+@listens_for(PresentationSession, 'before_update')
+def _PresentationSession_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_PresentationSession_is_valid, target.id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
+
+        dups = db.session.query(PresentationSession) \
+            .filter_by(date=target.date, session_type=target.session_type).all()
+        for dup in dups:
+            if dup.id != target.id:
+                cache.delete_memoized(_PresentationSession_is_valid, dup.id)
+
+
+@listens_for(PresentationSession, 'before_insert')
+def _PresentationSession_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_PresentationSession_is_valid, target.id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
+
+        dups = db.session.query(PresentationSession) \
+            .filter_by(date=target.date, session_type=target.session_type).all()
+        for dup in dups:
+            if dup.id != target.id:
+                cache.delete_memoized(_PresentationSession_is_valid, dup.id)
+
+
+@listens_for(PresentationSession, 'before_delete')
+def _PresentationSession_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_PresentationSession_is_valid, target.id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
+
+        dups = db.session.query(PresentationSession) \
+            .filter_by(date=target.date, session_type=target.session_type).all()
+        for dup in dups:
+            if dup.id != target.id:
+                cache.delete_memoized(_PresentationSession_is_valid, dup.id)
 
 
 # ############################

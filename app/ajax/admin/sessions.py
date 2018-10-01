@@ -11,6 +11,17 @@
 from flask import render_template_string, jsonify
 
 
+_date = \
+"""
+{{ s.date_as_string }}
+{% if not s.is_valid %}
+    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <div class="has-error">
+        <p class="help-block">Error: {{ s.error }}</p>
+    </div>
+{% endif %}
+"""
+
 _menu = \
 """
 <div class="dropdown">
@@ -37,7 +48,7 @@ _menu = \
 
 def assessment_sessions_data(sessions):
 
-    data = [{'date': s.date_as_string,
+    data = [{'date': render_template_string(_date, s=s),
              'session': s.session_type_label,
              'rooms': '',
              'availability': '',

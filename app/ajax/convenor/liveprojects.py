@@ -153,13 +153,13 @@ _menu = \
         {% if project.number_pending > 0 or project.number_confirmed > 0 %}
             <li>
                 <a href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
-                    <i class="fa fa-pencil"></i> Show confirmations
+                    <i class="fa fa-cogs"></i> Show confirmations
                 </a>
             </li>
         {% else %}
             <li class="disabled">
                 <a>
-                    <i class="fa fa-pencil"></i> Show confirmations
+                    <i class="fa fa-cogs"></i> Show confirmations
                 </a>
             </li>
         {% endif %}

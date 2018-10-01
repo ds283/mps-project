@@ -31,7 +31,7 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_period', id=period.id) }}">
-                <i class="fa fa-pencil"></i> Edit period
+                <i class="fa fa-cogs"></i> Edit period
             </a>
         </li>
         <li>

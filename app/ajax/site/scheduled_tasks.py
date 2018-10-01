@@ -21,7 +21,7 @@ _scheduled_menu_template = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{% if task.interval_id %}{{ url_for('admin.edit_interval_task', id=task.id) }}{% elif task.crontab_id %}{{ url_for('admin.edit_crontab_task', id=task.id) }}{% else %}#{% endif %}">
-                <i class="fa fa-pencil"></i> Edit task
+                <i class="fa fa-cogs"></i> Edit task
             </a>
         </li>
         <li>

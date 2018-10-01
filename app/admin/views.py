@@ -4661,7 +4661,7 @@ def edit_session(id):
 
         db.session.commit()
 
-        return redirect(url_for('admin.assessment_manage_sessions', id=id))
+        return redirect(url_for('admin.assessment_manage_sessions', id=sess.owner_id))
 
     return render_template('admin/presentations/edit_session.html', form=form, assessment=sess.owner, sess=sess)
 

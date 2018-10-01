@@ -4464,11 +4464,14 @@ def add_assessment():
         return redirect(request.referrer)
 
     current_year = get_current_year()
-    form = AddPresentationAssessmentForm(current_year, request.form)
+    form = AddPresentationAssessmentForm(current_year, None, request.form)
+
+    print(form.name.validators)
 
     if form.validate_on_submit():
         data = PresentationAssessment(name=form.name.data,
                                       year=current_year,
+                                      submission_periods=form.submission_periods.data,
                                       creator_id=current_user.id,
                                       creation_timestamp=datetime.now())
         db.session.add(data)
@@ -4496,11 +4499,12 @@ def edit_assessment(id):
     if not validate_assessment(data, current_year=current_year):
         return redirect(request.referrer)
 
-    form = EditPresentationAssessmentForm(current_year, obj=data)
+    form = EditPresentationAssessmentForm(current_year, data.id, obj=data)
     form.assessment = data
 
     if form.validate_on_submit():
         data.name = form.name.data
+        data.submission_periods = form.submission_periods.data
 
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()

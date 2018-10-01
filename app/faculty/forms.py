@@ -101,12 +101,13 @@ class EditProjectForm(Form, ProjectMixin, EditFormMixin):
 class DescriptionMixin():
 
     # allow the project_class list to be empty (but then the project is not offered)
-    project_classes = CheckboxQuerySelectMultipleField('Project classes',
-                                                       query_factory=CurrentUserProjectClasses, get_label='name')
+    project_classes = CheckboxQuerySelectMultipleField('Project classes', query_factory=None, get_label='name')
 
     capacity = IntegerField('Maximum student capacity',
-                            description='Optional. Used only if project-level option to enforce capacity is selected. '
-                                        'Note this refers to the number of assigned students, not your CATS assignment.',
+                            description='Optional. Used only the option to enforce capacity '
+                                        'in your settings is selected. '
+                                        'Note this refers to the maximum number of assigned students, '
+                                        'not your CATS assignment.',
                             validators=[Optional()])
 
     # allow team to be empty (but then the project is not offered)

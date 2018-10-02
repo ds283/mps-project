@@ -25,138 +25,136 @@ from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, Cur
 from functools import partial
 
 
-class ProjectMixin():
+def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
 
-    owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
-
-    keywords = StringField('Keywords', description='Optional. Separate with commas or semicolons.')
-
-    group = QuerySelectField('Research group', query_factory=CurrentUserResearchGroups, get_label='name')
-
-    # allow the project_class list to be empty (but then the project is not offered)
-    project_classes = CheckboxQuerySelectMultipleField('Project classes',
-                                                       query_factory=CurrentUserProjectClasses, get_label='name')
-
-    meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
-                       (Project.MEETING_NONE, "Prefer not to meet")]
-    meeting_reqd = SelectField('Meeting required?', choices=meeting_options, coerce=int)
-
-    enforce_capacity = BooleanField('Enforce maximum capacity')
-
-    # popularity display
-
-    show_popularity = BooleanField('Show popularity estimate')
-
-    show_bookmarks = BooleanField('Show number of bookmarks')
-
-    show_selections = BooleanField('Show number of selections')
-
-
-class AddProjectForm(Form, ProjectMixin):
-
-    def __init__(self,  *args, **kwargs):
-
-        convenor_editing = False
-        if 'convenor_editing' in kwargs:
-            convenor_editing = True
-            del kwargs['convenor_editing']
-
-        super().__init__(*args, **kwargs)
+    class ProjectMixin():
 
         if convenor_editing:
-            self.project_classes.query_factory = AllProjectClasses
-            self.group.query_factory = AllResearchGroups
+            owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
 
-    name = StringField('Title', validators=[InputRequired(message='Project title is required'),
-                                            globally_unique_project])
+        keywords = StringField('Keywords', description='Optional. Separate with commas or semicolons.')
 
-    submit = SubmitField('Next: Project descriptions')
+        group = QuerySelectField('Research group', query_factory=group_qf, get_label='name')
 
-    save_and_exit = SubmitField('Save and exit')
+        # allow the project_class list to be empty (but then the project is not offered)
+        project_classes = CheckboxQuerySelectMultipleField('Project classes',
+                                                           query_factory=project_classes_qf, get_label='name')
 
-    save_and_preview = SubmitField('Save and preview')
+        meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
+                           (Project.MEETING_NONE, "Prefer not to meet")]
+        meeting_reqd = SelectField('Meeting required?', choices=meeting_options, coerce=int)
 
+        enforce_capacity = BooleanField('Enforce maximum capacity')
 
-class EditProjectForm(Form, ProjectMixin, EditFormMixin):
+        # popularity display
 
-    def __init__(self, *args, **kwargs):
+        show_popularity = BooleanField('Show popularity estimate')
 
-        convenor_editing = False
-        if 'convenor_editing' in kwargs:
-            convenor_editing = True
-            del kwargs['convenor_editing']
+        show_bookmarks = BooleanField('Show number of bookmarks')
 
-        super().__init__(*args, **kwargs)
+        show_selections = BooleanField('Show number of selections')
 
-        if convenor_editing:
-            self.project_classes.query_factory = AllProjectClasses
-            self.group.query_factory = AllResearchGroups
-
-    name = StringField('Title', validators=[InputRequired(message='Project title is required'),
-                                            unique_or_original_project])
-
-    save_and_preview = SubmitField('Save changes and preview')
+    return ProjectMixin
 
 
-class DescriptionMixin():
+def AddProjectFormFactory(convenor_editing=False):
 
-    # allow the project_class list to be empty (but then the project is not offered)
-    project_classes = CheckboxQuerySelectMultipleField('Project classes', query_factory=None, get_label='name')
+    Mixin = ProjectMixinFactory(convenor_editing,
+                                AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
+                                AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
 
-    capacity = IntegerField('Maximum student capacity',
-                            description='Optional. Used only the option to enforce capacity '
-                                        'in your settings is selected. '
-                                        'Note this refers to the maximum number of assigned students, '
-                                        'not your CATS assignment.',
-                            validators=[Optional()])
+    class AddProjectForm(Form, Mixin):
 
-    # allow team to be empty (but then the project is not offered)
-    team = CheckboxQuerySelectMultipleField('Supervisory team',
-                                            query_factory=GetSupervisorRoles, get_label='name')
+        name = StringField('Title', validators=[InputRequired(message='Project title is required'),
+                                                globally_unique_project])
 
-    description = TextAreaField('Project description', render_kw={"rows": 15},
-                                description=r'Enter a description of your project. '
-                                            r'The LaTeX mathematics environments are supported, as are common LaTeX commands. '
-                                            r'The amsmath, amsthm, and amssymb packages are included. '
-                                            r'You may use displayed or inline mathematics. '
-                                            r'You may also use Markdown syntax to format your description. '
-                                            r'<strong>Please preview your project to check it renders correctly.</strong>',
-                                validators=[InputRequired(message='A project description is required')])
+        submit = SubmitField('Next: Project descriptions')
 
-    reading = TextAreaField('Recommended reading', render_kw={"rows": 7},
-                            description='Optional. The same styling and LaTeX options are available. '
-                                        'To embed internet links, use the Markdown syntax [link text](URL).')
+        save_and_exit = SubmitField('Save and exit')
+
+        save_and_preview = SubmitField('Save and preview')
+
+    return AddProjectForm
 
 
-class AddDescriptionForm(Form, DescriptionMixin):
+def EditProjectFormFactory(convenor_editing=False):
 
-    def __init__(self, project_id, *args, **kwargs):
+    Mixin = ProjectMixinFactory(convenor_editing,
+                                AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
+                                AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
 
-        super().__init__(*args, **kwargs)
+    class EditProjectForm(Form, Mixin, EditFormMixin):
 
-        self.project_classes.query_factory = partial(AvailableProjectDescriptionClasses, project_id, None)
+        name = StringField('Title', validators=[InputRequired(message='Project title is required'),
+                                                unique_or_original_project])
 
+        save_and_preview = SubmitField('Save changes and preview')
 
-    label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
-                                             project_unique_label],
-                        description='Enter a short label to identify this description in the list. '
-                                    'The label will not be visible to students.')
-
-    submit = SubmitField('Add new description')
+    return EditProjectForm
 
 
-class EditDescriptionForm(Form, DescriptionMixin, EditFormMixin):
+def DescriptionMixinFactory(query_factory):
 
-    def __init__(self, project_id, desc_id, *args, **kwargs):
+    class DescriptionMixin():
 
-        super().__init__(*args, **kwargs)
+        # allow the project_class list to be empty (but then the project is not offered)
+        project_classes = CheckboxQuerySelectMultipleField('Project classes', query_factory=query_factory, get_label='name')
 
-        self.project_classes.query_factory = partial(AvailableProjectDescriptionClasses, project_id, desc_id)
+        capacity = IntegerField('Maximum student capacity',
+                                description='Optional. Used only the option to enforce capacity '
+                                            'in your settings is selected. '
+                                            'Note this refers to the maximum number of assigned students, '
+                                            'not your CATS assignment.',
+                                validators=[Optional()])
 
-    label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
-                                             project_unique_or_original_label],
-                        description='Enter a short label to identify this description in the list. '
-                                    'The label will not be visible to students.')
+        # allow team to be empty (but then the project is not offered)
+        team = CheckboxQuerySelectMultipleField('Supervisory team',
+                                                query_factory=GetSupervisorRoles, get_label='name')
+
+        description = TextAreaField('Project description', render_kw={"rows": 15},
+                                    description=r'Enter a description of your project. '
+                                                r'The LaTeX mathematics environments are supported, as are common LaTeX commands. '
+                                                r'The amsmath, amsthm, and amssymb packages are included. '
+                                                r'You may use displayed or inline mathematics. '
+                                                r'You may also use Markdown syntax to format your description. '
+                                                r'<strong>Please preview your project to check it renders correctly.</strong>',
+                                    validators=[InputRequired(message='A project description is required')])
+
+        reading = TextAreaField('Recommended reading', render_kw={"rows": 7},
+                                description='Optional. The same styling and LaTeX options are available. '
+                                            'To embed internet links, use the Markdown syntax [link text](URL).')
+
+    return DescriptionMixin
+
+
+def AddDescriptionFormFactory(project_id):
+
+    Mixin = DescriptionMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, None))
+
+    class AddDescriptionForm(Form, Mixin):
+
+        label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
+                                                 project_unique_label],
+                            description='Enter a short label to identify this description in the list. '
+                                        'The label will not be visible to students.')
+
+        submit = SubmitField('Add new description')
+
+    return AddDescriptionForm
+
+
+def EditDescriptionFormFactory(project_id, desc_id):
+
+    Mixin = partial(AvailableProjectDescriptionClasses, project_id, desc_id)
+
+    class EditDescriptionForm(Form, Mixin, EditFormMixin):
+
+        label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
+                                                 project_unique_or_original_label],
+                            description='Enter a short label to identify this description in the list. '
+                                        'The label will not be visible to students.')
+
+    return EditDescriptionForm
 
 
 class SkillSelectorMixin():
@@ -169,18 +167,24 @@ class SkillSelectorForm(Form, SkillSelectorMixin):
     pass
 
 
-class DescriptionSelectorMixin():
+def DescriptionSelectorMixinFactory(query_factory):
 
-    selector = QuerySelectField('Show project preview for', query_factory=ProjectDescriptionClasses, get_label='name')
+    class DescriptionSelectorMixin():
+
+        selector = QuerySelectField('Show project preview for', query_factory=query_factory, get_label='name')
+
+    return DescriptionSelectorMixin
 
 
-class DescriptionSelectorForm(Form, DescriptionSelectorMixin):
+def DescriptionSelectorFormFactory(project_id):
 
-    def __init__(self, project_id, *args, **kwargs):
+    Mixin = DescriptionSelectorMixinFactory(partial(ProjectDescriptionClasses, project_id))
 
-        super().__init__(*args, **kwargs)
+    class DescriptionSelectorForm(Form, Mixin):
 
-        self.selector.query_factory = partial(ProjectDescriptionClasses, project_id)
+        pass
+
+    return DescriptionSelectorForm
 
 
 class FeedbackMixin():

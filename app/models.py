@@ -1506,7 +1506,8 @@ class ProjectClass(db.Model):
 
     @orm.reconstructor
     def reconstruct(self):
-        self.validate_presentations()
+        with db.session.no_autoflush:
+            self.validate_presentations()
 
 
     @property

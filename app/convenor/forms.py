@@ -47,15 +47,12 @@ class OpenFeedbackForm(Form):
     open_feedback = SubmitField('Open feedback period')
 
 
-class AssignMarkerForm(Form):
+def AssignMarkerFormFactory(live_project):
 
-    # 2nd marker
-    marker = QuerySelectField('Assign 2nd marker', query_factory=MarkerQuery, get_label=BuildMarkerLabel)
+    class AssignMarkerForm(Form):
 
+        # 2nd marker
+        marker = QuerySelectField('Assign 2nd marker', query_factory=partial(MarkerQuery, live_project),
+                                  get_label=partial(BuildMarkerLabel, live_project.config.pclass_id))
 
-    def __init__(self, live_project, *args, **kwargs):
-
-        super().__init__(*args, **kwargs)
-
-        self.marker.query_factory = partial(MarkerQuery, live_project)
-        self.marker.get_label = partial(BuildMarkerLabel, live_project.config.pclass_id)
+    return AssignMarkerForm

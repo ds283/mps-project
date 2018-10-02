@@ -15,6 +15,7 @@ from wtforms import StringField, IntegerField, SelectField, PasswordField, Boole
     TextAreaField, DateField, DateTimeField, FloatField, RadioField
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
+from wtforms.form import FormMeta
 
 from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_username, \
     unique_or_original_email, globally_unique_group_name, unique_or_original_group_name, \
@@ -498,81 +499,65 @@ class BackupManageForm(Form):
     delete_age = SubmitField('Delete backups older than cutoff')
 
 
-class MessageMixin():
+def MessageMixinFactory(query_factory, convenor_editing):
 
-    show_students = BooleanField('Display to students')
+    class MessageMixin():
 
-    show_faculty = BooleanField('Display to faculty')
+        show_students = BooleanField('Display to students')
 
-    show_login = BooleanField('Display on login screen if a broadcast message')
+        show_faculty = BooleanField('Display to faculty')
 
-    dismissible = BooleanField('Allow message to be dismissed')
+        if convenor_editing:
+            show_login = BooleanField('Display on login screen if a broadcast message')
 
-    title = StringField('Title', validators=[Optional()], description='Optional. Summarize your message briefly.')
+        dismissible = BooleanField('Allow message to be dismissed')
 
-    body = TextAreaField('Message', render_kw={"rows": 5},
-                         validators=[InputRequired(message='You must enter a message, however short')])
+        title = StringField('Title', validators=[Optional()], description='Optional. Briefly summarize your message.')
 
-    project_classes = CheckboxQuerySelectMultipleField('Display to users enrolled with',
-                                                       query_factory=GetAllProjectClasses, get_label='name')
+        body = TextAreaField('Message', render_kw={"rows": 5},
+                             validators=[InputRequired(message='You must enter a message, however short')])
 
+        project_classes = CheckboxQuerySelectMultipleField('Display to users enrolled for',
+                                                           query_factory=query_factory, get_label='name')
 
-class AddMessageForm(Form, MessageMixin):
-
-    submit = SubmitField('Add new message')
-
-
-    def __init__(self, *args, **kwargs):
-
-        self._convenor_editing = False
-        if 'convenor_editing' in kwargs:
-            self._convenor_editing = True
-            del kwargs['convenor_editing']
-
-        super().__init__(*args, **kwargs)
-
-        if self._convenor_editing:
-            # convenors are restricted to only their own project classes; administrative users can issue
-            # messages to all project classes
-            self.project_classes.query_factory = GetConvenorProjectClasses
-
-            self._validator = InputRequired(message='At least one project class should be selected')
-
-        else:
-            self._validator = Optional()
+    return MessageMixin
 
 
-    @staticmethod
-    def validate_project_classes(form, field):
-        return form._validator(form, field)
+# we *must* implement this form using a factory function because we have to adjust its class members
+def AddMessageFormFactory(convenor_editing=False):
+
+    Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses,
+                                convenor_editing)
+
+    class AddMessageForm(Form, Mixin):
+
+        submit = SubmitField('Add new message')
+
+        _validator = InputRequired(message='At least one project class should be selected') if convenor_editing \
+            else Optional()
+
+        @staticmethod
+        def validate_project_classes(form, field):
+            return form._validator(form, field)
+
+    return AddMessageForm
 
 
+def EditMessageFormFactory(convenor_editing=False):
 
-class EditMessageForm(Form, MessageMixin, EditFormMixin):
+    Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses)
 
-    def __init__(self, *args, **kwargs):
+    class EditMessageForm(Form, Mixin, EditFormMixin,
+                          convenor_editing):
 
-        self._convenor_editing = False
-        if 'convenor_editing' in kwargs:
-            self._convenor_editing = True
-            del kwargs['convenor_editing']
+        _validator = InputRequired(message='At least one project class should be selected') if convenor_editing \
+            else Optional()
 
-        super().__init__(*args, **kwargs)
+        @staticmethod
+        def validate_project_classes(form, field):
+            return form._validator(form, field)
 
-        if self._convenor_editing:
-            # convenors are restricted to only their own project classes; administrative users can issue
-            # messages to all project classes
-            self.projects_classes.query_factory = GetConvenorProjectClasses
-
-            self._validator = InputRequired(message='At least one project class should be selected')
-
-        else:
-            self._validator = Optional()
-
-
-    @staticmethod
-    def validate_project_classes(form, field):
-        return form._validator(form, field)
+    return EditMessageForm
 
 
 class ScheduleTypeMixin():
@@ -792,179 +777,178 @@ class EditRoleForm(Form, RoleMixin, EditFormMixin):
                                            unique_or_original_role])
 
 
-class MatchingMixin():
+def MatchingMixinFactory(query_factory):
 
-    name = StringField('Name',
-                       description='Enter a short tag to identify this match',
-                       validators=[InputRequired(message='Please supply a unique name')])
+    class MatchingMixin():
 
-    pclasses_to_include = CheckboxQuerySelectMultipleField('Include which project classes',
-                                                           query_factory=GetAutomatedMatchPClasses,
-                                                           get_label='name')
+        name = StringField('Name',
+                           description='Enter a short tag to identify this match',
+                           validators=[InputRequired(message='Please supply a unique name')])
 
-    ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts')
+        pclasses_to_include = CheckboxQuerySelectMultipleField('Include which project classes',
+                                                               query_factory=GetAutomatedMatchPClasses,
+                                                               get_label='name')
 
-    ignore_programme_prefs = BooleanField('Ignore degree programme preferences')
+        ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts')
 
-    years_memory = SelectField('Include how many years history when levelling workloads?',
-                               choices=matching_history_choices, coerce=int)
+        ignore_programme_prefs = BooleanField('Ignore degree programme preferences')
 
-    supervising_limit = IntegerField('CATS limit for supervising',
+        years_memory = SelectField('Include how many years history when levelling workloads?',
+                                   choices=matching_history_choices, coerce=int)
+
+        supervising_limit = IntegerField('CATS limit for supervising',
+                                         validators=[InputRequired(message='Please specify the maximum number of CATS '
+                                                                          'that can be allocated per faculty')])
+
+        marking_limit = IntegerField('CATS limit for marking',
                                      validators=[InputRequired(message='Please specify the maximum number of CATS '
                                                                       'that can be allocated per faculty')])
 
-    marking_limit = IntegerField('CATS limit for marking',
-                                 validators=[InputRequired(message='Please specify the maximum number of CATS '
-                                                                  'that can be allocated per faculty')])
+        max_marking_multiplicity = IntegerField('Maximum multiplicity for 2nd markers',
+                                                description='2nd markers may be assigned multiple instances of the same '
+                                                            'project, up to the maximum multiplicity specified',
+                                                validators=[InputRequired(message='Please specify a multiplicity')])
 
-    max_marking_multiplicity = IntegerField('Maximum multiplicity for 2nd markers',
-                                            description='2nd markers may be assigned multiple instances of the same '
-                                                        'project, up to the maximum multiplicity specified',
-                                            validators=[InputRequired(message='Please specify a multiplicity')])
+        include_matches = QuerySelectMultipleField('When levelling workloads, include CATS from existing matches',
+                                                   query_factory=query_factory, get_label='name')
 
-    include_matches = QuerySelectMultipleField('When levelling workloads, include CATS from existing matches',
-                                               query_factory=GetMatchingAttempts, get_label='name')
+        levelling_bias = FloatField('Workload levelling bias', default=1.0,
+                                    description='This sets the normalization of the workload levelling tension in '
+                                                'the objective function. This term tensions good student matches against '
+                                                'roughly equal workload for all faculty members who supervise, '
+                                                'perform marking, or both. Set to 0 to turn off workload levelling. '
+                                                'Set to values less than 1 to '
+                                                'prioritize matching to high-ranked projects rather than equal workloads. '
+                                                'Set to large values to prioritize equal workloads rather than '
+                                                'student matches to high-ranked projects.',
+                                    validators=[InputRequired(message='Please specify a levelling bias')])
 
-    levelling_bias = FloatField('Workload levelling bias', default=1.0,
-                                description='This sets the normalization of the workload levelling tension in '
-                                            'the objective function. This term tensions good student matches against '
-                                            'roughly equal workload for all faculty members who supervise, '
-                                            'perform marking, or both. Set to 0 to turn off workload levelling. '
-                                            'Set to values less than 1 to '
-                                            'prioritize matching to high-ranked projects rather than equal workloads. '
-                                            'Set to large values to prioritize equal workloads rather than '
-                                            'student matches to high-ranked projects.',
-                                validators=[InputRequired(message='Please specify a levelling bias')])
+        intra_group_tension = FloatField('Intra-group tension', default=1.0,
+                                         description='This sets the tension with which the typical workload for '
+                                                     'each faculty group (supervisors, markers, and those who do both) '
+                                                     'are held together. Set to large values to keep workloads '
+                                                     'as closely matched as possible.',
+                                         validators=[InputRequired(message='Please specify an intra-group tension')])
 
-    intra_group_tension = FloatField('Intra-group tension', default=1.0,
-                                     description='This sets the tension with which the typical workload for '
-                                                 'each faculty group (supervisors, markers, and those who do both) '
-                                                 'are held together. Set to large values to keep workloads '
-                                                 'as closely matched as possible.',
-                                     validators=[InputRequired(message='Please specify an intra-group tension')])
+        programme_bias = FloatField('Degree programme preference bias', default=1.5,
+                                    description='Values greater than 1 bias the optimization to match students '
+                                                'on given degree programmes with projects that '
+                                                'are marked as preferring that programme. '
+                                                'A value of 1 disables this preference.',
+                                    validators=[InputRequired(message='Please specify a programme preference bias')])
 
-    programme_bias = FloatField('Degree programme preference bias', default=1.5,
-                                description='Values greater than 1 bias the optimization to match students '
-                                            'on given degree programmes with projects that '
-                                            'are marked as preferring that programme. '
-                                            'A value of 1 disables this preference.',
-                                validators=[InputRequired(message='Please specify a programme preference bias')])
+        bookmark_bias = FloatField('Penalty for using bookmarks', default=0.333,
+                                   description='Values less than 1 penalize preferences taken from bookmark data '
+                                               'rather than a verified submission. Set to 1 if you do not wish '
+                                               'to distinguish these cases.',
+                                   validators=[InputRequired(message='Please specify a bookmark bias')])
 
-    bookmark_bias = FloatField('Penalty for using bookmarks', default=0.333,
-                               description='Values less than 1 penalize preferences taken from bookmark data '
-                                           'rather than a verified submission. Set to 1 if you do not wish '
-                                           'to distinguish these cases.',
-                               validators=[InputRequired(message='Please specify a bookmark bias')])
+        use_hints = BooleanField('Use convenor hints')
 
-    use_hints = BooleanField('Use convenor hints')
+        encourage_bias = FloatField('Bias for convenor <i>encouraged</i> hint', default=2.0,
+                                    validators=[InputRequired(message='Please specify a bias')])
 
-    encourage_bias = FloatField('Bias for convenor <i>encouraged</i> hint', default=2.0,
-                                validators=[InputRequired(message='Please specify a bias')])
+        discourage_bias = FloatField('Bias for convenor <i>discouraged</i> hint', default=0.5,
+                                     validators=[InputRequired(message='Please specify a bias')])
 
-    discourage_bias = FloatField('Bias for convenor <i>discouraged</i> hint', default=0.5,
-                                 validators=[InputRequired(message='Please specify a bias')])
+        strong_encourage_bias = FloatField('Bias for convenor <i>strongly encouraged</i> hint', default=5.0,
+                                           validators=[InputRequired(message='Please specify a bias')])
 
-    strong_encourage_bias = FloatField('Bias for convenor <i>strongly encouraged</i> hint', default=5.0,
-                                       validators=[InputRequired(message='Please specify a bias')])
+        strong_discourage_bias = FloatField('Bias for convenor <i>strongly discouraged</i> hint', default=0.2,
+                                            validators=[InputRequired(message='Please specify a bias')])
 
-    strong_discourage_bias = FloatField('Bias for convenor <i>strongly discouraged</i> hint', default=0.2,
-                                        validators=[InputRequired(message='Please specify a bias')])
+        solver = SelectField('Solver', choices=solver_choices, coerce=int,
+                             description='The optimizer can use a number of different solvers. If in doubt, use the '
+                                         'packaged CBC solver.')
 
-    solver = SelectField('Solver', choices=solver_choices, coerce=int,
-                         description='The optimizer can use a number of different solvers. If in doubt, use the '
-                                     'packaged CBC solver.')
+    return MatchingMixin
 
 
-class NewMatchForm(Form, MatchingMixin):
+def NewMatchFormFactory(year):
 
-    submit = SubmitField('Create new match')
+    Mixin = MatchingMixinFactory(partial(GetMatchingAttempts, year))
 
-    def __init__(self, year, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    class NewMatchForm(Form, Mixin):
 
-        self._year = year
+        submit = SubmitField('Create new match')
 
-        self.include_matches.query_factory = partial(GetMatchingAttempts, year)
+        @staticmethod
+        def validate_name(form, field):
+            return globally_unique_assessment_name(year, form, field)
 
-
-    @staticmethod
-    def validate_name(form, field):
-        return globally_unique_assessment_name(form._year, form, field)
+    return NewMatchForm
 
 
-class RenameMatchForm(Form):
+def RenameMatchFormFactory(year):
 
-    name = StringField('New name', description='Enter a short tag to identify this match',
-                       validators=[InputRequired(message='Please supply a unique name')])
+    class RenameMatchForm(Form):
 
-    submit = SubmitField('Rename match')
+        name = StringField('New name', description='Enter a short tag to identify this match',
+                           validators=[InputRequired(message='Please supply a unique name')])
 
+        submit = SubmitField('Rename match')
 
-    def __init__(self, year, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        @staticmethod
+        def validate_name(form, field):
+            return unique_or_original_matching_name(year, form, field)
 
-        self._year = year
-
-
-    @staticmethod
-    def validate_name(form, field):
-        return unique_or_original_matching_name(form._year, form, field)
+    return RenameMatchForm
 
 
-class CompareMatchForm(Form):
+def CompareMatchFormFactory(year, self_id, pclasses):
 
-    target = QuerySelectField('Compare to', query_factory=GetComparatorMatches, get_label='name')
+    class CompareMatchForm(Form):
 
-    compare = SubmitField('Compare')
+        target = QuerySelectField('Compare to', query_factory=partial(GetComparatorMatches, year, self_id, pclasses),
+                                  get_label='name')
 
+        compare = SubmitField('Compare')
 
-    def __init__(self, year, self_id, pclasses, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.target.query_factory = partial(GetComparatorMatches, year, self_id, pclasses)
-
-
-class PresentationAssessmentMixin():
-
-    name = StringField('Name', description='Enter a short name to identify this assessment event',
-                       validators=[InputRequired(message='Please supply a unique name')])
-
-    submission_periods = CheckboxQuerySelectMultipleField('Select the submission periods for which project '
-                                                          'presentations will be given',
-                                                          query_factory=None, get_label=BuildSubmissionPeriodName)
+    return CompareMatchForm
 
 
-class AddPresentationAssessmentForm(Form, PresentationAssessmentMixin):
+def PresentationAssessmentMixinFactory(query_factory):
 
-    submit = SubmitField('Add new assessment')
+    class PresentationAssessmentMixin():
 
+        name = StringField('Name', description='Enter a short name to identify this assessment event',
+                           validators=[InputRequired(message='Please supply a unique name')])
 
-    def __init__(self, year, assessment_id, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        submission_periods = CheckboxQuerySelectMultipleField('Select the submission periods for which project '
+                                                              'presentations will be given',
+                                                              query_factory=query_factory, get_label=BuildSubmissionPeriodName)
 
-        self._year = year
-
-        self.submission_periods.query_factory = partial(GetUnattachedSubmissionPeriods, assessment_id)
-
-
-    @staticmethod
-    def validate_name(form, field):
-        return globally_unique_assessment_name(form._year, form, field)
+    return PresentationAssessmentMixin
 
 
-class EditPresentationAssessmentForm(Form, PresentationAssessmentMixin, EditFormMixin):
+def AddPresentationAssessmentFormFactory(year):
 
-    def __init__(self, year, assessment_id, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    Mixin = PresentationAssessmentMixinFactory(partial(GetUnattachedSubmissionPeriods, None))
 
-        self._year = year
+    class AddPresentationAssessmentForm(Form, Mixin):
 
-        self.submission_periods.query_factory = partial(GetUnattachedSubmissionPeriods, assessment_id)
+        submit = SubmitField('Add new assessment')
+
+        @staticmethod
+        def validate_name(form, field):
+            return globally_unique_assessment_name(year, form, field)
+
+    return AddPresentationAssessmentForm
 
 
-    @staticmethod
-    def validate_name(form, field):
-        return unique_or_original_assessment_name(form._year, form, field)
+def EditPresentationAssessmentFormFactory(year, assessment_id):
+
+    Mixin = PresentationAssessmentMixinFactory(partial(GetUnattachedSubmissionPeriods, assessment_id))
+
+    class EditPresentationAssessmentForm(Form, Mixin, EditFormMixin):
+
+        pass
+
+        @staticmethod
+        def validate_name(form, field):
+            return unique_or_original_assessment_name(year, form, field)
+
+    return EditPresentationAssessmentForm
 
 
 class SessionMixin():

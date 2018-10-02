@@ -19,8 +19,9 @@ import app.ajax as ajax
 
 from . import faculty
 
-from .forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm, \
-    DescriptionSelectorForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
+from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
+    AddDescriptionFormFactory, EditDescriptionFormFactory, DescriptionSelectorFormFactory, SupervisorFeedbackForm, \
+    MarkerFeedbackForm, SupervisorResponseForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
@@ -317,17 +318,15 @@ def descriptions_ajax(id):
 def add_project():
 
     # set up form
+    AddProjectForm = AddProjectFormFactory(convenor_editing=False)
     form = AddProjectForm(request.form)
-
-    # only conveners/administrators can reassign ownership
-    del form.owner
 
     if form.validate_on_submit():
 
         data = Project(name=form.name.data,
                        keywords=form.keywords.data,
                        active=True,
-                       owner=current_user.faculty_data,
+                       owner_id=current_user.faculty_data.id,
                        group=form.group.data,
                        project_classes=form.project_classes.data,
                        skills=[],
@@ -384,11 +383,9 @@ def edit_project(id):
     if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
+    EditProjectForm = EditProjectFormFactory(convenor_editing=False)
     form = EditProjectForm(obj=proj)
     form.project = proj
-
-    # only convenors/administrators can reassign ownership
-    del form.owner
 
     if form.validate_on_submit():
 
@@ -517,7 +514,8 @@ def add_description(pid):
 
     create = request.args.get('create', default=None)
 
-    form = AddDescriptionForm(pid, request.form)
+    AddDescriptionForm = AddDescriptionFormFactory(pid)
+    form = AddDescriptionForm(request.form)
     form.project_id = pid
 
     if form.validate_on_submit():
@@ -557,7 +555,8 @@ def edit_description(did):
 
     create = request.args.get('create', default=None)
 
-    form = EditDescriptionForm(desc.parent_id, did, obj=desc)
+    EditDescriptionForm = EditDescriptionFormFactory(desc.parent_id, did)
+    form = EditDescriptionForm(obj=desc)
     form.project_id = desc.parent_id
     form.desc = desc
 
@@ -967,7 +966,8 @@ def project_preview(id):
     if not validate_edit_project(data):
         return redirect(request.referrer)
 
-    form = DescriptionSelectorForm(id, request.form)
+    DescriptionSelectorForm = DescriptionSelectorFormFactory(id)
+    form = DescriptionSelectorForm(request.form)
 
     if form.validate_on_submit():
         pass

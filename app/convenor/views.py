@@ -34,8 +34,9 @@ import app.ajax as ajax
 
 from . import convenor
 
-from ..faculty.forms import AddProjectForm, EditProjectForm, SkillSelectorForm, AddDescriptionForm, EditDescriptionForm
-from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerForm
+from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
+    AddDescriptionFormFactory, EditDescriptionFormFactory
+from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory
 
 from datetime import date, datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -1593,7 +1594,8 @@ def add_project(pclass_id):
             return redirect(request.referrer)
 
     # set up form
-    form = AddProjectForm(request.form, convenor_editing=True)
+    AddProjectForm = AddProjectFormFactory(convenor_editing=True)
+    form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
 
@@ -1680,7 +1682,8 @@ def edit_project(id, pclass_id):
     # set up form
     data = Project.query.get_or_404(id)
 
-    form = EditProjectForm(obj=data, convenor_editing=True)
+    EditProjectForm = EditProjectFormFactory(convenor_editing=True)
+    form = EditProjectForm(obj=data)
     form.project = data
 
     if form.validate_on_submit():
@@ -1798,7 +1801,8 @@ def add_description(pid, pclass_id):
 
     create = request.args.get('create', default=None)
 
-    form = AddDescriptionForm(pid, request.form)
+    AddDescriptionForm = AddDescriptionFormFactory(pid)
+    form = AddDescriptionForm(request.form)
     form.project_id = pid
 
     if form.validate_on_submit():
@@ -1845,7 +1849,8 @@ def edit_description(did, pclass_id):
 
     create = request.args.get('create', default=None)
 
-    form = EditDescriptionForm(desc.parent_id, did, obj=desc)
+    EditDescriptionForm = EditDescriptionFormFactory(desc.parent_id, did)
+    form = EditDescriptionForm(obj=desc)
     form.project_id = desc.parent_id
     form.desc = desc
 
@@ -3714,7 +3719,8 @@ def manual_assign(id):
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
-    form = AssignMarkerForm(rec.project, request.form)
+    AssignMarkerForm = AssignMarkerFormFactory(rec.project)
+    form = AssignMarkerForm(request.form)
 
     if form.validate_on_submit():
         rec.marker = form.marker.data

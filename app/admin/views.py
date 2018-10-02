@@ -32,13 +32,13 @@ from .forms import RoleSelectForm, \
     AddProjectClassForm, EditProjectClassForm, AddSubmissionPeriodForm, EditSubmissionPeriodForm, \
     AddSupervisorForm, EditSupervisorForm, \
     FacultySettingsForm, EnrollmentRecordForm, EmailLogForm, \
-    AddMessageForm, EditMessageForm, \
+    AddMessageFormFactory, EditMessageFormFactory, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
     EditBackupOptionsForm, BackupManageForm, \
     AddRoleForm, EditRoleForm, \
-    NewMatchForm, RenameMatchForm, CompareMatchForm, \
-    AddPresentationAssessmentForm, EditPresentationAssessmentForm, \
+    NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, \
+    AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -2438,9 +2438,10 @@ def add_message():
 
     # convenors can't show login-screen messages
     if not current_user.has_role('admin') and not current_user.has_role('root'):
-        form = AddMessageForm(request.form, convenor_editing=True)
-        del form.show_login
+        AddMessageForm = AddMessageFormFactory(convenor_editing=True)
+        form = AddMessageForm(request.form)
     else:
+        AddMessageForm = AddMessageFormFactory(convenor_editing=False)
         form = AddMessageForm(request.form)
 
     if form.validate_on_submit():
@@ -2487,11 +2488,12 @@ def edit_message(id):
             flash('Only administrative users can edit messages that they do not own')
             return home_dashboard()
 
-        form = EditMessageForm(obj=data, convenor_editing=True)
-        del form.show_login
+        EditMessageForm = EditMessageFormFactory(convenor_editing=True)
+        form = EditMessageForm(obj=data)
 
     else:
 
+        EditMessageForm = EditMessageFormFactory(convenor_editing=False)
         form = EditMessageForm(obj=data)
 
     if form.validate_on_submit():
@@ -3409,7 +3411,8 @@ def create_match():
 
     info = get_matching_dashboard_data()
 
-    form = NewMatchForm(current_year, request.form)
+    NewMatchForm = NewMatchFormFactory(current_year)
+    form = NewMatchForm(request.form)
 
     if form.validate_on_submit():
 
@@ -3802,7 +3805,8 @@ def rename_match(id):
     if url is None:
         url = url_for('admin.manage_matching')
 
-    form = RenameMatchForm(year, request.form)
+    RenameMatchForm = RenameMatchFormFactory(year)
+    form = RenameMatchForm(request.form)
     form.record = record
 
     if form.validate_on_submit():
@@ -3844,7 +3848,9 @@ def compare_match(id):
 
     year = get_current_year()
     our_pclasses = {x.id for x in record.available_pclasses}
-    form = CompareMatchForm(year, record.id, our_pclasses, request.form)
+
+    CompareMatchForm = CompareMatchFormFactory(year, record.id, our_pclasses)
+    form = CompareMatchForm(request.form)
 
     if form.validate_on_submit():
 
@@ -4464,7 +4470,8 @@ def add_assessment():
         return redirect(request.referrer)
 
     current_year = get_current_year()
-    form = AddPresentationAssessmentForm(current_year, None, request.form)
+    AddPresentationAssessmentForm = AddPresentationAssessmentFormFactory(current_year)
+    form = AddPresentationAssessmentForm(request.form)
 
     print(form.name.validators)
 
@@ -4499,7 +4506,8 @@ def edit_assessment(id):
     if not validate_assessment(data, current_year=current_year):
         return redirect(request.referrer)
 
-    form = EditPresentationAssessmentForm(current_year, data.id, obj=data)
+    EditPresentationAssessmentForm = EditPresentationAssessmentFormFactory(current_year, data.id)
+    form = EditPresentationAssessmentForm(obj=data)
     form.assessment = data
 
     if form.validate_on_submit():

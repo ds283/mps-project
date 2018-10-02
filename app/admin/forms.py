@@ -514,42 +514,65 @@ class MessageMixin():
                          validators=[InputRequired(message='You must enter a message, however short')])
 
     project_classes = CheckboxQuerySelectMultipleField('Display to users enrolled with',
-                                                       query_factory=GetAllProjectClasses, get_label='name',
-                                                       validators=[Optional()])
+                                                       query_factory=GetAllProjectClasses, get_label='name')
 
 
 class AddMessageForm(Form, MessageMixin):
 
+    submit = SubmitField('Add new message')
+
+
     def __init__(self, *args, **kwargs):
 
-        convenor_editing = False
+        self._convenor_editing = False
         if 'convenor_editing' in kwargs:
-            convenor_editing = True
+            self._convenor_editing = True
             del kwargs['convenor_editing']
 
         super().__init__(*args, **kwargs)
 
-        if convenor_editing:
-            self.projects.query_factory = GetConvenorProjectClasses
-            self.projects.validators = [InputRequired(message='At least one project class should be selected')]
+        if self._convenor_editing:
+            # convenors are restricted to only their own project classes; administrative users can issue
+            # messages to all project classes
+            self.project_classes.query_factory = GetConvenorProjectClasses
 
-    submit = SubmitField('Add new message')
+            self._validator = InputRequired(message='At least one project class should be selected')
+
+        else:
+            self._validator = Optional()
+
+
+    @staticmethod
+    def validate_project_classes(form, field):
+        return form._validator(form, field)
+
 
 
 class EditMessageForm(Form, MessageMixin, EditFormMixin):
 
     def __init__(self, *args, **kwargs):
 
-        convenor_editing = False
+        self._convenor_editing = False
         if 'convenor_editing' in kwargs:
-            convenor_editing = True
+            self._convenor_editing = True
             del kwargs['convenor_editing']
 
         super().__init__(*args, **kwargs)
 
-        if convenor_editing:
-            self.projects.query_factory = GetConvenorProjectClasses
-            self.projects.validators = [Optional()]
+        if self._convenor_editing:
+            # convenors are restricted to only their own project classes; administrative users can issue
+            # messages to all project classes
+            self.projects_classes.query_factory = GetConvenorProjectClasses
+
+            self._validator = InputRequired(message='At least one project class should be selected')
+
+        else:
+            self._validator = Optional()
+
+
+    @staticmethod
+    def validate_project_classes(form, field):
+        return form._validator(form, field)
 
 
 class ScheduleTypeMixin():

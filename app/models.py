@@ -5757,6 +5757,47 @@ def _PresentationSession_delete_handler(mapper, connection, target):
                 cache.delete_memoized(_PresentationSession_is_valid, dup.id)
 
 
+class Building(db.Model):
+    """
+    Store data modelling a building that houses bookable rooms for presentation assessments
+    """
+
+    __tablename__ = 'buildings'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # colour
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+
+class Room(db.Model):
+    """
+    Store data modelling a bookable room for presentation assessments
+    """
+
+    __tablename__ = 'rooms'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # building
+    building_id = db.Column(db.Integer(), db.ForeignKey('buildings.id'))
+    building = db.relationship('Building', foreign_keys=[building_id], uselist=False,
+                               backref=db.backref('rooms', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # room name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # room capacity (currently not used)
+    capacity = db.Column(db.Integer())
+
+
 # ############################
 
 

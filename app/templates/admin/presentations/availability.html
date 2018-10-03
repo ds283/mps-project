@@ -1,0 +1,84 @@
+{% extends "base_app.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% from "admin/presentations/availability/request.html" import issue_requests %}
+{% from "admin/presentations/availability/waiting.html" import waiting_responses %}
+{% from "admin/presentations/availability/closed.html" import availability_closed %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssmin", output="gen/bootstrap-datepicker3-min.css", "css/bootstrap-datepicker3.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-datepicker-min.js", "js/bootstrap-datepicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('.date').datepicker({
+                format: 'dd/mm/yyyy',
+                todayHighlight: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit buildings
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            {% if assessment %}
+                <div class="well">
+                    {% set state = assessment.availability_lifecycle %}
+                    {% if state == assessment.AVAILABILITY_NOT_REQUESTED %}
+
+                        {{ issue_requests(assessment, form) }}
+
+                    {% elif state == assessment.AVAILABILITY_REQUESTED %}
+
+                        {{ waiting_responses(assessment, form) }}
+
+                    {% elif state == assessment.AVAILABILITY_CLOSED %}
+
+                        {{ availability_closed(assessment) }}
+
+                    {% else %}
+
+                        <div class="panel panel-danger">
+                            <div class="panel-heading">Error</div>
+                            <div class="panel-body">
+                                <strong>Error:</strong>
+                                Unknown availability lifecycle state {{ state }}
+                            </div>
+                        </div>
+
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="panel panel-danger">
+                    <div class="panel-heading">Error</div>
+                    <div class="panel-body">
+                        <strong>Error:</strong>
+                        Data for this assessment is missing
+                    </div>
+                </div>
+            {% endif %}
+
+            <div>
+                <a href="{{ url_for('admin.manage_assessments') }}">
+                    <i class="fa fa-backward"></i> Return to assessments list
+                </a>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{%  endblock %}

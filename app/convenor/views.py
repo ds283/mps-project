@@ -2419,7 +2419,11 @@ def issue_confirm_requests(id):
             flash('{n} confirmation request{plural} have been issued'.format(n=requests, plural=plural))
 
         config.requests_issued = True
-        config.request_deadline = issue_form.request_deadline.data
+
+        deadline = issue_form.request_deadline.data
+        if deadline < datetime.now():
+            deadline = datetime.now() + timedelta(weeks=2)
+        config.request_deadline = deadline
 
         db.session.commit()
 

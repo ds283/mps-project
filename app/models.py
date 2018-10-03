@@ -292,6 +292,21 @@ session_to_rooms = db.Table('session_to_rooms',
                             db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
                             db.Column('room_id', db.Integer(), db.ForeignKey('rooms.id'), primary_key=True))
 
+# capture faculty availability for each session
+faculty_availability = db.Table('faculty_availability',
+                                db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
+                                db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
+# capture list of faculty who are attached to an assessment as possible assessors
+assessment_to_assessors = db.Table('assessment_to_assessors',
+                                   db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
+                                   db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
+# capture list of faculty who are still to return availability data for an assessment
+faculty_availability_waiting = db.Table('faculty_availability_waiting',
+                                        db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
+                                        db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
 
 class MainConfig(db.Model):
     """
@@ -2070,9 +2085,7 @@ class ProjectClassConfig(db.Model):
             .filter(User.active == True)
 
         for id, user, data in fd:
-
             if data not in self.golive_required:      # don't object if we are generating a duplicate request
-
                 self.golive_required.append(data)
 
 
@@ -2092,6 +2105,11 @@ class ProjectClassConfig(db.Model):
     @property
     def current_period(self):
         return self.get_period(self.submission_period)
+
+
+    @property
+    def confirm_outstanding_count(self):
+        return get_count(self.golive_required)
 
 
 class SubmissionPeriodRecord(db.Model):
@@ -2189,6 +2207,29 @@ class SubmissionPeriodRecord(db.Model):
 
 
     @property
+    def projects_list(self):
+        students = self.config.submitting_students.subquery()
+
+        records = db.session.query(SubmissionRecord.project_id) \
+            .join(students, students.c.id == SubmissionRecord.owner_id) \
+            .filter(SubmissionRecord.submission_period == self.submission_period).distinct().subquery()
+
+        return db.session.query(LiveProject) \
+            .join(records, records.c.project_id == LiveProject.id)
+
+
+    @property
+    def assessors_list(self):
+        projects = self.projects_list.subquery()
+
+        assessors = db.session.query(live_assessors.c.faculty_id) \
+            .join(projects, projects.c.id == live_assessors.c.project_id).distinct().subquery()
+
+        return db.session.query(FacultyData) \
+            .join(assessors, assessors.c.faculty_id == FacultyData.id)
+
+
+    @property
     def label(self):
         return self.config.project_class.make_label(self.config.abbreviation + ': ' + self.display_name)
 
@@ -2196,7 +2237,7 @@ class SubmissionPeriodRecord(db.Model):
 
 class EnrollmentRecord(db.Model):
     """
-    Capture details about a faculty member's enrollment
+    Capture details about a faculty member's enrollment in a single project class
     """
 
     __tablename__ = 'enrollment_record'
@@ -5428,6 +5469,26 @@ class PresentationAssessment(db.Model):
                                          backref=db.backref('presentation_assessments', lazy='dynamic'))
 
 
+    # AVAILABILITY LIFECYCLE
+
+    # have we sent availability requests to faculty?
+    requested_availability = db.Column(db.Boolean())
+
+    # can availabilities still be modified?
+    availability_closed = db.Column(db.Boolean())
+
+    # what deadline has been set of availability information to be returned?
+    availability_deadline = db.Column(db.DateTime())
+
+    # list of faculty members still to return availability data
+    availability_outstanding = db.relationship('FacultyData', secondary=faculty_availability_waiting, lazy='dynamic',
+                                               backref=db.backref('availability_waiting', lazy='dynamic'))
+
+    # list of faculty members
+    assessors = db.relationship('FacultyData', secondary=assessment_to_assessors, lazy='dynamic',
+                                backref=db.backref('presentation_assessments', lazy='dynamic'))
+
+
     # EDITING METADATA
 
     # created by
@@ -5459,6 +5520,26 @@ class PresentationAssessment(db.Model):
         self._validated = False
         self._errors = {}
         self._warnings = {}
+
+
+    AVAILABILITY_NOT_REQUESTED = 0
+    AVAILABILITY_REQUESTED = 1
+    AVAILABILITY_CLOSED = 2
+
+    @property
+    def availability_lifecycle(self):
+        if self.requested_availability is False:
+            return PresentationAssessment.AVAILABILITY_NOT_REQUESTED
+
+        if self.availability_closed is False:
+            return PresentationAssessment.AVAILABILITY_REQUESTED
+
+        return PresentationAssessment.AVAILABILITY_CLOSED
+
+
+    @property
+    def availability_outstanding_count(self):
+        return get_count(self.availability_outstanding)
 
 
     @property
@@ -5570,6 +5651,10 @@ class PresentationSession(db.Model):
     # rooms available for this session
     rooms = db.relationship('Room', secondary=session_to_rooms, lazy='dynamic',
                             backref=db.backref('sessions', lazy='dynamic'))
+
+    # faculty available for this session
+    faculty = db.relationship('FacultyData', secondary=faculty_availability, lazy='dynamic',
+                              backref=db.backref('session_availability', lazy='dynamic'))
 
 
     # EDITING METADATA

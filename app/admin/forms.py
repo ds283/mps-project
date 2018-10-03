@@ -1023,3 +1023,12 @@ class EditRoomForm(Form, RoomMixin, EditFormMixin):
     @staticmethod
     def validate_name(form, field):
         return unique_or_original_room_name(form, field)
+
+
+class AvailabilityForm(Form):
+
+    # deadline for response
+    availability_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+
+    # submit button: open feedback
+    issue_requests = SubmitField('Issue availability requests')

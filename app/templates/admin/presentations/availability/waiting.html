@@ -1,0 +1,43 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import date_field %}
+
+{% macro waiting_responses(assessment, form) %}
+    <div class="panel panel-info">
+        <div class="panel-heading">Faculty availability for assessment <strong>{{ assessment.name }}</strong></div>
+        <div class="panel-body">
+
+            <div class="row vertical-top">
+                <div class="col-xs-9">
+                    {% set count = assessment.availability_outstanding_count %}
+                    {% if count > 0 %}
+                        Responses are outstanding from <strong>{{ count }} faculty</strong>.
+                    {% else %}
+                        Responses have now been received from all faculty
+                        <span class="label label-success"><i class="fa fa-check"></i></span>
+                    {% endif %}
+                </div>
+                <div class="col-xs-3">
+                    <div class="pull-right">
+                        <a href="{{ url_for('admin.close_availability', id=assessment.id) }}"
+                           class="btn btn-danger">
+                            Close collection
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr class="intro-divider">
+            <form action="{{ url_for('admin.assessment_availability', id=assessment.id) }}"
+                  method="POST" name="availability-fom">
+                <p>The current deadline is</p>
+                {{ date_field(form.availability_deadline) }}
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="pull-right">
+                            {{ wtf.form_field(form.issue_requests, button_map={'issue_requests': 'default'}) }}
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endmacro %}

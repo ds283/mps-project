@@ -41,7 +41,7 @@ from .forms import RoleSelectForm, \
     NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
-    AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm
+    AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
@@ -4480,6 +4480,9 @@ def add_assessment():
         data = PresentationAssessment(name=form.name.data,
                                       year=current_year,
                                       submission_periods=form.submission_periods.data,
+                                      requested_availability=False,
+                                      availability_closed=False,
+                                      availability_deadline=None,
                                       creator_id=current_user.id,
                                       creation_timestamp=datetime.now())
         db.session.add(data)
@@ -4579,6 +4582,117 @@ def perform_delete_assessment(id):
     db.session.commit()
 
     return redirect(url)
+
+
+@admin.route('/assessment_availability/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def assessment_availability(id):
+    """
+    Request availability information from faculty
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    form = AvailabilityForm(obj=data)
+
+    if form.is_submitted() and form.issue_requests.data is True:
+
+        if not data.requested_availability:
+
+            if get_count(data.submission_periods) == 0:
+                flash('Availability requests not issued since this assessment is not attached to any '
+                      'submission periods', 'info')
+
+            elif get_count(data.sessions) == 0:
+                flash('Availability requests not issued since this assessment does not contain any sessions',
+                      'info')
+
+            else:
+
+                uuid = register_task('Issue availability requests for "{name}"'.format(name=data.name),
+                                     owner=current_user, description="Issue availability requests to faculty assessors")
+
+                celery = current_app.extensions['celery']
+                availability_task = celery.tasks['app.tasks.availability.issue']
+
+                availability_task.apply_async(args=(data.id, current_user.id, uuid), task_id=uuid)
+
+        data.requested_availability = True
+        data.availability_deadline = form.availability_deadline.data
+
+        db.session.commit()
+
+        return redirect(url_for('admin.manage_assessments'))
+
+    else:
+
+        if request.method == 'GET':
+            if form.availability_deadline.data is None:
+                form.availability_deadline.data = datetime.now() + timedelta(weeks=2)
+
+    if data.availability_lifecycle > PresentationAssessment.AVAILABILITY_NOT_REQUESTED:
+        form.issue_requests.label.text = 'Save changes'
+
+    return render_template('admin/presentations/availability.html', form=form, assessment=data)
+
+
+@admin.route('close_availability/<int:id>')
+@roles_required('root')
+def close_availability(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot close availability collection for this assessment because it has not yet been opened')
+        return redirect(request.referrer)
+
+    data.availability_closed = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('reopen_availability/<int:id>')
+@roles_required('root')
+def reopen_availability(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot reopen availability collection for this assessment because it has not yet been opened')
+        return redirect(request.referrer)
+
+    if not data.availability_closed:
+        flash('Cannot reopen availability collection for this assessment because it has not yet been closed')
+        return redirect(request.referrer)
+
+    data.availability_closed = False
+    if data.availability_deadline < datetime.now():
+        data.availability_deadline = datetime.now() + timedelta(weeks=1)
+
+    db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @admin.route('/assessment_manage_sessions/<int:id>')

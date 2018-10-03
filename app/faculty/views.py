@@ -1052,7 +1052,6 @@ def confirm_pclass(id):
     :param id:
     :return:
     """
-
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 

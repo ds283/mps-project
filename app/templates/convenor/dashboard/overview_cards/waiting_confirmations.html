@@ -12,7 +12,7 @@
                 <div class="col-xs-9">
                     <p>
                         Confirmations are outstanding from
-                        <strong>{{ config.golive_required.count() }} faculty</strong>.
+                        <strong>{{ config.confirm_outstanding_count }} faculty</strong>.
                     </p>
                     <p><a href="{{ url_for('convenor.outstanding_confirm', id=config.id) }}">View outstanding responses...</a></p>
                 </div>
@@ -28,6 +28,7 @@
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}"
                   method="POST" name="issue-form">
+                <p>The current deadline is</p>
                 {{ date_field(issue_form.request_deadline) }}
                 <div class="row">
                     <div class="col-xs-12">

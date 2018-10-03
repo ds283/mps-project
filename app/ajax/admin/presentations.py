@@ -86,6 +86,13 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+        <li class="dropdown-header">Operations</li>
+        <li>
+            <a href="{{ url_for('admin.assessment_availability', id=a.id) }}">
+                <i class="fa fa-calendar"></i> Faculty availability...
+            </a>
+        </li>
+        
         <li class="dropdown-header">Edit assessment</li>
         <li>
             <a href="{{ url_for('admin.edit_assessment', id=a.id) }}">

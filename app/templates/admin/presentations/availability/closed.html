@@ -1,0 +1,17 @@
+{% macro closed(assessment) %}
+    <div class="panel panel-default">
+        <div class="panel-heading">Faculty availability for assessment <strong>{{ assessment.name }}</strong></div>
+        <div class="panel-body">
+            Collection of availability data for this assessment is now closed.
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="pull-right">
+                        <a class="btn btn-default" href="{{ url_for('admin.reopen_availability', id=assessment.id) }}">
+                            Reopen collection
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}

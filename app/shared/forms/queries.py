@@ -221,7 +221,10 @@ def GetAllBuildings():
 
 
 def GetAllRooms():
-    return db.session.query(Room).filter_by(active=True)
+    return db.session.query(Room).filter_by(active=True) \
+        .join(Building, Building.id == Room.building_id) \
+        .order_by(Building.name.asc(),
+                  Room.name.asc())
 
 
 def BuildRoomLabel(room):

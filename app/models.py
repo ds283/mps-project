@@ -5650,6 +5650,14 @@ class PresentationSession(db.Model):
         return flag
 
 
+    @property
+    def ordered_rooms(self):
+        return self.rooms.filter_by(active=True) \
+            .join(Building, Building.id == Room.building_id) \
+            .order_by(Building.name.asc(),
+                      Room.name.asc())
+
+
 @listens_for(PresentationSession, 'before_update')
 def _PresentationSession_update_handler(mapper, connection, target):
     with db.session.no_autoflush:

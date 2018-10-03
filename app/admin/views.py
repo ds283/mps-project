@@ -1733,7 +1733,6 @@ def edit_pclass(id):
         data.extent = form.extent.data
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data
-        data.submissions = form.submissions.data
         data.uses_marker = form.uses_marker.data
         data.uses_presentations = form.uses_presentations.data
         data.convenor = form.convenor.data

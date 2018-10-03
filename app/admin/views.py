@@ -166,6 +166,8 @@ def create_faculty(role):
 
     form = ConfirmRegisterFacultyForm(request.form)
 
+    pane = request.args.get('pane', None)
+
     if form.validate_on_submit():
         # convert field values to a dictionary
         field_data = form.to_dict()
@@ -194,9 +196,16 @@ def create_faculty(role):
         db.session.commit()
 
         if form.submit.data:
-            return redirect(url_for('admin.edit_affiliations', id=data.id, create=1))
+            return redirect(url_for('admin.edit_affiliations', id=data.id, create=1, pane=pane))
         elif form.save_and_exit.data:
-            return redirect(url_for('admin.edit_users'))
+            if pane is None or pane == 'accounts':
+                return redirect(url_for('admin.edit_users'))
+            elif pane == 'faculty':
+                return redirect(url_for('admin.edit_users_faculty'))
+            elif pane == 'students':
+                return redirect(url_for('admin.edit_users_students'))
+            else:
+                raise RuntimeError('Unknown user pane "{pane}"'.format(pane=pane))
         else:
             raise RuntimeError('Unknown submit button in create_faculty')
 
@@ -213,7 +222,7 @@ def create_faculty(role):
 
             form.use_academic_title.data = current_app.config['DEFAULT_USE_ACADEMIC_TITLE']
 
-    return render_template('security/register_user.html', user_form=form, role=role,
+    return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
                            title='Register a new {r} user account'.format(r=role))
 
 
@@ -227,6 +236,8 @@ def create_student(role):
         return redirect(url_for('admin.edit_users'))
 
     form = ConfirmRegisterStudentForm(request.form)
+
+    pane = request.args.get('pane', None)
 
     if form.validate_on_submit():
 
@@ -253,7 +264,14 @@ def create_student(role):
         db.session.add(data)
         db.session.commit()
 
-        return redirect(url_for('admin.edit_users'))
+        if pane is None or pane == 'accounts':
+            return redirect(url_for('admin.edit_users'))
+        elif pane == 'faculty':
+            return redirect(url_for('admin.edit_users_faculty'))
+        elif pane == 'students':
+            return redirect(url_for('admin.edit_users_students'))
+        else:
+            raise RuntimeError('Unknown user pane "{pane}"'.format(pane=pane))
 
     else:
         if request.method == 'GET':
@@ -266,7 +284,7 @@ def create_student(role):
             else:
                 form.cohort.data = date.today().year
 
-    return render_template('security/register_user.html', user_form=form, role=role,
+    return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
                            title='Register a new {r} user account'.format(r=role))
 
 
@@ -610,14 +628,16 @@ def edit_user(id):
 
     user = User.query.get_or_404(id)
 
+    pane = request.args.get('pane', None)
+
     if user.has_role('office'):
-        return redirect(url_for('admin.edit_office', id=id))
+        return redirect(url_for('admin.edit_office', id=id, pane=pane))
 
     elif user.has_role('faculty'):
-        return redirect(url_for('admin.edit_faculty', id=id))
+        return redirect(url_for('admin.edit_faculty', id=id, pane=pane))
 
     elif user.has_role('student'):
-        return redirect(url_for('admin.edit_student', id=id))
+        return redirect(url_for('admin.edit_student', id=id, pane=pane))
 
     flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
     return redirect(url_for('admin.edit_users'))
@@ -863,6 +883,8 @@ def edit_enrollment(id, returnid):
 
     form = EnrollmentRecordForm(obj=record)
 
+    pane = request.args.get('pane', None)
+
     if form.validate_on_submit():
 
         record.supervisor_state = form.supervisor_state.data
@@ -886,13 +908,13 @@ def edit_enrollment(id, returnid):
         db.session.commit()
 
         if returnid==0:
-            return redirect(url_for('admin.edit_enrollments', id=record.owner_id))
+            return redirect(url_for('admin.edit_enrollments', id=record.owner_id, pane=pane))
         elif returnid==1:
             return redirect(url_for('convenor.faculty', id=record.pclass.id))
         else:
             return home_dashboard()
 
-    return render_template('admin/edit_enrollment.html', record=record, form=form, returnid=returnid)
+    return render_template('admin/edit_enrollment.html', record=record, form=form, returnid=returnid, pane=pane)
 
 
 @admin.route('/add_affiliation/<int:userid>/<int:groupid>')

@@ -1,0 +1,62 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "admin/presentations/rooms_nav.html" %}
+
+{% block scripts %}
+    {{ super() }}
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#rooms-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/rooms_ajax', dataSrc: '' },
+                columns: [
+                    { data: 'name' },
+                    { data: 'building' },
+                    { data: 'capacity' },
+                    { data: 'active' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Edit presentation venues
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Edit presentation venues</div>
+        <div class="panel-body">
+            <table id="rooms-table" class="table table-striped table-bordered">
+                <thead>
+                <tr>
+                    <th width="25%"> Name</th>
+                    <th width="20%"> Building</th>
+                    <th width="20%"> Capacity</th>
+                    <th width="20%"> Status</th>
+                    <th width="15%"> Actions</th>
+                </tr>
+                </thead>
+            </table>
+            <div style="text-align: center;">
+                <a href="{{ url_for('admin.add_room') }}" class="btn btn-default btn-lg">
+                    <i class="fa fa-plus"></i>
+                    Add new room
+                </a>
+            </div>
+        </div>
+    </div>
+{%  endblock %}

@@ -1,0 +1,16 @@
+{% extends "base_app.html" %}
+
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        <li {% if pane=='rooms' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_rooms') }}">
+                Rooms
+            </a>
+        </li>
+        <li {% if pane=='buildings' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_buildings') }}">
+                Buildings
+            </a>
+        </li>
+    </ul>
+{% endblock %}

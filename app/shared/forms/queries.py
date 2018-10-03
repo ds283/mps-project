@@ -11,9 +11,10 @@
 
 from flask_login import current_user
 
-from ...models import db, User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role, ResearchGroup, \
-    EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
-    MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig
+from ...models import db, User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
+    ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
+    MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
+    Building, Room
 
 from ..utils import get_current_year
 
@@ -213,3 +214,15 @@ def GetUnattachedSubmissionPeriods(assessment_id):
 
 def BuildSubmissionPeriodName(period):
     return period.display_name + ' (' + period.config.name + ')'
+
+
+def GetAllBuildings():
+    return db.session.query(Building).filter_by(active=True)
+
+
+def GetAllRooms():
+    return db.session.query(Room).filter_by(active=True)
+
+
+def BuildRoomLabel(room):
+    return room.full_name + ' (capacity = {n})'.format(n=room.capacity)

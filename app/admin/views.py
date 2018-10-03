@@ -20,6 +20,7 @@ from collections import deque
 
 from celery import chain, group
 
+import app.ajax.admin.skill_groups
 from ..limiter import limiter
 from .actions import register_user, estimate_CATS_load
 from .forms import RoleSelectForm, \
@@ -39,14 +40,15 @@ from .forms import RoleSelectForm, \
     AddRoleForm, EditRoleForm, \
     NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
-    AddSessionForm, EditSessionForm
+    AddSessionForm, EditSessionForm, \
+    AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm
 
 from ..models import db, MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
-    PresentationSession
+    PresentationSession, Room, Building
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -1229,7 +1231,6 @@ def add_degree_programme():
     View to create a new degree programme
     :return:
     """
-
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
         flash('No degree types are available. Set up at least one active degree type before adding a '
@@ -1475,7 +1476,7 @@ def skill_groups_ajax():
         return jsonify({})
 
     groups = SkillGroup.query.all()
-    return ajax.admin.skill_groups_data(groups)
+    return app.ajax.admin.skill_groups.skill_groups_data(groups)
 
 
 @admin.route('/add_skill_group', methods=['GET', 'POST'])
@@ -4635,6 +4636,7 @@ def add_session(id):
         sess = PresentationSession(owner_id=data.id,
                                    date=form.date.data,
                                    session_type=form.session_type.data,
+                                   rooms=form.rooms.data,
                                    creator_id=current_user.id,
                                    creation_timestamp=datetime.now())
         db.session.add(sess)
@@ -4667,6 +4669,7 @@ def edit_session(id):
     if form.validate_on_submit():
         sess.date = form.date.data
         sess.session_type = form.session_type.data
+        sess.rooms = form.rooms.data
 
         sess.last_edit_id = current_user.id
         sess.last_edit_timestamp = datetime.now()
@@ -4699,6 +4702,192 @@ def delete_session(id):
 
     return redirect(request.referrer)
 
+
+@admin.route('/edit_rooms')
+@roles_required('root')
+def edit_rooms():
+    """
+    Manage bookable venues for presentation sessions
+    :return:
+    """
+    return render_template('admin/presentations/edit_rooms.html', pane='rooms')
+
+
+@admin.route('/rooms_ajax')
+@roles_required('root')
+def rooms_ajax():
+    """
+    AJAX entrypoint for list of available rooms
+    :return:
+    """
+
+    rooms = db.session.query(Room).all()
+    return ajax.admin.rooms_data(rooms)
+
+
+@admin.route('/add_room', methods=['GET', 'POST'])
+@roles_required('root')
+def add_room():
+    # check whether any active buildngs exist, and raise an error if not
+    if not db.session.query(Building).filter_by(active=True).first():
+        flash('No buildings are available. Set up at least one active building before adding a room.', 'error')
+        return redirect(request.referrer)
+
+    form = AddRoomForm(request.form)
+
+    if form.validate_on_submit():
+
+        data = Room(building_id=form.building.data.id,
+                    name=form.name.data,
+                    capacity=form.capacity.data,
+                    active=True,
+                    creator_id=current_user.id,
+                    creation_timestamp=datetime.now())
+
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_rooms'))
+
+    return render_template('admin/presentations/edit_room.html', form=form, title='Add new venue')
+
+
+@admin.route('/edit_room/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_room(id):
+    # id is a Room
+    data = Room.query.get_or_404(id)
+
+    form = EditRoomForm(obj=data)
+    form.room = data
+
+    if form.validate_on_submit():
+        data.name = form.name.data
+        data.capacity = form.capacity.data
+
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_rooms'))
+
+    return render_template('admin/presentations/edit_room.html', form=form, room=data, title='Edit venue')
+
+
+@admin.route('/activate_room/<int:id>')
+@roles_required('root')
+def activate_room(id):
+    # id is a Room
+    data = Room.query.get_or_404(id)
+
+    data.enable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/deactivate_room/<int:id>')
+@roles_required('root')
+def deactivate_room(id):
+    # id is a Room
+    data = Room.query.get_or_404(id)
+
+    data.disable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/edit_buildings')
+@roles_required('root')
+def edit_buildings():
+    """
+    Manage list of buildings to which bookable venues can belong.
+    Essentially used to identify rooms in the same building with a coloured tag.
+    :return:
+    """
+    return render_template('admin/presentations/edit_buildings.html', pane='buildings')
+
+
+@admin.route('/buildings_ajax')
+@roles_required('root')
+def buildings_ajax():
+    """
+    AJAX entrypoint for list of available buildings
+    :return:
+    """
+
+    buildings = db.session.query(Building).all()
+    return ajax.admin.buildings_data(buildings)
+
+
+@admin.route('/add_building', methods=['GET', 'POST'])
+@roles_required('root')
+def add_building():
+    form = AddBuildingForm(request.form)
+
+    if form.validate_on_submit():
+        data = Building(name=form.name.data,
+                        colour=form.colour.data,
+                        active=True,
+                        creator_id=current_user.id,
+                        creation_timestamp=datetime.now())
+
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_buildings'))
+
+    return render_template('admin/presentations/edit_building.html', form=form, title='Add new building')
+
+
+@admin.route('/edit_building/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_building(id):
+    # id is a Building
+    data = Building.query.get_or_404(id)
+
+    form = EditBuildingForm(obj=data)
+    form.building = data
+
+    if form.validate_on_submit():
+        data.name = form.name.data
+        data.colour = form.colour.data
+
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_buildings'))
+
+    return render_template('admin/presentations/edit_building.html', form=form, building=data,
+                           title='Edit building')
+
+
+@admin.route('/activate_building/<int:id>')
+@roles_required('root')
+def activate_building(id):
+    # id is a Building
+    data = Building.query.get_or_404(id)
+
+    data.enable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/deactivate_building/<int:id>')
+@roles_required('root')
+def deactivate_building(id):
+    # id is a Building
+    data = Building.query.get_or_404(id)
+
+    data.disable()
+    db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @admin.route('/launch_test_task')

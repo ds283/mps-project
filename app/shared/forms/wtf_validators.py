@@ -17,7 +17,7 @@ from zxcvbn import zxcvbn
 
 from app.models import Project, ProjectDescription
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
-    Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment
+    Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment, Building, Room
 
 from flask import current_app
 from werkzeug.local import LocalProxy
@@ -38,8 +38,10 @@ def globally_unique_username(form, field):
 
 
 def unique_or_original_username(form, field):
-    if field.data != form.user.username and _datastore.get_user(field.data) is not None:
-        raise ValidationError('{name} is already associated with an account'.format(name=field.data))
+    if field.data == form.user.username:
+        return
+
+    return globally_unique_username(form, field)
 
 
 def existing_username(form, field):
@@ -52,7 +54,10 @@ def existing_username(form, field):
 
 
 def unique_or_original_email(form, field):
-    if field.data != form.user.email and _datastore.get_user(field.data) is not None:
+    if field.data == form.user.email:
+        return
+
+    if _datastore.get_user(field.data) is not None:
         raise ValidationError('{name} is already associated with an account'.format(name=field.data))
 
 
@@ -62,8 +67,10 @@ def globally_unique_group_name(form, field):
 
 
 def unique_or_original_group_name(form, field):
-    if field.data != form.group.name and ResearchGroup.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
+    if field.data == form.group.name:
+        return
+
+    return globally_unique_group_name(form, field)
 
 
 def globally_unique_group_abbreviation(form, field):
@@ -72,8 +79,10 @@ def globally_unique_group_abbreviation(form, field):
 
 
 def unique_or_original_group_abbreviation(form, field):
-    if field.data != form.group.abbreviation and ResearchGroup.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError('{name} is already associated with a research group'.format(name=field.data))
+    if field.data == form.group.abbreviation:
+        return
+
+    return globally_unique_group_abbreviation(form, field)
 
 
 def globally_unique_degree_type(form, field):
@@ -82,8 +91,10 @@ def globally_unique_degree_type(form, field):
 
 
 def unique_or_original_degree_type(form, field):
-    if field.data != form.degree_type.name and DegreeType.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a degree type'.format(name=field.data))
+    if field.data == form.degree_type.name:
+        return
+
+    return globally_unique_degree_type(form, field)
 
 
 def globally_unique_degree_abbreviation(form, field):
@@ -92,8 +103,10 @@ def globally_unique_degree_abbreviation(form, field):
 
 
 def unique_or_original_degree_abbreviation(form, field):
-    if field.data != form.degree_type.abbreviation and DegreeType.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError('{name} is already associated with a degree type'.format(name=field.data))
+    if field.data == form.degree_type.abbreviation:
+        return
+
+    return globally_unique_degree_abbreviation(form, field)
 
 
 def globally_unique_degree_programme(form, field):
@@ -104,9 +117,10 @@ def globally_unique_degree_programme(form, field):
 
 def unique_or_original_degree_programme(form, field):
     degree_type = form.degree_type.data
-    if (field.data != form.programme.name or degree_type.id != form.programme.type_id) and \
-            DegreeProgramme.query.filter_by(name=field.data, type_id=degree_type.id).first():
-        raise ValidationError('{name} is already associated with a degree programme of the same type'.format(name=field.data))
+    if field.data == form.programme.name and degree_type.id == form.programme.type_id:
+        return
+
+    return globally_unique_degree_programme(form, field)
 
 
 def globally_unique_programme_abbreviation(form, field):
@@ -117,9 +131,10 @@ def globally_unique_programme_abbreviation(form, field):
 
 def unique_or_original_programme_abbreviation(form, field):
     degree_type = form.degree_type.data
-    if (field.data != form.programme.abbreviation or degree_type.id != form.programme.type_id) and \
-            DegreeProgramme.query.filter_by(abbreviation=field.data, type_id=degree_type.id).first():
-        raise ValidationError('{name} is already associated with a degree programme of the same type'.format(name=field.data))
+    if field.data == form.programme.abbreviation and degree_type.id == form.programme.type_id:
+        return
+
+    return globally_unique_programme_abbreviation(form, field)
 
 
 def globally_unique_transferable_skill(form, field):
@@ -129,10 +144,10 @@ def globally_unique_transferable_skill(form, field):
 
 
 def unique_or_original_transferable_skill(form, field):
-    if field.data != form.skill.name and \
-            TransferableSkill.query.filter(TransferableSkill.name == field.data,
-                                           TransferableSkill.group_id == form.group.data.id).first():
-        raise ValidationError('{name} is already associated with a transferable skill'.format(name=field.data))
+    if field.data == form.skill.name:
+        return
+
+    return globally_unique_transferable_skill(form, field)
 
 
 def globally_unique_skill_group(form, field):
@@ -141,8 +156,10 @@ def globally_unique_skill_group(form, field):
 
 
 def unique_or_original_skill_group(form, field):
-    if field.data != form.group.name and SkillGroup.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a skill group'.format(name=field.data))
+    if field.data == form.group.name:
+        return
+
+    return globally_unique_skill_group(form, field)
 
 
 def globally_unique_project_class(form, field):
@@ -151,8 +168,10 @@ def globally_unique_project_class(form, field):
 
 
 def unique_or_original_project_class(form, field):
-    if field.data != form.project_class.name and ProjectClass.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a project class'.format(name=field.data))
+    if field.data == form.project_class.name:
+        return
+
+    return globally_unique_project_class(form, field)
 
 
 def globally_unique_project_class_abbrev(form, field):
@@ -161,8 +180,10 @@ def globally_unique_project_class_abbrev(form, field):
 
 
 def unique_or_original_project_class_abbrev(form, field):
-    if field.data != form.project_class.abbreviation and ProjectClass.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError('{name} is already in use as an abbreviation'.format(name=field.data))
+    if field.data == form.project_class.abbreviation:
+        return
+
+    return globally_unique_project_class_abbrev(form, field)
 
 
 def globally_unique_supervisor(form, field):
@@ -171,8 +192,10 @@ def globally_unique_supervisor(form, field):
 
 
 def unique_or_original_supervisor(form, field):
-    if field.data != form.supervisor.name and Supervisor.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a supervisory role'.format(name=field.data))
+    if field.data == form.supervisor.name:
+        return
+
+    return globally_unique_supervisor(form, field)
 
 
 def globally_unique_supervisor_abbrev(form, field):
@@ -181,8 +204,10 @@ def globally_unique_supervisor_abbrev(form, field):
 
 
 def unique_or_original_supervisor_abbrev(form, field):
-    if field.data != form.supervisor.abbreviation and Supervisor.query.filter_by(abbreviation=field.data).first():
-        raise ValidationError('{name} is already in use as an abbreviation'.format(name=field.data))
+    if field.data == form.supervisor.abbreviation:
+        return
+
+    return globally_unique_supervisor_abbrev(form, field)
 
 
 def globally_unique_role(form, field):
@@ -191,8 +216,10 @@ def globally_unique_role(form, field):
 
 
 def unique_or_original_role(form, field):
-    if field.data != form.role.name and Role.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a user role'.format(name=field.data))
+    if field.data == form.role.name:
+        return
+
+    return globally_unique_role(form, field)
 
 
 def globally_unique_exam_number(form, field):
@@ -206,10 +233,7 @@ def unique_or_original_exam_number(form, field):
     if field.data == form.user.student_data.exam_number:
         return
 
-    rec = StudentData.query.filter_by(exam_number=field.data).first()
-    if rec is not None:
-        raise ValidationError('Exam number {n} is already associated with student {name}'.format(n=rec.exam_number,
-                                                                                                 name=rec.user.name))
+    return globally_unique_exam_number(form, field)
 
 
 def globally_unique_matching_name(year, form, field):
@@ -221,8 +245,7 @@ def unique_or_original_matching_name(year, form, field):
     if field.data == form.record.name:
         return
 
-    if MatchingAttempt.query.filter_by(name=field.data, year=year).first():
-        raise ValidationError('{name} is already in use for a matching attempt this year'.format(name=field.data))
+    return globally_unique_matching_name(year, form, field)
 
 
 def globally_unique_project(form, field):
@@ -231,8 +254,10 @@ def globally_unique_project(form, field):
 
 
 def unique_or_original_project(form, field):
-    if field.data != form.project.name and Project.query.filter_by(name=field.data).first():
-        raise ValidationError('{name} is already associated with a project'.format(name=field.data))
+    if field.data == form.project.name:
+        return
+
+    return globally_unique_project(form, field)
 
 
 def project_unique_label(form, field):
@@ -241,10 +266,10 @@ def project_unique_label(form, field):
 
 
 def project_unique_or_original_label(form, field):
+    if field.data == form.desc.label:
+        return
 
-    if field.data != form.desc.label and ProjectDescription.query \
-            .filter_by(parent_id=form.project_id, label=field.data).first():
-        raise ValidationError('{name} is already used as a label for this project'.format(name=field.data))
+    return project_unique_label(form, field)
 
 
 def value_is_nonnegative(form, field):
@@ -261,8 +286,32 @@ def unique_or_original_assessment_name(year, form, field):
     if field.data == form.assessment.name:
         return
 
-    if PresentationAssessment.query.filter_by(name=field.data, year=year).first():
-        raise ValidationError('{name} is already in use as an assessment name for this year'.format(name=field.data))
+    return globally_unique_assessment_name(year, form, field)
+
+
+def globally_unique_building_name(form, field):
+    if Building.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already in use as a building name'.format(name=field.data))
+
+
+def unique_or_original_building_name(form, field):
+    if field.data == form.building.name:
+        return
+
+    return globally_unique_building_name(form, field)
+
+
+def globally_unique_room_name(form, field):
+    if Room.query.filter_by(name=field.data, building_id=form.building.data.id).first():
+        raise ValidationError('{building} {name} is already in use as a room name'.format(building=form.building.data.name,
+                                                                                          name=field.data))
+
+
+def unique_or_original_room_name(form, field):
+    if field.data == form.room.name and form.building.data.id == form.room.building.id:
+        return
+
+    return globally_unique_room_name(form, field)
 
 
 def valid_json(form, field):

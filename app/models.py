@@ -70,6 +70,35 @@ solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GL
 session_choices = [(0, 'Morning'), (1, 'Afternoon')]
 
 
+class ColouredLabelMixin():
+
+    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    def make_CSS_style(self):
+        if self.colour is None:
+            return None
+
+        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
+
+
+    def _make_label(self, text, user_classes=None):
+        """
+        Make appropriately coloured label
+        :param text:
+        :return:
+        """
+        if user_classes is None:
+            classes = 'label label-default'
+        else:
+            classes = 'label label-default {cls}'.format(cls=user_classes)
+
+        style = self.make_CSS_style()
+        if style is None:
+                return '<span class="{cls}">{msg}</span>'.format(msg=text, cls=classes)
+
+        return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=style)
+
+
 ####################
 # ASSOCIATION TABLES
 ####################
@@ -257,6 +286,11 @@ project_matching_table = db.Table('match_config_projects',
 assessment_to_periods = db.Table('assessment_to_periods',
                                  db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
                                  db.Column('period_id', db.Integer(), db.ForeignKey('submission_periods.id'), primary_key=True))
+
+# link sessions to rooms
+session_to_rooms = db.Table('session_to_rooms',
+                            db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
+                            db.Column('room_id', db.Integer(), db.ForeignKey('rooms.id'), primary_key=True))
 
 
 class MainConfig(db.Model):
@@ -446,7 +480,7 @@ class User(db.Model, UserMixin):
             db.session.commit()
 
 
-class ResearchGroup(db.Model):
+class ResearchGroup(db.Model, ColouredLabelMixin):
     """
     Model a row from the research group table
     """
@@ -467,9 +501,6 @@ class ResearchGroup(db.Model):
 
     # active flag
     active = db.Column(db.Boolean())
-
-    # colour string
-    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -508,29 +539,16 @@ class ResearchGroup(db.Model):
         self.active = True
 
 
-    def make_CSS_style(self):
-
-        if self.colour is None:
-            return None
-
-        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
-
-
-    def make_label(self, text=None):
+    def make_label(self, text=None, user_classes=None):
         """
         Make approriately coloured label
         :param text:
         :return:
         """
-
         if text is None:
             text = self.abbreviation
 
-        style = self.make_CSS_style()
-        if style is None:
-            return '<span class="label label-default">{msg}</span>'.format(msg=text)
-
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
+        return self._make_label(text, user_classes)
 
 
 class FacultyData(db.Model):
@@ -998,7 +1016,7 @@ class StudentData(db.Model):
 
 
 
-class DegreeType(db.Model):
+class DegreeType(db.Model, ColouredLabelMixin):
     """
     Model a degree type
     """
@@ -1013,9 +1031,6 @@ class DegreeType(db.Model):
 
     # degree type abbreviation
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
-
-    # colour
-    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # active flag
     active = db.Column(db.Boolean())
@@ -1055,32 +1070,11 @@ class DegreeType(db.Model):
         self.active = True
 
 
-    def make_CSS_style(self):
-        if self.colour is None:
-            return None
-
-        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
-
-
     def make_label(self, text=None, user_classes=None):
-        """
-        Make appropriately coloured label
-        :param text:
-        :return:
-        """
         if text is None:
             text = self.abbreviation
 
-        if user_classes is None:
-            classes = 'label label-default'
-        else:
-            classes = 'label label-default {cls}'.format(cls=user_classes)
-
-        style = self.make_CSS_style()
-        if style is None:
-            return '<span class="{cls}">{msg}</span>'.format(msg=text, cls=classes)
-
-        return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=style)
+        return self._make_label(text, user_classes)
 
 
 class DegreeProgramme(db.Model):
@@ -1188,7 +1182,7 @@ class DegreeProgramme(db.Model):
         return self.degree_type.make_label(self.short_name)
 
 
-class SkillGroup(db.Model):
+class SkillGroup(db.Model, ColouredLabelMixin):
     """
     Model a group of transferable skills
     """
@@ -1204,10 +1198,7 @@ class SkillGroup(db.Model):
     # active?
     active = db.Column(db.Boolean())
 
-    # tag with a colour for easy recognition
-    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
-
-    # add group name to lables
+    # add group name to labels
     add_group = db.Column(db.Boolean())
 
     # created by
@@ -1247,33 +1238,11 @@ class SkillGroup(db.Model):
             skill.disable()
 
 
-    def make_CSS_style(self):
-        if self.colour is None:
-            return None
-
-        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
-
-
-
     def make_label(self, text=None, user_classes=None):
-        """
-        Make appropriately coloured label
-        :param text:
-        :return:
-        """
         if text is None:
             text = self.name
 
-        if user_classes is None:
-            classes = 'label label-default'
-        else:
-            classes = 'label label-default {cls}'.format(cls=user_classes)
-
-        style = self.make_CSS_style()
-        if style is None:
-                return '<span class="{cls}">{msg}</span>'.format(msg=text, cls=classes)
-
-        return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=style)
+        return self._make_label(text, user_classes)
 
 
     def make_skill_label(self, skill, user_classes=None):
@@ -1289,7 +1258,7 @@ class SkillGroup(db.Model):
 
         label += skill
 
-        return self.make_label(text=label, user_classes=user_classes)
+        return self._make_label(text=label, user_classes=user_classes)
 
 
 class TransferableSkill(db.Model):
@@ -1380,7 +1349,7 @@ class TransferableSkill(db.Model):
         return self.group.make_label(self.name)
 
 
-class ProjectClass(db.Model):
+class ProjectClass(db.Model, ColouredLabelMixin):
     """
     Model a single project class
     """
@@ -1398,9 +1367,6 @@ class ProjectClass(db.Model):
 
     # active?
     active = db.Column(db.Boolean())
-
-    # colour to use to identify this project
-    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
 
     # PRACTICAL DATA
@@ -1588,28 +1554,11 @@ class ProjectClass(db.Model):
             .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
 
 
-    def make_CSS_style(self):
-        if self.colour is None:
-            return None
-
-        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
-
-
-    def make_label(self, text=None):
-        """
-        Make appropriately coloured label
-        :param text:
-        :return:
-        """
-
+    def make_label(self, text=None, user_classes=None):
         if text is None:
             text = self.name
 
-        style = self.make_CSS_style()
-        if style is None:
-            return '<span class="label label-default">{msg}</span>'.format(msg=text)
-
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
+        return self._make_label(text, user_classes)
 
 
     def validate_periods(self, minimum_expected=0):
@@ -2421,7 +2370,7 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_Project_num_assessors)
 
 
-class Supervisor(db.Model):
+class Supervisor(db.Model, ColouredLabelMixin):
     """
     Model a supervision team member
     """
@@ -2436,9 +2385,6 @@ class Supervisor(db.Model):
 
     # role abbreviation
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
-
-    # colour string
-    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # active flag
     active = db.Column(db.Boolean())
@@ -2480,29 +2426,11 @@ class Supervisor(db.Model):
         self.active = True
 
 
-    def make_CSS_style(self):
-
-        if self.colour is None:
-            return None
-
-        return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
-
-
-    def make_label(self, text=None):
-        """
-        Make appropriately coloured label
-        :param text:
-        :return:
-        """
-
+    def make_label(self, text=None, user_classes=None):
         if text is None:
             text = self.abbreviation
 
-        style = self.make_CSS_style()
-        if style is None:
-            return '<span class="label label-default">{msg}</span>'.format(msg=text)
-
-        return '<span class="label label-default" style="{sty}">{msg}</span>'.format(msg=text, sty=style)
+        return self._make_label(text, user_classes)
 
 
 @cache.memoize()
@@ -5639,6 +5567,10 @@ class PresentationSession(db.Model):
 
     session_type = db.Column(db.Integer())
 
+    # rooms available for this session
+    rooms = db.relationship('Room', secondary=session_to_rooms, lazy='dynamic',
+                            backref=db.backref('sessions', lazy='dynamic'))
+
 
     # EDITING METADATA
 
@@ -5757,7 +5689,7 @@ def _PresentationSession_delete_handler(mapper, connection, target):
                 cache.delete_memoized(_PresentationSession_is_valid, dup.id)
 
 
-class Building(db.Model):
+class Building(db.Model, ColouredLabelMixin):
     """
     Store data modelling a building that houses bookable rooms for presentation assessments
     """
@@ -5771,8 +5703,43 @@ class Building(db.Model):
     # name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
 
-    # colour
-    colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    # active flag
+    active = db.Column(db.Boolean())
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def make_label(self, text=None, user_classes=None):
+        if text is None:
+            text = self.name
+
+        return self._make_label(text, user_classes)
+
+
+    def enable(self):
+        self.active = True
+
+        for room in self.rooms:
+            room.disable()
+
+
+    def disable(self):
+        self.active = False
 
 
 class Room(db.Model):
@@ -5796,6 +5763,54 @@ class Room(db.Model):
 
     # room capacity (currently not used)
     capacity = db.Column(db.Integer())
+
+    # active flag
+    active = db.Column(db.Boolean())
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def full_name(self):
+        return self.building.name + ' ' + self.name
+
+
+    @property
+    def label(self):
+        return self.make_label()
+
+
+    def make_label(self, user_classes=None):
+        return self.building.make_label(self.full_name, user_classes)
+
+
+    def enable(self):
+        if self.available:
+            self.active = True
+
+
+    def disable(self):
+        self.active = False
+
+
+    @property
+    def available(self):
+        return self.building.active
 
 
 # ############################

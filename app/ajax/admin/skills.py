@@ -11,7 +11,7 @@
 from flask import render_template_string, jsonify
 
 
-_skills_menu = \
+_menu = \
 """
 <div class="dropdown">
     <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
@@ -49,35 +49,6 @@ _skills_menu = \
 """
 
 
-_skill_group_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('admin.edit_skill_group', id=group.id) }}">
-                <i class="fa fa-pencil"></i> Edit details
-            </a>
-        </li>
-
-        <li>
-            {% if group.active %}
-                <a href="{{ url_for('admin.deactivate_skill_group', id=group.id) }}">
-                    <i class="fa fa-wrench"></i> Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('admin.activate_skill_group', id=group.id) }}">
-                    <i class="fa fa-wrench"></i> Make active
-                </a>
-            {% endif %}
-        </li>
-    </ul>
-</div>
-"""
-
 _active = \
 """
 {% if a.active %}
@@ -87,32 +58,12 @@ _active = \
 {% endif %}
 """
 
-_include_name = \
-"""
-{% if g.add_group %}
-    <span class="label label-success"><i class="fa fa-check"></i> Yes</span>
-{% else %}
-    <span class="label label-default"><i class="fa fa-times"></i> No</span>
-{% endif %}
-"""
-
 
 def skills_data(skills):
 
     data = [{'name': s.name,
              'group': s.group.make_label() if s.group is not None else '<span class="label label-default">None</span>',
              'active': render_template_string(_active, a=s),
-             'menu': render_template_string(_skills_menu, skill=s)} for s in skills]
-
-    return jsonify(data)
-
-
-def skill_groups_data(groups):
-
-    data = [{'name': g.name,
-             'colour': g.make_label(g.colour),
-             'active': render_template_string(_active, a=g),
-             'include': render_template_string(_include_name, g=g),
-             'menu': render_template_string(_skill_group_menu, group=g)} for g in groups]
+             'menu': render_template_string(_menu, skill=s)} for s in skills]
 
     return jsonify(data)

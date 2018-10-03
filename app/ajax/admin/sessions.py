@@ -25,7 +25,7 @@ _date = \
 
 _rooms = \
 """
-{% for room in s.rooms %}
+{% for room in s.ordered_rooms %}
     {{ room.label|safe }}
 {% else %}
     <span class="label label-warning"><i class="fa fa-times"></i> No rooms attached</span>

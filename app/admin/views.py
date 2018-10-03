@@ -4657,7 +4657,7 @@ def assessment_availability(id):
 
         if request.method == 'GET':
             if form.availability_deadline.data is None:
-                form.availability_deadline.data = datetime.now() + timedelta(weeks=2)
+                form.availability_deadline.data = date.today() + timedelta(weeks=2)
 
     if data.availability_lifecycle > PresentationAssessment.AVAILABILITY_NOT_REQUESTED:
         form.issue_requests.label.text = 'Save changes'
@@ -4708,8 +4708,8 @@ def reopen_availability(id):
         return redirect(request.referrer)
 
     data.availability_closed = False
-    if data.availability_deadline < datetime.now():
-        data.availability_deadline = datetime.now() + timedelta(weeks=1)
+    if data.availability_deadline < date.today():
+        data.availability_deadline = date.today() + timedelta(weeks=1)
 
     db.session.commit()
 

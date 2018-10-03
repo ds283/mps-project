@@ -152,7 +152,9 @@ def _enumerate_liveprojects(configs):
             CATS_supervisor[number] = sup if sup is not None else 30
             CATS_marker[number] = mk if mk is not None else 3
 
-            capacity[number] = item.capacity if (item.enforce_capacity and item.capacity > 0) else 0
+            capacity[number] = item.capacity if (item.enforce_capacity and
+                                                 item.capacity is not None and
+                                                 item.capacity > 0) else 0
 
             project_dict[number] = item
 

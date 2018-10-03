@@ -5478,7 +5478,7 @@ class PresentationAssessment(db.Model):
     availability_closed = db.Column(db.Boolean())
 
     # what deadline has been set of availability information to be returned?
-    availability_deadline = db.Column(db.DateTime())
+    availability_deadline = db.Column(db.Date())
 
     # list of faculty members still to return availability data
     availability_outstanding = db.relationship('FacultyData', secondary=faculty_availability_waiting, lazy='dynamic',

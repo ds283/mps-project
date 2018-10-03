@@ -2421,8 +2421,8 @@ def issue_confirm_requests(id):
         config.requests_issued = True
 
         deadline = issue_form.request_deadline.data
-        if deadline < datetime.now():
-            deadline = datetime.now() + timedelta(weeks=2)
+        if deadline < date.today():
+            deadline = date.today() + timedelta(weeks=2)
         config.request_deadline = deadline
 
         db.session.commit()

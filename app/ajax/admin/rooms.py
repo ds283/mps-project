@@ -1,5 +1,5 @@
 #
-# Created by David Seery on 05/06/2018.
+# Created by David Seery on 2018-10-02.
 # Copyright (c) 2018 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
@@ -20,23 +20,23 @@ _menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
+            <a href="{{ url_for('admin.edit_room', id=r.id) }}">
                 <i class="fa fa-pencil"></i> Edit details
             </a>
         </li>
 
-        {% if programme.active %}
-            <li><a href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">
+        {% if r.active %}
+            <li><a href="{{ url_for('admin.deactivate_room', id=r.id) }}">
                 <i class="fa fa-wrench"></i> Make inactive
             </a></li>
         {% else %}
-            {% if programme.available %}
-                <li><a href="{{ url_for('admin.activate_degree_programme', id=programme.id) }}">
+            {% if r.available %}
+                <li><a href="{{ url_for('admin.activate_room', id=r.id) }}">
                     <i class="fa fa-wrench"></i> Make active
                 </a></li>
             {% else %}
                 <li class="disabled"><a>
-                    <i class="fa fa-ban"></i> Degree type inactive
+                    <i class="fa fa-ban"></i> Building inactive
                 </a></li>
             {% endif %}
         {% endif %}
@@ -47,7 +47,7 @@ _menu = \
 
 _active = \
 """
-{% if p.active %}
+{% if r.active %}
     <span class="label label-success"><i class="fa fa-check"></i> Active</span>
 {% else %}
     <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
@@ -55,28 +55,12 @@ _active = \
 """
 
 
-_show_type = \
-"""
-{% if p.show_type %}
-    <span class="label label-success"><i class="fa fa-check"></i> Yes</span>
-{% else %}
-    <span class="label label-default"><i class="fa fa-times"></i> No</span>
-{% endif %}
-"""
+def rooms_data(rooms):
 
-
-_name = \
-"""
-{{ p.name }} {{ p.short_label|safe }}
-"""
-
-
-def degree_programmes_data(programmes):
-
-    data = [{'name': render_template_string(_name, p=p),
-             'type': p.degree_type.name,
-             'show_type': render_template_string(_show_type, p=p),
-             'active': render_template_string(_active, p=p),
-             'menu': render_template_string(_menu, programme=p)} for p in programmes]
+    data = [{'name': r.name,
+             'building': r.building.make_label(),
+             'capacity': r.capacity,
+             'active': render_template_string(_active, r=r),
+             'menu': render_template_string(_menu, r=r)} for r in rooms]
 
     return jsonify(data)

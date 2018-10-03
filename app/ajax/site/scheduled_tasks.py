@@ -50,6 +50,16 @@ _scheduled_menu_template = \
 """
 
 
+_active = \
+"""
+{% if t.enabled %}
+    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+{% endif %}
+"""
+
+
 def _format_schedule(task):
 
     if task.interval is not None:
@@ -72,7 +82,7 @@ def scheduled_task_data(tasks):
              'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
                                                                name=t.owner.name) if t.owner is not None
                 else '<span class="label label-default">Nobody</span>',
-             'active': 'Yes' if t.enabled else 'No',
+             'active': render_template_string(_active, t=t),
              'last_run': {
                  'display': t.last_run_at.strftime("%a %d %b %Y %H:%M:%S"),
                  'timestamp': t.last_run_at.timestamp()

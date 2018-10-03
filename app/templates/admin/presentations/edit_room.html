@@ -1,0 +1,44 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {% if room %}
+        Edit venue {{ room.full_name }}
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block formtitle %}
+    {% if room %}
+        Edit venue <strong>{{ room.full_name }}</strong>
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if room %}
+        <form action="{{ url_for('admin.edit_room', id=room.id) }}" method="POST" name="room_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_room') }}" method="POST" name="room_form">
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.form_field(form.name) }}
+        {{ wtf.form_field(form.building) }}
+        {{ wtf.form_field(form.capacity) }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(room) }}
+{% endblock %}

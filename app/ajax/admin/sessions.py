@@ -22,6 +22,17 @@ _date = \
 {% endif %}
 """
 
+
+_rooms = \
+"""
+{% for room in s.rooms %}
+    {{ room.label|safe }}
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> No rooms attached</span>
+{% endfor %}
+"""
+
+
 _menu = \
 """
 <div class="dropdown">
@@ -50,7 +61,7 @@ def assessment_sessions_data(sessions):
 
     data = [{'date': render_template_string(_date, s=s),
              'session': s.session_type_label,
-             'rooms': '',
+             'rooms': render_template_string(_rooms, s=s),
              'availability': '',
              'menu': render_template_string(_menu, s=s)} for s in sessions]
 

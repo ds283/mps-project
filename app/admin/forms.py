@@ -32,11 +32,14 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_supervisor_abbrev, unique_or_original_supervisor_abbrev, value_is_nonnegative, \
     unique_or_original_matching_name, \
     globally_unique_assessment_name, unique_or_original_assessment_name, \
+    globally_unique_building_name, unique_or_original_building_name, \
+    globally_unique_room_name, unique_or_original_room_name, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
-    GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName
+    GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
+    GetAllBuildings, GetAllRooms, BuildRoomLabel
 from ..models import BackupConfiguration, EnrollmentRecord, academic_titles, \
     extent_choices, year_choices, matching_history_choices, solver_choices, session_choices
 
@@ -874,7 +877,7 @@ def NewMatchFormFactory(year):
 
         @staticmethod
         def validate_name(form, field):
-            return globally_unique_assessment_name(year, form, field)
+            return globally_unique_matching_name(year, form, field)
 
     return NewMatchForm
 
@@ -958,6 +961,8 @@ class SessionMixin():
 
     session_type = SelectField('Session type', choices=session_choices, coerce=int)
 
+    rooms = CheckboxQuerySelectMultipleField('Available rooms', query_factory=GetAllRooms, get_label=BuildRoomLabel)
+
 
 class AddSessionForm(Form, SessionMixin):
 
@@ -967,3 +972,54 @@ class AddSessionForm(Form, SessionMixin):
 class EditSessionForm(Form, SessionMixin, EditFormMixin):
 
     pass
+
+
+class BuildingMixin():
+
+    name = StringField('Name', description='Enter a short name or identifier for the building',
+                       validators=[InputRequired('A unique name is required')])
+
+    colour = StringField('Colour', description='Specify a colour to help identify rooms located in this building')
+
+
+class AddBuildingForm(Form, BuildingMixin):
+
+    submit = SubmitField('Add building')
+
+    @staticmethod
+    def validate_name(form, field):
+        return globally_unique_building_name(form, field)
+
+
+class EditBuildingForm(Form, BuildingMixin, EditFormMixin):
+
+    @staticmethod
+    def validate_name(form, field):
+        return unique_or_original_building_name(form, field)
+
+
+class RoomMixin():
+
+    name = StringField('Name', description='Enter a number or label for the venue',
+                       validators=[InputRequired('A unique name is required')])
+
+    building = QuerySelectField('Building', query_factory=GetAllBuildings, get_label='name')
+
+    capacity = IntegerField('Capacity', description='How many people will this room accommodate?',
+                            validators=[InputRequired('Enter the number of people who can be accommodated')])
+
+
+class AddRoomForm(Form, RoomMixin):
+
+    submit = SubmitField('Add room')
+
+    @staticmethod
+    def validate_name(form, field):
+        return globally_unique_room_name(form, field)
+
+
+class EditRoomForm(Form, RoomMixin, EditFormMixin):
+
+    @staticmethod
+    def validate_name(form, field):
+        return unique_or_original_room_name(form, field)

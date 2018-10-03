@@ -9,7 +9,8 @@
 #
 
 from .messages import messages_data
-from .skills import skills_data, skill_groups_data
+from .skills import skills_data
+from .skill_groups import skill_groups_data
 from .degree_types import degree_types_data
 from .degree_programmes import degree_programmes_data
 from .supervisors import supervisors_data
@@ -23,3 +24,5 @@ from .compare_matches import compare_match_data
 from .periods import periods_data
 from .presentations import presentation_assessments_data
 from .sessions import assessment_sessions_data
+from .buildings import buildings_data
+from .rooms import rooms_data

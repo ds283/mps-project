@@ -1,6 +1,6 @@
 {% macro root_dashboard_card(root_dash_data) %}
 
-    {% set config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = root_dash_data %}
+    {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = root_dash_data %}
 
     <div class="well">
         <p><span class="dashboard-project-title">System administrator dashboard</span></p>
@@ -45,25 +45,25 @@
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
                                 <span class="label label-warning">Marking/feedback: {{ config.current_period.display_name|safe }}</span>
                             {% elif sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
-                                <span class="label label-primary">Submissions complete</span>
+                                <span class="label label-primary"><i class="fa fa-check"></i> Submissions complete</span>
                             {% else %}
                                 <span class="label label-danger">Unknown submitted lifecycle state {{ sub_state }}</span>
                             {% endif %}
                             {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                                <span class="label label-default">Confirmations not issued</span>
+                                <span class="label label-default"><i class="fa fa-times"></i> Confirmations not issued</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
                                 <span class="label label-default"><i class="fa fa-times"></i> Not live</span>
                                 <span class="label label-primary"><i class="fa fa-clock-o"></i> Confirmations outstanding</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                                <span class="label label-default">Not live</span>
+                                <span class="label label-default"><i class="fa fa-times"></i> Not live</span>
                                 <span class="label label-success"><i class="fa fa-check"></i> GoLive ready</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                                 <span class="label label-primary"><i class="fa fa-check"></i> Selection open</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_MATCHING %}
-                                <span class="label label-primary">Selection closed</span>
+                                <span class="label label-primary"><i class="fa fa-bar"></i> Selection closed</span>
                                 <span class="label label-success"><i class="fa fa-check"></i> Matching ready</span>
                             {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER %}
-                                <span class="label label-primary">Selection closed</span>
+                                <span class="label label-primary"><i class="fa fa-bar"></i> Selection closed</span>
                                 {% if sub_state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER and not (config.year < current_year) %}
                                     <span class="label label-success"><i class="fa fa-check"></i> Rollover ready</span>
                                 {% else %}

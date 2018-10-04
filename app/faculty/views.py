@@ -11,7 +11,8 @@
 from flask import render_template, redirect, url_for, flash, request, session, jsonify
 from flask_security import roles_required, roles_accepted, current_user
 
-from ..models import db, DegreeProgramme, FacultyData, ResearchGroup, \
+from ..database import db
+from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord
 

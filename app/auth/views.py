@@ -13,7 +13,8 @@ from flask_security import login_required, current_user, logout_user, login_user
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from ..models import db, User
+from ..database import db
+from ..models import User
 
 from . import auth
 

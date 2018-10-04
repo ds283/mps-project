@@ -12,7 +12,8 @@
 from flask import current_app
 from sqlalchemy import func
 
-from ..models import db, BackupConfiguration, BackupRecord
+from ..database import db
+from ..models import BackupConfiguration, BackupRecord
 
 from .sqlalchemy import get_count
 

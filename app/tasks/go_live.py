@@ -12,7 +12,8 @@ from flask import current_app
 from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import db, User, TaskRecord, BackupRecord, ProjectClassConfig, \
+from ..database import db
+from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
     Project, FacultyData, EnrollmentRecord
 
 from ..task_queue import progress_update

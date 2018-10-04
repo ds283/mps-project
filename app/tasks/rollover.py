@@ -13,7 +13,8 @@ from flask import current_app
 from sqlalchemy import func, or_
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import db, User, TaskRecord, BackupRecord, ProjectClassConfig, \
+from ..database import db
+from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     SubmissionRecord, SubmissionPeriodRecord
 

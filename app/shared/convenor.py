@@ -9,7 +9,8 @@
 #
 
 
-from ..models import db, Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent, \
+from ..database import db
+from ..models import Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent, \
     ProjectClassConfig, EnrollmentRecord, SubmissionRecord
 
 

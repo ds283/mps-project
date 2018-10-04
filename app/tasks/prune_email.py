@@ -11,7 +11,8 @@
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import db, EmailLog
+from ..database import db
+from ..models import EmailLog
 
 from datetime import datetime, timedelta
 

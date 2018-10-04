@@ -10,13 +10,13 @@
 
 from flask import flash
 from flask_security import current_user, UserMixin, RoleMixin
-from flask_sqlalchemy import SQLAlchemy
 
 from sqlalchemy import orm, or_
 from sqlalchemy.event import listens_for
 
 from celery import schedules
 
+from .database import db
 from .cache import cache
 
 from .shared.formatters import format_size, format_time, format_readable_time
@@ -31,7 +31,6 @@ from uuid import uuid4
 
 
 # make db available as a static variable, so we can import into other parts of the code
-db = SQLAlchemy()
 
 
 # length of database string for typical fields, if used

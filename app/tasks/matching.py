@@ -9,7 +9,8 @@
 #
 
 
-from ..models import db, MatchingAttempt, TaskRecord, ProjectClassConfig, LiveProject, SelectingStudent, \
+from ..database import db
+from ..models import MatchingAttempt, TaskRecord, ProjectClassConfig, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord
 
 from ..shared.sqlalchemy import get_count

@@ -8,8 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from app import create_app
-from app.models import db, TaskRecord, Notification, MatchingAttempt
+from app import create_app, db
+from app.models import TaskRecord, Notification, MatchingAttempt
 from sqlalchemy.exc import SQLAlchemyError
 
 app, celery = create_app()

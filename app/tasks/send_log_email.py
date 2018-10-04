@@ -9,7 +9,8 @@
 #
 
 
-from ..models import db, User, EmailLog, TaskRecord
+from ..database import db
+from ..models import User, EmailLog, TaskRecord
 from ..task_queue import progress_update
 
 from celery import chain

@@ -8,7 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from app.models import db, TaskRecord
+from ..database import db
+from ..models import TaskRecord
 
 from uuid import uuid4
 

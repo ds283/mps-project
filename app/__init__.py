@@ -10,9 +10,9 @@
 
 import os
 
-from flask import Flask, current_app, request, session, render_template, flash, redirect, url_for
+from flask import current_app, request, session, render_template
 from flask_migrate import Migrate
-from flask_security import current_user, SQLAlchemyUserDatastore, Security, logout_user
+from flask_security import current_user, SQLAlchemyUserDatastore, Security
 from flask_login.signals import user_logged_in
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
@@ -32,7 +32,8 @@ from flask_profiler import Profiler
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
 from config import app_config, revision
-from .models import db, User, EmailLog, MessageOfTheDay, Notification
+from .database import db
+from .models import User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
 from .shared.utils import home_dashboard_url
 import app.tasks as tasks
@@ -42,9 +43,6 @@ from mdx_smartypants import makeExtension
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
 import latex2markdown
-
-from time import time
-from datetime import timedelta
 
 
 def create_app():

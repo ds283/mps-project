@@ -56,6 +56,21 @@ def home_dashboard():
     return redirect(url_for('auth.logged_out'))
 
 
+def get_assessments_in_use():
+    pcs = db.session.query(ProjectClass).filter_by(active=True).all()
+
+    presentation_assessments = False
+
+    # loop through all active project classes
+    for pclass in pcs:
+
+        if pclass.uses_presentations:
+            presentation_assessments = True
+            break
+
+    return presentation_assessments
+
+
 def get_root_dashboard_data():
     current_year = get_current_year()
 

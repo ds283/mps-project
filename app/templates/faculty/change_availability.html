@@ -1,0 +1,61 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    Change availability responses
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="top-return-link">
+                <a href="{{ home_dashboard_url }}">
+                    <i class="fa fa-backward"></i> Return to dashboard
+                </a>
+            </div>
+
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    Change availability responses
+                </div>
+                <div class="panel-body">
+                    <p>It is possible to change your responses for the following events</p>
+                    <div class="row vertical-top event-table">
+                        <div class="col-xs-4"><strong>Event</strong></div>
+                        <div class="col-xs-4"><strong>Organizer</strong></div>
+                        <div class="col-xs-3"><strong>Deadline</strong></div>
+                        <div class="col-xs-1"></div>
+                    </div>
+                    {% for assessment in current_user.faculty_data.editable_availability_requests %}
+                        <div class="row vertical-align event-table">
+                            <div class="col-xs-4">
+                                <a href="{{ url_for('faculty.set_availability', id=assessment.id, url=url_for('faculty.change_availability'), text='Return to availability page') }}">{{ assessment.name }}</a>
+                            </div>
+                            <div class="col-xs-4">
+                                <a href="mailto:{{ assessment.created_by.email }}">{{ assessment.created_by.name }}</a>
+                            </div>
+                            <div class="col-xs-3">
+                                {% if assessment.availability_deadline is not none %}
+                                    {{ assessment.availability_deadline.strftime("%a %d %b %Y") }}
+                                    &ndash; {{ assessment.time_to_availability_deadline }} from now
+                                {% endif %}
+                            </div>
+                            <div class="col-xs-1">
+                                <div class="pull-right">
+                                    <a class="btn btn-sm btn-default" href="{{ url_for('faculty.set_availability', id=assessment.id, url=url_for('faculty.change_availability'), text='Return to availability page') }}">Edit</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ home_dashboard_url }}">
+                    <i class="fa fa-backward"></i> Return to dashboard
+                </a>
+            </div>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

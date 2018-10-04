@@ -432,6 +432,15 @@
                                 <li><a href="{{ url_for('home.homepage') }}">
                                     <i class="fa fa-line-chart"></i> Dashboard
                                 </a></li>
+                                {% if current_user.faculty_data.has_editable_availability_requests %}
+                                    <li role="separator" class="divider"></li>
+                                    <li class="dropdown-header">Assessment events</li>
+                                    <li>
+                                        <a href="{{ url_for('faculty.change_availability') }}">
+                                            <i class="fa fa-calendar"></i> Change availability...
+                                        </a>
+                                    </li>
+                                {% endif %}
                                 {% if current_user.has_role('faculty') %}
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Faculty options</li>

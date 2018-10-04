@@ -12,7 +12,7 @@
 from flask import flash
 from flask_login import current_user
 
-from .utils import get_current_year, get_root_dashboard_data
+from .utils import get_current_year, get_root_dashboard_data, get_assessments_in_use
 from ..models import ProjectClassConfig
 
 
@@ -180,7 +180,7 @@ def validate_submission_viewable(record):
 
 def validate_using_assessment():
     # check that assessment events are actually required
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+    assessments = get_assessments_in_use()
 
     if not assessments:
         flash('Presentation assessments are not currently required', 'error')

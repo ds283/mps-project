@@ -1,0 +1,65 @@
+{% extends "base_app.html" %}
+
+{% block title %}
+    Set availability for {{ assessment.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            {% if url and text %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            <div class="panel panel-primary">
+                <div class="panel-heading">
+                    Set availability for assessment event <strong>{{ assessment.name }}</strong>
+                </div>
+                <div class="panel-body">
+                    <div class="row vertical-top event-table">
+                        <div class="col-xs-4"><strong>Date</strong></div>
+                        <div class="col-xs-1"><strong>Session</strong></div>
+                        <div class="col-xs-7"></div>
+                    </div>
+
+                    {% for session in assessment.sessions %}
+                        <div class="row vertical-align event-table">
+                            <div class="col-xs-4">{{ session.date.strftime("%a %d %b %Y") }}</div>
+                            <div class="col-xs-1">{{ session.session_type_label|safe }}</div>
+                            <div class="col-xs-7">
+                                <div class="pull-right">
+                                {% if session.in_session(current_user.id) %}
+                                    <a class="btn btn-success btn-sm">Available</a>
+                                    <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-default btn-sm">Not available</a>
+                                {% else %}
+                                    <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-default btn-sm">Available</a>
+                                    <a class="btn btn-danger btn-sm">Not available</a>
+                                {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    {% if assessment.is_outstanding(current_user.id) %}
+                        <hr class="intro-divider">
+                        <p>Please confirm your responses when you are finished. It is still possible to make changes up to the deadline.</p>
+                        <a href="{{ url_for('faculty.confirm_availability', id=assessment.id) }}" class="btn btn-primary">Confirm</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if url and text %}
+                <div>
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

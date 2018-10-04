@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% from "faculty/dashboard/pclass_card.html" import pclass_card with context %}
+{% from "faculty/dashboard/availability_card.html" import availability_card %}
 {% from "admin/root_dashboard/dashboard_card.html" import root_dashboard_card %}
 {% from "macros.html" import message_card %}
 
@@ -19,6 +20,10 @@
                 {% endfor %}
             {% endif %}
 
+            {% if current_user.faculty_data.has_outstanding_availability_requests %}
+                {{ availability_card(current_user.faculty_data) }}
+            {% endif %}
+
             {% if current_user.has_role('root') %}
                 {{ root_dashboard_card(root_dash_data) }}
             {% endif %}
@@ -26,9 +31,7 @@
             {% if enrollments and enrollments|length > 0 %}
 
                 {% for config, live_projects in enrollments %}
-
                     {{ pclass_card(config, live_projects) }}
-
                 {% endfor %}
 
             {% else %}

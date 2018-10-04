@@ -957,6 +957,30 @@ class FacultyData(db.Model):
         return any(not_started)
 
 
+    @property
+    def outstanding_availability_requests(self):
+        return self.availability_waiting \
+            .filter_by(year=_get_current_year(), availability_closed=False) \
+            .order_by(PresentationAssessment.name.asc())
+
+
+    @property
+    def editable_availability_requests(self):
+        return self.presentation_assessments \
+            .filter_by(year=_get_current_year(), availability_closed=False) \
+            .order_by(PresentationAssessment.name.asc())
+
+
+    @property
+    def has_outstanding_availability_requests(self):
+        return get_count(self.outstanding_availability_requests) > 0
+
+
+    @property
+    def has_editable_availability_requests(self):
+        return get_count(self.editable_availability_requests) > 0
+
+
 class StudentData(db.Model):
     """
     Models extra data held on students
@@ -5561,6 +5585,18 @@ class PresentationAssessment(db.Model):
         return get_count(self.availability_outstanding)
 
 
+    def is_outstanding(self, faculty_id):
+        return get_count(self.availability_outstanding.filter_by(id=faculty_id)) > 0
+
+    @property
+    def time_to_availability_deadline(self):
+        if self.availability_deadline is None:
+            return '<invalid>'
+
+        delta = self.availability_deadline - date.today()
+        return format_readable_time(delta)
+
+
     @property
     def ordered_sessions(self):
         return self.sessions.order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
@@ -5773,6 +5809,10 @@ class PresentationSession(db.Model):
         return self.faculty \
             .join(User, User.id == FacultyData.id) \
             .order_by(User.last_name.asc(), User.first_name.asc())
+
+
+    def in_session(self, faculty_id):
+        return get_count(self.faculty.filter_by(id=faculty_id)) > 0
 
 
 @listens_for(PresentationSession, 'before_update')

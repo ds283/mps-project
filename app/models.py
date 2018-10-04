@@ -5748,6 +5748,18 @@ class PresentationSession(db.Model):
                       Room.name.asc())
 
 
+    @property
+    def faculty_count(self):
+        return get_count(self.faculty)
+
+
+    @property
+    def ordered_faculty(self):
+        return self.faculty \
+            .join(User, User.id == FacultyData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
+
+
 @listens_for(PresentationSession, 'before_update')
 def _PresentationSession_update_handler(mapper, connection, target):
     with db.session.no_autoflush:

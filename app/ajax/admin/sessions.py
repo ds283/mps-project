@@ -57,12 +57,31 @@ _menu = \
 """
 
 
+_faculty = \
+"""
+{% if s.owner.availability_lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED %}
+    {% for assessor in s.ordered_faculty %}
+        {% if loop.index <= 15 %}
+            <span class="label label-default">{{ assessor.user.name }}</span>
+        {% elif loop.index == 16 %}
+            <span class="label label-info">...</span>
+            <span class="label label-primary">{{ s.faculty_count }} available</span>
+        {% endif %}
+    {% else %}
+        <span class="label label-danger">No availability</span>
+    {% endfor %}
+{% else %}
+    <span class="label label-default">Not yet requested</span>
+{% endif %}
+"""
+
+
 def assessment_sessions_data(sessions):
 
     data = [{'date': render_template_string(_date, s=s),
              'session': s.session_type_label,
              'rooms': render_template_string(_rooms, s=s),
-             'availability': '',
+             'availability': render_template_string(_faculty, s=s),
              'menu': render_template_string(_menu, s=s)} for s in sessions]
 
     return jsonify(data)

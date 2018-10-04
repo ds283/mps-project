@@ -101,7 +101,7 @@ _menu = \
         </li>
         <li>
             <a href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">
-                <i class="fa fa-calendar"></i> Sessions
+                <i class="fa fa-calendar"></i> Sessions...
             </a>
         </li>
         <li>

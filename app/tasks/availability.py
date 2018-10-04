@@ -41,7 +41,8 @@ def register_availability_tasks(celery):
 
                 assessors = period.assessors_list \
                     .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
-                    .filter(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED).all()
+                    .filter(EnrollmentRecord.pclass_id == period.config.pclass_id,
+                            EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED).all()
 
                 for assessor in assessors:
                     if assessor not in data.assessors:
@@ -79,7 +80,8 @@ def register_availability_tasks(celery):
             user = db.session.query(User).filter_by(id=user_id).first()
 
             if user is not None:
-                user.post_message('{n} availability requests issued'.format(n=get_count(data.assessors)),
+                count = get_count(data.assessors)
+                user.post_message('{n} availability request{pl} issued'.format(n=count, pl='' if count == 1 else 's'),
                                   'info', autocommit=True)
         except SQLAlchemyError:
             pass

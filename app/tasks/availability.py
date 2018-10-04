@@ -11,7 +11,8 @@
 from celery import group, chain
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import db, User, PresentationAssessment, TaskRecord, FacultyData, EnrollmentRecord
+from ..database import db
+from ..models import User, PresentationAssessment, TaskRecord, FacultyData, EnrollmentRecord, PresentationSession
 from ..task_queue import progress_update
 from ..shared.sqlalchemy import get_count
 

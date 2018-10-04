@@ -11,7 +11,8 @@
 
 from flask_login import current_user
 
-from ...models import db, User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
+from ...database import db
+from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
     Building, Room

@@ -19,7 +19,8 @@ from math import floor
 
 from celery import group, chain
 
-from ..models import db, User, BackupRecord
+from ..database import db
+from ..models import User, BackupRecord
 from ..shared.backup import get_backup_config, get_backup_count, get_backup_size, remove_backup
 
 from datetime import datetime, timedelta

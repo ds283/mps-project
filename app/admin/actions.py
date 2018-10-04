@@ -15,7 +15,8 @@ from flask_security.utils import hash_password, do_flash, config_value, send_mai
 from flask_security.signals import user_registered
 from flask_security.confirmable import generate_confirmation_link
 
-from ..models import db, ProjectClass, ProjectClassConfig, EnrollmentRecord, FacultyData, SelectingStudent, User
+from ..database import db
+from ..models import ProjectClass, ProjectClassConfig, EnrollmentRecord, FacultyData, SelectingStudent, User
 from ..shared.utils import get_current_year
 from ..shared.sqlalchemy import get_count
 

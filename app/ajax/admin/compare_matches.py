@@ -10,8 +10,8 @@
 
 from flask import jsonify, render_template_string
 
-from ...models import db, MatchingRecord
-
+from ...database import db
+from ...models import MatchingRecord
 
 _student = \
 """

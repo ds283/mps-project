@@ -11,7 +11,8 @@
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import db, User, TaskRecord
+from ..database import db
+from ..models import User, TaskRecord
 from ..task_queue import progress_update
 
 

@@ -18,8 +18,8 @@ from celery.beat import Scheduler, ScheduleEntry
 from celery import schedules, current_app
 from celery.utils.time import is_naive
 
-from .models import db, DatabaseSchedulerEntry, CrontabSchedule, IntervalSchedule
-
+from .database import db
+from .models import DatabaseSchedulerEntry, CrontabSchedule, IntervalSchedule
 
 # set default sleep interval to be 10 minutes
 _sleep_interval = 5

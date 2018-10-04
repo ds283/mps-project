@@ -11,7 +11,8 @@
 from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
-from ..models import db, LiveProject, ProjectClass, ProjectClassConfig, PopularityRecord
+from ..database import db
+from ..models import LiveProject, ProjectClass, ProjectClassConfig, PopularityRecord
 
 from math import floor
 

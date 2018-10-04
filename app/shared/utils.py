@@ -12,8 +12,8 @@
 from flask import redirect, url_for, flash
 from flask_security import current_user
 
-from app import db
-from app.models import db, MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
+from ..database import db
+from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
     MatchingAttempt, MatchingRecord
 

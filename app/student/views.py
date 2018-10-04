@@ -18,7 +18,8 @@ from . import student
 
 from .forms import StudentFeedbackForm
 
-from ..models import db, ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
+from ..database import db
+from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord
 
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects

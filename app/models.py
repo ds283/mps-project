@@ -1849,7 +1849,7 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def periods(self):
+    def template_periods(self):
         return self.project_class.periods
 
 
@@ -1918,7 +1918,7 @@ class ProjectClassConfig(db.Model):
         period = self.current_period
 
         if period is None:
-            template = self.periods.filter_by(period=self.submission_period).one()
+            template = self.template_periods.filter_by(period=self.submission_period).one()
 
             # allow period record to be auto-generated
             period = SubmissionPeriodRecord(config_id=self.id,
@@ -4937,7 +4937,7 @@ class MatchingAttempt(db.Model):
 
     def is_project_overassigned(self, project):
         count = self.number_project_assignments(project)
-        if project.enforce_capacity and 0 < project.capacity < count:
+        if project.enforce_capacity and project.capacity is not None and 0 < project.capacity < count:
             return True
 
         return False
@@ -5048,7 +5048,7 @@ class MatchingAttempt(db.Model):
         sup_and_mark_ids = supervisor_ids & marker_ids
 
         sup_only = [sup_dict[i] for i in sup_only_ids]
-        mark_only = [sup_dict[i] for i in mark_only_ids]
+        mark_only = [mark_dict[i] for i in mark_only_ids]
         sup_and_mark = [sup_dict[i] for i in sup_and_mark_ids]
 
         return mark_only, sup_and_mark, sup_only

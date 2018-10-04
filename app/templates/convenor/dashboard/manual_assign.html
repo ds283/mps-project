@@ -45,13 +45,17 @@
 {% endblock %}
 
 {% macro faculty_data(fac) %}
-    <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
-    {% set CATS_supv, CATS_mark = fac.CATS_assignment(config.pclass_id) %}
-    <div>
-        <span class="label label-info">Supv {{ CATS_supv }}</span>
-        <span class="label label-info">Mark {{ CATS_mark }}</span>
-        <span class="label label-primary">Total {{ CATS_supv+CATS_mark }}</span>
-    </div>
+    {% if fac is not none %}
+        <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+        {% set CATS_supv, CATS_mark = fac.CATS_assignment(config.pclass_id) %}
+        <div>
+            <span class="label label-info">Supv {{ CATS_supv }}</span>
+            <span class="label label-info">Mark {{ CATS_mark }}</span>
+            <span class="label label-primary">Total {{ CATS_supv+CATS_mark }}</span>
+        </div>
+    {% else %}
+        <span class="label label-danger">No project allocation</span>
+    {% endif %}
 {% endmacro %}
 
 {% block bodyblock %}
@@ -85,12 +89,18 @@
                                     <div class="col-xs-6">
                                         <span class="label label-default">#{{ item.submission_period }}</span>
                                         {% if item.submission_period == rec.submission_period %}<i class="fa fa-check"></i>{% endif %}
-                                        <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
-                                            {{ item.project.name }}
-                                        </a>
+                                        {% if item.project is not none %}
+                                            <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                {{ item.project.name }}
+                                            </a>
+                                        {% else %}
+                                            <span class="label label-danger">No project allocation</span>
+                                        {% endif %}
                                     </div>
                                     <div class="col-xs-3">
-                                        {{ faculty_data(item.project.owner) }}
+                                        {% if item.project is not none %}
+                                            {{ faculty_data(item.project.owner) }}
+                                        {% endif %}
                                     </div>
                                     <div class="col-xs-3">
                                         {{ faculty_data(item.marker) }}

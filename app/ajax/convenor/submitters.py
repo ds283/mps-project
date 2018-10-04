@@ -45,46 +45,50 @@ _projects = \
     {% set pclass = r.owner.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     <div>
-        <div class="dropdown assignment-label">
-            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle"
-                    {% if style %}style="{{ style }}"{% endif %}
-                    type="button" data-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
-                {{ r.supervisor.user.name }} (No. {{ r.project.number }})
-            <span class="caret"></span></a>
-            <ul class="dropdown-menu">
-                <li>
-                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
-                </li>
-                
-                {% set disabled = r.period.feedback_open or r.student_engaged %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
-                </li>
-            </ul>
-        </div>
-        {% if sub.published %}
+        {% if r.project is not none %}
             <div class="dropdown assignment-label">
-                <a class="label {% if r.student_engaged %}label-success{% else %}label-warning{% endif %} btn-table-block dropdown-toggle"
-                        type="button" data-toggle="dropdown">{% if r.student_engaged %}<i class="fa fa-check"></i> Started{% else %}<i class="fa fa-times"></i> Waiting{% endif %}
+                <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle"
+                        {% if style %}style="{{ style }}"{% endif %}
+                        type="button" data-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
+                    {{ r.supervisor.user.name }} (No. {{ r.project.number }})
                 <span class="caret"></span></a>
                 <ul class="dropdown-menu">
-                    {% if r.submission_period > r.owner.config.submission_period %}
-                        <li class="disabled">
-                            <a>Submission period not yet open</a>
-                        </li>
-                    {% elif not r.student_engaged %}
-                        <li>
-                            <a href="{{ url_for('convenor.mark_started', id=r.id) }}">
-                                <i class="fa fa-check"></i> Mark as started
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="disabled">
-                            <a><i class="fa fa-check"></i> Already started</a>
-                        </li>
-                    {% endif %}
+                    <li>
+                        <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                    </li>
+                    
+                    {% set disabled = r.period.feedback_open or r.student_engaged %}
+                    <li {% if disabled %}class="disabled"{% endif %}>
+                        <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
+                    </li>
                 </ul>
             </div>
+            {% if sub.published %}
+                <div class="dropdown assignment-label">
+                    <a class="label {% if r.student_engaged %}label-success{% else %}label-warning{% endif %} btn-table-block dropdown-toggle"
+                            type="button" data-toggle="dropdown">{% if r.student_engaged %}<i class="fa fa-check"></i> Started{% else %}<i class="fa fa-times"></i> Waiting{% endif %}
+                    <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        {% if r.submission_period > r.owner.config.submission_period %}
+                            <li class="disabled">
+                                <a>Submission period not yet open</a>
+                            </li>
+                        {% elif not r.student_engaged %}
+                            <li>
+                                <a href="{{ url_for('convenor.mark_started', id=r.id) }}">
+                                    <i class="fa fa-check"></i> Mark as started
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="disabled">
+                                <a><i class="fa fa-check"></i> Already started</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            {% endif %}
+        {% else %}
+            <span class="label label-danger">No project allocation</span>
         {% endif %}
     </div>
 {% endmacro %}
@@ -129,23 +133,27 @@ _markers = \
 {% macro marker_tag(r, show_period) %}
     {% set pclass = r.owner.config.project_class %}
     <div>
-        <div class="dropdown assignment-label">
-            <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
-                {% if show_period %}#{{ r.submission_period }}: {% endif %}
-                {{ r.marker.user.name }}
-                <span class="caret"></span>
-            </a>
-            <ul class="dropdown-menu">
-                <li>
-                    <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
-                </li>
-                
-                {% set disabled = r.period.feedback_open %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
-                </li>
-            </ul>
-        </div>
+        {% if r.project is not none %}
+            <div class="dropdown assignment-label">
+                <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                    {% if show_period %}#{{ r.submission_period }}: {% endif %}
+                    {{ r.marker.user.name }}
+                    <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                    </li>
+                    
+                    {% set disabled = r.period.feedback_open %}
+                    <li {% if disabled %}class="disabled"{% endif %}>
+                        <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
+                    </li>
+                </ul>
+            </div>
+        {% else %}
+            <span class="label label-danger">No project allocation</span>
+        {% endif %}
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}

@@ -173,7 +173,10 @@ def GetComparatorMatches(year, self_id, pclasses):
 
 
 def MarkerQuery(live_project):
-    return live_project.assessor_list_query
+    if live_project is not None:
+        return live_project.assessor_list_query
+
+    return []
 
 
 def BuildMarkerLabel(pclass_id, fac):

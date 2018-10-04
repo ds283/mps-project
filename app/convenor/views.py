@@ -2532,7 +2532,6 @@ def force_confirm(id, uid):
     return redirect(request.referrer)
 
 
-
 @convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def go_live(id):

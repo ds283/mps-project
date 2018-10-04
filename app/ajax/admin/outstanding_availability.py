@@ -13,7 +13,11 @@ from flask import render_template_string, jsonify, url_for
 
 _menu = \
 """
-<a href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=f.id) }}" class="btn btn-sm btn-table-block btn-warning">Force confirm</a>
+{% if a.availability_closed %}
+    <a class="disabled btn btn-sm btn-table-block btn-warning">Force confirm</a>
+{% else %}
+    <a href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=f.id) }}" class="btn btn-sm btn-table-block btn-warning">Force confirm</a>
+{% endif %}
 """
 
 def outstanding_availability_data(faculty, assessment):

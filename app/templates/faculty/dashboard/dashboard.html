@@ -13,7 +13,7 @@
                 <li {% if pane == 'system' %}class="active"{% endif %}>
                     <a href="{{ url_for('faculty.dashboard', pane='system') }}">
                         <i class="fa fa-exclamation-triangle"></i>
-                        System dashboard
+                        Administrator dashboard
                     </a>
                 </li>
             {% endif %}
@@ -22,8 +22,10 @@
                     <a href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                         {% set selector_state = config.selector_lifecycle %}
                         {% set submitter_state = config.submitter_lifecycle %}
+                        {% set nproj = current_user.faculty_data.projects_offered(config.project_class) %}
                         {% if selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required
-                           or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY %}
+                           or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY
+                           or nproj == 0 %}
                             <i class="fa fa-exclamation-triangle"></i>
                         {% endif %}
                         {{ config.name }}

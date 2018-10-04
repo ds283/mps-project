@@ -64,7 +64,7 @@ def register_golive_tasks(celery):
 
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
-                                  'because not all confirmation reponses have not been '
+                                  'because not all confirmation responses have not been '
                                   'received. If needed, use Force Confirm to remove any blocking '
                                   'responses.'.format(name=config.name, yra=year, yrb=year + 1),
                                   'warning', autocommit=True)

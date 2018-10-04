@@ -81,12 +81,12 @@ def get_root_dashboard_data():
     matching_ready = True
     rollover_ready = True
     rollover_in_progress = False
+    config_warning = False
 
     presentation_assessments = False
 
     # loop through all active project classes
     for pclass in pcs:
-
         if pclass.uses_presentations:
             presentation_assessments = True
 
@@ -96,10 +96,12 @@ def get_root_dashboard_data():
             .order_by(ProjectClassConfig.year.desc()).first()
 
         if config is not None:
-
             # compute capacity data for this project class
             group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = \
                 get_capacity_data(pclass)
+
+            if total_capacity < 1.15*config.number_selectors:
+                config_warning = True
 
             config_list.append((config, total_capacity, total_capacity_bounded))
 
@@ -117,7 +119,8 @@ def get_root_dashboard_data():
             if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
                 rollover_ready = False
 
-    return config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, presentation_assessments
+    return config_list, config_warning, current_year, rollover_ready, matching_ready, \
+           rollover_in_progress, presentation_assessments
 
 
 def get_convenor_dashboard_data(pclass, config):

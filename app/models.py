@@ -798,6 +798,13 @@ class FacultyData(db.Model):
 
 
     @property
+    def ordered_enrollments(self):
+        return self.enrollments \
+            .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id) \
+            .order_by(ProjectClass.name)
+
+
+    @property
     def is_convenor(self):
         """
         Determine whether this faculty member is convenor for any projects

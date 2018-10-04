@@ -5,6 +5,35 @@
 {% from "admin/root_dashboard/dashboard_card.html" import root_dashboard_card %}
 {% from "macros.html" import message_card %}
 
+{% if enrollments|length > 0 or current_user.has_role('root') %}
+    {% block pillblock %}
+        <ul class="nav nav-pills dashboard-nav">
+            {% if current_user.has_role('root') %}
+                {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = root_dash_data %}
+                <li {% if pane == 'system' %}class="active"{% endif %}>
+                    <a href="{{ url_for('faculty.dashboard', pane='system') }}">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        System dashboard
+                    </a>
+                </li>
+            {% endif %}
+            {% for config, live_projects in enrollments %}
+                <li {% if pane == config.id|string %}class="active"{% endif %}>
+                    <a href="{{ url_for('faculty.dashboard', pane=config.id) }}">
+                        {% set selector_state = config.selector_lifecycle %}
+                        {% set submitter_state = config.submitter_lifecycle %}
+                        {% if selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required
+                           or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY %}
+                            <i class="fa fa-exclamation-triangle"></i>
+                        {% endif %}
+                        {{ config.name }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endblock %}
+{% endif %}
+
 {% block title %}
     Faculty dashboard
 {% endblock %}
@@ -24,30 +53,32 @@
                 {{ availability_card(current_user.faculty_data) }}
             {% endif %}
 
-            {% if current_user.has_role('root') %}
+            {% if current_user.has_role('root') and pane == 'system' %}
                 {{ root_dashboard_card(root_dash_data) }}
-            {% endif %}
-
-            {% if enrollments and enrollments|length > 0 %}
-
-                {% for config, live_projects in enrollments %}
-                    {{ pclass_card(config, live_projects) }}
-                {% endfor %}
-
             {% else %}
+                {% if enrollments and enrollments|length > 0 %}
 
-                <div style="text-align: center;">
-                    <h3> You have no active project enrollments </h3>
-                    <p>
-                        Project classes for which you are enrolled, but are not active because of
-                        sabbatical, buy-out or exemption, are not shown
-                    </p>
-                    <p>
-                        <a href="{{ url_for('admin.faculty_settings') }}">View my settings</a>
-                    </p>
-                <hr class="intro-divider">
-                </div>
+                    {% for config, live_projects in enrollments %}
+                        {% if pane == config.id|string %}
+                            {{ pclass_card(config, live_projects) }}
+                        {% endif %}
+                    {% endfor %}
 
+                {% else %}
+
+                    <div style="text-align: center;">
+                        <h3> You have no active project enrollments </h3>
+                        <p>
+                            Project classes for which you are enrolled, but are not active because of
+                            sabbatical, buy-out or exemption, are not shown
+                        </p>
+                        <p>
+                            <a href="{{ url_for('admin.faculty_settings') }}">View my settings</a>
+                        </p>
+                    <hr class="intro-divider">
+                    </div>
+
+                {% endif %}
             {% endif %}
 
         </div>

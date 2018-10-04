@@ -996,7 +996,7 @@ def dashboard():
     :return:
     """
 
-    # check for unofferable projects and warn if any are prsent
+    # check for unofferable projects and warn if any are present
     unofferable = current_user.faculty_data.projects_unofferable
     if unofferable > 0:
         plural='s'
@@ -1012,7 +1012,7 @@ def dashboard():
 
     # build list of current configuration records for all enrolled project classes
     enrollments = []
-    for record in current_user.faculty_data.enrollments:
+    for record in current_user.faculty_data.ordered_enrollments:
 
         if (record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
             or record.marker_state == EnrollmentRecord.MARKER_ENROLLED
@@ -1039,13 +1039,30 @@ def dashboard():
         if include:
             messages.append(message)
 
-    root_dash_data = get_root_dashboard_data()
+    pane = request.args.get('pane', None)
+    if pane is None and session.get('faculty_dashboard_pane'):
+        pane = session['faculty_dashboard_pane']
+
+    if pane is None:
+        if current_user.has_role('root'):
+            pane = 'system'
+        elif len(enrollments) > 0:
+            c, lp = enrollments[0]
+            pane = c.id
+
+    if pane is not None:
+        session['faculty_dashboard_pane'] = pane
+
+    if current_user.has_role('root'):
+        root_dash_data = get_root_dashboard_data()
+    else:
+        root_dash_data = None
 
     return render_template('faculty/dashboard/dashboard.html',
                            enrolled_classes=current_user.faculty_data.enrollments,
                            enrollments=enrollments,
                            messages=messages,
-                           root_dash_data=root_dash_data)
+                           root_dash_data=root_dash_data, pane=pane)
 
 
 @faculty.route('/confirm_pclass/<int:id>')

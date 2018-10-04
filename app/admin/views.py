@@ -2125,7 +2125,8 @@ def confirm_global_rollover():
     :return:
     """
 
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+    config_list, config_warning, current_year, rollover_ready, matching_ready, \
+        rollover_in_progress, assessments = get_root_dashboard_data()
 
     if not rollover_ready:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
@@ -2160,7 +2161,8 @@ def perform_global_rollover():
     :return:
     """
 
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+    config_list, config_warning, current_year, rollover_ready, matching_ready, \
+        rollover_in_progress, assessments = get_root_dashboard_data()
 
     if not rollover_ready:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
@@ -3390,7 +3392,8 @@ def manage_matching():
     """
 
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+    config_list, config_warning, current_year, rollover_ready, matching_ready, \
+        rollover_in_progress, assessments = get_root_dashboard_data()
 
     if not matching_ready:
         flash('Automated matching is not yet available because some project classes are not ready', 'error')
@@ -3414,7 +3417,9 @@ def matches_ajax():
     """
 
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+    config_list, config_warning, current_year, rollover_ready, matching_ready, \
+        rollover_in_progress, assessments = get_root_dashboard_data()
+
     if not matching_ready or rollover_in_progress:
         return jsonify({})
 
@@ -3432,7 +3437,8 @@ def create_match():
     :return:
     """
     # check that all projects are ready to match
-    config_list, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = get_root_dashboard_data()
+    config_list, config_warning, current_year, rollover_ready, matching_ready, \
+        rollover_in_progress, assessments = get_root_dashboard_data()
 
     if not matching_ready:
         flash('Automated matching is not yet available because some project classes are not ready', 'info')

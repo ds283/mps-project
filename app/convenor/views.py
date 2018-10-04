@@ -1152,7 +1152,7 @@ def enroll_submitter(sid, configid):
         flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
         return redirect(request.referrer)
 
-    old_config = ProjectClassConfig.query(pclass_id=config.pclass_id, year=config.year-1).first()
+    old_config = ProjectClassConfig.query.filter_by(pclass_id=config.pclass_id, year=config.year-1).first()
 
     add_blank_submitter(sid, old_config.id if old_config is not None else None, configid, autocommit=True)
 
@@ -3723,7 +3723,7 @@ def manual_assign(id):
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
-    AssignMarkerForm = AssignMarkerFormFactory(rec.project)
+    AssignMarkerForm = AssignMarkerFormFactory(rec.project, rec.pclass_id)
     form = AssignMarkerForm(request.form)
 
     if form.validate_on_submit():

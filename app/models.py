@@ -3828,6 +3828,11 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def pclass_id(self):
+        return self.owner.config.pclass_id
+
+
+    @property
     def supervising_CATS(self):
         config = self.previous_config
 
@@ -5750,7 +5755,7 @@ def _PresentationSession_update_handler(mapper, connection, target):
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
 
         dups = db.session.query(PresentationSession) \
-            .filter_by(date=target.date, session_type=target.session_type).all()
+            .filter_by(date=target.date, owner_id=target.owner_id, session_type=target.session_type).all()
         for dup in dups:
             if dup.id != target.id:
                 cache.delete_memoized(_PresentationSession_is_valid, dup.id)
@@ -5763,7 +5768,7 @@ def _PresentationSession_insert_handler(mapper, connection, target):
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
 
         dups = db.session.query(PresentationSession) \
-            .filter_by(date=target.date, session_type=target.session_type).all()
+            .filter_by(date=target.date, owner_id=target.owner_id, session_type=target.session_type).all()
         for dup in dups:
             if dup.id != target.id:
                 cache.delete_memoized(_PresentationSession_is_valid, dup.id)
@@ -5776,7 +5781,7 @@ def _PresentationSession_delete_handler(mapper, connection, target):
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
 
         dups = db.session.query(PresentationSession) \
-            .filter_by(date=target.date, session_type=target.session_type).all()
+            .filter_by(date=target.date, owner_id=target.owner_id, session_type=target.session_type).all()
         for dup in dups:
             if dup.id != target.id:
                 cache.delete_memoized(_PresentationSession_is_valid, dup.id)

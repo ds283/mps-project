@@ -1765,7 +1765,7 @@ class ProjectClassConfig(db.Model):
     requests_issued = db.Column(db.Boolean())
 
     # deadline for confirmation requests
-    request_deadline = db.Column(db.DateTime())
+    request_deadline = db.Column(db.Date())
 
     # have we gone 'live' this year, ie. frozen a definitive 'live table' of projects and
     # made these available to students?
@@ -1779,7 +1779,7 @@ class ProjectClassConfig(db.Model):
     golive_timestamp = db.Column(db.DateTime())
 
     # deadline for students to make their choices on the live system
-    live_deadline = db.Column(db.DateTime())
+    live_deadline = db.Column(db.Date())
 
     # is project selection closed?
     selection_closed = db.Column(db.Boolean())
@@ -2002,8 +2002,8 @@ class ProjectClassConfig(db.Model):
         if self.request_deadline is None:
             return '<invalid>'
 
-        delta = self.request_deadline.date() - date.today()
-        return format_readable_time(delta.seconds)
+        delta = self.request_deadline - date.today()
+        return format_readable_time(delta)
 
 
     @property
@@ -2011,7 +2011,7 @@ class ProjectClassConfig(db.Model):
         if self.live_deadline is None:
             return '<invalid>'
 
-        delta = self.live_deadline.date() - date.today()
+        delta = self.live_deadline - date.today()
         return format_readable_time(delta)
 
 

@@ -37,8 +37,9 @@ def register_availability_tasks(celery):
 
         try:
             # first task is to build a list of faculty assessors
-            for period in data.submission_periods:
+            data.assessors = []
 
+            for period in data.submission_periods:
                 assessors = period.assessors_list \
                     .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
                     .filter(EnrollmentRecord.pclass_id == period.config.pclass_id,
@@ -85,3 +86,121 @@ def register_availability_tasks(celery):
                                   'info', autocommit=True)
         except SQLAlchemyError:
             pass
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def adjust(self, record_id, current_year):
+        self.update_state(state='STARTED',
+                          meta='Looking up EnrollmentRecord for id={id}'.format(id=record_id))
+
+        try:
+            record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load EnrollmentRecord record from database')
+            return
+
+        if record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
+            adjust_enroll.apply_async(args=(record_id, current_year))
+        else:
+            adjust_unenroll.apply_async(args=(record_id, current_year))
+
+        return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def adjust_enroll(self, record_id, current_year):
+        self.update_state(state='STARTED',
+                          meta='Looking up EnrollmentRecord for id={id}'.format(id=record_id))
+
+        try:
+            record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load EnrollmentRecord record from database')
+            return
+
+        # find all assessments that are actively searching for availability
+        assessments = db.session.query(PresentationAssessment) \
+            .filter_by(year=current_year, requested_availability=True, availability_closed=False).all()
+
+        for assessment in assessments:
+            in_assessors = False
+
+            for period in assessment.submission_periods:
+                assessors = period.assessors_list \
+                    .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
+                    .filter(EnrollmentRecord.pclass_id == period.config.pclass_id,
+                            EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                            EnrollmentRecord.owner_id == record.owner_id)
+
+                count = get_count(assessors)
+                if count > 0:
+                    in_assessors = True
+                    break
+
+            if in_assessors and record.owner not in assessment.assessors:
+                assessment.assessors.append(record.owner)
+                assessment.availability_outstanding.append(record.owner)
+
+                for session in assessment.sessions:
+                    if record.owner not in session.faculty:
+                        session.faculty.append(record.owner)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            raise self.retry()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def adjust_unenroll(self, record_id, current_year):
+        self.update_state(state='STARTED',
+                          meta='Looking up EnrollmentRecord for id={id}'.format(id=record_id))
+
+        try:
+            record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load EnrollmentRecord record from database')
+            return
+
+        # find all assessments that are actively searching for availability
+        assessments = db.session.query(PresentationAssessment) \
+            .filter_by(year=current_year, requested_availability=True, availability_closed=False).all()
+
+        for assessment in assessments:
+            in_assessors = False
+
+            for period in assessment.submission_periods:
+                assessors = period.assessors_list \
+                    .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
+                    .filter(EnrollmentRecord.pclass_id == period.config.pclass_id,
+                            EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                            EnrollmentRecord.owner_id == record.owner_id)
+
+                count = get_count(assessors)
+                if count > 0:
+                    in_assessors = True
+                    break
+
+            if not in_assessors and record.owner in assessment.assessors:
+                assessment.assessors.remove(record.owner)
+
+                if record.owner in assessment.availability_outstanding:
+                    assessment.availability_outstanding.remove(record.owner)
+
+                for session in assessment.sessions:
+                    if record.owner in session.faculty:
+                        session.faculty.remove(record.owner)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            raise self.retry()

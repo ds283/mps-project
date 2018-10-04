@@ -740,7 +740,7 @@ class FacultyData(db.Model):
             db.session.commit()
 
 
-    def add_enrollment(self, pclass, autocommit=False):
+    def add_enrollment(self, pclass):
         """
         Add an enrollment to this faculty member
         :param pclass:
@@ -765,9 +765,6 @@ class FacultyData(db.Model):
 
         db.session.add(record)
         db.session.commit()
-
-        if autocommit:
-            db.session.commit()
 
 
     def enrolled_labels(self, pclass):
@@ -930,10 +927,10 @@ class FacultyData(db.Model):
         marker_late = [x.supervisor_response_state == SubmissionRecord.FEEDBACK_LATE
                        for x in self.supervisor_assignments(pclass_id)]
 
-        reponse_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
-                        for x in self.marker_assignments(pclass_id)]
+        response_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
+                         for x in self.marker_assignments(pclass_id)]
 
-        return any(supervisor_late) or any(marker_late) or any(reponse_late)
+        return any(supervisor_late) or any(marker_late) or any(response_late)
 
 
     def has_not_started_flags(self, pclass_id):
@@ -1461,7 +1458,7 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     # co-convenors could eg. be old convenors who are able to help out during a transition period
     # between convenors
     coconvenors = db.relationship('FacultyData', secondary=pclass_coconvenors, lazy='dynamic',
-                                   backref=db.backref('coconvenor_for', lazy='dynamic'))
+                                  backref=db.backref('coconvenor_for', lazy='dynamic'))
 
     # associate this project class with a set of degree programmes
     programmes = db.relationship('DegreeProgramme', secondary=pclass_programme_associations, lazy='dynamic',
@@ -3905,7 +3902,7 @@ class SelectionRecord(db.Model):
     # removed from the database
     owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
     owner = db.relationship('SelectingStudent', foreign_keys=[owner_id], uselist=False,
-                           backref=db.backref('selections', lazy='dynamic', cascade='all, delete, delete-orphan'))
+                            backref=db.backref('selections', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # LiveProject we are linking to
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))

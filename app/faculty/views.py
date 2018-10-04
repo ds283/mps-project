@@ -14,7 +14,8 @@ from flask_security import roles_required, roles_accepted, current_user
 from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
-    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord
+    EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
+    PresentationSession
 
 import app.ajax as ajax
 
@@ -24,9 +25,11 @@ from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorF
     AddDescriptionFormFactory, EditDescriptionFormFactory, DescriptionSelectorFormFactory, SupervisorFeedbackForm, \
     MarkerFeedbackForm, SupervisorResponseForm
 
-from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors
+from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
+    get_current_year
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
-    validate_submission_supervisor, validate_submission_marker, validate_submission_viewable
+    validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
+    validate_assessment, validate_using_assessment
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
@@ -1575,7 +1578,6 @@ def submit_response(id):
 @faculty.route('/mark_started/<int:id>')
 @roles_accepted('faculty')
 def mark_started(id):
-
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
@@ -1598,3 +1600,121 @@ def mark_started(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@faculty.route('/set_availability/<int:id>')
+@roles_accepted('faculty')
+def set_availability(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot set availability for this assessment because it has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.availability_closed:
+        flash('Cannot set availability for this assessment because it has been closed', 'info')
+        return redirect(request.referrer)
+
+    return render_template('faculty/set_availability.html', assessment=data, url=url, text=text)
+
+
+@faculty.route('/session_available/<int:id>')
+@roles_accepted('faculty')
+def session_available(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationSession.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.owner.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.owner.availability_closed:
+        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
+        return redirect(request.referrer)
+
+    present = data.in_session(current_user.id)
+    if not present:
+        data.faculty.append(current_user.faculty_data)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/session_unavailable/<int:id>')
+@roles_accepted('faculty')
+def session_unavailable(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationSession.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.owner.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.owner.availability_closed:
+        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
+        return redirect(request.referrer)
+
+    present = data.in_session(current_user.id)
+    if present:
+        data.faculty.remove(current_user.faculty_data)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/confirm_availability/<int:id>')
+@roles_accepted('faculty')
+def confirm_availability(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot confirm availability for this assessment because it has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.availability_closed:
+        flash('Cannot confirm availability for this assessment because it has been closed', 'info')
+        return redirect(request.referrer)
+
+    if current_user.faculty_data in data.availability_outstanding:
+        data.availability_outstanding.remove(current_user.faculty_data)
+        db.session.commit()
+
+    return home_dashboard()
+
+
+@faculty.route('/change_availability')
+@roles_accepted('faculty')
+def change_availability():
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    return render_template('faculty/change_availability.html')

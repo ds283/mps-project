@@ -87,9 +87,7 @@ def register_golive_tasks(celery):
             .order_by(User.last_name, User.first_name).all()
 
         # weed out projects that do not satisfy is_offerable
-        for proj in attached_projects:
-            if not proj.is_offerable:
-                attached_projects.remove(proj)
+        attached_projects = [p for p in attached_projects if p.is_offerable]
 
         if len(attached_projects) == 0 and not allow_empty:
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
@@ -100,7 +98,7 @@ def register_golive_tasks(celery):
             self.update_state('FAILURE', meta='No attached projects')
             return golive_fail.apply_async(args=(task_id, convenor_id))
 
-        # build group of parallel tasks to automatically take attached projects live
+        # build group of parallel tasks to take each offerable attached project to a live counterpart
         projects_group = group(project_golive.si(n + 1, p.id, config_id) for n, p in enumerate(attached_projects))
 
         # get backup task from Celery instance

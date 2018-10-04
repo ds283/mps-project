@@ -2753,7 +2753,7 @@ def project_confirm_all(pid):
     for item in project.confirm_waiting:
         if item not in project.confirmed_students:
             project.confirmed_students.append(item)
-        project.confirm_waiting.remove(item)
+    project.confirm_waiting = []
     db.session.commit()
 
     return redirect(request.referrer)
@@ -2776,8 +2776,7 @@ def project_clear_requests(pid):
     if not validate_project_open(project.config):
         return redirect(request.referrer)
 
-    for item in project.confirm_waiting:
-        project.confirm_waiting.remove(item)
+    project.confirm_waiting = []
     db.session.commit()
 
     return redirect(request.referrer)
@@ -2800,8 +2799,7 @@ def project_remove_confirms(pid):
     if not validate_project_open(project.config):
         return redirect(request.referrer)
 
-    for item in project.confirmed_students:
-        project.confirmed_students.remove(item)
+    project.confirmed_students = []
     db.session.commit()
 
     return redirect(request.referrer)
@@ -2827,7 +2825,7 @@ def project_make_all_confirms_pending(pid):
     for item in project.confirmed_students:
         if item not in project.confirm_waiting:
             project.confirm_waiting.append(item)
-        project.confirmed_students.remove(item)
+    project.confirmed_students = []
     db.session.commit()
 
     return redirect(request.referrer)
@@ -2851,7 +2849,7 @@ def student_confirm_all(sid):
     for item in sel.confirm_requests:
         if item not in sel.confirmed:
             sel.confirmed.append(item)
-        sel.confirm_requests.remove(item)
+    sel.confirm_requests = []
     db.session.commit()
 
     return redirect(request.referrer)
@@ -2872,8 +2870,7 @@ def student_remove_confirms(sid):
     if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
-    for item in sel.confirmed:
-        sel.confirmed.remove(item)
+    sel.confirmed = []
     db.session.commit()
 
     return redirect(request.referrer)
@@ -2894,8 +2891,7 @@ def student_clear_requests(sid):
     if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
-    for item in sel.confirm_requests:
-        sel.confirm_requests.remove(item)
+    sel.confirm_requests = []
     db.session.commit()
 
     return redirect(request.referrer)
@@ -2919,7 +2915,7 @@ def student_make_all_confirms_pending(sid):
     for item in sel.confirmed:
         if item not in sel.confirm_requests:
             sel.confirm_requests.append(item)
-        sel.confirmed.remove(item)
+    sel.confirmed = []
     db.session.commit()
 
     return redirect(request.referrer)

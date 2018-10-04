@@ -60,16 +60,12 @@ _menu = \
 _faculty = \
 """
 {% if s.owner.availability_lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED %}
-    {% for assessor in s.ordered_faculty %}
-        {% if loop.index <= 15 %}
-            <span class="label label-default">{{ assessor.user.name }}</span>
-        {% elif loop.index == 16 %}
-            <span class="label label-info">...</span>
-            <span class="label label-primary">{{ s.faculty_count }} available</span>
-        {% endif %}
+    {% set count = s.faculty_count %}
+    {% if count > 0 %}
+        <span class="label label-primary">{{ count }} available</span>
     {% else %}
         <span class="label label-danger">No availability</span>
-    {% endfor %}
+    {% endif %}
 {% else %}
     <span class="label label-default">Not yet requested</span>
 {% endif %}

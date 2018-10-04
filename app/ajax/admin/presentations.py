@@ -32,7 +32,11 @@ _sessions = \
 """
 {% set sessions = a.ordered_sessions.all() %}
 {% for session in sessions %}
-    {{ session.label|safe }}
+    {% if a.requested_availability %}
+        {{ session.make_label(session.short_date_as_string + ' ' + session.session_type_string + ' (' + session.faculty_count|string + ')')|safe }}
+    {% else %}
+        {{ session.label|safe }}
+    {% endif %}
 {% endfor %}
 {% if sessions|length > 0 %}
     <p></p>
@@ -93,6 +97,7 @@ _menu = \
             </a>
         </li>
         
+        <li role="separator" class="divider">
         <li class="dropdown-header">Edit assessment</li>
         <li>
             <a href="{{ url_for('admin.edit_assessment', id=a.id) }}">

@@ -897,6 +897,7 @@ def edit_enrollment(id, returnid):
             else form.marker_reenroll.data
         record.marker_comment = form.marker_comment.data
 
+        old_presentations_state = record.presentations_state
         record.presentations_state = form.presentations_state.data
         record.presentations_reenroll = None if record.presentations_state != EnrollmentRecord.PRESENTATIONS_SABBATICAL \
             else form.presentations_reenroll.data
@@ -907,9 +908,18 @@ def edit_enrollment(id, returnid):
 
         db.session.commit()
 
-        if returnid==0:
+        # if enrollment state has changed for presentations, check whether we need to adjust our
+        # availability status for any presentation assessment events.
+        # To do that we kick off a background task via celery.
+        if old_presentations_state != record.presentations_state:
+            celery = current_app.extensions['celery']
+            adjust_task = celery.tasks['app.tasks.availability.adjust']
+
+            adjust_task.apply_async(args=(record.id, get_current_year()))
+
+        if returnid == 0:
             return redirect(url_for('admin.edit_enrollments', id=record.owner_id, pane=pane))
-        elif returnid==1:
+        elif returnid == 1:
             return redirect(url_for('convenor.faculty', id=record.pclass.id))
         else:
             return home_dashboard()
@@ -969,7 +979,7 @@ def add_enrollment(userid, pclassid):
     pclass = ProjectClass.query.get_or_404(pclassid)
 
     if not data.is_enrolled(pclass):
-        data.add_enrollment(pclass, autocommit=True)
+        data.add_enrollment(pclass)
 
     return redirect(request.referrer)
 
@@ -1039,7 +1049,7 @@ def add_group():
                               website=r.geturl(),
                               active=True,
                               creator_id=current_user.id,
-                              creation_timestamp=datetime.now());
+                              creation_timestamp=datetime.now())
         db.session.add(group)
         db.session.commit()
 

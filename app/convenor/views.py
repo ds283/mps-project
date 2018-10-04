@@ -1618,15 +1618,15 @@ def add_project(pclass_id):
         # ensure that list of preferred degree programmes is consistent
         data.validate_programmes()
 
+        db.session.add(data)
+        db.session.commit()
+
         # auto-enroll if implied by current project class associations
         owner = data.owner
         for pclass in data.project_classes:
             if not owner.is_enrolled(pclass):
                 owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
-
-        db.session.add(data)
-        db.session.commit()
 
         if form.submit.data:
             return redirect(url_for('convenor.edit_descriptions', id=data.id, pclass_id=pclass_id, create=1))
@@ -1703,14 +1703,14 @@ def edit_project(id, pclass_id):
         # ensure that list of preferred degree programmes is now consistent
         data.validate_programmes()
 
+        db.session.commit()
+
         # auto-enroll if implied by current project class associations
         for pclass in data.project_classes:
 
             if not data.owner.is_enrolled(pclass):
                 data.owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))
-
-        db.session.commit()
 
         return redirect(url_for('convenor.attached', id=pclass_id))
 
@@ -2618,7 +2618,7 @@ def enroll(userid, pclassid):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
-    data.add_enrollment(pclass, autocommit=True)
+    data.add_enrollment(pclass)
 
     return redirect(request.referrer)
 

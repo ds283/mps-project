@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import flash
+from flask import flash, current_app
 from flask_security import current_user, UserMixin, RoleMixin
 
 from sqlalchemy import orm, or_
@@ -96,6 +96,15 @@ class ColouredLabelMixin():
                 return '<span class="{cls}">{msg}</span>'.format(msg=text, cls=classes)
 
         return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=style)
+
+
+# roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
+def _get_main_config():
+    return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
+
+
+def _get_current_year():
+    return _get_main_config().year
 
 
 ####################
@@ -717,7 +726,7 @@ class FacultyData(db.Model):
         return True
 
 
-    def remove_enrollment(self, pclass, autocommit=False):
+    def remove_enrollment(self, pclass):
         """
         Remove an enrollment from a faculty member
         :param pclass:
@@ -735,8 +744,12 @@ class FacultyData(db.Model):
         for proj in ps.all():
             proj.remove_project_class(pclass)
 
-        if autocommit:
-            db.session.commit()
+        db.session.commit()
+
+        celery = current_app.extensions['celery']
+        adjust_task = celery.tasks['app.tasks.availability.adjust']
+
+        adjust_task.apply_async(args=(record.id, _get_current_year()))
 
 
     def add_enrollment(self, pclass):
@@ -764,6 +777,11 @@ class FacultyData(db.Model):
 
         db.session.add(record)
         db.session.commit()
+
+        celery = current_app.extensions['celery']
+        adjust_task = celery.tasks['app.tasks.availability.adjust']
+
+        adjust_task.apply_async(args=(record.id, _get_current_year()))
 
 
     def enrolled_labels(self, pclass):

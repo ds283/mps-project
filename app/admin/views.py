@@ -999,7 +999,7 @@ def remove_enrollment(userid, pclassid):
     pclass = ProjectClass.query.get_or_404(pclassid)
 
     if data.is_enrolled(pclass):
-        data.remove_enrollment(pclass, autocommit=True)
+        data.remove_enrollment(pclass)
 
     return redirect(request.referrer)
 

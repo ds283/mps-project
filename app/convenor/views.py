@@ -2636,7 +2636,7 @@ def unenroll(userid, pclassid):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
-    data.remove_enrollment(pclass, autocommit=True)
+    data.remove_enrollment(pclass)
 
     return redirect(request.referrer)
 

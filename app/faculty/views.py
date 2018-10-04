@@ -1062,7 +1062,6 @@ def confirm_pclass(id):
         return home_dashboard()
 
     if current_user.faculty_data in config.golive_required:
-
         config.golive_required.remove(current_user.faculty_data)
         db.session.commit()
 

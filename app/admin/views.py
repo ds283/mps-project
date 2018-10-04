@@ -4665,7 +4665,7 @@ def assessment_availability(id):
     return render_template('admin/presentations/availability.html', form=form, assessment=data)
 
 
-@admin.route('close_availability/<int:id>')
+@admin.route('/close_availability/<int:id>')
 @roles_required('root')
 def close_availability(id):
     if not validate_using_assessment():
@@ -4678,7 +4678,7 @@ def close_availability(id):
         return redirect(request.referrer)
 
     if not data.requested_availability:
-        flash('Cannot close availability collection for this assessment because it has not yet been opened')
+        flash('Cannot close availability collection for this assessment because it has not yet been opened', 'info')
         return redirect(request.referrer)
 
     data.availability_closed = True
@@ -4687,7 +4687,7 @@ def close_availability(id):
     return redirect(request.referrer)
 
 
-@admin.route('reopen_availability/<int:id>')
+@admin.route('/reopen_availability/<int:id>')
 @roles_required('root')
 def reopen_availability(id):
     if not validate_using_assessment():
@@ -4700,11 +4700,11 @@ def reopen_availability(id):
         return redirect(request.referrer)
 
     if not data.requested_availability:
-        flash('Cannot reopen availability collection for this assessment because it has not yet been opened')
+        flash('Cannot reopen availability collection for this assessment because it has not yet been opened', 'info')
         return redirect(request.referrer)
 
     if not data.availability_closed:
-        flash('Cannot reopen availability collection for this assessment because it has not yet been closed')
+        flash('Cannot reopen availability collection for this assessment because it has not yet been closed', 'info')
         return redirect(request.referrer)
 
     data.availability_closed = False
@@ -4712,6 +4712,77 @@ def reopen_availability(id):
         data.availability_deadline = date.today() + timedelta(weeks=1)
 
     db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/outstanding_availability/<int:id>')
+@roles_required('root')
+def outstanding_availability(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot show outstanding availability responses for this assessment because it has not yet been opened',
+              'info')
+        return redirect(request.referrer)
+
+    return render_template('admin/presentations/availability/outstanding.html', assessment=data)
+
+
+@admin.route('/outstanding_availability_ajax/<int:id>')
+@roles_required('root')
+def outstanding_availability_ajax(id):
+    if not validate_using_assessment():
+        return jsonify({})
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return jsonify({})
+
+    if not data.requested_availability:
+        flash('Cannot show outstanding availability responses for this assessment because it has not yet been opened',
+              'info')
+        return jsonify({})
+
+    return ajax.admin.outstanding_availability_data(data.availability_outstanding, data)
+
+
+@admin.route('/force_confirm_availability/<int:assessment_id>/<int:faculty_id>')
+@roles_required('root')
+def force_confirm_availability(assessment_id, faculty_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(assessment_id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot force confirm an availability response for this assessment because it has not yet been opened',
+              'info')
+        return redirect(request.referrer)
+
+    faculty = FacultyData.query.get_or_404(faculty_id)
+
+    if faculty not in data.assessors:
+        flash('Cannot force confirm availability response for {name} because this faculty member is not attached '
+              'to this assessment'.format(name=faculty.user.name), 'error')
+        return redirect(request.referrer)
+
+    if faculty in data.availability_outstanding:
+        data.availability_outstanding.remove(faculty)
+        db.session.commit()
 
     return redirect(request.referrer)
 

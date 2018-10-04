@@ -10,7 +10,8 @@
                 <div class="col-xs-9">
                     {% set count = assessment.availability_outstanding_count %}
                     {% if count > 0 %}
-                        Responses are outstanding from <strong>{{ count }} faculty</strong>.
+                        <p>Responses are outstanding from <strong>{{ count }} faculty</strong>.</p>
+                        <p><a href="{{ url_for('admin.outstanding_availability', id=assessment.id) }}">View outstanding responses...</a></p>
                     {% else %}
                         Responses have now been received from all faculty
                         <span class="label label-success"><i class="fa fa-check"></i></span>

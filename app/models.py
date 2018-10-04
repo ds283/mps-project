@@ -5690,16 +5690,17 @@ class PresentationSession(db.Model):
         self.error = None
 
 
-    @property
-    def label(self):
+    def make_label(self, text):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
             label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
         else:
             label_type = 'label-default'
 
-        return '<span class="label {type}">{date} {tag}</span>'.format(type=label_type,
-                                                                       date=self.short_date_as_string,
-                                                                       tag=self.session_type_string)
+        return '<span class="label {type}">{text}</span>'.format(type=label_type, text=text)
+
+    @property
+    def label(self):
+        return self.make_label(self.short_date_as_string + ' ' + self.session_type_string)
 
 
     @property

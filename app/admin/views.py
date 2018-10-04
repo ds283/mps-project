@@ -1693,7 +1693,7 @@ def add_pclass():
         db.session.add(config)
         db.session.flush()
 
-        for template in config.periods.all():
+        for template in config.template_periods.all():
             period = SubmissionPeriodRecord(config_id=config.id,
                                             name=template.name,
                                             has_presentation=template.has_presentation,

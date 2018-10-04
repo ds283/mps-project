@@ -348,11 +348,7 @@ def register_rollover_tasks(celery):
             db.session.flush()
 
             # generate new submission periods
-            num_submissions = old_config.submissions
-            if num_submissions is None or num_submissions == 0:
-                raise RuntimeError('Submissions field set incorrectly')
-
-            for template in old_config.periods:
+            for template in old_config.template_periods.all():
                 period = SubmissionPeriodRecord(config_id=new_config.id,
                                                 name=template.name,
                                                 has_presentation=template.has_presentation,
@@ -620,19 +616,19 @@ def register_rollover_tasks(celery):
             return
 
         if record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-            if record.supervisor_renroll is not None and record.supervisor_renroll <= current_year:
+            if record.supervisor_reenroll is not None and record.supervisor_reenroll <= current_year:
                 record.supervisor_state = EnrollmentRecord.SUPERVISOR_ENROLLED
                 record.supervisor_comment = 'Automatically re-enrolled during academic year rollover'
                 # TODO: issue email to faculty member, informing them of re-enrollment
 
         if record.marker_state != EnrollmentRecord.MARKER_ENROLLED:
-            if record.marker_renroll is not None and record.marker_renroll <= current_year:
+            if record.marker_reenroll is not None and record.marker_reenroll <= current_year:
                 record.marker_state = EnrollmentRecord.MARKER_ENROLLED
                 record.marker_comment = 'Automatically re-enrolled during academic year rollover'
                 # TODO: issue email to faculty member, informing them of re-enrollment
 
         if record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
-            if record.presentations_renroll is not None and record.presentations_renroll <= current_year:
+            if record.presentations_reenroll is not None and record.presentations_reenroll <= current_year:
                 record.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
                 record.presentations_comment = 'Automatically re-enrolled during academic year rollover'
                 # TODO: issue email to faculty member, informing them of re-enrollment

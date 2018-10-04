@@ -15,7 +15,7 @@
         {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
             panel-success
         {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
-            panel-primary
+            panel-default
         {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
             panel-warning
         {% else %}

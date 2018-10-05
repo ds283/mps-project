@@ -145,7 +145,7 @@ def AddDescriptionFormFactory(project_id):
 
 def EditDescriptionFormFactory(project_id, desc_id):
 
-    Mixin = partial(AvailableProjectDescriptionClasses, project_id, desc_id)
+    Mixin = DescriptionMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, desc_id))
 
     class EditDescriptionForm(Form, Mixin, EditFormMixin):
 

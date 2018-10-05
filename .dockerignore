@@ -9,6 +9,7 @@ database\ copies
 instance
 logs
 mongodb
+MPS-Project.sqlite
 mysql
 nginx
 profiling

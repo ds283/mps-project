@@ -250,7 +250,7 @@ def register_popularity_tasks(celery):
             # get most recent configuration record for this project class
             config = db.session.query(ProjectClassConfig) \
                 .filter_by(pclass_id=pid) \
-                .order_by(ProjectClassConfig.year.desc()).one()
+                .order_by(ProjectClassConfig.year.desc()).first()
 
         except SQLAlchemyError:
 
@@ -423,7 +423,7 @@ def register_popularity_tasks(celery):
             # get most recent configuration record for this project class
             config = db.session.query(ProjectClassConfig) \
                 .filter_by(pclass_id=pid) \
-                .order_by(ProjectClassConfig.year.desc()).one()
+                .order_by(ProjectClassConfig.year.desc()).first()
 
         except SQLAlchemyError:
 

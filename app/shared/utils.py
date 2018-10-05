@@ -74,7 +74,9 @@ def get_assessments_in_use():
 def get_root_dashboard_data():
     current_year = get_current_year()
 
-    pcs = db.session.query(ProjectClass).filter_by(active=True).all()
+    pcs = db.session.query(ProjectClass) \
+        .filter_by(active=True) \
+        .order_by(ProjectClass.name.asc()).all()
 
     config_list = []
 
@@ -119,8 +121,8 @@ def get_root_dashboard_data():
             if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
                 rollover_ready = False
 
-    return config_list, config_warning, current_year, rollover_ready, matching_ready, \
-           rollover_in_progress, presentation_assessments
+    return config_list, (config_warning or matching_ready or rollover_ready), current_year, \
+        rollover_ready, matching_ready, rollover_in_progress, presentation_assessments
 
 
 def get_convenor_dashboard_data(pclass, config):

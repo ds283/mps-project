@@ -145,7 +145,7 @@ _markers = \
                         <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
                     </li>
                     
-                    {% set disabled = r.period.feedback_open %}
+                    {% set disabled = r.period.feedback_open or r.student_engaged %}
                     <li {% if disabled %}class="disabled"{% endif %}>
                         <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
                     </li>

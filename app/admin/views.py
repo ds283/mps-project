@@ -41,7 +41,8 @@ from .forms import RoleSelectForm, \
     NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
-    AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm
+    AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
+    NewScheduleFormFactory
 
 from ..database import db
 from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -49,14 +50,14 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
-    PresentationSession, Room, Building
+    PresentationSession, Room, Building, ScheduleAttempt
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector, \
-    validate_using_assessment, validate_assessment
+    validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
 
@@ -3575,6 +3576,7 @@ def terminate_match(id):
 def perform_terminate_match(id):
 
     record = MatchingAttempt.query.get_or_404(id)
+
     url = request.args.get('url', None)
     if url is None:
         url = url_for('admin.manage_matching')
@@ -3644,18 +3646,17 @@ def perform_delete_match(id):
 
     record = MatchingAttempt.query.get_or_404(id)
 
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.manage_matching')
+
     if not validate_match_inspector(record):
-        return redirect(request.referrer)
+        return redirect(url)
 
     year = get_current_year()
     if record.year != year:
         flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
-        return redirect(request.referrer)
-
-    url = request.args.get('url', None)
-    if url is None:
-        # TODO consider an alternative implementation here
-        url = url_for('admin.manage_matching')
+        return redirect(url)
 
     if not record.finished:
         flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
@@ -4369,7 +4370,7 @@ def unpublish_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be published until it has '
+        flash('Match "{name}" cannot be unpublished until it has '
               'completed successfully.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -4543,6 +4544,11 @@ def edit_assessment(id):
         return redirect(request.referrer)
 
     data = PresentationAssessment.query.get_or_404(id)
+
+    if data.requested_availability:
+        flash('It is no longer possible to change settings for an assessment once '
+              'availability requests have been issued.', 'info')
+        return redirect(request.referrer)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
@@ -4921,6 +4927,286 @@ def delete_session(id):
         return redirect(request.referrer)
 
     db.session.delete(sess)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/assessment_schedules/<int:id>')
+@roles_required('root')
+def assessment_schedules(id):
+    """
+    Manage schedules associated with a given assessment
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.availability_closed:
+        flash('It is only possible to generate schedules once collection of faculty availabilities is closed',
+              'info')
+        return redirect(request.referrer)
+
+    matches = get_count(data.scheduling_attempts)
+
+    return render_template('admin/presentations/scheduling/manage.html', pane='manage', info=matches, assessment=data)
+
+
+@admin.route('/assessment_schedules_ajax/<int:id>')
+@roles_required('root')
+def assessment_schedules_ajax(id):
+    """
+    AJAX data point for schedules associated with a given assessment
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return jsonify({})
+
+    if not data.availability_closed:
+        return jsonify({})
+
+    return ajax.admin.assessment_schedules_data(data.scheduling_attempts)
+
+
+@admin.route('/create_assessment_schedule/<int:id>')
+@roles_required('root')
+def create_assessment_schedule(id):
+    """
+    Create a new schedule associated with a given assessment
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.availability_closed:
+        flash('It is only possible to generate schedules once collection of faculty availabilities is closed',
+              'info')
+        return redirect(request.referrer)
+
+    NewScheduleForm = NewScheduleFormFactory(data)
+    form = NewScheduleForm(request.form)
+
+    if form.validate_on_submit():
+
+        pass
+
+    matches = get_count(data.scheduling_attempts)
+
+    return render_template('admin/presentations/scheduling/create.html', pane='create', info=matches, form=form,
+                           assessment=data)
+
+
+@admin.route('/terminate_schedule/<int:id>')
+@roles_required('root')
+def terminate_schedule(id):
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if record.finished:
+        flash('Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    title = 'Terminate schedule'
+    panel_title = 'Terminate schedule <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_terminate_schedule', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to terminate the scheduling job ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Terminate job'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_terminate_schedule/<int:id>')
+@roles_required('root')
+def perform_terminate_schedule(id):
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.assessment_schedules', record.owner_id)
+
+    if record.finished:
+        flash('Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name),
+              'error')
+        return redirect(url)
+
+    celery = current_app.extensions['celery']
+    celery.control.revoke(record.celery_id, terminate=True, signal='SIGUSR1')
+
+    try:
+        progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+
+        # delete all MatchingRecords associated with this MatchingAttempt; in fact should not be any, but this
+        # is just to be sure
+        db.session.query(ScheduleAttempt).filter_by(matching_id=record.id).delete()
+
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Can not terminate scheduling task "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(url)
+
+
+@admin.route('/delete_schedule/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_schedule(id):
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.owner.year != year:
+        flash('Schedule "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    title = 'Delete schedule'
+    panel_title = 'Delete schedule <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_delete_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to delete the schedule ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Delete schedule'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_delete_schedule/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_delete_schedule(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.assessment_schedules', id=record.owner_id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(url)
+
+    year = get_current_year()
+    if record.owner.year != year:
+        flash('Schedule "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        return redirect(url)
+
+    if not record.finished:
+        flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(url)
+
+    if not current_user.has_role('root') and current_user.id != record.creator_id:
+        flash('Schedule "{name}" cannot be deleted because it belongs to another user')
+        return redirect(url)
+
+    try:
+        db.session.delete(record)
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Can not delete schedule "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(url)
+
+
+@admin.route('/publish_schedule/<int:id>')
+@roles_required('root')
+def publish_schedule(id):
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.owner.year != year:
+        flash('Schedule "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Schedule "{name}" cannot be published until it has '
+              'completed successfully.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with convenors.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    record.published = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/unpublish_schedule/<int:id>')
+@roles_required('root')
+def unpublish_schedule(id):
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.owner.year != year:
+        flash('Schedule "{name}" can no longer be edited because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Schedule "{name}" cannot be unpublished until it has '
+              'completed successfully.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with convenors.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    record.published = False
     db.session.commit()
 
     return redirect(request.referrer)

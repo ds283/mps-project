@@ -27,3 +27,4 @@ from .sessions import assessment_sessions_data
 from .buildings import buildings_data
 from .rooms import rooms_data
 from .outstanding_availability import outstanding_availability_data
+from .schedules import assessment_schedules_data

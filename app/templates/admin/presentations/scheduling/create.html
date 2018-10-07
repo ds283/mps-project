@@ -1,0 +1,36 @@
+{% extends "admin/presentations/scheduling/nav.html" %}
+
+{% block title %}
+    Create new schedule for {{ assessment.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="panel panel-primary panel-primary-bg">
+                <div class="panel-heading">Create new schedule for <strong>{{ assessment.name }}</strong></div>
+                <div class="panel-body">
+                    <form action="{{ url_for('admin.create_assessment_schedule', id=assessment.id) }}" method="POST" name="schedule_form">
+                        {{ form.hidden_tag() }}
+
+                        {{ wtf.form_field(form.name) }}
+
+                        <div class="well">
+                            {{ wtf.form_field(form.number_assessors) }}
+                            {{ wtf.form_field(form.max_group_size) }}
+                        </div>
+
+                        <div class="well">
+                            <p>Optimization settings</p>
+                            {{ wtf.form_field(form.solver) }}
+                        </div>
+
+                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

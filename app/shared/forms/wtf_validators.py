@@ -17,7 +17,8 @@ from zxcvbn import zxcvbn
 
 from app.models import Project, ProjectDescription
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
-    Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment, Building, Room
+    Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment, Building, Room, \
+    ScheduleAttempt
 
 from flask import current_app
 from werkzeug.local import LocalProxy
@@ -312,6 +313,11 @@ def unique_or_original_room_name(form, field):
         return
 
     return globally_unique_room_name(form, field)
+
+
+def globally_unique_schedule_name(assessment_id, form, field):
+    if ScheduleAttempt.query.filter_by(owner_id=assessment_id, name=field.data).first():
+        raise ValidationError('{name} is already in use for a schedule attached to this assessment'.format(name=field.data))
 
 
 def valid_json(form, field):

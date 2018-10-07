@@ -4649,7 +4649,60 @@ def _MatchingAttempt_is_valid(id):
     return True, student_issues, faculty_issues, errors, warnings
 
 
-class MatchingAttempt(db.Model):
+class PuLPMixin():
+    # METADATA
+
+    # outcome report from PuLP
+    OUTCOME_OPTIMAL = 0
+    OUTCOME_NOT_SOLVED = 1
+    OUTCOME_INFEASIBLE = 2
+    OUTCOME_UNBOUNDED = 3
+    OUTCOME_UNDEFINED = 4
+
+    # outcome of calculation
+    outcome = db.Column(db.Integer())
+
+    SOLVER_CBC_PACKAGED = 0
+    SOLVER_CBC_CMD = 1
+    SOLVER_GLPK_CMD = 2
+
+    # which solver to use
+    solver = db.Column(db.Integer())
+
+    # time taken to construct the PuLP problem
+    construct_time = db.Column(db.Numeric(8, 3))
+
+    # time taken by PulP to compute the solution
+    compute_time = db.Column(db.Numeric(8, 3))
+
+
+    # MATCHING OUTCOME
+
+    # value of objective function, if match was successful
+    score = db.Column(db.Numeric(10, 2))
+
+
+    _solvers = {0: 'PuLP-CBC', 1: 'CBC-CMD', 2: 'GLPK-CMD'}
+
+    @property
+    def solver_name(self):
+        if self.solver in self._solvers:
+            return self._solvers[self.solver]
+
+        return None
+
+
+    @property
+    def formatted_construct_time(self):
+        return format_time(self.construct_time)
+
+
+    @property
+    def formatted_compute_time(self):
+        return format_time(self.compute_time)
+
+
+class MatchingAttempt(db.Model, PuLPMixin):
     """
     Model configuration data for a matching attempt
     """
@@ -4690,32 +4743,6 @@ class MatchingAttempt(db.Model):
 
     # finished executing?
     finished = db.Column(db.Boolean())
-
-
-    # METADATA
-
-    # outcome report from PuLP
-    OUTCOME_OPTIMAL = 0
-    OUTCOME_NOT_SOLVED = 1
-    OUTCOME_INFEASIBLE = 2
-    OUTCOME_UNBOUNDED = 3
-    OUTCOME_UNDEFINED = 4
-
-    # outcome of calculation
-    outcome = db.Column(db.Integer())
-
-    SOLVER_CBC_PACKAGED = 0
-    SOLVER_CBC_CMD = 1
-    SOLVER_GLPK_CMD = 2
-
-    # which solver to use
-    solver = db.Column(db.Integer())
-
-    # time taken to construct the PuLP problem
-    construct_time = db.Column(db.Numeric(8, 3))
-
-    # time taken by PulP to compute the solution
-    compute_time = db.Column(db.Numeric(8, 3))
 
 
     # MATCHING OPTIONS
@@ -4776,17 +4803,11 @@ class MatchingAttempt(db.Model):
     # programme matching bias
     programme_bias = db.Column(db.Numeric(8, 3))
 
-    # other MatchingAttempts to include in CATS calcualtions
+    # other MatchingAttempts to include in CATS calculations
     include_matches = db.relationship('MatchingAttempt', secondary=match_balancing,
                                       primaryjoin=match_balancing.c.child_id==id,
                                       secondaryjoin=match_balancing.c.parent_id==id,
                                       backref='balanced_with')
-
-
-    # MATCHING OUTCOME
-
-    # value of objective function, if match was successful
-    score = db.Column(db.Numeric(10, 2))
 
 
     # CONFIGURATION
@@ -4915,16 +4936,6 @@ class MatchingAttempt(db.Model):
     def faculty(self):
         self._build_faculty_list()
         return self._faculty_list.values()
-
-
-    @property
-    def formatted_construct_time(self):
-        return format_time(self.construct_time)
-
-
-    @property
-    def formatted_compute_time(self):
-        return format_time(self.compute_time)
 
 
     @property
@@ -5124,16 +5135,6 @@ class MatchingAttempt(db.Model):
     @property
     def hint_status(self):
         return _MatchingAttempt_hint_status(self.id)
-
-
-    _solvers = {0: 'PuLP-CBC', 1: 'CBC-CMD', 2: 'GLPK-CMD'}
-
-    @property
-    def solver_name(self):
-        if self.solver in self._solvers:
-            return self._solvers[self.solver]
-
-        return None
 
 
     @property
@@ -5636,6 +5637,17 @@ class PresentationAssessment(db.Model):
         return self._warnings.values()
 
 
+    @property
+    def available_pclasses(self):
+        pclass_ids = db.session.query(ProjectClass.id) \
+            .select_from(self.submission_periods.subquery()) \
+            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
+            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id).distinct.subquery()
+
+        return db.session.query(ProjectClass) \
+            .join(pclass_ids, ProjectClass.id == pclass_ids.c.id).all()
+
+
 @listens_for(PresentationAssessment, 'before_update')
 def _PresentationAssessment_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
@@ -5983,6 +5995,72 @@ class Room(db.Model):
     @property
     def available(self):
         return self.building.active
+
+
+class ScheduleAttempt(db.Model, PuLPMixin):
+    """
+    Model configuration data for an assessment scheduling attempt
+    """
+
+    # make table name plural
+    __tablename__ = 'scheduling_attempts'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning assessment
+    owner_id = db.Column(db.Integer(), db.ForeignKey('presentation_assessments.id'))
+    owner = db.relationship('PresentationAssessment', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('scheduling_attempts', lazy='dynamic'))
+
+    # a name for this matching attempt
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
+
+    # flag whether this attempt has been published to convenors for comments or editing
+    published = db.Column(db.Boolean())
+
+
+    # CELERY TASK DATA
+
+    # Celery taskid, used in case we need to revoke the task;
+    # normally this will be the UUID
+    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # finished executing?
+    finished = db.Column(db.Boolean())
+
+
+    # CONFIGURATION
+
+    # number of faculty assessors to schedule
+    number_assessors = db.Column(db.Integer())
+
+    # target number of students per group;
+    max_group_size = db.Column(db.Integer())
+
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    @property
+    def available_pclasses(self):
+        return owner.available_pclasses
 
 
 # ############################

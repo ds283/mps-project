@@ -5,7 +5,12 @@
     <div class="panel panel-danger">
         <div class="panel-heading">Faculty availability for assessment <strong>{{ assessment.name }}</strong></div>
         <div class="panel-body">
-            Availability requests have not yet been issued to faculty.
+            <p>Availability requests have not yet been issued to faculty.</p>
+            <p>
+                <strong>Please note</strong> that after issuing availability requests
+                it is no longer possible to change the submission
+                periods to which this assessment is attached.
+            </p>
             <hr class="intro-divider">
             <form action="{{ url_for('admin.assessment_availability', id=assessment.id) }}"
                   method="POST" name="availability-fom">

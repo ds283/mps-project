@@ -34,6 +34,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_assessment_name, unique_or_original_assessment_name, \
     globally_unique_building_name, unique_or_original_building_name, \
     globally_unique_room_name, unique_or_original_room_name, \
+    globally_unique_schedule_name, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -780,6 +781,13 @@ class EditRoleForm(Form, RoleMixin, EditFormMixin):
                                            unique_or_original_role])
 
 
+class PuLPSolverMixin():
+
+    solver = SelectField('Solver', choices=solver_choices, coerce=int,
+                         description='The optimizer can use a number of different solvers. If in doubt, use the '
+                                     'packaged CBC solver.')
+
+
 def MatchingMixinFactory(query_factory):
 
     class MatchingMixin():
@@ -860,10 +868,6 @@ def MatchingMixinFactory(query_factory):
         strong_discourage_bias = FloatField('Bias for convenor <i>strongly discouraged</i> hint', default=0.2,
                                             validators=[InputRequired(message='Please specify a bias')])
 
-        solver = SelectField('Solver', choices=solver_choices, coerce=int,
-                             description='The optimizer can use a number of different solvers. If in doubt, use the '
-                                         'packaged CBC solver.')
-
     return MatchingMixin
 
 
@@ -871,7 +875,7 @@ def NewMatchFormFactory(year):
 
     Mixin = MatchingMixinFactory(partial(GetMatchingAttempts, year))
 
-    class NewMatchForm(Form, Mixin):
+    class NewMatchForm(Form, Mixin, PuLPSolverMixin):
 
         submit = SubmitField('Create new match')
 
@@ -1032,3 +1036,32 @@ class AvailabilityForm(Form):
 
     # submit button: open feedback
     issue_requests = SubmitField('Issue availability requests')
+
+
+class ScheduleMixin():
+
+    name = StringField('Name',
+                       description='Enter a short tag to identify this schedule',
+                       validators=[InputRequired(message='Please supply a unique name')])
+
+    number_assessors = IntegerField('Number of assessors per group',
+                                    description='Enter the number of faculty assessors present at each event',
+                                    validators=[InputRequired('Please enter a positive integer')])
+
+    max_group_size = IntegerField('Target group size',
+                                  description='Enter the desired group size. Not all groups will be exactly this '
+                                              'size, but the scheduler will attempt to keep most groups at this size.',
+                                  validators=[InputRequired('Please enter a positive integer')])
+
+
+def NewScheduleFormFactory(assessment):
+
+    class NewScheduleForm(Form, ScheduleMixin, PuLPSolverMixin):
+
+        submit = SubmitField('Create new schedule')
+
+        @staticmethod
+        def validate_name(form, field):
+            return globally_unique_schedule_name(assessment.id, form, field)
+
+    return NewScheduleForm

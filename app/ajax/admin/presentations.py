@@ -96,11 +96,18 @@ _menu = \
                 <i class="fa fa-calendar"></i> Faculty availability...
             </a>
         </li>
+        {% set disabled = not a.availability_closed %}
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.assessment_schedules', id=a.id) }}"{% endif %}>
+                <i class="fa fa-wrench"></i> Schedule...
+            </a>
+        </li>
         
         <li role="separator" class="divider">
         <li class="dropdown-header">Edit assessment</li>
-        <li>
-            <a href="{{ url_for('admin.edit_assessment', id=a.id) }}">
+        {% set disabled = a.requested_availability %}
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.edit_assessment', id=a.id) }}"{% endif %}>
                 <i class="fa fa-cogs"></i> Settings
             </a>
         </li>

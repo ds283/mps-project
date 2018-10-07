@@ -125,14 +125,16 @@ def validate_match_inspector(record):
         return True
 
     if current_user.has_role('faculty'):
-        for pclass in record.available_pclasses:
-            if pclass.is_convenor(current_user.id):
-                return True
+        if record.published:
+            for pclass in record.available_pclasses:
+                if pclass.is_convenor(current_user.id):
+                    return True
 
-        flash('The match owner has not yet made this match available to project convenors.', 'info')
-        return False
+        else:
+            flash('The match owner has not yet made this match available to project convenors.', 'info')
+            return False
 
-    flash('This operation is available only to administrative users and project convennors.', 'error')
+    flash('This operation is available only to administrative users and project convenors.', 'error')
     return False
 
 
@@ -199,3 +201,26 @@ def validate_assessment(data, current_year=None):
         return False
 
     return True
+
+
+def validate_schedule_inspector(record):
+    """
+    Validate that the logged-in user is entitled to view the schedule inspector for a given scheduling attempt
+    :param record:
+    :return:
+    """
+    if current_user.has_role('root') or current_user.has_role('admin'):
+        return True
+
+    if current_user.has_role('faculty'):
+        if record.published:
+            for pclass in record.available_pclasses:
+                if pclass.is_convenor(current_user.id):
+                    return True
+
+        else:
+            flash('The schedule owner has not yet made this match available to project convenors.', 'info')
+            return False
+
+    flash('This operation is available only to administrative users and project convenors.', 'error')
+    return False

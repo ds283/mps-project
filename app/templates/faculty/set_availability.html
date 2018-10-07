@@ -21,6 +21,15 @@
                     Set availability for assessment event <strong>{{ assessment.name }}</strong>
                 </div>
                 <div class="panel-body">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <div class="pull-right">
+                                <a class="btn btn-default" href="{{ url_for('faculty.session_all_available', id=assessment.id) }}"><i class="fa fa-check"></i> Available for all</a>
+                                <a class="btn btn-default" href="{{ url_for('faculty.session_all_unavailable', id=assessment.id) }}"><i class="fa fa-times"></i> Not available for all</a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="intro-divider">
                     <div class="row vertical-top event-table">
                         <div class="col-xs-4"><strong>Date</strong></div>
                         <div class="col-xs-1"><strong>Session</strong></div>
@@ -34,11 +43,11 @@
                             <div class="col-xs-7">
                                 <div class="pull-right">
                                 {% if session.in_session(current_user.id) %}
-                                    <a class="btn btn-success btn-sm">Available</a>
-                                    <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-default btn-sm">Not available</a>
+                                    <a class="btn btn-success btn-sm"><i class="fa fa-check"></i> Available</a>
+                                    <a href="{{ url_for('faculty.session_unavailable', id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
                                 {% else %}
-                                    <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-default btn-sm">Available</a>
-                                    <a class="btn btn-danger btn-sm">Not available</a>
+                                    <a href="{{ url_for('faculty.session_available', id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
+                                    <a class="btn btn-danger btn-sm"><i class="fa fa-times"></i> Not available</a>
                                 {% endif %}
                                 </div>
                             </div>

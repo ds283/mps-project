@@ -2264,6 +2264,11 @@ class SubmissionPeriodRecord(db.Model):
 
 
     @property
+    def number_projects(self):
+        return get_count(self.projects_list)
+
+
+    @property
     def assessors_list(self):
         projects = self.projects_list.subquery()
 
@@ -5485,10 +5490,17 @@ def _PresentationAssessment_is_valid(id):
     errors = {}
     warnings = {}
 
+    # CONSTRAINT 1 - sessions should satisfy their own consistency rules
     for sess in obj.sessions:
+        # check whether each session validates individually
         if not sess.is_valid:
-            errors[('basic', sess.id)] \
-                = '{date}: {err}'.format(date=sess.short_date_as_string, err=sess.error)
+            errors[('basic', sess.id)] = \
+                '{date}: {err}'.format(date=sess.short_date_as_string, err=sess.error)
+
+    # CONSTRAINT 2 - number of assessors should be nonzero
+    if obj.number_assessors is None or obj.number_assessors == 0:
+        errors[('settings', 0)] = \
+            'Number of assessors is zero or unset'
 
     if len(errors) > 0 or len(warnings) > 0:
         return False, errors, warnings
@@ -5512,12 +5524,18 @@ class PresentationAssessment(db.Model):
     main_config = db.relationship('MainConfig', foreign_keys=[year], uselist=False,
                                   backref=db.backref('presentation_assessments', lazy='dynamic'))
 
+
+    # CONFIGURATION
+
     # name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
 
     # submission sessions to which we are attached
     submission_periods = db.relationship('SubmissionPeriodRecord', secondary=assessment_to_periods, lazy='dynamic',
                                          backref=db.backref('presentation_assessments', lazy='dynamic'))
+
+    # number of faculty assessors to schedule
+    number_assessors = db.Column(db.Integer())
 
 
     # AVAILABILITY LIFECYCLE
@@ -5670,9 +5688,11 @@ def _PresentationAssessment_delete_handler(mapper, connection, target):
 def _PresentationSession_is_valid(id):
     obj = db.session.query(PresentationSession).filter_by(id=id).one()
 
+    # CONSTRAINT 1 - sessions should be scheduled on a weekday
     if obj.date.weekday() >= 5:
         return False, 'Session scheduled on a weekend'
 
+    # CONSTRAINT 2 - only one session should be scheduled per morning/afternoon on a fixed date
     # check how many sessions are assigned to this date and morning/afternoon
     count = get_count(obj.owner.sessions.filter_by(date=obj.date, session_type=obj.session_type))
 
@@ -5687,6 +5707,16 @@ def _PresentationSession_is_valid(id):
                 return False, 'A duplicate copy of this session exists'
             else:
                 return False, 'This session is a duplicate'
+
+    # CONSTRAINT 3 - if faculty availability information is available, then there should be enough
+    # faculty available to cover all the available rooms
+    if obj.owner.requested_availability:
+        number_rooms = get_count(obj.rooms)
+        number_faculty = get_count(obj.faculty)
+
+        if obj.owner.number_assessors is not None:
+            if number_faculty < obj.owner.number_assessors * number_rooms:
+                return False, 'Too few assessors are available for the number of rooms'
 
     return True, None
 
@@ -6032,9 +6062,6 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
 
     # CONFIGURATION
-
-    # number of faculty assessors to schedule
-    number_assessors = db.Column(db.Integer())
 
     # target number of students per group;
     max_group_size = db.Column(db.Integer())

@@ -4519,6 +4519,7 @@ def add_assessment():
         data = PresentationAssessment(name=form.name.data,
                                       year=current_year,
                                       submission_periods=form.submission_periods.data,
+                                      number_assessors=form.number_assessors.data,
                                       requested_availability=False,
                                       availability_closed=False,
                                       availability_deadline=None,
@@ -4561,6 +4562,7 @@ def edit_assessment(id):
     if form.validate_on_submit():
         data.name = form.name.data
         data.submission_periods = form.submission_periods.data
+        data.number_assessors = form.number_assessors.data
 
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
@@ -4643,6 +4645,11 @@ def assessment_availability(id):
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.is_valid:
+        flash('Cannot request availability for an invalid assessment. Correct any validation errors before '
+              'attempting to proceed.', 'info')
         return redirect(request.referrer)
 
     form = AvailabilityForm(obj=data)

@@ -26,7 +26,11 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.form_field(form.name) }}
+        <div class="well">
+            {{ wtf.form_field(form.name) }}
+            {{ wtf.form_field(form.number_assessors) }}
+        </div>
+
         <div class="well {% if form.submission_periods.errors %}has-error{% endif %}">
             <p>Select the submission periods for which project presentations will be given</p>
             {% for widget in form.submission_periods %}

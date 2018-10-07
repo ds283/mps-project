@@ -1701,6 +1701,72 @@ def session_unavailable(id):
     return redirect(request.referrer)
 
 
+@faculty.route('/session_all_available/<int:id>')
+@roles_accepted('faculty')
+def session_all_available(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.availability_closed:
+        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
+        return redirect(request.referrer)
+
+    changed = False
+    for session in data.sessions:
+        present = session.in_session(current_user.id)
+        if not present:
+            session.faculty.append(current_user.faculty_data)
+            changed = True
+
+    if changed:
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/session_all_unavailable/<int:id>')
+@roles_accepted('faculty')
+def session_all_unavailable(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.availability_closed:
+        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
+        return redirect(request.referrer)
+
+    changed = False
+    for session in data.sessions:
+        present = session.in_session(current_user.id)
+        if present:
+            session.faculty.remove(current_user.faculty_data)
+            changed = True
+
+    if changed:
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @faculty.route('/confirm_availability/<int:id>')
 @roles_accepted('faculty')
 def confirm_availability(id):

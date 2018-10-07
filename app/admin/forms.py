@@ -925,6 +925,10 @@ def PresentationAssessmentMixinFactory(query_factory):
                                                               'presentations will be given',
                                                               query_factory=query_factory, get_label=BuildSubmissionPeriodName)
 
+        number_assessors = IntegerField('Number of assessors per group', default=2,
+                                        description='Enter the number of faculty assessors present at each event',
+                                        validators=[InputRequired('Please enter a positive integer')])
+
     return PresentationAssessmentMixin
 
 
@@ -1043,10 +1047,6 @@ class ScheduleMixin():
     name = StringField('Name',
                        description='Enter a short tag to identify this schedule',
                        validators=[InputRequired(message='Please supply a unique name')])
-
-    number_assessors = IntegerField('Number of assessors per group',
-                                    description='Enter the number of faculty assessors present at each event',
-                                    validators=[InputRequired('Please enter a positive integer')])
 
     max_group_size = IntegerField('Target group size',
                                   description='Enter the desired group size. Not all groups will be exactly this '

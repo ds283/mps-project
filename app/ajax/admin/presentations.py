@@ -17,13 +17,30 @@ _name = \
 {% if not a.is_valid %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
+<p></p>
+{% set state = a.availability_lifecycle %}
+{% if state == a.AVAILABILITY_NOT_REQUESTED %}
+    <span class="label label-default">Availability not requested</span>
+{% elif state == a.AVAILABILITY_REQUESTED %}
+    <span class="label label-info">Availability requested</span>
+{% elif state == a.AVAILABILITY_CLOSED %}
+    <span class="label label-primary">Availability closed</span>
+{% else %}
+    <span class="label label-danger">Unknown lifecycle state</span>
+{% endif %}
 """
 
 
 _periods = \
 """
 {% for period in a.submission_periods %}
-    {{ period.label|safe }}
+    <div style="display: inline-block;">
+        {{ period.label|safe }}
+        {% set num = period.number_projects %}
+        {% set pl = 's' %}
+        {% if num == 1 %}{% set pl = '' %}{% endif %}
+        <span class="label label-info">{{ num }} project{{ pl }}</span>
+    </div>
 {% endfor %}
 """
 
@@ -33,7 +50,10 @@ _sessions = \
 {% set sessions = a.ordered_sessions.all() %}
 {% for session in sessions %}
     {% if a.requested_availability %}
-        {{ session.make_label(session.short_date_as_string + ' ' + session.session_type_string + ' (' + session.faculty_count|string + ')')|safe }}
+        <div style="display: inline-block;">
+            {{ session.label|safe }}
+            <span class="label label-info">{{ session.faculty_count }} available</span>
+        </div>
     {% else %}
         {{ session.label|safe }}
     {% endif %}
@@ -91,8 +111,10 @@ _menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li class="dropdown-header">Operations</li>
-        <li>
-            <a href="{{ url_for('admin.assessment_availability', id=a.id) }}">
+        {% set valid = a.is_valid %}
+        {% set disabled = not valid %}
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.assessment_availability', id=a.id) }}"{% endif %}>
                 <i class="fa fa-calendar"></i> Faculty availability...
             </a>
         </li>

@@ -138,7 +138,7 @@ def create_app():
     app.extensions['celery'] = celery
 
     # register celery tasks
-    # there doesn't seem a good way of doing this using factory functions! Here I compromise by passing hte
+    # there doesn't seem a good way of doing this using factory functions! Here I compromise by passing the
     # celery application instance to a collection of register_*() functions, which use an @celery decorator
     # to register callables. Then we write the callable into the app, in the 'tasks' dictionary
     app.tasks = {}
@@ -152,6 +152,7 @@ def create_app():
     tasks.register_popularity_tasks(celery)
     tasks.register_matching_tasks(celery)
     tasks.register_availability_tasks(celery)
+    tasks.register_scheduling_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

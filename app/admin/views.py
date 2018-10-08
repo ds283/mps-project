@@ -3455,7 +3455,6 @@ def create_match():
     form = NewMatchForm(request.form)
 
     if form.validate_on_submit():
-
         uuid = register_task('Match job "{name}"'.format(name=form.name.data),
                              owner=current_user, description="Automated project matching task")
 
@@ -3490,6 +3489,8 @@ def create_match():
                                last_edit_id=None,
                                score=None)
 
+        # check whether there is any work to do -- is there a current config entry for each
+        # attached pclass?
         count = 0
         for pclass in form.pclasses_to_include.data:
 
@@ -3506,6 +3507,8 @@ def create_match():
             flash('No project classes were specified for inclusion, so no match was computed.', 'error')
             return redirect(url_for('admin.manage_caching'))
 
+        # for matches we are supposed to take account of when levelling workload, check that there is no overlap
+        # with the projects we will include in this match
         for match in form.include_matches.data:
 
             if match not in data.include_matches:
@@ -3514,7 +3517,7 @@ def create_match():
                     for pclass_b in match.config_members:
                         if pclass_a.id == pclass_b.id:
                             ok = False
-                            flash('Excluded CATS form matching "{name}" since it contains project class '
+                            flash('Excluded CATS from existing match "{name}" since it contains project class '
                                   '"{pname}" which overlaps with the current match'.format(name=match.label,
                                                                                            pname=pclass_a.name))
                             break
@@ -4961,6 +4964,11 @@ def assessment_schedules(id):
               'info')
         return redirect(request.referrer)
 
+    if not data.is_valid:
+        flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
+              'Correct any indicated errors before attempting to try again.')
+        return redirect(request.referrer)
+
     matches = get_count(data.scheduling_attempts)
 
     return render_template('admin/presentations/scheduling/manage.html', pane='manage', info=matches, assessment=data)
@@ -4986,10 +4994,13 @@ def assessment_schedules_ajax(id):
     if not data.availability_closed:
         return jsonify({})
 
+    if not data.is_valid:
+        return jsonify({})
+
     return ajax.admin.assessment_schedules_data(data.scheduling_attempts)
 
 
-@admin.route('/create_assessment_schedule/<int:id>')
+@admin.route('/create_assessment_schedule/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
 def create_assessment_schedule(id):
     """
@@ -5011,12 +5022,63 @@ def create_assessment_schedule(id):
               'info')
         return redirect(request.referrer)
 
+    if not data.is_valid:
+        flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
+              'Correct any indicated errors before attempting to try again.')
+        return redirect(request.referrer)
+
     NewScheduleForm = NewScheduleFormFactory(data)
     form = NewScheduleForm(request.form)
 
     if form.validate_on_submit():
+        # perform absolute basic validation, to check that there are enough dates available
+        # with the specified maximum group size
+        available_slots = data.number_slots
+        required_slots = 0
 
-        pass
+        max_size = form.max_group_size.data
+
+        for period in data.submission_periods:
+            projects = period.number_projects
+            p, r = divmod(projects, max_size)
+
+            # whatever strategy we choose to deal with the leftover students in the remainder r,
+            # we are always going to require *at least* p+1 slots
+            required_slots += p+1
+
+        if required_slots > available_slots:
+            flash('Can not construct a schedule. The minimum possible number of slots ({min}) exceeds the '
+                  'available number ({avail}), so the scheduling problem is infeasible. Please increase the number '
+                  'of rooms, or dates, or both.'.format(min=required_slots, avail=available_slots), 'error')
+        else:
+            uuid = register_task('Schedule job "{name}"'.format(name=form.name.data),
+                                 owner=current_user, description="Automated assessment scheduling task")
+
+            schedule = ScheduleAttempt(owner_id=data.id,
+                                       name=form.name.data,
+                                       celery_id=uuid,
+                                       finished=False,
+                                       outcome=None,
+                                       published=False,
+                                       construct_time=None,
+                                       compute_time=None,
+                                       max_group_size=form.max_group_size.data,
+                                       solver=form.solver.data,
+                                       creation_timestamp=datetime.now(),
+                                       creator_id=current_user.id,
+                                       last_edit_timestamp=None,
+                                       last_edit_id=None,
+                                       score=None)
+
+            db.session.add(schedule)
+            db.session.commit()
+
+            celery = current_app.extensions['celery']
+            schedule_task = celery.tasks['app.tasks.scheduling.create_schedule']
+
+            schedule_task.apply_async(args=(data.id,), task_id=uuid)
+
+            return redirect(url_for('admin.assessment_schedules', id=data.id))
 
     matches = get_count(data.scheduling_attempts)
 

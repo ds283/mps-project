@@ -8,15 +8,13 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-
 from ..database import db
-from ..models import MatchingAttempt, TaskRecord, ProjectClassConfig, LiveProject, SelectingStudent, \
+from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord
 
 from ..shared.sqlalchemy import get_count
 from ..task_queue import progress_update
 
-from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from celery import group, chain
@@ -24,18 +22,9 @@ from celery import group, chain
 import pulp
 import pulp.solvers as solvers
 import itertools
-import time
 from datetime import datetime
 
-
-class Timer:
-    def __enter__(self):
-        self.start = time.clock()
-        return self
-
-    def __exit__(self, *args):
-        self.end = time.clock()
-        self.interval = self.end - self.start
+from ..shared.timer import Timer
 
 
 def _find_mean_project_CATS(configs):

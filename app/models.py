@@ -5553,7 +5553,8 @@ class PresentationAssessment(db.Model):
     availability_outstanding = db.relationship('FacultyData', secondary=faculty_availability_waiting, lazy='dynamic',
                                                backref=db.backref('availability_waiting', lazy='dynamic'))
 
-    # list of faculty members
+    # list of faculty members who are potential assessors for talks in this assessment
+    # (this list is computed and populated when we issue availability requests)
     assessors = db.relationship('FacultyData', secondary=assessment_to_assessors, lazy='dynamic',
                                 backref=db.backref('presentation_assessments', lazy='dynamic'))
 
@@ -5611,8 +5612,9 @@ class PresentationAssessment(db.Model):
         return get_count(self.availability_outstanding)
 
 
-    def is_outstanding(self, faculty_id):
+    def is_faculty_outstanding(self, faculty_id):
         return get_count(self.availability_outstanding.filter_by(id=faculty_id)) > 0
+
 
     @property
     def time_to_availability_deadline(self):
@@ -5626,6 +5628,11 @@ class PresentationAssessment(db.Model):
     @property
     def ordered_sessions(self):
         return self.sessions.order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+
+
+    @property
+    def number_slots(self):
+        return sum([sess.number_rooms for sess in self.sessions])
 
 
     @property
@@ -5849,8 +5856,13 @@ class PresentationSession(db.Model):
 
 
     @property
-    def faculty_count(self):
+    def number_faculty(self):
         return get_count(self.faculty)
+
+
+    @property
+    def number_rooms(self):
+        return get_count(self.rooms)
 
 
     @property
@@ -6087,7 +6099,7 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     @property
     def available_pclasses(self):
-        return owner.available_pclasses
+        return self.owner.available_pclasses
 
 
 # ############################

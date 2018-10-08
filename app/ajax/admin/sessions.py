@@ -60,7 +60,7 @@ _menu = \
 _faculty = \
 """
 {% if s.owner.availability_lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED %}
-    {% set count = s.faculty_count %}
+    {% set count = s.number_faculty %}
     {% if count > 0 %}
         <span class="label label-primary">{{ count }} available</span>
     {% else %}

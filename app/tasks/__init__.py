@@ -18,5 +18,6 @@ from .user_launch import register_user_launch_tasks
 from .popularity import register_popularity_tasks
 from .matching import register_matching_tasks
 from .availability import register_availability_tasks
+from .scheduling import register_scheduling_tasks
 
 from .test import register_test_tasks

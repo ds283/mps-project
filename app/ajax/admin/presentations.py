@@ -52,7 +52,7 @@ _sessions = \
     {% if a.requested_availability %}
         <div style="display: inline-block;">
             {{ session.label|safe }}
-            <span class="label label-info">{{ session.faculty_count }} available</span>
+            <span class="label label-info">{{ session.number_faculty }} available</span>
         </div>
     {% else %}
         {{ session.label|safe }}

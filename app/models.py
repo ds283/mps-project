@@ -315,6 +315,15 @@ faculty_availability_waiting = db.Table('faculty_availability_waiting',
                                         db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
                                         db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
+# faculty to slots map
+faculty_to_slots = db.Table('faculty_to_slots',
+                            db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                            db.Column('slot_id', db.Integer(), db.ForeignKey('schedule_slots.id'), primary_key=True))
+
+# submitter to slots map
+submitter_to_slots = db.Table('submitter_to_slots',
+                              db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True),
+                              db.Column('slot_id', db.Integer(), db.ForeignKey('schedule_slots.id'), primary_key=True))
 
 class MainConfig(db.Model):
     """
@@ -2250,6 +2259,14 @@ class SubmissionPeriodRecord(db.Model):
             .join(StudentData, StudentData.id == students.c.student_id) \
             .order_by(SubmissionRecord.submission_period.asc(), StudentData.exam_number).all()
 
+    @property
+    def submitter_list(self):
+        students = self.config.submitting_students.subquery()
+
+        return db.session.query(SubmissionRecord) \
+            .join(students, students.c.id == SubmissionRecord.owner_id) \
+            .filter(SubmissionRecord.submission_period == self.submission_period)
+
 
     @property
     def projects_list(self):
@@ -2257,10 +2274,10 @@ class SubmissionPeriodRecord(db.Model):
 
         records = db.session.query(SubmissionRecord.project_id) \
             .join(students, students.c.id == SubmissionRecord.owner_id) \
-            .filter(SubmissionRecord.submission_period == self.submission_period).distinct().subquery()
+            .filter(SubmissionRecord.submission_period == self.submission_period).subquery()
 
         return db.session.query(LiveProject) \
-            .join(records, records.c.project_id == LiveProject.id)
+            .join(records, records.c.project_id == LiveProject.id).distinct()
 
 
     @property
@@ -6100,6 +6117,38 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     @property
     def available_pclasses(self):
         return self.owner.available_pclasses
+
+
+class ScheduleSlot(db.Model):
+    """
+    Model a single slot in a schedule
+    """
+
+    __tablename__ = 'schedule_slots'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+
+    # owning schedule
+    owner_id = db.Column(db.Integer(), db.ForeignKey('scheduling_attempts.id'))
+    owner = db.relationship('ScheduleAttempt', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('slots', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # session
+    session_id = db.Column(db.Integer(), db.ForeignKey('presentation_sessions.id'))
+    session = db.relationship('PresentationSession', foreign_keys=[session_id], uselist=False)
+
+    # room
+    room_id = db.Column(db.Integer(), db.ForeignKey('rooms.id'))
+    room = db.relationship('Room', foreign_keys=[room_id], uselist=False)
+
+    # faculty list
+    assessors = db.relationship('FacultyData', secondary=faculty_to_slots, lazy='dynamic')
+
+    # student list
+    talks = db.relationship('SubmissionRecord', secondary=submitter_to_slots, lazy='dynamic')
 
 
 # ############################

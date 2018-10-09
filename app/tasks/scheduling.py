@@ -37,7 +37,7 @@ def _enumerate_talks(periods):
     for period in periods:
         # get SubmissionRecord instances that belong to this submission period
 
-        projects = period.projects_list.all()
+        projects = period.submitter_list.all()
 
         for p in projects:
             talk_to_number[p.id] = number
@@ -68,6 +68,26 @@ def _enumerate_assessors(record):
         number += 1
 
     return number, assessor_to_number, number_to_assessor, assessor_dict
+
+
+def _enumerate_slots(record):
+    # record is a ScheduleAttempt instance
+
+    number = 0
+    slot_to_number = {}
+    number_to_slot = {}
+
+    slot_dict = {}
+
+    for slot in record.slots:
+        slot_to_number[slot.id] = number
+        number_to_slot[number] = slot.id
+
+        slot_dict[number] = slot
+
+        number += 1
+
+    return number, slot_to_number, number_to_slot, slot_dict
 
 
 def register_scheduling_tasks(celery):

@@ -50,7 +50,7 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
-    PresentationSession, Room, Building, ScheduleAttempt
+    PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -5071,6 +5071,15 @@ def create_assessment_schedule(id):
                                        score=None)
 
             db.session.add(schedule)
+            db.session.flush()
+
+            for sess in data.sessions:
+                for room in sess.rooms:
+                    slot = ScheduleSlot(owner_id=schedule.id,
+                                        session_id=sess.id,
+                                        room_id=room.id)
+                    db.session.add(schedule)
+
             db.session.commit()
 
             celery = current_app.extensions['celery']

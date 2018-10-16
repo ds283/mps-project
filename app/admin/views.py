@@ -2063,9 +2063,9 @@ def deactivate_supervisor(id):
     return redirect(request.referrer)
 
 
-@admin.route('/faculty_settings', methods=['GET', 'POST'])
+@admin.route('/settings', methods=['GET', 'POST'])
 @roles_required('faculty')
-def faculty_settings():
+def settings():
     """
     Edit settings for a faculty member
     :return:
@@ -2111,7 +2111,7 @@ def faculty_settings():
             form.username.data = user.username
             form.theme.data = user.theme
 
-    return render_template('admin/faculty_settings.html', settings_form=form, data=data,
+    return render_template('faculty/settings.html', settings_form=form, data=data,
                            project_classes=ProjectClass.query.filter_by(active=True))
 
 

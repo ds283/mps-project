@@ -677,6 +677,7 @@ def edit_office(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
+        user.theme = form.theme.data
 
         _datastore.commit()
 
@@ -702,7 +703,7 @@ def edit_faculty(id):
     pane = request.args.get('pane', default=None)
 
     if form.validate_on_submit():
-
+        # determine whether to resend confirmation email
         resend_confirmation = False
         if form.email.data != user.email and form.ask_confirm.data is True:
             user.confirmed_at = None
@@ -712,6 +713,7 @@ def edit_faculty(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
+        user.theme = form.theme.data
 
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
@@ -719,9 +721,6 @@ def edit_faculty(id):
         data.project_capacity = form.project_capacity.data if form.enforce_capacity.data else None
         data.enforce_capacity = form.enforce_capacity.data
         data.show_popularity = form.show_popularity.data
-        data.CATS_supervision = form.CATS_supervision.data
-        data.CATS_presentation = form.CATS_presentation
-        data.CATS_marking = form.CATS_marking.data
         data.office = form.office.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
@@ -752,8 +751,6 @@ def edit_faculty(id):
             form.project_capacity.data = data.project_capacity
             form.enforce_capacity.data = data.enforce_capacity
             form.show_popularity.data = data.show_popularity
-            form.CATS_supervision.data = data.CATS_supervision
-            form.CATS_marking.data = data.CATS_marking
             form.office.data = data.office
 
             if form.project_capacity.data is None and form.enforce_capacity.data:
@@ -787,6 +784,7 @@ def edit_student(id):
         user.username = form.username.data
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
+        user.theme = form.theme.data
 
         rep_years = form.repeated_years.data
         ry = rep_years if rep_years is not None and rep_years >= 0 else 0
@@ -2079,14 +2077,12 @@ def faculty_settings():
     form = FacultySettingsForm(obj=data)
     form.user = user
 
-    del form.CATS_supervision
-    del form.CATS_marking
-
     if form.validate_on_submit():
 
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
         user.username = form.username.data
+        user.theme = form.theme.data
 
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
@@ -2113,6 +2109,7 @@ def faculty_settings():
             form.first_name.data = user.first_name
             form.last_name.data = user.last_name
             form.username.data = user.username
+            form.theme.data = user.theme
 
     return render_template('admin/faculty_settings.html', settings_form=form, data=data,
                            project_classes=ProjectClass.query.filter_by(active=True))

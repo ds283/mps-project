@@ -8,6 +8,24 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+
+name = \
+    """
+    {{ u.name }}
+    <div>
+        {% if u.theme == u.THEME_DEFAULT %}
+            <span class="label label-primary">Default</span>
+        {% elif u.theme == u.THEME_FLAT %}
+            <span class="label label-primary">Flat</span>
+        {% elif u.theme == u.THEME_DARK %}
+            <span class="label label-primary">Dark</span>
+        {% else %}
+            <span class="label label-danger">Unknown theme</span>
+        {% endif %}
+    </div>
+    """
+
+
 menu = \
     """
     <div class="dropdown">

@@ -15,7 +15,6 @@ from wtforms import StringField, IntegerField, SelectField, PasswordField, Boole
     TextAreaField, DateField, DateTimeField, FloatField, RadioField
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
-from wtforms.form import FormMeta
 
 from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_username, \
     unique_or_original_email, globally_unique_group_name, unique_or_original_group_name, \
@@ -42,7 +41,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel
 from ..models import BackupConfiguration, EnrollmentRecord, academic_titles, \
-    extent_choices, year_choices, matching_history_choices, solver_choices, session_choices
+    extent_choices, year_choices, matching_history_choices, solver_choices, session_choices, theme_choices
 
 from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
 
@@ -113,41 +112,51 @@ class FirstLastNameMixin():
     last_name = StringField('Last or family name', validators=[InputRequired(message='Last name is required')])
 
 
-class FacultyDataMixin():
+class ThemeMixin():
 
-    academic_title = SelectField('Academic title', choices=academic_titles, coerce=int)
+    theme = SelectField('Theme', choices=theme_choices, coerce=int)
 
-    use_academic_title = BooleanField('Use academic title', default=True,
-                                      description='Prefix your name with Dr, Professor or similar in student-facing web pages.')
 
-    sign_off_students = BooleanField('Ask to confirm student meetings', default=True,
-                                     description='If meetings are required before project selection, '
-                                                 'confirmation is needed before allowing students to sign up.')
+def FacultyDataMixinFactory(admin=False):
 
-    enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
-                                    description='By default, enforce limits on project capacity during assignment')
+    class FacultyDataMixin():
 
-    project_capacity = IntegerField('Default project capacity',
-                                    description='Default number of students that can be assigned to a project',
-                                    validators=[NotOptionalIf(enforce_capacity)])
+        academic_title = SelectField('Academic title', choices=academic_titles, coerce=int)
 
-    show_popularity = BooleanField('Show popularity indicators', default=True,
-                                   description='By default, show popularity indicators on project webpages')
+        use_academic_title = BooleanField('Use academic title', default=True,
+                                          description='Prefix your name with Dr, Professor or similar in student-facing web pages.')
 
-    CATS_supervision = IntegerField('Guideline number of CATS available for project supervision',
-                                    description='Leave blank for default assignment',
-                                    validators=[Optional()])
+        sign_off_students = BooleanField('Ask to confirm student meetings', default=True,
+                                         description='If meetings are required before project selection, '
+                                                     'confirmation is needed before allowing students to sign up.')
 
-    CATS_marking = IntegerField('Guideline number of CATS available for marking',
-                                description='Leave blank for default assignment',
-                                validators=[Optional()])
+        enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
+                                        description='By default, enforce limits on project capacity during assignment')
 
-    CATS_presentation = IntegerField('Guideline number of CATS available for presentation assessment',
-                                     description='Leave blank for default assignment',
-                                     validators=[Optional()])
+        project_capacity = IntegerField('Default project capacity',
+                                        description='Default number of students that can be assigned to a project',
+                                        validators=[NotOptionalIf(enforce_capacity)])
 
-    office = StringField('Office', validators=[InputRequired(message='Please enter your office details to help '
-                                                                    'students find you')])
+        show_popularity = BooleanField('Show popularity indicators', default=True,
+                                       description='By default, show popularity indicators on project webpages')
+
+        office = StringField('Office', validators=[InputRequired(message='Please enter your office details to help '
+                                                                         'students find you')])
+
+        if admin:
+            CATS_supervision = IntegerField('Guideline number of CATS available for project supervision',
+                                            description='Leave blank for default assignment',
+                                            validators=[Optional()])
+
+            CATS_marking = IntegerField('Guideline number of CATS available for marking',
+                                        description='Leave blank for default assignment',
+                                        validators=[Optional()])
+
+            CATS_presentation = IntegerField('Guideline number of CATS available for presentation assessment',
+                                             description='Leave blank for default assignment',
+                                             validators=[Optional()])
+
+    return FacultyDataMixin
 
 
 class StudentDataMixin():
@@ -169,7 +178,7 @@ class StudentDataMixin():
                                  get_label=BuildDegreeProgrammeName)
 
 
-class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin,
+class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin, ThemeMixin,
                          UniqueEmailFormMixin, NewPasswordFormMixin, FirstLastNameMixin):
 
     pass
@@ -184,7 +193,7 @@ class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, Ne
             self.next.data = request.args.get('next', '')
 
 
-class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixin):
+class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixinFactory(admin=True)):
 
     save_and_exit = SubmitField('Save and exit')
 
@@ -194,7 +203,7 @@ class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixin):
         self.submit.label.text = 'Next: Research group affiliations'
 
 
-class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixin):
+class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True)):
 
     save_and_exit = SubmitField('Save and exit')
 
@@ -216,12 +225,13 @@ class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
                                                           globally_unique_exam_number])
 
 
-class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, AskConfirmEditFormMixin, EditEmailFormMixin, FirstLastNameMixin):
+class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, AskConfirmEditFormMixin, ThemeMixin,
+                     EditEmailFormMixin, FirstLastNameMixin):
 
     pass
 
 
-class EditFacultyForm(EditOfficeForm, FacultyDataMixin):
+class EditFacultyForm(EditOfficeForm, FacultyDataMixinFactory(admin=True)):
 
     pass
 
@@ -232,7 +242,18 @@ class EditStudentForm(EditOfficeForm, StudentDataMixin):
                                                           unique_or_original_exam_number])
 
 
-class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixin, FirstLastNameMixin, EditFormMixin):
+class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False),
+                          FirstLastNameMixin, EditFormMixin, ThemeMixin):
+
+    pass
+
+
+class StudentSettingsForm(Form, ThemeMixin, EditFormMixin):
+
+    pass
+
+
+class OfficeSettingsForm(Form, ThemeMixin, EditFormMixin):
 
     pass
 

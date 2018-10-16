@@ -10,7 +10,7 @@
 
 from flask import render_template_string, jsonify
 
-from .shared import menu
+from .shared import menu, name
 
 
 _roles = \
@@ -37,7 +37,7 @@ _roles = \
 def build_accounts_data(users):
 
     data = [{'name': {
-                'display': u.name,
+                'display': render_template_string(name, u=u),
                 'sortvalue': u.last_name + u.first_name
              },
              'user': u.username,

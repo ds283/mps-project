@@ -445,13 +445,29 @@
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Faculty options</li>
                                     <li>
-                                        <a href="{{ url_for('admin.settings') }}">
+                                        <a href="{{ url_for('faculty.settings') }}">
                                             <i class="fa fa-cogs"></i> Settings
                                         </a>
                                     </li>
                                     <li>
                                         <a href="{{ url_for('faculty.affiliations') }}">
                                             <i class="fa fa-cogs"></i> Research affiliations
+                                        </a>
+                                    </li>
+                                {% elif current_user.has_role('student') %}
+                                    <li role="separator" class="divider"></li>
+                                    <li class="dropdown-header">Student options</li>
+                                    <li>
+                                        <a href="{{ url_for('student.settings') }}">
+                                            <i class="fa fa-cogs"></i> Settings
+                                        </a>
+                                    </li>
+                                {% elif current_user.has_role('office') %}
+                                    <li role="separator" class="divider"></li>
+                                    <li class="dropdown-header">Office options</li>
+                                    <li>
+                                        <a href="{{ url_for('office.settings') }}">
+                                            <i class="fa fa-cogs"></i> Settings
                                         </a>
                                     </li>
                                 {% endif %}

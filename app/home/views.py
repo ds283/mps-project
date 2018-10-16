@@ -12,7 +12,7 @@ from flask_security import login_required
 
 from . import home
 
-from app.shared.utils import home_dashboard
+from ..shared.utils import home_dashboard
 
 @home.route('/')
 @login_required

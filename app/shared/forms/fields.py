@@ -9,7 +9,7 @@
 #
 
 
-from wtforms import widgets, SubmitField, SelectMultipleField
+from wtforms import widgets, SelectMultipleField
 from wtforms_alchemy import QuerySelectMultipleField
 
 
@@ -24,6 +24,3 @@ class CheckboxQuerySelectMultipleField(QuerySelectMultipleField):
     option_widget = widgets.CheckboxInput()
 
 
-class EditFormMixin():
-
-    submit = SubmitField('Save changes')

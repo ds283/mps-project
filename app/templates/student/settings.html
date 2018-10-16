@@ -1,0 +1,25 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Settings
+{% endblock %}
+
+{% block formtitle %}
+    Edit my settings
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('student.settings') }}" method="POST" name="settings_form">
+
+    {{ settings_form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(settings_form) }}#}
+
+    {{ wtf.form_field(settings_form.theme) }}
+    {{ wtf.form_field(settings_form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

@@ -15,7 +15,7 @@ from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
-    PresentationSession
+    PresentationSession, User
 
 import app.ajax as ajax
 
@@ -23,7 +23,7 @@ from . import faculty
 
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, DescriptionSelectorFormFactory, SupervisorFeedbackForm, \
-    MarkerFeedbackForm, SupervisorResponseForm
+    MarkerFeedbackForm, SupervisorResponseForm, FacultySettingsForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
     get_current_year
@@ -1801,3 +1801,51 @@ def change_availability():
         return redirect(request.referrer)
 
     return render_template('faculty/change_availability.html')
+
+
+@faculty.route('/settings', methods=['GET', 'POST'])
+@roles_required('faculty')
+def settings():
+    """
+    Edit settings for a faculty member
+    :return:
+    """
+    user = User.query.get_or_404(current_user.id)
+    data = FacultyData.query.get_or_404(current_user.id)
+
+    form = FacultySettingsForm(obj=data)
+    form.user = user
+
+    if form.validate_on_submit():
+
+        user.first_name = form.first_name.data
+        user.last_name = form.last_name.data
+        user.username = form.username.data
+        user.theme = form.theme.data
+
+        data.academic_title = form.academic_title.data
+        data.use_academic_title = form.use_academic_title.data
+        data.sign_off_students = form.sign_off_students.data
+        data.project_capacity = form.project_capacity.data
+        data.enforce_capacity = form.enforce_capacity.data
+        data.show_popularity = form.show_popularity.data
+        data.office = form.office.data
+
+        data.last_edit_id = current_user.id
+        data.last_edit_timestamp = datetime.now()
+
+        flash('All changes saved', 'success')
+        db.session.commit()
+
+        return home_dashboard()
+
+    else:
+        # fill in fields that need data from 'User' and won't have been initialized from obj=data
+        if request.method == 'GET':
+            form.first_name.data = user.first_name
+            form.last_name.data = user.last_name
+            form.username.data = user.username
+            form.theme.data = user.theme
+
+    return render_template('faculty/settings.html', settings_form=form, data=data,
+                           project_classes=ProjectClass.query.filter_by(active=True))

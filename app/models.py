@@ -68,6 +68,9 @@ solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GL
 # session types
 session_choices = [(0, 'Morning'), (1, 'Afternoon')]
 
+# theme types
+theme_choices = [(0, 'Default'), (1, 'Flat'), (2, 'Dark')]
+
 
 class ColouredLabelMixin():
 
@@ -376,6 +379,14 @@ class User(db.Model, UserMixin):
 
     roles = db.relationship('Role', secondary=roles_to_users,
                             backref=db.backref('users', lazy='dynamic'))
+
+
+    THEME_DEFAULT = 0
+    THEME_FLAT = 1
+    THEME_DARK = 2
+
+    # theme options
+    theme = db.Column(db.Integer(), default=THEME_DEFAULT, nullable=False)
 
 
     # allow user objects to get all project classes so that we can render
@@ -820,10 +831,10 @@ class FacultyData(db.Model):
         :return:
         """
 
-        if self.convenor_for is not None and self.convenor_for.first() is not None:
+        if self.convenor_for is not None and get_count(self.convenor_for) > 0 is not None:
             return True
 
-        if self.coconvenor_for is not None and self.coconvenor_for.first() is not None:
+        if self.coconvenor_for is not None and get_count(self.coconvenor_for) is not None:
             return True
 
         return False

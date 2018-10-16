@@ -290,7 +290,13 @@
 {% endmacro %}
 
 {% block navbar %}
-    <nav class="navbar navbar-inverse navbar-fixed-top topnav" role="navigation">
+    <nav class="navbar
+                {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}
+                    navbar-default
+                {% else %}
+                    navbar-inverse
+                {% endif %}
+                navbar-fixed-top topnav" role="navigation">
         <div class="container topnav">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
@@ -445,13 +451,29 @@
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Faculty options</li>
                                     <li>
-                                        <a href="{{ url_for('admin.faculty_settings') }}">
+                                        <a href="{{ url_for('faculty.settings') }}">
                                             <i class="fa fa-cogs"></i> Settings
                                         </a>
                                     </li>
                                     <li>
                                         <a href="{{ url_for('faculty.affiliations') }}">
                                             <i class="fa fa-cogs"></i> Research affiliations
+                                        </a>
+                                    </li>
+                                {% elif current_user.has_role('student') %}
+                                    <li role="separator" class="divider"></li>
+                                    <li class="dropdown-header">Student options</li>
+                                    <li>
+                                        <a href="{{ url_for('student.settings') }}">
+                                            <i class="fa fa-cogs"></i> Settings
+                                        </a>
+                                    </li>
+                                {% elif current_user.has_role('office') %}
+                                    <li role="separator" class="divider"></li>
+                                    <li class="dropdown-header">Office options</li>
+                                    <li>
+                                        <a href="{{ url_for('office.settings') }}">
+                                            <i class="fa fa-cogs"></i> Settings
                                         </a>
                                     </li>
                                 {% endif %}
@@ -525,7 +547,7 @@
                 {% if real_user %}
                     <span class="navbar-text small" style="float: right;">You
                         are viewing as <i class="fa fa-user"></i>
-                        {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}">Return to my normal role</a></span>
+                        {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
                 {% endif %}
             </div>
         </div>

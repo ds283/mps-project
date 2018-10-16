@@ -11,7 +11,7 @@
 from ...shared.utils import get_current_year
 from flask import render_template_string, jsonify
 
-from .shared import menu
+from .shared import menu, name
 
 
 def build_student_data(students):
@@ -19,7 +19,7 @@ def build_student_data(students):
     year = get_current_year()
 
     data = [{'name': {
-                'display': u.name,
+                'display': render_template_string(name, u=u),
                 'sortstring': u.last_name + u.first_name},
              'active': u.active_label,
              'programme': s.programme.label,

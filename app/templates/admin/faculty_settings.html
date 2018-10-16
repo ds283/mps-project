@@ -134,11 +134,14 @@
         {% endif %}
     </div>
 
-    {{ wtf.form_field(settings_form.username) }}
-    {{ wtf.form_field(settings_form.first_name) }}
-    {{ wtf.form_field(settings_form.last_name) }}
+    <div class="well">
+        {{ wtf.form_field(settings_form.username) }}
+        {{ wtf.form_field(settings_form.first_name) }}
+        {{ wtf.form_field(settings_form.last_name) }}
 
-    {{ wtf.form_field(settings_form.office) }}
+        {{ wtf.form_field(settings_form.office) }}
+        {{ wtf.form_field(settings_form.theme) }}
+    </div>
 
     <div class="well">
         <p>Titles</p>

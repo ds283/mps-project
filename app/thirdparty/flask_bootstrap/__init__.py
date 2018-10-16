@@ -165,8 +165,8 @@ class Bootstrap(object):
 
         local = StaticCDN('bootstrap.static', rev=True)
         local_default = StaticCDN('bootstrap.static.default', rev=True)
-        local_slate = StaticCDN('bootstrap.static.slate', rev=True)
-        local_flatly = StaticCDN('bootstrap.static.flatly', rev=True)
+        local_dark = StaticCDN('bootstrap.static.darkly', rev=True)
+        local_flat = StaticCDN('bootstrap.static.flatly', rev=True)
         static = StaticCDN()
 
         def lwrap(cdn, primary=static):
@@ -178,11 +178,11 @@ class Bootstrap(object):
         default = lwrap(
             WebCDN('//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/%s/' % BOOTSTRAP_VERSION), local_default)
 
-        slate = lwrap(
-            WebCDN('//stackpath.bootstrapcdn.com/bootswatch/%s/slate/' % BOOTSTRAP_VERSION, strip_prefix=True), local_slate)
+        dark = lwrap(
+            WebCDN('//stackpath.bootstrapcdn.com/bootswatch/%s/darkly/' % BOOTSTRAP_VERSION, strip_prefix=True), local_dark)
 
-        flatly = lwrap(
-            WebCDN('//stackpath.bootstrapcdn.com/bootswatch/%s/flatly/' % BOOTSTRAP_VERSION, strip_prefix=True), local_flatly)
+        flat = lwrap(
+            WebCDN('//stackpath.bootstrapcdn.com/bootswatch/%s/flatly/' % BOOTSTRAP_VERSION, strip_prefix=True), local_flat)
 
         jquery = lwrap(
             WebCDN('//cdnjs.cloudflare.com/ajax/libs/jquery/%s/' %
@@ -202,8 +202,8 @@ class Bootstrap(object):
                 'static': static,
                 'bootstrap': bootstrap,
                 'default': default,
-                'slate': slate,
-                'flatly': flatly,
+                'dark': dark,
+                'flat': flat,
                 'jquery': jquery,
                 'html5shiv': html5shiv,
                 'respond.js': respondjs,

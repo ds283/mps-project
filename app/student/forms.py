@@ -9,7 +9,9 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, DateField, TextAreaField
+from wtforms import SubmitField, TextAreaField
+
+from ..shared.forms.mixins import SubmitButtonMixin, ThemeMixin
 
 
 class StudentFeedbackMixin():
@@ -24,5 +26,10 @@ class StudentFeedbackMixin():
 
 
 class StudentFeedbackForm(Form, StudentFeedbackMixin):
+
+    pass
+
+
+class StudentSettingsForm(Form, ThemeMixin, SubmitButtonMixin):
 
     pass

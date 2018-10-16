@@ -10,24 +10,25 @@
 
 
 from flask import render_template, redirect, url_for, flash, request, jsonify
-from flask_security import login_required, current_user, logout_user, roles_required, roles_accepted
+from flask_security import current_user, roles_required, roles_accepted
 
 from sqlalchemy.exc import SQLAlchemyError
 
 from . import student
 
-from .forms import StudentFeedbackForm
+from .forms import StudentFeedbackForm, StudentSettingsForm
 
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
-    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord
+    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord, \
+    User
 
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects
 
 import app.ajax as ajax
 
 import re
-from datetime import date, datetime
+from datetime import datetime
 import parse
 
 
@@ -739,3 +740,31 @@ def submit_feedback(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@student.route('/settings', methods=['GET', 'POST'])
+@roles_required('student')
+def settings():
+    """
+    Edit settings for a student user
+    :return:
+    """
+    user = User.query.get_or_404(current_user.id)
+
+    form = StudentSettingsForm(obj=user)
+    form.user = user
+
+    if form.validate_on_submit():
+        user.theme = form.theme.data
+
+        flash('All changes saved', 'success')
+        db.session.commit()
+
+        return home_dashboard()
+
+    else:
+        # fill in fields that need data from 'User' and won't have been initialized from obj=data
+        if request.method == 'GET':
+            form.theme.data = user.theme
+
+    return render_template('student/settings.html', settings_form=form, user=user)

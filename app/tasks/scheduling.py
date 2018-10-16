@@ -110,7 +110,7 @@ def register_scheduling_tasks(celery):
         try:
             periods = record.submission_periods
             number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(periods)
-            number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record)
+            number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record.owner)
             number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record)
         
         except SQLAlchemyError:

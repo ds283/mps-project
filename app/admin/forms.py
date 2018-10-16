@@ -1048,9 +1048,9 @@ class ScheduleMixin():
                        description='Enter a short tag to identify this schedule',
                        validators=[InputRequired(message='Please supply a unique name')])
 
-    max_group_size = IntegerField('Target group size',
-                                  description='Enter the desired group size. Not all groups will be exactly this '
-                                              'size, but the scheduler will attempt to keep most groups at this size.',
+    max_group_size = IntegerField('Maximum group size',
+                                  description='Enter the desired maximum group size. Some groups may be smaller '
+                                              'if this is required.',
                                   validators=[InputRequired('Please enter a positive integer')])
 
 

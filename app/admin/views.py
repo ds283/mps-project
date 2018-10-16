@@ -5315,7 +5315,7 @@ def rooms_ajax():
 @admin.route('/add_room', methods=['GET', 'POST'])
 @roles_required('root')
 def add_room():
-    # check whether any active buildngs exist, and raise an error if not
+    # check whether any active buildings exist, and raise an error if not
     if not db.session.query(Building).filter_by(active=True).first():
         flash('No buildings are available. Set up at least one active building before adding a room.', 'error')
         return redirect(request.referrer)

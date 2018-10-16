@@ -2,7 +2,21 @@
 
 {% block styles %}
     {{ super() }}
-    {% assets filters="cssmin", output="gen/packed_project.css", "css/project.css" -%}
-        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
-    {% endassets %}
+    {% if current_user.theme == current_user.THEME_DEFAULT %}
+        {% assets filters="cssmin", output="gen/project-default-min.css", "css/project-default.css" -%}
+            <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+        {% endassets %}
+    {% elif current_user.theme == current_user.THEME_FLAT %}
+        {% assets filters="cssmin", output="gen/project-flat-min.css", "css/project-flat.css" -%}
+            <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+        {% endassets %}
+    {% elif current_user.theme == current_user.THEME_DARK %}
+        {% assets filters="cssmin", output="gen/project-dark-min.css", "css/project-dark.css" -%}
+            <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+        {% endassets %}
+    {% else %}
+        {% assets filters="cssmin", output="gen/project-default-min.css", "css/project-default.css" -%}
+            <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+        {% endassets %}
+    {% endif %}
 {%- endblock %}

@@ -43,6 +43,7 @@
                 {{ wtf.form_field(user_form.ask_confirm) }}
             {% endif %}
             {{ wtf.form_field(user_form.username) }}
+            {{ wtf.form_field(user_form.theme) }}
         </div>
 
         {% if user_form.password or user_form.password_confirm or user_form.random_password %}

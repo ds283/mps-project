@@ -15,10 +15,8 @@ from wtforms import StringField, IntegerField, SelectField, PasswordField, Boole
     TextAreaField, DateField, DateTimeField, FloatField, RadioField
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
-from wtforms.form import FormMeta
 
-from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_username, \
-    unique_or_original_email, globally_unique_group_name, unique_or_original_group_name, \
+from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, globally_unique_group_name, unique_or_original_group_name, \
     globally_unique_group_abbreviation, unique_or_original_group_abbreviation, \
     globally_unique_degree_type, unique_or_original_degree_type,\
     globally_unique_degree_abbreviation, unique_or_original_degree_abbreviation,\
@@ -41,10 +39,11 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel
-from ..models import BackupConfiguration, EnrollmentRecord, academic_titles, \
-    extent_choices, year_choices, matching_history_choices, solver_choices, session_choices
+from ..models import BackupConfiguration, EnrollmentRecord, extent_choices, year_choices, matching_history_choices, solver_choices, session_choices
 
-from ..shared.forms.fields import EditFormMixin, CheckboxQuerySelectMultipleField
+from ..shared.forms.fields import CheckboxQuerySelectMultipleField
+from ..shared.forms.mixins import SubmitButtonMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
+    FacultyDataMixinFactory
 
 from functools import partial
 
@@ -53,12 +52,6 @@ class UniqueUserNameMixin():
 
     username = StringField('Username', validators=[InputRequired(message='Username is required'),
                                                    valid_username, globally_unique_username])
-
-
-class EditUserNameMixin():
-
-    username = StringField('Username', validators=[InputRequired(message='Username is required'),
-                                                   valid_username, unique_or_original_username])
 
 
 class EditEmailFormMixin():
@@ -106,50 +99,6 @@ class RoleSelectForm(Form, RoleMixin):
     submit = SubmitField('Select role')
 
 
-class FirstLastNameMixin():
-
-    first_name = StringField('First name', validators=[InputRequired(message='First name is required')])
-
-    last_name = StringField('Last or family name', validators=[InputRequired(message='Last name is required')])
-
-
-class FacultyDataMixin():
-
-    academic_title = SelectField('Academic title', choices=academic_titles, coerce=int)
-
-    use_academic_title = BooleanField('Use academic title', default=True,
-                                      description='Prefix your name with Dr, Professor or similar in student-facing web pages.')
-
-    sign_off_students = BooleanField('Ask to confirm student meetings', default=True,
-                                     description='If meetings are required before project selection, '
-                                                 'confirmation is needed before allowing students to sign up.')
-
-    enforce_capacity = BooleanField('Enforce maximum capacity', default=True,
-                                    description='By default, enforce limits on project capacity during assignment')
-
-    project_capacity = IntegerField('Default project capacity',
-                                    description='Default number of students that can be assigned to a project',
-                                    validators=[NotOptionalIf(enforce_capacity)])
-
-    show_popularity = BooleanField('Show popularity indicators', default=True,
-                                   description='By default, show popularity indicators on project webpages')
-
-    CATS_supervision = IntegerField('Guideline number of CATS available for project supervision',
-                                    description='Leave blank for default assignment',
-                                    validators=[Optional()])
-
-    CATS_marking = IntegerField('Guideline number of CATS available for marking',
-                                description='Leave blank for default assignment',
-                                validators=[Optional()])
-
-    CATS_presentation = IntegerField('Guideline number of CATS available for presentation assessment',
-                                     description='Leave blank for default assignment',
-                                     validators=[Optional()])
-
-    office = StringField('Office', validators=[InputRequired(message='Please enter your office details to help '
-                                                                    'students find you')])
-
-
 class StudentDataMixin():
 
     foundation_year = BooleanField('Foundation year')
@@ -169,7 +118,7 @@ class StudentDataMixin():
                                  get_label=BuildDegreeProgrammeName)
 
 
-class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin,
+class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin, ThemeMixin,
                          UniqueEmailFormMixin, NewPasswordFormMixin, FirstLastNameMixin):
 
     pass
@@ -184,7 +133,7 @@ class ConfirmRegisterOfficeForm(RegisterOfficeForm, PasswordConfirmFormMixin, Ne
             self.next.data = request.args.get('next', '')
 
 
-class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixin):
+class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixinFactory(admin=True)):
 
     save_and_exit = SubmitField('Save and exit')
 
@@ -194,7 +143,7 @@ class RegisterFacultyForm(RegisterOfficeForm, FacultyDataMixin):
         self.submit.label.text = 'Next: Research group affiliations'
 
 
-class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixin):
+class ConfirmRegisterFacultyForm(ConfirmRegisterOfficeForm, FacultyDataMixinFactory(admin=True)):
 
     save_and_exit = SubmitField('Save and exit')
 
@@ -216,12 +165,13 @@ class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
                                                           globally_unique_exam_number])
 
 
-class EditOfficeForm(Form, EditFormMixin, EditUserNameMixin, AskConfirmEditFormMixin, EditEmailFormMixin, FirstLastNameMixin):
+class EditOfficeForm(Form, SubmitButtonMixin, EditUserNameMixin, AskConfirmEditFormMixin, ThemeMixin,
+                     EditEmailFormMixin, FirstLastNameMixin):
 
     pass
 
 
-class EditFacultyForm(EditOfficeForm, FacultyDataMixin):
+class EditFacultyForm(EditOfficeForm, FacultyDataMixinFactory(admin=True)):
 
     pass
 
@@ -232,7 +182,12 @@ class EditStudentForm(EditOfficeForm, StudentDataMixin):
                                                           unique_or_original_exam_number])
 
 
-class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixin, FirstLastNameMixin, EditFormMixin):
+class StudentSettingsForm(Form, ThemeMixin, SubmitButtonMixin):
+
+    pass
+
+
+class OfficeSettingsForm(Form, ThemeMixin, SubmitButtonMixin):
 
     pass
 
@@ -255,7 +210,7 @@ class AddResearchGroupForm(Form, ResearchGroupMixin):
     submit = SubmitField('Add new group')
 
 
-class EditResearchGroupForm(Form, ResearchGroupMixin, EditFormMixin):
+class EditResearchGroupForm(Form, ResearchGroupMixin, SubmitButtonMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name is required'),
                                            unique_or_original_group_name])
@@ -280,7 +235,7 @@ class AddDegreeTypeForm(Form, DegreeTypeMixin):
     submit = SubmitField('Add new degree type')
 
 
-class EditDegreeTypeForm(Form, DegreeTypeMixin, EditFormMixin):
+class EditDegreeTypeForm(Form, DegreeTypeMixin, SubmitButtonMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree type name is required'),
                                            unique_or_original_degree_type])
@@ -307,7 +262,7 @@ class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):
     submit = SubmitField('Add new degree programme')
 
 
-class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, EditFormMixin):
+class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, SubmitButtonMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree programme name is required'),
                                            unique_or_original_degree_programme])
@@ -329,7 +284,7 @@ class AddTransferableSkillForm(Form, TransferableSkillMixin):
     submit = SubmitField('Add new transferable skill')
 
 
-class EditTransferableSkillForm(Form, TransferableSkillMixin, EditFormMixin):
+class EditTransferableSkillForm(Form, TransferableSkillMixin, SubmitButtonMixin):
 
     name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
                                             unique_or_original_transferable_skill])
@@ -434,7 +389,7 @@ class AddProjectClassForm(Form, ProjectClassMixin):
     submit = SubmitField('Add new project class')
 
 
-class EditProjectClassForm(Form, ProjectClassMixin, EditFormMixin):
+class EditProjectClassForm(Form, ProjectClassMixin, SubmitButtonMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name of project class is required'),
                                            unique_or_original_project_class])
@@ -457,7 +412,7 @@ class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin):
     submit = SubmitField('Add new submission period')
 
 
-class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, EditFormMixin):
+class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, SubmitButtonMixin):
 
     pass
 
@@ -478,7 +433,7 @@ class AddSupervisorForm(Form, SupervisorMixin):
     submit = SubmitField('Add new supervisory role')
 
 
-class EditSupervisorForm(Form, SupervisorMixin, EditFormMixin):
+class EditSupervisorForm(Form, SupervisorMixin, SubmitButtonMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name of supervisory role is required'),
                                            unique_or_original_supervisor])
@@ -551,7 +506,7 @@ def EditMessageFormFactory(convenor_editing=False):
 
     Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses)
 
-    class EditMessageForm(Form, Mixin, EditFormMixin,
+    class EditMessageForm(Form, Mixin, SubmitButtonMixin,
                           convenor_editing):
 
         _validator = InputRequired(message='At least one project class should be selected') if convenor_editing \
@@ -628,7 +583,7 @@ class AddIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin):
     submit = SubmitField('Add new task')
 
 
-class EditIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin, EditFormMixin):
+class EditIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin, SubmitButtonMixin):
 
     pass
 
@@ -638,7 +593,7 @@ class AddCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin):
     submit = SubmitField('Add new task')
 
 
-class EditCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin, EditFormMixin):
+class EditCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin, SubmitButtonMixin):
 
     pass
 
@@ -734,7 +689,7 @@ class EnrollmentRecordMixin():
 
 
 
-class EnrollmentRecordForm(Form, EnrollmentRecordMixin, EditFormMixin):
+class EnrollmentRecordForm(Form, EnrollmentRecordMixin, SubmitButtonMixin):
 
     pass
 
@@ -756,7 +711,7 @@ class AddSkillGroupForm(Form, SkillGroupMixin):
     submit = SubmitField('Add new skill')
 
 
-class EditSkillGroupForm(Form, SkillGroupMixin, EditFormMixin):
+class EditSkillGroupForm(Form, SkillGroupMixin, SubmitButtonMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
                                            unique_or_original_skill_group])
@@ -775,7 +730,7 @@ class AddRoleForm(Form, RoleMixin):
     submit = SubmitField('Add new role')
 
 
-class EditRoleForm(Form, RoleMixin, EditFormMixin):
+class EditRoleForm(Form, RoleMixin, SubmitButtonMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
                                            unique_or_original_role])
@@ -951,7 +906,7 @@ def EditPresentationAssessmentFormFactory(year, assessment_id):
 
     Mixin = PresentationAssessmentMixinFactory(partial(GetUnattachedSubmissionPeriods, assessment_id))
 
-    class EditPresentationAssessmentForm(Form, Mixin, EditFormMixin):
+    class EditPresentationAssessmentForm(Form, Mixin, SubmitButtonMixin):
 
         pass
 
@@ -977,7 +932,7 @@ class AddSessionForm(Form, SessionMixin):
     submit = SubmitField('Add session')
 
 
-class EditSessionForm(Form, SessionMixin, EditFormMixin):
+class EditSessionForm(Form, SessionMixin, SubmitButtonMixin):
 
     pass
 
@@ -999,7 +954,7 @@ class AddBuildingForm(Form, BuildingMixin):
         return globally_unique_building_name(form, field)
 
 
-class EditBuildingForm(Form, BuildingMixin, EditFormMixin):
+class EditBuildingForm(Form, BuildingMixin, SubmitButtonMixin):
 
     @staticmethod
     def validate_name(form, field):
@@ -1026,7 +981,7 @@ class AddRoomForm(Form, RoomMixin):
         return globally_unique_room_name(form, field)
 
 
-class EditRoomForm(Form, RoomMixin, EditFormMixin):
+class EditRoomForm(Form, RoomMixin, SubmitButtonMixin):
 
     @staticmethod
     def validate_name(form, field):

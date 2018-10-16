@@ -59,11 +59,24 @@ _settings = \
 _name = \
 """
 {{ u.name }}
-{% if f.is_convenor %}
-    {% for item in f.convenor_list %}
-        {{ item.make_label('Convenor ' + item.abbreviation)|safe }}
-    {% endfor %}
-{% endif %}
+<div>
+    {% if u.theme == u.THEME_DEFAULT %}
+        <span class="label label-primary">Default</span>
+    {% elif u.theme == u.THEME_FLAT %}
+        <span class="label label-primary">Flat</span>
+    {% elif u.theme == u.THEME_DARK %}
+        <span class="label label-primary">Dark</span>
+    {% else %}
+        <span class="label label-danger">Unknown theme</span>
+    {% endif %}
+</div>
+<div>
+    {% if f.is_convenor %}
+        {% for item in f.convenor_list %}
+            {{ item.make_label('Convenor ' + item.abbreviation)|safe }}
+        {% endfor %}
+    {% endif %}
+</div>
 """
 
 

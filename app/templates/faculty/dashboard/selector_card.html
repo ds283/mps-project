@@ -43,27 +43,31 @@
 
             {# show confirmation request if one is active #}
             {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
-                <div class="panel panel-danger">
-                    <div class="panel-heading"><strong>Confirmation of project descriptions</strong></div>
-                    <div class="panel-body">
-                        <p>Please review your projects to ensure the descriptions are up-to-date,
-                        and those you wish to offer next year are active and attached to
-                        the correct project classes.</p>
+                <p>Please review your projects to ensure the descriptions are up-to-date,
+                and those you wish to offer next year are active and attached to
+                the correct project classes.</p>
+                <div class="row vertical-bottom">
+                    <div class="col-xs-9">
                         {% if config.request_deadline %}
                             <p>The project convenor has set a deadline of
                                 <strong>{{ config.request_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
                                 <strong>{{ config.time_to_request_deadline }}</strong> from now.
                             </p>
                             <p>After the deadline, projects will be finalized and
-                                made avaliable to students for selection.
+                                made available to students for selection.
                             </p>
                         {% endif %}
-                        <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-danger">Confirm</a>
+                    </div>
+                    <div class="col-xs-3">
+                        <div class="pull-right">
+                            <a href="{{ url_for('faculty.confirm_pclass', id=pclass.id) }}" class="btn btn-danger">Confirm</a>
+                        </div>
                     </div>
                 </div>
+                <hr class="intro-divider">
             {% endif %}
 
-            {# show basic details about this project #}
+            {# show basic details about this project class #}
             <div class="row vertical-align">
                 <div class="col-xs-9">
                     {% if nproj == 0 %}

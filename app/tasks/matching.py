@@ -339,15 +339,12 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
     :param max_multiplicity:
     :return:
     """
-
     M = {}
 
     for i in range(0, number_mark):
-
         fac = mark_dict[i]
 
         for j in range(0, number_projects):
-
             idx = (i, j)
             proj = project_dict[j]
 
@@ -474,6 +471,9 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # projects assigned to any individual faculty member.
     maxMarking = pulp.LpVariable("maxMarking", lowBound=0, cat=pulp.LpContinuous)
 
+
+    # OBJECTIVE FUNCTION
+
     # generate objective function
     objective = 0
 
@@ -500,6 +500,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
             - abs(levelling_bias) * levelling / mean_CATS_per_project \
             - abs(levelling_bias) * maxMarking, "objective function"
 
+
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
 
     # selectors can only be assigned to projects that they have ranked
@@ -512,6 +513,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         prob += Y[key] <= M[key]
 
     # enforce desired multiplicity for each selector
+    # (usually requires that each selector is assigned just one project, but can be 2 for eg. MPP)
     for i in range(number_sel):
         prob += sum(X[(i, j)] for j in range(number_lp)) == multiplicity[i]
 
@@ -632,7 +634,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
                          multiplicity, sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project):
     """
-    Store
+    Store a matching satisfying all the constraints of the pulp problem
     :param prob:
     :param record:
     :param number_sel:

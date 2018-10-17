@@ -5165,10 +5165,15 @@ def perform_delete_schedule(id):
 
     try:
         # delete all ScheduleSlots associated with this ScheduleAttempt
-        db.session.query(ScheduleSlot).filter_by(owner_id=record.id).delete()
+        for slot in record.slots:
+            slot.assessors = []
+            slot.talks = []
+            db.session.delete(slot)
+        db.session.flush()
 
         db.session.delete(record)
         db.session.commit()
+
     except SQLAlchemyError:
         db.session.rollback()
         flash('Can not delete schedule "{name}" due to a database error. '

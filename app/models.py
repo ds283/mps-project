@@ -6155,10 +6155,10 @@ class ScheduleSlot(db.Model):
     room_id = db.Column(db.Integer(), db.ForeignKey('rooms.id'))
     room = db.relationship('Room', foreign_keys=[room_id], uselist=False)
 
-    # faculty list
+    # assessors attached to this slot
     assessors = db.relationship('FacultyData', secondary=faculty_to_slots, lazy='dynamic')
 
-    # student list
+    # talks scheduled in this slot
     talks = db.relationship('SubmissionRecord', secondary=submitter_to_slots, lazy='dynamic')
 
 

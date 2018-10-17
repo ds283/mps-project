@@ -5018,19 +5018,20 @@ def create_assessment_schedule(id):
             db.session.add(schedule)
             db.session.flush()
 
+            # add database records for each available slot
             for sess in data.sessions:
                 for room in sess.rooms:
                     slot = ScheduleSlot(owner_id=schedule.id,
                                         session_id=sess.id,
                                         room_id=room.id)
-                    db.session.add(schedule)
+                    db.session.add(slot)
 
             db.session.commit()
 
             celery = current_app.extensions['celery']
             schedule_task = celery.tasks['app.tasks.scheduling.create_schedule']
 
-            schedule_task.apply_async(args=(data.id,), task_id=uuid)
+            schedule_task.apply_async(args=(schedule.id,), task_id=uuid)
 
             return redirect(url_for('admin.assessment_schedules', id=data.id))
 
@@ -5086,12 +5087,13 @@ def perform_terminate_schedule(id):
     try:
         progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
 
-        # delete all MatchingRecords associated with this MatchingAttempt; in fact should not be any, but this
+        # delete all ScheduleSlot records associated with this ScheduleAttempt; in fact should not be any, but this
         # is just to be sure
-        db.session.query(ScheduleAttempt).filter_by(matching_id=record.id).delete()
+        db.session.query(ScheduleSlot).filter_by(owner_id=record.id).delete()
 
         db.session.delete(record)
         db.session.commit()
+
     except SQLAlchemyError:
         db.session.rollback()
         flash('Can not terminate scheduling task "{name}" due to a database error. '
@@ -5123,7 +5125,7 @@ def delete_schedule(id):
     title = 'Delete schedule'
     panel_title = 'Delete schedule <strong>{name}</strong>'.format(name=record.name)
 
-    action_url = url_for('admin.perform_delete_match', id=id, url=request.referrer)
+    action_url = url_for('admin.perform_delete_schedule', id=id, url=request.referrer)
     message = '<p>Please confirm that you wish to delete the schedule ' \
               '<strong>{name}</strong>.</p>' \
               '<p>This action cannot be undone.</p>' \
@@ -5138,7 +5140,7 @@ def delete_schedule(id):
 @roles_accepted('faculty', 'admin', 'root')
 def perform_delete_schedule(id):
 
-    record = MatchingAttempt.query.get_or_404(id)
+    record = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -5162,6 +5164,9 @@ def perform_delete_schedule(id):
         return redirect(url)
 
     try:
+        # delete all ScheduleSlots associated with this ScheduleAttempt
+        db.session.query(ScheduleSlot).filter_by(owner_id=record.id).delete()
+
         db.session.delete(record)
         db.session.commit()
     except SQLAlchemyError:

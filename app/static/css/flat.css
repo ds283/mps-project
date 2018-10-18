@@ -5,3 +5,7 @@
     margin-top: 48px;
     margin-bottom: 65px;
 }
+
+a.label {
+    text-decoration: none!important;
+}

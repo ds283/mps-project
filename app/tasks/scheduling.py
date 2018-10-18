@@ -27,7 +27,7 @@ from datetime import datetime
 from ..shared.timer import Timer
 
 
-def _enumerate_talks(periods):
+def _enumerate_talks(assessment):
     # periods is a list of SubmissionPeriodRecord instances
 
     number = 0
@@ -36,11 +36,8 @@ def _enumerate_talks(periods):
 
     talk_dict = {}
 
-    for period in periods:
-        # get SubmissionRecord instances that belong to this submission period
-        projects = period.submitter_list.all()
-
-        for p in projects:
+    for p in assessment.available_talks:
+        if not assessment.not_attending(p.id):
             talk_to_number[p.id] = number
             number_to_talk[number] = p.id
 
@@ -276,7 +273,7 @@ def register_scheduling_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
         try:
-            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record.owner.submission_periods)
+            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record.owner)
             number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record.owner)
             number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record)
 

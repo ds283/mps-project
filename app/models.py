@@ -313,6 +313,11 @@ assessment_to_assessors = db.Table('assessment_to_assessors',
                                    db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
                                    db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
+# capture list of students who can't attend the scheduled sessions of an assessment
+assessment_not_attend = db.Table('assessment_not_attend',
+                                 db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
+                                 db.Column('submitted_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True))
+
 # capture list of faculty who are still to return availability data for an assessment
 faculty_availability_waiting = db.Table('faculty_availability_waiting',
                                         db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
@@ -5587,6 +5592,12 @@ class PresentationAssessment(db.Model):
                                 backref=db.backref('presentation_assessments', lazy='dynamic'))
 
 
+    # STUDENTS/TALKS
+
+    # list of students who can't attend the main sessions
+    cant_attend = db.relationship('SubmissionRecord', secondary=assessment_not_attend, lazy='dynamic')
+
+
     # EDITING METADATA
 
     # created by
@@ -5692,13 +5703,29 @@ class PresentationAssessment(db.Model):
 
     @property
     def available_pclasses(self):
+        q = self.submission_periods.subquery()
+
         pclass_ids = db.session.query(ProjectClass.id) \
-            .select_from(self.submission_periods.subquery()) \
-            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
-            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id).distinct.subquery()
+            .select_from(q) \
+            .join(ProjectClassConfig, ProjectClassConfig.id == q.c.config_id) \
+            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id).distinct().subquery()
 
         return db.session.query(ProjectClass) \
             .join(pclass_ids, ProjectClass.id == pclass_ids.c.id).all()
+
+
+    @property
+    def available_talks(self):
+        talks = []
+
+        for period in self.submission_periods:
+            talks += period.submitter_list.all()
+
+        return talks
+
+
+    def not_attending(self, record_id):
+        return get_count(self.cant_attend.filter_by(id=record_id)) > 0
 
 
 @listens_for(PresentationAssessment, 'before_update')

@@ -139,6 +139,11 @@ _menu = \
             </a>
         </li>
         <li>
+            <a href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}">
+                <i class="fa fa-user"></i> Attendees...
+            </a>
+        </li>
+        <li>
             <a href="{{ url_for('admin.delete_assessment', id=a.id) }}">
                 <i class="fa fa-trash"></i> Delete
             </a>

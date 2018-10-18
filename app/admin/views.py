@@ -50,7 +50,7 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
-    PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot
+    PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -5241,6 +5241,136 @@ def unpublish_schedule(id):
 
     record.published = False
     db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/assessment_manage_attendees/<int:id>')
+@roles_required('root')
+def assessment_manage_attendees(id):
+    """
+    Manage student attendees for an existing assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    pclass_filter = request.args.get('pclass_filter')
+
+    if pclass_filter is None and session.get('attendees_pclass_filter'):
+        pclass_filter = session['attendees_pclass_filter']
+
+    if pclass_filter is not None:
+        session['attendees_pclass_filter'] = pclass_filter
+
+    attend_filter = request.args.get('attend_filter')
+
+    if attend_filter is None and session.get('attendees_attend_filter'):
+        attend_filter = session['attendees_attend_filter']
+
+    if attend_filter is not None:
+        session['attendees_attend_filter'] = attend_filter
+
+    pclasses = data.available_pclasses
+
+    return render_template('admin/presentations/manage_attendees.html', assessment=data, pclass_filter=pclass_filter,
+                           attend_filter=attend_filter, pclasses=pclasses)
+
+
+@admin.route('/manage_attendees_ajax/<int:id>')
+@roles_required('root')
+def manage_attendees_ajax(id):
+    """
+    AJAX data point for managing student attendees
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    pclass_filter = request.args.get('pclass_filter')
+    attend_filter = request.args.get('attend_filter')
+
+    talks = data.available_talks
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        talks = [t for t in talks if t.owner.config.pclass_id == pclass_value]
+
+    if attend_filter == 'attending':
+        talks = [t for t in talks if not data.not_attending(t.id)]
+    elif attend_filter == 'not-attending':
+        talks = [t for t in talks if data.not_attending(t.id)]
+
+    if not validate_assessment(data):
+        return jsonify({})
+
+    return ajax.admin.presentation_attendees_data(talks, data)
+
+
+@admin.route('/assessment_attending/<int:a_id>/<int:s_id>')
+@roles_required('root')
+def assessment_attending(a_id, s_id):
+    """
+    Mark a student/talk as able to attend the assessment
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    talk = SubmissionRecord.query.get_or_404(s_id)
+
+    if talk not in data.available_talks:
+        flash('Cannot mark the specified talk as attending because it is not included in this presentation assessment',
+              'error')
+        return redirect(request.referrer)
+
+    if talk in data.cant_attend:
+        data.cant_attend.remove(talk)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/assessment_not_attending/<int:a_id>/<int:s_id>')
+@roles_required('root')
+def assessment_not_attending(a_id, s_id):
+    """
+    Mark a student/talk as not able to attend the assessment
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    talk = SubmissionRecord.query.get_or_404(s_id)
+
+    if talk not in data.available_talks:
+        flash('Cannot mark the specified talk as not attending because it is not included in this presentation assessment',
+              'error')
+        return redirect(request.referrer)
+
+    if talk not in data.cant_attend:
+        data.cant_attend.append(talk)
+        db.session.commit()
 
     return redirect(request.referrer)
 

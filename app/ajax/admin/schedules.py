@@ -69,7 +69,7 @@ _score = \
 _name = \
 """
     {% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
-        <a href="#">{{ s.name }}</a>
+        <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text='assessment schedule manager', url=url_for('admin.assessment_schedules', id=s.owner.id)) }}">{{ s.name }}</a>
         {% if not s.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
@@ -112,7 +112,7 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         {% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
             <li>
-                <a href="#">
+                <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text='assessment schedule manager', url=url_for('admin.assessment_schedules', id=s.owner.id)) }}">
                     <i class="fa fa-search"></i> Inspect schedule
                 </a>
             </li>

@@ -4053,7 +4053,7 @@ def match_faculty_view(id):
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         flash('Match "{name}" is not available for inspection '
-              'because it did not yield an optimal solution'.format(name=record.name), 'error')
+              'because it did not yield an optimal solution.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
     if not validate_match_inspector(record):
@@ -4066,6 +4066,9 @@ def match_faculty_view(id):
     # if no state filter supplied, check if one is stored in session
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
         pclass_filter = session['admin_match_pclass_filter']
+
+    if pclass_filter is not None:
+        session['admin_match_pclass_filter'] = pclass_filter
 
     pclasses = get_automatch_pclasses()
 
@@ -4087,7 +4090,7 @@ def match_dists_view(id):
 
     if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         flash('Match "{name}" is not available for inspection '
-              'because it did not yield an optimal solution'.format(name=record.name), 'error')
+              'because it did not yield an optimal solution.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
     if not validate_match_inspector(record):
@@ -4100,6 +4103,9 @@ def match_dists_view(id):
     # if no state filter supplied, check if one is stored in session
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
         pclass_filter = session['admin_match_pclass_filter']
+
+    if pclass_filter is not None:
+        session['admin_match_pclass_filter'] = pclass_filter
 
     flag, pclass_value = is_integer(pclass_filter)
 
@@ -5112,9 +5118,7 @@ def delete_schedule(id):
     if not validate_schedule_inspector(record):
         return redirect(request.referrer)
 
-    year = get_current_year()
-    if record.owner.year != year:
-        flash('Schedule "{name}" can no longer be edited because it belongs to a previous year', 'info')
+    if not validate_assessment(record.owner):
         return redirect(request.referrer)
 
     if not record.finished:
@@ -5149,10 +5153,8 @@ def perform_delete_schedule(id):
     if not validate_schedule_inspector(record):
         return redirect(url)
 
-    year = get_current_year()
-    if record.owner.year != year:
-        flash('Schedule "{name}" can no longer be edited because it belongs to a previous year', 'info')
-        return redirect(url)
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
 
     if not record.finished:
         flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name),
@@ -5192,10 +5194,7 @@ def publish_schedule(id):
     if not validate_schedule_inspector(record):
         return redirect(request.referrer)
 
-    year = get_current_year()
-    if record.owner.year != year:
-        flash('Schedule "{name}" can no longer be edited because '
-              'it belongs to a previous year'.format(name=record.name), 'info')
+    if not validate_assessment(record.owner):
         return redirect(request.referrer)
 
     if not record.finished:
@@ -5223,10 +5222,7 @@ def unpublish_schedule(id):
     if not validate_schedule_inspector(record):
         return redirect(request.referrer)
 
-    year = get_current_year()
-    if record.owner.year != year:
-        flash('Schedule "{name}" can no longer be edited because '
-              'it belongs to a previous year'.format(name=record.name), 'info')
+    if not validate_assessment(record.owner):
         return redirect(request.referrer)
 
     if not record.finished:
@@ -5243,6 +5239,114 @@ def unpublish_schedule(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/schedule_view_sessions/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def schedule_view_sessions(id):
+    """
+    Sessions view in schedule inspector
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Schedule "{name}" is not yet available for inspection '
+              'because the solver has not terminated.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+        flash('Schedule "{name}" is not available for inspection '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    pclass_filter = request.args.get('pclass_filter')
+    building_filter = request.args.get('building_filter')
+    session_filter = request.args.get('session_filter')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    # if no state filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('admin_schedule_pclass_filter'):
+        pclass_filter = session['admin_schedule_pclass_filter']
+
+    if pclass_filter is not None:
+        session['admin_match_pclass_filter'] = pclass_filter
+
+    if building_filter is None and session.get('admin_schedule_building_filter'):
+        building_filter = session['admin_schedule_building_filter']
+
+    if building_filter is not None:
+        session['admin_match_building_filter'] = building_filter
+
+    if session_filter is None and session.get('admin_schedule_session_filter'):
+        session_filter = session['admin_schedule_session_filter']
+
+    if session_filter is not None:
+        session['admin_match_session_filter'] = session_filter
+
+    pclasses = record.available_pclasses
+    buildings = record.available_buildings
+    sessions = record.available_sessions
+
+    return render_template('admin/presentations/schedule_inspector/sessions.html', pane='sessions', record=record,
+                           pclasses=pclasses, buildings=buildings, sessions=sessions,
+                           text=text, url=url)
+
+
+@admin.route('/schedule_view_sessions_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def schedule_view_sessions_ajax(id):
+    """
+    AJAX data point for Sessions view in Schedule inspector
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_assessment(record.owner):
+        return jsonify({})
+
+    if not record.finished:
+        flash('Schedule "{name}" is not yet available for inspection '
+              'because the solver has not terminated.'.format(name=record.name), 'info')
+        return jsonify({})
+
+    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+        flash('Schedule "{name}" is not available for inspection '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return jsonify({})
+
+    if not validate_schedule_inspector(record):
+        return jsonify({})
+
+    pclass_filter = request.args.get('pclass_filter')
+    building_filter = request.args.get('building_filter')
+    session_filter = request.args.get('session_filter')
+
+    # now want to extract all slots from 'record' that satisfy the filters
+    slots = record.slots
+
+    flag, session_value = is_integer(session_filter)
+    if flag:
+        slots = slots.filter_by(session_id=session_value)
+
+    flag, building_value = is_integer(building_filter)
+    if flag:
+        slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(Room.building_id == building_value)
+
+    flag, pclass_value = is_integer(pclass_filter)
+
+    return ajax.admin.schedule_view_sessions(slots.all(), record)
 
 
 @admin.route('/assessment_manage_attendees/<int:id>')

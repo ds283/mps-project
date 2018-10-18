@@ -3916,6 +3916,11 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def pclass(self):
+        return self.owner.config.project_class
+
+
+    @property
     def supervising_CATS(self):
         config = self.previous_config
 
@@ -5715,6 +5720,24 @@ class PresentationAssessment(db.Model):
 
 
     @property
+    def available_buildings(self):
+        q = self.sessions.subquery()
+
+        building_ids = db.session.query(Building.id) \
+            .select_from(q) \
+            .join(session_to_rooms, session_to_rooms.c.session_id == q.c.id) \
+            .join(Building, Building.id == session_to_rooms.c.room_id).distinct().subquery()
+
+        return db.session.query(Building) \
+            .join(building_ids, Building.id == building_ids.c.id).all()
+
+
+    @property
+    def available_sessions(self):
+        return self.sessions.all()
+
+
+    @property
     def available_talks(self):
         talks = []
 
@@ -6155,6 +6178,16 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     @property
     def available_pclasses(self):
         return self.owner.available_pclasses
+
+
+    @property
+    def available_buildings(self):
+        return self.owner.available_buildings
+
+
+    @property
+    def available_sessions(self):
+        return self.owner.available_sessions
 
 
 class ScheduleSlot(db.Model):

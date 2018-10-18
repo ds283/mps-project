@@ -1,0 +1,13 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        <li {% if pane == 'sessions' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.schedule_view_sessions', id=record.id, text=text, url=url) }}">
+                Sessions view
+            </a>
+        </li>
+    </ul>
+{% endblock %}

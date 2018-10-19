@@ -6197,7 +6197,7 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
 
     @property
-    def available_buildings(self):
+    def buildings_query(self):
         q = self.slots.subquery()
 
         building_ids = db.session.query(Room.building_id) \
@@ -6208,22 +6208,42 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
         return db.session.query(Building) \
             .join(building_ids, Building.id == building_ids.c.building_id) \
-            .order_by(Building.name.asc()).all()
+            .order_by(Building.name.asc())
 
 
     @property
-    def available_rooms(self):
+    def available_buildings(self):
+        return self.buildings_query.all()
+
+
+    @property
+    def number_buildings(self):
+        return get_count(self.buildings_query)
+
+
+    @property
+    def rooms_query(self):
         q = self.slots.subquery()
 
         return db.session.query(Room) \
             .select_from(q) \
             .join(Room, Room.id == q.c.room_id) \
             .join(Building, Building.id == Room.building_id) \
-            .order_by(Building.name.asc(), Room.name.asc()).distinct().all()
+            .order_by(Building.name.asc(), Room.name.asc()).distinct()
 
 
     @property
-    def available_sessions(self):
+    def available_rooms(self):
+        return self.rooms_query.all()
+
+
+    @property
+    def number_rooms(self):
+        return get_count(self.rooms_query)
+
+
+    @property
+    def sessions_query(self):
         q = self.slots.subquery()
 
         session_ids = db.session.query(PresentationSession.id) \
@@ -6232,7 +6252,17 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
         return db.session.query(PresentationSession) \
             .join(session_ids, PresentationSession.id == session_ids.c.id) \
-            .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc()).all()
+            .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+
+
+    @property
+    def available_sessions(self):
+        return self.sessions_query.all()
+
+
+    @property
+    def number_sessions(self):
+        return get_count(self.sessions_query)
 
 
     @property

@@ -42,7 +42,7 @@ from .forms import RoleSelectForm, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
-    NewScheduleFormFactory
+    NewScheduleFormFactory, RenameScheduleFormFactory
 
 from ..database import db
 from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -3798,7 +3798,6 @@ def rename_match(id):
     form.record = record
 
     if form.validate_on_submit():
-
         try:
             record.name = form.name.data
             db.session.commit()
@@ -5173,6 +5172,40 @@ def perform_delete_schedule(id):
               'error')
 
     return redirect(url)
+
+
+@admin.route('/rename_schedule/<int:id>', methods=['GET', 'POST'])
+@roles_required('faculty', 'admin', 'root')
+def rename_schedule(id):
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.assessment_schedules', id=record.owner_id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    RenameScheduleForm = RenameScheduleFormFactory(record.owner)
+    form = RenameScheduleForm(request.form)
+    form.schedule = record
+
+    if form.validate_on_submit():
+        try:
+            record.name = form.name.data
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash('Could not rename schedule "{name}" due to a database error. '
+                  'Please contact a system administrator.'.format(name=record.name), 'error')
+
+        return redirect(url)
+
+    return render_template('admin/presentations/scheduling/rename.html', form=form, record=record, url=url)
 
 
 @admin.route('/publish_schedule/<int:id>')

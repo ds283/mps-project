@@ -320,6 +320,13 @@ def globally_unique_schedule_name(assessment_id, form, field):
         raise ValidationError('{name} is already in use for a schedule attached to this assessment'.format(name=field.data))
 
 
+def unique_or_original_schedule_name(assessment_id, form, field):
+    if field.data == form.schedule.name:
+        return
+
+    return globally_unique_assessment_name(assessment_id, form, field)
+
+
 def valid_json(form, field):
     try:
         json_obj = json.loads(field.data)

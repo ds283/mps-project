@@ -120,15 +120,16 @@ _menu = \
         {% endif %}    
 
         {% if not s.finished %}
-            <li>
-                <a href="{{ url_for('admin.terminate_schedule', id=s.id) }}">
+            {% set disabled = not current_user.has_role('root') %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('admin.terminate_schedule', id=s.id) }}"{% endif %}>
                     <i class="fa fa-times"></i> Terminate
                 </a>
             </li>
         {% else %}
             {% if s.outcome == s.OUTCOME_OPTIMAL %}
                 <li>
-                    <a href="#">
+                    <a href="{{ url_for('admin.rename_schedule', id=s.id) }}">
                         <i class="fa fa-pencil"></i> Rename
                     </a>
                 </li>

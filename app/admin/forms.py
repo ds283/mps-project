@@ -32,7 +32,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_assessment_name, unique_or_original_assessment_name, \
     globally_unique_building_name, unique_or_original_building_name, \
     globally_unique_room_name, unique_or_original_room_name, \
-    globally_unique_schedule_name, \
+    globally_unique_schedule_name, unique_or_original_schedule_name, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -42,7 +42,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
 from ..models import BackupConfiguration, EnrollmentRecord, extent_choices, year_choices, matching_history_choices, solver_choices, session_choices
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
-from ..shared.forms.mixins import SubmitButtonMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
+from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
     FacultyDataMixinFactory
 
 from functools import partial
@@ -165,7 +165,7 @@ class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
                                                           globally_unique_exam_number])
 
 
-class EditOfficeForm(Form, SubmitButtonMixin, EditUserNameMixin, AskConfirmEditFormMixin, ThemeMixin,
+class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin, ThemeMixin,
                      EditEmailFormMixin, FirstLastNameMixin):
 
     pass
@@ -182,12 +182,12 @@ class EditStudentForm(EditOfficeForm, StudentDataMixin):
                                                           unique_or_original_exam_number])
 
 
-class StudentSettingsForm(Form, ThemeMixin, SubmitButtonMixin):
+class StudentSettingsForm(Form, ThemeMixin, SaveChangesMixin):
 
     pass
 
 
-class OfficeSettingsForm(Form, ThemeMixin, SubmitButtonMixin):
+class OfficeSettingsForm(Form, ThemeMixin, SaveChangesMixin):
 
     pass
 
@@ -210,7 +210,7 @@ class AddResearchGroupForm(Form, ResearchGroupMixin):
     submit = SubmitField('Add new group')
 
 
-class EditResearchGroupForm(Form, ResearchGroupMixin, SubmitButtonMixin):
+class EditResearchGroupForm(Form, ResearchGroupMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name is required'),
                                            unique_or_original_group_name])
@@ -235,7 +235,7 @@ class AddDegreeTypeForm(Form, DegreeTypeMixin):
     submit = SubmitField('Add new degree type')
 
 
-class EditDegreeTypeForm(Form, DegreeTypeMixin, SubmitButtonMixin):
+class EditDegreeTypeForm(Form, DegreeTypeMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree type name is required'),
                                            unique_or_original_degree_type])
@@ -262,7 +262,7 @@ class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):
     submit = SubmitField('Add new degree programme')
 
 
-class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, SubmitButtonMixin):
+class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree programme name is required'),
                                            unique_or_original_degree_programme])
@@ -284,7 +284,7 @@ class AddTransferableSkillForm(Form, TransferableSkillMixin):
     submit = SubmitField('Add new transferable skill')
 
 
-class EditTransferableSkillForm(Form, TransferableSkillMixin, SubmitButtonMixin):
+class EditTransferableSkillForm(Form, TransferableSkillMixin, SaveChangesMixin):
 
     name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
                                             unique_or_original_transferable_skill])
@@ -389,7 +389,7 @@ class AddProjectClassForm(Form, ProjectClassMixin):
     submit = SubmitField('Add new project class')
 
 
-class EditProjectClassForm(Form, ProjectClassMixin, SubmitButtonMixin):
+class EditProjectClassForm(Form, ProjectClassMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name of project class is required'),
                                            unique_or_original_project_class])
@@ -412,7 +412,7 @@ class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin):
     submit = SubmitField('Add new submission period')
 
 
-class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, SubmitButtonMixin):
+class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, SaveChangesMixin):
 
     pass
 
@@ -433,7 +433,7 @@ class AddSupervisorForm(Form, SupervisorMixin):
     submit = SubmitField('Add new supervisory role')
 
 
-class EditSupervisorForm(Form, SupervisorMixin, SubmitButtonMixin):
+class EditSupervisorForm(Form, SupervisorMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name of supervisory role is required'),
                                            unique_or_original_supervisor])
@@ -506,7 +506,7 @@ def EditMessageFormFactory(convenor_editing=False):
 
     Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses)
 
-    class EditMessageForm(Form, Mixin, SubmitButtonMixin,
+    class EditMessageForm(Form, Mixin, SaveChangesMixin,
                           convenor_editing):
 
         _validator = InputRequired(message='At least one project class should be selected') if convenor_editing \
@@ -583,7 +583,7 @@ class AddIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin):
     submit = SubmitField('Add new task')
 
 
-class EditIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin, SubmitButtonMixin):
+class EditIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin, SaveChangesMixin):
 
     pass
 
@@ -593,7 +593,7 @@ class AddCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin):
     submit = SubmitField('Add new task')
 
 
-class EditCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin, SubmitButtonMixin):
+class EditCrontabScheduledTask(Form, ScheduledTaskMixin, CrontabMixin, SaveChangesMixin):
 
     pass
 
@@ -689,7 +689,7 @@ class EnrollmentRecordMixin():
 
 
 
-class EnrollmentRecordForm(Form, EnrollmentRecordMixin, SubmitButtonMixin):
+class EnrollmentRecordForm(Form, EnrollmentRecordMixin, SaveChangesMixin):
 
     pass
 
@@ -711,7 +711,7 @@ class AddSkillGroupForm(Form, SkillGroupMixin):
     submit = SubmitField('Add new skill')
 
 
-class EditSkillGroupForm(Form, SkillGroupMixin, SubmitButtonMixin):
+class EditSkillGroupForm(Form, SkillGroupMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
                                            unique_or_original_skill_group])
@@ -730,7 +730,7 @@ class AddRoleForm(Form, RoleMixin):
     submit = SubmitField('Add new role')
 
 
-class EditRoleForm(Form, RoleMixin, SubmitButtonMixin):
+class EditRoleForm(Form, RoleMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
                                            unique_or_original_role])
@@ -906,7 +906,7 @@ def EditPresentationAssessmentFormFactory(year, assessment_id):
 
     Mixin = PresentationAssessmentMixinFactory(partial(GetUnattachedSubmissionPeriods, assessment_id))
 
-    class EditPresentationAssessmentForm(Form, Mixin, SubmitButtonMixin):
+    class EditPresentationAssessmentForm(Form, Mixin, SaveChangesMixin):
 
         pass
 
@@ -932,7 +932,7 @@ class AddSessionForm(Form, SessionMixin):
     submit = SubmitField('Add session')
 
 
-class EditSessionForm(Form, SessionMixin, SubmitButtonMixin):
+class EditSessionForm(Form, SessionMixin, SaveChangesMixin):
 
     pass
 
@@ -954,7 +954,7 @@ class AddBuildingForm(Form, BuildingMixin):
         return globally_unique_building_name(form, field)
 
 
-class EditBuildingForm(Form, BuildingMixin, SubmitButtonMixin):
+class EditBuildingForm(Form, BuildingMixin, SaveChangesMixin):
 
     @staticmethod
     def validate_name(form, field):
@@ -981,7 +981,7 @@ class AddRoomForm(Form, RoomMixin):
         return globally_unique_room_name(form, field)
 
 
-class EditRoomForm(Form, RoomMixin, SubmitButtonMixin):
+class EditRoomForm(Form, RoomMixin, SaveChangesMixin):
 
     @staticmethod
     def validate_name(form, field):
@@ -997,11 +997,14 @@ class AvailabilityForm(Form):
     issue_requests = SubmitField('Issue availability requests')
 
 
-class ScheduleMixin():
+class ScheduleNameMixin():
 
     name = StringField('Name',
                        description='Enter a short tag to identify this schedule',
                        validators=[InputRequired(message='Please supply a unique name')])
+
+
+class ScheduleSettingsMixin():
 
     max_group_size = IntegerField('Maximum group size',
                                   description='Enter the desired maximum group size. Some groups may be smaller '
@@ -1011,7 +1014,7 @@ class ScheduleMixin():
 
 def NewScheduleFormFactory(assessment):
 
-    class NewScheduleForm(Form, ScheduleMixin, PuLPSolverMixin):
+    class NewScheduleForm(Form, ScheduleNameMixin, ScheduleSettingsMixin, PuLPSolverMixin):
 
         submit = SubmitField('Create new schedule')
 
@@ -1020,3 +1023,16 @@ def NewScheduleFormFactory(assessment):
             return globally_unique_schedule_name(assessment.id, form, field)
 
     return NewScheduleForm
+
+
+def RenameScheduleFormFactory(assessment):
+
+    class RenameScheduleForm(Form, ScheduleNameMixin):
+
+        submit = SubmitField('Rename schedule')
+
+        @staticmethod
+        def validate_name(form, field):
+            return unique_or_original_schedule_name(assessment.id, form, field)
+
+    return RenameScheduleForm

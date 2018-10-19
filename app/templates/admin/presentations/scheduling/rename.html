@@ -1,0 +1,25 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    Rename schedule
+{% endblock %}
+
+{% block formtitle %}
+    Rename schedule <strong>{{ record.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.rename_schedule', id=record.id, url=url) }}" method="POST" name="rename_form">
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(role_form) }}#}
+
+        {{ wtf.form_field(form.name) }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

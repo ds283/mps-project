@@ -199,8 +199,9 @@ _menu = \
         {% endif %}    
         
         {% if not m.finished %}
-            <li>
-                <a href="{{ url_for('admin.terminate_match', id=m.id) }}">
+            {% set disabled = not current_user.has_role('root') %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
                     <i class="fa fa-times"></i> Terminate
                 </a>
             </li>

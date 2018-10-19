@@ -16,7 +16,7 @@ from wtforms_alchemy.fields import QuerySelectField
 from ..models import Project
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
-from ..shared.forms.mixins import SubmitButtonMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
+from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
     FacultyDataMixinFactory
 from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
     project_unique_or_original_label
@@ -85,7 +85,7 @@ def EditProjectFormFactory(convenor_editing=False):
                                 AllProjectClasses if convenor_editing else CurrentUserProjectClasses,
                                 AllResearchGroups if convenor_editing else CurrentUserResearchGroups)
 
-    class EditProjectForm(Form, Mixin, SubmitButtonMixin):
+    class EditProjectForm(Form, Mixin, SaveChangesMixin):
 
         name = StringField('Title', validators=[InputRequired(message='Project title is required'),
                                                 unique_or_original_project])
@@ -149,7 +149,7 @@ def EditDescriptionFormFactory(project_id, desc_id):
 
     Mixin = DescriptionMixinFactory(partial(AvailableProjectDescriptionClasses, project_id, desc_id))
 
-    class EditDescriptionForm(Form, Mixin, SubmitButtonMixin):
+    class EditDescriptionForm(Form, Mixin, SaveChangesMixin):
 
         label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
                                                  project_unique_or_original_label],
@@ -230,6 +230,6 @@ class SupervisorResponseForm(Form, SupervisorResponseMixin):
 
 
 class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False),
-                          FirstLastNameMixin, SubmitButtonMixin, ThemeMixin):
+                          FirstLastNameMixin, SaveChangesMixin, ThemeMixin):
 
     pass

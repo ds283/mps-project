@@ -15,7 +15,7 @@ from ...models import theme_choices, academic_titles
 from .wtf_validators import valid_username, unique_or_original_username, NotOptionalIf
 
 
-class SubmitButtonMixin():
+class SaveChangesMixin():
 
     submit = SubmitField('Save changes')
 

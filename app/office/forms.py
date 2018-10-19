@@ -10,9 +10,9 @@
 
 from flask_security.forms import Form
 
-from ..shared.forms.mixins import SubmitButtonMixin, ThemeMixin
+from ..shared.forms.mixins import SaveChangesMixin, ThemeMixin
 
 
-class OfficeSettingsForm(Form, ThemeMixin, SubmitButtonMixin):
+class OfficeSettingsForm(Form, ThemeMixin, SaveChangesMixin):
 
     pass

@@ -5022,16 +5022,6 @@ def create_assessment_schedule(id):
                                        score=None)
 
             db.session.add(schedule)
-            db.session.flush()
-
-            # add database records for each available slot
-            for sess in data.sessions:
-                for room in sess.rooms:
-                    slot = ScheduleSlot(owner_id=schedule.id,
-                                        session_id=sess.id,
-                                        room_id=room.id)
-                    db.session.add(slot)
-
             db.session.commit()
 
             celery = current_app.extensions['celery']

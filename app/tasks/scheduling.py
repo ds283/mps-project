@@ -123,7 +123,76 @@ def _build_availability_matrix(number_assessors, assessor_dict, number_slots, sl
     return A
 
 
-def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots, talk_dict, assessor_dict, slot_dict):
+def _generate_minimize_objective(X, Y, S, number_talks, number_assessors, number_slots):
+    """
+    Generate an objective function that tries to schedule as efficiently as possible,
+    with workload balancing
+    :param X:
+    :param Y:
+    :param S:
+    :param number_talks:
+    :param number_assessors:
+    :param number_slots:
+    :return:
+    """
+
+    # generate objective function
+    objective = 0
+
+    # ask optimizer to minimize the number of slots that are used
+    objective += sum([S[i] for i in range(number_slots)])
+
+    # TODO: - workload balancing: share load evenly between faculty if possible
+    # TODO: - minimize number of days used in schedule
+    # TODO: - minimize number of rooms used in schedule
+    # TODO: - prevent talks on same subject being scheduled in same session, if possible
+
+    return objective
+
+
+def _generate_reschedule_objective(X, Y, S, number_talks, number_assessors, number_slots, Xold, Yold):
+    """
+    Generate an objective function that tries to produce a feasible schedule matching Xold, Yold
+    as closely as possible
+    :param X:
+    :param Y:
+    :param S:
+    :param number_talks:
+    :param number_assessors:
+    :param number_slots:
+    :return:
+    """
+
+    # generate objective function
+    objective = 0
+
+    # ask optimizer to choose X and Y values that match Xold, Yold as closely as possible.
+    # recall that we solve a *minimization* problem, so the objective function should
+    # count the number of *differences*
+
+    for i in range(number_talks):
+        for j in range(number_slots):
+            idx = (i,j)
+            if Xold[idx] == 0:
+                objective += X[idx]
+            else:
+                objective += 1 - X[idx]
+
+    for i in range(number_assessors):
+        for j in range(number_slots):
+            idx = (i,j)
+            if Yold[idx] == 0:
+                objective += Y[idx]
+            else:
+                objective += 1 - Y[idx]
+
+    return objective
+
+
+def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
+                         assessor_to_number,
+                         talk_dict, assessor_dict, slot_dict,
+                         make_objective):
     """
     Generate a PuLP problem to find an optimal assignment of student talks + faculty assessors to rooms
     :param assessor_dict:
@@ -137,6 +206,9 @@ def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots
     :return:
     """
 
+    print('Generating PuLP problem for schedule:')
+    print(' -- {l} talks, {m} assessors, {n} slots'.format(l=number_talks, m=number_assessors, n=number_slots))
+
     # generate PuLP problem
     prob = pulp.LpProblem(record.name, pulp.LpMinimize)
 
@@ -148,17 +220,12 @@ def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots
     Y = pulp.LpVariable.dicts("y", itertools.product(range(number_assessors), range(number_slots)), cat=pulp.LpBinary)
 
     # generate a 'size counting' variable for each slot
-    S = pulp.LpVariable.dicts("z", range(number_slots), cat=pulp.LpBinary)
+    S = pulp.LpVariable.dicts("s", range(number_slots), cat=pulp.LpBinary)
 
 
     # OBJECTIVE FUNCTION
 
-    # generate objective function
-    objective = 0
-
-    # ask optimizer to minimize the number of slots that are used
-    objective += sum([S[i] for i in range(number_slots)])
-
+    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots)
     prob += objective, "objective function"
 
 
@@ -216,6 +283,23 @@ def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots
                 count = get_count(talk.project.assessors.filter_by(id=assessor.id))
                 prob += X[(i, k)] + Y[(j, k)] <= (2 if count == 1 else 1)
 
+
+    # TALKS CANNOT BE SCHEDULED WITH THE SUPERVISOR AS AN ASSESSOR
+
+    for i in range(number_talks):
+        for k in range(number_slots):
+            talk = talk_dict[i]
+            supervisor_id = talk.supervisor.id
+
+            # it's not an error if supervisor_id is not in assessor_to_number; this just means that the supervisor
+            # is not a possible assessor.
+            # that most likely way this could happen is if the supervisor is exempt/on sabbatical from
+            # presentation assessments, eg. as HoD or HoS
+            if supervisor_id in assessor_to_number:
+                j = assessor_to_number[supervisor_id]
+                prob += X[(i, k)] + Y[(j, k)] <= 1
+
+
     return prob, X, Y
 
 
@@ -235,12 +319,18 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
     :return:
     """
 
+    store_slots = []
+
     for i in range(number_slots):
         slot = slot_dict[i]
+
+        # we only store slots that are scheduled
+        store = False
 
         for j in range(number_talks):
             X[(j, i)].round()
             if pulp.value(X[(j, i)]) == 1:
+                store = True
                 talk = talk_dict[j]
 
                 if talk not in slot.talks:
@@ -249,96 +339,111 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
         for j in range(number_assessors):
             Y[(j, i)].round()
             if pulp.value(Y[(j, i)]) == 1:
+                store = True
                 assessor = assessor_dict[j]
 
                 if assessor not in slot.assessors:
                     slot.assessors.append(assessor)
+
+        if store:
+            store_slots.append(slot)
+
+    # slots are marked cascade='all, delete, delete-orphan', so SQLAlchemy will tidy up after us here
+    record.slots = store_slots
+
+
+def compute_schedule(self, id, objective_generator):
+    self.update_state(state='STARTED', meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+
+    try:
+        record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+    except SQLAlchemyError:
+        raise self.retry()
+
+    if record is None:
+        self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+        return
+
+    progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
+
+    try:
+        number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record.owner)
+        number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record.owner)
+        number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record)
+
+        # build faculty availability matrix
+        A = _build_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
+
+    except SQLAlchemyError:
+        raise self.retry()
+
+    progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                    autocommit=True)
+
+    with Timer() as create_time:
+        prob, X, Y = _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
+                                          assessor_to_number,
+                                          talk_dict, assessor_dict, slot_dict,
+                                          objective_generator)
+
+    progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
+                    autocommit=True)
+
+    with Timer() as solve_time:
+        if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
+            output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=600, fracGap=0.01))
+        elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
+            output = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=600, fracGap=0.01))
+        elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
+            output = prob.solve(solvers.GLPK_CMD())
+        else:
+            output = prob.solve()
+
+    state = pulp.LpStatus[output]
+
+    if state == 'Optimal':
+        record.outcome = ScheduleAttempt.OUTCOME_OPTIMAL
+        record.score = pulp.value(prob.objective)
+
+        record.construct_time = create_time.interval
+        record.compute_time = solve_time.interval
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing PuLP solution...", autocommit=True)
+
+        try:
+            _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_slots,
+                                 talk_dict, assessor_dict, slot_dict)
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+    elif state == 'Not Solved':
+        record.outcome = ScheduleAttempt.OUTCOME_NOT_SOLVED
+    elif state == 'Infeasible':
+        record.outcome = ScheduleAttempt.OUTCOME_INFEASIBLE
+    elif state == 'Unbounded':
+        record.outcome = ScheduleAttempt.OUTCOME_UNBOUNDED
+    elif state == 'Undefined':
+        record.outcome = ScheduleAttempt.OUTCOME_UNDEFINED
+    else:
+        raise RuntimeError('Unknown PuLP outcome')
+
+    try:
+        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Scheduling task complete', autocommit=False)
+
+        record.finished = True
+        db.session.commit()
+
+    except SQLAlchemyError:
+        db.session.rollback()
+        raise self.retry()
+
+    return record.score
 
 
 def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def create_schedule(self, id):
-        self.update_state(state='STARTED', meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
-
-        try:
-            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
-            raise self.retry()
-
-        if record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
-            return
-
-        progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
-
-        try:
-            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record.owner)
-            number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record.owner)
-            number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record)
-
-            # build faculty availability matrix
-            A = _build_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
-
-        except SQLAlchemyError:
-            raise self.retry()
-
-        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...", autocommit=True)
-
-        with Timer() as create_time:
-            prob, X, Y = _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
-                                              talk_dict, assessor_dict, slot_dict)
-
-        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
-
-        with Timer() as solve_time:
-            if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
-                output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=600, fracGap=0.01))
-            elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
-                output = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=600, fracGap=0.01))
-            elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
-                output = prob.solve(solvers.GLPK_CMD())
-            else:
-                output = prob.solve()
-
-        state = pulp.LpStatus[output]
-
-        if state == 'Optimal':
-            record.outcome = ScheduleAttempt.OUTCOME_OPTIMAL
-            record.score = pulp.value(prob.objective)
-
-            record.construct_time = create_time.interval
-            record.compute_time = solve_time.interval
-
-            progress_update(record.celery_id, TaskRecord.RUNNING, 80, "Storing PuLP solution...", autocommit=True)
-
-            try:
-                _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_slots,
-                                     talk_dict, assessor_dict, slot_dict)
-                db.session.commit()
-
-            except SQLAlchemyError:
-                db.session.rollback()
-                raise self.retry()
-        elif state == 'Not Solved':
-            record.outcome = ScheduleAttempt.OUTCOME_NOT_SOLVED
-        elif state == 'Infeasible':
-            record.outcome = ScheduleAttempt.OUTCOME_INFEASIBLE
-        elif state == 'Unbounded':
-            record.outcome = ScheduleAttempt.OUTCOME_UNBOUNDED
-        elif state == 'Undefined':
-            record.outcome = ScheduleAttempt.OUTCOME_UNDEFINED
-        else:
-            raise RuntimeError('Unknown PuLP outcome')
-
-        try:
-            progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Scheduling task complete', autocommit=False)
-
-            record.finished = True
-            db.session.commit()
-
-        except SQLAlchemyError:
-            db.session.rollback()
-            raise self.retry()
-
-        return record.score
+        return compute_schedule(self, id, _generate_minimize_objective)

@@ -26,7 +26,7 @@ _talks = \
 {% for talk in s.talks %}
     <div>
         {% set style = talk.pclass.make_CSS_style() %}
-        <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }} &ndash; {{ talk.project.name }}</span>
+        <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }} &ndash; {{ talk.project.name }} ({{ talk.supervisor.user.name }})</span>
     </div>
 {% endfor %}
 """

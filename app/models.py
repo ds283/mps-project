@@ -6235,6 +6235,11 @@ class ScheduleAttempt(db.Model, PuLPMixin):
             .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc()).all()
 
 
+    @property
+    def is_valid(self):
+        return False
+
+
 class ScheduleSlot(db.Model):
     """
     Model a single slot in a schedule

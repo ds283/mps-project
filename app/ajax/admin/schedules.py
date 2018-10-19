@@ -103,6 +103,7 @@ _info = \
 
 _menu = \
 """
+{% set valid = s.is_valid %}
 <div class="dropdown">
     <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
@@ -133,9 +134,18 @@ _menu = \
                         <i class="fa fa-pencil"></i> Rename
                     </a>
                 </li>
+                {% set disabled = valid %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('admin.adjust_assessment_schedule', id=s.id) }}"{% endif %}>
+                        <i class="fa fa-wrench"></i> Re-apply constraints
+                    </a>
+                </li>
             {% else %}
                 <li class="disabled">
                     <a><i class="fa fa-pencil"></i> Rename</a>
+                </li>
+                <li class="disabled">
+                    <a><i class="fa fa-wrench"></i> Re-apply constraints
                 </li>
             {% endif %}
 

@@ -209,21 +209,23 @@ def _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots, 
         k = reverse_slot_dict[(slot.session_id, slot.room_id)]
 
         for talk in slot.talks:
-            i = talk_to_number[talk.id]
-            X[(i,k)] = 1
+            if talk.id in talk_to_number:                   # key might be missing if this talk has been removed; is so, just ignore
+                i = talk_to_number[talk.id]
+                X[(i, k)] = 1
 
         for assessor in slot.assessors:
-            j = assessor_to_number[assessor.id]
-            Y[(j,k)] = 1
+            if assessor.id in assessor_to_number:           # key might be missing if this assessor has been removed; if so, just ignore
+                j = assessor_to_number[assessor.id]
+                Y[(j, k)] = 1
 
     for k in range(number_slots):
         for i in range(number_talks):
-            if (i,k) not in X:
-                X[(i,k)] = 0
+            if (i, k) not in X:
+                X[(i, k)] = 0
 
         for j in range(number_assessors):
-            if (j,k) not in Y:
-                Y[(j,k)] = 0
+            if (j, k) not in Y:
+                Y[(j, k)] = 0
 
     return X, Y
 
@@ -439,9 +441,9 @@ def _execute(self, record, prob, X, Y, create_time, number_talks, number_assesso
 
     with Timer() as solve_time:
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
-            output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=600, fracGap=0.01))
+            output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=600, fracGap=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
-            output = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=600, fracGap=0.01))
+            output = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=600, fracGap=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
             output = prob.solve(solvers.GLPK_CMD())
         else:

@@ -3728,7 +3728,7 @@ def duplicate_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be edited because it belongs to a previous year.', 'info')
         return redirect(request.referrer)
 
     if not record.finished:
@@ -3752,7 +3752,7 @@ def duplicate_match(id):
 
     if suffix >= 100:
         flash('Can not duplicate match "{name}" because a new unique tag could not '
-              'be generated'.format(name=record.name), 'error')
+              'be generated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
     # hand off duplicate job to asynchronous queue
@@ -4950,6 +4950,29 @@ def assessment_schedules_ajax(id):
     return ajax.admin.assessment_schedules_data(data.scheduling_attempts)
 
 
+def _validate_number_slots(assessment, max_group_size):
+    # perform absolute basic validation, to check that there are enough dates available
+    # with the specified maximum group size
+    available_slots = assessment.number_slots
+    required_slots = 0
+
+    for period in assessment.submission_periods:
+        projects = period.number_projects
+        p, r = divmod(projects, max_group_size)
+
+        # whatever strategy we choose to deal with the leftover students in the remainder r,
+        # we are always going to require *at least* p+1 slots
+        required_slots += p + 1
+
+    if required_slots > available_slots:
+        flash('Can not construct a schedule. The minimum possible number of slots ({min}) exceeds the '
+              'available number ({avail}), so the scheduling problem is infeasible. Please increase the number '
+              'of rooms, or dates, or both.'.format(min=required_slots, avail=available_slots), 'error')
+        return False
+
+    return True
+
+
 @admin.route('/create_assessment_schedule/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
 def create_assessment_schedule(id):
@@ -4974,33 +4997,14 @@ def create_assessment_schedule(id):
 
     if not data.is_valid:
         flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
-              'Correct any indicated errors before attempting to try again.')
+              'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(request.referrer)
 
     NewScheduleForm = NewScheduleFormFactory(data)
     form = NewScheduleForm(request.form)
 
     if form.validate_on_submit():
-        # perform absolute basic validation, to check that there are enough dates available
-        # with the specified maximum group size
-        available_slots = data.number_slots
-        required_slots = 0
-
-        max_size = form.max_group_size.data
-
-        for period in data.submission_periods:
-            projects = period.number_projects
-            p, r = divmod(projects, max_size)
-
-            # whatever strategy we choose to deal with the leftover students in the remainder r,
-            # we are always going to require *at least* p+1 slots
-            required_slots += p+1
-
-        if required_slots > available_slots:
-            flash('Can not construct a schedule. The minimum possible number of slots ({min}) exceeds the '
-                  'available number ({avail}), so the scheduling problem is infeasible. Please increase the number '
-                  'of rooms, or dates, or both.'.format(min=required_slots, avail=available_slots), 'error')
-        else:
+        if _validate_number_slots(data, form.max_group_size.data):
             uuid = register_task('Schedule job "{name}"'.format(name=form.name.data),
                                  owner=current_user, description="Automated assessment scheduling task")
 
@@ -5034,6 +5038,83 @@ def create_assessment_schedule(id):
 
     return render_template('admin/presentations/scheduling/create.html', pane='create', info=matches, form=form,
                            assessment=data)
+
+
+@admin.route('/adjust_assessment_schedule/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def adjust_assessment_schedule(id):
+    """
+    Create a new schedule associated with a given assessment
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    old_schedule = ScheduleAttempt.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(old_schedule.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not old_schedule.owner.availability_closed:
+        flash('It is only possible to adjust a schedule once collection of faculty availabilities is closed.',
+              'info')
+        return redirect(request.referrer)
+
+    if not old_schedule.owner.is_valid:
+        flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
+              'Correct any indicated errors before attempting to try again.', 'info')
+        return redirect(request.referrer)
+
+    if old_schedule.is_valid:
+        flash('This schedule does not contain any validation errors, so does not require adjustment.', 'info')
+        return redirect(request.referrer)
+
+    if _validate_number_slots(old_schedule.owner, old_schedule.max_group_size):
+        # find name for adjusted schedule
+        suffix = 2
+        while suffix < 100:
+            new_name = '{name} #{suffix}'.format(name=old_schedule.name, suffix=suffix)
+
+            if ScheduleAttempt.query.filter_by(name=new_name, owner_id=old_schedule.owner_id).first() is None:
+                break
+
+            suffix += 1
+
+        if suffix > 100:
+            flash('Can not adjust schedule "{name}" because a new unique tag could not '
+                  'be generated.'.format(name=old_schedule.name), 'error')
+            return redirect(request.referrer)
+
+        uuid = register_task('Schedule job "{name}"'.format(name=new_name),
+                             owner=current_user, description="Automated assessment scheduling task")
+
+        new_schedule = ScheduleAttempt(owner_id=old_schedule.owner_id,
+                                       name=new_name,
+                                       celery_id=uuid,
+                                       finished=False,
+                                       outcome=None,
+                                       published=False,
+                                       construct_time=None,
+                                       compute_time=None,
+                                       max_group_size=old_schedule.max_group_size,
+                                       solver=old_schedule.solver,
+                                       creation_timestamp=datetime.now(),
+                                       creator_id=current_user.id,
+                                       last_edit_timestamp=None,
+                                       last_edit_id=None,
+                                       score=None)
+
+        db.session.add(new_schedule)
+        db.session.commit()
+
+        celery = current_app.extensions['celery']
+        schedule_task = celery.tasks['app.tasks.scheduling.recompute_schedule']
+
+        schedule_task.apply_async(args=(new_schedule.id, old_schedule.id,), task_id=uuid)
+
+    return redirect(url_for('admin.assessment_schedules', id=old_schedule.owner.id))
 
 
 @admin.route('/terminate_schedule/<int:id>')

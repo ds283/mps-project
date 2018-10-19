@@ -96,7 +96,15 @@ _name = \
 
 _info = \
 """
-<span class="label label-default">Max group size {{ s.max_group_size }}</span>
+<span class="label label-info">Max group size {{ s.max_group_size }}</span>
+{% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
+    {% set value = s.number_sessions %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
+    <span class="label label-info">Uses {{ value }} session{{ pl }}</span>
+    {% set value = s.number_rooms %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
+    <span class="label label-info">Uses {{ value }} room{{ pl }}</span>
+    {% set value = s.number_buildings %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
+    <span class="label label-info">Uses {{ value }} building{{ pl }}</span>
+{% endif %}
 <p><p>
 <span class="label label-success">Solver {{ s.solver_name }}</span>
 """

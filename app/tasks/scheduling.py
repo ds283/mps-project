@@ -9,20 +9,17 @@
 #
 
 from ..database import db
-from ..models import TaskRecord, ScheduleAttempt, SubmissionPeriodRecord, SubmissionRecord
+from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot
 
 from ..shared.sqlalchemy import get_count
 from ..task_queue import progress_update
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from celery import group, chain
-from celery.exceptions import Ignore
-
 import pulp
 import pulp.solvers as solvers
 import itertools
-from datetime import datetime
+from functools import partial
 
 from ..shared.timer import Timer
 
@@ -150,9 +147,9 @@ def _generate_minimize_objective(X, Y, S, number_talks, number_assessors, number
     return objective
 
 
-def _generate_reschedule_objective(X, Y, S, number_talks, number_assessors, number_slots, Xold, Yold):
+def _generate_reschedule_objective(oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots):
     """
-    Generate an objective function that tries to produce a feasible schedule matching Xold, Yold
+    Generate an objective function that tries to produce a feasible schedule matching oldX, oldY
     as closely as possible
     :param X:
     :param Y:
@@ -166,14 +163,14 @@ def _generate_reschedule_objective(X, Y, S, number_talks, number_assessors, numb
     # generate objective function
     objective = 0
 
-    # ask optimizer to choose X and Y values that match Xold, Yold as closely as possible.
+    # ask optimizer to choose X and Y values that match oldX, oldY as closely as possible.
     # recall that we solve a *minimization* problem, so the objective function should
     # count the number of *differences*
 
     for i in range(number_talks):
         for j in range(number_slots):
             idx = (i,j)
-            if Xold[idx] == 0:
+            if oldX[idx] == 0:
                 objective += X[idx]
             else:
                 objective += 1 - X[idx]
@@ -181,12 +178,54 @@ def _generate_reschedule_objective(X, Y, S, number_talks, number_assessors, numb
     for i in range(number_assessors):
         for j in range(number_slots):
             idx = (i,j)
-            if Yold[idx] == 0:
+            if oldY[idx] == 0:
                 objective += Y[idx]
             else:
                 objective += 1 - Y[idx]
 
     return objective
+
+
+def _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots, talk_to_number, assessor_to_number,
+                    slot_dict):
+    try:
+        record = db.session.query(ScheduleAttempt).filter_by(id=old_id).first()
+    except SQLAlchemyError:
+        raise self.retry()
+
+    if record is None:
+        self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+        raise self.retry()
+
+    X = {}
+    Y = {}
+
+    reverse_slot_dict = {}
+    for number in slot_dict:
+        slot = slot_dict[number]
+        reverse_slot_dict[(slot.session_id, slot.room_id)] = number
+
+    for slot in record.slots:
+        k = reverse_slot_dict[(slot.session_id, slot.room_id)]
+
+        for talk in slot.talks:
+            i = talk_to_number[talk.id]
+            X[(i,k)] = 1
+
+        for assessor in slot.assessors:
+            j = assessor_to_number[assessor.id]
+            Y[(j,k)] = 1
+
+    for k in range(number_slots):
+        for i in range(number_talks):
+            if (i,k) not in X:
+                X[(i,k)] = 0
+
+        for j in range(number_assessors):
+            if (j,k) not in Y:
+                Y[(j,k)] = 0
+
+    return X, Y
 
 
 def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
@@ -352,7 +391,7 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
     record.slots = store_slots
 
 
-def compute_schedule(self, id, objective_generator):
+def _initialize(self, id):
     self.update_state(state='STARTED', meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
 
     try:
@@ -362,7 +401,17 @@ def compute_schedule(self, id, objective_generator):
 
     if record is None:
         self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
-        return
+        raise self.retry()
+
+    # add database records for each available slot
+    for sess in record.owner.sessions:
+        for room in sess.rooms:
+            slot = ScheduleSlot(owner_id=record.id,
+                                session_id=sess.id,
+                                room_id=room.id)
+            db.session.add(slot)
+
+    db.session.commit()
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
@@ -377,15 +426,14 @@ def compute_schedule(self, id, objective_generator):
     except SQLAlchemyError:
         raise self.retry()
 
-    progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
-                    autocommit=True)
+    return number_talks, number_assessors, number_slots, \
+           talk_to_number, assessor_to_number, slot_to_number, \
+           number_to_talk, number_to_assessor, number_to_slot, \
+           talk_dict, assessor_dict, slot_dict, A, record
 
-    with Timer() as create_time:
-        prob, X, Y = _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
-                                          assessor_to_number,
-                                          talk_dict, assessor_dict, slot_dict,
-                                          objective_generator)
 
+def _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+             talk_dict, assessor_dict, slot_dict):
     progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
                     autocommit=True)
 
@@ -446,4 +494,42 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def create_schedule(self, id):
-        return compute_schedule(self, id, _generate_minimize_objective)
+        number_talks, number_assessors, number_slots, \
+        talk_to_number, assessor_to_number, slot_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, \
+        talk_dict, assessor_dict, slot_dict, A, record = _initialize(self, id)
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                        autocommit=True)
+
+        with Timer() as create_time:
+            prob, X, Y = _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
+                                              assessor_to_number,
+                                              talk_dict, assessor_dict, slot_dict,
+                                              _generate_minimize_objective)
+
+        return _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+                        talk_dict, assessor_dict, slot_dict)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def recompute_schedule(self, new_id, old_id):
+        number_talks, number_assessors, number_slots, \
+        talk_to_number, assessor_to_number, slot_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, \
+        talk_dict, assessor_dict, slot_dict, A, record = _initialize(self, new_id)
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                        autocommit=True)
+
+        oldX, oldY = _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots,
+                                     talk_to_number, assessor_to_number, slot_dict)
+
+        with Timer() as create_time:
+            prob, X, Y = _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
+                                              assessor_to_number,
+                                              talk_dict, assessor_dict, slot_dict,
+                                              partial(_generate_reschedule_objective, oldX, oldY))
+
+        return _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+                        talk_dict, assessor_dict, slot_dict)

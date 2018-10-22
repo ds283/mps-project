@@ -5012,7 +5012,7 @@ def assessment_schedules(id):
               'info')
         return redirect(request.referrer)
 
-    if not data.is_valid:
+    if not data.is_valid and len(data.errors) > 0:
         flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.')
         return redirect(request.referrer)
@@ -5042,7 +5042,7 @@ def assessment_schedules_ajax(id):
     if not data.availability_closed:
         return jsonify({})
 
-    if not data.is_valid:
+    if not data.is_valid and len(data.errors) > 0:
         return jsonify({})
 
     return ajax.admin.assessment_schedules_data(data.scheduling_attempts)
@@ -5093,7 +5093,7 @@ def create_assessment_schedule(id):
               'info')
         return redirect(request.referrer)
 
-    if not data.is_valid:
+    if not data.is_valid and len(data.errors) > 0:
         flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(request.referrer)

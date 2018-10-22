@@ -107,6 +107,47 @@ _info = \
 {% endif %}
 <p><p>
 <span class="label label-success">Solver {{ s.solver_name }}</span>
+{% if not s.is_valid %}
+    <p></p>
+    {% set errors = s.errors %}
+    {% set warnings = s.warnings %}
+    {% if errors|length == 1 %}
+        <span class="label label-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="label label-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="label label-success">0 errors</span>
+    {% endif %}
+    {% if warnings|length == 1 %}
+        <span class="label label-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="label label-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="label label-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="has-error">
+            {% for item in errors %}
+                {% if loop.index <= 10 %}
+                    <p class="help-block">{{ item }}</p>
+                {% elif loop.index == 11 %}
+                    <p class="help-block">...</p>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="has-error">
+            {% for item in warnings %}
+                {% if loop.index <= 10 %}
+                    <p class="help-block">Warning: {{ item }}</p>
+                {% elif loop.index == 11 %}
+                    <p class="help-block">...</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}
 """
 
 _menu = \
@@ -145,7 +186,7 @@ _menu = \
                 {% set disabled = valid %}
                 <li {% if disabled %}class="disabled"{% endif %}>
                     <a {% if not disabled %}href="{{ url_for('admin.adjust_assessment_schedule', id=s.id) }}"{% endif %}>
-                        <i class="fa fa-wrench"></i> Re-apply constraints
+                        <i class="fa fa-wrench"></i> Adjust to constraints
                     </a>
                 </li>
             {% else %}
@@ -153,7 +194,7 @@ _menu = \
                     <a><i class="fa fa-pencil"></i> Rename</a>
                 </li>
                 <li class="disabled">
-                    <a><i class="fa fa-wrench"></i> Re-apply constraints
+                    <a><i class="fa fa-wrench"></i> Adjust to constraints
                 </li>
             {% endif %}
 

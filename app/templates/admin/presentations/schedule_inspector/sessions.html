@@ -53,7 +53,7 @@
     {% endif %}
 
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Sessions view of schedule <strong>{{ record.name }}</strong></div>
+        <div class="panel-heading">Sessions view of schedule <strong>{{ record.name }}</strong> for assessment <strong>{{ record.owner.name }}</strong></div>
         <div class="panel-body">
             {% if pclasses and pclasses is not none and pclasses|length > 1 %}
                 <div class="well">

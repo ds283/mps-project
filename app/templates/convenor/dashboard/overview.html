@@ -50,6 +50,17 @@
             {# SELECTING #}
             <div class="well">
                 {# provide summary #}
+
+                {% if config.has_published_schedules %}
+                    <div class="panel panel-danger">
+                        <div class="panel-heading">Proposed assessment schedules are available to view</div>
+                        <div class="panel-body">
+                            <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
+                            <a href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
+                        </div>
+                    </div>
+                {% endif %}
+
                 {% set state = config.selector_lifecycle %}
                 {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
 

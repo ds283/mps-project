@@ -2160,9 +2160,31 @@ class ProjectClassConfig(db.Model):
 
 
     @property
+    def published_matches(self):
+        return self.matching_attempts.filter_by(published=True)
+
+
+    @property
     def has_published_matches(self):
-        query = self.matching_attempts.filter_by(published=True)
-        return get_count(query) > 0
+        return get_count(self.published_matches) > 0
+
+
+    @property
+    def published_schedules(self):
+        # determine whether any of our periods have published schedules
+        query = db.session.query(ScheduleAttempt) \
+            .filter_by(published=True) \
+            .join(PresentationAssessment, PresentationAssessment.id == ScheduleAttempt.owner_id) \
+            .join(assessment_to_periods, assessment_to_periods.c.assessment_id == PresentationAssessment.id) \
+            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == assessment_to_periods.c.period_id) \
+            .filter(SubmissionPeriodRecord.config_id == self.id)
+
+        return query
+
+
+    @property
+    def has_published_schedules(self):
+        return get_count(self.published_schedules) > 0
 
 
     def get_period(self, n):
@@ -5809,6 +5831,11 @@ class PresentationAssessment(db.Model):
 
     def not_attending(self, record_id):
         return get_count(self.cant_attend.filter_by(id=record_id)) > 0
+
+
+    @property
+    def has_published_schedules(self):
+        return get_count(self.scheduling_attempts.filter_by(published=True)) > 0
 
 
 @listens_for(PresentationAssessment, 'before_update')

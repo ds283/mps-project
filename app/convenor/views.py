@@ -3193,7 +3193,6 @@ def clear_group_filters(id):
 @convenor.route('/add_skill_filter/<int:id>/<int:gid>')
 @roles_accepted('faculty', 'admin', 'root')
 def add_skill_filter(id, gid):
-
     skill = SkillGroup.query.get_or_404(gid)
 
     # id is a FilterRecord
@@ -3213,7 +3212,6 @@ def add_skill_filter(id, gid):
 @convenor.route('/remove_skill_filter/<int:id>/<int:gid>')
 @roles_accepted('faculty', 'admin', 'root')
 def remove_skill_filter(id, gid):
-
     skill = SkillGroup.query.get_or_404(gid)
 
     # id is a FilterRecord
@@ -3233,7 +3231,6 @@ def remove_skill_filter(id, gid):
 @convenor.route('/clear_skill_filters/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def clear_skill_filters(id):
-
     # id is a FilterRecord
     record = FilterRecord.query.get_or_404(id)
 
@@ -3250,7 +3247,6 @@ def clear_skill_filters(id):
 @convenor.route('/set_hint/<int:id>/<int:hint>')
 @roles_accepted('faculty', 'admin', 'root')
 def set_hint(id, hint):
-
     rec = SelectionRecord.query.get_or_404(id)
     config = rec.owner.config
 
@@ -3272,7 +3268,6 @@ def set_hint(id, hint):
 @convenor.route('/hints_list/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def hints_list(id):
-
     # pid is a ProjectClass
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -3302,7 +3297,6 @@ def hints_list(id):
 @convenor.route('/audit_matches/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def audit_matches(pclass_id):
-    
     # pclass_id labels a ProjectClass
     pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -3316,7 +3310,6 @@ def audit_matches(pclass_id):
 @convenor.route('/audit_matches_ajax/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def audit_matches_ajax(pclass_id):
-
     # pclass_id labels a ProjectClass
     pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -3330,9 +3323,45 @@ def audit_matches_ajax(pclass_id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
-    matches = config.matching_attempts.filter_by(published=True).all()
+    matches = config.published_matches.all()
 
-    return ajax.admin.matches_data(matches, text='matching audit dashboard', url=url_for('convenor.audit_matches', pclass_id=pclass_id))
+    return ajax.admin.matches_data(matches, text='matching audit dashboard',
+                                   url=url_for('convenor.audit_matches', pclass_id=pclass_id))
+
+
+@convenor.route('/audit_schedules/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def audit_schedules(pclass_id):
+    # pclass_id labels a ProjectClass
+    pclass = ProjectClass.query.get_or_404(pclass_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    return render_template('convenor/presentations/audit.html', pclass_id=pclass_id)
+
+
+@convenor.route('/audit_schedules_ajax/<int:pclass_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def audit_schedules_ajax(pclass_id):
+    # pclass_id labels a ProjectClass
+    pclass = ProjectClass.query.get_or_404(pclass_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    matches = config.published_schedules.all()
+
+    return ajax.admin.assessment_schedules_data(matches, text='schedule audit dashboard',
+                                                url=url_for('convenor.audit_schedules', pclass_id=pclass_id))
 
 
 @convenor.route('/open_feedback/<int:id>', methods=['GET', 'POST'])

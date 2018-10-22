@@ -5037,7 +5037,8 @@ def assessment_schedules_ajax(id):
     if not data.is_valid and len(data.errors) > 0:
         return jsonify({})
 
-    return ajax.admin.assessment_schedules_data(data.scheduling_attempts)
+    return ajax.admin.assessment_schedules_data(data.scheduling_attempts, text='assessment schedule manager',
+                                                url=url_for('admin.assessment_schedules', id=id))
 
 
 def _validate_number_slots(assessment, max_group_size):
@@ -5346,9 +5347,8 @@ def perform_delete_schedule(id):
 
 
 @admin.route('/rename_schedule/<int:id>', methods=['GET', 'POST'])
-@roles_required('faculty', 'admin', 'root')
+@roles_accepted('faculty', 'admin', 'root')
 def rename_schedule(id):
-
     record = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)

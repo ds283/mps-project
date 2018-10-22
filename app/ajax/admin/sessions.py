@@ -48,6 +48,11 @@ _menu = \
             </a>
         </li>
         <li>
+            <a href="{{ url_for('admin.edit_availabilities', id=s.id) }}">
+                <i class="fa fa-cogs"></i> Edit availabilities...
+            </a>
+        </li>
+        <li>
             <a href="{{ url_for('admin.delete_session', id=s.id) }}">
                 <i class="fa fa-trash"></i> Delete
             </a>

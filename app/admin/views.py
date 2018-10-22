@@ -4600,7 +4600,7 @@ def assessment_availability(id):
     if not validate_assessment(data, current_year=current_year):
         return redirect(request.referrer)
 
-    if not data.is_valid:
+    if not data.is_valid and data.availability_lifecycle < PresentationAssessment.AVAILABILITY_REQUESTED:
         flash('Cannot request availability for an invalid assessment. Correct any validation errors before '
               'attempting to proceed.', 'info')
         return redirect(request.referrer)

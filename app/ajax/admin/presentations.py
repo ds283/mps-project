@@ -112,7 +112,7 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li class="dropdown-header">Operations</li>
         {% set valid = a.is_valid %}
-        {% set disabled = not valid %}
+        {% set disabled = not valid and a.availability_lifecycle < a.AVAILABILITY_REQUESTED %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.assessment_availability', id=a.id) }}"{% endif %}>
                 <i class="fa fa-calendar"></i> Faculty availability...

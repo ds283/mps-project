@@ -5532,13 +5532,37 @@ def _PresentationAssessment_is_valid(id):
     for sess in obj.sessions:
         # check whether each session validates individually
         if not sess.is_valid:
-            errors[('basic', sess.id)] = \
+            errors[('sessions', sess.id)] = \
                 '{date}: {err}'.format(date=sess.short_date_as_string, err=sess.error)
 
-    # CONSTRAINT 2 - number of assessors should be nonzero
-    if obj.number_assessors is None or obj.number_assessors == 0:
-        errors[('settings', 0)] = \
-            'Number of assessors is zero or unset'
+
+    # CONSTRAINT 2 - schedules should satisfy their own consistency rules
+    # if any schedule exists which validates, don't raise concer
+    if all([not s.is_valid for s in obj.scheduling_attempts]):
+        for schedule in obj.scheduling_attempts:
+            # check whether each schedule validates individually
+            if not schedule.is_valid:
+                warnings[('scheduling', schedule.id)] = \
+                    'Schedule "{name}" has validation errors'.format(name=schedule.name)
+
+
+    # CONSTRAINT 3 - if availability requested, number of assessors should be nonzero
+    lifecycle = obj.availability_lifecycle
+    if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED \
+            and (obj.number_assessors is None or obj.number_assessors == 0):
+        errors[('presentations', 0)] = 'Number of attached assessors is zero or unset'
+
+
+    # CONSTRAINT 4 - if availabilty requested, number of talks should be nonzero
+    if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED \
+            and (obj.number_talks is None or obj.number_talks == 0):
+        errors[('presentations', 1)] = 'Number of attached presentations is zero or unset'
+
+
+    # CONSTRAINT 5 - if availability requested, number of talks should be larger than number not attending
+    if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED \
+            and (obj.number_not_attending > obj.number_talks):
+        errors[('presentations', 2)] = 'Number of non-attending students exceeds or equals total number'
 
     if len(errors) > 0 or len(warnings) > 0:
         return False, errors, warnings
@@ -6153,6 +6177,38 @@ class Room(db.Model):
         return self.building.active
 
 
+@cache.memoize()
+def _ScheduleAttempt_is_valid(id):
+    obj = db.session.query(ScheduleAttempt).filter_by(id=id).one()
+
+    errors = {}
+    warnings = {}
+
+    # CONSTRAINT 1 - slots should satisfy their own consistency rules
+    for slot in obj.slots:
+        # check whether each slot validates individually
+        if not slot.is_valid:
+            for n, e in enumerate(slot.errors):
+                errors[('slots', (slot.id, n))] = \
+                    '{date} {session} {room}: {err}'.format(date=slot.short_date_as_string,
+                                                            session=slot.session_type_string,
+                                                            room=slot.room_full_name, err=e)
+
+            for n, w in enumerate(slot.warnings):
+                warnings[('slots', (slot.id, n))] = \
+                    '{date} {session} {room}: {warn}'.format(date=slot.short_date_as_string,
+                                                            session=slot.session_type_string,
+                                                            room=slot.room_full_name, warn=w)
+
+
+    # CONSTRAINT 2. EVERY TALK SHOULD HAVE BEEN SCHEDULED IN EXACTLY ONE SLOT
+
+    if len(errors) > 0 or len(warnings) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
+
+
 class ScheduleAttempt(db.Model, PuLPMixin):
     """
     Model configuration data for an assessment scheduling attempt
@@ -6209,6 +6265,21 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def _init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
 
 
     @property
@@ -6287,7 +6358,135 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     @property
     def is_valid(self):
-        return False
+        """
+        Perform validation
+        :return:
+        """
+
+        flag, self._errors, self._warnings = _ScheduleAttempt_is_valid(self.id)
+        self._validated = True
+
+        return flag
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
+
+
+@listens_for(ScheduleAttempt, 'before_update')
+def _ScheduleAttempt_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
+
+
+@listens_for(ScheduleAttempt, 'before_insert')
+def _ScheduleAttempt_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
+
+
+@listens_for(ScheduleAttempt, 'before_delete')
+def _ScheduleAttempt_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
+
+
+@cache.memoize()
+def _ScheduleSlot_is_valid(id):
+    obj = db.session.query(ScheduleSlot).filter_by(id=id).one()
+
+    errors = {}
+    warnings = {}
+
+
+    # CONSTRAINT 1. NUMBER OF TALKS SHOULD BE LESS THAN PRESCRIBED MAXIMUM
+    num_talks = get_count(obj.talks)
+    if num_talks > obj.owner.max_group_size:
+        errors[('basic', 0)] = 'Too many talks scheduled in this slot ' \
+                               '(scheduled={sch}, max={max})'.format(sch=num_talks, max=obj.owner.max_group_size)
+
+
+    # CONSTRAINT 2. NUMBER OF ASSESSORS SHOULD BE EQUAL TO PRESCRIBED NUMBER
+    num_assessors = get_count(obj.assessors)
+    if num_assessors > obj.owner.owner.number_assessors:
+        errors[('basic', 1)] = 'Too many assessors scheduled in this slot ' \
+                               '(scheduled={sch}, required={num})'.format(sch=num_assessors,
+                                                                          num=obj.owner.owner.number_assessors)
+    if num_assessors < obj.owner.owner.number_assessors:
+        errors[('basic', 1)] = 'Too few assessors scheduled in this slot ' \
+                               '(scheduled={sch}, required={num})'.format(sch=num_assessors,
+                                                                          num=obj.owner.owner.number_assessors)
+
+
+    # CONSTRAINT 3. ASSESSORS SHOULD ALL BE AVAILABLE FOR THIS SESSION
+    for assessor in obj.assessors:
+        if not assessor in obj.session.faculty:
+            errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is not ' \
+                                               'available'.format(name=assessor.user.name)
+
+
+    # CONSTRAINT 4. PROJECTS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
+    for talk in obj.talks:
+        if obj.owner.owner.not_attending(talk.id):
+            errors[('talks', talk.id)] = 'Presentation for "{name}" is scheduled in this slot, but this student ' \
+                                         'is not attending'.format(name=talk.owner.student.user.name)
+
+
+    # CONSTRAINT 5. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN THE TWO PLACES AT THE SAME TIME
+    for assessor in obj.assessors:
+        q = db.session.query(ScheduleSlot) \
+            .filter(ScheduleSlot.id != obj.id,
+                    ScheduleSlot.owner_id == obj.owner_id,
+                    ScheduleSlot.session_id == obj.session_id,
+                    ScheduleSlot.assessors.any(id=assessor.id))
+        count = get_count(q)
+
+        if count > 0:
+            for sess in q.all():
+                errors[('assessors',
+                        (assessor.id, sess.id))] = 'Assessor "{name}" is clashed with session {date} {session} ' \
+                                                   '{room}'.format(name=assessor.user.name,
+                                                                   date=sess.short_date_as_string,
+                                                                   session=sess.session_type_as_string,
+                                                                   room=sess.room_full_name)
+
+
+    # CONSTRAINT 6. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
+    for talk in obj.talks:
+        q = db.session.query(ScheduleSlot) \
+            .filter(ScheduleSlot.id != obj.id,
+                    ScheduleSlot.owner_id == obj.owner_id,
+                    ScheduleSlot.session_id == obj.session_id,
+                    ScheduleSlot.talks.any(id=talk.id))
+        count = get_count(q)
+
+        if count > 0:
+            for sess in q.all():
+                errors[('assessors',
+                        (talk.id, sess.id))] = '"{name}" is also scheduled in session {date} {session} ' \
+                                               '{room}'.format(name=talk.owner.student.user.name,
+                                                               date=sess.short_date_as_string,
+                                                               session=sess.session_type_as_string,
+                                                               room=sess.room_full_name)
+
+
+    if len(errors) > 0 or len(warnings) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
 
 
 class ScheduleSlot(db.Model):
@@ -6322,12 +6521,98 @@ class ScheduleSlot(db.Model):
     talks = db.relationship('SubmissionRecord', secondary=submitter_to_slots, lazy='dynamic')
 
 
+    def _init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @property
+    def is_valid(self):
+        """
+        Perform validation
+        :return:
+        """
+
+        flag, self._errors, self._warnings = _ScheduleSlot_is_valid(self.id)
+        self._validated = True
+
+        return flag
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
+
+
     def has_pclass(self, pclass_id):
         q = self.talks \
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id) \
             .filter(ProjectClassConfig.pclass_id == pclass_id)
         return get_count(q) > 0
+
+
+    @property
+    def date_as_string(self):
+        return self.session.date_as_string
+
+
+    @property
+    def short_date_as_string(self):
+        return self.session.short_date_as_string
+
+
+    @property
+    def session_type_string(self):
+        return self.session.session_type_string
+
+
+    @property
+    def room_full_name(self):
+        return self.room.full_name
+
+
+@listens_for(ScheduleSlot, 'before_update')
+def _ScheduleSlot_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+
+
+@listens_for(ScheduleSlot, 'before_insert')
+def _ScheduleSlot_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+
+
+@listens_for(ScheduleSlot, 'before_delete')
+def _ScheduleSlot_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
+        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 # ############################

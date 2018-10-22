@@ -149,7 +149,7 @@ _info = \
     <div class="has-error">
         {% for item in warnings %}
             {% if loop.index <= 10 %}
-                <p class="help-block">{{ item }}</p>
+                <p class="help-block">Warning: {{ item }}</p>
             {% elif loop.index == 11 %}
                 <p class="help-block">...</p>
             {% endif %}

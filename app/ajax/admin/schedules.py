@@ -69,7 +69,7 @@ _score = \
 _name = \
 """
     {% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
-        <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text='assessment schedule manager', url=url_for('admin.assessment_schedules', id=s.owner.id)) }}">{{ s.name }}</a>
+        <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
         {% if not s.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
@@ -162,7 +162,7 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         {% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
             <li>
-                <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text='assessment schedule manager', url=url_for('admin.assessment_schedules', id=s.owner.id)) }}">
+                <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">
                     <i class="fa fa-search"></i> Inspect schedule
                 </a>
             </li>
@@ -179,7 +179,7 @@ _menu = \
         {% else %}
             {% if s.outcome == s.OUTCOME_OPTIMAL %}
                 <li>
-                    <a href="{{ url_for('admin.rename_schedule', id=s.id) }}">
+                    <a href="{{ url_for('admin.rename_schedule', id=s.id, url=url) }}">
                         <i class="fa fa-pencil"></i> Rename
                     </a>
                 </li>
@@ -234,14 +234,42 @@ _menu = \
 """
 
 
-def assessment_schedules_data(schedules):
+_periods = \
+"""
+{{ a.name }}
+<p></p>
+{% for period in a.submission_periods %}
+    <div style="display: inline-block;">
+        {{ period.label|safe }}
+        {% set num = period.number_projects %}
+        {% set pl = 's' %}
+        {% if num == 1 %}{% set pl = '' %}{% endif %}
+        <span class="label label-info">{{ num }} project{{ pl }}</span>
+    </div>
+{% endfor %}
+{% set total = a.number_talks %}
+{% set missing = a.number_not_attending %}
+{% if total > 0 or missing > 0 %}
+    <p></p>
+    {% set pl = 's' %}{% if total == 1 %}{% set p = '' %}{% endif %}
+    <span class="label label-primary">{{ total }} presentation{{ pl }}</span>
+    {% if missing > 0 %}
+        <span class="label label-warning">{{ missing }} not attending</span>
+    {% else %}
+        <span class="label label-success">{{ missing }} not attending</span>
+    {% endif %}
+{% endif %}
+"""
+
+
+def assessment_schedules_data(schedules, text, url):
     """
     Build AJAX JSON payload
     :param schedules: 
     :return: 
     """
     
-    data = [{'name': render_template_string(_name, s=s),
+    data = [{'name': render_template_string(_name, s=s, text=text, url=url),
              'status': render_template_string(_status, s=s),
              'score': {
                  'display': render_template_string(_score, s=s),
@@ -249,6 +277,7 @@ def assessment_schedules_data(schedules):
              },
              'timestamp': render_template_string(_timestamp, s=s),
              'info': render_template_string(_info, s=s),
-             'menu': render_template_string(_menu, s=s)} for s in schedules]
+             'periods': render_template_string(_periods, a=s.owner),
+             'menu': render_template_string(_menu, s=s, text=text, url=url)} for s in schedules]
 
     return jsonify(data)

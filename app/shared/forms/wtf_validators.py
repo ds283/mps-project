@@ -324,7 +324,7 @@ def unique_or_original_schedule_name(assessment_id, form, field):
     if field.data == form.schedule.name:
         return
 
-    return globally_unique_assessment_name(assessment_id, form, field)
+    return globally_unique_schedule_name(assessment_id, form, field)
 
 
 def valid_json(form, field):

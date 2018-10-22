@@ -4946,10 +4946,6 @@ def session_available(f_id, s_id):
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
         return redirect(request.referrer)
 
-    if data.owner.availability_closed:
-        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
-        return redirect(request.referrer)
-
     fac = FacultyData.query.get_or_404(f_id)
 
     present = data.in_session(fac.id)
@@ -4974,10 +4970,6 @@ def session_unavailable(f_id, s_id):
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
-        return redirect(request.referrer)
-
-    if data.owner.availability_closed:
-        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)

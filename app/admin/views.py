@@ -4892,6 +4892,104 @@ def delete_session(id):
     return redirect(request.referrer)
 
 
+@admin.route('/edit_availabilities/<int:id>')
+@roles_required('root')
+def edit_availabilities(id):
+    """
+    Edit/inspect faculty availabilities for an assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    sess = PresentationSession.query.get_or_404(id)
+
+    if not validate_assessment(sess.owner):
+        return redirect(request.referrer)
+
+    return render_template('admin/presentations/edit_availabilities.html', assessment=sess.owner, sess=sess)
+
+
+@admin.route('/edit_availabilities_ajax/<int:id>')
+@roles_required('root')
+def edit_availabilities_ajax(id):
+    """
+    AJAX data entrypoint for edit/inspect faculty availability viee
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    sess = PresentationSession.query.get_or_404(id)
+
+    if not validate_assessment(sess.owner):
+        return jsonify({})
+
+    return ajax.admin.edit_availability_data(sess.owner, sess)
+
+
+@admin.route('/session_available/<int:f_id>/<int:s_id>')
+@roles_accepted('root')
+def session_available(f_id, s_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationSession.query.get_or_404(s_id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.owner.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.owner.availability_closed:
+        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
+        return redirect(request.referrer)
+
+    fac = FacultyData.query.get_or_404(f_id)
+
+    present = data.in_session(fac.id)
+    if not present:
+        data.faculty.append(fac)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/session_unavailable/<int:f_id>/<int:s_id>')
+@roles_accepted('root')
+def session_unavailable(f_id, s_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationSession.query.get_or_404(s_id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.owner.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.owner.availability_closed:
+        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
+        return redirect(request.referrer)
+
+    fac = FacultyData.query.get_or_404(f_id)
+
+    present = data.in_session(fac.id)
+    if present:
+        data.faculty.remove(fac)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @admin.route('/assessment_schedules/<int:id>')
 @roles_required('root')
 def assessment_schedules(id):
@@ -5510,7 +5608,7 @@ def assessment_manage_attendees(id):
 
     pclasses = data.available_pclasses
 
-    return render_template('admin/presentations/manage_attendees.html', assessment=data, pclass_filter=pclass_filter,
+    return render_template('admin/presentations/edit_availabilities.html', assessment=data, pclass_filter=pclass_filter,
                            attend_filter=attend_filter, pclasses=pclasses)
 
 

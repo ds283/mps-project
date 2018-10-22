@@ -53,7 +53,7 @@
                             </div>
                         </div>
                     {% endfor %}
-                    {% if assessment.is_outstanding(current_user.id) %}
+                    {% if assessment.is_faculty_outstanding(current_user.id) %}
                         <hr class="intro-divider">
                         <p>Please confirm your responses when you are finished. It is still possible to make changes up to the deadline.</p>
                         <a href="{{ url_for('faculty.confirm_availability', id=assessment.id) }}" class="btn btn-primary">Confirm</a>

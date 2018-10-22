@@ -5160,7 +5160,7 @@ def adjust_assessment_schedule(id):
               'info')
         return redirect(request.referrer)
 
-    if not old_schedule.owner.is_valid:
+    if not old_schedule.owner.is_valid and len(old_schedule.owner.errors) > 0:
         flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
         return redirect(request.referrer)

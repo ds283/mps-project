@@ -6596,7 +6596,8 @@ def _ScheduleSlot_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
-        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+        if target.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 @listens_for(ScheduleSlot, 'before_insert')
@@ -6604,7 +6605,8 @@ def _ScheduleSlot_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
-        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+        if target.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 @listens_for(ScheduleSlot, 'before_delete')
@@ -6612,7 +6614,8 @@ def _ScheduleSlot_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
-        cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+        if target.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
 
 
 # ############################

@@ -28,6 +28,15 @@ _name = \
 {% else %}
     <span class="label label-danger">Unknown lifecycle state</span>
 {% endif %}
+{% set sessions = a.number_sessions %}
+{% set pl = 's' %}{% if sessions == 1 %}{% set pl = '' %}{% endif %}
+<span class="label label-info">{{ sessions }} session{{ pl }}</span>
+{% set slots = a.number_slots %}
+{% set pl = 's' %}{% if slots == 1 %}{% set pl = '' %}{% endif %}
+<span class="label label-info">{{ slots }} slot{{ pl }}</span>
+{% set schedules = a.number_schedules %}
+{% set pl = 's' %}{% if schedules == 1 %}{% set pl = '' %}{% endif %}
+<span class="label label-info">{{ schedules }} schedule{{ pl }}</span>
 """
 
 
@@ -42,6 +51,18 @@ _periods = \
         <span class="label label-info">{{ num }} project{{ pl }}</span>
     </div>
 {% endfor %}
+{% set total = a.number_talks %}
+{% set missing = a.number_not_attending %}
+{% if total > 0 or missing > 0 %}
+    <p></p>
+    {% set pl = 's' %}{% if total == 1 %}{% set p = '' %}{% endif %}
+    <span class="label label-primary">{{ total }} presentation{{ pl }}</span>
+    {% if missing > 0 %}
+        <span class="label label-warning">{{ missing }} not attending</span>
+    {% else %}
+        <span class="label label-success">{{ missing }} not attending</span>
+    {% endif %}
+{% endif %}
 """
 
 

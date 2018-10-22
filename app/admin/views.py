@@ -5608,7 +5608,7 @@ def assessment_manage_attendees(id):
 
     pclasses = data.available_pclasses
 
-    return render_template('admin/presentations/edit_availabilities.html', assessment=data, pclass_filter=pclass_filter,
+    return render_template('admin/presentations/manage_attendees.html', assessment=data, pclass_filter=pclass_filter,
                            attend_filter=attend_filter, pclasses=pclasses)
 
 

@@ -5675,8 +5675,28 @@ class PresentationAssessment(db.Model):
 
 
     @property
+    def number_sessions(self):
+        return get_count(self.sessions)
+
+
+    @property
     def number_slots(self):
         return sum([sess.number_rooms for sess in self.sessions])
+
+
+    @property
+    def number_schedules(self):
+        return get_count(self.scheduling_attempts)
+
+
+    @property
+    def number_talks(self):
+        return sum([p.number_projects for p in self.submission_periods])
+
+
+    @property
+    def number_not_attending(self):
+        return get_count(self.cant_attend)
 
 
     @property

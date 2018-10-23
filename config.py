@@ -18,7 +18,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 # website revision number
-revision = '2018.9.1'
+revision = '2018.10.1'
 
 
 class Config(object):

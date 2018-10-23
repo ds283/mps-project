@@ -27,7 +27,7 @@
                                 {% if talk.belongs_to(period) %}
                                     <tr>
                                         <td>
-                                            {{ talk.owner.student.user.name }}
+                                            <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.owner.student.user.name }}</a>
                                         </td>
                                         <td>
                                             <a href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>

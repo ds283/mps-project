@@ -433,7 +433,8 @@ def register_rollover_tasks(celery):
                 db.session.flush()
 
                 for rec in match_records:
-                    sub_record = SubmissionRecord(submission_period=rec.submission_period,
+                    period = config.get_period(rec.submission_period)
+                    sub_record = SubmissionRecord(period_id=period.id,
                                                   retired=False,
                                                   owner_id=student_record.id,
                                                   project_id=rec.project_id,
@@ -498,7 +499,8 @@ def register_rollover_tasks(celery):
                             db.session.flush()
 
                             for rec in prev_record.records:
-                                sub_record = SubmissionRecord(submission_period=rec.submission_period,
+                                period = config.get_period(rec.submission_period)
+                                sub_record = SubmissionRecord(submission_period=period.id,
                                                               retired=False,
                                                               owner_id=student_record.id,
                                                               project_id=rec.project_id,

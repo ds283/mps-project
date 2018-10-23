@@ -6259,6 +6259,9 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     # flag whether this attempt has been published to convenors for comments or editing
     published = db.Column(db.Boolean())
 
+    # flag whether this attempt has been deployed as an official schedule
+    deployed = db.Column(db.Boolean())
+
 
     # CELERY TASK DATA
 

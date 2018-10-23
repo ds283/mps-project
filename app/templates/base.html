@@ -346,7 +346,7 @@
                     <!-- add convenor menu if user is a convenor, or an admin user -->
                     {% if current_user.has_role('admin') or current_user.has_role('root') %}
                         {{ convenor_menu(current_user.all_project_classes.all()) }}
-                    {% elif current_user.has_role('faculty') and current_user.faculty_data and current_user.faculty_data.is_convenor %}
+                    {% elif current_user.has_role('faculty') and current_user.faculty_data is not none and current_user.faculty_data.is_convenor %}
                         {{ convenor_menu(current_user.faculty_data.convenor_list) }}
                     {% endif %}
 

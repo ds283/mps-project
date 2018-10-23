@@ -291,8 +291,12 @@
 
 {% block navbar %}
     <nav class="navbar
-                {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}
-                    navbar-default
+                {% if current_user.theme is defined %}
+                    {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}
+                        navbar-default
+                    {% else %}
+                        navbar-inverse
+                    {% endif %}
                 {% else %}
                     navbar-inverse
                 {% endif %}

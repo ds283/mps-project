@@ -12,12 +12,16 @@
 
     {%- block styles %}
     <!-- Bootstrap -->
-    {% if current_user.theme == current_user.THEME_DEFAULT %}
-        <link href="{{bootstrap_find_resource('css/bootstrap.css', cdn='default')}}" rel="stylesheet">
-    {% elif current_user.theme == current_user.THEME_FLAT %}
-        <link href="{{bootstrap_find_resource('css/bootstrap.css', cdn='flat')}}" rel="stylesheet">
-    {% elif current_user.theme == current_user.THEME_DARK %}
-        <link href="{{bootstrap_find_resource('css/bootstrap.css', cdn='dark')}}" rel="stylesheet">
+    {% if current_user.theme is defined %}
+        {% if current_user.theme == current_user.THEME_DEFAULT %}
+            <link href="{{bootstrap_find_resource('css/bootstrap.css', cdn='default')}}" rel="stylesheet">
+        {% elif current_user.theme == current_user.THEME_FLAT %}
+            <link href="{{bootstrap_find_resource('css/bootstrap.css', cdn='flat')}}" rel="stylesheet">
+        {% elif current_user.theme == current_user.THEME_DARK %}
+            <link href="{{bootstrap_find_resource('css/bootstrap.css', cdn='dark')}}" rel="stylesheet">
+        {% else %}
+            <link href="{{bootstrap_find_resource('css/bootstrap.css', cdn='default')}}" rel="stylesheet">
+        {% endif %}
     {% else %}
         <link href="{{bootstrap_find_resource('css/bootstrap.css', cdn='default')}}" rel="stylesheet">
     {% endif %}

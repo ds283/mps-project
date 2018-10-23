@@ -42,7 +42,7 @@ def home_dashboard_url():
         return url_for('office.dashboard')
 
     else:
-        return None
+        return '#'
 
 
 

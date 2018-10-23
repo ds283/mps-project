@@ -91,6 +91,9 @@ _name = \
 {% if s.published and current_user.has_role('root') %}
     <span class="label label-primary">Published</span>
 {% endif %}
+{% if s.deployed and current_user.has_role('root') %}
+    <span class="label label-success">Deployed</span>
+{% endif %}
 """
 
 
@@ -221,11 +224,37 @@ _menu = \
                         </a>
                     </li>
                 {% else %}
+                    {% if not s.deployed %}
+                        <li>
+                            <a href="{{ url_for('admin.publish_schedule', id=s.id) }}">
+                                <i class="fa fa-share"></i> Publish to convenors
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="disabled">
+                            <a><i class="fa fa-share"></i> Can't publish</a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                
+                {% if s.deployed %}
                     <li>
-                        <a href="{{ url_for('admin.publish_schedule', id=s.id) }}">
-                            <i class="fa fa-share"></i> Publish to convenors
+                        <a href="{{ url_for('admin.undeploy_schedule', id=s.id) }}">
+                            <i class="fa fa-stop-circle"></i> Undeploy
                         </a>
                     </li>
+                {% else %}
+                    {% if s.owner.is_deployed %}
+                        <li class="disabled">
+                            <a><i class="fa fa-upload"> Can't deploy
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="{{ url_for('admin.deploy_schedule', id=s.id) }}">
+                                <i class="fa fa-upload"></i> Deploy
+                            </a>
+                        </li>
+                    {% endif %}
                 {% endif %}
             {% endif %}            
         {% endif %}        

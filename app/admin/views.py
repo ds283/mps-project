@@ -5383,7 +5383,6 @@ def rename_schedule(id):
 @admin.route('/publish_schedule/<int:id>')
 @roles_required('root')
 def publish_schedule(id):
-
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
@@ -5402,6 +5401,11 @@ def publish_schedule(id):
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
+    if record.deployed:
+        flash('Schedule "{name}" is deployed and is not available to be published.'.format(name=record.name),
+              'info')
+        return redirect(request.referrer)
+
     record.published = True
     db.session.commit()
 
@@ -5411,7 +5415,6 @@ def publish_schedule(id):
 @admin.route('/unpublish_schedule/<int:id>')
 @roles_required('root')
 def unpublish_schedule(id):
-
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
@@ -5431,6 +5434,65 @@ def unpublish_schedule(id):
         return redirect(request.referrer)
 
     record.published = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/deploy_schedule/<int:id>')
+@roles_required('root')
+def deploy_schedule(id):
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if record.owner.is_deployed:
+        flash('The assessment "{name}" already has a deployed schedule. Only one schedule can be '
+              'deployed at a time.'.format(name=record.owner.name), 'info')
+
+    if not record.finished:
+        flash('Schedule "{name}" cannot be deployed until it has '
+              'completed successfully.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for '
+              'deployment.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    record.deployed = True
+    record.published = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/undeploy_schedule/<int:id>')
+@roles_required('root')
+def undeploy_schedule(id):
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Schedule "{name}" cannot be deployed until it has '
+              'completed successfully.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for '
+              'deployment.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    record.deployed = False
     db.session.commit()
 
     return redirect(request.referrer)

@@ -1204,10 +1204,6 @@ def live_project(pid):
     # pid is the id for a LiveProject
     data = LiveProject.query.get_or_404(pid)
 
-    # verify the logged-in user is allowed to view this live project
-    if not validate_edit_project(data):
-        return redirect(request.referrer)
-
     text = request.args.get('text', None)
     url = request.args.get('url', None)
     if url is None:

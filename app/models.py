@@ -836,10 +836,10 @@ class FacultyData(db.Model):
         :return:
         """
 
-        if self.convenor_for is not None and get_count(self.convenor_for) > 0 is not None:
+        if self.convenor_for is not None and get_count(self.convenor_for) > 0:
             return True
 
-        if self.coconvenor_for is not None and get_count(self.coconvenor_for) is not None:
+        if self.coconvenor_for is not None and get_count(self.coconvenor_for) > 0:
             return True
 
         return False

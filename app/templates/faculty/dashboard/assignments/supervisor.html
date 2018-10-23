@@ -53,7 +53,9 @@
                         <td>
                             <div style="text-align: right;" class="pull-right">
                                 {% if not period.feedback_open and not rec.student_engaged %}
-                                    <a href="{{ url_for('faculty.mark_started', id=rec.id) }}" class="btn btn-sm btn-table-block btn-primary">Mark as started</a>
+                                    {% if rec.submission_period <= rec.owner.config.submission_period %}
+                                        <a href="{{ url_for('faculty.mark_started', id=rec.id) }}" class="btn btn-sm btn-table-block btn-primary">Mark as started</a>
+                                    {% endif %}
                                 {% elif (period.feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
                                     <a href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
                                     {% if valid %}

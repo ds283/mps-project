@@ -2225,7 +2225,7 @@ class SubmissionPeriodRecord(db.Model):
     # can be null if not used
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
-    # does this submission period have an associated presentation assessment
+    # does this submission period have an associated presentation assessment?
     has_presentation = db.Column(db.Boolean())
 
     # retired flag, set by rollover code
@@ -3700,6 +3700,43 @@ class SubmittingStudent(db.Model):
                                    SubmissionRecord.student_engaged == False).count() > 0
 
 
+class PresentationFeedback(db.Model):
+    """
+    Collect details of feedback for a student presentation
+    """
+
+    __tablename = 'presentation_feedback'
+
+
+    # unique id for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # submission record owning this feedback
+    owner_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'))
+    owner = db.relationship('SubmissionRecord', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('presentation_feedback', lazy='dynamic',
+                                               cascade='all, delete, delete-orphan'))
+
+    # assessor
+    assessor_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    assessor = db.relationship('FacultyData', foreign_keys=[assessor_id], uselist=False,
+                               backref=db.backref('presentation_feedback', lazy='dynamic'))
+
+    # PRESENTATION (IF USED)
+
+    # presentation positive feedback
+    presentation_positive = db.Column(db.Text())
+
+    # presentation negative feedback
+    presentation_negative = db.Column(db.Text())
+
+    # submitted flag
+    submitted = db.Column(db.Boolean())
+
+    # timestamp of submission
+    timestamp = db.Column(db.DateTime())
+
+
 class SubmissionRecord(db.Model):
     """
     Collect details for a student submission
@@ -3798,6 +3835,11 @@ class SubmissionRecord(db.Model):
 
     # faculty response timestamp
     faculty_response_timestamp = db.Column(db.DateTime())
+
+
+    # PRESENTATIONS
+
+    # 'presentation_feedback' member created by back-reference
 
 
     @property

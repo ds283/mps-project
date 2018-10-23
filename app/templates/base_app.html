@@ -2,14 +2,20 @@
 
 {% block styles %}
     {{ super() }}
-    {% if current_user.theme == current_user.THEME_FLAT %}
-        {% assets filters="cssmin", output="gen/site-flat-min.css", "css/common.css", "css/flat.css", "css/site-flat.css" -%}
-            <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
-        {% endassets %}
-    {% elif current_user.theme == current_user.THEME_DARK %}
-        {% assets filters="cssmin", output="gen/site-dark-min.css", "css/common.css", "css/dark.css", "css/site-dark.css" -%}
-            <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
-        {% endassets %}
+    {% if current_user.theme is defined %}
+        {% if current_user.theme == current_user.THEME_FLAT %}
+            {% assets filters="cssmin", output="gen/site-flat-min.css", "css/common.css", "css/flat.css", "css/site-flat.css" -%}
+                <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+            {% endassets %}
+        {% elif current_user.theme == current_user.THEME_DARK %}
+            {% assets filters="cssmin", output="gen/site-dark-min.css", "css/common.css", "css/dark.css", "css/site-dark.css" -%}
+                <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+            {% endassets %}
+        {% else %}
+            {% assets filters="cssmin", output="gen/site-default-min.css", "css/common.css", "css/default.css", "css/site-default.css" -%}
+                <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+            {% endassets %}
+        {% endif %}
     {% else %}
         {% assets filters="cssmin", output="gen/site-default-min.css", "css/common.css", "css/default.css", "css/site-default.css" -%}
             <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>

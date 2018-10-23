@@ -3691,7 +3691,7 @@ class SubmittingStudent(db.Model):
 
 
     def get_assignment(self, period):
-        records = self.records.filter_by(submission_period=period).all()
+        records = self.records.filter_by(period_id=period.id).all()
 
         if len(records) == 0:
             return None

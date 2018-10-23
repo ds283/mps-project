@@ -40,7 +40,7 @@
                 <hr class="intro-divider">
 
                 {# show assignments #}
-                {% set record = sub.get_assignment(period.submission_period) %}
+                {% set record = sub.get_assignment(period) %}
                 {% if record %}
                     <div class="row vertical-top">
                         {% if sub.published %}

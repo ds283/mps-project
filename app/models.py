@@ -2281,9 +2281,10 @@ class SubmissionPeriodRecord(db.Model):
 
     def get_supervisor_records(self, fac_id):
         return self.submissions \
-            .filter(marker_id=fac_id) \
+            .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
+            .filter(LiveProject.owner_id == fac_id) \
             .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
-            .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.ower_id) \
+            .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
             .join(User, User.id == SubmittingStudent.student_id) \
             .order_by(SubmissionPeriodRecord.submission_period.asc(),
                       User.last_name.asc(), User.first_name.asc()).all()
@@ -2291,11 +2292,16 @@ class SubmissionPeriodRecord(db.Model):
 
     def get_marker_records(self, fac_id):
         return self.submissions \
-                .filter(marker_id=fac_id) \
-                .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
-                .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.ower_id) \
-                .join(StudentData, StudentData.id == SubmittingStudent.student_id) \
-                .order_by(SubmissionPeriodRecord.submission_period.asc(), StudentData.exam_number.asc()).all()
+            .filter_by(marker_id=fac_id) \
+            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
+            .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
+            .join(StudentData, StudentData.id == SubmittingStudent.student_id) \
+            .order_by(SubmissionPeriodRecord.submission_period.asc(), StudentData.exam_number.asc()).all()
+
+
+    def get_presentation_slots(self, fac_id):
+        schedule = self._deployed_schedule
+        return schedule.get_faculty_slots(fac_id).all()
 
 
     @property
@@ -2331,6 +2337,39 @@ class SubmissionPeriodRecord(db.Model):
     def label(self):
         return self.config.project_class.make_label(self.config.abbreviation + ': ' + self.display_name)
 
+
+    @property
+    def has_deployed_schedule(self):
+        if not self.has_presentation:
+            return False
+
+        count = get_count(self.presentation_assessments)
+
+        if count > 1:
+            raise RuntimeError('Too many assessments attached to this submission period')
+
+        if count == 0:
+            return False
+
+        assessment = self.presentation_assessments.one()
+        return assessment.is_deployed
+
+
+    @property
+    def _deployed_schedule(self):
+        if not self.has_presentation:
+            return None
+
+        count = get_count(self.presentation_assessments)
+
+        if count > 1:
+            raise RuntimeError('Too many assessments attached to this submission period')
+
+        if count == 0:
+            return None
+
+        assessment = self.presentation_assessments.one()
+        return assessment.deployed_schedule
 
 
 class EnrollmentRecord(db.Model):
@@ -3846,6 +3885,10 @@ class SubmissionRecord(db.Model):
     @property
     def submission_period(self):
         return self.period.submission_period
+
+
+    def belongs_to(self, period):
+        return self.period_id == period.id
 
 
     @property
@@ -5877,6 +5920,30 @@ class PresentationAssessment(db.Model):
         return get_count(self.scheduling_attempts.filter_by(published=True)) > 0
 
 
+    @property
+    def is_deployed(self):
+        count = get_count(self.scheduling_attempts.filter_by(deployed=True))
+
+        if count > 1:
+            raise RuntimeError('Too many schedules deployed at once')
+
+        return count == 1
+
+
+    @property
+    def deployed_schedule(self):
+        count = get_count(self.scheduling_attempts.filter_by(deployed=True))
+
+        if count > 1:
+            raise RuntimeError('Too many schedules deployed at once')
+
+        if count == 0:
+            return None
+
+        return self.scheduling_attempts.filter_by(deployed=True).one()
+
+
+
 @listens_for(PresentationAssessment, 'before_update')
 def _PresentationAssessment_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
@@ -6452,6 +6519,10 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         return self._warnings.values()
 
 
+    def get_faculty_slots(self, fac_id):
+        return self.slots.filter(ScheduleSlot.assessors.any(id=fac_id))
+
+
 @listens_for(ScheduleAttempt, 'before_update')
 def _ScheduleAttempt_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
@@ -6658,6 +6729,10 @@ class ScheduleSlot(db.Model):
     @property
     def room_full_name(self):
         return self.room.full_name
+
+
+    def belongs_to(self, period):
+        return get_count(self.talks.filter_by(period_id=period.id)) > 0
 
 
 @listens_for(ScheduleSlot, 'before_update')

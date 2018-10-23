@@ -1,0 +1,85 @@
+{% macro supervisor_assignments(period, id) %}
+    {% set records = period.get_supervisor_records(id) %}
+    {% if records|length > 0 %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th width="20%">Name</th>
+                    <th width="20%">Marker</th>
+                    <th width="40%">Project</th>
+                    <th width="20%"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in records %}
+                    {% set valid = rec.is_supervisor_valid %}
+                    <tr>
+                        <td>
+                            <a href="mailto:{{ rec.owner.student.user.email }}">{{ rec.owner.student.user.name }}</a>
+                            <div>
+                                {{ rec.owner.student.cohort_label|safe }}
+                                {{ rec.owner.student.programme.label|safe }}
+                                {% if not rec.owner.published %}
+                                    <span class="label label-warning">Not published</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=home_dashboard_url) }}">
+                                {{ rec.project.name }} (No. {{ rec.project.number }})
+                            </a>
+                            <div>
+                                {% if rec.supervisor_submitted %}
+                                    <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                {% elif period.closed and not rec.supervisor_submitted %}
+                                    <span class="label label-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                {% endif %}
+                                {% if rec.student_feedback_submitted %}
+                                    <span class="label label-success"><i class="fa fa-check"></i> Student feedback</span>
+                                    {% if not rec.acknowledge_feedback %}
+                                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Acknowledgment required</span>
+                                    {% endif %}
+                                    {% if not rec.faculty_response_submitted %}
+                                        <span class="label label-warning"><i class="fa fa-times"></i> Response not submitted</span>
+                                    {% else %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Response submitted</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="text-align: right;" class="pull-right">
+                                {% if not period.feedback_open and not rec.student_engaged %}
+                                    <a href="{{ url_for('faculty.mark_started', id=rec.id) }}" class="btn btn-sm btn-table-block btn-primary">Mark as started</a>
+                                {% elif (period.feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
+                                    <a href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
+                                    {% if valid %}
+                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
+                                    {% endif %}
+                                    {% if not rec.supervisor_submitted %}
+                                        <a href="{{ url_for('faculty.supervisor_submit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-success">Submit feedback</a>
+                                    {% else %}
+                                        <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit feedback</a>
+                                    {% endif %}
+                                {% elif period.closed %}
+                                    <a href="{{ url_for('faculty.view_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block {% if rec.student_feedback_submitted and not rec.acknowledge_feedback %}btn-warning{% else %}btn-default{% endif %}">View feedback</a>
+                                    {% if rec.student_feedback_submitted and not rec.faculty_response_submitted %}
+                                        <a href="{{ url_for('faculty.edit_response', id=rec.id) }}" class="btn btn-sm btn-table-block btn-default">Edit response</a>
+                                        {% if rec.is_response_valid %}
+                                            <a href="{{ url_for('faculty.submit_response', id=rec.id) }}" class="btn btn-sm btn-table-block btn-success">Submit response</a>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No assignments</p>
+    {% endif %}
+{% endmacro %}

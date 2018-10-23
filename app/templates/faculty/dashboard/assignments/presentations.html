@@ -1,0 +1,58 @@
+{% macro presentation_assignments(period, id) %}
+    {% if period.has_deployed_schedule %}
+        {% set records = period.get_presentation_slots(id) %}
+        {% if records|length > 0 %}
+            {% set ns=namespace(count=0) %}
+            {% for rec in records %}
+                {% if rec.belongs_to(period) %}
+                    {% set ns.count = ns.count + 1 %}
+                    <p>
+                        <h4>
+                            <span class="label label-primary">{{ rec.date_as_string }}</span>
+                            <span class="label label-info">{{ rec.session_type_string }}</span>
+                            <span class="label label-info">{{ rec.room_full_name }}</span>
+                        </h4>
+                    </p>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th width="20%">Name</th>
+                                <th width="20%">Supervisor</th>
+                                <th width="40%">Project</th>
+                                <th width="20%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for talk in rec.talks %}
+                                {% if talk.belongs_to(period) %}
+                                    <tr>
+                                        <td>
+                                            {{ talk.owner.student.user.name }}
+                                        </td>
+                                        <td>
+                                            <a href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=home_dashboard_url) }}">
+                                                {{ talk.project.name }} (No. {{ talk.project.number }})
+                                            </a>
+                                        </td>
+                                        <td>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            {% endfor %}
+            {% if ns.count == 0 %}
+                <p>No assignments</p>
+            {% endif %}
+        {% else %}
+            <p>No assignments</p>
+        {% endif %}
+    {% else %}
+        <p>Details to be announced</p>
+    {% endif %}
+{% endmacro %}

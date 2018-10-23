@@ -1,6 +1,6 @@
 {% macro presentation_assignments(period, id) %}
     {% if period.has_deployed_schedule %}
-        {% set records = period.get_presentation_slots(id) %}
+        {% set records = period.get_faculty_presentation_slots(id) %}
         {% if records|length > 0 %}
             {% set ns=namespace(count=0) %}
             {% for rec in records %}

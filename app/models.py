@@ -2299,9 +2299,14 @@ class SubmissionPeriodRecord(db.Model):
             .order_by(SubmissionPeriodRecord.submission_period.asc(), StudentData.exam_number.asc()).all()
 
 
-    def get_presentation_slots(self, fac_id):
+    def get_faculty_presentation_slots(self, fac_id):
         schedule = self._deployed_schedule
         return schedule.get_faculty_slots(fac_id).all()
+
+
+    def get_student_presentation_slot(self, student_id):
+        schedule = self._deployed_schedule
+        return schedule.get_student_slot(student_id).one()
 
 
     @property
@@ -6521,6 +6526,10 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     def get_faculty_slots(self, fac_id):
         return self.slots.filter(ScheduleSlot.assessors.any(id=fac_id))
+
+
+    def get_student_slot(self, submitter_id):
+        return self.slots.filter(ScheduleSlot.talks.any(owner_id=submitter_id))
 
 
 @listens_for(ScheduleAttempt, 'before_update')

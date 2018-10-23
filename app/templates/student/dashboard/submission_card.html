@@ -42,8 +42,9 @@
                 {# show assignments #}
                 {% set record = sub.get_assignment(period) %}
                 {% if record %}
-                    <div class="row vertical-top">
-                        {% if sub.published %}
+                    {% if sub.published %}
+                        <div class="dashboard-subtitle" style="padding-bottom: 8px;">Project assignment</div>
+                        <div class="row vertical-top">
                             <div class="col-xs-3">
                                 <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
                             </div>
@@ -71,7 +72,25 @@
                                     {% endif %}
                                 </div>
                             </div>
-                        {% else %}
+                        </div>
+                        {% if period.has_presentation %}
+                            <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation</div>
+                            {% if period.has_deployed_schedule %}
+                                {% set slot = period.get_student_presentation_slot(sub.id) %}
+                                <span class="label label-primary">{{ slot.date_as_string }}</span>
+                                <span class="label label-info">{{ slot.session_type_string }}</span>
+                                <span class="label label-info">{{ slot.room_full_name }}</span>
+                                {% for assessor in slot.assessors %}
+                                    <span class="label label-default">{{ assessor.user.name }}</span>
+                                {% else %}
+                                    <span class="label label-danger">Assessor information missing</span>
+                                {% endfor %}
+                            {% else %}
+                                <p>To be announced</p>
+                            {% endif %}
+                        {% endif %}
+                    {% else %}
+                        <div class="row vertical-top">
                             <div class="col-xs-12">
                                 <div style="text-align: left; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">
                                     <p><strong>To be announced.</strong></p>
@@ -82,8 +101,8 @@
                                     </p>
                                 </div>
                             </div>
-                        {% endif %}
-                    </div>
+                        </div>
+                    {% endif %}
                 {% else %}
                     <div style="text-align: center; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">No projects assigned</div>
                 {% endif %}

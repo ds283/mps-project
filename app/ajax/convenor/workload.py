@@ -142,28 +142,47 @@ _marking = \
 """
 
 
+_presentations = \
+"""
+{% set slots = f.presentation_assignments(config.pclass_id).all() %}
+{% if slots|length >= 1 %}
+    {% for slot in slots %}
+        <div>
+            <span class="label label-info">{{ slot.owner.owner.name }}</span>
+            <span class="label label-default">{{ slot.short_date_as_string }}</span>
+            <span class="label label-default">{{ slot.session_type_string }}</span>
+            <span class="label label-default">{{ slot.room_full_name }}</span>
+        </div>
+    {% endfor %}
+{% else %}
+    <span class="label label-info">None</span>
+{% endif %}
+"""
+
+
 _workload = \
 """
 <span class="label label-info">Supv {{ CATS_sup }}</span>
 <span class="label label-info">Mark {{ CATS_mark }}</span>
+<span class="label label-info">Pres {{ CATS_pres }}</span>
 <span class="label label-primary">Total {{ CATS_sup+CATS_mark }}</span>
 """
 
 
 def faculty_workload_data(faculty, config):
-
     data = []
 
     for u, d in faculty:
 
-        CATS_sup, CATS_mark = d.CATS_assignment(config.pclass_id)
+        CATS_sup, CATS_mark, CATS_pres = d.CATS_assignment(config.pclass_id)
 
         data.append({'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                               'sortvalue': u.last_name + u.first_name},
                      'projects': render_template_string(_projects, f=d, config=config),
                      'marking': render_template_string(_marking, f=d, config=config),
+                     'presentations': render_template_string(_presentations, f=d, config=config),
                      'workload': {'display': render_template_string(_workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark,
-                                                                    f=d),
-                                  'sortvalue': CATS_sup+CATS_mark}})
+                                                                    CATS_pres=CATS_pres, f=d),
+                                  'sortvalue': CATS_sup+CATS_mark+CATS_pres}})
 
     return jsonify(data)

@@ -953,6 +953,25 @@ class FacultyData(db.Model):
             .order_by(SubmissionPeriodRecord.submission_period.asc())
 
 
+    def presentation_assignments(self, pclass_id):
+        slot_query = self.assessor_slots.subquery()
+
+        slot_ids = db.session.query(ScheduleSlot.id) \
+            .join(slot_query, slot_query.c.id == ScheduleSlot.id).subquery()
+
+        filtered_ids = db.session.query(slot_ids.c.id) \
+            .join(submitter_to_slots, submitter_to_slots.c.slot_id == slot_ids.c.id) \
+            .join(SubmissionRecord, SubmissionRecord.id == submitter_to_slots.c.submitter_id) \
+            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
+            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
+            .filter(ProjectClassConfig.pclass_id == pclass_id).distinct().subquery()
+
+        return db.session.query(ScheduleSlot) \
+            .join(filtered_ids, filtered_ids.c.id == ScheduleSlot.id) \
+            .join(PresentationSession, PresentationSession.id == ScheduleSlot.session_id) \
+            .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+
+
     def CATS_assignment(self, pclass_id):
         """
         Return (supervising CATS, marking CATS) for the current year
@@ -961,6 +980,7 @@ class FacultyData(db.Model):
 
         supv = self.supervisor_assignments(pclass_id)
         mark = self.marker_assignments(pclass_id)
+        pres = self.presentation_assignments(pclass_id)
 
         supv_CATS = [x.supervising_CATS for x in supv]
         supv_CATS_clean = [x for x in supv_CATS if x is not None]
@@ -968,7 +988,10 @@ class FacultyData(db.Model):
         mark_CATS = [x.marking_CATS for x in mark]
         mark_CATS_clean = [x for x in mark_CATS if x is not None]
 
-        return sum(supv_CATS_clean), sum(mark_CATS_clean)
+        pres_CATS = [x.assessor_CATS for x in mark]
+        pres_CATS_clean = [x for x in pres_CATS if x is not None]
+
+        return sum(supv_CATS_clean), sum(mark_CATS_clean), sum(pres_CATS_clean)
 
 
     def has_late_feedback(self, pclass_id):
@@ -4049,6 +4072,16 @@ class SubmissionRecord(db.Model):
         return None
 
 
+    @property
+    def assessor_CATS(self):
+        config = self.previous_config
+
+        if config is not None:
+            return config.CATS_presentation
+
+        return None
+
+
 class Bookmark(db.Model):
     """
     Model an (orderable) bookmark
@@ -6664,10 +6697,12 @@ class ScheduleSlot(db.Model):
     room = db.relationship('Room', foreign_keys=[room_id], uselist=False)
 
     # assessors attached to this slot
-    assessors = db.relationship('FacultyData', secondary=faculty_to_slots, lazy='dynamic')
+    assessors = db.relationship('FacultyData', secondary=faculty_to_slots, lazy='dynamic',
+                                backref=db.backref('assessor_slots', lazy='dynamic'))
 
     # talks scheduled in this slot
-    talks = db.relationship('SubmissionRecord', secondary=submitter_to_slots, lazy='dynamic')
+    talks = db.relationship('SubmissionRecord', secondary=submitter_to_slots, lazy='dynamic',
+                            backref=db.backref('scheduled_slot', lazy='dynamic'))
 
 
     def _init__(self, *args, **kwargs):
@@ -6742,6 +6777,17 @@ class ScheduleSlot(db.Model):
 
     def belongs_to(self, period):
         return get_count(self.talks.filter_by(period_id=period.id)) > 0
+
+
+    @property
+    def assessor_CATS(self):
+        # assume all scheduled talks are in the same project class
+        talk = self.talks.first()
+
+        if talk is None:
+            return None
+
+        return talk.assessor_CATS
 
 
 @listens_for(ScheduleSlot, 'before_update')

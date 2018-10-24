@@ -4476,6 +4476,7 @@ def add_assessment():
                                       requested_availability=False,
                                       availability_closed=False,
                                       availability_deadline=None,
+                                      feedback_open=True,
                                       creator_id=current_user.id,
                                       creation_timestamp=datetime.now())
         db.session.add(data)
@@ -4578,6 +4579,77 @@ def perform_delete_assessment(id):
     url = request.args.get('url', url_for('admin.manage_assessments'))
 
     db.session.delete(data)
+    db.session.commit()
+
+    return redirect(url)
+
+
+@admin.route('/close_assessment/<int:id>')
+@roles_required('root')
+def close_assessment(id):
+    """
+    Close feedback for an existing assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.feedback_open:
+        return redirect(request.referrer)
+
+    if not data.is_closable:
+        flash('Cannot close assessment "{name}" because one or more closing criteria have not been met. Check '
+              'that all scheduled sessions are in the past.'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    title = 'Close feedback for assessment'
+    panel_title = 'Close feedback for assessment <strong>{name}</strong>'.format(name=data.name)
+
+    action_url = url_for('admin.perform_close_assessment', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to close feedback for the assessment ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=data.name)
+    submit_label = 'Close feedback'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_close_assessment/<int:id>')
+@roles_required('root')
+def perform_close_assessment(id):
+    """
+    Close feedback for an existing assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.feedback_open:
+        return redirect(request.referrer)
+
+    if not data.is_closable:
+        flash('Cannot close assessment "{name}" because one or more closing criteria have not been met. Check '
+              'that all scheduled sessions are in the past.'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', url_for('admin.manage_assessments'))
+
+    data.feedback_open = False
     db.session.commit()
 
     return redirect(url)
@@ -4852,6 +4924,11 @@ def edit_session(id):
     if not validate_assessment(sess.owner):
         return redirect(request.referrer)
 
+    if not sess.owner.feedback_open:
+        flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
+              'edited'.format(name=sess.owner.name), 'info')
+        return redirect(request.referrer)
+
     form = EditSessionForm(obj=sess)
     form.session = sess
 
@@ -4886,6 +4963,11 @@ def delete_session(id):
     if not validate_assessment(sess.owner):
         return redirect(request.referrer)
 
+    if not sess.owner.feedback_open:
+        flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
+              'edited'.format(name=sess.owner.name), 'info')
+        return redirect(request.referrer)
+
     db.session.delete(sess)
     db.session.commit()
 
@@ -4904,6 +4986,11 @@ def edit_availabilities(id):
         return redirect(request.referrer)
 
     sess = PresentationSession.query.get_or_404(id)
+
+    if not sess.owner.feedback_open:
+        flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
+              'edited'.format(name=sess.owner.name), 'info')
+        return redirect(request.referrer)
 
     if not validate_assessment(sess.owner):
         return redirect(request.referrer)
@@ -5475,7 +5562,7 @@ def undeploy_schedule(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Schedule "{name}" cannot be deployed until it has '
+        flash('Schedule "{name}" cannot be deployed or revoked until it has '
               'completed successfully.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -5483,6 +5570,10 @@ def undeploy_schedule(id):
         flash('Schedule "{name}" did not yield an optimal solution and is not available for '
               'deployment.'.format(name=record.name), 'info')
         return redirect(request.referrer)
+
+    if not record.is_revokable:
+        flash('Schedule "{name}" is not revokable. This may be because some scheduled slots are in '
+              'the past, or because some feedback has already been entered.'.format(name=record.name), 'error')
 
     record.deployed = False
     db.session.commit()

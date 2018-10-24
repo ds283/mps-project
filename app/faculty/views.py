@@ -1482,6 +1482,24 @@ def supervisor_acknowledge_feedback(id):
     return redirect(request.referrer)
 
 
+@faculty.route('/presentation_edit_feedback/<int:slot_id>/<int:talk_id>')
+@roles_required('faculty')
+def presentation_edit_feedback(slot_id, talk_id):
+    pass
+
+
+@faculty.route('/presentation_submit_feedback/<int:slot_id>/<int:talk_id>')
+@roles_required('faculty')
+def presentation_submit_feedback(slot_id, talk_id):
+    pass
+
+
+@faculty.route('/presentation_unsubmit_feedback/<int:slot_id>/<int:talk_id>')
+@roles_required('faculty')
+def presentation_unsubmit_feedback(slot_id, talk_id):
+    pass
+
+
 @faculty.route('/view_feedback/<int:id>')
 @roles_required('faculty')
 def view_feedback(id):

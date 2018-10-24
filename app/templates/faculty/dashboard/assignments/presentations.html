@@ -5,14 +5,14 @@
         {% set records = period.get_faculty_presentation_slots(id) %}
         {% if records|length > 0 %}
             {% set ns=namespace(count=0) %}
-            {% for rec in records %}
-                {% if rec.belongs_to(period) %}
+            {% for slot in records %}
+                {% if slot.belongs_to(period) %}
                     {% set ns.count = ns.count + 1 %}
                     <p>
                         <h4>
-                            <span class="label label-primary">{{ rec.date_as_string }}</span>
-                            <span class="label label-info">{{ rec.session_type_string }}</span>
-                            <span class="label label-info">{{ rec.room_full_name }}</span>
+                            <span class="label label-primary">{{ slot.date_as_string }}</span>
+                            <span class="label label-info">{{ slot.session_type_string }}</span>
+                            <span class="label label-info">{{ slot.room_full_name }}</span>
                         </h4>
                     </p>
                     <table class="table table-striped">
@@ -25,8 +25,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for talk in rec.talks %}
+                            {% for talk in slot.talks %}
                                 {% if talk.belongs_to(period) %}
+                                    {% set valid = talk.is_presentation_assessor_valid %}
                                     <tr>
                                         <td>
                                             <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.owner.student.user.name }}</a>
@@ -40,6 +41,19 @@
                                             </a>
                                         </td>
                                         <td>
+                                            <div style="text-align: right;" class="pull-right">
+                                                {% if slot.feedback_due %}
+                                                    <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
+                                                    {% if valid %}
+                                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
+                                                    {% endif %}
+                                                    {% if not talk.presentation_assessor_submitted %}
+                                                        <a href="{{ url_for('faculty.presentation_submit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block btn-success">Submit feedback</a>
+                                                    {% else %}
+                                                        <a href="{{ url_for('faculty.presentation_unsubmit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit feedback</a>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
                                         </td>
                                     </tr>
                                 {% endif %}

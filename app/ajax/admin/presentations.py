@@ -131,7 +131,7 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
-        <li class="dropdown-header">Operations</li>
+        <li class="dropdown-header">Scheduling</li>
         {% set valid = a.is_valid %}
         {% set disabled = not valid and a.availability_lifecycle < a.AVAILABILITY_REQUESTED %}
         <li {% if disabled %}class="disabled"{% endif %}>
@@ -169,6 +169,15 @@ _menu = \
                 <i class="fa fa-trash"></i> Delete
             </a>
         </li>
+        
+        <li role="separator" class="divider">
+        <li class="dropdown-header">Administration</li>
+        {% set disabled = not a.is_closable %}
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.close_assessment', id=a.id) }}"{% endif %}>
+                <i class="fa fa-times-circle"></i> Close feedback
+            </a>
+        </li> 
     </ul>
 </div>
 """

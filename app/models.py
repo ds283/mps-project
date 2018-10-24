@@ -5766,6 +5766,12 @@ class PresentationAssessment(db.Model):
                                 backref=db.backref('presentation_assessments', lazy='dynamic'))
 
 
+    # FEEDBACK LIFECYCLE
+
+    # feedback is open
+    feedback_open = db.Column(db.Boolean())
+
+
     # STUDENTS/TALKS
 
     # list of students who can't attend the main sessions
@@ -5983,6 +5989,14 @@ class PresentationAssessment(db.Model):
 
         return self.scheduling_attempts.filter_by(deployed=True).one()
 
+
+    @property
+    def is_closable(self):
+        if not self.is_deployed:
+            return False
+
+        schedule = self.deployed_schedule
+        return schedule.is_closable
 
 
 @listens_for(PresentationAssessment, 'before_update')
@@ -6573,6 +6587,39 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         return self.slots.filter(ScheduleSlot.talks.any(owner_id=submitter_id))
 
 
+    @property
+    def is_revokable(self):
+        # can't revoke is parent event is closed for feedback
+        if not self.owner.feedback_open:
+            return False
+
+        today = date.today()
+
+        for slot in self.slots:
+            # can't revoke if any schedule slot is in the past
+            if slot.session.date <= today:
+                return False
+
+            # can't revoke if any feedback has been added
+            for talk in slot.talks:
+                if get_count(talk.presentation_feedback) > 0:
+                    return False
+
+        return True
+
+
+    @property
+    def is_closable(self):
+        # is closable if all scheduled slots are in the past
+        today = date.today()
+
+        for slot in self.slots:
+            if slot.session.date >= today:
+                return False
+
+        return True
+
+
 @listens_for(ScheduleAttempt, 'before_update')
 def _ScheduleAttempt_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
@@ -6785,6 +6832,15 @@ class ScheduleSlot(db.Model):
 
     def belongs_to(self, period):
         return get_count(self.talks.filter_by(period_id=period.id)) > 0
+
+
+    @property
+    def feedback_due(self):
+        today = date.today()
+        if today > self.session.date:
+            return True
+
+        return False
 
 
     @property

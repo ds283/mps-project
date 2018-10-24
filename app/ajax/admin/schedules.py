@@ -92,7 +92,7 @@ _name = \
     <span class="label label-primary">Published</span>
 {% endif %}
 {% if s.deployed and current_user.has_role('root') %}
-    <span class="label label-success">Deployed</span>
+    <span class="label label-success"><i class="fa fa-check"></i> Deployed</span>
 {% endif %}
 """
 
@@ -246,7 +246,7 @@ _menu = \
                 {% else %}
                     {% if s.owner.is_deployed %}
                         <li class="disabled">
-                            <a><i class="fa fa-upload"> Can't deploy
+                            <a><i class="fa fa-upload"></i> Can't deploy</a>
                         </li>
                     {% else %}
                         <li>

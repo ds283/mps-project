@@ -954,7 +954,9 @@ class FacultyData(db.Model):
 
 
     def presentation_assignments(self, pclass_id):
-        slot_query = self.assessor_slots.subquery()
+        slot_query = self.assessor_slots \
+            .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id) \
+            .filter(ScheduleAttempt.deployed == True).subquery()
 
         slot_ids = db.session.query(ScheduleSlot.id) \
             .join(slot_query, slot_query.c.id == ScheduleSlot.id).subquery()
@@ -962,6 +964,7 @@ class FacultyData(db.Model):
         filtered_ids = db.session.query(slot_ids.c.id) \
             .join(submitter_to_slots, submitter_to_slots.c.slot_id == slot_ids.c.id) \
             .join(SubmissionRecord, SubmissionRecord.id == submitter_to_slots.c.submitter_id) \
+            .filter(SubmissionRecord.retired == False) \
             .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
             .filter(ProjectClassConfig.pclass_id == pclass_id).distinct().subquery()
@@ -988,7 +991,7 @@ class FacultyData(db.Model):
         mark_CATS = [x.marking_CATS for x in mark]
         mark_CATS_clean = [x for x in mark_CATS if x is not None]
 
-        pres_CATS = [x.assessor_CATS for x in mark]
+        pres_CATS = [x.assessor_CATS for x in pres]
         pres_CATS_clean = [x for x in pres_CATS if x is not None]
 
         return sum(supv_CATS_clean), sum(mark_CATS_clean), sum(pres_CATS_clean)

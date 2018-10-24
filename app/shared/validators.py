@@ -13,6 +13,7 @@ from flask import flash
 from flask_login import current_user
 
 from .utils import get_current_year, get_root_dashboard_data, get_assessments_in_use
+from ..shared.utils import get_count
 from ..models import ProjectClassConfig
 
 
@@ -223,4 +224,17 @@ def validate_schedule_inspector(record):
             return False
 
     flash('This operation is available only to administrative users and project convenors.', 'error')
+    return False
+
+
+def validate_presentation_assessor(record):
+    """
+    Validate that the logged-in user is entitled to provide feedback on a presentation
+    :param record:
+    :return:
+    """
+    if get_count(record.assessors.filter_by(id=current_user.id)) > 0:
+        return True
+
+    flash('Only presentation assessors can provide feedback on a presentation assessment', 'error')
     return False

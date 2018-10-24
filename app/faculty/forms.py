@@ -212,6 +212,11 @@ class MarkerFeedbackForm(Form, FeedbackMixin):
     pass
 
 
+class PresentationFeedbackForm(Form, FeedbackMixin):
+
+    pass
+
+
 class SupervisorResponseMixin():
 
     feedback = TextAreaField('Enter your response', render_kw={'rows': 5},

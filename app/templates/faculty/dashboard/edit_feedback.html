@@ -14,10 +14,17 @@
     <form action="{{ submit_url }}" method="POST" name="feedback_form">
         {{ form.hidden_tag() }}
 
-        {% if period.closed %}
+        {% if period is defined and period is not none and period.closed %}
             <div class="alert alert-danger">
                 The convenor has closed this submission period. You are still able to enter and edit feedback,
                 but once submitted it will not be possible to make further edits, or to unsubmit.
+            </div>
+        {% endif %}
+        {% if assessment is defined and assessment is not none and not assessment.feedback_open %}
+            <div class="alert alert-danger">
+                An administrative user has closed feedback for this assessment event. You are still able to
+                enter and edit feedback, but once submitted it will not be possible to make further
+                edits, or to unsubmit.
             </div>
         {% endif %}
 

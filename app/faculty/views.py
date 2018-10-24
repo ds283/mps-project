@@ -15,7 +15,7 @@ from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
-    PresentationSession, User
+    PresentationSession, ScheduleSlot, User, PresentationFeedback
 
 import app.ajax as ajax
 
@@ -23,13 +23,13 @@ from . import faculty
 
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, DescriptionSelectorFormFactory, SupervisorFeedbackForm, \
-    MarkerFeedbackForm, SupervisorResponseForm, FacultySettingsForm
+    MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
     get_current_year
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
-    validate_assessment, validate_using_assessment
+    validate_assessment, validate_using_assessment, validate_presentation_assessor
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
@@ -1482,10 +1482,67 @@ def supervisor_acknowledge_feedback(id):
     return redirect(request.referrer)
 
 
-@faculty.route('/presentation_edit_feedback/<int:slot_id>/<int:talk_id>')
+@faculty.route('/presentation_edit_feedback/<int:slot_id>/<int:talk_id>', methods=['GET', 'POST'])
 @roles_required('faculty')
 def presentation_edit_feedback(slot_id, talk_id):
-    pass
+    # slot_id labels a ScheduleSlot
+    # talk_id labels a SubmissionRecord
+    slot = ScheduleSlot.query.get_or_404(slot_id)
+    talk = SubmissionRecord.query.get_or_404(talk_id)
+
+    if not validate_presentation_assessor(slot):
+        return redirect(request.referrer)
+
+    if not validate_assessment(slot.owner.owner):
+        return redirect(request.referrer)
+
+    if not slot.owner.deployed:
+        flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
+        return redirect(request.referrer)
+
+    if not slot.owner.owner.feedback_open and talk.presentation_assessor_submitted:
+        flash('It is not possible to edit feedback after an assessment event has been closed.', 'error')
+        return redirect(request.referrer)
+
+    feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).first()
+    if feedback is None:
+        feedback = PresentationFeedback(owner_id=talk.id,
+                                        assessor_id=current_user.id,
+                                        presentation_positive=None,
+                                        presentation_negative=None,
+                                        submitted=False,
+                                        timestamp=None)
+        db.session.add(feedback)
+        db.session.commit()
+
+    form = PresentationFeedbackForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        feedback.presentation_positive = form.positive.data
+        feedback.presentation_negative = form.negative.data
+
+        if feedback.submitted:
+            feedback.timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url)
+
+    else:
+
+        if request.method == 'GET':
+            form.positive.data = feedback.presentation_positive
+            form.negative.data = feedback.presentation_negative
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Edit presentation feedback',
+                           formtitle='Edit presentation feedback for <strong>{num}</strong>'.format(num=talk.owner.student.user.name),
+                           submit_url=url_for('faculty.presentation_edit_feedback', slot_id=slot_id, talk_id=talk_id, url=url),
+                           assessment=slot.owner.owner)
 
 
 @faculty.route('/presentation_submit_feedback/<int:slot_id>/<int:talk_id>')

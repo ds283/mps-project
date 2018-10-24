@@ -12,7 +12,7 @@
                 {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments, messages = root_dash_data %}
                 <li {% if pane == 'system' %}class="active"{% endif %}>
                     <a href="{{ url_for('faculty.dashboard', pane='system') }}">
-                        {% if config_warning %}
+                        {% if config_warning or (messages is not none and messages|length > 0) %}
                             <i class="fa fa-exclamation-triangle"></i>
                         {% endif %}
                         Administrator dashboard

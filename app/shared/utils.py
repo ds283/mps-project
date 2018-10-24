@@ -87,6 +87,10 @@ def get_root_dashboard_data():
 
     presentation_assessments = False
 
+    messages = []
+    error_events = set()
+    error_schedules = ()
+
     # loop through all active project classes
     for pclass in pcs:
         if pclass.uses_presentations:
@@ -121,8 +125,28 @@ def get_root_dashboard_data():
             if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
                 rollover_ready = False
 
+            for period in config.periods:
+                if period.has_deployed_schedule:
+                    schedule = period.deployed_schedule
+
+                    if not schedule.owner.is_valid:
+                        if schedule.event_name not in error_events:
+                            messages.append(('error', 'Event "{event}" (containing deployed schedule "{name}" for project class '
+                                             '"{pclass}") contains validation errors. Please attend to these as soon '
+                                             'as possible.'.format(name=schedule.name, event=schedule.event_name,
+                                                                   pclass=pclass.name)))
+                            error_events.add(schedule.event_name)
+
+                    elif not schedule.is_valid:
+                        if schedule.name not in error_schedules:
+                            messages.append(('error', 'Deployed schedule "{name}" (for event "{event}" and project class "{pclass}") '
+                                             'contains validation errors. Please attend to these as soon as '
+                                             'possible.'.format(name=schedule.name, event=schedule.event_name,
+                                                                pclass=pclass.name)))
+                            error_schedules.add(schedule.name)
+
     return config_list, (config_warning or matching_ready or rollover_ready), current_year, \
-        rollover_ready, matching_ready, rollover_in_progress, presentation_assessments
+        rollover_ready, matching_ready, rollover_in_progress, presentation_assessments, messages
 
 
 def get_convenor_dashboard_data(pclass, config):

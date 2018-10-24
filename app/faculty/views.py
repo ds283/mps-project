@@ -1012,6 +1012,7 @@ def dashboard():
 
     # build list of current configuration records for all enrolled project classes
     enrollments = []
+    valid_panes = []
     for record in current_user.faculty_data.ordered_enrollments:
 
         if (record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
@@ -1023,6 +1024,7 @@ def dashboard():
             live_projects = config.live_projects.filter_by(owner_id=current_user.id)
 
             enrollments.append((config, live_projects))
+            valid_panes.append(str(config.id))
 
     # build list of system messages to consider displaying
     messages = []
@@ -1052,7 +1054,10 @@ def dashboard():
 
     if pane == 'system' and not current_user.has_role('root'):
         if len(enrollments) > 0:
-            pane = enrollments[0][0].config
+            pane = valid_panes[0]
+    else:
+        if not pane in valid_panes:
+            pane = valid_panes[0]
 
     if pane is not None:
         session['faculty_dashboard_pane'] = pane

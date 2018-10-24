@@ -21,7 +21,7 @@
     <div class="well">
         {% if data and data.enrollments and data.enrollments.first() %}
             <p><strong>You are currently enrolled for the following project classes</strong></p>
-            {% for record in data.enrollments %}
+            {% for record in data.ordered_enrollments %}
                 {% if loop.index > 1 %}
                     <hr class="intro-divider">
                 {% endif %}

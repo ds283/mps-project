@@ -165,7 +165,7 @@ _workload = \
 <span class="label label-info">Supv {{ CATS_sup }}</span>
 <span class="label label-info">Mark {{ CATS_mark }}</span>
 <span class="label label-info">Pres {{ CATS_pres }}</span>
-<span class="label label-primary">Total {{ CATS_sup+CATS_mark }}</span>
+<span class="label label-primary">Total {{ CATS_sup+CATS_mark+CATS_pres }}</span>
 """
 
 

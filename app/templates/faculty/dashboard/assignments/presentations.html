@@ -1,5 +1,7 @@
 {% macro presentation_assignments(period, id) %}
     {% if period.has_deployed_schedule %}
+        {% set schedule = period.deployed_schedule %}
+        <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
         {% set records = period.get_faculty_presentation_slots(id) %}
         {% if records|length > 0 %}
             {% set ns=namespace(count=0) %}
@@ -53,6 +55,7 @@
             <p>No assignments</p>
         {% endif %}
     {% else %}
-        <p>Details to be announced</p>
+        <div class="dashboard-subtitle">Presentation assessments</div>
+        <p>Schedule not yet available &ndash; details to be announced</p>
     {% endif %}
 {% endmacro %}

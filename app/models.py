@@ -2323,12 +2323,12 @@ class SubmissionPeriodRecord(db.Model):
 
 
     def get_faculty_presentation_slots(self, fac_id):
-        schedule = self._deployed_schedule
+        schedule = self.deployed_schedule
         return schedule.get_faculty_slots(fac_id).all()
 
 
     def get_student_presentation_slot(self, student_id):
-        schedule = self._deployed_schedule
+        schedule = self.deployed_schedule
         return schedule.get_student_slot(student_id).one()
 
 
@@ -2384,7 +2384,7 @@ class SubmissionPeriodRecord(db.Model):
 
 
     @property
-    def _deployed_schedule(self):
+    def deployed_schedule(self):
         if not self.has_presentation:
             return None
 
@@ -6454,6 +6454,11 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         self._validated = False
         self._errors = {}
         self._warnings = {}
+
+
+    @property
+    def event_name(self):
+        return self.owner.name
 
 
     @property

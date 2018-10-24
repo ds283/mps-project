@@ -73,10 +73,13 @@
                                 </div>
                             </div>
                         </div>
+
+                        {# deal with presentation if this period has oen #}
                         {% if period.has_presentation %}
-                            <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation</div>
                             {% if period.has_deployed_schedule %}
+                                {% set schedule = period.deployed_schedule %}
                                 {% set slot = period.get_student_presentation_slot(sub.id) %}
+                                <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
                                 <span class="label label-primary">{{ slot.date_as_string }}</span>
                                 <span class="label label-info">{{ slot.session_type_string }}</span>
                                 <span class="label label-info">{{ slot.room_full_name }}</span>
@@ -86,7 +89,8 @@
                                     <span class="label label-danger">Assessor information missing</span>
                                 {% endfor %}
                             {% else %}
-                                <p>To be announced</p>
+                                <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>
+                                <p>Schedule not yet available &ndash; details to be announced</p>
                             {% endif %}
                         {% endif %}
                     {% else %}

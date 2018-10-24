@@ -61,7 +61,6 @@
                 {{ marker_assignments(period, current_user.faculty_data.id) }}
 
                 {% if period.has_presentation %}
-                    <span class="dashboard-subtitle">Presentation assessments</span>
                     {{ presentation_assignments(period, current_user.faculty_data.id) }}
                 {% endif %}
             </div>

@@ -1052,8 +1052,8 @@ def dashboard():
             c, lp = enrollments[0]
             pane = c.id
 
-    if pane == 'system' and not current_user.has_role('root'):
-        if len(enrollments) > 0:
+    if pane == 'system':
+        if not current_user.has_role('root'):
             pane = valid_panes[0]
     else:
         if not pane in valid_panes:

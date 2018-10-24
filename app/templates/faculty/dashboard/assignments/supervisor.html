@@ -16,9 +16,9 @@
                     <tr>
                         <td>
                             <a href="mailto:{{ rec.owner.student.user.email }}">{{ rec.owner.student.user.name }}</a>
-                            <div>
+                            <div style="padding-top: 6px;">
                                 {{ rec.owner.student.cohort_label|safe }}
-                                {{ rec.owner.student.programme.label|safe }}
+                                {{ rec.owner.student.programme.short_label|safe }}
                                 {% if not rec.owner.published %}
                                     <span class="label label-warning">Not published</span>
                                 {% endif %}

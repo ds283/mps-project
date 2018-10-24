@@ -237,10 +237,10 @@ _menu = \
                     {% endif %}
                 {% endif %}
                 
-                {% if s.deployed %}
+                {% if s.deployed and s.is_revokable %}
                     <li>
                         <a href="{{ url_for('admin.undeploy_schedule', id=s.id) }}">
-                            <i class="fa fa-stop-circle"></i> Undeploy
+                            <i class="fa fa-stop-circle"></i> Revoke deployment
                         </a>
                     </li>
                 {% else %}

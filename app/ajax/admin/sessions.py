@@ -41,19 +41,20 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+        {% set disabled = not s.owner.feedback_open %}
         <li class="dropdown-header">Edit session</li>
-        <li>
-            <a href="{{ url_for('admin.edit_session', id=s.id) }}">
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
                 <i class="fa fa-cogs"></i> Settings
             </a>
         </li>
-        <li>
-            <a href="{{ url_for('admin.edit_availabilities', id=s.id) }}">
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.edit_availabilities', id=s.id) }}"{% endif %}>
                 <i class="fa fa-cogs"></i> Edit availabilities...
             </a>
         </li>
-        <li>
-            <a href="{{ url_for('admin.delete_session', id=s.id) }}">
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
                 <i class="fa fa-trash"></i> Delete
             </a>
         </li>

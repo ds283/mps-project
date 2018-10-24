@@ -33,7 +33,7 @@
     {% endif %}
 {% endmacro %}
 
-{% macro message_card(message, enrolled_classes) %}
+{% macro message_card(message, fac_data) %}
     <div class="well">
         <div class="row vertical-top" style="margin-bottom: 1%;">
             <div class="col-xs-5">
@@ -43,9 +43,9 @@
             </div>
             <div class="col-xs-7">
                 <div class="pull-right">
-                    {% if enrolled_classes %}
+                    {% if fac_data is defined and fac_data is not none %}
                         {% for pclass in message.project_classes %}
-                            {% if pclass in enrolled_classes %}
+                            {% if fac_data.is_enrolled(pclass) %}
                                 <span class="label label-info">{{ pclass.name }}</span>
                             {% endif %}
                         {% endfor %}

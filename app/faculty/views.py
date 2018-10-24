@@ -1050,6 +1050,10 @@ def dashboard():
             c, lp = enrollments[0]
             pane = c.id
 
+    if pane == 'system' and not current_user.has_role('root'):
+        if len(enrollments) > 0:
+            pane = enrollments[0][0].config
+
     if pane is not None:
         session['faculty_dashboard_pane'] = pane
 
@@ -1058,10 +1062,7 @@ def dashboard():
     else:
         root_dash_data = None
 
-    return render_template('faculty/dashboard/dashboard.html',
-                           enrolled_classes=current_user.faculty_data.enrollments,
-                           enrollments=enrollments,
-                           messages=messages,
+    return render_template('faculty/dashboard/dashboard.html', enrollments=enrollments, messages=messages,
                            root_dash_data=root_dash_data, pane=pane)
 
 

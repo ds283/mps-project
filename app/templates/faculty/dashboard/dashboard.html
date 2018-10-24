@@ -51,7 +51,7 @@
 
             {% if messages %}
                 {% for message in messages %}
-                    {{ message_card(message, enrolled_classes) }}
+                    {{ message_card(message, current_user.faculty_data) }}
                 {% endfor %}
             {% endif %}
 

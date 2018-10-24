@@ -1,6 +1,11 @@
+{% from "macros.html" import flashed_messages %}
+
 {% macro root_dashboard_card(root_dash_data) %}
 
-    {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments = root_dash_data %}
+    {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments, messages = root_dash_data %}
+    {% if messages is defined and messages is not none and messages|length > 0 %}
+        {{ flashed_messages(messages=messages, default_category='error', dismissible=False) }}
+    {% endif %}
 
     <div class="well">
         <p><span class="dashboard-project-title">System administrator dashboard</span></p>

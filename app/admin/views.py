@@ -2072,7 +2072,7 @@ def confirm_global_rollover():
     """
 
     config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments = get_root_dashboard_data()
+        rollover_in_progress, assessments, messages = get_root_dashboard_data()
 
     if not rollover_ready:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
@@ -2108,7 +2108,7 @@ def perform_global_rollover():
     """
 
     config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments = get_root_dashboard_data()
+        rollover_in_progress, assessments, messages = get_root_dashboard_data()
 
     if not rollover_ready:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
@@ -3339,7 +3339,7 @@ def manage_matching():
 
     # check that all projects are ready to match
     config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments = get_root_dashboard_data()
+        rollover_in_progress, assessments, messages = get_root_dashboard_data()
 
     if not matching_ready:
         flash('Automated matching is not yet available because some project classes are not ready', 'error')
@@ -3364,7 +3364,7 @@ def matches_ajax():
 
     # check that all projects are ready to match
     config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments = get_root_dashboard_data()
+        rollover_in_progress, assessments, messages = get_root_dashboard_data()
 
     if not matching_ready or rollover_in_progress:
         return jsonify({})
@@ -3384,7 +3384,7 @@ def create_match():
     """
     # check that all projects are ready to match
     config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments = get_root_dashboard_data()
+        rollover_in_progress, assessments, messages = get_root_dashboard_data()
 
     if not matching_ready:
         flash('Automated matching is not yet available because some project classes are not ready', 'info')
@@ -5004,11 +5004,6 @@ def assessment_schedules(id):
               'info')
         return redirect(request.referrer)
 
-    if not data.is_valid and len(data.errors) > 0:
-        flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
-              'Correct any indicated errors before attempting to try again.')
-        return redirect(request.referrer)
-
     matches = get_count(data.scheduling_attempts)
 
     return render_template('admin/presentations/scheduling/manage.html', pane='manage', info=matches, assessment=data)
@@ -5032,9 +5027,6 @@ def assessment_schedules_ajax(id):
         return jsonify({})
 
     if not data.availability_closed:
-        return jsonify({})
-
-    if not data.is_valid and len(data.errors) > 0:
         return jsonify({})
 
     return ajax.admin.assessment_schedules_data(data.scheduling_attempts, text='assessment schedule manager',

@@ -3711,11 +3711,11 @@ def faculty_workload_ajax(id):
 
     # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
     if state_filter == 'no-late-feedback':
-        data = [rec for rec in faculty.all() if not rec[1].has_late_feedback(pclass.id)]
+        data = [rec for rec in faculty.all() if not rec[1].has_late_feedback(pclass.id, rec[1].id)]
     elif state_filter == 'late-feedback':
-        data = [rec for rec in faculty.all() if rec[1].has_late_feedback(pclass.id)]
+        data = [rec for rec in faculty.all() if rec[1].has_late_feedback(pclass.id, rec[1].id)]
     elif state_filter == 'not-started':
-        data = [rec for rec in faculty.all() if rec[1].has_not_started_flags(pclass.id)]
+        data = [rec for rec in faculty.all() if rec[1].has_not_started_flags(pclass.id, rec[1].id)]
     else:
         data = faculty.all()
 

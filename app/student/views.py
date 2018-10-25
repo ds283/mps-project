@@ -649,13 +649,13 @@ def view_feedback(id):
     if url is None:
         url = request.referrer
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
-
-    if not period.closed:
+    if not record.has_feedback:
         flash('It is only possible to view feedback after the convenor has made it available. '
               'Try again when this submission period is closed.', 'info')
         return redirect(url)
+
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
 
     return render_template('student/dashboard/view_feedback.html', record=record, period=period,
                            text='home dashboard', url=url)

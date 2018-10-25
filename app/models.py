@@ -997,7 +997,7 @@ class FacultyData(db.Model):
         return sum(supv_CATS_clean), sum(mark_CATS_clean), sum(pres_CATS_clean)
 
 
-    def has_late_feedback(self, pclass_id):
+    def has_late_feedback(self, pclass_id, faculty_id):
         supervisor_late = [x.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE
                            for x in self.supervisor_assignments(pclass_id)]
 
@@ -1007,7 +1007,10 @@ class FacultyData(db.Model):
         response_late = [x.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE
                          for x in self.marker_assignments(pclass_id)]
 
-        return any(supervisor_late) or any(marker_late) or any(response_late)
+        presentation_late = [x.feedback_state(faculty_id) == ScheduleSlot.FEEDBACK_LATE
+                             for x in self.presentation_assignments(pclass_id)]
+
+        return any(supervisor_late) or any(marker_late) or any(response_late) or any(presentation_late)
 
 
     def has_not_started_flags(self, pclass_id):
@@ -3749,14 +3752,21 @@ class SubmittingStudent(db.Model):
 
     @property
     def marker_feedback_late(self):
-        marker_states = [r.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
+        states = [r.marker_feedback_state == SubmissionRecord.FEEDBACK_LATE for r in self.records]
 
-        return any(marker_states)
+        return any(states)
+
+
+    @property
+    def presentation_feedback_late(self):
+        states = [r.presentation_feedback_late for r in self.records]
+
+        return any(states)
 
 
     @property
     def has_late_feedback(self):
-        return self.supervisor_feedback_late or self.marker_feedback_late
+        return self.supervisor_feedback_late or self.marker_feedback_late or self.presentation_feedback_late
 
 
     @property
@@ -3953,14 +3963,13 @@ class SubmissionRecord(db.Model):
         return True
 
 
-    @property
-    def is_presentation_assessor_valid(self):
+    def is_presentation_assessor_valid(self, faculty_id):
+        # find ScheduleSlot to check that current user is actually required to submit feedback
         slot = self.schedule_slot
-
-        if get_count(slot.assessors.filter_by(id=current_user.id)) == 0:
+        if get_count(slot.assessors.filter_by(id=faculty_id)) == 0:
             return None
 
-        feedback = self.presentation_feedback.filter_by(assessor_id=current_user.id).first()
+        feedback = self.presentation_feedback.filter_by(assessor_id=faculty_id).first()
 
         if feedback is None:
             return False
@@ -3974,14 +3983,16 @@ class SubmissionRecord(db.Model):
         return True
 
 
-    @property
-    def presentation_assessor_submitted(self):
+    def presentation_assessor_submitted(self, faculty_id):
+        # find ScheduleSlot to check that current user is actually required to submit feedback
         slot = self.schedule_slot
-
-        if get_count(slot.assessors.filter_by(id=current_user.id)) == 0:
+        if get_count(slot.assessors.filter_by(id=faculty_id)) == 0:
             return None
 
-        feedback = self.presentation_feedback.filter_by(assessor_id=current_user.id).first()
+        feedback = self.presentation_feedback.filter_by(assessor_id=faculty_id).first()
+        if feedback is None:
+            return False
+
         return feedback.submitted
 
 
@@ -4006,11 +4017,12 @@ class SubmissionRecord(db.Model):
         return self.is_supervisor_valid or self.is_marker_valid
 
 
-    FEEDBACK_NOT_YET = 0
-    FEEDBACK_SUBMITTED = 1
+    FEEDBACK_NOT_REQUIRED = 0
+    FEEDBACK_NOT_YET = 1
     FEEDBACK_WAITING = 2
     FEEDBACK_ENTERED = 3
     FEEDBACK_LATE = 4
+    FEEDBACK_SUBMITTED = 5
 
 
     def _feedback_state(self, valid):
@@ -4039,6 +4051,43 @@ class SubmissionRecord(db.Model):
     @property
     def marker_feedback_state(self):
         return self._feedback_state(self.is_marker_valid)
+
+
+    @property
+    def presentation_feedback_late(self):
+        if not self.period.has_presentation:
+            return False
+
+        slot = self.schedule_slot
+        if slot is None:
+            return False
+
+        states = [self.presentation_feedback_state(a.id) == SubmissionRecord.FEEDBACK_LATE for a in slot.assessors]
+        return any(states)
+
+
+    def presentation_feedback_state(self, faculty_id):
+        if not self.period.has_presentation:
+            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
+
+        slot = self.schedule_slot
+        count = get_count(slot.assessors.filter_by(id=faculty_id))
+        if count == 0:
+            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
+
+        closed = not slot.owner.owner.feedback_open
+
+        today = date.today()
+        if today <= slot.session.date:
+            return SubmissionRecord.FEEDBACK_NOT_YET
+
+        if not self.is_presentation_assessor_valid(faculty_id):
+            return SubmissionRecord.FEEDBACK_LATE if closed else SubmissionRecord.FEEDBACK_WAITING
+
+        if not self.presentation_assessor_submitted(faculty_id):
+            return SubmissionRecord.FEEDBACK_LATE if closed else SubmissionRecord.FEEDBACK_ENTERED
+
+        return SubmissionRecord.FEEDBACK_SUBMITTED
 
 
     @property
@@ -6874,6 +6923,11 @@ class ScheduleSlot(db.Model):
         return self._warnings.values()
 
 
+    @property
+    def event_name(self):
+        return self.owner.event_name
+
+
     def has_pclass(self, pclass_id):
         q = self.talks \
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
@@ -6907,15 +6961,6 @@ class ScheduleSlot(db.Model):
 
 
     @property
-    def feedback_due(self):
-        today = date.today()
-        if today > self.session.date:
-            return True
-
-        return False
-
-
-    @property
     def assessor_CATS(self):
         # assume all scheduled talks are in the same project class
         talk = self.talks.first()
@@ -6924,6 +6969,55 @@ class ScheduleSlot(db.Model):
             return None
 
         return talk.assessor_CATS
+
+
+    FEEDBACK_NOT_REQUIRED = 0
+    FEEDBACK_NOT_YET = 1
+    FEEDBACK_WAITING = 2
+    FEEDBACK_ENTERED = 3
+    FEEDBACK_LATE = 4
+    FEEDBACK_SUBMITTED = 5
+
+    feedback_map = {SubmissionRecord.FEEDBACK_NOT_REQUIRED: FEEDBACK_NOT_REQUIRED,
+                    SubmissionRecord.FEEDBACK_NOT_YET: FEEDBACK_NOT_YET,
+                    SubmissionRecord.FEEDBACK_WAITING: FEEDBACK_WAITING,
+                    SubmissionRecord.FEEDBACK_ENTERED: FEEDBACK_ENTERED,
+                    SubmissionRecord.FEEDBACK_LATE: FEEDBACK_LATE,
+                    SubmissionRecord.FEEDBACK_SUBMITTED: FEEDBACK_SUBMITTED}
+
+
+    def feedback_state(self, faculty_id):
+        count = get_count(self.assessors.filter_by(id=faculty_id))
+        if count == 0:
+            return ScheduleSlot.FEEDBACK_NOT_REQUIRED
+
+        state = []
+        for talk in self.talks:
+            state.append(ScheduleSlot.feedback_map[talk.presentation_feedback_state(faculty_id)])
+
+        # state is defined to be the earliest lifecycle state, taken over all the talks, except that
+        # we use ENTERED rather than WAITING if possible
+        s = min(state)
+        if s == ScheduleSlot.FEEDBACK_WAITING and \
+                any([s == ScheduleSlot.FEEDBACK_ENTERED or s == ScheduleSlot.FEEDBACK_SUBMITTED for s in state]):
+            return ScheduleSlot.FEEDBACK_ENTERED
+
+        return s
+
+
+    def feedback_number(self, faculty_id):
+        count = get_count(self.assessors.filter_by(id=faculty_id))
+        if count == 0:
+            return None
+
+        submitted = 0
+        total = 0
+        for talk in self.talks:
+            if talk.presentation_assessor_submitted(faculty_id):
+                submitted += 1
+            total += 1
+
+        return submitted, total
 
 
 @listens_for(ScheduleSlot, 'before_update')

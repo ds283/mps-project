@@ -17,7 +17,7 @@ _projects = \
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="label label-default">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="label label-default">{{ label }} to do</span>
+        <span class="label label-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
         <span class="label label-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
@@ -95,7 +95,7 @@ _marking = \
     {% if state == obj.FEEDBACK_NOT_YET %}
         {# <span class="label label-default">{{ label }} not yet required</span> #}
     {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="label label-default">{{ label }} to do</span>
+        <span class="label label-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
         <span class="label label-success">{{ label }} submitted</span>        
     {% elif state == obj.FEEDBACK_ENTERED %}
@@ -144,14 +144,55 @@ _marking = \
 
 _presentations = \
 """
+{% macro feedback_state_tag(obj, state, label) %}
+    {% if state == obj.FEEDBACK_NOT_REQUIRED %}
+        <span class="label label-danger">Inconsistent feedback state</span>
+    {% elif state == obj.FEEDBACK_NOT_YET %}
+        {# <span class="label label-default">{{ label }} not yet required</span> #}
+    {% elif state == obj.FEEDBACK_WAITING %}
+        <span class="label label-info">{{ label }} to do</span>
+    {% elif state == obj.FEEDBACK_SUBMITTED %}
+        <span class="label label-success">{{ label }} submitted</span>        
+    {% elif state == obj.FEEDBACK_ENTERED %}
+        <span class="label label-warning">{{ label }} in progress</span>        
+    {% elif state == obj.FEEDBACK_LATE %}
+        <span class="label label-danger">{{ label }} late</span>
+    {% else %}
+        <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
+    {% endif %}        
+{% endmacro %}
 {% set slots = f.presentation_assignments(config.pclass_id).all() %}
 {% if slots|length >= 1 %}
     {% for slot in slots %}
-        <div>
-            <span class="label label-info">{{ slot.owner.owner.name }}</span>
+        <div {% if loop.index < loop.length %}style="padding-bottom: 10px;"{% endif %}>
+            <div class="dropdown assignment-label">
+                <a class="label label-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
+                    {{ slot.event_name }}
+                    <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    {% for rec in slot.talks %}
+                        <li>
+                            {% set pclass = rec.owner.config.project_class %}
+                            <a href="{{ url_for('convenor.view_feedback', id=rec.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">
+                                Show feedback for {{ rec.owner.student.user.name }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
             <span class="label label-default">{{ slot.short_date_as_string }}</span>
             <span class="label label-default">{{ slot.session_type_string }}</span>
             <span class="label label-default">{{ slot.room_full_name }}</span>
+            {% set state = slot.feedback_state(f.id) %}
+            {{ feedback_state_tag(slot, state, 'Feedback') }}
+            {% if state < slot.FEEDBACK_SUBMITTED %}
+                {% set numbers = slot.feedback_number(f.id) %}
+                {% if numbers is not none %}
+                    {% set submitted, total = numbers %}
+                    <span class="label label-warning">{{ submitted }}/{{ total }} submitted</span>
+                {% endif %}
+            {% endif %}
         </div>
     {% endfor %}
 {% else %}
@@ -172,7 +213,10 @@ _workload = \
 def faculty_workload_data(faculty, config):
     data = []
 
+    total = len(faculty)
+    count = 0
     for u, d in faculty:
+        count += 1
 
         CATS_sup, CATS_mark, CATS_pres = d.CATS_assignment(config.pclass_id)
 

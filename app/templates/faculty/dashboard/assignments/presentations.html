@@ -39,6 +39,13 @@
                                             <a href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=home_dashboard_url) }}">
                                                 {{ talk.project.name }} (No. {{ talk.project.number }})
                                             </a>
+                                            <div>
+                                                {% if talk.presentation_assessor_submitted %}
+                                                    <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
+                                                {% elif not slot.owner.owner.feedback_open and not talk.presentation_assessor_submitted %}
+                                                    <span class="label label-warning"><i class="fa fa-times"></i> Feedback missing</span>
+                                                {% endif %}
+                                            </div>
                                         </td>
                                         <td>
                                             <div style="text-align: right;" class="pull-right">
@@ -46,7 +53,7 @@
                                                     {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not talk.presentation_assessor_submitted) %}
                                                         <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
                                                         {% if valid %}
-                                                            <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
+                                                            <a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
                                                         {% endif %}
                                                         {% if not talk.presentation_assessor_submitted %}
                                                             <a href="{{ url_for('faculty.presentation_submit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block btn-success">Submit feedback</a>

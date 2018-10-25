@@ -26,7 +26,7 @@ from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorF
     MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
-    get_current_year
+    get_current_year, get_count
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor
@@ -1490,6 +1490,10 @@ def presentation_edit_feedback(slot_id, talk_id):
     slot = ScheduleSlot.query.get_or_404(slot_id)
     talk = SubmissionRecord.query.get_or_404(talk_id)
 
+    if get_count(slot.talks.filter_by(id=talk.id)) != 1:
+        flash('This talk/slot combination does not form a scheduled pair', 'error')
+        return redirect(request.referrer)
+
     if not validate_presentation_assessor(slot):
         return redirect(request.referrer)
 
@@ -1508,8 +1512,8 @@ def presentation_edit_feedback(slot_id, talk_id):
     if feedback is None:
         feedback = PresentationFeedback(owner_id=talk.id,
                                         assessor_id=current_user.id,
-                                        presentation_positive=None,
-                                        presentation_negative=None,
+                                        positive=None,
+                                        negative=None,
                                         submitted=False,
                                         timestamp=None)
         db.session.add(feedback)
@@ -1522,8 +1526,8 @@ def presentation_edit_feedback(slot_id, talk_id):
         url = request.referrer
 
     if form.validate_on_submit():
-        feedback.presentation_positive = form.positive.data
-        feedback.presentation_negative = form.negative.data
+        feedback.positive = form.positive.data
+        feedback.negative = form.negative.data
 
         if feedback.submitted:
             feedback.timestamp = datetime.now()
@@ -1535,8 +1539,8 @@ def presentation_edit_feedback(slot_id, talk_id):
     else:
 
         if request.method == 'GET':
-            form.positive.data = feedback.presentation_positive
-            form.negative.data = feedback.presentation_negative
+            form.positive.data = feedback.positive
+            form.negative.data = feedback.negative
 
     return render_template('faculty/dashboard/edit_feedback.html', form=form,
                            title='Edit presentation feedback',
@@ -1548,13 +1552,71 @@ def presentation_edit_feedback(slot_id, talk_id):
 @faculty.route('/presentation_submit_feedback/<int:slot_id>/<int:talk_id>')
 @roles_required('faculty')
 def presentation_submit_feedback(slot_id, talk_id):
-    pass
+    # slot_id labels a ScheduleSlot
+    # talk_id labels a SubmissionRecord
+    slot = ScheduleSlot.query.get_or_404(slot_id)
+    talk = SubmissionRecord.query.get_or_404(talk_id)
+
+    if get_count(slot.talks.filter_by(id=talk.id)) != 1:
+        flash('This talk/slot combination does not form a scheduled pair', 'error')
+        return redirect(request.referrer)
+
+    if not validate_presentation_assessor(slot):
+        return redirect(request.referrer)
+
+    if not validate_assessment(slot.owner.owner):
+        return redirect(request.referrer)
+
+    if not slot.owner.deployed:
+        flash('Can not submit feedback because the schedule containing this slot has not been deployed.', 'error')
+        return redirect(request.referrer)
+
+    if not talk.is_presentation_assessor_valid:
+        flash('Cannot submit feedback because it is still incomplete.', 'error')
+        return redirect(request.referrer)
+
+    feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).one()
+
+    feedback.submitted = True
+    feedback.timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @faculty.route('/presentation_unsubmit_feedback/<int:slot_id>/<int:talk_id>')
 @roles_required('faculty')
 def presentation_unsubmit_feedback(slot_id, talk_id):
-    pass
+    # slot_id labels a ScheduleSlot
+    # talk_id labels a SubmissionRecord
+    slot = ScheduleSlot.query.get_or_404(slot_id)
+    talk = SubmissionRecord.query.get_or_404(talk_id)
+
+    if get_count(slot.talks.filter_by(id=talk.id)) != 1:
+        flash('This talk/slot combination does not form a scheduled pair', 'error')
+        return redirect(request.referrer)
+
+    if not validate_presentation_assessor(slot):
+        return redirect(request.referrer)
+
+    if not validate_assessment(slot.owner.owner):
+        return redirect(request.referrer)
+
+    if not slot.owner.deployed:
+        flash('Can not submit feedback because the schedule containing this slot has not been deployed.', 'error')
+        return redirect(request.referrer)
+
+    if not slot.owner.owner.feedback_open:
+        flash('Cannot unsubmit feedback after an assessment has closed.', 'error')
+        return redirect(request.referrer)
+
+    feedback = talk.presentation_feedback.filter_by(assessor_id=current_user.id).one()
+
+    feedback.submitted = False
+    feedback.timestamp = None
+    db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @faculty.route('/view_feedback/<int:id>')

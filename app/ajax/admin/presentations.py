@@ -18,6 +18,9 @@ _name = \
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 <p></p>
+{% if not a.feedback_open %}
+    <span class="label label-success">Feedback closed</span>
+{% endif %}
 {% set state = a.availability_lifecycle %}
 {% if state == a.AVAILABILITY_NOT_REQUESTED %}
     <span class="label label-default">Availability not requested</span>
@@ -159,13 +162,14 @@ _menu = \
                 <i class="fa fa-calendar"></i> Sessions...
             </a>
         </li>
-        <li>
-            <a href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}">
+        {% set disabled = not a.is_deployed %}
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}"{% endif %}>
                 <i class="fa fa-user"></i> Attendees...
             </a>
         </li>
-        <li>
-            <a href="{{ url_for('admin.delete_assessment', id=a.id) }}">
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.delete_assessment', id=a.id) }}"{% endif %}>
                 <i class="fa fa-trash"></i> Delete
             </a>
         </li>

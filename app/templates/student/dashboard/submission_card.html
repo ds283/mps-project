@@ -61,7 +61,7 @@
                             </div>
                             <div class="col-xs-4">
                                 <div style="text-align: right;" class="pull-right">
-                                    {% if period.closed and record.supervisor_submitted or record.marker_submitted %}
+                                    {% if record.has_feedback %}
                                         <a href="{{ url_for('student.view_feedback', id=record.id) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
                                     {% endif %}
                                     {% if period.closed and not record.student_feedback_submitted %}
@@ -74,7 +74,7 @@
                             </div>
                         </div>
 
-                        {# deal with presentation if this period has oen #}
+                        {# deal with presentation if this period has one #}
                         {% if period.has_presentation %}
                             {% if period.has_deployed_schedule %}
                                 {% set schedule = period.deployed_schedule %}

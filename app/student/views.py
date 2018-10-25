@@ -23,7 +23,7 @@ from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, Submitt
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord, \
     User
 
-from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects
+from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count
 
 import app.ajax as ajax
 
@@ -122,8 +122,7 @@ def dashboard():
         # determine whether this student has a selector role for this project class
         select_q = config.selecting_students.filter_by(retired=False, student_id=current_user.id)
 
-        # TODO: consider performance impact of count() here. Is there a better alternative?
-        if select_q.count() > 1:
+        if get_count(select_q) > 1:
             flash('Multiple live "selector" records exist for "{pclass}" on your account. Please contact '
                   'the system administrator'.format(pclass=item.name), 'error')
 
@@ -132,8 +131,7 @@ def dashboard():
         # determine whether this student has a submitter role for this project class
         submit_q = config.submitting_students.filter_by(retired=False, student_id=current_user.id)
 
-        # TODO: consider performance impact of count() here. Is there a better alternative?
-        if submit_q.count() > 1:
+        if get_count(submit_q) > 1:
             flash('Multiple live "submitter" records exist for "{pclass}" on your account. Please contact '
                   'the system administrator'.format(pclass=item.name), 'error')
 

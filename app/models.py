@@ -3794,10 +3794,10 @@ class PresentationFeedback(db.Model):
     # PRESENTATION (IF USED)
 
     # presentation positive feedback
-    presentation_positive = db.Column(db.Text())
+    positive = db.Column(db.Text())
 
     # presentation negative feedback
-    presentation_negative = db.Column(db.Text())
+    negative = db.Column(db.Text())
 
     # submitted flag
     submitted = db.Column(db.Boolean())
@@ -3954,6 +3954,38 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def is_presentation_assessor_valid(self):
+        slot = self.schedule_slot
+
+        if get_count(slot.assessors.filter_by(id=current_user.id)) == 0:
+            return None
+
+        feedback = self.presentation_feedback.filter_by(assessor_id=current_user.id).first()
+
+        if feedback is None:
+            return False
+
+        if feedback.positive is None or len(feedback.positive) == 0:
+            return False
+
+        if feedback.negative is None or len(feedback.negative) == 0:
+            return False
+
+        return True
+
+
+    @property
+    def presentation_assessor_submitted(self):
+        slot = self.schedule_slot
+
+        if get_count(slot.assessors.filter_by(id=current_user.id)) == 0:
+            return None
+
+        feedback = self.presentation_feedback.filter_by(assessor_id=current_user.id).first()
+        return feedback.submitted
+
+
+    @property
     def is_student_valid(self):
         if self.student_feedback is None or len(self.student_feedback) == 0:
             return False
@@ -4029,8 +4061,33 @@ class SubmissionRecord(db.Model):
 
 
     @property
-    def has_feedback(self):
+    def feedback_submitted(self):
+        """
+        Determines whether any feedback is available, irrespective of whether it is visible to the student
+        :return:
+        """
+        if self.period.has_presentation:
+            for feedback in self.presentation_feedback:
+                if feedback.submitted:
+                    return True
+
         return self.supervisor_submitted or self.marker_submitted
+
+
+    @property
+    def has_feedback(self):
+        """
+        Determines whether feedback should be offered to the student
+        :return:
+        """
+        if self.period.has_presentation:
+            slot = self.schedule_slot
+            if not slot.owner.owner.feedback_open:
+                for feedback in self.presentation_feedback:
+                    if feedback.submitted:
+                        return True
+
+        return self.period.closed and (self.supervisor_submitted or self.marker_submitted)
 
 
     @property
@@ -4083,6 +4140,21 @@ class SubmissionRecord(db.Model):
             return config.CATS_presentation
 
         return None
+
+
+    @property
+    def schedule_slot(self):
+        query = self.scheduled_slot \
+            .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id) \
+            .filter(ScheduleAttempt.deployed == True)
+
+        slots = get_count(query)
+        if slots > 1:
+            raise RuntimeError('Too many deployed ScheduleSlot instances attached to a SubmissionRecord')
+        elif slots == 0:
+            return None
+
+        return query.first()
 
 
 class Bookmark(db.Model):

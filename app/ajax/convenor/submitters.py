@@ -214,7 +214,7 @@ _menu = \
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">View feedback</li>
         {% for r in recs %}
-            {% set disabled = not r.has_feedback %}
+            {% set disabled = not r.feedback_submitted %}
             <li {% if disabled %}class="disabled"{% endif %}>
                 <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
                     Period #{{ r.submission_period }}

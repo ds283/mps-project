@@ -177,7 +177,14 @@ def validate_submission_viewable(record):
     if record.project.owner_id == current_user.id or record.marker_id == current_user.id:
         return True
 
-    flash('Only supervisors or 2nd markers can perform this operation', 'error')
+    if record.period.has_presentation:
+        slot = record.schedule_slot
+        if slot is not None:
+            count = get_count(slot.assessors.filter_by(id=current_user.id))
+            if count > 0:
+                return True
+
+    flash('Only supervisors, 2nd markers and presentation assessors can perform this operation', 'error')
     return False
 
 

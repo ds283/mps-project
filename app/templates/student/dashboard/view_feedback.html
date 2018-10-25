@@ -30,7 +30,7 @@
 
             {% if record.supervisor_submitted %}
                 <div class="panel panel-default">
-                    <div class="panel-heading">Supervisor feedback on project and marked report</div>
+                    <div class="panel-heading">Feedback from your supervisor on the project and marked report</div>
                     <div class="panel-body">
                         <span class="dashboard-subtitle">Positive aspects</span>
                         {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
@@ -41,13 +41,13 @@
                 </div>
             {% else %}
                 <div class="well">
-                    No supervisor feedback has been recorded.
+                    No feedback has been recorded from the project supervisor.
                 </div>
             {% endif %}
 
             {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
                 <div class="panel panel-default">
-                    <div class="panel-heading">Marker feedback on marked report</div>
+                    <div class="panel-heading">Feedback from the project marker on your report</div>
                     <div class="panel-body">
                         <span class="dashboard-subtitle">Positive aspects</span>
                         {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
@@ -58,8 +58,34 @@
                 </div>
             {% else %}
                 <div class="well">
-                    No marker feedback has been recorded.
+                    No feedback has been recorded from the project marker.
                 </div>
+            {% endif %}
+
+            {% if record.period.has_presentation %}
+                {% set ns = namespace(count=0) %}
+                {% for feedback in record.presentation_feedback %}
+                    {% if feedback.submitted or (feedback.positive or feedback.negative) and preview %}
+                        {% set ns.count = ns.count + 1 %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                Presentation assessment feedback from <strong>{{ feedback.assessor.user.name }}</strong>
+                            </div>
+                            <div class="panel-body">
+                                <span class="dashboard-subtitle">Positive aspects</span>
+                                {{ feedback.positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                <hr class="intro-divider">
+                                <span class="dashboard-subtitle">Negative aspects</span>
+                                {{ feedback.negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                {% if ns.count == 0 %}
+                    <div class="well">
+                        No feedback has been recorded from the assessed presentation.
+                    </div>
+                {% endif %}
             {% endif %}
 
             {% if record.student_feedback_submitted or (record.student_feedback and preview) %}

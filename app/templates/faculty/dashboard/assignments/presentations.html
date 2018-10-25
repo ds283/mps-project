@@ -27,7 +27,8 @@
                         <tbody>
                             {% for talk in slot.talks %}
                                 {% if talk.belongs_to(period) %}
-                                    {% set valid = talk.is_presentation_assessor_valid %}
+                                    {% set valid = talk.is_presentation_assessor_valid(current_user.id) %}
+                                    {% set submitted = talk.presentation_assessor_submitted(current_user.id) %}
                                     <tr>
                                         <td>
                                             <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.owner.student.user.name }}</a>
@@ -40,22 +41,22 @@
                                                 {{ talk.project.name }} (No. {{ talk.project.number }})
                                             </a>
                                             <div>
-                                                {% if talk.presentation_assessor_submitted %}
+                                                {% if submitted %}
                                                     <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
-                                                {% elif not slot.owner.owner.feedback_open and not talk.presentation_assessor_submitted %}
+                                                {% elif not slot.owner.owner.feedback_open and not submitted %}
                                                     <span class="label label-warning"><i class="fa fa-times"></i> Feedback missing</span>
                                                 {% endif %}
                                             </div>
                                         </td>
                                         <td>
                                             <div style="text-align: right;" class="pull-right">
-                                                {% if slot.feedback_due %}
-                                                    {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not talk.presentation_assessor_submitted) %}
+                                                {% if slot.feedback_state > slot.FEEDBACK_NOT_YET %}
+                                                    {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
                                                         <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
                                                         {% if valid %}
                                                             <a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
                                                         {% endif %}
-                                                        {% if not talk.presentation_assessor_submitted %}
+                                                        {% if not submitted %}
                                                             <a href="{{ url_for('faculty.presentation_submit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block btn-success">Submit feedback</a>
                                                         {% else %}
                                                             <a href="{{ url_for('faculty.presentation_unsubmit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit feedback</a>

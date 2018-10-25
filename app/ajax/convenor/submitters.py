@@ -13,14 +13,9 @@ from flask import render_template_string, jsonify
 
 _cohort = \
 """
-{{ sub.student.programme.label|safe }}
+{{ sub.student.programme.short_label|safe }}
 {{ sub.student.cohort_label|safe }}
 {{ sub.academic_year_label|safe }}
-"""
-
-
-_published = \
-"""
 """
 
 
@@ -230,6 +225,62 @@ _menu = \
 """
 
 
+_presentations = \
+"""
+{% macro feedback_state_tag(obj, state, label) %}
+    {% if state == obj.FEEDBACK_NOT_YET %}
+        {# <span class="label label-default">{{ label }}: not yet required</span> #}
+    {% elif state == obj.FEEDBACK_WAITING %}
+        <span class="label label-default">{{ label }}: to do</span>
+    {% elif state == obj.FEEDBACK_SUBMITTED %}
+        <span class="label label-success">{{ label }}: submitted</span>        
+    {% elif state == obj.FEEDBACK_ENTERED %}
+        <span class="label label-warning">{{ label }}: in progress</span>        
+    {% elif state == obj.FEEDBACK_LATE %}
+        <span class="label label-danger">{{ label }}: late</span>
+    {% else %}
+        <span class="label label-danger">{{ label }}: error &ndash; unknown state</span>
+    {% endif %}        
+{% endmacro %}
+{% set recs = sub.ordered_assignments.all() %}
+{% set ns = namespace(count=0) %}
+{% for rec in recs %}
+    {% if rec.period.has_presentation %}
+        {% set pclass = rec.owner.config.project_class %}
+        {% set ns.count = ns.count + 1 %}
+        {% set slot = rec.schedule_slot %}
+        <div>
+            <span class="label label-primary">#{{ rec.submission_period}}</span>
+            {% if slot is not none %}
+                <div class="dropdown assignment-label">
+                    <a class="label label-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
+                        {{ slot.event_name }}
+                        <span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="{{ url_for('convenor.view_feedback', id=rec.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                        </li>
+                    </ul>
+                </div>
+                <span class="label label-default">{{ slot.short_date_as_string }}</span>
+                <span class="label label-default">{{ slot.session_type_string }}</span>
+                <span class="label label-default">{{ slot.room_full_name }}</span>
+                {% for a in slot.assessors %}
+                    {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
+                {% endfor %}
+            {% else %}
+                <span class="label label-warning">Not attending</span>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endfor %}
+{% if ns.count == 0 %}
+    <span class="label label-default">None</span>
+{% endif %}
+"""
+
+
 _name = \
 """
 <a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
@@ -252,6 +303,7 @@ def submitters_data(students, config):
              'cohort': render_template_string(_cohort, sub=s),
              'projects': render_template_string(_projects, sub=s),
              'markers': render_template_string(_markers, sub=s),
+             'presentations': render_template_string(_presentations, sub=s),
              'menu': render_template_string(_menu, sub=s)} for s in students]
 
     return jsonify(data)

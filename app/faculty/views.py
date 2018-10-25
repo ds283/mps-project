@@ -1504,7 +1504,7 @@ def presentation_edit_feedback(slot_id, talk_id):
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
         return redirect(request.referrer)
 
-    if not slot.owner.owner.feedback_open and talk.presentation_assessor_submitted:
+    if not slot.owner.owner.feedback_open and talk.presentation_assessor_submitted(current_user.id):
         flash('It is not possible to edit feedback after an assessment event has been closed.', 'error')
         return redirect(request.referrer)
 
@@ -1571,7 +1571,7 @@ def presentation_submit_feedback(slot_id, talk_id):
         flash('Can not submit feedback because the schedule containing this slot has not been deployed.', 'error')
         return redirect(request.referrer)
 
-    if not talk.is_presentation_assessor_valid:
+    if not talk.is_presentation_assessor_valid(current_user.id):
         flash('Cannot submit feedback because it is still incomplete.', 'error')
         return redirect(request.referrer)
 

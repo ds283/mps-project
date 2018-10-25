@@ -131,15 +131,15 @@ def get_root_dashboard_data():
 
                     if not schedule.owner.is_valid:
                         if schedule.event_name not in error_events:
-                            messages.append(('error', 'Event "{event}" (containing deployed schedule "{name}" for project class '
-                                             '"{pclass}") contains validation errors. Please attend to these as soon '
+                            messages.append(('error', 'Event "{event}" and deployed schedule "{name}" for project class '
+                                             '"{pclass}" contain validation errors. Please attend to these as soon '
                                              'as possible.'.format(name=schedule.name, event=schedule.event_name,
                                                                    pclass=pclass.name)))
                             error_events.add(schedule.event_name)
 
                     elif not schedule.is_valid:
                         if schedule.name not in error_schedules:
-                            messages.append(('error', 'Deployed schedule "{name}" (for event "{event}" and project class "{pclass}") '
+                            messages.append(('error', 'Deployed schedule "{name}" for event "{event}" and project class "{pclass}") '
                                              'contains validation errors. Please attend to these as soon as '
                                              'possible.'.format(name=schedule.name, event=schedule.event_name,
                                                                 pclass=pclass.name)))

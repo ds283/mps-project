@@ -28,8 +28,18 @@
             </div>
         {% endif %}
 
-        {{ wtf.form_field(form.positive) }}
-        {{ wtf.form_field(form.negative) }}
+        {% if form.assessor %}
+            <div class="well">
+                {{ wtf.form_field(form.assessor) }}
+            </div>
+        {% endif %}
+
+        <div class="well">
+            {{ wtf.form_field(form.positive) }}
+        </div>
+        <div class="well">
+            {{ wtf.form_field(form.negative) }}
+        </div>
 
         {{ wtf.form_field(form.save_feedback) }}
     </form>

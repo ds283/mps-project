@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from wtforms import SubmitField, StringField, SelectField, BooleanField, IntegerField
+from wtforms import SubmitField, StringField, SelectField, BooleanField, IntegerField, TextAreaField
 from wtforms.validators import InputRequired, Optional
 
 from ...models import theme_choices, academic_titles
@@ -78,3 +78,16 @@ def FacultyDataMixinFactory(admin=False):
                                              validators=[Optional()])
 
     return FacultyDataMixin
+
+
+class FeedbackMixin():
+
+    positive = TextAreaField('Positive aspects', render_kw={"rows": 10},
+                             description='Your feedback can be structured using Markdown, or use LaTeX formatting '
+                                         'and mathematical markup. The display uses the same rendering pipeline '
+                                         'used for project descriptions, so anything that works there will work here. '
+                                         'You can preview your feedback before submitting it.')
+
+    negative = TextAreaField('Negative aspects', render_kw={"rows": 10})
+
+    save_feedback = SubmitField('Save changes')

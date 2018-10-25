@@ -15,7 +15,7 @@ from ...database import db
 from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
-    Building, Room
+    Building, Room, PresentationFeedback
 
 from ..utils import get_current_year
 
@@ -234,3 +234,15 @@ def GetAllRooms():
 
 def BuildRoomLabel(room):
     return room.full_name + ' (capacity = {n})'.format(n=room.capacity)
+
+
+def GetPresentationFeedbackFaculty(record_id):
+    used_ids = db.session.query(PresentationFeedback.assessor_id) \
+        .filter(PresentationFeedback.owner_id == record_id).distinct().subquery()
+
+    return db.session.query(FacultyData) \
+        .join(User, User.id == FacultyData.id) \
+        .filter(User.active) \
+        .join(used_ids, used_ids.c.assessor_id == FacultyData.id, isouter=True) \
+        .filter(used_ids.c.assessor_id == None) \
+        .order_by(User.last_name, User.first_name)

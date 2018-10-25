@@ -17,7 +17,7 @@ from . import office
 from ..database import db
 from ..models import User
 from .forms import OfficeSettingsForm
-from ..shared.utils import home_dashboard
+from ..shared.utils import home_dashboard, get_root_dashboard_data
 
 
 @office.route('/dashboard')
@@ -28,7 +28,9 @@ def dashboard():
     :return:
     """
 
-    return render_template('office/dashboard.html')
+    data = get_root_dashboard_data()
+
+    return render_template('office/dashboard.html', root_data=data)
 
 
 @office.route('/settings', methods=['GET', 'POST'])

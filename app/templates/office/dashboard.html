@@ -1,11 +1,19 @@
-{% import "bootstrap/wtf.html" as wtf %}
-
 {% extends "base_app.html" %}
+
+{% from "admin/admin_dashboard/admin_card.html" import admin_dashboard_card %}
 
 {% block title %}
     Dashboard
 {% endblock %}
 
 {% block bodyblock %}
-    Testing office
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="well">
+                {{ admin_dashboard_card(root_data) }}
+            </div>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
 {% endblock %}

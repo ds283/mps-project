@@ -1,0 +1,73 @@
+{% from "macros.html" import flashed_messages %}
+
+{% macro root_messages(root_dash_data) %}
+    {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments, messages = root_dash_data %}
+    {% if messages is defined and messages is not none and messages|length > 0 %}
+        {{ flashed_messages(messages=messages, default_category='error', dismissible=True) }}
+    {% endif %}
+{% endmacro %}
+
+{% macro root_functions(root_dash_data) %}
+    {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments, messages = root_dash_data %}
+
+    {% if assessments %}
+        <div class="panel panel-info">
+            <div class="panel-heading">Presentation assessments</div>
+            <div class="panel-body">
+                <div class="row vertical-bottom">
+                    <div class="col-xs-8">
+                        Some active project classes use presentations.
+                    </div>
+                    <div class="col-xs-4">
+                        <div class="pull-right">
+                            <a href="{{ url_for('admin.manage_assessments') }}" class="btn btn-default">
+                                Manage assessments
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if matching_ready and not rollover_in_progress %}
+        <div class="panel panel-warning">
+            <div class="panel-heading">Perform automatic matching</div>
+            <div class="panel-body">
+                <div class="row vertical-bottom">
+                    <div class="col-xs-8">
+                        All projects that participate in automatic matching are now ready.
+                    </div>
+                    <div class="col-xs-4">
+                        <div class="pull-right">
+                            <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-warning">
+                                Manage matching
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if rollover_ready and not rollover_in_progress %}
+        <div class="panel panel-danger">
+            <div class="panel-heading">Rollover academic year</div>
+            <div class="panel-body">
+                <div class="row vertical-bottom">
+                    <div class="col-xs-8">
+                        All projects are now in a rollover state.
+                    </div>
+                    <div class="col-xs-4">
+                        <div class="pull-right">
+                            <a href="{{ url_for('admin.confirm_global_rollover') }}" class="btn btn-danger">
+                                Rollover academic year
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+{% endmacro %}

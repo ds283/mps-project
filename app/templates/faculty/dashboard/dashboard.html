@@ -2,7 +2,8 @@
 
 {% from "faculty/dashboard/pclass_card.html" import pclass_card with context %}
 {% from "faculty/dashboard/availability_card.html" import availability_card %}
-{% from "admin/root_dashboard/dashboard_card.html" import root_dashboard_card %}
+{% from "admin/admin_dashboard/admin_card.html" import admin_dashboard_card %}
+{% from "admin/admin_dashboard/root_functions.html" import root_functions, root_messages %}
 {% from "macros.html" import message_card %}
 
 {% if (enrollments and enrollments|length > 0) or current_user.has_role('root') %}
@@ -55,12 +56,19 @@
                 {% endfor %}
             {% endif %}
 
+            {% if current_user.has_role('root') and pane == 'system' %}
+                {{ root_messages(root_dash_data) }}
+            {% endif %}
+
             {% if current_user.faculty_data.has_outstanding_availability_requests %}
                 {{ availability_card(current_user.faculty_data) }}
             {% endif %}
 
             {% if current_user.has_role('root') and pane == 'system' %}
-                {{ root_dashboard_card(root_dash_data) }}
+                <div class="well">
+                    {{ admin_dashboard_card(root_dash_data) }}
+                    {{ root_functions(root_dash_data) }}
+                </div>
             {% else %}
                 {% if enrollments and enrollments|length > 0 %}
 

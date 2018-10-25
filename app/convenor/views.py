@@ -18,13 +18,13 @@ from ..database import db
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
-    SubmissionRecord
+    SubmissionRecord, PresentationFeedback
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
     build_enroll_submitter_candidates, build_submitters_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
-    validate_project_open
+    validate_project_open, validate_not_attending
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
@@ -36,8 +36,9 @@ import app.ajax as ajax
 from . import convenor
 
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
-    AddDescriptionFormFactory, EditDescriptionFormFactory
-from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory
+    AddDescriptionFormFactory, EditDescriptionFormFactory, PresentationFeedbackForm
+from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory, \
+    AssignPresentationFeedbackFormFactory
 
 from datetime import date, datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -3904,6 +3905,97 @@ def assign_liveproject(id, pid):
         sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
 
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/assign_presentation_feedback/<int:id>/', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def assign_presentation_feedback(id):
+    # id labels a SubmissionRecord
+    talk = SubmissionRecord.query.get_or_404(id)
+
+    if not validate_is_convenor(talk.owner.config.project_class):
+        return redirect(request.referrer)
+
+    if not validate_not_attending(talk):
+        return redirect(request.referrer)
+
+    AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(talk.id)
+    form = AssignPresentationFeedbackForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        feedback = PresentationFeedback(owner_id=talk.id,
+                                        assessor=form.assessor.data,
+                                        positive=form.positive.data,
+                                        negative=form.negative.data,
+                                        submitted=True,
+                                        timestamp=datetime.now())
+
+        db.session.add(feedback)
+        db.session.commit()
+
+        return redirect(url)
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Assign presentation feedback',
+                           formtitle='Assign presentation feedback for <strong>{num}</strong>'.format(num=talk.owner.student.user.name),
+                           submit_url=url_for('convenor.assign_presentation_feedback', id=talk.id, url=url))
+
+
+@convenor.route('/edit_presentation_feedback/<int:id>/', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_presentation_feedback(id):
+    # id labels PresentationFeedback record
+    feedback = PresentationFeedback.query.get_or_404(id)
+
+    talk = feedback.owner
+    if not validate_is_convenor(talk.owner.config.project_class):
+        return redirect(request.referrer)
+
+    if not validate_not_attending(talk):
+        return redirect(request.referrer)
+
+    form = PresentationFeedbackForm(obj=feedback)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        feedback.positive = form.positive.data
+        feedback.negative = form.negative.data
+        feedback.timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url)
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Assign presentation feedback',
+                           formtitle='Assign presentation feedback for <strong>{num}</strong>'.format(num=talk.owner.student.user.name),
+                           submit_url=url_for('convenor.edit_presentation_feedback', id=feedback.id, url=url))
+
+
+@convenor.route('/delete_presentation_feedback/<int:id>/', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def delete_presentation_feedback(id):
+    # id labels PresentationFeedback record
+    feedback = PresentationFeedback.query.get_or_404(id)
+
+    talk = feedback.owner
+    if not validate_is_convenor(talk.owner.config.project_class):
+        return redirect(request.referrer)
+
+    if not validate_not_attending(talk):
+        return redirect(request.referrer)
+
+    db.session.delete(feedback)
     db.session.commit()
 
     return redirect(request.referrer)

@@ -2335,7 +2335,7 @@ class SubmissionPeriodRecord(db.Model):
 
     def get_student_presentation_slot(self, student_id):
         schedule = self.deployed_schedule
-        return schedule.get_student_slot(student_id).one()
+        return schedule.get_student_slot(student_id).first()
 
 
     @property
@@ -4131,12 +4131,28 @@ class SubmissionRecord(db.Model):
         """
         if self.period.has_presentation:
             slot = self.schedule_slot
-            if not slot.owner.owner.feedback_open:
+
+            if slot is not None:
+                closed = not slot.owner.owner.feedback_open
+            else:
+                if not self.period.has_deployed_schedule:
+                    closed = False
+                else:
+                    schedule = self.period.deployed_schedule
+                    assessment = schedule.owner
+                    closed = not assessment.feedback_open
+
+            if closed:
                 for feedback in self.presentation_feedback:
                     if feedback.submitted:
                         return True
 
         return self.period.closed and (self.supervisor_submitted or self.marker_submitted)
+
+
+    @property
+    def number_presentation_feedback(self):
+        return get_count(self.presentation_feedback)
 
 
     @property

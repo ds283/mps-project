@@ -17,7 +17,7 @@ from ..models import Project
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
-    FacultyDataMixinFactory
+    FacultyDataMixinFactory, FeedbackMixin
 from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
     project_unique_or_original_label
 from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, CurrentUserResearchGroups, \
@@ -187,19 +187,6 @@ def DescriptionSelectorFormFactory(project_id):
         pass
 
     return DescriptionSelectorForm
-
-
-class FeedbackMixin():
-
-    positive = TextAreaField('Positive aspects', render_kw={"rows": 10},
-                             description='Your feedback can be structured using Markdown, or use LaTeX formatting '
-                                         'and mathematical markup. The display uses the same rendering pipeline '
-                                         'used for project descriptions, so anything that works there will work here. '
-                                         'You can preview your feedback before submitting it.')
-
-    negative = TextAreaField('Negative aspects', render_kw={"rows": 10})
-
-    save_feedback = SubmitField('Save changes')
 
 
 class SupervisorFeedbackForm(Form, FeedbackMixin):

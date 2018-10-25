@@ -4546,6 +4546,10 @@ def delete_assessment(id):
     if not validate_assessment(data, current_year=current_year):
         return redirect(request.referrer)
 
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
     title = 'Delete presentation assessment'
     panel_title = 'Delete presentation assessment <strong>{name}</strong>'.format(name=data.name)
 
@@ -4760,6 +4764,10 @@ def reopen_availability(id):
 
     if not data.availability_closed:
         flash('Cannot reopen availability collection for this assessment because it has not yet been closed', 'info')
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Cannot reopen availability collection for this assessment because it has a deployed schedule', 'info')
         return redirect(request.referrer)
 
     data.availability_closed = False
@@ -5728,6 +5736,11 @@ def assessment_manage_attendees(id):
     if not validate_assessment(data):
         return redirect(request.referrer)
 
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
+              ' altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
     pclass_filter = request.args.get('pclass_filter')
 
     if pclass_filter is None and session.get('attendees_pclass_filter'):
@@ -5798,6 +5811,11 @@ def assessment_attending(a_id, s_id):
     if not validate_assessment(data):
         return redirect(request.referrer)
 
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
+              ' altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
     talk = SubmissionRecord.query.get_or_404(s_id)
 
     if talk not in data.available_talks:
@@ -5826,6 +5844,11 @@ def assessment_not_attending(a_id, s_id):
     data = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
+              ' altered'.format(name=data.name), 'info')
         return redirect(request.referrer)
 
     talk = SubmissionRecord.query.get_or_404(s_id)

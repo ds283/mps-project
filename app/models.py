@@ -6129,6 +6129,9 @@ class PresentationAssessment(db.Model):
 
     @property
     def is_closable(self):
+        if not self.feedback_open:
+            return False
+
         if not self.is_deployed:
             return False
 

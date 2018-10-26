@@ -55,11 +55,20 @@ _active = \
 """
 
 
+_info = \
+"""
+<span class="label label-primary">Capacity {{ r.capacity }}</span>
+{% if r.lecture_capture %}
+    <span class="label label-info">Lecture capture</span>
+{% endif %}
+"""
+
+
 def rooms_data(rooms):
 
     data = [{'name': r.name,
              'building': r.building.make_label(),
-             'capacity': r.capacity,
+             'info': render_template_string(_info, r=r),
              'active': render_template_string(_active, r=r),
              'menu': render_template_string(_menu, r=r)} for r in rooms]
 

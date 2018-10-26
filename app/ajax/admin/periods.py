@@ -13,10 +13,13 @@ from flask import render_template_string, jsonify
 
 _presentation = \
 """
-{% if flag %}
-    <span class="label label-success">Yes</span>
+{% if p.has_presentation %}
+    <span class="label label-success">Required</span>
 {% else %}
-    <span class="label label-default">No</span>
+    <span class="label label-default">Not required</span>
+{% endif %}
+{% if p.lecture_capture %}
+    <span class="label label-info">Requires lecture capture</span>
 {% endif %}
 """
 
@@ -48,7 +51,7 @@ def periods_data(periods):
 
     data = [{'number': p.period,
              'name': '<span class="label label-default">None</span>' if p.name is None else p.name,
-             'has_presentation': render_template_string(_presentation, flag=p.has_presentation),
+             'presentation': render_template_string(_presentation, p=p),
              'menu': render_template_string(_menu, period=p)} for p in periods]
 
     return jsonify(data)

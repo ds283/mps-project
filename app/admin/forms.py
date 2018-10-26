@@ -406,6 +406,8 @@ class SubmissionPeriodMixin():
 
     has_presentation = BooleanField('This submission period includes a presentation assessment')
 
+    lecture_capture = BooleanField('The presentation assessment requires a venue with lecture capture')
+
 
 class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin):
 
@@ -970,6 +972,8 @@ class RoomMixin():
 
     capacity = IntegerField('Capacity', description='How many people will this room accommodate?',
                             validators=[InputRequired('Enter the number of people who can be accommodated')])
+
+    lecture_capture = BooleanField('Lecture capture available')
 
 
 class AddRoomForm(Form, RoomMixin):

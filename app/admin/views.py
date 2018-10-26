@@ -1881,6 +1881,7 @@ def add_period(id):
                                           period=pclass.submissions+1,
                                           name=form.name.data,
                                           has_presentation=form.has_presentation.data,
+                                          lecture_capture=form.lecture_capture.data,
                                           creator_id=current_user.id,
                                           creation_timestamp=datetime.now())
         pclass.periods.append(data)
@@ -1909,6 +1910,7 @@ def edit_period(id):
     if form.validate_on_submit():
         data.name = form.name.data
         data.has_presentation = form.has_presentation.data
+        data.lecture_capture = form.lecture_capture.data
 
         data.last_edit_id = current_user.id,
         data.last_edit_timestamp = datetime.now()
@@ -5902,6 +5904,7 @@ def add_room():
         data = Room(building_id=form.building.data.id,
                     name=form.name.data,
                     capacity=form.capacity.data,
+                    lecture_capture=form.lecture_capture.data,
                     active=True,
                     creator_id=current_user.id,
                     creation_timestamp=datetime.now())
@@ -5926,6 +5929,7 @@ def edit_room(id):
     if form.validate_on_submit():
         data.name = form.name.data
         data.capacity = form.capacity.data
+        data.lecture_capture = form.lecture_capture.data
 
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()

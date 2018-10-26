@@ -1765,6 +1765,9 @@ class SubmissionPeriodDefinition(db.Model):
     # does this period have a presentation submission?
     has_presentation = db.Column(db.Boolean())
 
+    # if using a presentation, does it require lecture capture?
+    lecture_capture = db.Column(db.Boolean())
+
 
     # EDITING METADATA
 
@@ -2258,6 +2261,9 @@ class SubmissionPeriodRecord(db.Model):
 
     # does this submission period have an associated presentation assessment?
     has_presentation = db.Column(db.Boolean())
+
+    # if using a presentation, does it require lecture capture?
+    lecture_capture = db.Column(db.Boolean())
 
     # retired flag, set by rollover code
     retired = db.Column(db.Boolean(), index=True)
@@ -6455,6 +6461,9 @@ class Room(db.Model):
 
     # room capacity (currently not used)
     capacity = db.Column(db.Integer())
+
+    # room has lecture capture?
+    lecture_capture = db.Column(db.Boolean())
 
     # active flag
     active = db.Column(db.Boolean())

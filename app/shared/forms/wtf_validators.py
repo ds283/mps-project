@@ -15,10 +15,9 @@ from wtforms import ValidationError
 from wtforms.validators import Optional
 from zxcvbn import zxcvbn
 
-from app.models import Project, ProjectDescription
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
     Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment, Building, Room, \
-    ScheduleAttempt
+    ScheduleAttempt, Module, Project, ProjectDescription
 
 from flask import current_app
 from werkzeug.local import LocalProxy
@@ -325,6 +324,18 @@ def unique_or_original_schedule_name(assessment_id, form, field):
         return
 
     return globally_unique_schedule_name(assessment_id, form, field)
+
+
+def globally_unique_module_code(form, field):
+    if Module.query.filter_by(code=field.data).first():
+        raise ValidationError('{name} is already in use as a module code'.format(name=field.data))
+
+
+def unique_or_original_module_code(form, field):
+    if field.data == form.module.code:
+        return
+
+    return globally_unique_module_code(form, field)
 
 
 def valid_json(form, field):

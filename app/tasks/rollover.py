@@ -353,6 +353,7 @@ def register_rollover_tasks(celery):
                 period = SubmissionPeriodRecord(config_id=new_config.id,
                                                 name=template.name,
                                                 has_presentation=template.has_presentation,
+                                                lecture_capture=template.lecture_capture,
                                                 retired=False,
                                                 submission_period=template.period,
                                                 feedback_open=False,

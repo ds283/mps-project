@@ -42,9 +42,10 @@ services:
       - API_KEY='8e8116d37510b15b73aa5f9ec3246884'
     ports:
       - '80:8000'
-      - '443:443'
+      - '443:8443'
     volumes:
       - /data/mpsproject/logs:/home/mpsproject/logs
+      - /etc/letsencrypt:/home/letsencrypt
     links:
       - web
       - flower

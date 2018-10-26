@@ -27,8 +27,8 @@
                         <tbody>
                             {% for talk in slot.talks %}
                                 {% if talk.belongs_to(period) %}
-                                    {% set valid = talk.is_presentation_assessor_valid(current_user.id) %}
-                                    {% set submitted = talk.presentation_assessor_submitted(current_user.id) %}
+                                    {% set valid = talk.is_presentation_assessor_valid(id) %}
+                                    {% set submitted = talk.presentation_assessor_submitted(id) %}
                                     <tr>
                                         <td>
                                             <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.owner.student.user.name }}</a>
@@ -50,7 +50,7 @@
                                         </td>
                                         <td>
                                             <div style="text-align: right;" class="pull-right">
-                                                {% if slot.feedback_state > slot.FEEDBACK_NOT_YET %}
+                                                {% if slot.feedback_state(id) > slot.FEEDBACK_NOT_YET %}
                                                     {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
                                                         <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
                                                         {% if valid %}

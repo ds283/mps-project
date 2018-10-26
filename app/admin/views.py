@@ -1707,6 +1707,7 @@ def add_pclass():
             period = SubmissionPeriodRecord(config_id=config.id,
                                             name=template.name,
                                             has_presentation=template.has_presentation,
+                                            lecture_capture=template.lecture_capture,
                                             retired=False,
                                             submission_period=template.period,
                                             feedback_open=False,

@@ -2028,6 +2028,7 @@ class ProjectClassConfig(db.Model):
             period = SubmissionPeriodRecord(config_id=self.id,
                                             name=template.name,
                                             has_presentation=template.has_presentation,
+                                            lecture_capture=template.lecture_capture,
                                             retired=False,
                                             submission_period=self.submission_period,
                                             feedback_open=False,

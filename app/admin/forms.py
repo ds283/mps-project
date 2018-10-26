@@ -33,13 +33,15 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_building_name, unique_or_original_building_name, \
     globally_unique_room_name, unique_or_original_room_name, \
     globally_unique_schedule_name, unique_or_original_schedule_name, \
+    globally_unique_module_code, unique_or_original_module_code, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel
-from ..models import BackupConfiguration, EnrollmentRecord, extent_choices, year_choices, matching_history_choices, solver_choices, session_choices
+from ..models import BackupConfiguration, EnrollmentRecord, extent_choices, year_choices, \
+    matching_history_choices, solver_choices, session_choices, academic_year_choices
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
@@ -269,6 +271,27 @@ class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, SaveChangesMixin):
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
                                                            unique_or_original_programme_abbreviation])
+
+
+class ModuleMixin():
+
+    name = StringField('Module name', validators=[InputRequired(message='Module name is required')])
+
+    runs_in = SelectField('Runs in academic year', choices=academic_year_choices, coerce=int)
+
+
+class AddModuleForm(Form, ModuleMixin):
+
+    code = StringField('Module code', validators=[InputRequired(message='Module code is required'),
+                                                  globally_unique_module_code])
+
+    submit = SubmitField('Add new module')
+
+
+class EditModuleForm(Form, ModuleMixin, SaveChangesMixin):
+
+    code = StringField('Module code', validators=[InputRequired(message='Module code is required'),
+                                                  unique_or_original_module_code])
 
 
 class TransferableSkillMixin():

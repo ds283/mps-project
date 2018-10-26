@@ -13,6 +13,7 @@ from flask_security import current_user, UserMixin, RoleMixin
 
 from sqlalchemy import orm, or_
 from sqlalchemy.event import listens_for
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from celery import schedules
 
@@ -57,7 +58,7 @@ year_choices = [(2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
 extent_choices = [(1, '1 year'), (2, '2 years')]
 
 # labels and keys for 'academic titles' field
-academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss')]
+academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss'), (7, 'Mx')]
 
 # labels and keys for years_history
 matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '4 years'), (5, '5 years')]
@@ -70,6 +71,9 @@ session_choices = [(0, 'Morning'), (1, 'Afternoon')]
 
 # theme types
 theme_choices = [(0, 'Default'), (1, 'Flat'), (2, 'Dark')]
+
+# academic years
+academic_year_choices = [(0, 'Foundation year'), (1, 'Year 1'), (2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
 
 
 class ColouredLabelMixin():
@@ -1098,7 +1102,6 @@ class StudentData(db.Model):
         :param current_year:
         :return:
         """
-
         base_year = current_year - self.cohort + 1 - self.repeated_years
 
         if self.foundation_year:
@@ -1108,7 +1111,6 @@ class StudentData(db.Model):
 
 
     def academic_year_label(self, current_year):
-
         academic_year = self.academic_year(current_year)
 
         if academic_year < 0:
@@ -4597,7 +4599,6 @@ class BackupRecord(db.Model):
     backup_size = db.Column(db.Integer())
 
 
-
     def type_to_string(self):
         if self.type in self._type_index:
             return self._type_index[self.type]
@@ -7074,6 +7075,88 @@ def _ScheduleSlot_delete_handler(mapper, connection, target):
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
         if target.owner is not None:
             cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+
+
+class Module(db.Model):
+    """
+    Represent a module (course)
+    """
+
+    __tablename__ = 'modules'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # unique course code
+    code = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True, index=True)
+
+    # course name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # runs in which academic year?
+    runs_in = db.Column(db.Integer())
+
+    # first taught in
+    first_taught = db.Column(db.Integer())
+
+    # retired in
+    last_taught = db.Column(db.Integer())
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    @hybrid_property
+    def active(self):
+        return self.last_taught is None
+
+
+    @active.expression
+    def active(cls):
+        return cls.last_taught == None
+
+
+    def retire(self):
+        # currently no need to cascade
+        self.last_taught = _get_current_year()
+
+
+    def unretire(self):
+        # currently no need to cascade
+        self.last_taught = None
+
+
+    @property
+    def academic_year_label(self):
+        if self.runs_in < 0:
+            text = 'Error(<0)'
+            type = 'danger'
+        elif self.runs_in > 4:
+            text = 'Error(>4)'
+            type = 'danger'
+        elif self.runs_in == 0:
+            text = 'Foundation Year'
+            type = 'warning'
+        else:
+            text = 'Y{y}'.format(y=self.runs_in)
+            type = 'info'
+
+        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
 
 
 # ############################

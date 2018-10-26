@@ -29,6 +29,7 @@ from .forms import RoleSelectForm, \
     AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
+    AddModuleForm, EditModuleForm, \
     AddTransferableSkillForm, EditTransferableSkillForm, AddSkillGroupForm, EditSkillGroupForm, \
     AddProjectClassForm, EditProjectClassForm, AddSubmissionPeriodForm, EditSubmissionPeriodForm, \
     AddSupervisorForm, EditSupervisorForm, \
@@ -50,7 +51,8 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
-    PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord
+    PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
+    Module
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -1131,7 +1133,6 @@ def edit_degree_types():
     View for editing degree types
     :return:
     """
-
     return render_template('admin/degree_types/edit_degrees.html', subpane='degrees')
 
 
@@ -1142,33 +1143,50 @@ def edit_degree_programmes():
     View for editing degree programmes
     :return:
     """
-
     return render_template('admin/degree_types/edit_programmes.html', subpane='programmes')
 
 
-@admin.route('/degree_types_ajax', methods=['GET', 'POST'])
+@admin.route('/edit_modules')
+@roles_required('root')
+def edit_modules():
+    """
+    View for editing modules
+    :return:
+    """
+    return render_template('admin/degree_types/edit_modules.html', subpane='modules')
+
+
+@admin.route('/degree_types_ajax')
 @roles_required('root')
 def degree_types_ajax():
     """
     Ajax data point for degree type table
     :return:
     """
-
     types = DegreeType.query.all()
     return ajax.admin.degree_types_data(types)
 
 
-@admin.route('/degree_programmes_ajax', methods=['GET', 'POST'])
+@admin.route('/degree_programmes_ajax')
 @roles_required('root')
 def degree_programmes_ajax():
     """
     Ajax data point for degree programmes tables
     :return:
     """
-
     programmes = DegreeProgramme.query.all()
     return ajax.admin.degree_programmes_data(programmes)
 
+
+@admin.route('/modules_ajax')
+@roles_required('root')
+def modules_ajax():
+    """
+    Ajax data point for module table
+    :return:
+    """
+    modules = Module.query.all()
+    return ajax.admin.modules_data(modules)
 
 
 @admin.route('/add_type', methods=['GET', 'POST'])
@@ -1178,7 +1196,6 @@ def add_degree_type():
     View to create a new degree type
     :return:
     """
-
     form = AddDegreeTypeForm(request.form)
 
     if form.validate_on_submit():
@@ -1204,7 +1221,6 @@ def edit_degree_type(id):
     :param id:
     :return:
     """
-
     type = DegreeType.query.get_or_404(id)
     form = EditDegreeTypeForm(obj=type)
 
@@ -1326,7 +1342,6 @@ def activate_degree_programme(id):
     :param id:
     :return:
     """
-
     programme = DegreeProgramme.query.get_or_404(id)
     programme.enable()
     db.session.commit()
@@ -1342,9 +1357,99 @@ def deactivate_degree_programme(id):
     :param id:
     :return:
     """
-
     programme = DegreeProgramme.query.get_or_404(id)
     programme.disable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/add_module', methods=['GET', 'POST'])
+@roles_required('root')
+def add_module():
+    """
+    Add a new module record
+    :return:
+    """
+    form = AddModuleForm(request.form)
+
+    if form.validate_on_submit():
+        module = Module(code=form.code.data,
+                        name=form.name.data,
+                        runs_in=form.runs_in.data,
+                        first_taught=get_current_year(),
+                        last_taught=None,
+                        creator_id=current_user.id,
+                        creation_timestamp=datetime.now(),
+                        last_edit_id=None,
+                        last_edit_timestamp=None);
+
+        db.session.add(module)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_modules'))
+
+    return render_template('admin/degree_types/edit_module.html', form=form, title='Add new module')
+
+
+@admin.route('/edit_module/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_module(id):
+    """
+    id labels a Module
+    :param id:
+    :return:
+    """
+    module = Module.query.get_or_404(id)
+
+    if not module.active:
+        flash('Module "{code} {name}" cannot be edited because it is '
+              'retired.'.format(code=module.code, name=module.name), 'info')
+        return redirect(request.referrer)
+
+    form = EditModuleForm(obj=module)
+    form.module = module
+
+    if form.validate_on_submit():
+        module.code = form.code.data
+        module.name = form.name.data
+        module.runs_in = form.runs_in.data,
+        module.last_edit_id = current_user.id
+        module.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_modules'))
+
+    return render_template('admin/degree_types/edit_module.html', form=form,
+                           title='Edit module', module=module)
+
+
+@admin.route('/retire_module/<int:id>')
+@roles_required('root')
+def retire_module(id):
+    """
+    Retire a current module
+    :param id:
+    :return:
+    """
+    module = Module.query.get_or_404(id)
+    module.retire()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/unretire_module/<int:id>')
+@roles_required('root')
+def unretire_module(id):
+    """
+    Un-retire a current module
+    :param id:
+    :return:
+    """
+    module = Module.query.get_or_404(id)
+    module.unretire()
     db.session.commit()
 
     return redirect(request.referrer)
@@ -1357,7 +1462,6 @@ def edit_skills():
     View for edit skills
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1371,7 +1475,6 @@ def skills_ajax():
     Ajax data point for transferable skills table
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return jsonify({})
 
@@ -1386,7 +1489,6 @@ def add_skill():
     View to create a new transferable skill
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1421,7 +1523,6 @@ def edit_skill(id):
     :param id:
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1452,7 +1553,6 @@ def activate_skill(id):
     :param id:
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1471,7 +1571,6 @@ def deactivate_skill(id):
     :param id:
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1489,7 +1588,6 @@ def edit_skill_groups():
     View for editing skill groups
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1503,7 +1601,6 @@ def skill_groups_ajax():
     Ajax data point for skill groups table
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return jsonify({})
 
@@ -1518,7 +1615,6 @@ def add_skill_group():
     Add a new skill group
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1547,7 +1643,6 @@ def edit_skill_group(id):
     Edit an existing skill group
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1598,7 +1693,6 @@ def deactivate_skill_group(id):
     :param id:
     :return:
     """
-
     if not validate_is_admin_or_convenor():
         return home_dashboard()
 
@@ -1616,7 +1710,6 @@ def edit_project_classes():
     Provide list and edit view for project classes
     :return:
     """
-
     return render_template('admin/edit_project_classes.html')
 
 
@@ -1627,7 +1720,6 @@ def pclasses_ajax():
     Ajax data point for project class tables
     :return:
     """
-
     classes = ProjectClass.query.all()
     return ajax.admin.pclasses_data(classes)
 
@@ -1639,7 +1731,6 @@ def add_pclass():
     Create a new project class
     :return:
     """
-
     # check whether any active degree types exist, and raise an error if not
     if not DegreeType.query.filter_by(active=True).first():
         flash('No degree types are available. Set up at least one active degree type before adding a project class.')
@@ -1741,7 +1832,6 @@ def edit_pclass(id):
     :param id:
     :return:
     """
-
     data = ProjectClass.query.get_or_404(id)
     form = EditProjectClassForm(obj=data)
 

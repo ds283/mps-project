@@ -7,6 +7,11 @@
                 Degree programmes
             </a>
         </li>
+        <li {% if subpane=='modules' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_modules') }}">
+                Modules
+            </a>
+        </li>
         <li {% if subpane=='degrees' %}class="active"{% endif %}>
             <a href="{{ url_for('admin.edit_degree_types') }}">
                 Degree types

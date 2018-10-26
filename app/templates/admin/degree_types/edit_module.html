@@ -1,0 +1,40 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if module is not defined or module is none %}
+        {{ title }}
+    {% else %}
+        Edit module <strong>{{ module.code }}</strong>: <strong>{{ module.name }}</strong>
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if module %}
+        <form action="{{ url_for('admin.edit_module', id=module.id) }}" method="POST" name="module_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_module') }}" method="POST" name="module_form">
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.form_field(form.code) }}
+        {{ wtf.form_field(form.name) }}
+        {{ wtf.form_field(form.runs_in) }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(module) }}
+{% endblock %}

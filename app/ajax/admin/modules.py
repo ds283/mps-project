@@ -20,10 +20,10 @@ _code = \
 _status = \
 """
 {% if m.active %}
-    <span class="label label-success">Active</span>
+    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
     <span class="label label-info">First taught {{ m.first_taught }}</span>
 {% else %}
-    <span class="label label-default">Retired</span>
+    <span class="label label-default"><i class="fa fa-times"></i> Retired</span>
     <span class="label label-info">First taught {{ m.first_taught }}</span>
     <span class="label label-info">Last taught {{ m.last_taught }}</span>
 {% endif %}

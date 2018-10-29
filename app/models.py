@@ -128,6 +128,11 @@ faculty_affiliations = db.Table('faculty_affiliations',
                                 db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
                                 db.Column('group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True))
 
+# association table mapping degree programmes to modules
+programmes_to_modules = db.Table('programmes_to_modules',
+                                 db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True),
+                                 db.Column('module_id', db.Integer(), db.ForeignKey('modules.id'), primary_key=True))
+
 
 # PROJECT CLASS ASSOCIATIONS
 
@@ -1220,6 +1225,13 @@ class DegreeProgramme(db.Model):
     # degree type
     type_id = db.Column(db.Integer(), db.ForeignKey('degree_types.id'), index=True)
     degree_type = db.relationship('DegreeType', backref=db.backref('degree_programmes', lazy='dynamic'))
+
+    # modules that are part of this programme
+    modules = db.relationship('Module', secondary=programmes_to_modules, lazy='dynamic',
+                              backref=db.backref('programmes', lazy='dynamic'))
+
+
+    # EDITING METADATA
 
     # created by
     creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))

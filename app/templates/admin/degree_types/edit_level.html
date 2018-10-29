@@ -1,0 +1,56 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data, colour_field %}
+
+{% extends "security/index.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-colorpicker-min.js", "js/bootstrap-colorpicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $(function () {
+            $('#colour-group').colorpicker({
+                format: 'hex',
+                useAlpha: false
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {{ title }}
+{% endblock %}
+
+{% block form_content %}
+    {% if level %}
+        <form action="{{ url_for('admin.edit_level', id=level.id) }}" method="POST" name="level_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_level') }}" method="POST" name="level_form">
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.form_field(form.name) }}
+        {{ colour_field(form.colour, 'colour-group') }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(level) }}
+{% endblock %}

@@ -17,7 +17,7 @@ from zxcvbn import zxcvbn
 
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
     Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment, Building, Room, \
-    ScheduleAttempt, Module, Project, ProjectDescription
+    ScheduleAttempt, Module, Project, ProjectDescription, FHEQ_Level
 
 from flask import current_app
 from werkzeug.local import LocalProxy
@@ -336,6 +336,18 @@ def unique_or_original_module_code(form, field):
         return
 
     return globally_unique_module_code(form, field)
+
+
+def globally_unique_FHEQ_level_name(form, field):
+    if FHEQ_Level.query.filter_by(name=field.data).first():
+        raise ValidationError('{name} is already defined as a FHEQ Level name'.format(name=field.data))
+
+
+def unique_or_original_FHEQ_level_name(form, field):
+    if field.data == form.level.name:
+        return
+
+    return globally_unique_FHEQ_level_name(form, field)
 
 
 def valid_json(form, field):

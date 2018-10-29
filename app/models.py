@@ -75,6 +75,10 @@ theme_choices = [(0, 'Default'), (1, 'Flat'), (2, 'Dark')]
 # academic years
 academic_year_choices = [(0, 'Foundation year'), (1, 'Year 1'), (2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
 
+# semesters
+semester_choices = [(0, 'Autumn Semester'), (1, 'Spring Semester'), (2, 'Autumn & Spring teaching'),
+                    (3, 'All-year teaching')]
+
 
 class ColouredLabelMixin():
 
@@ -1310,6 +1314,11 @@ class DegreeProgramme(db.Model):
     @property
     def short_label(self):
         return self.degree_type.make_label(self.short_name)
+
+
+    @property
+    def ordered_modules(self):
+        return self.modules.order_by(Module.code.asc())
 
 
 class SkillGroup(db.Model, ColouredLabelMixin):
@@ -7106,8 +7115,13 @@ class Module(db.Model):
     # course name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
-    # runs in which academic year?
-    runs_in = db.Column(db.Integer())
+    # FHEQ level
+    level_id = db.Column(db.Integer(), db.ForeignKey('fheq_levels.id'))
+    level = db.relationship('FHEQ_Level', foreign_keys=[level_id], uselist=False,
+                            backref=db.backref('modules', lazy='dynamic'))
+
+    # runs in which semester?
+    semester = db.Column(db.Integer())
 
     # first taught in
     first_taught = db.Column(db.Integer())
@@ -7169,6 +7183,74 @@ class Module(db.Model):
             type = 'info'
 
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+
+
+    _semester_choices = {0: 'Autumn term', 1: 'Spring term', 2: 'Autumn & Spring', 3: 'All-year'}
+
+    @property
+    def semester_label(self):
+        idx = int(self.semester) if self.semester is not None else None
+        if idx in Module._semester_choices:
+            text = Module._semester_choices[idx]
+            type = 'info'
+        else:
+            text = 'Unknown value {n}'.format(n=self.semester)
+            type = 'danger'
+
+        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+
+
+class FHEQ_Level(db.Model, ColouredLabelMixin):
+    """
+    Characterize an FHEQ level
+    """
+
+    __tablename__ = 'fheq_levels'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+
+    # name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+
+    # active flag
+    active = db.Column(db.Boolean())
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def enable(self):
+        self.active = True
+
+
+    def disable(self):
+        self.active = False
+
+
+    def make_label(self, text=None, user_classes=None):
+        """
+        Make approriately coloured label
+        :param text:
+        :return:
+        """
+        return self._make_label(text, user_classes)
 
 
 # ############################

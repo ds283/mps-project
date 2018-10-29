@@ -59,10 +59,17 @@ _menu = \
 """
 
 
+_runs_in = \
+"""
+{{ m.academic_year_label|safe }}
+{{ m.semester_label|safe }}
+"""
+
+
 def modules_data(modules):
     data = [{'code': render_template_string(_code, m=m),
              'name': m.name,
-             'runs_in': m.academic_year_label,
+             'runs_in': render_template_string(_runs_in, m=m),
              'status': render_template_string(_status, m=m),
              'menu': render_template_string(_menu, m=m)} for m in modules]
 

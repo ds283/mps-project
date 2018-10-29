@@ -32,3 +32,4 @@ from .schedules import assessment_schedules_data
 from .attendees import presentation_attendees_data
 from .schedule_view_sessions import schedule_view_sessions
 from .modules import modules_data
+from .levels import FHEQ_levels_data

@@ -43,7 +43,9 @@ from .forms import RoleSelectForm, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
-    NewScheduleFormFactory, RenameScheduleFormFactory
+    NewScheduleFormFactory, RenameScheduleFormFactory, \
+    LevelSelectorForm, \
+    AddFHEQLevelForm, EditFHEQLevelForm
 
 from ..database import db
 from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -52,7 +54,7 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module
+    Module, FHEQ_Level
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -62,6 +64,7 @@ from ..shared.validators import validate_is_convenor, validate_is_admin_or_conve
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
+from ..shared.forms.queries import GetFHEQLevels
 
 from ..task_queue import register_task, progress_update
 
@@ -1156,6 +1159,27 @@ def edit_modules():
     return render_template('admin/degree_types/edit_modules.html', subpane='modules')
 
 
+@admin.route('/edit_levels')
+@roles_required('root')
+def edit_levels():
+    """
+    View for editing FHEQ levels
+    :return:
+    """
+    return render_template('admin/degree_types/edit_levels.html', subpane='levels')
+
+
+@admin.route('/edit_levels_ajax')
+@roles_required('root')
+def edit_levels_ajax():
+    """
+    AJAX data point for FHEQ levels table
+    :return: 
+    """
+    levels = FHEQ_Level.query.all()
+    return ajax.admin.FHEQ_levels_data(levels)
+
+
 @admin.route('/degree_types_ajax')
 @roles_required('root')
 def degree_types_ajax():
@@ -1364,6 +1388,159 @@ def deactivate_degree_programme(id):
     return redirect(request.referrer)
 
 
+@admin.route('/attach_modules/<int:id>/<int:level_id>')
+@admin.route('/attach_modules/<int:id>')
+@roles_required('root')
+def attach_modules(id, level_id=None):
+    """
+    Attach modules to a degree programme
+    :param id:
+    :return:
+    """
+    programme = DegreeProgramme.query.get_or_404(id)
+
+    form = LevelSelectorForm(request.form)
+
+    if not form.validate_on_submit() and request.method == 'GET':
+        if level_id is None:
+            form.selector.data = FHEQ_Level.query \
+                .filter(FHEQ_Level.active == True) \
+                .order_by(FHEQ_Level.name.asc()).first()
+        else:
+            form.selector.data = FHEQ_Level.query \
+                .filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
+
+        form.selector.data = level_id
+
+    # get list of modules for the current level_id
+    if form.selector.data is not None:
+        modules = Module.query \
+            .filter(Module.active == True,
+                    Module.level_id == form.selector.data.id) \
+            .order_by(Module.code.asc())
+    else:
+        modules = []
+
+    return render_template('admin/degree_types/attach_modules.html', prog=programme, modules=modules, form=form,
+                           title='Attach modules')
+
+
+@admin.route('/attach_module/<int:prog_id>/<int:mod_id>')
+@roles_required('root')
+def attach_module(prog_id, mod_id):
+    """
+    Attach a module to a degree programme
+    :param prog_id:
+    :param mod_id:
+    :return:
+    """
+    programme = DegreeProgramme.query.get_or_404(prog_id)
+    module = Module.query.get_or_404(mod_id)
+
+    if module not in programme.modules:
+        programme.modules.append(module)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/detach_module/<int:prog_id>/<int:mod_id>')
+@roles_required('root')
+def detach_module(prog_id, mod_id):
+    """
+    Detach a module from a degree programme
+    :param prog_id:
+    :param mod_id:
+    :return:
+    """
+    programme = DegreeProgramme.query.get_or_404(prog_id)
+    module = Module.query.get_or_404(mod_id)
+
+    if module in programme.modules:
+        programme.modules.remove(module)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/add_level', methods=['GET', 'POST'])
+@roles_required('root')
+def add_level():
+    """
+    Add a new FHEQ level record
+    :return:
+    """
+    form = AddFHEQLevelForm(request.form)
+
+    if form.validate_on_submit():
+        level = FHEQ_Level(name=form.name.data,
+                           colour=form.colour.data,
+                           creator_id=current_user.id,
+                           creation_timestamp=datetime.now(),
+                           last_edit_id=None,
+                           last_edit_timestamp=None)
+
+        db.session.add(level)
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_levels'))
+
+    return render_template('admin/degree_types/edit_level.html', form=form, title='Add new FHEQ Level')
+
+
+@admin.route('/edit_level/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_level(id):
+    """
+    Edit an existing FHEQ level record
+    :return:
+    """
+    level = FHEQ_Level.query.get_or_404(id)
+    form = AddFHEQLevelForm(obj=level)
+
+    if form.validate_on_submit():
+        level.name = form.name.data
+        level.colour = form.colour.data
+        level.last_edit_id = current_user.id
+        level.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_levels'))
+
+    return render_template('admin/degree_types/edit_level.html', form=form, level=level, title='Edit FHEQ Level')
+
+
+@admin.route('/activate_level/<int:id>')
+@roles_accepted('root')
+def activate_level(id):
+    """
+    Make an FHEQ level active
+    :param id:
+    :return:
+    """
+    level = FHEQ_Level.query.get_or_404(id)
+    level.enable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/deactivate_level/<int:id>')
+@roles_accepted('root;')
+def deactivate_level(id):
+    """
+    Make an FHEQ level inactive
+    :param id:
+    :return:
+    """
+    skill = FHEQ_Level.query.get_or_404(id)
+    skill.disable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @admin.route('/add_module', methods=['GET', 'POST'])
 @roles_required('root')
 def add_module():
@@ -1371,18 +1548,25 @@ def add_module():
     Add a new module record
     :return:
     """
+    # check whether any active FHEQ levels exist, and raise an error if not
+    if not FHEQ_Level.query.filter_by(active=True).first():
+        flash('No FHEQ Levels are available. Set up at least one active FHEQ Level before adding a '
+              'module.', 'error')
+        return redirect(request.referrer)
+
     form = AddModuleForm(request.form)
 
     if form.validate_on_submit():
         module = Module(code=form.code.data,
                         name=form.name.data,
                         runs_in=form.runs_in.data,
+                        semester=form.semester.data,
                         first_taught=get_current_year(),
                         last_taught=None,
                         creator_id=current_user.id,
                         creation_timestamp=datetime.now(),
                         last_edit_id=None,
-                        last_edit_timestamp=None);
+                        last_edit_timestamp=None)
 
         db.session.add(module)
         db.session.commit()
@@ -1413,7 +1597,8 @@ def edit_module(id):
     if form.validate_on_submit():
         module.code = form.code.data
         module.name = form.name.data
-        module.runs_in = form.runs_in.data,
+        module.runs_in = form.runs_in.data
+        module.semester = form.semester.data
         module.last_edit_id = current_user.id
         module.last_edit_timestamp = datetime.now()
 

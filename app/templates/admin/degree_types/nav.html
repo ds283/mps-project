@@ -12,6 +12,11 @@
                 Modules
             </a>
         </li>
+        <li {% if subpane=='levels' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.edit_levels') }}">
+                FHEQ Levels
+            </a>
+        </li>
         <li {% if subpane=='degrees' %}class="active"{% endif %}>
             <a href="{{ url_for('admin.edit_degree_types') }}">
                 Degree types

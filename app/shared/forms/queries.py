@@ -15,7 +15,8 @@ from ...database import db
 from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
-    Building, Room, PresentationFeedback
+    Building, Room, PresentationFeedback, Module, FHEQ_Level
+from ...models import academic_year_choices
 
 from ..utils import get_current_year
 
@@ -246,3 +247,7 @@ def GetPresentationFeedbackFaculty(record_id):
         .join(used_ids, used_ids.c.assessor_id == FacultyData.id, isouter=True) \
         .filter(used_ids.c.assessor_id == None) \
         .order_by(User.last_name, User.first_name)
+
+
+def GetFHEQLevels():
+    return db.session.query(FHEQ_Level).order_by(name.asc())

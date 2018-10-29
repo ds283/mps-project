@@ -19,11 +19,20 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+        <li class="dropdown-header">Edit</li>
         <li>
             <a href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
-                <i class="fa fa-pencil"></i> Edit details
+                <i class="fa fa-cogs"></i> Edit details
             </a>
         </li>
+        <li>
+            <a href="{{ url_for('admin.attach_modules', id=programme.id) }}">
+                <i class="fa fa-cogs"></i> Attach modules...
+            </a>
+        </li>
+        
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Administration</li>
 
         {% if programme.active %}
             <li><a href="{{ url_for('admin.deactivate_degree_programme', id=programme.id) }}">

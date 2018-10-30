@@ -35,6 +35,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_schedule_name, unique_or_original_schedule_name, \
     globally_unique_module_code, unique_or_original_module_code, \
     globally_unique_FHEQ_level_name, unique_or_original_FHEQ_level_name, \
+    globally_unique_FHEQ_short_name, unique_or_original_FHEQ_short_name, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -42,8 +43,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels
 from ..models import BackupConfiguration, EnrollmentRecord, extent_choices, year_choices, \
-    matching_history_choices, solver_choices, session_choices, academic_year_choices, \
-    semester_choices
+    matching_history_choices, solver_choices, session_choices, semester_choices
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
@@ -279,7 +279,7 @@ class ModuleMixin():
 
     name = StringField('Module name', validators=[InputRequired(message='Module name is required')])
 
-    runs_in = SelectField('Runs in academic year', choices=academic_year_choices, coerce=int)
+    level = QuerySelectField('Level', query_factory=GetFHEQLevels, get_label='name')
 
     semester = SelectField('Semester', choices=semester_choices, coerce=int)
 
@@ -1091,6 +1091,10 @@ class AddFHEQLevelForm(Form, FHEQLevelMixin):
                        validators=[InputRequired(message='Please specify a name for this level'),
                                    globally_unique_FHEQ_level_name])
 
+    short_name = StringField('Short name', description='A shortened name is used to save space on some dispays',
+                       validators=[InputRequired(message='Please specify a short name for this level'),
+                                   globally_unique_FHEQ_short_name])
+
     submit = SubmitField('Create new level')
 
 
@@ -1099,3 +1103,7 @@ class EditFHEQLevelForm(Form, FHEQLevelMixin, SaveChangesMixin):
     name = StringField('Name', description='Provide a name for this level',
                        validators=[InputRequired(message='Please specify a name for this level'),
                                    unique_or_original_FHEQ_level_name])
+
+    short_name = StringField('Short name', description='A shortened name is used to save space on some dispays',
+                             validators=[InputRequired(message='Please specify a short name for this level'),
+                                         unique_or_original_FHEQ_short_name])

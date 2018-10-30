@@ -50,18 +50,21 @@ _menu = \
                 <i class="fa fa-wrench"></i> Retire
             </a></li>
         {% else %}
-            <li><a href="{{ url_for('admin.unretire_module', id=m.id) }}">
-                <i class="fa fa-wrench"></i> Unretire
-            </a></li>
+            {% set disabled = m.available %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('admin.unretire_module', id=m.id) }}"{% endif %}>
+                    <i class="fa fa-wrench"></i> Unretire
+                </a>
+            </li>
         {% endif %}
     </ul>
 </div>
 """
 
 
-_runs_in = \
+_level = \
 """
-{{ m.academic_year_label|safe }}
+{{ m.level_label|safe }}
 {{ m.semester_label|safe }}
 """
 
@@ -69,7 +72,7 @@ _runs_in = \
 def modules_data(modules):
     data = [{'code': render_template_string(_code, m=m),
              'name': m.name,
-             'runs_in': render_template_string(_runs_in, m=m),
+             'level': render_template_string(_level, m=m),
              'status': render_template_string(_status, m=m),
              'menu': render_template_string(_menu, m=m)} for m in modules]
 

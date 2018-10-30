@@ -16,21 +16,20 @@ from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
     Building, Room, PresentationFeedback, Module, FHEQ_Level
-from ...models import academic_year_choices
 
 from ..utils import get_current_year
 
 
 def GetActiveDegreeTypes():
-    return DegreeType.query.filter_by(active=True)
+    return DegreeType.query.filter_by(active=True).order_by(DegreeType.name.asc())
 
 
 def GetActiveDegreeProgrammes():
-    return DegreeProgramme.query.filter_by(active=True)
+    return DegreeProgramme.query.filter_by(active=True).order_by(DegreeProgramme.name.asc())
 
 
 def GetActiveSkillGroups():
-    return SkillGroup.query.filter_by(active=True)
+    return SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc())
 
 
 def BuildDegreeProgrammeName(programme):
@@ -60,7 +59,7 @@ def BuildConvenorRealName(fac):
 
 
 def GetAllProjectClasses():
-    return ProjectClass.query.filter_by(active=True)
+    return ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc())
 
 
 def GetConvenorProjectClasses():
@@ -77,11 +76,12 @@ def BuildSysadminUserName(user):
 
 
 def CurrentUserResearchGroups():
-    return ResearchGroup.query.filter(ResearchGroup.active, ResearchGroup.faculty.any(id=current_user.id))
+    return ResearchGroup.query.filter(ResearchGroup.active, ResearchGroup.faculty.any(id=current_user.id)) \
+        .order_by(ResearchGroup.name.asc())
 
 
 def AllResearchGroups():
-    return ResearchGroup.query.filter_by(active=True)
+    return ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc())
 
 
 def CurrentUserProjectClasses():
@@ -93,15 +93,15 @@ def CurrentUserProjectClasses():
 
 
 def AllProjectClasses():
-    return ProjectClass.query.filter_by(active=True)
+    return ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc())
 
 
 def GetProjectClasses():
-    return ProjectClass.query.filter_by(active=True)
+    return ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc())
 
 
 def GetSupervisorRoles():
-    return Supervisor.query.filter_by(active=True)
+    return Supervisor.query.filter_by(active=True).order_by(Supervisor.name.asc())
 
 
 def GetSkillGroups():
@@ -250,4 +250,4 @@ def GetPresentationFeedbackFaculty(record_id):
 
 
 def GetFHEQLevels():
-    return db.session.query(FHEQ_Level).order_by(name.asc())
+    return db.session.query(FHEQ_Level).filter(FHEQ_Level.active).order_by(FHEQ_Level.name.asc())

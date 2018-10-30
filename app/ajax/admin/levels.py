@@ -39,7 +39,7 @@ _types_menu = \
 """
 
 
-_active = \
+_status = \
 """
 {% if l.active %}
     <span class="label label-success"><i class="fa fa-check"></i> Active</span>
@@ -52,8 +52,9 @@ _active = \
 def FHEQ_levels_data(levels):
 
     data = [{'name': l.name,
-             'active': render_template_string(_active, l=l),
+             'short_name': l.short_name,
              'colour': l.make_label(l.colour),
+             'status': render_template_string(_status, l=l),
              'menu': render_template_string(_types_menu, l=l)} for l in levels]
 
     return jsonify(data)

@@ -72,9 +72,6 @@ session_choices = [(0, 'Morning'), (1, 'Afternoon')]
 # theme types
 theme_choices = [(0, 'Default'), (1, 'Flat'), (2, 'Dark')]
 
-# academic years
-academic_year_choices = [(0, 'Foundation year'), (1, 'Year 1'), (2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
-
 # semesters
 semester_choices = [(0, 'Autumn Semester'), (1, 'Spring Semester'), (2, 'Autumn & Spring teaching'),
                     (3, 'All-year teaching')]
@@ -1319,6 +1316,18 @@ class DegreeProgramme(db.Model):
     @property
     def ordered_modules(self):
         return self.modules.order_by(Module.code.asc())
+
+
+    def _level_modules_query(self, level_id):
+        return self.modules.filter_by(level_id=level_id).order_by(Module.code.asc())
+
+
+    def number_level_modules(self, level_id):
+        return get_count(self._level_modules_query(level_id))
+
+
+    def get_level_modules(self, level_id):
+        return self._level_modules_query(level_id).all()
 
 
 class SkillGroup(db.Model, ColouredLabelMixin):
@@ -7157,6 +7166,12 @@ class Module(db.Model):
         return cls.last_taught == None
 
 
+    @property
+    def available(self):
+        # check whether tagged FHEQ level is active
+        return self.level.active
+
+
     def retire(self):
         # currently no need to cascade
         self.last_taught = _get_current_year()
@@ -7167,25 +7182,7 @@ class Module(db.Model):
         self.last_taught = None
 
 
-    @property
-    def academic_year_label(self):
-        if self.runs_in < 0:
-            text = 'Error(<0)'
-            type = 'danger'
-        elif self.runs_in > 4:
-            text = 'Error(>4)'
-            type = 'danger'
-        elif self.runs_in == 0:
-            text = 'Foundation Year'
-            type = 'warning'
-        else:
-            text = 'Y{y}'.format(y=self.runs_in)
-            type = 'info'
-
-        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
-
-
-    _semester_choices = {0: 'Autumn term', 1: 'Spring term', 2: 'Autumn & Spring', 3: 'All-year'}
+    _semester_choices = {0: 'Autumn Semester', 1: 'Spring Semester', 2: 'Autumn & Spring', 3: 'All-year'}
 
     @property
     def semester_label(self):
@@ -7198,6 +7195,16 @@ class Module(db.Model):
             type = 'danger'
 
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+    
+    
+    @property
+    def level_label(self):
+        return self.level.short_label
+
+
+    @property
+    def text_label(self):
+        return self.code + ' ' + self.name
 
 
 class FHEQ_Level(db.Model, ColouredLabelMixin):
@@ -7214,6 +7221,9 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
 
     # name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+
+    # short version of name
+    short_name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
 
     # active flag
     active = db.Column(db.Boolean())
@@ -7243,6 +7253,10 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
     def disable(self):
         self.active = False
 
+        # disable any modules that are attached on this FHEQ Level
+        for module in self.modules:
+            module.retire()
+
 
     def make_label(self, text=None, user_classes=None):
         """
@@ -7251,6 +7265,11 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
         :return:
         """
         return self._make_label(text, user_classes)
+    
+    
+    @property
+    def short_label(self):
+        return self.make_label(text=self.short_name)
 
 
 # ############################

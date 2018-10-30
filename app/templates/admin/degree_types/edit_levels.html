@@ -19,6 +19,7 @@
                 ajax: { url: $SCRIPT_ROOT + '/admin/edit_levels_ajax', dataSrc: '' },
                 columns: [
                     { data: 'name' },
+                    { data: 'short_name' },
                     { data: 'colour' },
                     { data: 'status' },
                     { data: 'menu' }
@@ -40,7 +41,8 @@
             <table id="level-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="55%"> Level name</th>
+                    <th width="35%"> Level name</th>
+                    <th width="20%"> Short name</th>
                     <th width="15%"> Colour</th>
                     <th width="15%"> Status</th>
                     <th width="15%"> Actions</th>

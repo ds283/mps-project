@@ -350,6 +350,18 @@ def unique_or_original_FHEQ_level_name(form, field):
     return globally_unique_FHEQ_level_name(form, field)
 
 
+def globally_unique_FHEQ_short_name(form, field):
+    if FHEQ_Level.query.filter_by(short_name=field.data).first():
+        raise ValidationError('{name} is already defined as a FHEQ short name'.format(name=field.data))
+
+
+def unique_or_original_FHEQ_short_name(form, field):
+    if field.data == form.level.short_name:
+        return
+
+    return globally_unique_FHEQ_short_name(form, field)
+
+
 def valid_json(form, field):
     try:
         json_obj = json.loads(field.data)

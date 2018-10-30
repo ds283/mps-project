@@ -1388,8 +1388,8 @@ def deactivate_degree_programme(id):
     return redirect(request.referrer)
 
 
-@admin.route('/attach_modules/<int:id>/<int:level_id>')
-@admin.route('/attach_modules/<int:id>')
+@admin.route('/attach_modules/<int:id>/<int:level_id>', methods=['GET', 'POST'])
+@admin.route('/attach_modules/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
 def attach_modules(id, level_id=None):
     """
@@ -1410,8 +1410,6 @@ def attach_modules(id, level_id=None):
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
 
-        form.selector.data = level_id
-
     # get list of modules for the current level_id
     if form.selector.data is not None:
         modules = Module.query \
@@ -1421,13 +1419,17 @@ def attach_modules(id, level_id=None):
     else:
         modules = []
 
+    level_id = form.selector.data.id if form.selector.data is not None else None
+
+    levels = FHEQ_Level.query.filter_by(active=True).all()
+
     return render_template('admin/degree_types/attach_modules.html', prog=programme, modules=modules, form=form,
-                           title='Attach modules')
+                           level_id=level_id, levels=levels, title='Attach modules')
 
 
-@admin.route('/attach_module/<int:prog_id>/<int:mod_id>')
+@admin.route('/attach_module/<int:prog_id>/<int:mod_id>/<int:level_id>')
 @roles_required('root')
-def attach_module(prog_id, mod_id):
+def attach_module(prog_id, mod_id, level_id):
     """
     Attach a module to a degree programme
     :param prog_id:
@@ -1441,12 +1443,12 @@ def attach_module(prog_id, mod_id):
         programme.modules.append(module)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(url_for('admin.attach_modules', id=prog_id, level_id=level_id))
 
 
-@admin.route('/detach_module/<int:prog_id>/<int:mod_id>')
+@admin.route('/detach_module/<int:prog_id>/<int:mod_id>/<int:level_id>')
 @roles_required('root')
-def detach_module(prog_id, mod_id):
+def detach_module(prog_id, mod_id, level_id):
     """
     Detach a module from a degree programme
     :param prog_id:
@@ -1460,7 +1462,7 @@ def detach_module(prog_id, mod_id):
         programme.modules.remove(module)
         db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(url_for('admin.attach_modules', id=prog_id, level_id=level_id))
 
 
 @admin.route('/add_level', methods=['GET', 'POST'])
@@ -1474,7 +1476,9 @@ def add_level():
 
     if form.validate_on_submit():
         level = FHEQ_Level(name=form.name.data,
+                           short_name=form.short_name.data,
                            colour=form.colour.data,
+                           active=True,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now(),
                            last_edit_id=None,
@@ -1496,10 +1500,12 @@ def edit_level(id):
     :return:
     """
     level = FHEQ_Level.query.get_or_404(id)
-    form = AddFHEQLevelForm(obj=level)
+    form = EditFHEQLevelForm(obj=level)
+    form.level = level
 
     if form.validate_on_submit():
         level.name = form.name.data
+        level.short_name = form.short_name.data
         level.colour = form.colour.data
         level.last_edit_id = current_user.id
         level.last_edit_timestamp = datetime.now()
@@ -1559,7 +1565,7 @@ def add_module():
     if form.validate_on_submit():
         module = Module(code=form.code.data,
                         name=form.name.data,
-                        runs_in=form.runs_in.data,
+                        level=form.level.data,
                         semester=form.semester.data,
                         first_taught=get_current_year(),
                         last_taught=None,
@@ -1597,7 +1603,7 @@ def edit_module(id):
     if form.validate_on_submit():
         module.code = form.code.data
         module.name = form.name.data
-        module.runs_in = form.runs_in.data
+        module.level = form.level.data
         module.semester = form.semester.data
         module.last_edit_id = current_user.id
         module.last_edit_timestamp = datetime.now()

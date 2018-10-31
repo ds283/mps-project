@@ -182,7 +182,7 @@ _marker_menu = \
        class="btn btn-sm btn-default">
         <i class="fa fa-trash"></i> Remove
     </a>
-{% elif proj.can_enroll_marker(f) %}
+{% elif proj.can_enroll_assessor(f) %}
     <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
        class="btn btn-sm btn-default">
         <i class="fa fa-plus"></i> Attach
@@ -2443,9 +2443,9 @@ def add_assessor(proj_id, pclass_id, mid):
         if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
-    marker = FacultyData.query.get_or_404(mid)
+    assessor = FacultyData.query.get_or_404(mid)
 
-    proj.add_assessor(marker)
+    proj.add_assessor(assessor)
 
     return redirect(request.referrer)
 
@@ -2472,9 +2472,9 @@ def remove_assessor(proj_id, pclass_id, mid):
         if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
-    marker = FacultyData.query.get_or_404(mid)
+    assessor = FacultyData.query.get_or_404(mid)
 
-    proj.remove_assessor(marker)
+    proj.remove_assessor(assessor)
 
     return redirect(request.referrer)
 
@@ -2505,10 +2505,10 @@ def attach_all_assessors(proj_id, pclass_id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    markers = filter_assessors(proj, state_filter, pclass_filter, group_filter)
+    assessoes = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
-    for marker in markers:
-        proj.add_assessor(marker)
+    for assessor in assessoes:
+        proj.add_assessor(assessor)
 
     return redirect(request.referrer)
 
@@ -2539,10 +2539,10 @@ def remove_all_assessors(proj_id, pclass_id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    markers = filter_assessors(proj, state_filter, pclass_filter, group_filter)
+    assessors = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
-    for marker in markers:
-        proj.remove_assessor(marker)
+    for assessor in assessors:
+        proj.remove_assessor(assessor)
 
     return redirect(request.referrer)
 

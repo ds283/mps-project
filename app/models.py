@@ -1324,7 +1324,10 @@ class DegreeProgramme(db.Model):
 
     @property
     def ordered_modules(self):
-        return self.modules.order_by(Module.code.asc())
+        return self.modules \
+            .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
+            .order_by(FHEQ_Level.name.asc(),
+                      Module.semester.asc(), Module.name.asc())
 
 
     def _level_modules_query(self, level_id):
@@ -3048,7 +3051,7 @@ class Project(db.Model):
         return self.assessor_list_query(pclass).all()
 
 
-    def can_enroll_marker(self, faculty):
+    def can_enroll_assessor(self, faculty):
         """
         Determine whether a given FacultyData instance can be enrolled as an assessor for this project
         :param faculty:
@@ -3078,7 +3081,7 @@ class Project(db.Model):
         :param faculty:
         :return:
         """
-        if self.is_assessor(faculty):
+        if not self.can_enroll_assessor(faculty):
             return
 
         self.assessors.append(faculty)
@@ -3319,7 +3322,10 @@ class ProjectDescription(db.Model):
 
     @property
     def ordered_modules(self):
-        return self.modules.order_by(Module.code.asc())
+        return self.modules \
+            .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
+            .order_by(FHEQ_Level.name.asc(),
+                      Module.semester.asc(), Module.name.asc())
 
 
 @listens_for(ProjectDescription, 'before_update')

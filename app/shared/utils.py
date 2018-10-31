@@ -11,6 +11,7 @@
 
 from flask import redirect, url_for, flash
 from flask_security import current_user
+from sqlalchemy import and_
 
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
@@ -156,7 +157,6 @@ def get_convenor_dashboard_data(pclass, config):
     :param config:
     :return:
     """
-
     fac_query = db.session.query(User) \
         .filter_by(active=True) \
         .join(FacultyData, FacultyData.id == User.id)
@@ -164,7 +164,18 @@ def get_convenor_dashboard_data(pclass, config):
     fac_total = get_count(fac_query)
     fac_count = get_count(fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
 
-    proj_count = get_count(db.session.query(Project).filter(Project.project_classes.any(id=pclass.id)))
+    attached_projects = db.session.query(Project) \
+        .filter(Project.active,
+                Project.project_classes.any(id=pclass.id)) \
+        .join(User, User.id == Project.owner_id) \
+        .join(FacultyData, FacultyData.id == Project.owner_id) \
+        .join(EnrollmentRecord,
+              and_(EnrollmentRecord.pclass_id == pclass.id, EnrollmentRecord.owner_id == Project.owner_id)) \
+        .filter(User.active) \
+        .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
+        .order_by(User.last_name, User.first_name)
+    proj_count = get_count(attached_projects)
+
     sel_count = get_count(config.selecting_students.filter_by(retired=False))
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)

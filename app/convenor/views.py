@@ -416,8 +416,11 @@ def attached_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    # build list of projects attached to this project class
-    pq = db.session.query(Project.id, Project.owner_id).filter(Project.project_classes.any(id=id)).subquery()
+    # build list of active projects attached to this project class
+    pq = db.session.query(Project.id, Project.owner_id) \
+        .filter(Project.project_classes.any(id=id)) \
+        .join(User, User.id == Project.owner_id) \
+        .filter(User.active == True).subquery()
 
     # build list of enrollments attached to this project class
     eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()

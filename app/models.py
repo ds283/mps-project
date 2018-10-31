@@ -2714,33 +2714,37 @@ def _Project_is_offerable(pid):
     """
     project = db.session.query(Project).filter_by(id=pid).one()
 
+    errors = {}
+    warnings = {}
+
+    # CONSTRAINT 1. At least one assigned project class should be active
     if get_count(project.project_classes.filter(ProjectClass.active)) == 0:
-        return False, "No active project types assigned to project"
+        errors['pclass'] = "No active project types assigned to project"
 
+    # CONSTRAINT 2. The affiliated research group should be active
     if project.group is None:
-        return False, "No active research group affiliated with project"
+        errors['groups'] = "No active research group affiliated with project"
 
-    # for each project class we are attached to, check whether enough assessors have been assigned
-    # and whether a project description is available
+    # CONSTRAINT 3. For each attached project class, we should have enough assessors.
+    # Also, there should be a project description
     for pclass in project.project_classes:
-        if pclass.uses_marker:
-            if project.num_assessors(pclass) < pclass.number_assessors:
-                return False, "Too few assessors assigned for '{name}'".format(name=pclass.name)
+        if pclass.uses_marker and project.num_assessors(pclass) < pclass.number_assessors:
+            errors[('pclass-assessors', pclass.id)] = "Too few assessors assigned for '{name}'".format(name=pclass.name)
 
         desc = project.get_description(pclass)
-
         if desc is None:
-            return False, "No project description assigned for '{name}'".format(name=pclass.name)
+            errors[('pclass-descriptions', pclass.id)] = "No project description assigned for '{name}'".format(name=pclass.name)
 
-        if get_count(desc.team.filter(Supervisor.active)) == 0:
-            return False, "No active supervisory roles assigned for '{name}'".format(name=pclass.name)
+    # CONSTRAINT 4. All attached project descriptions should validate individually
+    for desc in project.descriptions:
+        if not desc.is_valid:
+            errors[('descriptions', desc.id)] = \
+                'Description "{label}" has validation errors'.format(label=desc.label)
 
-        if project.enforce_capacity:
-            if desc.capacity is None or desc.capacity <= 0:
-                return False, "Capacity is zero or unset for '{name}', " \
-                              "but enforcement is enabled".format(name=pclass.name)
+    if len(errors) > 0 or len(warnings) > 0:
+        return False, errors, warnings
 
-    return True, None
+    return True, errors, warnings
 
 
 @cache.memoize()
@@ -2855,12 +2859,17 @@ class Project(db.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.error = None
+
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
 
 
     @orm.reconstructor
     def _reconstruct(self):
-        self.error = None
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
 
 
     @property
@@ -2873,7 +2882,6 @@ class Project(db.Model):
         Disable this project
         :return:
         """
-
         self.active = False
 
 
@@ -2882,7 +2890,6 @@ class Project(db.Model):
         Enable this project
         :return:
         """
-
         self.active = True
 
 
@@ -2892,10 +2899,24 @@ class Project(db.Model):
         Determine whether this project is available for selection
         :return:
         """
-        flag, self.error = _Project_is_offerable(self.id)
+        flag, self._errors, self._warnings = _Project_is_offerable(self.id)
+        self._validated = True
 
         return flag
 
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
 
 
     @property
@@ -3123,6 +3144,37 @@ def _Project_insert_handler(mapper, connection, target):
             cache.delete_memoized(_Project_num_assessors, target.id, pclass.id)
 
 
+@listens_for(Project, 'before_delete')
+def _Project_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_Project_is_offerable, target.id)
+
+        for pclass in target.project_classes:
+            cache.delete_memoized(_Project_num_assessors, target.id, pclass.id)
+
+
+@cache.memoize()
+def _ProjectDescription_is_valid(id):
+    obj = ProjectDescription.query.filter_by(id=id).one()
+
+    errors = {}
+    warnings = {}
+
+    # CONSTRAINT 1 - At least on supervisory role must be specified
+    if get_count(obj.team.filter(Supervisor.active)) == 0:
+        errors['supervisors'] = 'No active supervisory roles assigned'
+
+    # CONSTRAINT 2 - If parent project enforces capacity limits, a capacity must be specified
+    if obj.parent.enforce_capacity:
+        if obj.capacity is None or obj.capacity <= 0:
+            errors['capacity'] = "Capacity is zero or unset, but enforcement is enabled for " \
+                                 "parent project"
+
+    if len(errors) > 0 or len(warnings) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
+
 
 class ProjectDescription(db.Model):
     """
@@ -3182,6 +3234,47 @@ class ProjectDescription(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @orm.reconstructor
+    def _reconstruct(self):
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @property
+    def is_valid(self):
+        """
+        Perform validation
+        :return:
+        """
+        flag, self._errors, self._warnings = _ProjectDescription_is_valid(self.id)
+        self._validated = True
+
+        return flag
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
+
+
     def _level_modules_query(self, level_id):
         return self.modules \
             .filter_by(level_id=level_id) \
@@ -3213,9 +3306,15 @@ class ProjectDescription(db.Model):
         return [m for m in modules if self.module_available(m.id)]
 
 
+    @property
+    def has_modules(self):
+        return get_count(self.modules) > 0
+
+
 @listens_for(ProjectDescription, 'before_update')
 def _ProjectDescription_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
+        cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
         for pclass in target.parent.project_classes:
@@ -3225,6 +3324,7 @@ def _ProjectDescription_update_handler(mapper, connection, target):
 @listens_for(ProjectDescription, 'before_insert')
 def _ProjectDescription_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
+        cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
         for pclass in target.parent.project_classes:
@@ -3234,6 +3334,7 @@ def _ProjectDescription_insert_handler(mapper, connection, target):
 @listens_for(ProjectDescription, 'before_delete')
 def _ProjectDescription_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
+        cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
         for pclass in target.parent.project_classes:
@@ -5911,7 +6012,7 @@ def _PresentationAssessment_is_valid(id):
         # check whether each session validates individually
         if not sess.is_valid:
             errors[('sessions', sess.id)] = \
-                '{date}: {err}'.format(date=sess.short_date_as_string, err=sess.error)
+                'Session {date} has validation errors'.format(date=sess.short_date_as_string)
 
 
     # CONSTRAINT 2 - schedules should satisfy their own consistency rules
@@ -6113,7 +6214,6 @@ class PresentationAssessment(db.Model):
         Perform validation
         :return:
         """
-
         flag, self._errors, self._warnings = _PresentationAssessment_is_valid(self.id)
         self._validated = True
 
@@ -6257,9 +6357,12 @@ def _PresentationAssessment_delete_handler(mapper, connection, target):
 def _PresentationSession_is_valid(id):
     obj = db.session.query(PresentationSession).filter_by(id=id).one()
 
+    errors = {}
+    warnings = {}
+
     # CONSTRAINT 1 - sessions should be scheduled on a weekday
     if obj.date.weekday() >= 5:
-        return False, 'Session scheduled on a weekend'
+        warnings['weekday'] = 'Session scheduled on a weekend'
 
     # CONSTRAINT 2 - only one session should be scheduled per morning/afternoon on a fixed date
     # check how many sessions are assigned to this date and morning/afternoon
@@ -6273,9 +6376,9 @@ def _PresentationSession_is_valid(id):
 
         if lo_rec is not None:
             if lo_rec.id == obj.id:
-                return False, 'A duplicate copy of this session exists'
+                errors['duplicate'] = 'A duplicate copy of this session exists'
             else:
-                return False, 'This session is a duplicate'
+                errors['duplicate'] = 'This session is a duplicate'
 
     # CONSTRAINT 3 - if faculty availability information is available, then there should be enough
     # faculty available to cover all the available rooms
@@ -6285,9 +6388,12 @@ def _PresentationSession_is_valid(id):
 
         if obj.owner.number_assessors is not None:
             if number_faculty < obj.owner.number_assessors * number_rooms:
-                return False, 'Too few assessors are available for the number of rooms'
+                errors['assessors'] = 'Too few assessors are available for the number of rooms'
 
-    return True, None
+    if len(errors) > 0 or len(warnings) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
 
 
 class PresentationSession(db.Model):
@@ -6350,12 +6456,17 @@ class PresentationSession(db.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.error = None
+
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
 
 
     @orm.reconstructor
     def _reconstruct(self):
-        self.error = None
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
 
 
     def make_label(self, text):
@@ -6404,9 +6515,24 @@ class PresentationSession(db.Model):
 
     @property
     def is_valid(self):
-        flag, self.error = _PresentationSession_is_valid(self.id)
+        flag, self._errors, self._warnings = _PresentationSession_is_valid(self.id)
+        self._validated = True
 
         return flag
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
 
 
     @property
@@ -6797,7 +6923,6 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         Perform validation
         :return:
         """
-
         flag, self._errors, self._warnings = _ScheduleAttempt_is_valid(self.id)
         self._validated = True
 

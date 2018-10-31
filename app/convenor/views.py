@@ -63,31 +63,31 @@ _project_menu = \
 
         <li>
             <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-cogs"></i> Settings
+                <i class="fa fa-cogs"></i> Settings...
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-pencil"></i> Descriptions
+                <i class="fa fa-pencil"></i> Descriptions...
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-cogs"></i> Assessors
+                <i class="fa fa-cogs"></i> Assessors...
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-cogs"></i> Transferable skills
+                <i class="fa fa-cogs"></i> Transferable skills...
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-cogs"></i> Degree programmes
+                <i class="fa fa-cogs"></i> Degree programmes...
             </a>
         </li>
 
@@ -128,31 +128,31 @@ _unattached_project_menu = \
 
         <li>
             <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Settings
+                <i class="fa fa-cogs"></i> Settings...
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Descriptions
+                <i class="fa fa-pencil"></i> Descriptions...
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Assessors
+                <i class="fa fa-cogs"></i> Assessors...
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Transferable skills
+                <i class="fa fa-cogs"></i> Transferable skills...
             </a>
         </li>
 
         <li>
             <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Degree programmes
+                <i class="fa fa-cogs"></i> Degree programmes...
             </a>
         </li>
 
@@ -210,7 +210,7 @@ _desc_menu = \
         <ul class="dropdown-menu dropdown-menu-right">
             <li>
                 <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-pencil"></i> Edit description
+                    <i class="fa fa-pencil"></i> Edit description...
                 </a>
             </li>
             <li>

@@ -22,7 +22,7 @@ _menu = \
         <li class="dropdown-header">Edit</li>
         <li>
             <a href="{{ url_for('admin.edit_degree_programme', id=programme.id) }}">
-                <i class="fa fa-cogs"></i> Edit details
+                <i class="fa fa-cogs"></i> Edit details...
             </a>
         </li>
         <li>

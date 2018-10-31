@@ -21,7 +21,7 @@ _types_menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_level', id=l.id) }}">
-                <i class="fa fa-pencil"></i> Edit details
+                <i class="fa fa-pencil"></i> Edit details...
             </a>
         </li>
 

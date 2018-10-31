@@ -30,13 +30,13 @@ _pclasses_menu = \
         
         <li>
             <a href="{{ url_for('admin.edit_pclass', id=pcl.id) }}">
-                <i class="fa fa-cogs"></i> Settings
+                <i class="fa fa-cogs"></i> Settings...
             </a>
         </li>
         
         <li>
             <a href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
-                <i class="fa fa-cogs"></i> Submission periods
+                <i class="fa fa-cogs"></i> Submission periods...
             </a>
         </li>
         

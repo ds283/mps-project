@@ -41,7 +41,7 @@ _menu = \
         {% set disabled = not m.active %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.edit_module', id=m.id) }}"{% endif %}>
-                <i class="fa fa-pencil"></i> Edit details
+                <i class="fa fa-pencil"></i> Edit details...
             </a>
         </li>
 

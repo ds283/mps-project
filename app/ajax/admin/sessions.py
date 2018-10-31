@@ -45,7 +45,7 @@ _menu = \
         <li class="dropdown-header">Edit session</li>
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.edit_session', id=s.id) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Settings
+                <i class="fa fa-cogs"></i> Settings...
             </a>
         </li>
         <li {% if disabled %}class="disabled"{% endif %}>

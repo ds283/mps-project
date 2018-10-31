@@ -13,11 +13,23 @@ from flask import render_template_string, jsonify
 
 _project_name = \
 """
+{% set offerable = project.is_offerable %}
 <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
     {{ project.name }}
+    {% if not offerable %}
+        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    {% endif %}
 </a>
-{% if not project.is_offerable %}
-    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+<p></p>
+{% for pclass in project.project_classes %}
+    {% if pclass.active %}
+        {% set style = pclass.make_CSS_style() %}
+        <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
+    {% endif %}
+{% else %}
+    <span class="label label-danger">No project classes</span>
+{% endfor %}
+{% if not offerable %}
     <p></p>
     {% set errors = project.errors %}
     {% set warnings = project.warnings %}

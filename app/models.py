@@ -1319,7 +1319,9 @@ class DegreeProgramme(db.Model):
 
 
     def _level_modules_query(self, level_id):
-        return self.modules.filter_by(level_id=level_id).order_by(Module.code.asc())
+        return self.modules \
+            .filter_by(level_id=level_id) \
+            .order_by(Module.semester.asc(), Module.name.asc())
 
 
     def number_level_modules(self, level_id):

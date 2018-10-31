@@ -1416,7 +1416,7 @@ def attach_modules(id, level_id=None):
         modules = Module.query \
             .filter(Module.active == True,
                     Module.level_id == form.selector.data.id) \
-            .order_by(Module.code.asc())
+            .order_by(Module.semester.asc(), Module.name.asc())
     else:
         modules = []
 

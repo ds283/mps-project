@@ -15,7 +15,7 @@ from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
-    PresentationSession, ScheduleSlot, User, PresentationFeedback
+    PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level
 
 import app.ajax as ajax
 
@@ -24,6 +24,7 @@ from . import faculty
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, DescriptionSelectorFormFactory, SupervisorFeedbackForm, \
     MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsForm
+from ..admin.forms import LevelSelectorForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
     get_current_year, get_count
@@ -137,6 +138,48 @@ _marker_menu = \
 _desc_label = \
 """
 <a href="{{ url_for('faculty.edit_description', did=d.id) }}">{{ d.label }}</a>
+{% if not d.is_valid %}
+    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <p></p>
+    {% set errors = d.errors %}
+    {% set warnings = d.warnings %}
+    {% if errors|length == 1 %}
+        <span class="label label-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="label label-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="label label-success">0 errors</span>
+    {% endif %}
+    {% if warnings|length == 1 %}
+        <span class="label label-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="label label-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="label label-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="has-error">
+            {% for item in errors %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">{{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="has-error">
+            {% for item in warnings %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">Warning: {{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}
 """
 
 
@@ -153,6 +196,11 @@ _desc_menu = \
                 <i class="fa fa-pencil"></i> Edit description...
             </a>
         </li>
+            <li>
+                <a href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
+                    <i class="fa fa-cogs"></i> Module pre-requisites...
+                </a>
+            </li>
         <li>
             <a href="{{ url_for('faculty.delete_description', did=d.id) }}">
                 <i class="fa fa-trash"></i> Delete
@@ -581,6 +629,83 @@ def edit_description(did):
 
     return render_template('faculty/edit_description.html', project=desc.parent, desc=desc, form=form,
                            title='Edit description', create=create)
+
+
+@faculty.route('/description_modules/<int:did>/<int:level_id>', methods=['GET', 'POST'])
+@faculty.route('/description_modules/<int:did>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def description_modules(did, level_id=None):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
+
+    form = LevelSelectorForm(request.form)
+
+    if not form.validate_on_submit() and request.method == 'GET':
+        if level_id is None:
+            form.selector.data = FHEQ_Level.query \
+                .filter(FHEQ_Level.active == True) \
+                .order_by(FHEQ_Level.name.asc()).first()
+        else:
+            form.selector.data = FHEQ_Level.query \
+                .filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
+
+    # get list of modules for the current level_id
+    if form.selector.data is not None:
+        modules = desc.get_available_modules(level_id=form.selector.data.id)
+    else:
+        modules = []
+
+    level_id = form.selector.data.id if form.selector.data is not None else None
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.name.asc()).all()
+
+    return render_template('faculty/description_modules.html', project=desc.parent, desc=desc, form=form,
+                           title='Attach pre-requisite modules', levels=levels, create=create,
+                           modules=modules, level_id=level_id)
+
+
+@faculty.route('/description_attach_module/<int:did>/<int:mod_id>/<int:level_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def description_attach_module(did, mod_id, level_id):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
+    module = Module.query.get_or_404(mod_id)
+
+    if desc.module_available(module.id):
+        if module not in desc.modules:
+            desc.modules.append(module)
+            db.session.commit()
+
+    return redirect(url_for('faculty.description_modules', did=did, level_id=level_id, create=create))
+
+
+@faculty.route('/description_detach_module/<int:did>/<int:mod_id>/<int:level_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def description_detach_module(did, mod_id, level_id):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
+    module = Module.query.get_or_404(mod_id)
+
+    if desc.module_available(module.id):
+        if module in desc.modules:
+            desc.modules.delete(module)
+            db.session.commit()
+
+    return redirect(url_for('faculty.description_modules', did=did, level_id=level_id, create=create))
 
 
 @faculty.route('/delete_description/<int:did>')

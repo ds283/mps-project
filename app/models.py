@@ -3328,8 +3328,9 @@ def _ProjectDescription_update_handler(mapper, connection, target):
         cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
-        for pclass in target.parent.project_classes:
-            cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+        if target is not None and target.parent is not None:
+            for pclass in target.parent.project_classes:
+                cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
 
 
 @listens_for(ProjectDescription, 'before_insert')
@@ -3338,8 +3339,9 @@ def _ProjectDescription_insert_handler(mapper, connection, target):
         cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
-        for pclass in target.parent.project_classes:
-            cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+        if target is not None and target.parent is not None:
+            for pclass in target.parent.project_classes:
+                cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
 
 
 @listens_for(ProjectDescription, 'before_delete')
@@ -3348,8 +3350,9 @@ def _ProjectDescription_delete_handler(mapper, connection, target):
         cache.delete_memoized(_ProjectDescription_is_valid, target.id)
         cache.delete_memoized(_Project_is_offerable, target.parent_id)
 
-        for pclass in target.parent.project_classes:
-            cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+        if target is not None and target.parent is not None:
+            for pclass in target.parent.project_classes:
+                cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
 
 
 class LiveProject(db.Model):

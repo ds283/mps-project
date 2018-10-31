@@ -3167,8 +3167,14 @@ def _ProjectDescription_is_valid(id):
     # CONSTRAINT 2 - If parent project enforces capacity limits, a capacity must be specified
     if obj.parent.enforce_capacity:
         if obj.capacity is None or obj.capacity <= 0:
-            errors['capacity'] = "Capacity is zero or unset, but enforcement is enabled for " \
-                                 "parent project"
+            errors['capacity'] = 'Capacity is zero or unset, but enforcement is enabled for ' \
+                                 'parent project'
+
+    # CONSTRAINT 3 - All tagged pre-requisite modules should be valid
+    for module in obj.modules:
+        if not obj.module_available(module.id):
+            errors[('module', module.id)] = 'Tagged pre-requisite module "{name}" is not available for this ' \
+                                            'description'.format(name=module.name)
 
     if len(errors) > 0 or len(warnings) > 0:
         return False, errors, warnings
@@ -3309,6 +3315,11 @@ class ProjectDescription(db.Model):
     @property
     def has_modules(self):
         return get_count(self.modules) > 0
+
+
+    @property
+    def ordered_modules(self):
+        return self.modules.order_by(Module.code.asc())
 
 
 @listens_for(ProjectDescription, 'before_update')
@@ -3458,9 +3469,13 @@ class LiveProject(db.Model):
         :param sel:
         :return:
         """
+        # if student doesn't satisfy pre-requisites, sign-off is required by default whether or not
+        # the project/owner settings require sign-off
+        if not sel.satisfies_prerequisites(self) and not self.meeting_confirmed(sel):
+            return False
 
-        # if project doesn't require sign off, is always available
-        # if project owner doesn't require confirmation, is always available
+        # if project doesn't require sign off, it is always available
+        # if project owner doesn't require confirmation, it is always available
         if self.meeting_reqd != self.MEETING_REQUIRED or self.owner.sign_off_students is False:
             return True
 
@@ -3874,6 +3889,17 @@ class SelectingStudent(db.Model):
             return None
 
         return None
+
+
+    def satisfies_prerequisites(self, desc):
+        if get_count(desc.modules) == 0:
+            return True
+
+        for module in desc.modules:
+            if get_count(self.student.programme.modules.filter_by(id=module.id)) == 0:
+                return False
+
+        return True
 
 
 class SubmittingStudent(db.Model):
@@ -7390,6 +7416,13 @@ class Module(db.Model):
         return self.code + ' ' + self.name
 
 
+    def make_label(self, text=None, user_classes=None):
+        if text is None:
+            text = self.text_label
+
+        return self.level.make_label(text=text, user_classes=user_classes)
+
+
 class FHEQ_Level(db.Model, ColouredLabelMixin):
     """
     Characterize an FHEQ level
@@ -7447,7 +7480,7 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
         :param text:
         :return:
         """
-        return self._make_label(text, user_classes)
+        return self._make_label(text, user_classes=user_classes)
     
     
     @property

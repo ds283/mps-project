@@ -29,6 +29,7 @@ _pclasses = \
     <span class="label label-default">None</span>
 {% endif %}
 {% if d.has_modules %}
+    <p></p>
     <span class="label label-primary"><i class="fa fa-exclamation-circle"></i> Has pre-requisites</span>
 {% endif %}
 """

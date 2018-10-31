@@ -185,6 +185,26 @@
                                         </div>
                                     {% endif %}
 
+                                    {% set modules = desc.ordered_modules.all() %}
+                                    {% if modules|length > 0 %}
+                                        <div class="row sm-gap-below vertical-top">
+                                            <div class="col-xs-3">Pre-requisites</div>
+                                            <div class="col-xs-9">
+                                                {% for module in modules %}
+                                                    {% if module.active %}
+                                                        {{ module.make_label(user_classes="project-label")|safe }}
+                                                    {% endif %}
+                                                {% endfor %}
+                                                {% if sel %}
+                                                    {% if not sel.satisfies_prerequisites(desc) %}
+                                                        <p>This project has pre-requisites that are not available
+                                                        on your programme.</p>
+                                                    {% endif %}
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
                                     <div class="row vertical-top">
                                         <div class="col-xs-3">Supervision team</div>
                                         <div class="col-xs-9">

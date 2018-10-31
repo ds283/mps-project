@@ -77,12 +77,19 @@ _show_type = \
 _name = \
 """
 {{ p.name }} {{ p.short_label|safe }}
+<p></p>
+{% for level in levels %}
+    {% set num = p.number_level_modules(level.id) %} 
+    {% if num > 0 %}
+        {{ level.make_label(level.short_name + ' ' + num|string)|safe }} 
+    {% endif %}
+{% endfor %}
 """
 
 
-def degree_programmes_data(programmes):
+def degree_programmes_data(programmes, levels):
 
-    data = [{'name': render_template_string(_name, p=p),
+    data = [{'name': render_template_string(_name, p=p, levels=levels),
              'type': p.degree_type.name,
              'show_type': render_template_string(_show_type, p=p),
              'active': render_template_string(_active, p=p),

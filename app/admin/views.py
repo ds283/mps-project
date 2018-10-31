@@ -1199,7 +1199,8 @@ def degree_programmes_ajax():
     :return:
     """
     programmes = DegreeProgramme.query.all()
-    return ajax.admin.degree_programmes_data(programmes)
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.name.asc()).all()
+    return ajax.admin.degree_programmes_data(programmes, levels)
 
 
 @admin.route('/modules_ajax')

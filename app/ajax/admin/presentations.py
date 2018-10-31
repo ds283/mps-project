@@ -82,7 +82,7 @@ _sessions = \
         {{ session.label|safe }}
     {% endif %}
 {% endfor %}
-{% if sessions|length > 0 %}
+{% if not a.is_valid %}
     <p></p>
     {% set errors = a.errors %}
     {% set warnings = a.warnings %}

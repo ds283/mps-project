@@ -13,15 +13,51 @@ from flask import render_template_string, jsonify
 
 _project_name = \
 """
-{% set is_offerable = project.is_offerable %}
-<div class="{% if not is_offerable %}has-error{% endif %}">
-    <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-        {{ project.name }}
-    </a>
-    {% if not is_offerable and project.error %}
-        <p class="help-block">Error: {{ project.error }}</p>
+<a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
+    {{ project.name }}
+</a>
+{% if not project.is_offerable %}
+    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <p></p>
+    {% set errors = project.errors %}
+    {% set warnings = project.warnings %}
+    {% if errors|length == 1 %}
+        <span class="label label-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="label label-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="label label-success">0 errors</span>
     {% endif %}
-</div>
+    {% if warnings|length == 1 %}
+        <span class="label label-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="label label-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="label label-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="has-error">
+            {% for item in errors %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">{{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="has-error">
+            {% for item in warnings %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">Warning: {{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}
 """
 
 _project_status = \

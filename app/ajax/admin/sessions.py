@@ -16,9 +16,45 @@ _date = \
 {{ s.date_as_string }}
 {% if not s.is_valid %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
-    <div class="has-error">
-        <p class="help-block">Error: {{ s.error }}</p>
-    </div>
+    <p></p>
+    {% set errors = s.errors %}
+    {% set warnings = s.warnings %}
+    {% if errors|length == 1 %}
+        <span class="label label-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="label label-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="label label-success">0 errors</span>
+    {% endif %}
+    {% if warnings|length == 1 %}
+        <span class="label label-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="label label-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="label label-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="has-error">
+            {% for item in errors %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">{{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="has-error">
+            {% for item in warnings %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">Warning: {{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
 {% endif %}
 """
 

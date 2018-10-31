@@ -34,6 +34,8 @@ def do_confirm(sel, project):
 
     if sel not in project.confirmed_students:
         project.confirmed_students.append(sel)
+        sel.student.user.post_message('Your confirmation request for the project "{name}" has been '
+                                      'approved.'.format(name=project.name), 'success')
 
     return True
 
@@ -41,8 +43,10 @@ def do_confirm(sel, project):
 def do_deconfirm(sel, project):
 
     if sel in project.confirmed_students:
-
         project.confirmed_students.remove(sel)
+        sel.student.user.post_message('Your confirmation approval for project "{name}" has been removed. '
+                                      'If you were not expecting this event, please make an appointment to discuss '
+                                      'with the supervisor.'.format(name=project.name), 'info')
         return True
 
     return False
@@ -57,6 +61,9 @@ def do_deconfirm_to_pending(sel, project):
 
     if sel not in project.confirm_waiting:
         project.confirm_waiting.append(sel)
+        sel.student.user.post_message('Your confirmation approval for project "{name}" has been reverted to "pending". '
+                                      'If you were not expecting this event, please make an appointment to discuss '
+                                      'with the supervisor.'.format(name=project.name), 'info')
 
     return True
 

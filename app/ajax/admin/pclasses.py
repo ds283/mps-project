@@ -132,7 +132,11 @@ _submissions = \
 
 _configuration = \
 """
-<span class="label label-primary">Y{{ p.year }}</span>
+{% if p.start_level is not none %}
+    <span class="label label-primary">Y{{ p.start_level.academic_year }}</span>
+{% else %}
+    <span class="label label-danger">Start level missing</span>
+{% endif %}
 <span class="label label-info">extent: {{ p.extent }} yr</span>
 """
 

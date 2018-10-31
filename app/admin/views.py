@@ -1199,7 +1199,7 @@ def degree_programmes_ajax():
     :return:
     """
     programmes = DegreeProgramme.query.all()
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.name.asc()).all()
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
     return ajax.admin.degree_programmes_data(programmes, levels)
 
 
@@ -1406,7 +1406,7 @@ def attach_modules(id, level_id=None):
         if level_id is None:
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True) \
-                .order_by(FHEQ_Level.name.asc()).first()
+                .order_by(FHEQ_Level.academic_year.asc()).first()
         else:
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
@@ -1422,7 +1422,7 @@ def attach_modules(id, level_id=None):
 
     level_id = form.selector.data.id if form.selector.data is not None else None
 
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.name.asc()).all()
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
 
     return render_template('admin/degree_types/attach_modules.html', prog=programme, modules=modules, form=form,
                            level_id=level_id, levels=levels, title='Attach modules')
@@ -1478,6 +1478,7 @@ def add_level():
     if form.validate_on_submit():
         level = FHEQ_Level(name=form.name.data,
                            short_name=form.short_name.data,
+                           academic_year=form.academic_year.data,
                            colour=form.colour.data,
                            active=True,
                            creator_id=current_user.id,
@@ -1507,6 +1508,7 @@ def edit_level(id):
     if form.validate_on_submit():
         level.name = form.name.data
         level.short_name = form.short_name.data
+        level.academic_year = form.academic_year.data
         level.colour = form.colour.data
         level.last_edit_id = current_user.id
         level.last_edit_timestamp = datetime.now()
@@ -1534,7 +1536,7 @@ def activate_level(id):
 
 
 @admin.route('/deactivate_level/<int:id>')
-@roles_accepted('root;')
+@roles_accepted('root')
 def deactivate_level(id):
     """
     Make an FHEQ level inactive
@@ -1943,7 +1945,7 @@ def add_pclass():
                             colour=form.colour.data,
                             do_matching=form.do_matching.data,
                             number_assessors=form.number_assessors.data,
-                            year=form.year.data,
+                            start_level=form.start_level.data,
                             extent=form.extent.data,
                             require_confirm=form.require_confirm.data,
                             supervisor_carryover=form.supervisor_carryover.data,
@@ -2041,7 +2043,7 @@ def edit_pclass(id):
 
         data.name = form.name.data
         data.abbreviation = form.abbreviation.data
-        data.year = form.year.data
+        data.start_level = form.start_level.data
         data.colour = form.colour.data
         data.do_matching = form.do_matching.data
         data.number_assessors = form.number_assessors.data

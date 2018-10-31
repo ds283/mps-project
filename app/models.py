@@ -1326,7 +1326,7 @@ class DegreeProgramme(db.Model):
     def ordered_modules(self):
         return self.modules \
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-            .order_by(FHEQ_Level.name.asc(),
+            .order_by(FHEQ_Level.academic_year.asc(),
                       Module.semester.asc(), Module.name.asc())
 
 
@@ -1533,8 +1533,10 @@ class ProjectClass(db.Model, ColouredLabelMixin):
 
     # PRACTICAL DATA
 
-    # which year does this project class run for?
-    year = db.Column(db.Integer(), index=True)
+    # in which academic year/FHEQ level does this project class begin?
+    start_level_id = db.Column(db.Integer(), db.ForeignKey('fheq_levels.id'))
+    start_level = db.relationship('FHEQ_Level', foreign_keys=[start_level_id], uselist=False,
+                                  backref=db.backref('pclasses', lazy='dynamic'))
 
     # how many years does the project extend? usually 1, but RP is more
     extent = db.Column(db.Integer())
@@ -1973,7 +1975,7 @@ class ProjectClassConfig(db.Model):
 
     @property
     def start_year(self):
-        return self.project_class.year
+        return self.project_class.start_level.academic_year
 
 
     @property
@@ -3324,7 +3326,7 @@ class ProjectDescription(db.Model):
     def ordered_modules(self):
         return self.modules \
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-            .order_by(FHEQ_Level.name.asc(),
+            .order_by(FHEQ_Level.academic_year.asc(),
                       Module.semester.asc(), Module.name.asc())
 
 
@@ -7449,6 +7451,9 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
 
     # short version of name
     short_name = db.Column(db.String(DEFAULT_STRING_LENGTH), unique=True)
+
+    # corresponding academic year
+    academic_year = db.Column(db.Integer(), unique=True)
 
     # active flag
     active = db.Column(db.Boolean())

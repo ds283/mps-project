@@ -702,7 +702,7 @@ def description_detach_module(did, mod_id, level_id):
 
     if desc.module_available(module.id):
         if module in desc.modules:
-            desc.modules.delete(module)
+            desc.modules.remove(module)
             db.session.commit()
 
     return redirect(url_for('faculty.description_modules', did=did, level_id=level_id, create=create))

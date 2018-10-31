@@ -198,6 +198,48 @@ _marker_menu = \
 _desc_label = \
 """
 <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id) }}">{{ d.label }}</a>
+{% if not d.is_valid %}
+    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    <p></p>
+    {% set errors = d.errors %}
+    {% set warnings = d.warnings %}
+    {% if errors|length == 1 %}
+        <span class="label label-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="label label-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="label label-success">0 errors</span>
+    {% endif %}
+    {% if warnings|length == 1 %}
+        <span class="label label-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="label label-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="label label-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="has-error">
+            {% for item in errors %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">{{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="has-error">
+            {% for item in warnings %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">Warning: {{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}
 """
 
 
@@ -1921,12 +1963,9 @@ def description_modules(did, pclass_id, level_id=None):
     level_id = form.selector.data.id if form.selector.data is not None else None
     levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.name.asc()).all()
 
-    url = url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create)
-    text = 'Return to project description list'
-
-    return render_template('faculty/description_modules.html', project=desc.parent, desc=desc, form=form,
+    return render_template('convenor/description_modules.html', project=desc.parent, desc=desc, form=form,
                            pclass_id=pclass_id, title='Attach pre-requisite modules', levels=levels, create=create,
-                           modules=modules, level_id=level_id, url=url, text=text)
+                           modules=modules, level_id=level_id)
 
 
 @convenor.route('/description_attach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>')

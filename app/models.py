@@ -203,6 +203,11 @@ description_pclasses = db.Table('description_to_pclasses',
                                 db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
                                 db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
 
+# association table matching project descriptions to modules
+description_to_modules = db.Table('description_to_modules',
+                                  db.Column('description_id', db.Integer(), db.ForeignKey('descriptions.id'), primary_key=True),
+                                  db.Column('module_id', db.Integer(), db.ForeignKey('modules.id'), primary_key=True))
+
 
 # PROJECT ASSOCIATIONS (LIVE)
 
@@ -227,10 +232,15 @@ live_project_supervision = db.Table('live_project_to_supervision',
                                     db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                                     db.Column('supervisor.id', db.Integer(), db.ForeignKey('supervision_team.id'), primary_key=True))
 
-# association table giving assessors
+# association table matching live projects to assessors
 live_assessors = db.Table('live_project_to_assessors',
                           db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
                           db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+
+# association table matching live projects to modules
+live_project_to_modules = db.Table('live_project_to_modules',
+                                   db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
+                                   db.Column('module_id', db.Integer(), db.ForeignKey('modules.id'), primary_key=True))
 
 
 # LIVE STUDENT ASSOCIATIONS
@@ -238,8 +248,7 @@ live_assessors = db.Table('live_project_to_assessors',
 # association table: faculty confirmation requests
 confirmation_requests = db.Table('confirmation_requests',
                                  db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                 db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True)
-                                 )
+                                 db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True))
 
 # association table: faculty confirmed meetings
 faculty_confirmations = db.Table('faculty_confirmations',
@@ -1753,6 +1762,14 @@ class ProjectClass(db.Model, ColouredLabelMixin):
         db.session.commit()
 
 
+    def module_available(self, module_id):
+        for prog in self.programmes:
+            if get_count(prog.modules.filter_by(id=module_id)) == 0:
+                return False
+
+        return True
+
+
 @listens_for(ProjectClass, 'before_update')
 def _ProjectClass_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
@@ -3143,6 +3160,10 @@ class ProjectDescription(db.Model):
     # maximum number of students
     capacity = db.Column(db.Integer())
 
+    # tagged pre-requisite modules
+    modules = db.relationship('Module', secondary=description_to_modules, lazy='dynamic',
+                              backref=db.backref('tagged_descriptions', lazy='dynamic'))
+
 
     # EDITING METADATA
 
@@ -3159,6 +3180,37 @@ class ProjectDescription(db.Model):
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def _level_modules_query(self, level_id):
+        return self.modules \
+            .filter_by(level_id=level_id) \
+            .order_by(Module.semester.asc(), Module.name.asc())
+
+
+    def number_level_modules(self, level_id):
+        return get_count(self._level_modules_query(level_id))
+
+
+    def get_level_modules(self, level_id):
+        return self._level_modules_query(level_id).all()
+
+
+    def module_available(self, module_id):
+        for pclass in self.project_classes:
+            if not pclass.module_available(module_id):
+                return False
+
+        return True
+
+
+    def get_available_modules(self, level_id=None):
+        query = db.session.query(Module).filter_by(active=True)
+        if level_id is not None:
+            query = query.filter_by(level_id=level_id)
+        modules = query.all()
+
+        return [m for m in modules if self.module_available(m.id)]
 
 
 @listens_for(ProjectDescription, 'before_update')
@@ -3237,6 +3289,10 @@ class LiveProject(db.Model):
     # which degree programmes are preferred for this project?
     programmes = db.relationship('DegreeProgramme', secondary=live_project_programmes, lazy='dynamic',
                                  backref=db.backref('live_projects', lazy='dynamic'))
+
+    # tagged pre-requisite modules
+    modules = db.relationship('Module', secondary=live_project_to_modules, lazy='dynamic',
+                              backref=db.backref('tagged_live_projects', lazy='dynamic'))
 
 
     # SELECTION

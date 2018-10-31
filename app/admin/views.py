@@ -1422,7 +1422,7 @@ def attach_modules(id, level_id=None):
 
     level_id = form.selector.data.id if form.selector.data is not None else None
 
-    levels = FHEQ_Level.query.filter_by(active=True).all()
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.name.asc()).all()
 
     return render_template('admin/degree_types/attach_modules.html', prog=programme, modules=modules, form=form,
                            level_id=level_id, levels=levels, title='Attach modules')

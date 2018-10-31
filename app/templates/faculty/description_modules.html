@@ -1,0 +1,69 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import on_click_selector_field %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    Attach pre-requisite modules for <strong>{{ project.name }}/{{ desc.label }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <div class="panel panel-default">
+        <div class="panel-body">
+            {% if desc and desc.modules and levels %}
+                <h4>
+                    {% set ns = namespace(count=0) %}
+                    {% for level in levels %}
+                        {% if desc.number_level_modules(level.id) > 0 %}
+                            <div {% if ns.count > 0 %}style="padding-top: 15px;"{% endif %}>
+                                <span style="font-weight: lighter;">{{ level.name }}</span>
+                            </div>
+                            {% set ns.count = ns.count + 1 %}
+                            {% for module in desc.get_level_modules(level.id) %}
+                                <a class="btn btn-default selection-label"
+                                   {% if module.level is not none %}
+                                     style="{{ module.level.make_CSS_style() }}"
+                                   {% endif %}
+                                   href="{{ url_for('convenor.description_detach_module', did=desc.id, pclass_id=pclass_id, mod_id=module.id, level_id=level_id, create=create) }}">
+                                    <i class="fa fa-times"></i> {{ module.text_label }}
+                                </a>
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </h4>
+            {% else %}
+                <p>No pre-requisite modules currently tagged</p>
+            {% endif %}
+        </div>
+        <div class="panel-footer">
+            <form action="{{ url_for('convenor.description_modules', did=desc.id, pclass_id=pclass_id, create=create) }}" method="POST" name="module-selector-form">
+                {{ form.hidden_tag() }}
+                {{ on_click_selector_field(form.selector, false) }}
+            </form>
+            {% if desc and modules %}
+                <h4>
+                    {% for module in modules %}
+                        {% if module not in desc.modules %}
+                            <a class="btn btn-default selection-label"
+                               href="{{ url_for('convenor.description_attach_module', did=desc.id, pclass_id=pclass_id, mod_id=module.id, level_id=level_id, create=create) }}">
+                                <i class="fa fa-plus"></i> {{ module.text_label }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </h4>
+            {% else %}
+                <p>No modules currently defined</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if url and text %}
+        <a href="{{ url }}">
+            <i class="fa fa-backward"></i> {{ text }}
+        </a>
+    {% endif %}
+{% endblock %}

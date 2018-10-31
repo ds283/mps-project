@@ -1952,7 +1952,7 @@ def description_modules(did, pclass_id, level_id=None):
         if level_id is None:
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True) \
-                .order_by(FHEQ_Level.name.asc()).first()
+                .order_by(FHEQ_Level.academic_year.asc()).first()
         else:
             form.selector.data = FHEQ_Level.query \
                 .filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
@@ -1964,7 +1964,7 @@ def description_modules(did, pclass_id, level_id=None):
         modules = []
 
     level_id = form.selector.data.id if form.selector.data is not None else None
-    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.name.asc()).all()
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
 
     return render_template('convenor/description_modules.html', project=desc.parent, desc=desc, form=form,
                            pclass_id=pclass_id, title='Attach pre-requisite modules', levels=levels, create=create,

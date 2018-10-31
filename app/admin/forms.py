@@ -36,12 +36,13 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_module_code, unique_or_original_module_code, \
     globally_unique_FHEQ_level_name, unique_or_original_FHEQ_level_name, \
     globally_unique_FHEQ_short_name, unique_or_original_FHEQ_short_name, \
+    globally_unique_FHEQ_year, unique_or_original_FHEQ_year, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
-    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels
+    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel
 from ..models import BackupConfiguration, EnrollmentRecord, extent_choices, year_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices
 
@@ -329,8 +330,9 @@ class ProjectClassMixin():
                                                 'sufficient flexibility during matching.',
                                     validators=[NotOptionalIf(do_matching)])
 
-    year = SelectField('Runs in year', choices=year_choices, coerce=int,
-                       description='Select the academic year in which students join the project.')
+    start_level = QuerySelectField('Starts in academic year',
+                                   description='Select the academic year in which students join the project.',
+                                   query_factory=GetFHEQLevels, get_label=BuildFHEQYearLabel)
 
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
                          description='For how many academic years do students participate in the project?')
@@ -1091,8 +1093,11 @@ class AddFHEQLevelForm(Form, FHEQLevelMixin):
                                    globally_unique_FHEQ_level_name])
 
     short_name = StringField('Short name', description='A shortened name is used to save space on some dispays',
-                       validators=[InputRequired(message='Please specify a short name for this level'),
-                                   globally_unique_FHEQ_short_name])
+                             validators=[InputRequired(message='Please specify a short name for this level'),
+                                         globally_unique_FHEQ_short_name])
+
+    academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
+                                                              globally_unique_FHEQ_year])
 
     submit = SubmitField('Create new level')
 
@@ -1106,3 +1111,6 @@ class EditFHEQLevelForm(Form, FHEQLevelMixin, SaveChangesMixin):
     short_name = StringField('Short name', description='A shortened name is used to save space on some dispays',
                              validators=[InputRequired(message='Please specify a short name for this level'),
                                          unique_or_original_FHEQ_short_name])
+
+    academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
+                                                              unique_or_original_FHEQ_year])

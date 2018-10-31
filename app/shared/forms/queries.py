@@ -250,4 +250,8 @@ def GetPresentationFeedbackFaculty(record_id):
 
 
 def GetFHEQLevels():
-    return db.session.query(FHEQ_Level).filter(FHEQ_Level.active).order_by(FHEQ_Level.name.asc())
+    return db.session.query(FHEQ_Level).filter(FHEQ_Level.active).order_by(FHEQ_Level.academic_year.asc())
+
+
+def BuildFHEQYearLabel(level):
+    return 'Year {n}'.format(n=level.academic_year)

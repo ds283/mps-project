@@ -1768,6 +1768,15 @@ class ProjectClass(db.Model, ColouredLabelMixin):
 
 
     def module_available(self, module_id):
+        # the module should be at an FHEQ level which is less than or equal to our starting level
+        q = db.session.query(Module) \
+            .filter(Module.id == module_id) \
+            .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
+            .filter(FHEQ_Level.academic_year <= self.start_level.academic_year)
+        if get_count(q) == 0:
+            return False
+
+        # the module should be included in all programmes attached to this project class
         for prog in self.programmes:
             if get_count(prog.modules.filter_by(id=module_id)) == 0:
                 return False

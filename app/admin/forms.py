@@ -1071,8 +1071,7 @@ def RenameScheduleFormFactory(assessment):
 
 class LevelSelectorMixin():
 
-    selector = QuerySelectField('Select courses from academic year', query_factory=GetFHEQLevels,
-                                get_label='name')
+    selector = QuerySelectField('Select courses from FHEQ level', query_factory=GetFHEQLevels, get_label='name')
 
 
 class LevelSelectorForm(Form, LevelSelectorMixin):

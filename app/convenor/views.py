@@ -18,7 +18,7 @@ from ..database import db
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
-    SubmissionRecord, PresentationFeedback
+    SubmissionRecord, PresentationFeedback, Module, FHEQ_Level
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -35,6 +35,7 @@ import app.ajax as ajax
 
 from . import convenor
 
+from ..admin.forms import LevelSelectorForm
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, PresentationFeedbackForm
 from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory, \
@@ -211,6 +212,11 @@ _desc_menu = \
             <li>
                 <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
                     <i class="fa fa-pencil"></i> Edit description...
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
+                    <i class="fa fa-cogs"></i> Module pre-requisites...
                 </a>
             </li>
             <li>
@@ -1808,7 +1814,6 @@ def add_description(pid, pclass_id):
     form.project_id = pid
 
     if form.validate_on_submit():
-
         data = ProjectDescription(parent_id=pid,
                                   label=form.label.data,
                                   project_classes=form.project_classes.data,
@@ -1831,7 +1836,6 @@ def add_description(pid, pclass_id):
 @convenor.route('/edit_description/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def edit_description(did, pclass_id):
-
     desc = ProjectDescription.query.get_or_404(did)
 
     if pclass_id == 0:
@@ -1857,7 +1861,6 @@ def edit_description(did, pclass_id):
     form.desc = desc
 
     if form.validate_on_submit():
-
         desc.label = form.label.data
         desc.project_classes = form.project_classes.data
         desc.description = form.description.data
@@ -1875,10 +1878,122 @@ def edit_description(did, pclass_id):
                            pclass_id=pclass_id, title='Edit description', create=create)
 
 
+@convenor.route('/description_modules/<int:did>/<int:pclass_id>/<int:level_id>', methods=['GET', 'POST'])
+@convenor.route('/description_modules/<int:did>/<int:pclass_id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def description_modules(did, pclass_id, level_id=None):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
+
+    form = LevelSelectorForm(request.form)
+
+    if not form.validate_on_submit() and request.method == 'GET':
+        if level_id is None:
+            form.selector.data = FHEQ_Level.query \
+                .filter(FHEQ_Level.active == True) \
+                .order_by(FHEQ_Level.name.asc()).first()
+        else:
+            form.selector.data = FHEQ_Level.query \
+                .filter(FHEQ_Level.active == True, FHEQ_Level.id == level_id).first()
+
+    # get list of modules for the current level_id
+    if form.selector.data is not None:
+        modules = desc.get_available_modules(level_id=form.selector.data.id)
+    else:
+        modules = []
+
+    level_id = form.selector.data.id if form.selector.data is not None else None
+    levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.name.asc()).all()
+
+    url = url_for('convenor.edit_descriptions', id=desc.parent_id, pclass_id=pclass_id, create=create)
+    text = 'Return to project description list'
+
+    return render_template('faculty/description_modules.html', project=desc.parent, desc=desc, form=form,
+                           pclass_id=pclass_id, title='Attach pre-requisite modules', levels=levels, create=create,
+                           modules=modules, level_id=level_id, url=url, text=text)
+
+
+@convenor.route('/description_attach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def description_attach_module(did, pclass_id, mod_id, level_id):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
+    module = Module.query.get_or_404(mod_id)
+
+    if desc.module_available(module.id):
+        if not module in desc.modules:
+            desc.modules.append(module)
+            db.session.commit()
+
+    return redirect(url_for('convenor.description_modules', did=did, pclass_id=pclass_id, level_id=level_id, create=create))
+
+
+@convenor.route('/description_detach_module/<int:did>/<int:pclass_id>/<int:mod_id>/<int:level_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def description_detach_module(did, pclass_id, mod_id, level_id):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    if pclass_id == 0:
+
+        # got here from unattached projects view; reject if user is not administrator
+        if not validate_is_administrator():
+            return redirect(request.referrer)
+
+    else:
+
+        # get project class details
+        pclass = ProjectClass.query.get_or_404(pclass_id)
+
+        # if logged in user is not a suitable convenor, or an administrator, object
+        if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
+    module = Module.query.get_or_404(mod_id)
+
+    if desc.module_available(module.id):
+        if module in desc.modules:
+            desc.modules.delete(module)
+            db.session.commit()
+
+    return redirect(url_for('convenor.description_modules', did=did, pclass_id=pclass_id, level_id=level_id, create=create))
+
+
 @convenor.route('/delete_description/<int:did>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def delete_description(did, pclass_id):
-
     desc = ProjectDescription.query.get_or_404(did)
 
     if pclass_id == 0:

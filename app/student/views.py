@@ -322,11 +322,12 @@ def view_project(sid, pid):
     db.session.commit()
 
     # build list of keywords
-    keywords = [ kw.strip() for kw in re.split("[;,]", project.keywords) ]
+    keywords = [kw.strip() for kw in re.split("[;,]", project.keywords)]
+    keywords = [w for w in keywords if len(w) > 0]
 
     return render_template('student/show_project.html', title=project.name, sel=sel, project=project, desc=project,
                            keywords=keywords, text='project list',
-                           url=url_for('student.browse_projects', id=sel.config.pclass_id))
+                           url=url_for('student.browse_projects', id=sel.id))
 
 
 @student.route('/add_bookmark/<int:sid>/<int:pid>')

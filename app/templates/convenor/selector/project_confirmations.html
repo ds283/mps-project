@@ -6,7 +6,7 @@
 
 {% block bodyblock %}
     {% set config = project.config %}
-    {% set lifecycle = config.lifecycle %}
+    {% set lifecycle = config.selector_lifecycle %}
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
@@ -28,6 +28,9 @@
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     {{ sel.student.user.name }}
+                                    {% if not sel.satisfies_prerequisites(project) %}
+                                        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                    {% endif %}
                                 </div>
                                 <div class="col-xs-8">
                                     <div class="dropdown">
@@ -70,6 +73,9 @@
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     {{ sel.student.user.name }}
+                                    {% if not sel.satisfies_prerequisites(project) %}
+                                        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                    {% endif %}
                                 </div>
                                 <div class="col-xs-8">
                                     <div class="dropdown">

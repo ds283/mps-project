@@ -1776,12 +1776,12 @@ class ProjectClass(db.Model, ColouredLabelMixin):
         if get_count(q) == 0:
             return False
 
-        # the module should be included in all programmes attached to this project class
+        # the module should be included in at least one programme attached to this project class
         for prog in self.programmes:
-            if get_count(prog.modules.filter_by(id=module_id)) == 0:
-                return False
+            if get_count(prog.modules.filter_by(id=module_id)) > 0:
+                return True
 
-        return True
+        return False
 
 
 @listens_for(ProjectClass, 'before_update')
@@ -3337,6 +3337,10 @@ class ProjectDescription(db.Model):
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
             .order_by(FHEQ_Level.academic_year.asc(),
                       Module.semester.asc(), Module.name.asc())
+
+
+    def validate_modules(self):
+        self.modules = [m for m in self.modules if self.module_available(m.id)]
 
 
 @listens_for(ProjectDescription, 'before_update')

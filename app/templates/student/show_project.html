@@ -185,8 +185,8 @@
                                         </div>
                                     {% endif %}
 
-                                    {% set modules = desc.ordered_modules.all() %}
-                                    {% if modules|length > 0 %}
+                                    {% set modules = desc.ordered_modules.all() if desc is not none else none%}
+                                    {% if modules and modules|length > 0 %}
                                         <div class="row sm-gap-below vertical-top">
                                             <div class="col-xs-3">Pre-requisites</div>
                                             <div class="col-xs-9">
@@ -195,7 +195,7 @@
                                                         {{ module.make_label(user_classes="project-label")|safe }}
                                                     {% endif %}
                                                 {% endfor %}
-                                                {% if sel %}
+                                                {% if sel and desc %}
                                                     {% if not sel.satisfies_prerequisites(desc) %}
                                                         <p>This project has pre-requisites that are not available
                                                         on your programme. This does not prevent you from applying for
@@ -210,11 +210,13 @@
                                     <div class="row vertical-top">
                                         <div class="col-xs-3">Supervision team</div>
                                         <div class="col-xs-9">
-                                            {% for role in desc.team %}
-                                                {% set style = role.make_CSS_style() %}
-                                                <span class="label label-default project-label"
-                                                      {% if style %}style="{{ style }}"{% endif %}>{{ role.name }}</span>
-                                            {% endfor %}
+                                            {% if desc %}
+                                                {% for role in desc.team %}
+                                                    {% set style = role.make_CSS_style() %}
+                                                    <span class="label label-default project-label"
+                                                          {% if style %}style="{{ style }}"{% endif %}>{{ role.name }}</span>
+                                                {% endfor %}
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -222,12 +224,14 @@
                         </div>
 
                         <h4>Description</h4>
-                        <div class="project-description">{{ desc.description|dealingwithdollars|markdown|bclean|blinkify|safe }}</div>
+                        {% if desc %}
+                            <div class="project-description">{{ desc.description|dealingwithdollars|markdown|bclean|blinkify|safe }}</div>
 
-                        {% if desc.reading and desc.reading is not none %}
-                            <hr class="intro-divider">
-                            <p><strong>Recommended reading</strong></p>
-                            {{ desc.reading|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            {% if desc.reading and desc.reading is not none %}
+                                <hr class="intro-divider">
+                                <p><strong>Recommended reading</strong></p>
+                                {{ desc.reading|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>

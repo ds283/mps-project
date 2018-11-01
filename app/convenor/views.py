@@ -2097,6 +2097,7 @@ def duplicate_description(did, pclass_id):
     data = ProjectDescription(parent_id=desc.parent_id,
                               label=new_label,
                               project_classes=[],
+                              modules=[],
                               capacity=desc.capacity,
                               description=desc.description,
                               reading=desc.reading,

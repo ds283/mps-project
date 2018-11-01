@@ -122,9 +122,14 @@
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                        <a class="label label-success dropdown-toggle"
+                                        {% set prerequisites = sel.satisfies_prerequisites(project) %}
+                                        <a class="label {% if prerequisites %}label-success{% else %}label-warning{% endif %} dropdown-toggle"
                                                 type="button" data-toggle="dropdown">
-                                            {{ sel.student.user.name }} <span class="caret"></span>
+                                            {{ sel.student.user.name }}
+                                            {% if not prerequisites %}
+                                                <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                            {% endif %}
+                                            <span class="caret"></span>
                                         </a>
                                         <ul class="dropdown-menu">
                                             {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
@@ -159,7 +164,7 @@
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                        <a class="label label-warning dropdown-toggle"
+                                        <a class="label label-success dropdown-toggle"
                                                 type="button" data-toggle="dropdown">
                                             {{ sel.student.user.name }} <span class="caret"></span>
                                         </a>

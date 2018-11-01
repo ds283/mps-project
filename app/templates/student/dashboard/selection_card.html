@@ -56,7 +56,7 @@
 
 {% macro show_submission_status(config, sel) %}
     <div class="row vertical-top">
-        <div class="col-xs-8">
+        <div class="col-xs-6">
             {% if sel.has_submitted %}
                 <div>
                     You have already submitted a valid list of project preferences.
@@ -70,8 +70,9 @@
                 <div>You have not yet submitted your project preferences.</div>
             {% endif %}
         </div>
-        <div class="col-xs-4">
+        <div class="col-xs-6">
             <div class="pull-right">
+                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success">Show available projects</a>
                 {% if sel.has_submitted %}
                     <a class="btn btn-default" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                         Clear submission
@@ -218,7 +219,7 @@
 
                     <hr class="intro-divider">
                     <div class="row vertical-top">
-                        <div class="col-xs-9">
+                        <div class="col-xs-12">
                             {% set num_choices = sel.number_choices %}
                             {% set numpl = 's' %}
                             {% if num_choices == 1 %}
@@ -240,20 +241,14 @@
                                 Bookmarks highlighted in <span class="label label-danger">red</span> will not be included.
                             </p>
                         </div>
-                        <div class="col-xs-3">
-                            <span class="pull-right">
-                                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success">Show available projects</a>
-                            </span>
-                        </div>
                     </div>
 
                 {# render bookmarks #}
                 {% if sel.has_bookmarks %}
                     {{ render_bookmarks(config, sel) }}
-                    <hr class="intro-divider">
-                    {{ show_submission_status(config, sel) }}
-
                 {% endif %}
+                <hr class="intro-divider">
+                {{ show_submission_status(config, sel) }}
 
             {% elif config.selection_closed %}
 

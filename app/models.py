@@ -3523,6 +3523,14 @@ class LiveProject(db.Model):
                       TransferableSkill.name.asc())
 
 
+    @property
+    def ordered_modules(self):
+        return self.modules \
+            .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
+            .order_by(FHEQ_Level.academic_year.asc(),
+                      Module.semester.asc(), Module.name.asc())
+
+
     def _get_popularity_attr(self, getter):
         record = PopularityRecord.query \
             .filter_by(liveproject_id=self.id) \

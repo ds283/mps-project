@@ -10,24 +10,24 @@
     {% set R = project.popularity_rank %}
     {% if R is not none %}
         {% set rank, total = R %}
-        <span class="label label-success">PopRank {{ rank }}/{{ total }}</span>
+        <span class="label label-success">Popularity {{ rank }}/{{ total }}</span>
     {% endif %}
 
     {% set R = project.selections_rank %}
     {% if R is not none %}
         {% set rank, total = R %}
-        <span class="label label-primary">SelRank {{ rank }}/{{ total }}</span>
+        <span class="label label-primary">Selections {{ rank }}/{{ total }}</span>
     {% endif %}
 
     {% set R = project.bookmarks_rank %}
     {% if R is not none %}
         {% set rank, total = R %}
-        <span class="label label-info">BookmarkRank {{ rank }}/{{ total }}</span>
+        <span class="label label-info">Bookmarks {{ rank }}/{{ total }}</span>
     {% endif %}
 
     {% set R = project.views_rank %}
     {% if R is not none %}
         {% set rank, total = R %}
-        <span class="label label-info">ViewRank {{ rank }}/{{ total }}</span>
+        <span class="label label-info">Views {{ rank }}/{{ total }}</span>
     {% endif %}
 {% endmacro %}

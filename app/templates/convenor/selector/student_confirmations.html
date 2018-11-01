@@ -6,7 +6,7 @@
 
 {% block bodyblock %}
     {% set config = sel.config %}
-    {% set lifecycle = sel.lifecycle %}
+    {% set lifecycle = config.selector_lifecycle %}
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
@@ -45,7 +45,11 @@
                                     <div class="dropdown">
                                         <a class="btn btn-warning dropdown-toggle"
                                                 type="button" data-toggle="dropdown">
-                                            Deconfirm <span class="caret"></span>
+                                            Deconfirm
+                                            {% if not sel.satisfies_prerequisites(project) %}
+                                                <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                            {% endif %}
+                                            <span class="caret"></span>
                                         </a>
                                         <ul class="dropdown-menu">
                                             {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
@@ -98,7 +102,11 @@
                                     <div class="dropdown">
                                         <a class="btn btn-success dropdown-toggle"
                                                 type="button" data-toggle="dropdown">
-                                            Confirm <span class="caret"></span>
+                                            Confirm
+                                            {% if not sel.satisfies_prerequisites(project) %}
+                                                <i class="fa fa-exclamation-triangle" style="color:white;"></i>
+                                            {% endif %}
+                                            <span class="caret"></span>
                                         </a>
                                         <ul class="dropdown-menu">
                                             {% if lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}

@@ -2911,9 +2911,12 @@ def project_confirm_all(pid):
     if not validate_project_open(project.config):
         return redirect(request.referrer)
 
-    for item in project.confirm_waiting:
-        if item not in project.confirmed_students:
-            project.confirmed_students.append(item)
+    for sel in project.confirm_waiting:
+        if sel not in project.confirmed_students:
+            project.confirmed_students.append(sel)
+            sel.student.user.post_message('Your confirmation request for the project "{name}" has been '
+                                          'approved.'.format(name=project.name), 'success')
+
     project.confirm_waiting = []
     db.session.commit()
 
@@ -2960,6 +2963,10 @@ def project_remove_confirms(pid):
     if not validate_project_open(project.config):
         return redirect(request.referrer)
 
+    for sel in project.confirmed_students:
+        sel.student.user.post_message('Your confirmation approval for the project "{name}" has been removed. '
+                                      'If you were not expecting this event, please make an appointment to discuss '
+                                      'with the supervisor.'.format(name=project.name), 'info')
     project.confirmed_students = []
     db.session.commit()
 
@@ -2983,9 +2990,12 @@ def project_make_all_confirms_pending(pid):
     if not validate_project_open(project.config):
         return redirect(request.referrer)
 
-    for item in project.confirmed_students:
-        if item not in project.confirm_waiting:
-            project.confirm_waiting.append(item)
+    for sel in project.confirmed_students:
+        if sel not in project.confirm_waiting:
+            project.confirm_waiting.append(sel)
+            sel.student.user.post_message('Your confirmation approval for the project "{name}" has been reverted to "pending". '
+                                          'If you were not expecting this event, please make an appointment to discuss '
+                                          'with the supervisor.'.format(name=project.name), 'info')
     project.confirmed_students = []
     db.session.commit()
 
@@ -3007,9 +3017,11 @@ def student_confirm_all(sid):
     if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
-    for item in sel.confirm_requests:
-        if item not in sel.confirmed:
-            sel.confirmed.append(item)
+    for project in sel.confirm_requests:
+        if project not in sel.confirmed:
+            sel.confirmed.append(project)
+            sel.student.user.post_message('Your confirmation request for the project "{name}" has been '
+                                          'approved.'.format(name=project.name), 'success')
     sel.confirm_requests = []
     db.session.commit()
 
@@ -3031,6 +3043,10 @@ def student_remove_confirms(sid):
     if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
+    for project in sel.confirmed:
+        sel.student.user.post_message('Your confirmation approval for the project "{name}" has been removed. '
+                                      'If you were not expecting this event, please make an appointment to discuss '
+                                      'with the supervisor.'.format(name=project.name), 'info')
     sel.confirmed = []
     db.session.commit()
 
@@ -3073,9 +3089,12 @@ def student_make_all_confirms_pending(sid):
     if not validate_project_open(sel.config):
         return redirect(request.referrer)
 
-    for item in sel.confirmed:
-        if item not in sel.confirm_requests:
-            sel.confirm_requests.append(item)
+    for project in sel.confirmed:
+        if project not in sel.confirm_requests:
+            sel.confirm_requests.append(project)
+            sel.student.user.post_message('Your confirmation approval for the project "{name}" has been reverted to "pending". '
+                                          'If you were not expecting this event, please make an appointment to discuss '
+                                          'with the supervisor.'.format(name=project.name), 'info')
     sel.confirmed = []
     db.session.commit()
 

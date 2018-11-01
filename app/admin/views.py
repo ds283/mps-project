@@ -404,6 +404,8 @@ def users_ajax():
         users = User.query.filter(User.roles.any(Role.name == 'student')).all()
     elif filter == 'faculty':
         users = User.query.filter(User.roles.any(Role.name == 'faculty')).all()
+    elif filter == 'office':
+        users = User.query.filter(User.roles.any(Role.name == 'office')).all()
     elif filter == 'exec':
         users = User.query.filter(User.roles.any(Role.name == 'exec')).all()
     elif filter == 'admin':

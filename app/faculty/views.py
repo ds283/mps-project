@@ -598,7 +598,6 @@ def add_description(pid):
 @faculty.route('/edit_description/<int:did>', methods=['GET', 'POST'])
 @roles_required('faculty')
 def edit_description(did):
-
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
@@ -622,6 +621,8 @@ def edit_description(did):
         desc.capacity = form.capacity.data
         desc.last_edit_id = current_user.id
         desc.last_edit_timestamp = datetime.now()
+
+        desc.validate_modules()
 
         db.session.commit()
 
@@ -751,6 +752,7 @@ def duplicate_description(did):
     data = ProjectDescription(parent_id=desc.parent_id,
                               label=new_label,
                               project_classes=[],
+                              modules=[],
                               capacity=desc.capacity,
                               description=desc.description,
                               reading=desc.reading,

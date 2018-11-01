@@ -531,6 +531,7 @@ def faculty_ajax(id):
 
         # get User, FacultyData pairs for this list
         faculty = db.session.query(User, FacultyData) \
+            .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, User.id == faculty_ids.c.owner_id)
 
@@ -542,6 +543,7 @@ def faculty_ajax(id):
 
         # join to main User and FacultyData records and select pairs that have no counterpart in faculty_ids
         faculty = db.session.query(User, FacultyData) \
+            .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, faculty_ids.c.owner_id == User.id, isouter=True) \
             .filter(faculty_ids.c.owner_id == None)
@@ -576,6 +578,7 @@ def faculty_ajax(id):
 
         # get User, FacultyData pairs for this list
         faculty = db.session.query(User, FacultyData) \
+            .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids_q, User.id == faculty_ids_q.c.owner_id)
 
@@ -3815,6 +3818,7 @@ def faculty_workload_ajax(id):
 
         # get User, FacultyData pairs for this list
         faculty = db.session.query(User, FacultyData) \
+            .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, User.id == faculty_ids.c.owner_id)
 
@@ -3826,6 +3830,7 @@ def faculty_workload_ajax(id):
 
         # join to main User and FacultyData records and select pairs that have no counterpart in faculty_ids
         faculty = db.session.query(User, FacultyData) \
+            .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids, faculty_ids.c.owner_id == User.id, isouter=True) \
             .filter(faculty_ids.c.owner_id == None)
@@ -3860,6 +3865,7 @@ def faculty_workload_ajax(id):
 
         # get User, FacultyData pairs for this list
         faculty = db.session.query(User, FacultyData) \
+            .filter(User.active) \
             .join(FacultyData, FacultyData.id == User.id) \
             .join(faculty_ids_q, User.id == faculty_ids_q.c.owner_id)
 

@@ -53,24 +53,28 @@ _enrollments = \
             <span class="label label-danger"><i class="fa fa-times"></i> Supv: unknown</span>
         {% endif %}
 
-        {% if record.marker_state == record.MARKER_ENROLLED %}
-            <span class="label label-success"><i class="fa fa-check"></i> Mark: active</span>
-        {% elif record.marker_state == record.MARKER_SABBATICAL %}
-            <span class="label label-warning"><i class="fa fa-times"></i> Mark: sabbat</span>
-        {% elif record.marker_state == record.MARKER_EXEMPT %}
-            <span class="label label-danger"><i class="fa fa-times"></i> Mark: exempt</span>
-        {% else %}
-            <span class="label label-danger"><i class="fa fa-times"></i> Mark: unknown</span>
+        {% if record.pclass.uses_marker %}
+            {% if record.marker_state == record.MARKER_ENROLLED %}
+                <span class="label label-success"><i class="fa fa-check"></i> Mark: active</span>
+            {% elif record.marker_state == record.MARKER_SABBATICAL %}
+                <span class="label label-warning"><i class="fa fa-times"></i> Mark: sabbat</span>
+            {% elif record.marker_state == record.MARKER_EXEMPT %}
+                <span class="label label-danger"><i class="fa fa-times"></i> Mark: exempt</span>
+            {% else %}
+                <span class="label label-danger"><i class="fa fa-times"></i> Mark: unknown</span>
+            {% endif %}
         {% endif %}
 
-        {% if record.presentation_state == record.PRESENTATION_ENROLLED %}
-            <span class="label label-success"><i class="fa fa-check"></i> Pres: active</span>
-        {% elif record.presentation_state == record.PRESENTATION_SABBATICAL %}
-            <span class="label label-warning"><i class="fa fa-times"></i> Pres: sabbat</span>
-        {% elif record.presentation_state == record.PRESENTATION_EXEMPT %}
-            <span class="label label-danger"><i class="fa fa-times"></i> Pres: exempt</span>
-        {% else %}
-            <span class="label label-danger"><i class="fa fa-times"></i> Pres: unknown</span>
+        {% if record.pclass.uses_presentations %}
+            {% if record.presentation_state == record.PRESENTATION_ENROLLED %}
+                <span class="label label-success"><i class="fa fa-check"></i> Pres: active</span>
+            {% elif record.presentation_state == record.PRESENTATION_SABBATICAL %}
+                <span class="label label-warning"><i class="fa fa-times"></i> Pres: sabbat</span>
+            {% elif record.presentation_state == record.PRESENTATION_EXEMPT %}
+                <span class="label label-danger"><i class="fa fa-times"></i> Pres: exempt</span>
+            {% else %}
+                <span class="label label-danger"><i class="fa fa-times"></i> Pres: unknown</span>
+            {% endif %}
         {% endif %}
     </div>
 {% else %}
@@ -86,6 +90,8 @@ _workload = \
 {% else %}
     <span class="label label-default">None</span>
 {% endfor %}
+<p></p>
+<span class="label label-primary">Total = {{ tot }}</span>
 """
 
 
@@ -106,7 +112,7 @@ def workload_data(faculty):
                      'groups': render_template_string(_groups, f=f),
                      'enrollments': {'display': render_template_string(_enrollments, f=f),
                                      'sortvalue': get_count(f.enrollments)},
-                     'workload': {'display': render_template_string(_workload, f=f, wkld=workload),
+                     'workload': {'display': render_template_string(_workload, f=f, wkld=workload, tot=total_workload),
                                   'sortvalue': total_workload}})
 
     return jsonify(data)

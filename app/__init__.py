@@ -294,5 +294,8 @@ def create_app():
     from .office import office as office_blueprint
     app.register_blueprint(office_blueprint, url_prefix='/office')
 
+    from .exec import exec as exec_blueprint
+    app.register_blueprint(exec_blueprint, url_prefix='/exec')
+
     return app, celery
 

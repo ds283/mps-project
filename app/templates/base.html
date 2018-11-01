@@ -319,6 +319,20 @@
                         </li>
                     {% endif %}
 
+                    {% if current_user.has_role('exec') %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                Exec reports
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url_for('exec.workload') }}">
+                                    <i class="fa fa-line-chart"></i> Workload
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% endif %}
+
                     <!-- add convenor menu if user is a convenor, or an admin user -->
                     {% if current_user.has_role('admin') or current_user.has_role('root') %}
                         {{ convenor_menu(current_user.all_project_classes.all()) }}

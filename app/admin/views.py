@@ -11,8 +11,7 @@
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session
 from werkzeug.local import LocalProxy
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
-from flask_security.utils import config_value, get_message, do_flash, \
-    send_mail
+from flask_security.utils import config_value, get_message, do_flash, send_mail
 from flask_security.confirmable import generate_confirmation_link
 from flask_security.signals import user_registered
 
@@ -20,7 +19,6 @@ from collections import deque
 
 from celery import chain, group
 
-import app.ajax.admin.skill_groups
 from ..limiter import limiter
 from .actions import register_user, estimate_CATS_load
 from .forms import RoleSelectForm, \
@@ -64,7 +62,6 @@ from ..shared.validators import validate_is_convenor, validate_is_admin_or_conve
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
-from ..shared.forms.queries import GetFHEQLevels
 
 from ..task_queue import register_task, progress_update
 

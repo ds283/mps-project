@@ -1,5 +1,5 @@
 #
-# Created by David Seery on 05/06/2018.
+# Created by David Seery on 2018-11-01.
 # Copyright (c) 2018 University of Sussex. All rights reserved.
 #
 # This file is part of the MPS-Project platform developed in
@@ -8,12 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from . import admin
-from . import convenor
-from . import project
-from . import site
-from . import student
-from . import users
-from . import polling
-from . import faculty
-from . import exec
+from flask import Blueprint
+
+exec = Blueprint('exec', __name__)
+
+from . import views

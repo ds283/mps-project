@@ -34,6 +34,7 @@ from ..shared.validators import validate_edit_project, validate_project_open, va
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime
@@ -977,9 +978,11 @@ def attach_assessors(id):
 
     # get list of project classes to which this project is attached, and which require assignment of
     # second markers
-    pclasses = proj.project_classes.filter_by(active=True, uses_marker=True).all()
+    pclasses = proj.project_classes.filter(and_(ProjectClass.active == True,
+                                                or_(ProjectClass.uses_marker == True,
+                                                    ProjectClass.uses_presentations == True))).all()
 
-    return render_template('faculty/attach_assesors.html', data=proj, groups=groups, pclasses=pclasses,
+    return render_template('faculty/attach_assessors.html', data=proj, groups=groups, pclasses=pclasses,
                            state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter,
                            create=create)
 

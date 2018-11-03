@@ -574,7 +574,8 @@ class ScheduledTaskMixin():
                        ('app.tasks.backup.clean_up', 'Clean up backup folder'),
                        ('app.tasks.backup.drop_absent_backups', 'Drop absent backups'),
                        ('app.tasks.popularity.update_popularity_data', 'Update LiveProject popularity data'),
-                       ('app.tasks.popularity.thin', 'Thin LiveProject popularity data')]
+                       ('app.tasks.popularity.thin', 'Thin LiveProject popularity data'),
+                       ('app.tasks.maintenance.maintenance', 'Perform regular database maintenance')]
                        # ('remote_backup', 'Backup to internet location')]
     task = SelectField('Task', choices=tasks_available)
 

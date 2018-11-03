@@ -368,6 +368,7 @@ def register_backup_tasks(celery):
 
         if record is None:
             self.update_state(state='FAILURE', meta='Database record could not be loaded')
+            raise self.retry()
 
         backup_folder = current_app.config['BACKUP_FOLDER']
         abspath = path.join(backup_folder, record.filename)

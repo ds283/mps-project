@@ -153,6 +153,7 @@ def create_app():
     tasks.register_matching_tasks(celery)
     tasks.register_availability_tasks(celery)
     tasks.register_scheduling_tasks(celery)
+    tasks.register_maintenance_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

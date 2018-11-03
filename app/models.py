@@ -11,7 +11,7 @@
 from flask import flash, current_app
 from flask_security import current_user, UserMixin, RoleMixin
 
-from sqlalchemy import orm, or_
+from sqlalchemy import orm, or_, and_
 from sqlalchemy.event import listens_for
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -2844,13 +2844,13 @@ class Project(db.Model):
 
     # POPULARITY DISPLAY
 
-    # show popularity estimate
+    # show popularity estimate?
     show_popularity = db.Column(db.Boolean())
 
-    # show number of selections
+    # show number of selections?
     show_selections = db.Column(db.Boolean())
 
-    # show number of bookmarks
+    # show number of bookmarks?
     show_bookmarks = db.Column(db.Boolean())
 
 
@@ -3022,7 +3022,7 @@ class Project(db.Model):
         :param faculty:
         :return:
         """
-        return faculty in self.assessors
+        return get_count(self.assessors.filter_by(id=faculty.id)) > 0
 
 
     def num_assessors(self, pclass):
@@ -3044,9 +3044,12 @@ class Project(db.Model):
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True) \
             .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
-            .filter(EnrollmentRecord.pclass_id == pclass_id,
-                    or_(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
-                        EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)) \
+            .filter(EnrollmentRecord.pclass_id == pclass_id) \
+            .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id) \
+            .filter(or_(and_(ProjectClass.uses_marker == True,
+                             EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED),
+                        and_(ProjectClass.uses_presentations == True,
+                             EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED))) \
             .order_by(User.last_name.asc(), User.first_name.asc())
 
         return query
@@ -3062,6 +3065,19 @@ class Project(db.Model):
         return self.assessor_list_query(pclass).all()
 
 
+    def _is_assessor_for_at_least_one_pclass(self, faculty):
+        pclasses = self.project_classes.subquery()
+
+        query = faculty.enrollments \
+            .join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id) \
+            .filter(or_(and_(pclasses.c.uses_marker == True,
+                             EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED),
+                        and_(pclasses.c.uses_presentations == True,
+                             EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)))
+
+        return get_count(query) > 0
+
+
     def can_enroll_assessor(self, faculty):
         """
         Determine whether a given FacultyData instance can be enrolled as an assessor for this project
@@ -3074,16 +3090,9 @@ class Project(db.Model):
         if not faculty.user.active:
             return False
 
-        # need to determine whether this faculty member is enrolled as a second marker for any project
+        # determine whether this faculty member is enrolled as a second marker for any project
         # class we are attached to
-        pclasses = self.project_classes.subquery()
-
-        query = faculty.enrollments \
-            .join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id) \
-            .filter(or_(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
-                        EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED))
-
-        return get_count(query) > 0
+        return self._is_assessor_for_at_least_one_pclass(faculty)
 
 
     def add_assessor(self, faculty):
@@ -3138,6 +3147,22 @@ class Project(db.Model):
             return None
 
         return desc.capacity
+
+
+    def maintenance(self):
+        """
+        Perform regular basic maintenance, to ensure validity of the database
+        :return:
+        """
+        # ensure that assessor list does not contain anyone who is no longer enrolled for those tasks
+        removed = [f for f in self.assessors if not self._is_assessor_for_at_least_one_pclass(f)]
+        self.assessors = [f for f in self.assessors if self._is_assessor_for_at_least_one_pclass(f)]
+
+        for f in removed:
+            current_app.logger.info('Regular maintainance: pruned assessor "{name}" from project "{proj}" since '
+                                    'they no longer meet eligibility criteria'.format(name=f.user.name, proj=self.name))
+
+        return len(removed) > 0
 
 
 @listens_for(Project, 'before_update')

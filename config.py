@@ -62,9 +62,8 @@ class Config(object):
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379'
     CACHE_DEFAULT_TIMEOUT = 86400                           # default timeout = 86400 seconds = 24 hours
 
-    # Flask-Limiter
-    RATELIMIT_DEFAULT = "600/day;120/hour"
-    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_REDIS_URL') or 'redis://localhost:6379'
+    # Flask-HTMLmin
+    MINIFY_PAGE = True
 
     # logging
     LOG_FILE = os.environ.get('LOG_FILE') or 'logs/mps_project.log'
@@ -109,6 +108,10 @@ class ProductionConfig(Config):
     """
 
     DEBUG = False
+
+    # Flask-Limiter
+    RATELIMIT_DEFAULT = "600/day;120/hour"
+    RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_REDIS_URL') or 'redis://localhost:6379'
 
     # determine whether to use Werkzeug profiler to write a .prof to disc
     PROFILE_TO_DISK = False

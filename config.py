@@ -18,7 +18,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 # website revision number
-revision = '2018.10.1'
+revision = '2018.11.1'
 
 
 class Config(object):
@@ -113,7 +113,9 @@ class ProductionConfig(Config):
     RATELIMIT_DEFAULT = "600/day;120/hour"
     RATELIMIT_STORAGE_URL = os.environ.get('RATELIMIT_REDIS_URL') or 'redis://localhost:6379'
 
+    # our own, hand-rolled profiler:
     # determine whether to use Werkzeug profiler to write a .prof to disc
+    # (from where we can use eg. SnakeViz as a GUI tool)
     PROFILE_TO_DISK = False
     PROFILE_DIRECTORY = os.environ.get('PROFILE_DIRECTORY') or "./profiling"
 

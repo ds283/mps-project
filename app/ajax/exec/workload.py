@@ -66,11 +66,11 @@ _enrollments = \
         {% endif %}
 
         {% if record.pclass.uses_presentations %}
-            {% if record.presentation_state == record.PRESENTATION_ENROLLED %}
+            {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
                 <span class="label label-success"><i class="fa fa-check"></i> Pres: active</span>
-            {% elif record.presentation_state == record.PRESENTATION_SABBATICAL %}
+            {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
                 <span class="label label-warning"><i class="fa fa-times"></i> Pres: sabbat</span>
-            {% elif record.presentation_state == record.PRESENTATION_EXEMPT %}
+            {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
                 <span class="label label-danger"><i class="fa fa-times"></i> Pres: exempt</span>
             {% else %}
                 <span class="label label-danger"><i class="fa fa-times"></i> Pres: unknown</span>

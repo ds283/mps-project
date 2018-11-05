@@ -37,18 +37,18 @@ menu = \
             <li class="dropdown-header">Edit</li>
             <li>
                 <a href="{{ url_for('admin.edit_user', id=user.id, pane=pane) }}">
-                    <i class="fa fa-cogs"></i> Account settings
+                    <i class="fa fa-cogs"></i> Account settings...
                 </a>
             </li>
             {% if user.has_role('faculty') %}
                 <li>
                     <a href="{{ url_for('admin.edit_affiliations', id=user.id, pane=pane) }}">
-                        <i class="fa fa-cogs"></i> Affiliations
+                        <i class="fa fa-cogs"></i> Affiliations...
                     </a>
                 </li>
                 <li>
                     <a href="{{ url_for('admin.edit_enrollments', id=user.id, pane=pane) }}">
-                        <i class="fa fa-cogs"></i> Enrollments
+                        <i class="fa fa-cogs"></i> Enrollments...
                     </a>
                 </li>
             {% endif %}

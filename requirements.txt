@@ -24,7 +24,6 @@ Flask-BabelEx==0.9.3
 Flask-Caching==1.4.0
 Flask-Debug-API==0.1.0
 Flask-DebugToolbar==0.10.1
-Flask-HTMLmin==1.5.0
 Flask-HTTPAuth==3.2.4
 Flask-Limiter==1.0.1
 Flask-Login==0.4.1

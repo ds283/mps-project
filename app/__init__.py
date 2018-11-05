@@ -26,7 +26,6 @@ from flask import Flask
 from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
 from .limiter import limiter
-from .minify import htmlmin
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 
@@ -68,7 +67,6 @@ def create_app():
     session_store = Session(app)
 
     cache.init_app(app)
-    htmlmin.init_app(app)
 
     # add endpoint profiler and rate limiter in production mode
     # also add handler to direct Waitress logging output to the console

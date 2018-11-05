@@ -349,7 +349,7 @@ def register_backup_tasks(celery):
             raise self.retry()
 
         # build a group of tasks, one for each backup
-        seq = group(drop_backup_if_absent.si(id) for id in records)
+        seq = group(drop_backup_if_absent.si(i.id) for i in records)
         seq.apply_async()
 
         self.update_state(state='SUCCESS')

@@ -161,13 +161,11 @@ def register_popularity_tasks(celery):
         query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid)
 
         try:
-
             if query.count() != num_live:
                 raise RuntimeError('Number of records in group is incorrect: '
                                    'expected {exp}, found {obs}'.format(exp=num_live, obs=query.count()))
 
             try:
-
                 records = query.all()
 
                 for record in records:
@@ -176,16 +174,13 @@ def register_popularity_tasks(celery):
                 db.session.commit()
 
             except SQLAlchemyError:
-
                 db.session.rollback()
                 raise
 
         except SQLAlchemyError:
-
             raise self.retry()
 
         except RuntimeError:
-
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -246,19 +241,16 @@ def register_popularity_tasks(celery):
                           meta='Looking up current project class configuration for id={id}'.format(id=pid))
 
         try:
-
             # get most recent configuration record for this project class
             config = db.session.query(ProjectClassConfig) \
                 .filter_by(pclass_id=pid) \
                 .order_by(ProjectClassConfig.year.desc()).first()
 
-        except SQLAlchemyError:
-
+        except SQLAlchemyError as e:
             raise self.retry()
 
         self.update_state(state='STARTED',
-                          meta='Update popularity data for project class "{name}"'.format(
-                              name=config.name))
+                          meta='Update popularity data for project class "{name}"'.format(name=config.name))
 
         # set up group of tasks to update popularity score of each LiveProject on this configuration
         # only need to work with projects that are open for student selections
@@ -268,7 +260,6 @@ def register_popularity_tasks(celery):
         uuid = uuid1()
 
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-
             compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live)
                             for proj in config.live_projects)
 
@@ -289,14 +280,12 @@ def register_popularity_tasks(celery):
         self.update_state(state='STARTED', meta='Update popularity data')
 
         try:
-
             pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()
 
         except SQLAlchemyError:
-
             raise self.retry()
 
-        tasks = group(update_project_popularity_data.si(i) for i in pclass_ids)
+        tasks = group(update_project_popularity_data.si(i.id) for i in pclass_ids)
         tasks.apply_async()
 
         self.update_state(state='SUCCESS')
@@ -308,7 +297,6 @@ def register_popularity_tasks(celery):
         self.update_state(state='STARTED', meta='Thinning record bin')
 
         try:
-
             # retain popularity record with the highest score
             records = [db.session.query(PopularityRecord).filter_by(id=id).first() for id in bin]
 
@@ -331,7 +319,6 @@ def register_popularity_tasks(celery):
                 db.session.commit()
 
         except SQLAlchemyError:
-
             db.session.rollback()
             raise self.retry()
 
@@ -357,11 +344,9 @@ def register_popularity_tasks(celery):
                           meta='Building list of popularity records for LiveProject id={id}'.format(id=liveid))
 
         try:
-
             liveproject = db.session.query(LiveProject).filter_by(id=liveid).first()
 
         except SQLAlchemyError:
-
             raise self.retry()
 
         # extract time limits from parent project class
@@ -384,7 +369,6 @@ def register_popularity_tasks(celery):
 
         # loop through all PopularityRecords attached to this LiveProject
         for record in liveproject.popularity_data:
-
             age = now - record.datestamp
 
             if age < max_hourly_age:
@@ -454,7 +438,7 @@ def register_popularity_tasks(celery):
 
             raise self.retry()
 
-        tasks = group(thin_project_popularity_data.si(i) for i in pclass_ids)
+        tasks = group(thin_project_popularity_data.si(i.id) for i in pclass_ids)
         tasks.apply_async()
 
         self.update_state(state='SUCCESS')

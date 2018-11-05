@@ -1044,15 +1044,25 @@ class FacultyData(db.Model):
 
     @property
     def outstanding_availability_requests(self):
-        return self.availability_waiting \
-            .filter_by(year=_get_current_year(), availability_closed=False) \
+        query = db.session.query(faculty_availability_waiting.c.assessment_id) \
+            .filter(faculty_availability_waiting.c.faculty_id == self.id).query()
+
+        return db.session.query(PresentationAssessment) \
+            .join(query, query.c.assessment_id == PresentationAssessment.id) \
+            .filter(PresentationAssessment.year == _get_current_year(),
+                    PresentationAssessment.availability_closed == False) \
             .order_by(PresentationAssessment.name.asc())
 
 
     @property
     def editable_availability_requests(self):
-        return self.presentation_assessments \
-            .filter_by(year=_get_current_year(), availability_closed=False) \
+        query = db.session.query(assessment_to_assessors.c.assessment_id) \
+            .filter(assessment_to_assessors.c.faculty_id == self.id).query()
+
+        return db.session.query(PresentationAssessment) \
+            .join(query, query.c.assessment_id == PresentationAssessment.id) \
+            .filter(PresentationAssessment.year == _get_current_year(),
+                    PresentationAssessment.availability_closed == False) \
             .order_by(PresentationAssessment.name.asc())
 
 
@@ -1337,8 +1347,12 @@ class DegreeProgramme(db.Model):
 
 
     def _level_modules_query(self, level_id):
-        return self.modules \
-            .filter_by(level_id=level_id) \
+        query = db.session.query(programmes_to_modules.c.module_id) \
+            .filter(programmes_to_modules.c.programme_id == self.id).subquery()
+
+        return db.session.query(Module) \
+            .join(query, query.c.module_id == Module.id) \
+            .filter(Module.level_id == level_id) \
             .order_by(Module.semester.asc(), Module.name.asc())
 
 
@@ -3339,8 +3353,12 @@ class ProjectDescription(db.Model):
 
 
     def _level_modules_query(self, level_id):
-        return self.modules \
-            .filter_by(level_id=level_id) \
+        query = db.sesson.query(description_to_modules.c.module_id) \
+            .filter(description_to_modules.c.description_id == self.id).subquery()
+
+        return db.session.query(Module) \
+            .join(query, query.c.module_id == Module.id) \
+            .filter(Module.level_id == level_id) \
             .order_by(Module.semester.asc(), Module.name.asc())
 
 
@@ -7280,7 +7298,6 @@ class ScheduleSlot(db.Model):
         Perform validation
         :return:
         """
-
         flag, self._errors, self._warnings = _ScheduleSlot_is_valid(self.id)
         self._validated = True
 

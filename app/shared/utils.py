@@ -17,6 +17,7 @@ from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
     MatchingAttempt, MatchingRecord
+from ..models import project_assessors
 
 from .conversions import is_integer
 from .sqlalchemy import get_count
@@ -339,7 +340,11 @@ def build_assessor_query(proj, state_filter, pclass_filter, group_filter):
     # build base query -- either all users, or attached users, or not attached faculty
     if state_filter == 'attached':
         # build list of all active faculty users who are attached
-        query = proj.assessors \
+        sq = db.session.query(project_assessors.c.faculty_id) \
+            .filter(project_assessors.c.project_id == proj.id).subquery()
+
+        query = db.session.query(FacultyData) \
+            .join(sq, sq.c.faculty_id == FacultyData.id) \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True, User.id != proj.owner_id)
 
@@ -385,14 +390,11 @@ def filter_assessors(proj, state_filter, pclass_filter, group_filter):
     :param group_filter:
     :return:
     """
-
     query = build_assessor_query(proj, state_filter, pclass_filter, group_filter)
-
     return query.all()
 
 
 def get_convenor_filter_record(config):
-
     # extract FilterRecord for the logged-in user, if one exists
     record = config.filters.filter_by(user_id=current_user.id).first()
 
@@ -509,7 +511,6 @@ def get_automatch_pclasses():
 
 
 def build_submitters_data(config, cohort_filter, prog_filter, state_filter):
-
     # build a list of live students submitting work for evaluation in this project class
     submitters = config.submitting_students.filter_by(retired=False)
 

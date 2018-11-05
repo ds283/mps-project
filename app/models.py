@@ -402,8 +402,7 @@ class User(db.Model, UserMixin):
     current_login_ip = db.Column(db.String(IP_LENGTH))
     login_count = db.Column(db.Integer())
 
-    roles = db.relationship('Role', secondary=roles_to_users,
-                            backref=db.backref('users', lazy='dynamic'))
+    roles = db.relationship('Role', secondary=roles_to_users, backref=db.backref('users', lazy='dynamic'))
 
 
     THEME_DEFAULT = 0
@@ -974,7 +973,10 @@ class FacultyData(db.Model):
 
 
     def presentation_assignments(self, pclass_id):
-        slot_query = self.assessor_slots \
+        query = db.session.query(faculty_to_slots.c.slot_id).filter(faculty_to_slots.c.faculty_id == self.id).subquery()
+
+        slot_query = db.session.query(ScheduleSlot) \
+            .join(query, query.c.slot_id == ScheduleSlot.id) \
             .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id) \
             .filter(ScheduleAttempt.deployed == True).subquery()
 
@@ -4528,17 +4530,20 @@ class SubmissionRecord(db.Model):
 
     @property
     def schedule_slot(self):
-        query = self.scheduled_slot \
+        query = db.session.query(submitter_to_slots.c.slot_id).filter(submitter_to_slots.c.submitter_id == self.id).subquery()
+
+        slot_query = db.session.query(ScheduleSlot) \
+            .join(query, query.c.slot_id == ScheduleSlot.id) \
             .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id) \
             .filter(ScheduleAttempt.deployed == True)
 
-        slots = get_count(query)
+        slots = get_count(slot_query)
         if slots > 1:
             raise RuntimeError('Too many deployed ScheduleSlot instances attached to a SubmissionRecord')
         elif slots == 0:
             return None
 
-        return query.first()
+        return slot_query.first()
 
 
 class Bookmark(db.Model):

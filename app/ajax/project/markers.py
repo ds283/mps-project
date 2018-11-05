@@ -37,7 +37,7 @@ _enrollments = \
         {% if e.marker_state == e.MARKER_ENROLLED %}
             {{ e.pclass.make_label('<i class="fa fa-check"></i> ' + e.pclass.abbreviation)|safe }}
         {% elif e.marker_state == e.MARKER_SABBATICAL %}
-            <span class="label label-default"><i class="fa fa-times"></i> {{ e.pclass.abbreviation }} (buyout)</span>
+            <span class="label label-default"><i class="fa fa-times"></i> {{ e.pclass.abbreviation }} (sabbat)</span>
         {% elif e.marker_state == e.MARKER_EXEMPT %}
             <span class="label label-default"><i class="fa fa-times"></i> {{ e.pclass.abbreviation }} (exempt)</span>
         {% else %}

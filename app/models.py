@@ -189,9 +189,9 @@ project_programmes = db.Table('project_to_programmes',
                               db.Column('programme_id', db.Integer(), db.ForeignKey('degree_programmes.id'), primary_key=True))
 
 # association table giving assessors
-assessors = db.Table('project_to_assessors',
-                     db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
-                     db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
+project_assessors = db.Table('project_to_assessors',
+                             db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                             db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
 # association table matching project descriptions to supervision team
 description_supervisors = db.Table('description_to_supervisors',
@@ -351,6 +351,7 @@ faculty_to_slots = db.Table('faculty_to_slots',
 submitter_to_slots = db.Table('submitter_to_slots',
                               db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True),
                               db.Column('slot_id', db.Integer(), db.ForeignKey('schedule_slots.id'), primary_key=True))
+
 
 class MainConfig(db.Model):
     """
@@ -1324,7 +1325,10 @@ class DegreeProgramme(db.Model):
 
     @property
     def ordered_modules(self):
-        return self.modules \
+        query = db.session.query(programmes_to_modules.c.module_id).filter(programmes_to_modules.c.programme_id==self.id).subquery()
+
+        return db.session.query(Module) \
+            .join(query, query.c.module_id == Module.id) \
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
             .order_by(FHEQ_Level.academic_year.asc(),
                       Module.semester.asc(), Module.name.asc())
@@ -1713,7 +1717,11 @@ class ProjectClass(db.Model, ColouredLabelMixin):
 
     @property
     def ordered_programmes(self):
-        return self.programmes \
+        query = db.session.query(pclass_programme_associations.c.programme_id) \
+            .filter(pclass_programme_associations.c.project_class_id==self.id).subquery()
+
+        return db.session.query(DegreeProgramme) \
+            .join(query, query.c.programme_id == DegreeProgramme.id) \
             .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
             .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
 
@@ -2826,7 +2834,7 @@ class Project(db.Model):
     enforce_capacity = db.Column(db.Boolean())
 
     # table of allowed assessors
-    assessors = db.relationship('FacultyData', secondary=assessors, lazy='dynamic',
+    assessors = db.relationship('FacultyData', secondary=project_assessors, lazy='dynamic',
                                 backref=db.backref('assessor_for', lazy='dynamic'))
 
 
@@ -2948,7 +2956,10 @@ class Project(db.Model):
 
     @property
     def ordered_skills(self):
-        return self.skills \
+        query = db.session.query(project_skills.c.skill_id).filter(project_skills.c.project_id==self.id).subquery()
+
+        return db.session.query(TransferableSkill) \
+            .join(query, query.c.skill_id == TransferableSkill.id) \
             .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
             .order_by(SkillGroup.name.asc(),
                       TransferableSkill.name.asc())
@@ -2964,7 +2975,10 @@ class Project(db.Model):
 
     @property
     def ordered_programmes(self):
-        return self.programmes \
+        query = db.session.query(project_programmes.c.programme_id).filter(project_programmes.c.project_id==self.id).subquery()
+
+        return db.session.query(DegreeProgramme) \
+            .join(query, query.c.programme_id == DegreeProgramme.id) \
             .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
             .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
 
@@ -3005,7 +3019,6 @@ class Project(db.Model):
         are valid, given the current project class associations
         :return:
         """
-
         available_programmes = self.available_degree_programmes
         if available_programmes is None:
             self.programmes = []
@@ -3040,7 +3053,10 @@ class Project(db.Model):
         else:
             pclass_id = pclass.id
 
-        query = self.assessors \
+        fac_ids = db.session.query(project_assessors.c.faculty_id).filter(project_assessors.c.project_id==self.id).subquery()
+
+        query = db.session.query(FacultyData) \
+            .join(fac_ids, fac_ids.c.faculty_id == FacultyData.id) \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True) \
             .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
@@ -3358,7 +3374,10 @@ class ProjectDescription(db.Model):
 
     @property
     def ordered_modules(self):
-        return self.modules \
+        query = db.session.query(description_to_modules.c.module_id).filter(description_to_modules.c.description_id==self.id).subquery()
+
+        return db.session.query(Module) \
+            .join(query, query.c.module_id == Module.id) \
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
             .order_by(FHEQ_Level.academic_year.asc(),
                       Module.semester.asc(), Module.name.asc())
@@ -3542,7 +3561,10 @@ class LiveProject(db.Model):
 
     @property
     def ordered_skills(self):
-        return self.skills \
+        query = db.session.query(live_project_skills.c.skill_id).filter(live_project_skills.c.project_id==self.id).subquery()
+
+        return db.session.query(TransferableSkill) \
+            .join(query, query.c.skill_id == TransferableSkill.id) \
             .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
             .order_by(SkillGroup.name.asc(),
                       TransferableSkill.name.asc())
@@ -3550,10 +3572,23 @@ class LiveProject(db.Model):
 
     @property
     def ordered_modules(self):
-        return self.modules \
+        query = db.session.query(live_project_to_modules.c.module_id).filter(live_project_to_modules.c.project_id==self.id).subquery()
+
+        return db.session.query(Module) \
+            .join(query, query.c.module_id == Module.id) \
             .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
             .order_by(FHEQ_Level.academic_year.asc(),
                       Module.semester.asc(), Module.name.asc())
+
+
+    @property
+    def ordered_programmes(self):
+        query = db.session.query(live_project_programmes.c.programme_id).filter(live_project_programmes.c.project_id==self.id).subquery()
+
+        return db.session.query(DegreeProgramme) \
+            .join(query, query.c.programme_id == DegreeProgramme.id) \
+            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+            .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
 
 
     def _get_popularity_attr(self, getter):
@@ -3733,7 +3768,10 @@ class LiveProject(db.Model):
 
     @property
     def assessor_list_query(self):
-        return self.assessors \
+        fac_ids = db.session.query(live_assessors.c.faculty_id).filter(live_assessors.c.project_id==self.id).subquery()
+
+        return db.session.query(FacultyData) \
+            .join(fac_ids, fac_ids.c.faculty_id == FacultyData.id) \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True) \
             .order_by(User.last_name.asc(), User.first_name.asc())
@@ -6620,7 +6658,12 @@ class PresentationSession(db.Model):
 
     @property
     def ordered_rooms(self):
-        return self.rooms.filter_by(active=True) \
+        query = db.session.query(session_to_rooms.c.room_id) \
+            .filter(session_to_rooms.c.session_id == self.id).subquery()
+
+        return db.session.query(Room) \
+            .join(query, query.c.room_id == Room.id) \
+            .filter(Room.active == True) \
             .join(Building, Building.id == Room.building_id) \
             .order_by(Building.name.asc(),
                       Room.name.asc())
@@ -6638,7 +6681,11 @@ class PresentationSession(db.Model):
 
     @property
     def ordered_faculty(self):
-        return self.faculty \
+        query = db.session.query(faculty_availability.c.faculty_id) \
+            .filter(faculty_availability.c.session_id == self.id).subquery()
+
+        return db.session.query(FacultyData) \
+            .join(query, query.c.faculty_id == FacultyData.id) \
             .join(User, User.id == FacultyData.id) \
             .order_by(User.last_name.asc(), User.first_name.asc())
 
@@ -7255,7 +7302,11 @@ class ScheduleSlot(db.Model):
 
 
     def has_pclass(self, pclass_id):
-        q = self.talks \
+        query = db.session.query(submitter_to_slots.c.submitter_id) \
+            .filter(submitter_to_slots.c.slot_id == self.id).subquery()
+
+        q = db.session.query(SubmissionRecord) \
+            .join(query, query.c.submitter_id == SubmissionRecord.id) \
             .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id) \
             .filter(ProjectClassConfig.pclass_id == pclass_id)

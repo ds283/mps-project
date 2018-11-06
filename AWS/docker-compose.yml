@@ -56,7 +56,7 @@ services:
         awslogs-region: eu-west-1
         awslogs-stream-prefix: nginx
 
-  worker:
+  worker1:
 
     image: 801384587375.dkr.ecr.eu-west-1.amazonaws.com/mpsproject:latest
     entrypoint: "./launch_celery.sh"
@@ -88,7 +88,41 @@ services:
       options:
         awslogs-group: mps-project
         awslogs-region: eu-west-1
-        awslogs-stream-prefix: worker
+        awslogs-stream-prefix: worker1
+
+  worker2:
+
+    image: 801384587375.dkr.ecr.eu-west-1.amazonaws.com/mpsproject:latest
+    entrypoint: "./launch_celery.sh"
+    user: mpsproject
+    environment:
+      - DATABASE_URL=mysql+pymysql://mpsproject:Bridle12Way2007@mariadb/mpsproject
+      - CELERY_RESULT_BACKEND=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379
+      - BACKUP_FOLDER=/home/mpsproject/backups
+      - DATABASE_USER=mpsproject
+      - DATABASE_PASSWORD=Bridle12Way2007
+      - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
+      - DATABASE_HOSTNAME=mariadb
+      - CACHE_REDIS_URL=redis://redis:6379
+      - RATELIMIT_REDIS_URL=redis://redis:6379
+      - PROFILER_MONGODB_URL=mongodb://mpsproject:Bridle12Way2007@mongodb:27017
+      - PROFILER_MONGODB_DATABASE=flask_profiler
+      - LOG_FILE=/home/mpsproject/logs/mps_project.log
+    volumes:
+      - /data/mpsproject/instance:/home/mpsproject/instance
+      - /data/mpsproject/backups:/home/mpsproject/backups
+      - /data/mpsproject/logs:/home/mpsproject/logs
+    links:
+      - mariadb
+      - redis
+      - mongodb
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: mps-project
+        awslogs-region: eu-west-1
+        awslogs-stream-prefix: worker2
 
   scheduler:
 
@@ -138,7 +172,8 @@ services:
     links:
       - mariadb
       - redis
-      - worker
+      - worker1
+      - worker2
       - mongodb
     logging:
       driver: awslogs

@@ -112,7 +112,7 @@
                                             <div class="col-xs-9">
                                                 <div class="sm-gap-below">
                                                     {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                                        {% if project.meeting_confirmed(sel) %}
+                                                        {% if project.is_confirmed(sel) %}
                                                             <span class="label label-primary project-label"><i
                                                                     class="fa fa-check"></i> Meeting confirmed</span>
                                                         {% else %}

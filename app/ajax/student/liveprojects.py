@@ -10,11 +10,17 @@
 
 from flask import render_template_string, jsonify, url_for
 
+from ...database import db
+from ...models import SelectingStudent, LiveProject, Bookmark, SelectionRecord
+from ...cache import cache
+
+from sqlalchemy.event import listens_for
+
 
 _meeting = \
 """
 {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-    {% if project.meeting_confirmed(sel) %}
+    {% if project.is_confirmed(sel) %}
         <span class="label label-primary"><i class="fa fa-check"></i> Confirmed</span>
     {% else %}
         <span class="label label-danger"><i class="fa fa-times"></i> Required</span>
@@ -26,12 +32,13 @@ _meeting = \
 {% endif %}
 """
 
+
 _status = \
 """
 {% if project.is_available(sel) %}
     <span class="label label-success"><i class="fa fa-check"></i> Available for selection</span>
 {% else %}
-    {% if sel in project.confirm_waiting %}
+    {% if project.is_waiting(sel) %}
         <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="label label-warning">
             <i class="fa fa-times"></i> Cancel request
         </a>
@@ -45,7 +52,7 @@ _status = \
 
 _bookmarks = \
 """
-{% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
+{% if sel.is_project_bookmarked(project) %}
     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
        class="label label-primary">
        <i class="fa fa-times"></i> Remove
@@ -69,11 +76,11 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
-                View project
+                View project...
             </a>
         </li>
         <li>
-            {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
+            {% if sel.is_project_bookmarked(project) %}
                 <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
                     Remove bookmark
                 </a>
@@ -85,7 +92,7 @@ _menu = \
         </li>
         <li {% if project.is_available(sel) %}class="disabled"{% endif %}>
             {% if not project.is_available(sel) %}
-                {% if sel in project.confirm_waiting %}
+                {% if project.is_waiting(sel) %}
                     <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
                         Cancel confirmation
                     </a>
@@ -136,13 +143,18 @@ _project_group = \
 </a>
 """
 
-def liveprojects_data(sel, projects):
-    data = [{'number': '{c}'.format(c=p.number),
-             'name': '<a href="{url}">{name}</strong></a>'.format(name=p.name,
-                                                                  url=url_for('student.view_project', sid=sel.id,
-                                                                              pid=p.id)),
+
+@cache.memoize()
+def _element(sel_id, project_id):
+    sel = db.session.query(SelectingStudent).filter_by(id=sel_id).one()
+    p = db.session.query(LiveProject).filter_by(id=project_id).one()
+
+    return {'number': '{c}'.format(c=p.number),
+             'name': '<a href="{url}">{name}</a>'.format(name=p.name,
+                                                         url=url_for('student.view_project', sid=sel.id, pid=p.id)),
              'supervisor': {
-                 'display': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name, em=p.owner.user.email),
+                 'display': '{name} <a href="mailto:{em}">{em}</a>'.format(name=p.owner.user.name,
+                                                                           em=p.owner.user.email),
                  'sortvalue': p.owner.user.last_name + p.owner.user.first_name},
              'group': render_template_string(_project_group, sel=sel, group=p.group),
              'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
@@ -150,6 +162,52 @@ def liveprojects_data(sel, projects):
              'meeting': render_template_string(_meeting, sel=sel, project=p),
              'availability': render_template_string(_status, sel=sel, project=p),
              'bookmarks': render_template_string(_bookmarks, sel=sel, project=p),
-             'menu': render_template_string(_menu, sel=sel, project=p)} for p in projects]
+             'menu': render_template_string(_menu, sel=sel, project=p)}
+
+
+@listens_for(SelectingStudent.confirm_requests, 'append')
+def _SelectingStudent_confirm_requests_append_handler(value, target, initiator):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, value.id, target.id)
+
+
+@listens_for(SelectingStudent.confirm_requests, 'remove')
+def _SelectingStudent_confirm_requests_remove_handler(value, target, initiator):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, value.id, target.id)
+
+
+@listens_for(SelectingStudent.confirmed, 'append')
+def _SelectingStudent_confirmed_append_handler(value, target, initiator):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, value.id, target.id)
+
+
+@listens_for(SelectingStudent.confirmed, 'remove')
+def _SelectingStudent_confirmed_remove_handler(value, target, initiator):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, value.id, target.id)
+
+
+@listens_for(Bookmark, 'before_update')
+def _Bookmark_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, target.owner_id, target.liveproject_id)
+
+
+@listens_for(Bookmark, 'before_insert')
+def _Bookmark_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, target.owner_id, target.liveproject_id)
+
+
+@listens_for(Bookmark, 'before_delete')
+def _Bookmark_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, target.owner_id, target.liveproject_id)
+
+
+def liveprojects_data(sel_id, projects):
+    data = [_element(sel_id, project_id) for project_id in projects]
 
     return jsonify(data)

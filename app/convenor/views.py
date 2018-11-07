@@ -18,7 +18,7 @@ from ..database import db
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
-    SubmissionRecord, PresentationFeedback, Module, FHEQ_Level
+    SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -655,7 +655,11 @@ def selectors(id):
         programmes.add(sel.student.programme_id)
 
     # build list of available programmes
-    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    all_progs = db.session.query(DegreeProgramme) \
+        .filter(DegreeProgramme.active == True) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .order_by(DegreeType.name.asc(),
+                  DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
@@ -773,7 +777,11 @@ def enroll_selectors(id):
         programmes.add(student.programme_id)
 
     # build list of available programmes
-    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    all_progs = db.session.query(DegreeProgramme) \
+        .filter(DegreeProgramme.active == True) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .order_by(DegreeType.name.asc(),
+                  DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
@@ -936,9 +944,15 @@ def selector_grid(id):
         programmes.add(sel.student.programme_id)
 
     # build list of available programmes
-    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    all_progs = db.session.query(DegreeProgramme) \
+        .filter(DegreeProgramme.active == True) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .order_by(DegreeType.name.asc(),
+                  DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
-    groups = ResearchGroup.query.filter_by(active=True).all()
+    groups = db.session.query(ResearchGroup) \
+        .filter_by(active=True) \
+        .order_by(ResearchGroup.name.asc()).all()
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
 
@@ -1042,7 +1056,11 @@ def submitters(id):
         programmes.add(sub.student.programme_id)
 
     # build list of available programmes
-    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    all_progs = db.session.query(DegreeProgramme) \
+        .filter(DegreeProgramme.active == True) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .order_by(DegreeType.name.asc(),
+                  DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
@@ -1132,7 +1150,11 @@ def enroll_submitters(id):
         programmes.add(student.programme_id)
 
     # build list of available programmes
-    all_progs = DegreeProgramme.query.filter_by(active=True).all()
+    all_progs = db.session.query(DegreeProgramme) \
+        .filter(DegreeProgramme.active == True) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .order_by(DegreeType.name.asc(),
+                  DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
 
     fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)

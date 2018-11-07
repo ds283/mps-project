@@ -9,3 +9,15 @@
 a.label {
     text-decoration: none!important;
 }
+
+.selected-project {
+    background-color: #dff0d8;
+    /*border-width: 3px;*/
+    margin: 3px;
+}
+
+.deselected-project {
+    background-color: #f2dede;
+    /*border-width: 3px;*/
+    margin: 3px;
+}

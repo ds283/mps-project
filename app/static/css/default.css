@@ -6,3 +6,15 @@
     margin-top: 40px;
     margin-bottom: 65px;
 }
+
+.selected-project {
+    background-color: #dff0d8;
+    /*border-width: 3px;*/
+    margin: 3px;
+}
+
+.deselected-project {
+    background-color: #f2dede;
+    /*border-width: 3px;*/
+    margin: 3px;
+}

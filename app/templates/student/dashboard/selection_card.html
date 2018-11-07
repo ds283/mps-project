@@ -70,22 +70,22 @@
                 <div>You have not yet submitted your project preferences.</div>
             {% endif %}
         </div>
-        <div class="col-xs-6">
+        <div class="col-xs-6" style="text-align: right;">
             <div class="pull-right">
-                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success">Show available projects</a>
+                <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects</a>
                 {% if sel.has_submitted %}
-                    <a class="btn btn-default" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
+                    <a class="btn btn-default student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                         Clear submission
                     </a>
                 {% endif %}
                 {% set is_valid = sel.is_valid_selection %}
                 <a id="P{{ config.id }}-valid-button"
-                   class="btn btn-primary {% if not is_valid %}hidden{% endif %}"
+                   class="btn btn-primary {% if not is_valid %}hidden{% endif %} student-dashboard-button"
                    href="{{ url_for('student.submit', sid=sel.id) }}">
                     {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
                 </a>
                 <a id="P{{ config.id }}-invalid-button"
-                   class="btn btn-primary disabled {% if is_valid %}hidden{% endif %}">
+                   class="btn btn-primary disabled {% if is_valid %}hidden{% endif %} student-dashboard-button">
                     {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
                 </a>
             </div>

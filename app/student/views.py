@@ -205,7 +205,7 @@ def projects_ajax(id):
     projects = filter_projects(sel.config.live_projects.all(),
                                sel.group_filters.all(), sel.skill_filters.all())
 
-    return ajax.student.liveprojects_data(sel, projects)
+    return ajax.student.liveprojects_data(sel.id, projects)
 
 
 @student.route('/add_group_filter/<id>/<gid>')
@@ -353,8 +353,7 @@ def add_bookmark(sid, pid):
         return redirect(request.referrer)
 
     # add bookmark
-    if not sel.bookmarks.filter_by(liveproject_id=pid).first():
-
+    if not sel.is_project_bookmarked(project):
         bm = Bookmark(owner_id=sid, liveproject_id=pid, rank=sel.bookmarks.count()+1)
         db.session.add(bm)
         db.session.commit()
@@ -397,7 +396,6 @@ def remove_bookmark(sid, pid):
 @student.route('/request_confirm/<int:sid>/<int:pid>')
 @roles_accepted('student', 'admin', 'root')
 def request_confirmation(sid, pid):
-
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
 
@@ -438,7 +436,6 @@ def request_confirmation(sid, pid):
 @student.route('/cancel_confirm/<int:sid>/<int:pid>')
 @roles_accepted('student', 'admin', 'root')
 def cancel_confirmation(sid, pid):
-
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
 
@@ -472,7 +469,6 @@ def cancel_confirmation(sid, pid):
 
 
 def _demap_project(item_id):
-
     result = parse.parse('P{configid}-{pid}', item_id)
 
     return int(result['pid'])
@@ -481,7 +477,6 @@ def _demap_project(item_id):
 @student.route('/update_ranking', methods=['GET', 'POST'])
 @roles_accepted('student', 'admin', 'root')
 def update_ranking():
-
     data = request.get_json()
 
     # discard if request is ill-formed
@@ -532,7 +527,6 @@ def update_ranking():
 @student.route('/submit/<int:sid>')
 @roles_required('student')
 def submit(sid):
-
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
 
@@ -552,10 +546,9 @@ def submit(sid):
 
         # iterate through bookmarks, converting them to a selection set
         for bookmark in sel.bookmarks:
-
             # rank is based on 1
             if bookmark.rank <= sel.number_choices:
-                rec = SelectionRecord(owner_id=sel.student_id,
+                rec = SelectionRecord(owner_id=sel.id,
                                       liveproject_id=bookmark.liveproject_id,
                                       rank=bookmark.rank,
                                       converted_from_bookmark=False,

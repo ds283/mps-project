@@ -343,7 +343,11 @@ def edit_users_students():
     if year_filter is not None:
         session['accounts_year_filter'] = year_filter
 
-    programmes = db.session.query(DegreeProgramme).filter(DegreeProgramme.active == True).all()
+    programmes = db.session.query(DegreeProgramme) \
+        .filter(DegreeProgramme.active == True) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .order_by(DegreeType.name.asc(),
+                  DegreeProgramme.name.asc()).all()
     cohort_data = db.session.query(StudentData.cohort) \
         .join(User, User.id == StudentData.id) \
         .filter(User.active == True).distinct().all()

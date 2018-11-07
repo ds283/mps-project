@@ -279,7 +279,6 @@ def filter_projects(plist, groups, skills, getter=None):
     projects = []
 
     for item in plist:
-
         if getter is not None:
             proj = getter(item)
         else:
@@ -288,7 +287,6 @@ def filter_projects(plist, groups, skills, getter=None):
         append = True
 
         if len(groups) > 0:
-
             # check if any of the items in the filter list matches this project's group affiliation
             match = False
 
@@ -302,7 +300,6 @@ def filter_projects(plist, groups, skills, getter=None):
                 append = False
 
         if append and len(skills) > 0:
-
             # check if any of the items in the skill list matches one of this project's transferable skills
             match = False
 
@@ -322,7 +319,7 @@ def filter_projects(plist, groups, skills, getter=None):
                 append = False
 
         if append:
-            projects.append(item)
+            projects.append(item.id)
 
     return projects
 

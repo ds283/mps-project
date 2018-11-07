@@ -3559,7 +3559,7 @@ class LiveProject(db.Model):
         """
         # if student doesn't satisfy pre-requisites, sign-off is required by default whether or not
         # the project/owner settings require sign-off
-        if not sel.satisfies_prerequisites(self) and not self.meeting_confirmed(sel):
+        if not sel.satisfies_prerequisites(self) and not self.is_confirmed(sel):
             return False
 
         # if project doesn't require sign off, it is always available
@@ -3568,15 +3568,18 @@ class LiveProject(db.Model):
             return True
 
         # otherwise, check if sel is in list of confirmed students
-        if self.meeting_confirmed(sel):
+        if self.is_confirmed(sel):
             return True
 
         return False
 
 
-    def meeting_confirmed(self, sel):
-        if sel in self.confirmed_students:
-            return True
+    def is_waiting(self, sel):
+        return get_count(self.confirm_waiting.filter_by(id=sel.id)) > 0
+
+
+    def is_confirmed(self, sel):
+        return get_count(self.confirmed_students.filter_by(id=sel.id)) > 0
 
 
     @property
@@ -3870,7 +3873,7 @@ class SelectingStudent(db.Model):
         determine whether this SelectingStudent has bookmarks
         :return:
         """
-        return self.bookmarks.first() is not None
+        return get_count(self.bookmarks) > 0
 
 
     @property
@@ -3918,7 +3921,7 @@ class SelectingStudent(db.Model):
         project class
         :return:
         """
-        return self.student.programme not in self.config.project_class.programmes
+        return get_count(self.config.project_class.programmes.filter_by(id=self.student.programme.id)) == 0
 
 
     @property
@@ -3963,29 +3966,15 @@ class SelectingStudent(db.Model):
         Determine whether a submission has been made
         :return:
         """
-        return self.selections.first() is not None
+        return get_count(self.selections) > 0
 
 
     def is_project_submitted(self, proj):
-        if not self.has_submitted:
-            return False
-
-        for item in self.selections:
-            if item.liveproject_id == proj.id:
-                return True
-
-        return False
+        return get_count(self.selections.filter_by(liveproject_id=proj.id)) > 0
 
 
     def is_project_bookmarked(self, proj):
-        if not self.has_bookmarks:
-            return False
-
-        for item in self.bookmarks:
-            if item.liveproject_id == proj.id:
-                return True
-
-        return False
+        return get_count(self.bookmarks.filter_by(liveproject_id=proj.id)) > 0
 
 
     @property
@@ -3997,6 +3986,7 @@ class SelectingStudent(db.Model):
         # ignore bookmarks; these will have been converted to
         # SelectionRecords after closure if needed, and project_rank() is only really
         # meaningful once selections have closed
+
         if self.has_submitted:
             for item in self.selections.all():
                 if item.liveproject_id == proj_id:

@@ -451,7 +451,7 @@ def attached_ajax(id):
 
     plist = zip(ps, es)
     projects = filter_projects(plist, filter_record.group_filters.all(),
-                               filter_record.skill_filters.all(), lambda x: x[0])
+                               filter_record.skill_filters.all(), getter=lambda x: x[0])
 
     return ajax.project.build_data(projects, _project_menu, config=config,
                                    text='attached projects list',

@@ -454,7 +454,7 @@ def attached_ajax(id):
                                filter_record.skill_filters.all(), getter=lambda x: x[0])
 
     return ajax.project.build_data(projects, _project_menu, config=config,
-                                   text='attached projects list',
+                                   name_labels=True, text='attached projects list',
                                    url=url_for('convenor.attached', id=id))
 
 
@@ -1456,7 +1456,7 @@ def attach_liveproject_ajax(id):
     es = [ x[1] for x in eq2.all() ]
 
     return ajax.project.build_data(zip(ps, es), _attach_liveproject_action, config=config,
-                                   text='attach view',
+                                   name_labels=True, text='attach view',
                                    url=url_for('convenor.attach_liveproject', id=id))
 
 
@@ -1564,7 +1564,7 @@ def attach_liveproject_other_ajax(id):
     es = [ x[1] for x in eq2.all() ]
 
     return ajax.project.build_data(zip(ps, es), _attach_liveproject_other_action, config=config,
-                                   text='attach view',
+                                   name_labels=True, text='attach view',
                                    url=url_for('convenor.attach_liveproject', id=id))
 
 
@@ -2677,7 +2677,7 @@ def unofferable_ajax():
     projects = [(p, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.is_offerable]
 
     return ajax.project.build_data(projects, _unattached_project_menu,
-                                   text='attached projects list',
+                                   name_labels=True, text='attached projects list',
                                    url=url_for('convenor.show_unofferable'))
 
 

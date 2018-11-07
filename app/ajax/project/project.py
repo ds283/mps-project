@@ -20,15 +20,17 @@ _project_name = \
         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
     {% endif %}
 </a>
-<p></p>
-{% for pclass in project.project_classes %}
-    {% if pclass.active %}
-        {% set style = pclass.make_CSS_style() %}
-        <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
-    {% endif %}
-{% else %}
-    <span class="label label-danger">No project classes</span>
-{% endfor %}
+{% if name_labels %}
+    <p></p>
+    {% for pclass in project.project_classes %}
+        {% if pclass.active %}
+            {% set style = pclass.make_CSS_style() %}
+            <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
+        {% endif %}
+    {% else %}
+        <span class="label label-danger">No project classes</span>
+    {% endfor %}
+{% endif %}
 {% if not offerable %}
     <p></p>
     {% set errors = project.errors %}
@@ -128,9 +130,9 @@ _project_skills = \
 """
 
 
-def build_data(projects, menu_template, config=None, text=None, url=None):
+def build_data(projects, menu_template, config=None, text=None, url=None, name_labels=False):
 
-    data = [{'name': render_template_string(_project_name, project=p, text=text, url=url),
+    data = [{'name': render_template_string(_project_name, project=p, text=text, url=url, name_labels=name_labels),
              'owner': {
                  'display': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.user.email, nm=p.owner.user.name),
                  'sortvalue': p.owner.user.last_name + p.owner.user.first_name},

@@ -203,7 +203,7 @@ def projects_ajax(id):
         return jsonify({})
 
     projects = filter_projects(sel.config.live_projects.all(),
-                               sel.group_filters.all(), sel.skill_filters.all())
+                               sel.group_filters.all(), sel.skill_filters.all(), setter=lambda x: x.id)
 
     return ajax.student.liveprojects_data(sel.id, projects)
 

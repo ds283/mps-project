@@ -274,7 +274,7 @@ def get_matching_dashboard_data():
     return matches
 
 
-def filter_projects(plist, groups, skills, getter=None):
+def filter_projects(plist, groups, skills, getter=None, setter=None):
 
     projects = []
 
@@ -319,7 +319,10 @@ def filter_projects(plist, groups, skills, getter=None):
                 append = False
 
         if append:
-            projects.append(item.id)
+            if setter is not None:
+                projects.append(setter(item))
+            else:
+                projects.append(item)
 
     return projects
 

@@ -34,6 +34,18 @@
         $(window).resize(determineDropDirection);
     </script>
 
+    {# attempt to ensure that navbar doesn't obscure content below it #}
+    <script>
+        function resizeHandler() {
+            $("body").css("padding-top", $(".navbar-fixed-top").height());
+            $("body").css("padding-bottom", $(".navbar-fixed-bottom").height());
+        };
+
+        // attach the function to the window resize event
+        resizeHandler()
+        $(window).resize(resizeHandler);
+    </script>
+
     {% if current_user.is_authenticated %}
     <script>
 
@@ -490,7 +502,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid main-content">
+    <div class="container-fluid">
         <br/>
         {# Navigation pills go in the pillblock, if needed (eg. see convenor dashboard, backups dashboard #}
         {% block pillblock %}

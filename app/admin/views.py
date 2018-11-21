@@ -88,6 +88,7 @@ _datastore = LocalProxy(lambda: _security.datastore)
 
 @admin.route('/create_user', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def create_user():
     """
     View function that handles creation of a user account
@@ -124,6 +125,7 @@ def create_user():
 
 @admin.route('/create_office/<string:role>', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def create_office(role):
     """
     Create an 'office' user
@@ -156,6 +158,7 @@ def create_office(role):
 
 @admin.route('/create_faculty/<string:role>', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def create_faculty(role):
     """
     Create a 'faculty' user
@@ -234,6 +237,7 @@ def create_faculty(role):
 
 @admin.route('/create_student/<string:role>', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def create_student(role):
 
     # check whether role is ok
@@ -296,6 +300,7 @@ def create_student(role):
 
 @admin.route('/edit_users')
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def edit_users():
     """
     View function that handles listing of all registered users
@@ -315,6 +320,7 @@ def edit_users():
 
 @admin.route('/edit_users_students')
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def edit_users_students():
     """
     View function that handles listing of all registered students
@@ -362,6 +368,7 @@ def edit_users_students():
 
 @admin.route('/edit_users_faculty')
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def edit_users_faculty():
     """
     View function that handles listing of all registered faculty
@@ -394,6 +401,7 @@ def edit_users_faculty():
 
 @admin.route('/users_ajax')
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def users_ajax():
     """
     Return JSON structure representing users table
@@ -426,6 +434,7 @@ def users_ajax():
 
 @admin.route('/users_students_ajax')
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def users_students_ajax():
 
     prog_filter = request.args.get('prog_filter')
@@ -466,6 +475,7 @@ def users_students_ajax():
 
 @admin.route('/users_faculty_ajax')
 @roles_accepted('admin', 'root')
+@limiter.limit('1000/day')
 def users_faculty_ajax():
 
     group_filter = request.args.get('group_filter')

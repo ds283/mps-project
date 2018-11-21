@@ -62,9 +62,6 @@ class Config(object):
     CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379'
     CACHE_DEFAULT_TIMEOUT = 86400                           # default timeout = 86400 seconds = 24 hours
 
-    # Flask-HTMLmin
-    MINIFY_PAGE = True
-
     # logging
     LOG_FILE = os.environ.get('LOG_FILE') or 'logs/mps_project.log'
 

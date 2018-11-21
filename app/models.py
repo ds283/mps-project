@@ -327,6 +327,11 @@ faculty_availability = db.Table('faculty_availability',
                                 db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
                                 db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
+# capture selector availability for each session
+submitter_availability = db.Table('submitter_availability',
+                                  db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
+                                  db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True))
+
 # capture list of faculty who are attached to an assessment as possible assessors
 assessment_to_assessors = db.Table('assessment_to_assessors',
                                    db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
@@ -6445,6 +6450,12 @@ class PresentationAssessment(db.Model):
 
 
     @property
+    def schedulable_talks(self):
+        talks = self.available_talks
+        return [t for t in talks if not self.not_attending(t.id)]
+
+
+    @property
     def has_published_schedules(self):
         return get_count(self.scheduling_attempts.filter_by(published=True)) > 0
 
@@ -6513,6 +6524,7 @@ def _PresentationSession_is_valid(id):
     if obj.date.weekday() >= 5:
         warnings['weekday'] = 'Session scheduled on a weekend'
 
+
     # CONSTRAINT 2 - only one session should be scheduled per morning/afternoon on a fixed date
     # check how many sessions are assigned to this date and morning/afternoon
     count = get_count(obj.owner.sessions.filter_by(date=obj.date, session_type=obj.session_type))
@@ -6528,6 +6540,7 @@ def _PresentationSession_is_valid(id):
                 errors['duplicate'] = 'A duplicate copy of this session exists'
             else:
                 errors['duplicate'] = 'This session is a duplicate'
+
 
     # CONSTRAINT 3 - if faculty availability information is available, then there should be enough
     # faculty available to cover all the available rooms
@@ -6583,6 +6596,10 @@ class PresentationSession(db.Model):
     # faculty available for this session
     faculty = db.relationship('FacultyData', secondary=faculty_availability, lazy='dynamic',
                               backref=db.backref('session_availability', lazy='dynamic'))
+
+    # submitters (students) available for this session
+    submitters = db.relationship('SubmissionRecord', secondary=submitter_availability, lazy='dynamic',
+                                 backref=db.backref('session_availability', lazy='dynamic'))
 
 
     # EDITING METADATA

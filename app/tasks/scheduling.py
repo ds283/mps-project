@@ -33,14 +33,13 @@ def _enumerate_talks(assessment):
 
     talk_dict = {}
 
-    for p in assessment.available_talks:
-        if not assessment.not_attending(p.id):
-            talk_to_number[p.id] = number
-            number_to_talk[number] = p.id
+    for p in assessment.schedulable_talks:
+        talk_to_number[p.id] = number
+        number_to_talk[number] = p.id
 
-            talk_dict[number] = p
+        talk_dict[number] = p
 
-            number += 1
+        number += 1
 
     return number, talk_to_number, number_to_talk, talk_dict
 

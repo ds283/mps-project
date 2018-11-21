@@ -5592,7 +5592,6 @@ def adjust_assessment_schedule(id):
 @admin.route('/terminate_schedule/<int:id>')
 @roles_required('root')
 def terminate_schedule(id):
-
     record = ScheduleAttempt.query.get_or_404(id)
 
     if record.finished:
@@ -5617,7 +5616,6 @@ def terminate_schedule(id):
 @admin.route('/perform_terminate_schedule/<int:id>')
 @roles_required('root')
 def perform_terminate_schedule(id):
-
     record = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
@@ -5654,7 +5652,6 @@ def perform_terminate_schedule(id):
 @admin.route('/delete_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def delete_schedule(id):
-
     record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
@@ -5685,7 +5682,6 @@ def delete_schedule(id):
 @admin.route('/perform_delete_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_delete_schedule(id):
-
     record = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
@@ -6112,8 +6108,8 @@ def assessment_attending(a_id, s_id):
     talk = SubmissionRecord.query.get_or_404(s_id)
 
     if talk not in data.available_talks:
-        flash('Cannot mark the specified talk as attending because it is not included in this presentation assessment',
-              'error')
+        flash('Cannot mark the specified presenter as attending because they are not included in this '
+              'presentation assessment', 'error')
         return redirect(request.referrer)
 
     if talk in data.cant_attend:
@@ -6147,13 +6143,16 @@ def assessment_not_attending(a_id, s_id):
     talk = SubmissionRecord.query.get_or_404(s_id)
 
     if talk not in data.available_talks:
-        flash('Cannot mark the specified talk as not attending because it is not included in this presentation assessment',
-              'error')
+        flash('Cannot mark the specified presenter as not attending because they are not included in this '
+              'presentation assessment', 'error')
         return redirect(request.referrer)
 
     if talk not in data.cant_attend:
         data.cant_attend.append(talk)
         db.session.commit()
+
+    # we leave availability information per-session intact, so that it is immediately available again
+    # if this presenter is subsequently marked as attending
 
     return redirect(request.referrer)
 

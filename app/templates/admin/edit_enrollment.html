@@ -17,12 +17,14 @@
 
     {{ form.hidden_tag() }}
 
-    <div class="well">
-        <p><strong>Role: Supervisor</strong></p>
-        {{ wtf.form_field(form.supervisor_state) }}
-        {{ wtf.form_field(form.supervisor_reenroll) }}
-        {{ wtf.form_field(form.supervisor_comment) }}
-    </div>
+    {% if record.pclass.uses_supervisor %}
+        <div class="well">
+            <p><strong>Role: Supervisor</strong></p>
+            {{ wtf.form_field(form.supervisor_state) }}
+            {{ wtf.form_field(form.supervisor_reenroll) }}
+            {{ wtf.form_field(form.supervisor_comment) }}
+        </div>
+    {% endif %}
 
     {% if record.pclass.uses_marker %}
         <div class="well">

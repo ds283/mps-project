@@ -4070,7 +4070,7 @@ def assign_from_selection(id, sel_id):
 
     markers = sel.liveproject.assessor_list
     if rec.marker not in markers:
-        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
+        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.project_class))[1])
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
 
     db.session.commit()
@@ -4111,7 +4111,7 @@ def assign_liveproject(id, pid):
 
     markers = lp.assessor_list
     if rec.marker not in markers:
-        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.pclass_id))[1])
+        sorted_markers = sorted(markers, key=lambda x: (x.CATS_assignment(config.project_class))[1])
         rec.marker_id = sorted_markers[0].id if len(sorted_markers) > 0 else None
 
     db.session.commit()

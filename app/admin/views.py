@@ -151,6 +151,9 @@ def create_office(role):
         db.session.commit()
 
         return redirect(url_for('admin.edit_users'))
+    else:
+        if request.method == 'GET':
+            form.random_password.data = True
 
     return render_template('security/register_user.html', user_form=form, role=role,
                            title='Register a new {r} user account'.format(r=role))
@@ -220,7 +223,6 @@ def create_faculty(role):
     else:
 
         if request.method == 'GET':
-
             # dynamically set default project capacity
             form.project_capacity.data = current_app.config['DEFAULT_PROJECT_CAPACITY']
 
@@ -230,6 +232,8 @@ def create_faculty(role):
             form.dont_clash_presentations = current_app.config['DEFAULT_DONT_CLASH_PRESENTATIONS']
 
             form.use_academic_title.data = current_app.config['DEFAULT_USE_ACADEMIC_TITLE']
+
+            form.random_password.data = True
 
     return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
                            title='Register a new {r} user account'.format(r=role))
@@ -293,6 +297,8 @@ def create_student(role):
 
             else:
                 form.cohort.data = date.today().year
+
+            form.random_password.data = True
 
     return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
                            title='Register a new {r} user account'.format(r=role))
@@ -771,7 +777,7 @@ def edit_faculty(id):
             form.project_capacity.data = data.project_capacity
             form.enforce_capacity.data = data.enforce_capacity
             form.show_popularity.data = data.show_popularity
-            form.dont_clash_presentations = data.dont_clash_presentations
+            form.dont_clash_presentations.data = data.dont_clash_presentations
             form.office.data = data.office
 
             if form.project_capacity.data is None and form.enforce_capacity.data:
@@ -1965,7 +1971,7 @@ def add_pclass():
                             extent=form.extent.data,
                             require_confirm=form.require_confirm.data,
                             supervisor_carryover=form.supervisor_carryover.data,
-                            submissions=form.submissions.data,
+                            uses_supervisor=form.uses_supervisor.data,
                             uses_marker=form.uses_marker.data,
                             uses_presentations=form.uses_presentations.data,
                             convenor=form.convenor.data,
@@ -2004,6 +2010,9 @@ def add_pclass():
         db.session.add(config)
         db.session.flush()
 
+        # generate submission period records, if any
+        # if this is a brand new project then we won't create anything -- that will have to be done
+        # later, when the submission periods are defined
         for template in config.template_periods.all():
             period = SubmissionPeriodRecord(config_id=config.id,
                                             name=template.name,
@@ -2066,6 +2075,7 @@ def edit_pclass(id):
         data.extent = form.extent.data
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data
+        data.uses_supervisor = form.uses_supervisor.data
         data.uses_marker = form.uses_marker.data
         data.uses_presentations = form.uses_presentations.data
         data.convenor = form.convenor.data
@@ -2097,8 +2107,12 @@ def edit_pclass(id):
         if request.method == 'GET':
             if form.number_assessors.data is None:
                 form.number_assessors.data = current_app.config['DEFAULT_ASSESSORS']
+            if form.uses_supervisor.data is None:
+                form.uses_supervisor.data = True
             if form.uses_marker.data is None:
                 form.uses_marker.data = True
+            if form.uses_presentations.data is None:
+                form.uses_presentations.data = False
 
     return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')
@@ -2163,6 +2177,98 @@ def submission_periods_ajax(id):
     periods = data.periods.all()
 
     return ajax.admin.periods_data(periods)
+
+
+@admin.route('/regenerate_submission_periods/<int:id>')
+@roles_required('root')
+def regenerate_period_records(id):
+    """
+    Generate a new (if needed) set of SubmissionPeriodRecords corresponding to the current
+    snapshot of SubmissionPeriodDefinitions
+    :param id:
+    :return:
+    """
+
+    # get current set of submission period definitions and validate
+    data = ProjectClass.query.get_or_404(id)
+    data.validate_periods()
+
+    # get current set of submission period records
+    current_year = get_current_year()
+    config = db.session.query(ProjectClassConfig) \
+        .filter(ProjectClassConfig.pclass_id == data.id) \
+        .order_by(ProjectClassConfig.year == current_year).first()
+
+    templates = config.template_periods.all()
+    current = config.periods.order_by(SubmissionPeriodRecord.submission_period.asc()).all()
+
+    while len(templates) > 0 and len(current) > 0:
+        t = templates.pop(0)
+        c = current.pop(0)
+
+        c.submission_period = t.submission_period
+        c.name = t.name
+        c.has_presentation = t.has_presentation
+        c.lecture_capture = t.lecture_capture
+
+    # do we need to generate new records?
+    while len(templates) > 0:
+        t = templates.pop(0)
+
+        period = SubmissionPeriodRecord(config_id=config.id,
+                                        name=t.name,
+                                        has_presentation=t.has_presentation,
+                                        lecture_capture=t.lecture_capture,
+                                        retired=False,
+                                        submission_period=t.period,
+                                        feedback_open=False,
+                                        feedback_id=None,
+                                        feedback_timestamp=None,
+                                        feedback_deadline=None,
+                                        closed=False,
+                                        closed_id=None,
+                                        closed_timestamp=None)
+        db.session.add(period)
+
+        # add SubmissionRecord instances for any attached students
+        for sel in config.submitting_students:
+            sub_record = SubmissionRecord(period_id=period.id,
+                                          retired=False,
+                                          owner_id=sel.id,
+                                          project_id=None,
+                                          marker_id=None,
+                                          selection_config_id=None,
+                                          matching_record_id=None,
+                                          student_engaged=False,
+                                          supervisor_positive=None,
+                                          supervisor_negative=None,
+                                          supervisor_submitted=False,
+                                          supervisor_timestamp=None,
+                                          marker_positive=None,
+                                          marker_negative=None,
+                                          marker_submitted=False,
+                                          marker_timestamp=None,
+                                          student_feedback=None,
+                                          student_feedback_submitted=False,
+                                          student_feedback_timestamp=None,
+                                          acknowledge_feedback=False,
+                                          faculty_response=None,
+                                          faculty_response_submitted=False,
+                                          faculty_response_timestamp=None)
+            db.session.add(sub_record)
+
+    while len(current) > 0:
+        c = current.pop(0)
+
+        # remove any attached SubmissionRecords
+        db.session.query(SubmissionRecord).filter_by(period_id=c.id, retired=False).delete()
+
+        db.session.delete(c)
+
+    db.session.commit()
+    flash('Successfully updated submission period records for this project class', 'info')
+
+    return redirect(request.referrer)
 
 
 @admin.route('/add_period/<int:id>', methods=['GET', 'POST'])

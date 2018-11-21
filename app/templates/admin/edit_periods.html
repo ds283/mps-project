@@ -42,6 +42,17 @@
         </a>
     </div>
 
+    <div class="row vertical-align">
+        <div class="col-xs-12">
+            <div class="pull-right">
+                <a href="{{ url_for('admin.regenerate_period_records', id=pclass.id) }}"
+                   class="btn btn-default" style="margin-bottom: 10px;">
+                    <i class="fa fa-repeat"></i> Regenerate period records
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Edit submission periods for project class <strong>{{ pclass.name }}</strong></div>
         <div class="panel-body">

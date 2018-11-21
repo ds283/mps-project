@@ -51,19 +51,23 @@
                 </div>
                 <div class="row vertical-top">
                     <div class="col-xs-4">
-                        {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
-                            <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
-                        {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                            <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
-                            {% if record.supervisor_reenroll is not none %}
-                                <span class="label label-info">ends {{ record.supervisor_reenroll }}</span>
+                        {% if record.pclass.uses_supervisor %}
+                            {% if record.supervisor_state == record.SUPERVISOR_ENROLLED  %}
+                                <span class="label label-primary"><i class="fa fa-check"></i> Enrolled</span>
+                            {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                                <span class="label label-info"><i class="fa fa-times"></i> Sabbatical/Buyout</span>
+                                {% if record.supervisor_reenroll is not none %}
+                                    <span class="label label-info">ends {{ record.supervisor_reenroll }}</span>
+                                {% else %}
+                                    <span class="label label-warning">no end date</span>
+                                {% endif %}
+                            {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                                <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
                             {% else %}
-                                <span class="label label-warning">no end date</span>
+                                <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
                             {% endif %}
-                        {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                            <span class="label label-warning"><i class="fa fa-times"></i> Exempt</span>
                         {% else %}
-                            <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
+                            <span class="label label-default">Not used</span>
                         {% endif %}
                     </div>
                     <div class="col-xs-4">
@@ -83,7 +87,7 @@
                                 <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
                             {% endif %}
                         {% else %}
-                            <span class="label label-default">Not used for this project class</span>
+                            <span class="label label-default">Not used</span>
                         {% endif %}
                     </div>
                     <div class="col-xs-4">
@@ -103,7 +107,7 @@
                                 <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Error</span>
                             {% endif %}
                         {% else %}
-                            <span class="label label-default">Not used for this project class</span>
+                            <span class="label label-default">Not used</span>
                         {% endif %}
                     </div>
                 </div>

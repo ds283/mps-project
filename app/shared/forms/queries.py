@@ -182,7 +182,8 @@ def MarkerQuery(live_project):
 
 
 def BuildMarkerLabel(pclass_id, fac):
-    CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(pclass_id)
+    pclass = db.session.query(ProjectClass).filter_by(id=pclass_id).one()
+    CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(pclass)
     return '{name} (CATS: {supv} supv, {mark} mark, {pres} pres, ' \
            '{tot} total)'.format(name=fac.user.name, supv=CATS_supv, mark=CATS_mark, pres=CATS_pres,
                                  tot=CATS_supv+CATS_mark)

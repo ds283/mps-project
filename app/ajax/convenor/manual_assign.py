@@ -48,7 +48,7 @@ def manual_assign_data(liveprojects, rec):
                                                                                     name=p.owner.user.name),
                             'sortstring': p.owner.user.last_name + p.owner.user.first_name},
              'workload': {'display': render_template_string(_workload, owner=p.owner, config=p.config),
-                          'sortvalue': sum(p.owner.CATS_assignment(p.config.pclass_id))},
+                          'sortvalue': sum(p.owner.CATS_assignment(p.config.project_class))},
              'menu': render_template_string(_action, rec=rec, p=p)} for p in liveprojects]
 
     return jsonify(data)

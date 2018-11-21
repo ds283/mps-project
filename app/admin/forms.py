@@ -114,7 +114,7 @@ class StudentDataMixin():
                                       'or for other reasons such as resitting years, this will be accommodated '
                                       'separately.')
 
-    repeated_years = IntegerField('Number of repeat years',
+    repeated_years = IntegerField('Number of repeat years', default=0,
                                   validators=[InputRequired(message="Number of repeat years is required"),
                                               value_is_nonnegative],
                                   description='Enter the number of repeat years the student has used.')

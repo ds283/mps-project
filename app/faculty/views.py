@@ -389,6 +389,7 @@ def add_project():
                        show_popularity=form.show_popularity.data,
                        show_bookmarks=form.show_bookmarks.data,
                        show_selections=form.show_selections.data,
+                       dont_clash_presentations=form.dont_clash_presentations.data,
                        creator_id=current_user.id,
                        creation_timestamp=datetime.now())
 
@@ -421,6 +422,7 @@ def add_project():
                 form.show_selections.data = False
 
             form.enforce_capacity.data = owner.enforce_capacity
+            form.dont_clash_presentations = owner.dont_clash_presentations
 
     return render_template('faculty/edit_project.html', project_form=form, title='Add new project')
 
@@ -451,6 +453,7 @@ def edit_project(id):
         proj.show_popularity = form.show_popularity.data
         proj.show_bookmarks = form.show_bookmarks.data
         proj.show_selections = form.show_selections.data
+        proj.dont_clash_presentations = form.dont_clash_presentations.data
         proj.last_edit_id = current_user.id
         proj.last_edit_timestamp = datetime.now()
 
@@ -2086,7 +2089,6 @@ def settings():
     form.user = user
 
     if form.validate_on_submit():
-
         user.first_name = form.first_name.data
         user.last_name = form.last_name.data
         user.username = form.username.data
@@ -2098,6 +2100,7 @@ def settings():
         data.project_capacity = form.project_capacity.data
         data.enforce_capacity = form.enforce_capacity.data
         data.show_popularity = form.show_popularity.data
+        data.dont_clash_presentations = form.dont_clash_presentations.data
         data.office = form.office.data
 
         data.last_edit_id = current_user.id

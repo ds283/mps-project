@@ -47,6 +47,8 @@ def FacultyDataMixinFactory(admin=False):
         use_academic_title = BooleanField('Use academic title', default=True,
                                           description='Prefix your name with Dr, Professor or similar in student-facing web pages.')
 
+        # project defaults
+
         sign_off_students = BooleanField('Ask to confirm student meetings', default=True,
                                          description='If meetings are required before project selection, '
                                                      'confirmation is needed before allowing students to sign up.')
@@ -60,6 +62,11 @@ def FacultyDataMixinFactory(admin=False):
 
         show_popularity = BooleanField('Show popularity indicators', default=True,
                                        description='By default, show popularity indicators on project webpages')
+
+        dont_clash_presentations = BooleanField("Don't schedule presentations with other students taking "
+                                                "the same project", default=True,
+                                                description='Please consider disabling this setting if possible. '
+                                                            'This makes scheduling presentations easier.')
 
         office = StringField('Office', validators=[InputRequired(message='Please enter your office details to help '
                                                                          'students find you')])

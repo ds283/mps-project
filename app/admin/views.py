@@ -189,6 +189,7 @@ def create_faculty(role):
                            project_capacity=form.project_capacity.data if form.enforce_capacity.data else None,
                            enforce_capacity=form.enforce_capacity.data,
                            show_popularity=form.show_popularity.data,
+                           dont_clash_presentations=form.dont_clash_presentations.data,
                            CATS_supervision=form.CATS_supervision.data,
                            CATS_marking=form.CATS_marking.data,
                            CATS_presentation=form.CATS_presentation,
@@ -223,6 +224,7 @@ def create_faculty(role):
             form.sign_off_students.data = current_app.config['DEFAULT_SIGN_OFF_STUDENTS']
             form.enforce_capacity.data = current_app.config['DEFAULT_ENFORCE_CAPACITY']
             form.show_popularity.data = current_app.config['DEFAULT_SHOW_POPULARITY']
+            form.dont_clash_presentations = current_app.config['DEFAULT_DONT_CLASH_PRESENTATIONS']
 
             form.use_academic_title.data = current_app.config['DEFAULT_USE_ACADEMIC_TITLE']
 
@@ -729,6 +731,7 @@ def edit_faculty(id):
         data.project_capacity = form.project_capacity.data if form.enforce_capacity.data else None
         data.enforce_capacity = form.enforce_capacity.data
         data.show_popularity = form.show_popularity.data
+        data.dont_clash_presentations = form.dont_clash_presentations.data
         data.office = form.office.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
@@ -752,13 +755,13 @@ def edit_faculty(id):
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == 'GET':
-
             form.academic_title.data = data.academic_title
             form.use_academic_title.data = data.use_academic_title
             form.sign_off_students.data = data.sign_off_students
             form.project_capacity.data = data.project_capacity
             form.enforce_capacity.data = data.enforce_capacity
             form.show_popularity.data = data.show_popularity
+            form.dont_clash_presentations = data.dont_clash_presentations
             form.office.data = data.office
 
             if form.project_capacity.data is None and form.enforce_capacity.data:

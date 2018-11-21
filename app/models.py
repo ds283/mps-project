@@ -643,19 +643,22 @@ class FacultyData(db.Model):
     office = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
-    # PROJECT SETTINGS
+    # DEFAULT PROJECT SETTINGS
 
     # does this faculty want to sign off on students before they can apply?
-    sign_off_students = db.Column(db.Boolean())
+    sign_off_students = db.Column(db.Boolean(), default=True)
 
     # default capacity
-    project_capacity = db.Column(db.Integer())
+    project_capacity = db.Column(db.Integer(), default=2)
 
     # enforce capacity limits by default?
-    enforce_capacity = db.Column(db.Boolean())
+    enforce_capacity = db.Column(db.Boolean(), default=True)
 
     # enable popularity display by default?
-    show_popularity = db.Column(db.Boolean())
+    show_popularity = db.Column(db.Boolean(), default=True)
+
+    # don't clash presentations by default?
+    dont_clash_presentations = db.Column(db.Boolean(), default=True)
 
 
     # CAPACITY
@@ -2854,6 +2857,12 @@ class Project(db.Model):
                                 backref=db.backref('assessor_for', lazy='dynamic'))
 
 
+    # PRESENTATION SETTINGS
+
+    # don't schedule with other submitters doing the same project
+    dont_clash_presentations = db.Column(db.Boolean(), default=True)
+
+
     # PROJECT DESCRIPTION
 
     # 'descriptions' field is established by backreference from ProjectDescription
@@ -3515,6 +3524,12 @@ class LiveProject(db.Model):
     # table of allowed assessors
     assessors = db.relationship('FacultyData', secondary=live_assessors, lazy='dynamic',
                                 backref=db.backref('assessor_for_live', lazy='dynamic'))
+
+
+    # PRESENTATIONS
+
+    # avoid scheduling multiple copies of presentations on this project in the same session?
+    dont_clash_presentations = db.Column(db.Boolean(), default=True)
 
 
     # PROJECT DESCRIPTION

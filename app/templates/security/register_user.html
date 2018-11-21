@@ -87,8 +87,8 @@
             </div>
         {%  endif %}
 
-        {# FACULTY FIELDS #}
 
+        {# FACULTY FIELDS #}
 
         {% if user_form.academic_title or user_form.use_academic_title %}
             <div class="well">
@@ -106,7 +106,7 @@
 
         {% if user_form.sign_off_students or user_form.project_capacity or user_form.enforce_capacity or user_form.show_popularity %}
             <div class="well">
-                <p>Project defaults</p>
+                <p>Default settings for new projects</p>
                 {% if user_form.sign_off_students %}
                     {{ wtf.form_field(user_form.sign_off_students) }}
                 {% endif %}
@@ -118,6 +118,9 @@
                 {% endif %}
                 {% if user_form.show_popularity %}
                     {{ wtf.form_field(user_form.show_popularity) }}
+                {% endif %}
+                {% if user_form.dont_clash_presentations %}
+                    {{ wtf.form_field(user_form.dont_clash_presentations) }}
                 {% endif %}
             </div>
         {% endif %}

@@ -42,19 +42,26 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         project_classes = CheckboxQuerySelectMultipleField('Project classes',
                                                            query_factory=project_classes_qf, get_label='name')
 
+        # project options
+
         meeting_options = [(Project.MEETING_REQUIRED, "Meeting required"), (Project.MEETING_OPTIONAL, "Meeting optional"),
                            (Project.MEETING_NONE, "Prefer not to meet")]
         meeting_reqd = SelectField('Meeting required?', choices=meeting_options, coerce=int)
 
-        enforce_capacity = BooleanField('Enforce maximum capacity')
+        enforce_capacity = BooleanField('Enforce maximum capacity', default=True)
+
+        dont_clash_presentations = BooleanField("Don't schedule presentation with other students taking "
+                                                "the same project", default=True,
+                                                description='Please consider disabling this setting if possible. '
+                                                            'This makes scheduling presentations easier.')
 
         # popularity display
 
-        show_popularity = BooleanField('Show popularity estimate')
+        show_popularity = BooleanField('Show popularity estimate', default=True)
 
-        show_bookmarks = BooleanField('Show number of bookmarks')
+        show_bookmarks = BooleanField('Show number of bookmarks', default=True)
 
-        show_selections = BooleanField('Show number of selections')
+        show_selections = BooleanField('Show number of selections', default=True)
 
     return ProjectMixin
 

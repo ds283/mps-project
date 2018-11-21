@@ -150,11 +150,12 @@
     </div>
 
     <div class="well">
-        <p>Project defaults</p>
+        <p>Default settings for new projects</p>
         {{ wtf.form_field(settings_form.sign_off_students) }}
         {{ wtf.form_field(settings_form.project_capacity) }}
         {{ wtf.form_field(settings_form.enforce_capacity) }}
         {{ wtf.form_field(settings_form.show_popularity) }}
+        {{ wtf.form_field(settings_form.dont_clash_presentations) }}
     </div>
 
     <div class="well">

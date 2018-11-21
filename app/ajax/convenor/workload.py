@@ -203,9 +203,15 @@ _presentations = \
 
 _workload = \
 """
-<span class="label label-info">Supv {{ CATS_sup }}</span>
-<span class="label label-info">Mark {{ CATS_mark }}</span>
-<span class="label label-info">Pres {{ CATS_pres }}</span>
+{% if config.uses_supervisor %}
+    <span class="label label-info">Supv {{ CATS_sup }}</span>
+{% endif %}
+{% if config.uses_marker %}
+    <span class="label label-info">Mark {{ CATS_mark }}</span>
+{% endif %}
+{% if config.uses_presentations %}
+    <span class="label label-info">Pres {{ CATS_pres }}</span>
+{% endif %}
 <span class="label label-primary">Total {{ CATS_sup+CATS_mark+CATS_pres }}</span>
 """
 
@@ -218,7 +224,7 @@ def faculty_workload_data(faculty, config):
     for u, d in faculty:
         count += 1
 
-        CATS_sup, CATS_mark, CATS_pres = d.CATS_assignment(config.pclass_id)
+        CATS_sup, CATS_mark, CATS_pres = d.CATS_assignment(config.project_class)
 
         data.append({'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                               'sortvalue': u.last_name + u.first_name},
@@ -226,7 +232,7 @@ def faculty_workload_data(faculty, config):
                      'marking': render_template_string(_marking, f=d, config=config),
                      'presentations': render_template_string(_presentations, f=d, config=config),
                      'workload': {'display': render_template_string(_workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark,
-                                                                    CATS_pres=CATS_pres, f=d),
+                                                                    CATS_pres=CATS_pres, f=d, config=config),
                                   'sortvalue': CATS_sup+CATS_mark+CATS_pres}})
 
     return jsonify(data)

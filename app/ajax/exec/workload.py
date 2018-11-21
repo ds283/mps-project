@@ -36,21 +36,23 @@ _enrollments = \
 {% for record in f.ordered_enrollments %}
     <div {% if loop.index > 1 %}style="top-padding: 8px;"{% endif %}>
         {{ record.pclass.make_label()|safe }}
-        {% set offered = f.projects_offered(record.pclass) %}
-        {% if offered > 0 %}
-            <span class="label label-info">Offered={{ offered }}</span>
-        {% else %}
-            <span class="label label-danger">Offered=0</span>
-        {% endif %}
 
-        {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
-            <span class="label label-success"><i class="fa fa-check"></i> Supv: active</span>
-        {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-            <span class="label label-warning"><i class="fa fa-times"></i> Supv: sabbat</span>
-        {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-            <span class="label label-danger"><i class="fa fa-times"></i> Supv: exempt</span>
-        {% else %}
-            <span class="label label-danger"><i class="fa fa-times"></i> Supv: unknown</span>
+        {% if record.pclass.uses_supervisor %}
+            {% set offered = f.projects_offered(record.pclass) %}
+            {% if offered > 0 %}
+                <span class="label label-info">Offered={{ offered }}</span>
+            {% else %}
+                <span class="label label-danger">Offered=0</span>
+            {% endif %}
+            {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
+                <span class="label label-success"><i class="fa fa-check"></i> Supv: active</span>
+            {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                <span class="label label-warning"><i class="fa fa-times"></i> Supv: sabbat</span>
+            {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                <span class="label label-danger"><i class="fa fa-times"></i> Supv: exempt</span>
+            {% else %}
+                <span class="label label-danger"><i class="fa fa-times"></i> Supv: unknown</span>
+            {% endif %}
         {% endif %}
 
         {% if record.pclass.uses_marker %}
@@ -103,7 +105,7 @@ def workload_data(faculty):
         total_workload = 0
 
         for record in f.enrollments:
-            CATS = sum(f.CATS_assignment(record.pclass_id))
+            CATS = sum(f.CATS_assignment(record.pclass))
             workload[record.pclass_id] = CATS
             total_workload += CATS
 

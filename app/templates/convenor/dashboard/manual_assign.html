@@ -47,11 +47,17 @@
 {% macro faculty_data(fac) %}
     {% if fac is not none %}
         <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
-        {% set CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(config.pclass_id) %}
+        {% set CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(config.project_class) %}
         <div>
-            <span class="label label-info">Supv {{ CATS_supv }}</span>
-            <span class="label label-info">Mark {{ CATS_mark }}</span>
-            <span class="label label-info">Pres {{ CATS_pres }}</span>
+            {% if config.uses_supervisor %}
+                <span class="label label-info">Supv {{ CATS_supv }}</span>
+            {% endff %}
+            {% if config.uses_marker %}
+                <span class="label label-info">Mark {{ CATS_mark }}</span>
+            {% endif %}
+            {% if config.uses_presentations %}
+                <span class="label label-info">Pres {{ CATS_pres }}</span>
+            {% endif %}
             <span class="label label-primary">Total {{ CATS_supv+CATS_mark+CATS_pres }}</span>
         </div>
     {% else %}

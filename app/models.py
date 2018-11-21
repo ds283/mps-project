@@ -1005,26 +1005,40 @@ class FacultyData(db.Model):
             .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
 
 
-    def CATS_assignment(self, pclass_id):
+    def CATS_assignment(self, pclass):
         """
         Return (supervising CATS, marking CATS) for the current year
         :return:
         """
 
-        supv = self.supervisor_assignments(pclass_id)
-        mark = self.marker_assignments(pclass_id)
-        pres = self.presentation_assignments(pclass_id)
+        if pclass.uses_supervisor:
+            supv = self.supervisor_assignments(pclass.id)
+            supv_CATS = [x.supervising_CATS for x in supv]
+            supv_CATS_clean = [x for x in supv_CATS if x is not None]
 
-        supv_CATS = [x.supervising_CATS for x in supv]
-        supv_CATS_clean = [x for x in supv_CATS if x is not None]
+            supv_total = sum(supv_CATS_clean)
+        else:
+            supv_total = 0
 
-        mark_CATS = [x.marking_CATS for x in mark]
-        mark_CATS_clean = [x for x in mark_CATS if x is not None]
+        if pclass.uses_marker:
+            mark = self.marker_assignments(pclass.id)
+            mark_CATS = [x.marking_CATS for x in mark]
+            mark_CATS_clean = [x for x in mark_CATS if x is not None]
 
-        pres_CATS = [x.assessor_CATS for x in pres]
-        pres_CATS_clean = [x for x in pres_CATS if x is not None]
+            mark_total = sum(mark_CATS_clean)
+        else:
+            mark_total = 0
 
-        return sum(supv_CATS_clean), sum(mark_CATS_clean), sum(pres_CATS_clean)
+        if pclass.uses_presentations:
+            pres = self.presentation_assignments(pclass.id)
+            pres_CATS = [x.assessor_CATS for x in pres]
+            pres_CATS_clean = [x for x in pres_CATS if x is not None]
+
+            pres_total = sum(pres_CATS_clean)
+        else:
+            pres_total = 0
+
+        return supv_total, mark_total, pres_total
 
 
     def has_late_feedback(self, pclass_id, faculty_id):
@@ -1569,6 +1583,9 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     # how many years does the project extend? usually 1, but RP is more
     extent = db.Column(db.Integer())
 
+    # are projects supervised (or just marked?)
+    uses_supervisor = db.Column(db.Boolean())
+
     # are the submissions second marked?
     uses_marker = db.Column(db.Boolean())
 
@@ -1990,9 +2007,17 @@ class ProjectClassConfig(db.Model):
 
 
     @property
+    def uses_supervisor(self):
+        return self.project_class.uses_supervisor
+
+
+    @property
     def uses_marker(self):
         return self.project_class.uses_marker
 
+    @property
+    def uses_presentations(self):
+        return self.project_class.uses_presentations
 
     @property
     def do_matching(self):
@@ -2051,7 +2076,7 @@ class ProjectClassConfig(db.Model):
 
     @property
     def template_periods(self):
-        return self.project_class.periods
+        return self.project_class.periods.order_by(SubmissionPeriodDefinition.period.asc())
 
 
     @property
@@ -2656,11 +2681,13 @@ class EnrollmentRecord(db.Model):
 
     @property
     def enrolled_labels(self):
-        label = self.supervisor_label
+        label = ''
+        if self.pclass.uses_supervisor:
+            label += (' ' if len(label) > 0 else '') + self.supervisor_label
         if self.pclass.uses_marker:
-            label += ' ' + self.marker_label
+            label += (' ' if len(label) > 0 else '') + self.marker_label
         if self.pclass.uses_presentations:
-            label += ' ' + self.presentation_label
+            label += (' ' if len(label) > 0 else '') + self.presentation_label
 
         return label
 
@@ -4394,11 +4421,17 @@ class SubmissionRecord(db.Model):
 
     @property
     def supervisor_feedback_state(self):
+        if not self.period.config.uses_supervisor:
+            return False
+
         return self._feedback_state(self.is_supervisor_valid)
 
 
     @property
     def marker_feedback_state(self):
+        if not self.period.config.uses_marker:
+            return False
+
         return self._feedback_state(self.is_marker_valid)
 
 
@@ -5203,8 +5236,9 @@ def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
         config = item.project.config
 
         if pclass_id is None or config.pclass_id == pclass_id:
-            if config.CATS_supervision is not None and config.CATS_supervision > 0:
-                CATS_supervisor += config.CATS_supervision
+            if config.uses_supervisor:
+                if config.CATS_supervision is not None and config.CATS_supervision > 0:
+                    CATS_supervisor += config.CATS_supervision
 
     for item in obj.get_marker_records(fac_id).all():
         config = item.project.config

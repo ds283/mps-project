@@ -53,12 +53,16 @@
                 <hr class="intro-divider">
 
                 {# show supervisor assignments #}
-                <span class="dashboard-subtitle">Supervising</span>
-                {{ supervisor_assignments(period, current_user.faculty_data.id) }}
+                {% if config.uses_supervisor %}
+                    <span class="dashboard-subtitle">Supervising</span>
+                    {{ supervisor_assignments(period, current_user.faculty_data.id) }}
+                {% endif %}
 
                 {# show marker assignments #}
-                <span class="dashboard-subtitle">2nd marking</span>
-                {{ marker_assignments(period, current_user.faculty_data.id) }}
+                {% if config.uses_marker %}
+                    <span class="dashboard-subtitle">2nd marking</span>
+                    {{ marker_assignments(period, current_user.faculty_data.id) }}
+                {% endif %}
 
                 {% if period.has_presentation %}
                     {{ presentation_assignments(period, current_user.faculty_data.id) }}

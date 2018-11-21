@@ -112,14 +112,15 @@ def estimate_CATS_load():
         if config.CATS_marking is not None and config.CATS_marking > 0:
             marking_CATS += config.CATS_marking * num_selectors
 
-        # find supervising faculty enrolled for this project
-        supervisors = db.session.query(EnrollmentRecord) \
-            .filter_by(pclass_id=pclass.id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
-            .join(User, User.id==EnrollmentRecord.owner_id) \
-            .filter(User.active).all()
+        if pclass.uses_supervisor:
+            # find supervising faculty enrolled for this project
+            supervisors = db.session.query(EnrollmentRecord) \
+                .filter_by(pclass_id=pclass.id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
+                .join(User, User.id==EnrollmentRecord.owner_id) \
+                .filter(User.active).all()
 
-        for item in supervisors:
-            supervising_faculty.add(item.owner_id)
+            for item in supervisors:
+                supervising_faculty.add(item.owner_id)
 
         if pclass.uses_marker:
             # find marking faculty enrolled for this project

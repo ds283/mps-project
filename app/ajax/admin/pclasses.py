@@ -83,7 +83,9 @@ _status = \
 
 _workload = \
 """
-<span class="label label-primary">Supv: {{ p.CATS_supervision }}</span>
+{% if p.uses_supervisor %}
+    <span class="label label-primary">Supv: {{ p.CATS_supervision }}</span>
+{% endif %}
 {% if p.uses_marker %}
     <span class="label label-info">Mark: {{ p.CATS_marking }}</span>
 {% endif %}

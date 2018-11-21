@@ -79,7 +79,7 @@ class AskConfirmEditFormMixin():
 # redefine NewPasswordFormMixin from flask-security to check password strength
 class NewPasswordFormMixin():
 
-    random_password = BooleanField('Generate random password')
+    random_password = BooleanField('Generate random password', default=True)
 
     password = PasswordField(
         get_form_field_label('password'),
@@ -340,6 +340,8 @@ class ProjectClassMixin():
     require_confirm = BooleanField('Require faculty to confirm projects yearly')
 
     supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')
+
+    uses_supervisor = BooleanField('Projects are supervisor by a named faculty member')
 
     uses_marker = BooleanField('Submissions are second-marked')
 

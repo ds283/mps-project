@@ -550,9 +550,9 @@ def faculty_ajax(id):
             .join(faculty_ids, faculty_ids.c.owner_id == User.id, isouter=True) \
             .filter(faculty_ids.c.owner_id == None)
 
-    elif enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt' \
-            or enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt' \
-            or enroll_filter == 'pres-active' or enroll_filter == 'pres-sabbatical' or enroll_filter == 'pres-exempt':
+    elif ((enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt') and pclass.uses_supervisor) \
+            or ((enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt') and pclass.uses_marker) \
+            or ((enroll_filter == 'pres-active' or enroll_filter == 'pres-sabbatical' or enroll_filter == 'pres-exempt') and pclass.uses_presentations):
 
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id)
@@ -590,9 +590,9 @@ def faculty_ajax(id):
         faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
 
     # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
-    if state_filter == 'no-projects':
+    if state_filter == 'no-projects' and pclass.uses_supervisor:
         data = [ rec for rec in faculty.all() if rec[1].projects_offered(pclass) == 0 ]
-    elif state_filter == 'no-marker':
+    elif state_filter == 'no-marker' and pclass.uses_supervisor:
         data = [ rec for rec in faculty.all() if rec[1].number_assessor == 0 ]
     elif state_filter == 'unofferable':
         data = [ rec for rec in faculty.all() if rec[1].projects_unofferable > 0 ]
@@ -3877,9 +3877,9 @@ def faculty_workload_ajax(id):
             .join(faculty_ids, faculty_ids.c.owner_id == User.id, isouter=True) \
             .filter(faculty_ids.c.owner_id == None)
 
-    elif enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt' \
-            or enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt' \
-            or enroll_filter == 'pres-active' or enroll_filter == 'pres-sabbatical' or enroll_filter == 'pres-exempt':
+    elif ((enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt') and pclass.uses_supervisor) \
+            or ((enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt') and pclass.uses_marker) \
+            or ((enroll_filter == 'pres-active' or enroll_filter == 'pres-sabbatical' or enroll_filter == 'pres-exempt') and pclass.uses_presentations):
 
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id)

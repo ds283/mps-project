@@ -89,11 +89,13 @@ def CurrentUserProjectClasses():
     sq = EnrollmentRecord.query.filter_by(owner_id=current_user.id).subquery()
 
     # join to project class table
-    return db.session.query(ProjectClass).join(sq, sq.c.pclass_id == ProjectClass.id)
+    return db.session.query(ProjectClass) \
+        .filter_by(active=True, uses_supervisor=True) \
+        .join(sq, sq.c.pclass_id == ProjectClass.id)
 
 
 def AllProjectClasses():
-    return ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc())
+    return ProjectClass.query.filter_by(active=True, uses_supervisor=True).order_by(ProjectClass.name.asc())
 
 
 def GetProjectClasses():

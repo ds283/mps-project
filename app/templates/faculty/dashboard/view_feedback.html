@@ -28,52 +28,56 @@
                 </div>
             {% endif %}
 
-            {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        Supervisor feedback
-                        {% if record.supervisor_timestamp %}
-                            <div class="pull-right">
-                                <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                            </div>
-                        {% endif %}
+            {% if record.period.config.uses_supervisor %}
+                {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            Supervisor feedback
+                            {% if record.supervisor_timestamp %}
+                                <div class="pull-right">
+                                    <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="panel-body">
+                            <span class="dashboard-subtitle">Positive aspects</span>
+                            {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            <hr class="intro-divider">
+                            <span class="dashboard-subtitle">Negative aspects</span>
+                            {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                        </div>
                     </div>
-                    <div class="panel-body">
-                        <span class="dashboard-subtitle">Positive aspects</span>
-                        {{ record.supervisor_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
-                        <hr class="intro-divider">
-                        <span class="dashboard-subtitle">Negative aspects</span>
-                        {{ record.supervisor_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                {% else %}
+                    <div class="well">
+                        No feedback has been recorded from the project supervisor.
                     </div>
-                </div>
-            {% else %}
-                <div class="well">
-                    No feedback has been recorded from the project supervisor.
-                </div>
+                {% endif %}
             {% endif %}
 
-            {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        Marker feedback
-                        {% if record.marker_timestamp %}
-                            <div class="pull-right">
-                                <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                            </div>
-                        {% endif %}
+            {% if record.period.config.uses_marker %}
+                {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            Marker feedback
+                            {% if record.marker_timestamp %}
+                                <div class="pull-right">
+                                    <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="panel-body">
+                            <span class="dashboard-subtitle">Positive aspects</span>
+                            {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                            <hr class="intro-divider">
+                            <span class="dashboard-subtitle">Negative aspects</span>
+                            {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                        </div>
                     </div>
-                    <div class="panel-body">
-                        <span class="dashboard-subtitle">Positive aspects</span>
-                        {{ record.marker_positive|dealingwithdollars|markdown|bclean|blinkify|safe }}
-                        <hr class="intro-divider">
-                        <span class="dashboard-subtitle">Negative aspects</span>
-                        {{ record.marker_negative|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                {% else %}
+                    <div class="well">
+                        No feedback has been recorded from the project marker.
                     </div>
-                </div>
-            {% else %}
-                <div class="well">
-                    No feedback has been recorded from the project marker.
-                </div>
+                {% endif %}
             {% endif %}
 
             {% if record.period.has_presentation %}

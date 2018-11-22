@@ -1659,13 +1659,11 @@ def descriptions_ajax(id, pclass_id):
 def add_project(pclass_id):
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -1721,10 +1719,9 @@ def add_project(pclass_id):
             raise RuntimeError('Unknown submit button in faculty.add_project')
 
     else:
-
         if request.method == 'GET':
             # use convenor's defaults
-            # This solution seems no less arbitrary than any other options
+            # This solution is arbitrary, but no less arbitrary than any other choice
             owner = current_user.faculty_data
 
             if owner.show_popularity:
@@ -1747,13 +1744,11 @@ def add_project(pclass_id):
 def edit_project(id, pclass_id):
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -1790,7 +1785,6 @@ def edit_project(id, pclass_id):
 
         # auto-enroll if implied by current project class associations
         for pclass in data.project_classes:
-
             if not data.owner.is_enrolled(pclass):
                 data.owner.add_enrollment(pclass)
                 flash('Auto-enrolled {name} in {pclass}'.format(name=data.owner.user.name, pclass=pclass.name))

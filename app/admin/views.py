@@ -3763,6 +3763,32 @@ def manage_matching():
     return render_template('admin/matching/manage.html', pane='manage', info=info)
 
 
+@admin.route('/skip_matching')
+@roles_required('root')
+def skip_matching():
+    """
+    Mark current set of ProjectClassConfig instances to skip automated matching
+    :return:
+    """
+
+    pcs = db.session.query(ProjectClass) \
+        .filter_by(active=True) \
+        .order_by(ProjectClass.name.asc()).all()
+
+    for pclass in pcs:
+        # get current configuration record for this project class
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=pclass.id) \
+            .order_by(ProjectClassConfig.year.desc()).first()
+
+        if config is not None:
+            config.skip_matching = True
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @admin.route('/matches_ajax')
 @roles_required('root')
 def matches_ajax():

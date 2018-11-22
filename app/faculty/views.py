@@ -375,7 +375,6 @@ def add_project():
     form = AddProjectForm(request.form)
 
     if form.validate_on_submit():
-
         data = Project(name=form.name.data,
                        keywords=form.keywords.data,
                        active=True,
@@ -408,7 +407,6 @@ def add_project():
             raise RuntimeError('Unknown submit button in faculty.add_project')
 
     else:
-
         if request.method == 'GET':
             owner = current_user.faculty_data
 
@@ -443,7 +441,6 @@ def edit_project(id):
     form.project = proj
 
     if form.validate_on_submit():
-
         proj.name = form.name.data
         proj.keywords = form.keywords.data
         proj.group = form.group.data
@@ -463,8 +460,7 @@ def edit_project(id):
 
         if form.save_and_preview.data:
             return redirect(url_for('faculty.project_preview', id=id,
-                                    text='project list',
-                                    url=url_for('faculty.edit_projects')))
+                                    text='project list', url=url_for('faculty.edit_projects')))
         else:
             return redirect(url_for('faculty.edit_projects'))
 

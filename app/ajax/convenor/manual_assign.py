@@ -21,7 +21,7 @@ _name = \
 _workload = \
 """
 {% macro faculty_data(fac) %}
-    {% set CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(config.pclass_id) %}
+    {% set CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(config.project_class) %}
     <div>
         <span class="label label-info">Supv {{ CATS_supv }}</span>
         <span class="label label-info">Mark {{ CATS_mark }}</span>

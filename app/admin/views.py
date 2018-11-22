@@ -4989,6 +4989,10 @@ def perform_delete_assessment(id):
     if not validate_assessment(data, current_year=current_year):
         return redirect(request.referrer)
 
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule and cannot be deleted.'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
     url = request.args.get('url', url_for('admin.manage_assessments'))
 
     db.session.delete(data)

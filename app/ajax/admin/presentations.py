@@ -168,6 +168,7 @@ _menu = \
                 <i class="fa fa-user"></i> Attendees...
             </a>
         </li>
+        {% set disabled = a.is_deployed %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.delete_assessment', id=a.id) }}"{% endif %}>
                 <i class="fa fa-trash"></i> Delete

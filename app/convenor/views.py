@@ -2789,7 +2789,7 @@ def close_selections(id):
 
     close.apply_async(args=(task_id, config.id, current_user.id),
                       task_id=task_id,
-                      link_error=close_fail(task_id, current_user.id))
+                      link_error=close_fail.si(task_id, current_user.id))
 
     return redirect(request.referrer)
 

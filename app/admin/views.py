@@ -3653,8 +3653,8 @@ def terminate_background_task(id):
 
     record = TaskRecord.query.get_or_404(id)
 
-    if record.state == TaskRecord.SUCCESS or record.state == TaskRecord.FAILURE \
-            or record.state == TaskRecord.TERMINATED:
+    if record.status == TaskRecord.SUCCESS or record.status == TaskRecord.FAILURE \
+            or record.status == TaskRecord.TERMINATED:
         flash('Could not terminate background task "{name}" because it has finished.'.format(name=record.name),
               'error')
         return redirect(request.referrer)

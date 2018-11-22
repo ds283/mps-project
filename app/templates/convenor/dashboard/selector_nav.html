@@ -7,7 +7,7 @@
     <ul class="nav nav-tabs dashboard-nav">
         <li {% if subpane=='list' %}class="active"{% endif %}>
             <a href="{{ url_for('convenor.selectors', id=pclass.id) }}">
-                Show selector
+                Show selectors
             </a>
         </li>
         <li {% if show_selector_grid %}{% if subpane=='grid' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>

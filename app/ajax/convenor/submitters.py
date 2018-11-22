@@ -32,6 +32,7 @@ _projects = \
         <span class="label label-warning">{{ label }} in progress</span>        
     {% elif state == obj.FEEDBACK_LATE %}
         <span class="label label-danger">{{ label }} late</span>
+    {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
         <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        
@@ -121,6 +122,7 @@ _markers = \
         <span class="label label-warning">{{ label }} in progress</span>        
     {% elif state == obj.FEEDBACK_LATE %}
         <span class="label label-danger">{{ label }} late</span>
+    {% elif state == obj.FEEDBACK_NOT_REQUIRED %}
     {% else %}
         <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        

@@ -101,7 +101,7 @@
                                                 {{ item.project.name }}
                                             </a>
                                         {% else %}
-                                            <span class="label label-danger">No project allocation</span>
+                                            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">No project allocation</a>
                                         {% endif %}
                                     </div>
                                     <div class="col-xs-3">

@@ -4430,7 +4430,7 @@ class SubmissionRecord(db.Model):
     @property
     def supervisor_feedback_state(self):
         if not self.period.config.uses_supervisor:
-            return False
+            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         return self._feedback_state(self.is_supervisor_valid)
 
@@ -4438,7 +4438,7 @@ class SubmissionRecord(db.Model):
     @property
     def marker_feedback_state(self):
         if not self.period.config.uses_marker:
-            return False
+            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         return self._feedback_state(self.is_marker_valid)
 

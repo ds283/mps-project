@@ -37,15 +37,13 @@ def register_close_selection_tasks(celery):
             raise self.retry()
 
         if config is None or convenor is None:
-            if convenor is not None:
-                convenor.post_message('Close selection failed. Please contact a system administrator', 'error',
-                                      autocommit=True)
-
             if config is None:
                 self.update_state('FAILURE', meta='Could not load ProjectClassConfig record from database')
             if convenor is None:
                 self.update_state('FAILURE', meta='Could not load convenor User record from database')
 
+            print('config: {x}'.format(x=config))
+            print('convenor: {x}').format(x=convenor)
             return close_fail.apply_async(args=(task_id, convenor_id))
 
         year = config.year
@@ -60,9 +58,12 @@ def register_close_selection_tasks(celery):
         seq = chain(close_initialize.si(task_id),
                     backup.si(convenor_id, type=BackupRecord.PROJECT_CLOSE_FALLBACK, tag='close',
                               description='Rollback snapshot for '
-                                          '{proj} close {yr}'.format(proj=config.name, yr=year)),
-                    selectors_group,
-                    close_finalize.si(task_id, config_id, convenor_id)).on_error(close_fail.si(task_id, convenor_id))
+                                          '{proj} close {yr}'.format(proj=config.name, yr=year)))
+
+        if len(selectors_group) > 0:
+            seq = seq | selectors_group
+
+        seq = (seq | close_finalize.si(task_id, config_id, convenor_id)).on_error(close_fail.si(task_id, convenor_id))
 
         seq.apply_async()
 
@@ -88,11 +89,9 @@ def register_close_selection_tasks(celery):
             config.closed_timestamp = datetime.now()
 
         if convenor is not None:
-            # send direct message to user announcing successful
-            convenor.post_message('Closure of selection '
-                                  'for "{proj}" {yra}-{yrb} is now complete'.format(proj=config.name,
-                                                                                    yra=config.year,
-                                                                                    yrb=config.year+1),
+            # send direct message to user announcing that we have been successful
+            convenor.post_message('Closure of selections for "{proj}" {yra}-{yrb} is now '
+                                  'complete'.format(proj=config.name, yra=config.year, yrb=config.year+1),
                                   'success', autocommit=False)
 
         db.session.commit()
@@ -108,7 +107,7 @@ def register_close_selection_tasks(celery):
             raise self.retry()
 
         if convenor is not None:
-            convenor.post_message('Close selection failed. Please contact a system administrator', 'error',
+            convenor.post_message('Close selections failed. Please contact a system administrator', 'error',
                                   autocommit=False)
 
         db.session.commit()

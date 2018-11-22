@@ -971,11 +971,11 @@ class FacultyData(db.Model):
         Return a list of current SubmissionRecord instances for which we are 2nd marker
         :return:
         """
-        return self.marking_records \
-            .filter_by(retired=False) \
+        return db.session.query(SubmissionRecord) \
+            .filter_by(retired=False, marker_id=self.id) \
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
             .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
-            .join(SubmissionPeriodRecord, SubmissionRecord.project_id == SubmissionPeriodRecord.id) \
+            .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id) \
             .filter(ProjectClassConfig.pclass_id == pclass_id) \
             .order_by(SubmissionPeriodRecord.submission_period.asc())
 

@@ -420,7 +420,7 @@ def add_project():
                 form.show_selections.data = False
 
             form.enforce_capacity.data = owner.enforce_capacity
-            form.dont_clash_presentations = owner.dont_clash_presentations
+            form.dont_clash_presentations.data = owner.dont_clash_presentations
 
     return render_template('faculty/edit_project.html', project_form=form, title='Add new project')
 

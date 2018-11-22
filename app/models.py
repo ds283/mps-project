@@ -3402,7 +3402,7 @@ class ProjectDescription(db.Model):
 
 
     def _level_modules_query(self, level_id):
-        query = db.sesson.query(description_to_modules.c.module_id) \
+        query = db.session.query(description_to_modules.c.module_id) \
             .filter(description_to_modules.c.description_id == self.id).subquery()
 
         return db.session.query(Module) \

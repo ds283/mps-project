@@ -198,7 +198,11 @@
                     {% endif %}
 
                     <hr class="intro-divider">
-                    <p>Alternatively, select a project by hand from the full list:</p>
+                    {% if rec.matching_record is not none %}
+                        <p>Alternatively, select a project from the full list:</p>
+                    {% else %}
+                        <p>Select a project from the full list:</p>
+                    {% endif %}
 
                     <table id="manual-assign-table" class="table table-striped">
                         <thead>
@@ -212,7 +216,7 @@
                     </table>
 
                     <hr class="intro-divider">
-                    <form action="{{ url_for('convenor.manual_assign', id=rec.id) }}" name="marker-assign-form" method="POST">
+                    <form action="{{ url_for('convenor.manual_assign', id=rec.id, text=text, url=url) }}" name="marker-assign-form" method="POST">
                         {{ form.hidden_tag() }}
                         {{ on_click_selector_field(form.marker, true) }}
                     </form>

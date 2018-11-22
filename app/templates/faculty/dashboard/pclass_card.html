@@ -48,7 +48,9 @@
             </div>
         {% endif %}
 
-        {{ selector_card(config, sel_state, live_projects, current_user) }}
+        {% if pclass.uses_supervisor %}
+            {{ selector_card(config, sel_state, live_projects, current_user) }}
+        {% endif %}
 
         {% for n in range(config.submissions) %}
             {{ submitter_card(config, sub_state, n, current_user) }}

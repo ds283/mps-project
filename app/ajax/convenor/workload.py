@@ -77,7 +77,6 @@ _projects = \
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
-{% set recs = f.supervisor_assignments(config.pclass_id).all() %}
 {% if recs|length >= 1 %}
     {% for rec in recs %}
         {% if loop.index > 1 %}<p></p>{% endif %}
@@ -130,7 +129,6 @@ _marking = \
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}
-{% set recs = f.marker_assignments(config.pclass_id).all() %}
 {% if recs|length >= 1 %}
     {% for rec in recs %}
         {% if loop.index > 1 %}<p></p>{% endif %}
@@ -161,7 +159,6 @@ _presentations = \
         <span class="label label-danger">{{ label }} error &ndash; unknown state</span>
     {% endif %}        
 {% endmacro %}
-{% set slots = f.presentation_assignments(config.pclass_id).all() %}
 {% if slots|length >= 1 %}
     {% for slot in slots %}
         <div {% if loop.index < loop.length %}style="padding-bottom: 10px;"{% endif %}>
@@ -225,12 +222,18 @@ def faculty_workload_data(faculty, config):
         count += 1
 
         CATS_sup, CATS_mark, CATS_pres = d.CATS_assignment(config.project_class)
+        projects = d.supervisor_assignments(config.pclass_id).all()
+        marking = d.marker_assignments(config.pclass_id).all()
+        presentations = d.presentation_assignments(config.pclass_id).all()
 
         data.append({'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
                               'sortvalue': u.last_name + u.first_name},
-                     'projects': render_template_string(_projects, f=d, config=config),
-                     'marking': render_template_string(_marking, f=d, config=config),
-                     'presentations': render_template_string(_presentations, f=d, config=config),
+                     'projects': {'display': render_template_string(_projects, f=d, config=config, recs=projects),
+                                  'sortvalue': len(projects)},
+                     'marking': {'display': render_template_string(_marking, f=d, config=config, recs=marking),
+                                 'sortvalue': len(marking)},
+                     'presentations': {'display': render_template_string(_presentations, f=d, config=config, slots=presentations),
+                                       'sortvalue': len(presentations)},
                      'workload': {'display': render_template_string(_workload, CATS_sup=CATS_sup, CATS_mark=CATS_mark,
                                                                     CATS_pres=CATS_pres, f=d, config=config),
                                   'sortvalue': CATS_sup+CATS_mark+CATS_pres}})

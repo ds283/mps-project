@@ -162,7 +162,7 @@ _menu = \
                 <i class="fa fa-calendar"></i> Sessions...
             </a>
         </li>
-        {% set disabled = not a.is_deployed %}
+        {% set disabled = a.is_deployed %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}"{% endif %}>
                 <i class="fa fa-user"></i> Attendees...

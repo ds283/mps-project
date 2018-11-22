@@ -423,7 +423,6 @@ def register_rollover_tasks(celery):
 
         # if a match has been assigned, use this to generate a SubmittingStudent record
         if match_records is not None:
-
             try:
                 student_record = SubmittingStudent(config_id=new_config_id,
                                                    student_id=selector.student_id,
@@ -466,10 +465,8 @@ def register_rollover_tasks(celery):
                 return self.retry()
 
         else:
-
             try:
                 if selector.academic_year == config.start_year - 1:
-
                     if config.selection_open_to_all:
                         # no allocation here means that the selector chose not to participate
                         pass
@@ -482,7 +479,6 @@ def register_rollover_tasks(celery):
                             return
 
                 elif selector.academic_year >= config.start_year:
-
                     if config.supervisor_carryover:
 
                         # if possible, we should carry over supervisor allocations from the previous year
@@ -501,7 +497,7 @@ def register_rollover_tasks(celery):
 
                             for rec in prev_record.records:
                                 period = config.get_period(rec.submission_period)
-                                sub_record = SubmissionRecord(submission_period=period.id,
+                                sub_record = SubmissionRecord(period_id=period.id,
                                                               retired=False,
                                                               owner_id=student_record.id,
                                                               project_id=rec.project_id,

@@ -1984,6 +1984,12 @@ class ProjectClassConfig(db.Model):
     # 'periods' member constructed by backreference from SubmissionPeriodRecord below
 
 
+    # MATCHING
+
+    # override participation in automatic matching, just for this instance
+    skip_matching = db.Column(db.Boolean(), default=False)
+
+
     # WORKLOAD MODEL
 
     # CATS awarded for supervising in this year
@@ -2019,9 +2025,10 @@ class ProjectClassConfig(db.Model):
     def uses_presentations(self):
         return self.project_class.uses_presentations
 
+
     @property
     def do_matching(self):
-        return self.project_class.do_matching
+        return self.project_class.do_matching and not self.skip_matching
 
 
     @property
@@ -2345,6 +2352,7 @@ class ProjectClassConfig(db.Model):
 
 
     def get_period(self, n):
+        # note submission periods start at 1
         if n <= 0 or n > self.submissions:
             return None
 
@@ -4591,7 +4599,11 @@ class SubmissionRecord(db.Model):
 
     @property
     def schedule_slot(self):
-        query = db.session.query(submitter_to_slots.c.slot_id).filter(submitter_to_slots.c.submitter_id == self.id).subquery()
+        if not self.period.has_deployed_schedule:
+            return None
+
+        query = db.session.query(submitter_to_slots.c.slot_id) \
+            .filter(submitter_to_slots.c.submitter_id == self.id).subquery()
 
         slot_query = db.session.query(ScheduleSlot) \
             .join(query, query.c.slot_id == ScheduleSlot.id) \

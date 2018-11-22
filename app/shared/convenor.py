@@ -111,8 +111,8 @@ def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
     db.session.flush()
 
     for i in range(0, config.submissions):
-        period = config.period(i+1)
-        record = SubmissionRecord(submission_period=period.id,
+        period = config.get_period(i+1)
+        record = SubmissionRecord(period_id=period.id,
                                   retired=False,
                                   owner_id=submitter.id,
                                   project_id=None,

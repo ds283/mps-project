@@ -40,6 +40,11 @@
                     </div>
                     <div class="col-xs-4">
                         <div class="pull-right">
+                            {% if not rollover_ready %}
+                                <a href="{{ url_for('admin.skip_matching') }}" class="btn btn-default">
+                                    Skip matching
+                                </a>
+                            {% endif %}
                             <a href="{{ url_for('admin.manage_matching') }}" class="btn btn-warning">
                                 Manage matching
                             </a>

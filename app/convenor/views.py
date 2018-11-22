@@ -1692,6 +1692,7 @@ def add_project(pclass_id):
                        show_popularity=form.show_popularity.data,
                        show_bookmarks=form.show_bookmarks.data,
                        show_selections=form.show_selections.data,
+                       dont_clash_presentations=form.dont_clash_presentations.data,
                        creator_id=current_user.id,
                        creation_timestamp=datetime.now())
 
@@ -1736,6 +1737,7 @@ def add_project(pclass_id):
                 form.show_selections.data = False
 
             form.enforce_capacity.data = owner.enforce_capacity
+            form.dont_clash_presentations.data = owner.dont_clash_presentations
 
     return render_template('faculty/edit_project.html', project_form=form, pclass_id=pclass_id, title='Add new project')
 
@@ -1777,6 +1779,7 @@ def edit_project(id, pclass_id):
         data.show_popularity = form.show_popularity.data
         data.show_bookmarks = form.show_bookmarks.data
         data.show_selections = form.show_selections.data
+        data.dont_clash_presentations = form.dont_clash_presentations.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 

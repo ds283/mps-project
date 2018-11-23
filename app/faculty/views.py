@@ -1144,9 +1144,10 @@ def dashboard():
     valid_panes = []
     for record in current_user.faculty_data.ordered_enrollments:
 
-        if (record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
-            or record.marker_state == EnrollmentRecord.MARKER_ENROLLED
-            or record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED) and record.pclass.active:
+        if ((record.pclass.uses_supervisor and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
+            or (record.pclass.uses_marker and record.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+            or (record.pclass.uses_presentations and record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)) \
+                and record.pclass.active:
             config = record.pclass.configs.order_by(ProjectClassConfig.year.desc()).first()
 
             # get live projects belonging to both this config item and the active user
@@ -1183,10 +1184,16 @@ def dashboard():
 
     if pane == 'system':
         if not current_user.has_role('root'):
-            pane = valid_panes[0]
+            if len(valid_panes) > 0:
+                pane = valid_panes[0]
+            else:
+                pane = None
     else:
         if not pane in valid_panes:
-            pane = valid_panes[0]
+            if len(valid_panes) > 0:
+                pane = valid_panes[0]
+            else:
+                pane = None
 
     if pane is not None:
         session['faculty_dashboard_pane'] = pane

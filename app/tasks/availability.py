@@ -38,6 +38,7 @@ def register_availability_tasks(celery):
 
         try:
             # first task is to build a list of faculty assessors
+            # we bake this list into the PresentationAssessment record as the 'assessors' list.
             data.assessors = []
 
             for period in data.submission_periods:
@@ -54,6 +55,20 @@ def register_availability_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
+        progress_update(celery_id, TaskRecord.RUNNING, 30, "Building list of submitters...", autocommit=True)
+
+        try:
+            data.submitters = []
+
+            for period in data.submission_periods:
+                for talk in period.submitter_list.all():
+                    if talk not in data.submitters:
+                        data.submitters.append(talk)
+
+            db.session.commit()
+        except SQLAlchemyError:
+            raise self.retry()
+
         progress_update(celery_id, TaskRecord.RUNNING, 50, "Generating availability requests...", autocommit=True)
 
         try:
@@ -63,20 +78,19 @@ def register_availability_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        progress_update(celery_id, TaskRecord.RUNNING, 80, "Filling default availabilities...", autocommit=True)
+        progress_update(celery_id, TaskRecord.RUNNING, 70, "Filling default availabilities...", autocommit=True)
 
         try:
             # third, we assume everyone is available by default
-            for assessor in data.assessors:
-                for session in data.sessions:
-                    if assessor not in session.faculty:
-                        session.faculty.append(assessor)
+            for session in data.sessions:
+                session.unavailable_faculty = []
+                session.unavailable_submitters = []
 
             db.session.commit()
         except SQLAlchemyError:
             raise self.retry()
 
-        progress_update(celery_id, TaskRecord.SUCCESS, 100, 'Availability requests issued', autocommit=False)
+        progress_update(celery_id, TaskRecord.SUCCESS, 90, 'Availability requests issued', autocommit=False)
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()

@@ -5481,11 +5481,8 @@ def session_available(f_id, s_id):
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)
-
-    present = data.in_session(fac.id)
-    if not present:
-        data.faculty.append(fac)
-        db.session.commit()
+    data.add_faculty(fac)
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -5507,11 +5504,8 @@ def session_unavailable(f_id, s_id):
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)
-
-    present = data.in_session(fac.id)
-    if present:
-        data.faculty.remove(fac)
-        db.session.commit()
+    data.remove_faculty(fac)
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -6247,8 +6241,8 @@ def assessment_attending(a_id, s_id):
         return redirect(request.referrer)
 
     if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
-              ' altered'.format(name=data.name), 'info')
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
         return redirect(request.referrer)
 
     talk = SubmissionRecord.query.get_or_404(s_id)
@@ -6282,8 +6276,8 @@ def assessment_not_attending(a_id, s_id):
         return redirect(request.referrer)
 
     if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
-              ' altered'.format(name=data.name), 'info')
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
         return redirect(request.referrer)
 
     talk = SubmissionRecord.query.get_or_404(s_id)
@@ -6299,6 +6293,164 @@ def assessment_not_attending(a_id, s_id):
 
     # we leave availability information per-session intact, so that it is immediately available again
     # if this presenter is subsequently marked as attending
+
+    return redirect(request.referrer)
+
+
+@admin.route('/assessment_submitter_availability/<int:a_id>/<int:s_id>')
+@roles_required('root')
+def assessment_submitter_availability(a_id, s_id):
+    """
+    Allow submitter availabilities to be specified on a per-session basis
+    :param a_id:
+    :param s_id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    submitter = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in data.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    return render_template('admin/presentations/availability/submitter_availability.html',
+                           assessment=data, submitter=submitter, url=url, text=text)
+
+
+@admin.route('/submitter_available/<int:sess_id>/<int:s_id>')
+@roles_accepted('root')
+def submitter_available(sess_id, s_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    session = PresentationSession.query.get_or_404(sess_id)
+    data = session.owner
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    submitter = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in data.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(request.referrer)
+
+    session.add_submitter(submitter)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/submitter_unavailable/<int:sess_id>/<int:s_id>')
+@roles_accepted('root')
+def submitter_unavailable(sess_id, s_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    session = PresentationSession.query.get_or_404(sess_id)
+    data = session.owner
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    submitter = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in data.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(request.referrer)
+
+    session.remove_submitter(submitter)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/submitter_all_available/<int:a_id>/<int:s_id>')
+@roles_accepted('root')
+def submitter_all_available(a_id, s_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    submitter = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in data.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(request.referrer)
+
+    for session in data.sessions:
+        session.add_submitter(submitter)
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/submitter_all_unavailable/<int:a_id>/<int:s_id>')
+@roles_accepted('root')
+def submitter_all_unavailable(a_id, s_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    submitter = SubmissionRecord.query.get_or_404(s_id)
+
+    if submitter not in data.available_talks:
+        flash('Cannot specify availability for the specified presenter because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(request.referrer)
+
+    for session in data.sessions:
+        session.remove_submitter(submitter)
+
+    db.session.commit()
 
     return redirect(request.referrer)
 

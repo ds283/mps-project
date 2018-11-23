@@ -13,7 +13,7 @@ from flask import render_template_string, jsonify, url_for
 
 _actions = \
 """
-{% set available = s.in_session(f.id) %}
+{% set available = s.faculty_available(f.id) %}
 {% if available %}
     <a class="btn btn-sm btn-success">
         <i class="fa fa-check"></i> Available

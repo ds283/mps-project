@@ -1933,10 +1933,8 @@ def session_available(id):
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(request.referrer)
 
-    present = data.in_session(current_user.id)
-    if not present:
-        data.faculty.append(current_user.faculty_data)
-        db.session.commit()
+    data.add_faculty(current_user.faculty_data)
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -1961,10 +1959,8 @@ def session_unavailable(id):
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(request.referrer)
 
-    present = data.in_session(current_user.id)
-    if present:
-        data.faculty.remove(current_user.faculty_data)
-        db.session.commit()
+    data.remove_faculty(current_user.faculty_data)
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -1989,15 +1985,10 @@ def session_all_available(id):
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(request.referrer)
 
-    changed = False
     for session in data.sessions:
-        present = session.in_session(current_user.id)
-        if not present:
-            session.faculty.append(current_user.faculty_data)
-            changed = True
+        session.add_faculty(current_user.faculty_data)
 
-    if changed:
-        db.session.commit()
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -2022,15 +2013,10 @@ def session_all_unavailable(id):
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(request.referrer)
 
-    changed = False
     for session in data.sessions:
-        present = session.in_session(current_user.id)
-        if present:
-            session.faculty.remove(current_user.faculty_data)
-            changed = True
+        session.remove_faculty(current_user.faculty_data)
 
-    if changed:
-        db.session.commit()
+    db.session.commit()
 
     return redirect(request.referrer)
 

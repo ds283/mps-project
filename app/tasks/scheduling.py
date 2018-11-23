@@ -25,7 +25,7 @@ from ..shared.timer import Timer
 
 
 def _enumerate_talks(assessment):
-    # periods is a list of SubmissionPeriodRecord instances
+    # assessment is a PresentationAssessment instance
 
     number = 0
     talk_to_number = {}
@@ -84,7 +84,7 @@ def _enumerate_slots(record):
     return number, slot_to_number, number_to_slot, slot_dict
 
 
-def _build_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict):
+def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict):
     """
     Construct a dictionary mapping from (assessing-faculty, slot) pairs to availabilities,
     coded as 0 = not available, 1 = available
@@ -104,17 +104,10 @@ def _build_availability_matrix(number_assessors, assessor_dict, number_slots, sl
             slot = slot_dict[j]
 
             # is this assessor available in this slot?
-            count = get_count(slot.session.faculty.filter_by(id=assessor.id))
-
-            if count == 1:
+            if slot.session.faculty_available(assessor.id):
                 A[idx] = 1
-            elif count == 0:
-                A[idx] = 0
             else:
-                raise RuntimeError('Inconsistent availability for faculty member: '
-                                   'fac={fname}, slot={slotid}, '
-                                   'session={sessid}'.format(fname=assessor.user.name, slotid=slot.id,
-                                                             sessid=slot.session.id))
+                A[idx] = 0
 
     return A
 
@@ -168,7 +161,7 @@ def _generate_reschedule_objective(oldX, oldY, X, Y, S, number_talks, number_ass
 
     for i in range(number_talks):
         for j in range(number_slots):
-            idx = (i,j)
+            idx = (i, j)
             if oldX[idx] == 0:
                 objective += X[idx]
             else:
@@ -176,7 +169,7 @@ def _generate_reschedule_objective(oldX, oldY, X, Y, S, number_talks, number_ass
 
     for i in range(number_assessors):
         for j in range(number_slots):
-            idx = (i,j)
+            idx = (i, j)
             if oldY[idx] == 0:
                 objective += Y[idx]
             else:
@@ -422,7 +415,7 @@ def _initialize(self, id):
         number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record)
 
         # build faculty availability matrix
-        A = _build_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
+        A = _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
 
     except SQLAlchemyError:
         raise self.retry()
@@ -505,8 +498,7 @@ def register_scheduling_tasks(celery):
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
-                                              assessor_to_number,
-                                              talk_dict, assessor_dict, slot_dict,
+                                              assessor_to_number, talk_dict, assessor_dict, slot_dict,
                                               _generate_minimize_objective)
 
         return _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,

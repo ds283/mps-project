@@ -499,7 +499,7 @@ def MessageMixinFactory(query_factory, convenor_editing):
 
         show_faculty = BooleanField('Display to faculty')
 
-        if convenor_editing:
+        if not convenor_editing:
             show_login = BooleanField('Display on login screen if a broadcast message')
 
         dismissible = BooleanField('Allow message to be dismissed')

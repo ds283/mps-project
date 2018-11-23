@@ -43,6 +43,8 @@ class Config(object):
     SECURITY_CHANGEABLE = True
     SECURITY_REGISTERABLE = False
 
+    SECURITY_TOKEN_MAX_AGE = 10800    # tokens expire after 3 * 60 * 60 = 10,800 seconds = 3 hours
+
     SECURITY_PASSWORDLESS = False     # disable passwordless login
 
     SECURITY_EMAIL_HTML = False       # disable HTML emails

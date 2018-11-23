@@ -540,8 +540,7 @@ def EditMessageFormFactory(convenor_editing=False):
     Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses,
                                 convenor_editing=convenor_editing)
 
-    class EditMessageForm(Form, Mixin, SaveChangesMixin,
-                          convenor_editing):
+    class EditMessageForm(Form, Mixin, SaveChangesMixin):
 
         _validator = InputRequired(message='At least one project class should be selected') if convenor_editing \
             else Optional()

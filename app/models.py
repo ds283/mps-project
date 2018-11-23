@@ -1096,9 +1096,7 @@ class FacultyData(db.Model):
 
     @property
     def has_outstanding_availability_requests(self):
-        c = get_count(self.outstanding_availability_requests)
-        print('has_outstanding_availability_requests = {c}'.format(c=c))
-        return  c > 0
+        return get_count(self.outstanding_availability_requests) > 0
 
 
     @property

@@ -519,7 +519,7 @@ def MessageMixinFactory(query_factory, convenor_editing):
 def AddMessageFormFactory(convenor_editing=False):
 
     Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses,
-                                convenor_editing)
+                                convenor_editing=convenor_editing)
 
     class AddMessageForm(Form, Mixin):
 
@@ -537,7 +537,8 @@ def AddMessageFormFactory(convenor_editing=False):
 
 def EditMessageFormFactory(convenor_editing=False):
 
-    Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses)
+    Mixin = MessageMixinFactory(GetConvenorProjectClasses if convenor_editing else GetAllProjectClasses,
+                                convenor_editing=convenor_editing)
 
     class EditMessageForm(Form, Mixin, SaveChangesMixin,
                           convenor_editing):

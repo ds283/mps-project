@@ -24,11 +24,11 @@
                     <p>Sent: <strong>{{ email.send_date.strftime("%a %d %b %Y %H:%M:%S") }}</strong></p>
                     <p>Subject: <strong>{{ email.subject }}</strong></p>
                     <hr class="intro-divider">
-                    {{ email.body }}
+                    {{ email.body|markdown|bclean|blinkify|safe }}
                 </div>
                 <div class="panel-footer email-display">
                     <h4>HTML content</h4>
-                    {{ email.html }}
+                    {{ email.html|safe }}
                 </div>
             </div>
         </div>

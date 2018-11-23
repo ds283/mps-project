@@ -18,7 +18,12 @@
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/admin/attach_sessions_ajax/{{ assessment.id }}', dataSrc: '' },
                 columns: [
-                    { data: 'date'},
+                    { data: 'date',
+                      render: {
+                        _: 'display',
+                        sort: 'timestamp',
+                        type: 'timestamp'
+                    } },
                     { data: 'session' },
                     { data: 'rooms' },
                     { data: 'availability' },

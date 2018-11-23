@@ -10,6 +10,8 @@
 
 from flask import render_template_string, jsonify
 
+import calendar
+
 
 _date = \
 """
@@ -116,7 +118,8 @@ _faculty = \
 
 def assessment_sessions_data(sessions):
 
-    data = [{'date': render_template_string(_date, s=s),
+    data = [{'date': {'display': render_template_string(_date, s=s),
+                      'timestamp': calendar.timegm(s.date.timetuple())},
              'session': s.session_type_label,
              'rooms': render_template_string(_rooms, s=s),
              'availability': render_template_string(_faculty, s=s),

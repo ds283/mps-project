@@ -24,31 +24,25 @@
                     { data: 'schedule' },
                     { data: 'owner' },
                     { data: 'active' },
-                    {
-                        data: 'last_run',
-                        render:
-                            {
-                                _: 'display',
-                                sort: 'timestamp'
-                            }
-                    },
+                    { data: 'last_run',
+                      render: {
+                        _: 'display',
+                        sort: 'timestamp',
+                        type: 'timestamp'
+                    } },
                     { data: 'total_runs' },
-                    {
-                        data: 'last_change',
-                        render:
-                            {
-                                _: 'display',
-                                sort: 'timestamp'
-                            }
-                    },
-                    {
-                        data: 'expires',
-                        render:
-                            {
-                                _: 'display',
-                                sort: 'timestamp'
-                            }
-                    },
+                    { data: 'last_change',
+                      render: {
+                        _: 'display',
+                        sort: 'timestamp',
+                        type: 'timestamp'
+                    } },
+                    { data: 'expires',
+                      render: {
+                        _: 'display',
+                        sort: 'timestamp',
+                        type: 'timestamp'
+                    } },
                     { data: 'menu' }
                 ],
                 deferRender: true

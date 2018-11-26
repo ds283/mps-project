@@ -67,8 +67,11 @@ _projects = \
                             </a>
                         </li>
                     {% else %}
-                        <li class="disabled">
-                            <a><i class="fa fa-check"></i> Already started</a>
+                        {% set disabled = (r.owner.config.submitter_lifecycle >= r.owner.config.SUBMITTER_LIFECYCLE_READY_ROLLOVER) %}
+                        <li {% if disabled %}class="disabled"{% endif %}>
+                            <a {% if not disabled %}href="{{ url_for('convenor.mark_waiting', id=r.id) }}"{% endif %}>
+                                <i class="fa fa-times"></i> Mark as waiting
+                            </a>
                         </li>
                     {% endif %}
                 </ul>

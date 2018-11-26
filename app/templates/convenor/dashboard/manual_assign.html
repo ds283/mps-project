@@ -94,7 +94,7 @@
                             {% for item in rec.owner.records %}
                                 <div class="row vertical-align final-selection-table">
                                     <div class="col-xs-6">
-                                        <span class="label label-default">#{{ item.submission_period }}</span>
+                                        <a class="label label-default" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
                                         {% if item.submission_period == rec.submission_period %}<i class="fa fa-check"></i>{% endif %}
                                         {% if item.project is not none %}
                                             <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">

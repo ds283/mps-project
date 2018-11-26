@@ -46,7 +46,12 @@ _projects = \
                 <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle"
                         {% if style %}style="{{ style }}"{% endif %}
                         type="button" data-toggle="dropdown">{% if show_period %}#{{ r.submission_period }}: {% endif %}
-                    {{ r.supervisor.user.name }} (No. {{ r.project.number }})
+                    {% if r.project.name|length < 35 %}
+                        {{ r.project.name }}
+                    {% else %}
+                        {{ r.project.name[0:35] }}...
+                    {% endif %}
+                    ({{r.supervisor.user.last_name}})
                 <span class="caret"></span></a>
                 <ul class="dropdown-menu">
                     <li>
@@ -130,7 +135,7 @@ _markers = \
 {% macro marker_tag(r, show_period) %}
     {% set pclass = r.owner.config.project_class %}
     <div>
-        {% if r.project is not none %}
+        {% if r.marker is not none %}
             <div class="dropdown assignment-label">
                 <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                     {% if show_period %}#{{ r.submission_period }}: {% endif %}

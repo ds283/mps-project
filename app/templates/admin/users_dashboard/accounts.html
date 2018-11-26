@@ -19,32 +19,26 @@
                 ajax: { url: $SCRIPT_ROOT + '/admin/users_ajax{% if filter is not none %}?filter={{ filter }}{% endif %}', dataSrc: '' },
                 columns: [
                     { data: 'name',
-                      render:
-                          {
-                               _: 'display',
-                               sort: 'sortvalue'
-                          }
-                    },
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue'
+                    } },
                     { data: 'user' },
                     { data: 'email' },
-                    {
-                        data: 'confirm',
-                        render:
-                            {
-                                _: 'display',
-                                sort: 'timestamp'
-                            }
-                    },
+                    { data: 'confirm',
+                      render: {
+                        _: 'display',
+                        sort: 'timestamp',
+                        type: 'timestamp'
+                    } },
                     { data: 'active' },
                     { data: 'count' },
-                    {
-                        data: 'last_login',
-                        render:
-                            {
-                                _: 'display',
-                                sort: 'timestamp'
-                            }
-                    },
+                    { data: 'last_login',
+                      render: {
+                        _: 'display',
+                        sort: 'timestamp',
+                        type: 'timestamp'
+                    } },
                     { data: 'ip' },
                     { data: 'role' },
                     { data: 'menu' }

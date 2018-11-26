@@ -3651,7 +3651,7 @@ def publish_assignment(id):
     # id is a SubmittingStudent
     sub = SubmittingStudent.query.get_or_404(id)
 
-    # reject is logged-in user is not a convenor for this SubmittingStudent
+    # reject if logged-in user is not a convenor for this SubmittingStudent
     if not validate_is_convenor(sub.config.project_class):
         return redirect(request.referrer)
 
@@ -3672,7 +3672,7 @@ def unpublish_assignment(id):
     # id is a SubmittingStudent
     sub = SubmittingStudent.query.get_or_404(id)
 
-    # reject is logged-in user is not a convenor for this SubmittingStudent
+    # reject if logged-in user is not a convenor for this SubmittingStudent
     if not validate_is_convenor(sub.config.project_class):
         return redirect(request.referrer)
 
@@ -3693,7 +3693,7 @@ def publish_all_assignments(id):
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
-    # reject is logged-in user is not a convenor for this project class
+    # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
@@ -3722,7 +3722,7 @@ def unpublish_all_assignments(id):
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
-    # reject is logged-in user is not a convenor for this project class
+    # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
@@ -3751,7 +3751,7 @@ def mark_started(id):
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
-    # reject is logged-in user is not a convenor for the project class associated with this submission record
+    # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_is_convenor(rec.owner.config.project_class):
         return redirect(request.referrer)
 
@@ -3765,8 +3765,38 @@ def mark_started(id):
 
     if not rec.owner.published:
         flash('Cannot mark this submission period as started because it is not published to the submitter', 'error')
+        return redirect(request.referrer)
 
     rec.student_engaged = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/mark_waiting/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def mark_waiting(id):
+
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # reject if logged-in user is not a convenor for the project class associated with this submission record
+    if not validate_is_convenor(rec.owner.config.project_class):
+        return redirect(request.referrer)
+
+    if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to mark a submission period as started', 'error')
+        return redirect(request.referrer)
+
+    if rec.submission_period > rec.owner.config.submission_period:
+        flash('Cannot mark this submission period as started because it is not yet open', 'error')
+        return redirect(request.referrer)
+
+    if not rec.owner.published:
+        flash('Cannot mark this submission period as started because it is not published to the submitter', 'error')
+        return redirect(request.referrer)
+
+    rec.student_engaged = False
     db.session.commit()
 
     return redirect(request.referrer)
@@ -3779,7 +3809,7 @@ def view_feedback(id):
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
-    # reject is logged-in user is not a convenor for the project class associated with this submission record
+    # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_is_convenor(rec.owner.config.project_class):
         return redirect(request.referrer)
 

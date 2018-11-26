@@ -52,7 +52,7 @@
                         </td>
                         <td>
                             <div style="text-align: right;" class="pull-right">
-                                {% if not period.feedback_open and not rec.student_engaged %}
+                                {% if not period.feedback_open and not rec.student_engaged and rec.owner.published %}
                                     {% if rec.submission_period <= rec.owner.config.submission_period %}
                                         <a href="{{ url_for('faculty.mark_started', id=rec.id) }}" class="btn btn-sm btn-table-block btn-primary">Mark as started</a>
                                     {% endif %}

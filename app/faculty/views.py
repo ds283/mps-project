@@ -1873,7 +1873,7 @@ def mark_started(id):
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
-    # reject is logged-in user is not a convenor for the project class associated with this submission record
+    # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_submission_supervisor(rec):
         return redirect(request.referrer)
 
@@ -1887,6 +1887,7 @@ def mark_started(id):
 
     if not rec.owner.published:
         flash('Cannot mark this submission period as started because it is not published to the submitter', 'error')
+        return redirect(request.referrer)
 
     rec.student_engaged = True
     db.session.commit()

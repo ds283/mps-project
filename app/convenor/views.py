@@ -1694,6 +1694,9 @@ def add_project(pclass_id):
                        creator_id=current_user.id,
                        creation_timestamp=datetime.now())
 
+        if pclass_id != 0 and len(data.project_classes.all()) == 0 and not pclass.uses_supervisor:
+            data.project_classes.append(pclass)
+
         # ensure that list of preferred degree programmes is consistent
         data.validate_programmes()
 
@@ -1777,6 +1780,9 @@ def edit_project(id, pclass_id):
         data.dont_clash_presentations = form.dont_clash_presentations.data
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
+
+        if pclass_id != 0 and len(data.project_classes.all()) == 0 and not pclass.uses_supervisor:
+            data.project_classes.append(pclass)
 
         # ensure that list of preferred degree programmes is now consistent
         data.validate_programmes()

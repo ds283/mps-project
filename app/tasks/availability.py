@@ -12,7 +12,8 @@ from celery import group, chain
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User, PresentationAssessment, TaskRecord, FacultyData, EnrollmentRecord, PresentationSession
+from ..models import User, PresentationAssessment, TaskRecord, FacultyData, EnrollmentRecord, PresentationSession, \
+    AssessorAttendanceData, SubmitterAttendanceData
 from ..task_queue import progress_update
 from ..shared.sqlalchemy import get_count
 
@@ -34,13 +35,15 @@ def register_availability_tasks(celery):
             progress_update(celery_id, TaskRecord.FAILURE, 100, "Database error", autocommit=True)
             return
 
-        progress_update(celery_id, TaskRecord.RUNNING, 10, "Building list of faculty assessors...", autocommit=True)
+        progress_update(celery_id, TaskRecord.RUNNING, 30, "Building list of faculty assessors...", autocommit=True)
 
         try:
             # first task is to build a list of faculty assessors
-            # we bake this list into the PresentationAssessment record as the 'assessors' list.
-            data.assessors = []
+            # we bake this list into the PresentationAssessment record via a set of AssessorAttendanceData instances
+            total_assessors = set()
 
+            # build list of eligible assessors for each submission period included in this assessment,
+            # and merge into total_assessors is required
             for period in data.submission_periods:
                 assessors = period.assessors_list \
                     .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
@@ -48,44 +51,59 @@ def register_availability_tasks(celery):
                             EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED).all()
 
                 for assessor in assessors:
-                    if assessor not in data.assessors:
-                        data.assessors.append(assessor)
+                    if assessor not in total_assessors:
+                        data.assessors.add(assessor)
+
+            for assessor in total_assessors:
+                a_record = AssessorAttendanceData(assessment_id=data.id,
+                                                  faculty=assessor.id,
+                                                  comment=None)
+
+                # assume available for all sessions by default
+                for session in data.sessions:
+                    a_record.available.append(session)
+
+                db.session.add(a_record)
 
             db.session.commit()
         except SQLAlchemyError:
             raise self.retry()
 
-        progress_update(celery_id, TaskRecord.RUNNING, 30, "Building list of submitters...", autocommit=True)
+        progress_update(celery_id, TaskRecord.RUNNING, 50, "Building list of submitters...", autocommit=True)
 
         try:
-            data.submitters = []
+            total_submitters = set()
 
+            # build list of submitters for each submission period included in this assessment,
+            # and merge into total_submitters
             for period in data.submission_periods:
                 for talk in period.submitter_list.all():
-                    if talk not in data.submitters:
-                        data.submitters.append(talk)
+                    if talk not in total_submitters:
+                        total_submitters.add(talk)
+
+            for submitter in total_submitters:
+                s_record = SubmitterAttendanceData(assessment_id=data.id,
+                                                   submitter_id=submitter.id,
+                                                   attending=True)
+
+                # assume available for all sessions by default
+                for session in data.sessions:
+                    s_record.available.append(session)
+
+                db.session.add(s_record)
 
             db.session.commit()
         except SQLAlchemyError:
             raise self.retry()
 
-        progress_update(celery_id, TaskRecord.RUNNING, 50, "Generating availability requests...", autocommit=True)
+        progress_update(celery_id, TaskRecord.RUNNING, 70, "Generating availability requests...", autocommit=True)
 
         try:
             # second task is to copy this to the list of faculty who have outstanding responses
-            data.availability_outstanding = data.assessors
-            db.session.commit()
-        except SQLAlchemyError:
-            raise self.retry()
+            data.availability_outstanding = []
 
-        progress_update(celery_id, TaskRecord.RUNNING, 70, "Filling default availabilities...", autocommit=True)
-
-        try:
-            # third, we assume everyone is available by default
-            for session in data.sessions:
-                session.unavailable_faculty = []
-                session.unavailable_submitters = []
-
+            for assessor in total_assessors:
+                data.availability_outstanding.append(assessor)
             db.session.commit()
         except SQLAlchemyError:
             raise self.retry()
@@ -144,8 +162,9 @@ def register_availability_tasks(celery):
             .filter_by(year=current_year, requested_availability=True, availability_closed=False).all()
 
         for assessment in assessments:
-            in_assessors = False
+            eligible_assessor = False
 
+            # determine whether this faculty member is eligible for inclusion in this assessment
             for period in assessment.submission_periods:
                 assessors = period.assessors_list \
                     .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
@@ -155,16 +174,19 @@ def register_availability_tasks(celery):
 
                 count = get_count(assessors)
                 if count > 0:
-                    in_assessors = True
+                    eligible_assessor = True
                     break
 
-            if in_assessors and record.owner not in assessment.assessors:
-                assessment.assessors.append(record.owner)
-                assessment.availability_outstanding.append(record.owner)
+            # if eligible but not included, fix
+            if eligible_assessor and get_count(assessment.assessor_list.filter_by(faculty_id=record.owner_id)) > 0:
+                record = AssessorAttendanceData(assessment_id=assessment.id,
+                                                faculty_id=record.owner_id,
+                                                comment=None)
 
                 for session in assessment.sessions:
-                    if record.owner not in session.faculty:
-                        session.faculty.append(record.owner)
+                    record.available.append(session)
+
+                db.session.add(record)
 
         try:
             db.session.commit()
@@ -191,8 +213,9 @@ def register_availability_tasks(celery):
             .filter_by(year=current_year, requested_availability=True, availability_closed=False).all()
 
         for assessment in assessments:
-            in_assessors = False
+            eligible_assessor = False
 
+            # determine whether this faculty member is eligible for inclusion in this assessment
             for period in assessment.submission_periods:
                 assessors = period.assessors_list \
                     .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
@@ -202,18 +225,62 @@ def register_availability_tasks(celery):
 
                 count = get_count(assessors)
                 if count > 0:
-                    in_assessors = True
+                    eligible_assessor = True
                     break
 
-            if not in_assessors and record.owner in assessment.assessors:
-                assessment.assessors.remove(record.owner)
+            # if not eligible, but included, fix
+            if not eligible_assessor and get_count(assessment.assessor_list.filter_by(faculty_id=record.owner_id)) > 0:
+                record = assessment.assessor_list.filter_by(faculty_id=record.owner_id).one()
+                db.session.delete(record)
 
-                if record.owner in assessment.availability_outstanding:
-                    assessment.availability_outstanding.remove(record.owner)
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            raise self.retry()
 
-                for session in assessment.sessions:
-                    if record.owner in session.faculty:
-                        session.faculty.remove(record.owner)
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def session_added(self, sess_id, assessment_id):
+        self.update_state(state='STARTED',
+                          meta='Looking up PresentationAssessment record for id={id}'.format(id=assessment_id))
+
+        try:
+            data = db.session.query(PresentationAssessment).filter_by(id=assessment_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if data is None:
+            self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
+            return
+
+        self.update_state(state='STARTED',
+                          meta='Looking up PresentationSession record for id={id}'.format(id=sess_id))
+
+        try:
+            session = db.session.query(PresentationSession).filter_by(id=sess_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if session is None:
+            self.update_state('FAILURE', meta='Could not load PresentationSession record from database')
+            return
+
+        for assessor in data.assessor_list:
+            if get_count(assessor.available.filter_by(id=session.id)) == 0:
+                assessor.available.append(session)
+
+            if get_count(assessor.unavailable.filter_by(id=session.id)) > 0:
+                assessor.unavailable.remove(session)
+
+            if get_count(assessor.if_needed.filter_by(id=session.id)) > 0:
+                assessor.if_needed.remove(session)
+
+        for submitter in data.submitter_list:
+            if get_count(submitter.available.filter_by(id=session.id)) == 0:
+                submitter.available.append(session)
+
+            if get_count(submitter.unavailable.filter_by(id=session.id)) > 0:
+                submitter.unavailable.remove(session)
 
         try:
             db.session.commit()

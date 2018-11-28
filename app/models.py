@@ -6342,12 +6342,6 @@ class PresentationAssessment(db.Model):
     feedback_open = db.Column(db.Boolean())
 
 
-    # STUDENTS/TALKS
-
-    # list of students who can't attend the main sessions
-    cant_attend = db.relationship('SubmissionRecord', secondary=submitter_not_attend, lazy='dynamic')
-
-
     # EDITING METADATA
 
     # created by
@@ -6441,7 +6435,7 @@ class PresentationAssessment(db.Model):
 
     @property
     def number_not_attending(self):
-        return get_count(self.cant_attend)
+        return get_count(self.submitter_list.filter_by(attending=False))
 
 
     @property
@@ -6519,7 +6513,10 @@ class PresentationAssessment(db.Model):
 
     @property
     def available_talks(self):
-        return self.submitters
+        q = self.submitter_list.subquery()
+
+        return db.session.query(SubmissionRecord) \
+            .join(q, q.c.submitter_id == SubmissionRecord.id)
 
 
     @property
@@ -6529,15 +6526,15 @@ class PresentationAssessment(db.Model):
 
 
     def not_attending(self, record_id):
-        return get_count(self.cant_attend.filter_by(id=record_id)) > 0
+        return get_count(self.submitter_list.filter_by(submitter_id=record_id, attending=False)) > 0
 
 
     def includes_faculty(self, faculty_id):
-        return get_count(self.assessors.filter_by(id=faculty_id)) > 0
+        return get_count(self.assessor_list.filter_by(faculty_id=faculty_id)) > 0
 
 
     def includes_submitter(self, submitter_id):
-        return get_count(self.submitters.filter_by(id=submitter_id)) > 0
+        return get_count(self.submitter_list.filter_by(submitter_id=submitter_id)) > 0
 
 
     @property
@@ -6578,6 +6575,40 @@ class PresentationAssessment(db.Model):
 
         schedule = self.deployed_schedule
         return schedule.is_closable
+
+
+    def submitter_not_attending(self, sub):
+        record = self.submitter_list.filter_by(submitter_id=sub.id).first()
+
+        if record is None:
+            return
+
+        record.attending = False
+
+
+    def submitter_attending(self, sub):
+        record = self.submitter_list.filter_by(submitter_id=sub.id).first()
+
+        if record is None:
+            return
+
+        record.attending = True
+
+
+    def faculty_set_comment(self, fac, comment):
+        data = self.assessor_list.filter_by(faculty_id=fac.id).first()
+        if data is None:
+            return
+
+        data.comment = comment
+
+
+    def faculty_get_comment(self, fac):
+        data = self.assessor_list.filter_by(faculty_id=fac.id).first()
+        if data is None:
+            return
+
+        return data.comment
 
 
 @listens_for(PresentationAssessment, 'before_update')
@@ -6631,7 +6662,7 @@ def _PresentationSession_is_valid(id):
     # faculty available to cover all the available rooms
     if obj.owner.requested_availability:
         number_rooms = obj.number_rooms
-        number_faculty = obj.number_faculty
+        number_faculty = obj.number_available_faculty + obj.number_ifneeded_faculty
 
         if obj.owner.number_assessors is not None:
             if number_faculty < obj.owner.number_assessors * number_rooms:
@@ -6641,6 +6672,27 @@ def _PresentationSession_is_valid(id):
         return False, errors, warnings
 
     return True, errors, warnings
+
+
+def _trim_session_list(list):
+
+    data = {}
+    changed = False
+
+    for item in list:
+        if item.id in data:
+            data[item.id].append(item)
+        else:
+            data[item.id] = [item]
+
+    for item_id in data:
+        l = data[item_id]
+        while len(l) > 1:
+            list.remove(l[0])
+            l.pop(0)
+            changed = True
+
+    return changed
 
 
 class AssessorAttendanceData(db.Model):
@@ -6659,20 +6711,53 @@ class AssessorAttendanceData(db.Model):
     faculty = db.relationship('FacultyData', foreign_keys=[faculty_id], uselist=False,
                               backref=db.backref('assessment_attendance', lazy='dynamic'))
 
+    # assessment that owns this availability record
+    assessment_id = db.Column(db.Integer(), db.ForeignKey('presentation_assessments.id'))
+    assessment = db.relationship('PresentationAssessment', foreign_keys=[assessment_id], uselist=False,
+                                 backref=db.backref('assessor_list', lazy='dynamic'))
+
     # sessions for which we are available
-    available = db.relationship('PresentationSession', secondary=assessor_available_sessions,
-                                backref=db.backref('faculty_available', lazy='dynamic'))
+    available = db.relationship('PresentationSession', secondary=assessor_available_sessions, lazy='dynamic',
+                                backref=db.backref('available_faculty', lazy='dynamic'))
 
     # sessions for which we are unavailable
-    unavailable = db.relationship('PresentationSession', secondary=assessor_unavailable_sessions,
-                                  backref=db.backref('faculty_unavailable', lazy='dynamic'))
+    unavailable = db.relationship('PresentationSession', secondary=assessor_unavailable_sessions, lazy='dynamic',
+                                  backref=db.backref('unavailable_faculty', lazy='dynamic'))
 
     # sessions for which we are tagged 'if needed' -- ie strongly disfavour but available if required
-    if_needed = db.relationship('PresentationSession', secondary=assessor_ifneeded_sessions,
-                                backref=db.backref('faculty_ifneeded', lazy='dynamic'))
+    if_needed = db.relationship('PresentationSession', secondary=assessor_ifneeded_sessions, lazy='dynamic',
+                                backref=db.backref('ifneeded_faculty', lazy='dynamic'))
 
     # optional textual comment
-    comment = db.Column(db.String(DEFAULT_STRING_LENGTH), default=None)
+    comment = db.Column(db.Text(), default=None)
+
+
+    def maintenance(self):
+        changed = False
+
+        changed = _trim_session_list(self.available) or changed
+        changed = _trim_session_list(self.if_needed) or changed
+        changed = _trim_session_list(self.unavailable) or changed
+
+        for item in self.available:
+            if item in self.unavailable:
+                self.unavailable.remove(item)
+                changed = True
+            if item in self.if_needed:
+                self.if_needed.remove(item)
+                changed = True
+
+        for item in self.if_needed:
+            if item in self.unavailable:
+                self.unavailable.remove(item)
+                changed = True
+
+        for sess in self.assessment.sessions:
+            if sess not in self.available and sess not in self.unavailable and sess not in self.if_needed:
+                self.available.append(sess)
+                changed = True
+
+        return changed
 
 
 class SubmitterAttendanceData(db.Model):
@@ -6692,13 +6777,40 @@ class SubmitterAttendanceData(db.Model):
     submitter = db.relationship('SubmissionRecord', foreign_keys=[submitter_id], uselist=False,
                                 backref=db.backref('assessment_attendance', lazy='dynamic'))
 
+    # assessment that owns this availability record
+    assessment_id = db.Column(db.Integer(), db.ForeignKey('presentation_assessments.id'))
+    assessment = db.relationship('PresentationAssessment', foreign_keys=[assessment_id], uselist=False,
+                                 backref=db.backref('submitter_list', lazy='dynamic'))
+
+    # in the make-up event?
+    attending = db.Column(db.Boolean(), default=False)
+
     # sessions for which we are available
-    available = db.relationship('PresentationSession', secondary=submitter_available_sessions,
-                                backref=db.backref('submitters_available', lazy='dynamic'))
+    available = db.relationship('PresentationSession', secondary=submitter_available_sessions, lazy='dynamic',
+                                backref=db.backref('available_submitters', lazy='dynamic'))
 
     # sessions for which we are unavailable
-    unavailable = db.relationship('PresentationSession', secondary=submitter_unavailable_sessions,
-                                  backref=db.backref('submitters_unavailable', lazy='dynamic'))
+    unavailable = db.relationship('PresentationSession', secondary=submitter_unavailable_sessions, lazy='dynamic',
+                                  backref=db.backref('unavailable_submitters', lazy='dynamic'))
+
+
+    def maintenance(self):
+        changed = False
+
+        changed = _trim_session_list(self.available) or changed
+        changed = _trim_session_list(self.unavailable) or changed
+
+        for item in self.available:
+            if item in self.unavailable:
+                self.unavailable.remove(item)
+                changed = True
+
+        for sess in self.assessment.sessions:
+            if sess not in self.available and sess not in self.unavailable:
+                self.available.append(sess)
+                changed = True
+
+        return changed
 
 
 class PresentationSession(db.Model):
@@ -6735,17 +6847,6 @@ class PresentationSession(db.Model):
     # rooms available for this session
     rooms = db.relationship('Room', secondary=session_to_rooms, lazy='dynamic',
                             backref=db.backref('sessions', lazy='dynamic'))
-
-    # faculty who are *unavailable* for this session
-    # (we store the list of faculty who can't make it on the assumption that this is more space-efficient
-    # in the database than storing the list of faculty who *can* make it)
-    unavailable_faculty = db.relationship('FacultyData', secondary=faculty_availability, lazy='dynamic',
-                                          backref=db.backref('session_availability', lazy='dynamic'))
-
-    # submitters (students) who are *unavailable* for this session
-    # (we make the same assumption that this is more space-efficient)
-    unavailable_submitters = db.relationship('SubmissionRecord', secondary=submitter_availability, lazy='dynamic',
-                                             backref=db.backref('session_availability', lazy='dynamic'))
 
 
     # EDITING METADATA
@@ -6861,13 +6962,18 @@ class PresentationSession(db.Model):
 
 
     @property
-    def number_faculty(self):
-        return get_count(self.owner.assessors) - get_count(self.unavailable_faculty)
+    def number_available_faculty(self):
+        return get_count(self.available_faculty)
+
+
+    @property
+    def number_ifneeded_faculty(self):
+        return get_count(self.ifneeded_faculty)
 
 
     @property
     def number_submitters(self):
-        return get_count(self.owner.submitters) - get_count(self.unavailable_submitters)
+        return get_count(self.available_submitters)
 
 
     @property
@@ -6877,30 +6983,18 @@ class PresentationSession(db.Model):
 
     @property
     def _faculty(self):
-        faculty = db.session.query(assessment_to_assessors.c.faculty_id) \
-            .filter(assessment_to_assessors.c.assessment_id == self.owner.id).subquery()
-
-        unavailable = db.session.query(faculty_availability.c.faculty_id) \
-            .filter(faculty_availability.c.session_id == self.id).subquery()
+        q = self.available_assessors.subquery()
 
         return db.session.query(FacultyData) \
-            .join(faculty, faculty.c.faculty_id == FacultyData.id) \
-            .join(unavailable, unavailable.c.faculty_id == FacultyData.id, isouter=True) \
-            .filter(unavailable.c.faculty_id == None)
+            .join(q, q.c.faculty_id == FacultyData.id)
 
 
     @property
     def _submitters(self):
-        submitters = db.session.query(assessment_to_submitters.c.submitter_id) \
-            .filter(assessment_to_submitters.c.assessment_id == self.owner.id).subquery()
-
-        unavailable = db.session.query(submitter_availability.c.submitter_id) \
-            .filter(submitter_availability.c.session_id == self.id).subquery()
+        q = self.available_submitters.subquery()
 
         return db.session.query(SubmissionRecord) \
-            .join(submitters, submitters.c.submitter_id == SubmissionRecord.id) \
-            .join(unavailable, unavailable.c.submitter_id == SubmissionRecord.id, isouter=True) \
-            .filter(unavailable.c.submitter_id == None)
+            .join(q, q.c.submitter_id == SubmissionRecord.id)
 
 
     @property
@@ -6911,43 +7005,97 @@ class PresentationSession(db.Model):
 
 
     def faculty_available(self, faculty_id):
-        return get_count(self._faculty.filter(FacultyData.id == faculty_id)) > 0
+        return get_count(self.available_faculty.filter_by(faculty_id=faculty_id)) > 0
+
+
+    def faculty_ifneeded(self, faculty_id):
+        return get_count(self.ifneeded_faculty.filter_by(faculty_id=faculty_id)) > 0
+
+
+    def faculty_unavailable(self, faculty_id):
+        return get_count(self.unavailable_faculty.filter_by(faculty_id=faculty_id)) > 0
 
 
     def submitter_available(self, submitter_id):
-        return get_count(self._submitters.filter(SubmissionRecord.id == submitter_id)) > 0
+        return get_count(self.available_submitters.filter_by(submitter_id=submitter_id)) > 0
 
 
-    def add_faculty(self, fac):
-        if not self.owner.includes_faculty(fac.id):
+    def submitter_unavailable(self, submitter_id):
+        return get_count(self.unavailable_submitters.filter_by(submitter_id=submitter_id)) > 0
+
+
+    def faculty_make_available(self, fac):
+        data = db.session.query(AssessorAttendanceData).filter_by(assessment_id=self.owner_id,
+                                                                  faculty_id=fac.id).first()
+        if data is None:
             return
 
-        if fac in self.unavailable_faculty:
-            self.unavailable_faculty.remove(fac)
+        if get_count(data.available.filter_by(id=self.id)) == 0:
+            data.available.append(self)
+
+        if get_count(data.unavailable.filter_by(id=self.id)) > 0:
+            data.unavailable.remove(self)
+
+        if get_count(data.if_needed.filter_by(id=self.id)) > 0:
+            data.if_needed.remove(self)
 
 
-    def remove_faculty(self, fac):
-        if not self.owner.includes_faculty(fac.id):
+    def faculty_make_unavailable(self, fac):
+        data = db.session.query(AssessorAttendanceData).filter_by(assessment_id=self.owner_id,
+                                                                  faculty_id=fac.id).first()
+        if data is None:
             return
 
-        if fac not in self.unavailable_faculty:
-            self.unavailable_faculty.append(fac)
+        if get_count(data.available.filter_by(id=self.id)) > 0:
+            data.available.remove(self)
+
+        if get_count(data.unavailable.filter_by(id=self.id)) == 0:
+            data.unavailable.append(self)
+
+        if get_count(data.if_needed.filter_by(id=self.id)) > 0:
+            data.if_needed.remove(self)
 
 
-    def add_submitter(self, sub):
-        if not self.owner.includes_submitter(sub.id):
+    def faculty_make_ifneeded(self, fac):
+        data = db.session.query(AssessorAttendanceData).filter_by(assessment_id=self.owner_id,
+                                                                  faculty_id=fac.id).first()
+        if data is None:
             return
 
-        if sub in self.unavailable_submitters:
-            self.unavailable_submitters.remove(sub)
+        if get_count(data.available.filter_by(id=self.id)) > 0:
+            data.available.remove(self)
+
+        if get_count(data.unavailable.filter_by(id=self.id)) > 0:
+            data.unavailable.remove(self)
+
+        if get_count(data.if_needed.filter_by(id=self.id)) == 0:
+            data.if_needed.append(self)
 
 
-    def remove_submitter(self, sub):
-        if not self.owner.includes_submitter(sub.id):
+    def submitter_make_available(self, sub):
+        data = db.session.query(SubmitterAttendanceData).filter_by(assessment_id=self.owner_id,
+                                                                   submitter_id=sub.id).first()
+        if data is None:
             return
 
-        if sub not in self.unavailable_submitters:
-            self.unavailable_submitters.append(sub)
+        if get_count(data.available.filter_by(id=self.id)) == 0:
+            data.available.append(self)
+
+        if get_count(data.unavailable.filter_by(id=self.id)) > 0:
+            data.unavailable.remove(self)
+
+
+    def submitter_make_unavailable(self, sub):
+        data = db.session.query(SubmitterAttendanceData).filter_by(assessment_id=self.owner_id,
+                                                                   submitter_id=sub.id).first()
+        if data is None:
+            return
+
+        if get_count(data.available.filter_by(id=self.id)) > 0:
+            data.available.remove(self)
+
+        if get_count(data.unavailable.filter_by(id=self.id)) == 0:
+            data.unavailable.append(self)
 
 
 @listens_for(PresentationSession, 'before_update')

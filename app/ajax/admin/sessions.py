@@ -104,9 +104,10 @@ _menu = \
 _faculty = \
 """
 {% if s.owner.availability_lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED %}
-    {% set count = s.number_faculty %}
-    {% if count > 0 %}
-        <span class="label label-primary">{{ count }} available</span>
+    {% set available = s.number_available_faculty %}
+    {% set ifneeded = s.number_ifneeded_faculty %}
+    {% if available > 0 or ifneeded > 0 %}
+        <span class="label label-primary">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
     {% else %}
         <span class="label label-danger">No availability</span>
     {% endif %}

@@ -53,7 +53,7 @@ _name = \
 {% endfor %}
 {% if ns.constraints %}
     <p></p>
-    <span class="label label-info">Has constraints</span>
+    <span class="label label-info">Has session constraints</span>
 {% endif %}
 """
 

@@ -14,21 +14,42 @@ from flask import render_template_string, jsonify, url_for
 _actions = \
 """
 {% set available = s.faculty_available(f.id) %}
-{% if available %}
-    <a class="btn btn-sm btn-success">
-        <i class="fa fa-check"></i> Available
-    </a>
-    <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}">
-        <i class="fa fa-times"></i> Not available
-    </a>
-{% else %}
-    <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}">
-        <i class="fa fa-check"></i> Available
-    </a>
-    <a class="btn btn-sm btn-danger">
-        <i class="fa fa-times"></i> Not available
-    </a>
-{% endif %}
+{% set ifneeded = s.faculty_ifneeded(f.id) %}
+<div style="text-align: right;">
+    <div class="pull-right">
+        {% if available %}
+            <a class="btn btn-sm btn-success">
+                <i class="fa fa-check"></i> Available
+            </a>
+            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}">
+                If needed
+            </a>
+            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}">
+                <i class="fa fa-times"></i> Not available
+            </a>
+        {% elif ifneeded %}
+            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}">
+                <i class="fa fa-check"></i> Available
+            </a>
+            <a class="btn btn-sm btn-warning">
+                If needed
+            </a>
+            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}">
+                <i class="fa fa-times"></i> Not available
+            </a>
+        {% else %}
+            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}">
+                <i class="fa fa-check"></i> Available
+            </a>
+            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}">
+                If needed
+            </a>
+            <a class="btn btn-sm btn-danger">
+                <i class="fa fa-times"></i> Not available
+            </a>
+        {% endif %}
+    </div>
+</div>
 """
 
 

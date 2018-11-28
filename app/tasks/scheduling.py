@@ -53,11 +53,11 @@ def _enumerate_assessors(record):
 
     assessor_dict = {}
 
-    for assessor in record.assessors:
-        assessor_to_number[assessor.id] = number
-        number_to_assessor[number] = assessor.id
+    for assessor in record.assessor_list:
+        assessor_to_number[assessor.faculty_id] = number
+        number_to_assessor[number] = assessor.faculty_id
 
-        assessor_dict[number] = assessor
+        assessor_dict[number] = assessor.faculty
 
         number += 1
 

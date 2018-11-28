@@ -5338,6 +5338,11 @@ def add_session(id):
     if not validate_assessment(data):
         return redirect(request.referrer)
 
+    if not data.feedback_open:
+        flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
+              'edited'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
     form = AddSessionForm(request.form)
 
     if form.validate_on_submit():
@@ -5349,6 +5354,12 @@ def add_session(id):
                                    creation_timestamp=datetime.now())
         db.session.add(sess)
         db.session.commit()
+
+        # add this session to all attendance data records attached for this assessment
+        celery = current_app.extensions['celery']
+        adjust_task = celery.tasks['app.tasks.availability.session_added']
+
+        adjust_task.apply_async(args=(sess.id, data.id))
 
         return redirect(url_for('admin.assessment_manage_sessions', id=id))
 
@@ -5414,6 +5425,23 @@ def delete_session(id):
         flash('Event "{name}" has been closed to feedback and its sessions can no longer be '
               'edited'.format(name=sess.owner.name), 'info')
         return redirect(request.referrer)
+
+    # deletion can't be done asynchronously, because we want the database to be updated
+    # by the time the user's UI is refreshed
+
+    for assessor in sess.owner.assessor_list:
+        if sess in assessor.available:
+            assessor.available.remove(sess)
+        if sess in assessor.unavailable:
+            assessor.unavailable.remove(sess)
+        if sess in assessor.if_needed:
+            assessor.if_needed.remove(sess)
+
+    for submitter in sess.owner.submitter_list:
+        if sess in submitter.available:
+            submitter.available.remove(sess)
+        if sess in submitter.unavailable:
+            submitter.unavailable.remove(sess)
 
     db.session.delete(sess)
     db.session.commit()
@@ -5481,7 +5509,30 @@ def session_available(f_id, s_id):
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)
-    data.add_faculty(fac)
+    data.faculty_make_available(fac)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/session_ifneeded/<int:f_id>/<int:s_id>')
+@roles_accepted('root')
+def session_ifneeded(f_id, s_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationSession.query.get_or_404(s_id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.owner.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    fac = FacultyData.query.get_or_404(f_id)
+    data.faculty_make_ifneeded(fac)
     db.session.commit()
 
     return redirect(request.referrer)
@@ -5504,7 +5555,7 @@ def session_unavailable(f_id, s_id):
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)
-    data.remove_faculty(fac)
+    data.faculty_make_unavailable(fac)
     db.session.commit()
 
     return redirect(request.referrer)
@@ -6252,9 +6303,8 @@ def assessment_attending(a_id, s_id):
               'presentation assessment', 'error')
         return redirect(request.referrer)
 
-    if talk in data.cant_attend:
-        data.cant_attend.remove(talk)
-        db.session.commit()
+    data.submitter_attending(talk)
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -6287,9 +6337,8 @@ def assessment_not_attending(a_id, s_id):
               'presentation assessment', 'error')
         return redirect(request.referrer)
 
-    if talk not in data.cant_attend:
-        data.cant_attend.append(talk)
-        db.session.commit()
+    data.submitter_not_attending(talk)
+    db.session.commit()
 
     # we leave availability information per-session intact, so that it is immediately available again
     # if this presenter is subsequently marked as attending
@@ -6357,7 +6406,7 @@ def submitter_available(sess_id, s_id):
               'presentation assessment', 'error')
         return redirect(request.referrer)
 
-    session.add_submitter(submitter)
+    session.submitter_make_available(submitter)
     db.session.commit()
 
     return redirect(request.referrer)
@@ -6387,7 +6436,7 @@ def submitter_unavailable(sess_id, s_id):
               'presentation assessment', 'error')
         return redirect(request.referrer)
 
-    session.remove_submitter(submitter)
+    session.submitter_make_unavailable(submitter)
     db.session.commit()
 
     return redirect(request.referrer)
@@ -6417,7 +6466,7 @@ def submitter_all_available(a_id, s_id):
         return redirect(request.referrer)
 
     for session in data.sessions:
-        session.add_submitter(submitter)
+        session.submitter_make_available(submitter)
 
     db.session.commit()
 
@@ -6448,7 +6497,7 @@ def submitter_all_unavailable(a_id, s_id):
         return redirect(request.referrer)
 
     for session in data.sessions:
-        session.remove_submitter(submitter)
+        session.submitter_make_unavailable(submitter)
 
     db.session.commit()
 

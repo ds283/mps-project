@@ -9,14 +9,51 @@
 #
 
 from app import create_app, db
-from app.models import TaskRecord, Notification, MatchingAttempt
+from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
+    AssessorAttendanceData, SubmitterAttendanceData
 from sqlalchemy.exc import SQLAlchemyError
+
+
+def migrate_availability_data():
+    """
+    Migrate old-style attendance data (for PresentationAssessment/PresentationSession) to new style,
+    with individual records for each attendee
+    :return:
+    """
+    assessments = db.session.query(PresentationAssessment).all()
+
+    for assessment in assessments:
+        for assessor in assessment.assessors.all():
+            new_record = AssessorAttendanceData(faculty_id=assessor.id,
+                                                assessment_id=assessment.id,
+                                                comment=None)
+
+            for session in assessment.sessions.all():
+                if session.faculty_available(assessor.id):
+                    new_record.available.append(session)
+                else:
+                    new_record.unavailable.append(session)
+
+            db.session.add(new_record)
+
+        for submitter in assessment.submitters.all():
+            new_record = SubmitterAttendanceData(submitter_id=submitter.id,
+                                                 assessment_id=assessment.id,
+                                                 attending=not assessment.not_attending(submitter.id))
+
+            for session in assessment.sessions.all():
+                if session.submitter_available(submitter.id):
+                    new_record.available.append(session)
+                else:
+                    new_record.unavailable.append(session)
+
+            db.session.add(new_record)
+
 
 app, celery = create_app()
 
 with app.app_context():
-
-    # drop all transient task records and notifications, which will no longer have any meaning
+    # on restart, drop all transient task records and notifications, which will no longer have any meaning
     TaskRecord.query.delete()
     Notification.query.delete()
 
@@ -28,6 +65,8 @@ with app.app_context():
             item.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
     except SQLAlchemyError:
         pass
+
+    # migrate_availability_data()
 
     db.session.commit()
 

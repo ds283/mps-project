@@ -76,7 +76,9 @@ _sessions = \
     {% if a.requested_availability %}
         <div style="display: inline-block;">
             {{ session.label|safe }}
-            <span class="label label-info">{{ session.number_faculty }} available</span>
+            {% set available = session.number_available_faculty %}
+            {% set ifneeded = session.number_ifneeded_faculty %}
+            <span class="label label-info">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
         </div>
     {% else %}
         {{ session.label|safe }}

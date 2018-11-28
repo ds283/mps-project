@@ -23,7 +23,8 @@ from . import faculty
 
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, DescriptionSelectorFormFactory, SupervisorFeedbackForm, \
-    MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsForm
+    MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsForm, \
+    AvailabilityFormFactory
 from ..admin.forms import LevelSelectorForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
@@ -1895,7 +1896,7 @@ def mark_started(id):
     return redirect(request.referrer)
 
 
-@faculty.route('/set_availability/<int:id>')
+@faculty.route('/set_availability/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty')
 def set_availability(id):
     if not validate_using_assessment():
@@ -1918,7 +1919,35 @@ def set_availability(id):
         flash('Cannot set availability for this assessment because it has been closed', 'info')
         return redirect(request.referrer)
 
-    return render_template('faculty/set_availability.html', assessment=data, url=url, text=text)
+    include_confirm = data.is_faculty_outstanding(current_user.id)
+    AvailabilityForm = AvailabilityFormFactory(include_confirm)
+    form = AvailabilityForm(request.form)
+
+    if form.validate_on_submit():
+        comment = form.comment.data
+        if len(comment) == 0:
+            comment = None
+
+        data.faculty_set_comment(current_user.faculty_data, comment)
+
+        if hasattr(form, 'confirm') and form.confirm:
+            flash('Your availability details have been recorded. Thank you for responding.', 'info')
+            data.availability_outstanding.remove(current_user.faculty_data)
+
+        elif hasattr(form, 'update') and form.update:
+            flash('Your availability details have been updated', 'info')
+
+        else:
+            raise RuntimeError('Unknown submit button in faculty.set_availability')
+
+        db.session.commit()
+        return home_dashboard()
+
+    else:
+        if request.method == 'GET':
+            form.comment.data = data.faculty_get_comment(current_user.faculty_data)
+
+    return render_template('faculty/set_availability.html', form=form, assessment=data, url=url, text=text)
 
 
 @faculty.route('/session_available/<int:id>')
@@ -1941,7 +1970,33 @@ def session_available(id):
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(request.referrer)
 
-    data.add_faculty(current_user.faculty_data)
+    data.faculty_make_available(current_user.faculty_data)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/session_ifneeded/<int:id>')
+@roles_accepted('faculty')
+def session_ifneeded(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationSession.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.owner.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.owner.availability_closed:
+        flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
+        return redirect(request.referrer)
+
+    data.faculty_make_ifneeded(current_user.faculty_data)
     db.session.commit()
 
     return redirect(request.referrer)
@@ -1967,7 +2022,7 @@ def session_unavailable(id):
         flash('Cannot set availability for this session because its parent assessment has been closed', 'info')
         return redirect(request.referrer)
 
-    data.remove_faculty(current_user.faculty_data)
+    data.faculty_make_unavailable(current_user.faculty_data)
     db.session.commit()
 
     return redirect(request.referrer)
@@ -1994,7 +2049,7 @@ def session_all_available(id):
         return redirect(request.referrer)
 
     for session in data.sessions:
-        session.add_faculty(current_user.faculty_data)
+        session.faculty_make_available(current_user.faculty_data)
 
     db.session.commit()
 
@@ -2022,38 +2077,11 @@ def session_all_unavailable(id):
         return redirect(request.referrer)
 
     for session in data.sessions:
-        session.remove_faculty(current_user.faculty_data)
+        session.faculty_make_unavailable(current_user.faculty_data)
 
     db.session.commit()
 
     return redirect(request.referrer)
-
-
-@faculty.route('/confirm_availability/<int:id>')
-@roles_accepted('faculty')
-def confirm_availability(id):
-    if not validate_using_assessment():
-        return redirect(request.referrer)
-
-    data = PresentationAssessment.query.get_or_404(id)
-
-    current_year = get_current_year()
-    if not validate_assessment(data, current_year=current_year):
-        return redirect(request.referrer)
-
-    if not data.requested_availability:
-        flash('Cannot confirm availability for this assessment because it has not yet been opened', 'info')
-        return redirect(request.referrer)
-
-    if data.availability_closed:
-        flash('Cannot confirm availability for this assessment because it has been closed', 'info')
-        return redirect(request.referrer)
-
-    if current_user.faculty_data in data.availability_outstanding:
-        data.availability_outstanding.remove(current_user.faculty_data)
-        db.session.commit()
-
-    return home_dashboard()
 
 
 @faculty.route('/change_availability')

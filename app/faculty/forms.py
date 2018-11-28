@@ -232,3 +232,19 @@ class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin
                           FirstLastNameMixin, SaveChangesMixin, ThemeMixin):
 
     pass
+
+
+def AvailabilityFormFactory(include_confirm=False):
+
+    class AvailabilityForm(Form):
+
+        comment = TextAreaField('Please include any other information you would like the schedulers to '
+                                'take into account:', render_kw={'rows': 5}, validators=[Optional()])
+
+        if include_confirm:
+            confirm = SubmitField('Confirm')
+
+        else:
+            update = SubmitField('Update')
+
+    return AvailabilityForm

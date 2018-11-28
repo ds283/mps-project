@@ -64,9 +64,9 @@ _confirmed = \
 
 
 def edit_availability_data(assessment, session):
-    data = [{'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=f.user.email, name=f.user.name),
-                      'sortstring': f.user.last_name + f.user.first_name},
-             'confirmed': render_template_string(_confirmed, a=assessment, s=session, f=f),
-             'menu': render_template_string(_actions, s=session, f=f)} for f in assessment.assessors]
+    data = [{'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=f.faculty.user.email, name=f.faculty.user.name),
+                      'sortstring': f.faculty.user.last_name + f.faculty.user.first_name},
+             'confirmed': render_template_string(_confirmed, a=assessment, s=session, f=f.faculty),
+             'menu': render_template_string(_actions, s=session, f=f.faculty)} for f in assessment.assessor_list]
 
     return jsonify(data)

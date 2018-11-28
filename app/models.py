@@ -1083,8 +1083,8 @@ class FacultyData(db.Model):
 
     @property
     def editable_availability_requests(self):
-        query = db.session.query(assessment_to_assessors.c.assessment_id) \
-            .filter(assessment_to_assessors.c.faculty_id == self.id).subquery()
+        query = db.session.query(AssessorAttendanceData.assessment_id) \
+            .filter(AssessorAttendanceData.faculty_id == self.id).subquery()
 
         return db.session.query(PresentationAssessment) \
             .join(query, query.c.assessment_id == PresentationAssessment.id) \

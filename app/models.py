@@ -322,32 +322,6 @@ session_to_rooms = db.Table('session_to_rooms',
                             db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
                             db.Column('room_id', db.Integer(), db.ForeignKey('rooms.id'), primary_key=True))
 
-# capture faculty availability for each session
-faculty_availability = db.Table('faculty_availability',
-                                db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
-                                db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
-
-# capture selector availability for each session
-submitter_availability = db.Table('submitter_availability',
-                                  db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
-                                  db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True))
-
-# capture list of faculty who are attached to an assessment as possible assessors
-assessment_to_assessors = db.Table('assessment_to_assessors',
-                                   db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
-                                   db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
-
-# capture list of students who should give talks as part of an assessment
-assessment_to_submitters = db.Table('assessment_to_submitters',
-                                    db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
-                                    db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True))
-
-# capture list of students who can't attend the scheduled sessions of an assessment, or who need
-# reasonable adjustments
-submitter_not_attend = db.Table('submitter_not_attend',
-                                db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
-                                db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True))
-
 # capture list of faculty who are still to return availability data for an assessment
 faculty_availability_waiting = db.Table('faculty_availability_waiting',
                                         db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
@@ -6325,16 +6299,6 @@ class PresentationAssessment(db.Model):
     availability_outstanding = db.relationship('FacultyData', secondary=faculty_availability_waiting, lazy='dynamic',
                                                backref=db.backref('availability_waiting', lazy='dynamic'))
 
-    # list of faculty members who are potential assessors for talks in this assessment
-    # (this list is computed and populated when we issue faculty availability requests)
-    assessors = db.relationship('FacultyData', secondary=assessment_to_assessors, lazy='dynamic',
-                                backref=db.backref('presentation_assessments', lazy='dynamic'))
-
-    # list of submitting students who will present talks in this assessment
-    # (like the list above, this is computed and populated when we issue faculty availability requests)
-    submitters = db.relationship('SubmissionRecord', secondary=assessment_to_submitters, lazy='dynamic',
-                                 backref=db.backref('presentation_assessment', lazy='dynamic'))
-
 
     # FEEDBACK LIFECYCLE
 
@@ -6783,7 +6747,7 @@ class SubmitterAttendanceData(db.Model):
                                  backref=db.backref('submitter_list', lazy='dynamic'))
 
     # in the make-up event?
-    attending = db.Column(db.Boolean(), default=False)
+    attending = db.Column(db.Boolean(), default=True)
 
     # sessions for which we are available
     available = db.relationship('PresentationSession', secondary=submitter_available_sessions, lazy='dynamic',

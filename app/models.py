@@ -363,6 +363,31 @@ submitter_to_slots = db.Table('submitter_to_slots',
                               db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True),
                               db.Column('slot_id', db.Integer(), db.ForeignKey('schedule_slots.id'), primary_key=True))
 
+# assessor attendance: available
+assessor_available_sessions = db.Table('assessor_available',
+                                       db.Column('assessor_id', db.Integer(), db.ForeignKey('assessor_attendance_data.id'), primary_key=True),
+                                       db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True))
+
+# assessor attendance: unavailable
+assessor_unavailable_sessions = db.Table('assessor_unavailable',
+                                         db.Column('assessor_id', db.Integer(), db.ForeignKey('assessor_attendance_data.id'), primary_key=True),
+                                         db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True))
+
+# assessor attendance: if needed
+assessor_ifneeded_sessions = db.Table('assessor_ifneeded',
+                                      db.Column('assessor_id', db.Integer(), db.ForeignKey('assessor_attendance_data.id'), primary_key=True),
+                                      db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True))
+
+# submitter attendance: available
+submitter_available_sessions = db.Table('submitter_available',
+                                        db.Column('submitter_id', db.Integer(), db.ForeignKey('submitter_attendance_data.id'), primary_key=True),
+                                        db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True))
+
+# submitter attendance: available
+submitter_unavailable_sessions = db.Table('submitter_unavailable',
+                                          db.Column('submitter_id', db.Integer(), db.ForeignKey('submitter_attendance_data.id'), primary_key=True),
+                                          db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True))
+
 
 class MainConfig(db.Model):
     """
@@ -6616,6 +6641,64 @@ def _PresentationSession_is_valid(id):
         return False, errors, warnings
 
     return True, errors, warnings
+
+
+class AssessorAttendanceData(db.Model):
+    """
+    Store data about an assessors attendance constraints, per session
+    """
+
+    __tablename__ = 'assessor_attendance_data'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # faculty member for whom this attendance record exists
+    faculty_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'))
+    faculty = db.relationship('FacultyData', foreign_keys=[faculty_id], uselist=False,
+                              backref=db.backref('assessment_attendance', lazy='dynamic'))
+
+    # sessions for which we are available
+    available = db.relationship('PresentationSession', secondary=assessor_available_sessions,
+                                backref=db.backref('faculty_available', lazy='dynamic'))
+
+    # sessions for which we are unavailable
+    unavailable = db.relationship('PresentationSession', secondary=assessor_unavailable_sessions,
+                                  backref=db.backref('faculty_unavailable', lazy='dynamic'))
+
+    # sessions for which we are tagged 'if needed' -- ie strongly disfavour but available if required
+    if_needed = db.relationship('PresentationSession', secondary=assessor_ifneeded_sessions,
+                                backref=db.backref('faculty_ifneeded', lazy='dynamic'))
+
+    # optional textual comment
+    comment = db.Column(db.String(DEFAULT_STRING_LENGTH), default=None)
+
+
+class SubmitterAttendanceData(db.Model):
+    """
+    Store data about a submitter's attendance constraints, per session
+    """
+
+    __tablename__ = 'submitter_attendance_data'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+
+    # submitted for whom this attendance record exists
+    submitter_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'))
+    submitter = db.relationship('SubmissionRecord', foreign_keys=[submitter_id], uselist=False,
+                                backref=db.backref('assessment_attendance', lazy='dynamic'))
+
+    # sessions for which we are available
+    available = db.relationship('PresentationSession', secondary=submitter_available_sessions,
+                                backref=db.backref('submitters_available', lazy='dynamic'))
+
+    # sessions for which we are unavailable
+    unavailable = db.relationship('PresentationSession', secondary=submitter_unavailable_sessions,
+                                  backref=db.backref('submitters_unavailable', lazy='dynamic'))
 
 
 class PresentationSession(db.Model):

@@ -1,6 +1,6 @@
 {% macro availability_closed(assessment) %}
     <div class="panel panel-default">
-        <div class="panel-heading">Faculty availability for assessment <strong>{{ assessment.name }}</strong></div>
+        <div class="panel-heading">Assessor availability for assessment <strong>{{ assessment.name }}</strong></div>
         <div class="panel-body">
             <p>Collection of availability data for this assessment is now closed.</p>
             <p><a href="{{ url_for('admin.outstanding_availability', id=assessment.id) }}">View outstanding responses...</a></p>

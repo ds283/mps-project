@@ -178,7 +178,7 @@ def register_availability_tasks(celery):
                     break
 
             # if eligible but not included, fix
-            if eligible_assessor and get_count(assessment.assessor_list.filter_by(faculty_id=record.owner_id)) > 0:
+            if eligible_assessor and get_count(assessment.assessor_list.filter_by(faculty_id=record.owner_id)) == 0:
                 record = AssessorAttendanceData(assessment_id=assessment.id,
                                                 faculty_id=record.owner_id,
                                                 comment=None)

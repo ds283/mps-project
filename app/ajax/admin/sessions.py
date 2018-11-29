@@ -87,8 +87,8 @@ _menu = \
             </a>
         </li>
         <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.edit_availabilities', id=s.id) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Edit availabilities...
+            <a {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
+                <i class="fa fa-cogs"></i> Assessor availability...
             </a>
         </li>
         <li {% if disabled %}class="disabled"{% endif %}>

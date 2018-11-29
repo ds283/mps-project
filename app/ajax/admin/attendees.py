@@ -20,25 +20,29 @@ _pclass = \
 
 _actions = \
 """
-{% if a.not_attending(s.id) %}
-    <a href="{{ url_for('admin.assessment_attending', a_id=a.id, s_id=s.id) }}" class="btn btn-sm btn-default btn-table-block">
-        Attending
-    </a>
-    <a class="btn btn-sm btn-danger btn-table-block">
-        Not attending
-    </a>
-{% else %}
-    <a class="btn btn-sm btn-success btn-table-block">
-        Attending
-    </a>
-    <a href="{{ url_for('admin.assessment_not_attending', a_id=a.id, s_id=s.id) }}" class="btn btn-sm btn-default btn-table-block">
-        Not attending
-    </a>
-{% endif %}
-{% set disabled = a.not_attending(s.id) %}
-<a {% if not disabled %}href="{{ url_for('admin.assessment_submitter_availability', a_id=a.id, s_id=s.id, text='assessment attendee list', url=url_for('admin.assessment_manage_attendees', id=a.id)) }}"{% endif %} class="btn btn-sm btn-info btn-table-block {% if disabled %}disabled{% endif %}">
-    Sessions
-</a>
+<div style="text-align: right;">
+    <div class="pull-right">
+        {% if a.not_attending(s.id) %}
+            <a href="{{ url_for('admin.assessment_attending', a_id=a.id, s_id=s.id) }}" class="btn btn-sm btn-default btn-table-block">
+                Attending
+            </a>
+            <a class="btn btn-sm btn-danger btn-table-block">
+                Not attending
+            </a>
+        {% else %}
+            <a class="btn btn-sm btn-success btn-table-block">
+                Attending
+            </a>
+            <a href="{{ url_for('admin.assessment_not_attending', a_id=a.id, s_id=s.id) }}" class="btn btn-sm btn-default btn-table-block">
+                Not attending
+            </a>
+        {% endif %}
+        {% set disabled = a.not_attending(s.id) %}
+        <a {% if not disabled %}href="{{ url_for('admin.assessment_submitter_availability', a_id=a.id, s_id=s.id, text='assessment attendee list', url=url_for('admin.assessment_manage_attendees', id=a.id)) }}"{% endif %} class="btn btn-sm btn-info btn-table-block {% if disabled %}disabled{% endif %}">
+            Sessions
+        </a>
+    </div>
+</div>
 """
 
 

@@ -1,4 +1,5 @@
 {% extends "base_app.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
 
 {% block title %}
     Set availability for {{ assessment.name }}
@@ -18,14 +19,14 @@
 
             <div class="panel panel-primary">
                 <div class="panel-heading">
-                    Set <i class="fa fa-user"></i> <strong>{{ submitter.owner.student.user.name }}</strong> availability for assessment event <strong>{{ assessment.name }}</strong>
+                    Set <i class="fa fa-user"></i> <strong>{{ assessor.user.name }}</strong> availability for assessment event <strong>{{ assessment.name }}</strong>
                 </div>
                 <div class="panel-body">
                     <div class="row">
                         <div class="col-xs-12">
                             <div class="pull-right">
-                                <a class="btn btn-default" href="{{ url_for('admin.submitter_all_available', a_id=assessment.id, s_id=submitter.id) }}"><i class="fa fa-check"></i> Available for all</a>
-                                <a class="btn btn-default" href="{{ url_for('admin.submitter_all_unavailable', a_id=assessment.id, s_id=submitter.id) }}"><i class="fa fa-times"></i> Not available for all</a>
+                                <a class="btn btn-default" href="{{ url_for('admin.session_all_available', f_id=assessor.id, a_id=assessment.id) }}"><i class="fa fa-check"></i> Available for all</a>
+                                <a class="btn btn-default" href="{{ url_for('admin.session_all_unavailable', f_id=assessor.id, a_id=assessment.id) }}"><i class="fa fa-times"></i> Not available for all</a>
                             </div>
                         </div>
                     </div>
@@ -42,11 +43,17 @@
                             <div class="col-xs-1">{{ session.session_type_label|safe }}</div>
                             <div class="col-xs-7">
                                 <div class="pull-right">
-                                {% if session.submitter_available(submitter.id) %}
+                                {% if session.faculty_available(assessor.id) %}
                                     <a class="btn btn-success btn-sm"><i class="fa fa-check"></i> Available</a>
-                                    <a href="{{ url_for('admin.submitter_unavailable', sess_id=session.id, s_id=submitter.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
+                                    <a href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm">If needed</a>
+                                    <a href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
+                                {% elif session.faculty_ifneeded(assessor.id) %}
+                                    <a href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
+                                    <a class="btn btn-warning btn-sm">If needed</a>
+                                    <a href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
                                 {% else %}
-                                    <a href="{{ url_for('admin.submitter_available', sess_id=session.id, s_id=submitter.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
+                                    <a href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
+                                    <a href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm">If needed</a>
                                     <a class="btn btn-danger btn-sm"><i class="fa fa-times"></i> Not available</a>
                                 {% endif %}
                                 </div>

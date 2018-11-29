@@ -141,7 +141,7 @@ _menu = \
         {% set disabled = not valid and a.availability_lifecycle < a.AVAILABILITY_REQUESTED %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.assessment_availability', id=a.id) }}"{% endif %}>
-                <i class="fa fa-calendar"></i> Faculty availability...
+                <i class="fa fa-calendar"></i> Assessor availability...
             </a>
         </li>
         {% set disabled = not a.availability_closed %}
@@ -167,7 +167,12 @@ _menu = \
         {% set disabled = not a.requested_availability or a.is_deployed %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}"{% endif %}>
-                <i class="fa fa-user"></i> Attendees...
+                <i class="fa fa-user"></i> Submitters...
+            </a>
+        </li>
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.assessment_manage_assessors', id=a.id) }}"{% endif %}>
+                <i class="fa fa-user"></i> Assessors...
             </a>
         </li>
         {% set disabled = a.is_deployed %}

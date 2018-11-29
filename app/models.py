@@ -6696,6 +6696,21 @@ class AssessorAttendanceData(db.Model):
     comment = db.Column(db.Text(), default=None)
 
 
+    @property
+    def number_available(self):
+        return get_count(self.available)
+
+
+    @property
+    def number_unavailable(self):
+        return get_count(self.unavailable)
+
+
+    @property
+    def number_ifneeded(self):
+        return get_count(self.if_needed)
+
+
     def maintenance(self):
         changed = False
 
@@ -6756,6 +6771,16 @@ class SubmitterAttendanceData(db.Model):
     # sessions for which we are unavailable
     unavailable = db.relationship('PresentationSession', secondary=submitter_unavailable_sessions, lazy='dynamic',
                                   backref=db.backref('unavailable_submitters', lazy='dynamic'))
+
+
+    @property
+    def number_available(self):
+        return get_count(self.available)
+
+
+    @property
+    def number_unavailable(self):
+        return get_count(self.unavailable)
 
 
     def maintenance(self):

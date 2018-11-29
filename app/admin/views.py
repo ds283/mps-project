@@ -52,7 +52,7 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level
+    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -5449,9 +5449,9 @@ def delete_session(id):
     return redirect(request.referrer)
 
 
-@admin.route('/edit_availabilities/<int:id>')
+@admin.route('/assessor_session_availability/<int:id>')
 @roles_required('root')
-def edit_availabilities(id):
+def assessor_session_availability(id):
     """
     Edit/inspect faculty availabilities for an assessment event
     :param id:
@@ -5470,12 +5470,21 @@ def edit_availabilities(id):
     if not validate_assessment(sess.owner):
         return redirect(request.referrer)
 
-    return render_template('admin/presentations/edit_availabilities.html', assessment=sess.owner, sess=sess)
+    state_filter = request.args.get('state_filter')
+
+    if state_filter is None and session.get('assessors_session_state_filter'):
+        state_filter = session['assessors_session_state_filter']
+
+    if state_filter is not None:
+        session['assessors_session_state_filter'] = state_filter
+
+    return render_template('admin/presentations/availability/assessor_session_availability.html',
+                           assessment=sess.owner, sess=sess, state_filter=state_filter)
 
 
-@admin.route('/edit_availabilities_ajax/<int:id>')
+@admin.route('/assessor_session_availability_ajax/<int:id>')
 @roles_required('root')
-def edit_availabilities_ajax(id):
+def assessor_session_availability_ajax(id):
     """
     AJAX data entrypoint for edit/inspect faculty availability viee
     :param id:
@@ -5489,7 +5498,30 @@ def edit_availabilities_ajax(id):
     if not validate_assessment(sess.owner):
         return jsonify({})
 
-    return ajax.admin.edit_availability_data(sess.owner, sess)
+    state_filter = request.args.get('state_filter')
+    data = sess.owner
+
+    if state_filter == 'confirm':
+        missing_q = data.availability_outstanding.subquery()
+        attached_q = data.assessor_list.subquery()
+
+        assessors = db.session.query(AssessorAttendanceData) \
+            .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
+            .join(missing_q, missing_q.c.id == AssessorAttendanceData.faculty_id, isouter=True) \
+            .filter(missing_q.c.id == None).all()
+
+    elif state_filter == 'not-confirm':
+        missing_q = data.availability_outstanding.subquery()
+        attached_q = data.assessor_list.subquery()
+
+        assessors = db.session.query(AssessorAttendanceData) \
+            .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
+            .join(missing_q, missing_q.c.id == AssessorAttendanceData.faculty_id).all()
+
+    else:
+        assessors = data.assessor_list.all()
+
+    return ajax.admin.assessor_session_availability_data(data, sess, assessors)
 
 
 @admin.route('/session_available/<int:f_id>/<int:s_id>')
@@ -5556,6 +5588,58 @@ def session_unavailable(f_id, s_id):
 
     fac = FacultyData.query.get_or_404(f_id)
     data.faculty_make_unavailable(fac)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/session_all_available/<int:f_id>/<int:a_id>')
+@roles_accepted('root')
+def session_all_available(f_id, a_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(a_id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    fac = FacultyData.query.get_or_404(f_id)
+
+    for session in data.sessions:
+        session.faculty_make_available(fac)
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/session_all_unavailable/<int:f_id>/<int:a_id>')
+@roles_accepted('root')
+def session_all_unavailable(f_id, a_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(a_id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    fac = FacultyData.query.get_or_404(f_id)
+
+    for session in data.sessions:
+        session.faculty_make_unavailable(fac)
+
     db.session.commit()
 
     return redirect(request.referrer)
@@ -6256,6 +6340,9 @@ def manage_attendees_ajax(id):
 
     data = PresentationAssessment.query.get_or_404(id)
 
+    if data.is_deployed:
+        return jsonify({})
+
     pclass_filter = request.args.get('pclass_filter')
     attend_filter = request.args.get('attend_filter')
 
@@ -6370,8 +6457,8 @@ def assessment_submitter_availability(a_id, s_id):
 
     submitter = SubmissionRecord.query.get_or_404(s_id)
 
-    if submitter not in data.available_talks:
-        flash('Cannot specify availability for the specified presenter because they are not included in this '
+    if not data.includes_submitter(s_id):
+        flash('Cannot set availability for the specified presenter because they are not included in this '
               'presentation assessment', 'error')
         return redirect(request.referrer)
 
@@ -6380,6 +6467,42 @@ def assessment_submitter_availability(a_id, s_id):
 
     return render_template('admin/presentations/availability/submitter_availability.html',
                            assessment=data, submitter=submitter, url=url, text=text)
+
+
+@admin.route('/assessment_assessor_availability/<int:a_id>/<int:f_id>')
+@roles_required('root')
+def assessment_assessor_availability(a_id, f_id):
+    """
+    Allow submitter availabilities to be specified on a per-session basis
+    :param a_id:
+    :param s_id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(a_id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its assessors can no longer be '
+              'altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    assessor = FacultyData.query.get_or_404(f_id)
+
+    if not data.includes_faculty(f_id):
+        flash('Cannot set availability for the specified assessor because they are not included in this '
+              'presentation assessment', 'error')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    return render_template('admin/presentations/availability/assessor_availability.html',
+                           assessment=data, assessor=assessor, url=url, text=text)
 
 
 @admin.route('/submitter_available/<int:sess_id>/<int:s_id>')
@@ -6502,6 +6625,79 @@ def submitter_all_unavailable(a_id, s_id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/assessment_manage_assessors/<int:id>')
+@roles_required('root')
+def assessment_manage_assessors(id):
+    """
+    Manage faculty assessors for an existing assessment event
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
+              ' altered'.format(name=data.name), 'info')
+        return redirect(request.referrer)
+
+    state_filter = request.args.get('state_filter')
+
+    if state_filter is None and session.get('assessors_state_filter'):
+        state_filter = session['assessors_state_filter']
+
+    if state_filter is not None:
+        session['assessors_state_filter'] = state_filter
+
+    return render_template('admin/presentations/manage_assessors.html', assessment=data, state_filter=state_filter)
+
+
+@admin.route('/manage_assessors_ajax/<int:id>')
+@roles_required('root')
+def manage_assessors_ajax(id):
+    """
+    AJAX data point for managing faculty assessors
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    if data.is_deployed:
+        return jsonify({})
+
+    state_filter = request.args.get('state_filter')
+
+    if state_filter == 'confirm':
+        missing_q = data.availability_outstanding.subquery()
+        attached_q = data.assessor_list.subquery()
+
+        assessors = db.session.query(AssessorAttendanceData) \
+            .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
+            .join(missing_q, missing_q.c.id == AssessorAttendanceData.faculty_id, isouter=True) \
+            .filter(missing_q.c.id == None).all()
+
+    elif state_filter == 'not-confirm':
+        missing_q = data.availability_outstanding.subquery()
+        attached_q = data.assessor_list.subquery()
+
+        assessors = db.session.query(AssessorAttendanceData) \
+            .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
+            .join(missing_q, missing_q.c.id == AssessorAttendanceData.faculty_id).all()
+
+    else:
+        assessors = data.assessor_list.all()
+
+    return ajax.admin.presentation_assessors_data(data, assessors)
 
 
 @admin.route('/edit_rooms')

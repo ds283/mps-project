@@ -18,6 +18,7 @@
                 <div style="display: flex; flex-wrap: wrap;">
                     {% for pclass in project_classes %}
                         {% if data.is_enrolled(pclass) %}
+                            {% set record = data.get_enrollment_record(pclass) %}
                             {% set style = pclass.make_CSS_style() %}
                             <div class="dropdown">
                                 <button class="btn {% if style %}btn-default{% else %}btn-success{% endif %} selection-label dropdown-toggle"
@@ -26,14 +27,28 @@
                                     {{ pclass.name }} <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu">
+                                    <li class="dropdown-header">Admin</li>
                                     <li>
                                         <a href="{{ url_for('admin.remove_enrollment', userid=user.id, pclassid=pclass.id) }}">
                                             <i class="fa fa-trash"></i> Remove enrollment
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="{{ url_for('admin.edit_enrollment', id=data.get_enrollment_record(pclass).id, returnid=0, pane=pane) }}">
+                                        <a href="{{ url_for('admin.edit_enrollment', id=record.id, returnid=0, pane=pane) }}">
                                             <i class="fa fa-cogs"></i> Edit enrollment
+                                        </a>
+                                    </li>
+                                    <li role="separator" class="divider"></li>
+                                    <li class="dropdown-header">Operations</li>
+                                    {% set disable = record.marker_state != record.MARKER_ENROLLED and record.presentations_state != record.PRESENTATIONS_ENROLLED %}
+                                    <li {% if disable %}class="disable"{% endif %}>
+                                        <a {% if not disable %}href="{{  url_for('admin.enroll_projects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
+                                            <i class="fa fa-cogs"></i> Make assessor for all projects
+                                        </a>
+                                    </li>
+                                    <li {% if disable %}class="disable"{% endif %}>
+                                        <a {% if not disable %}href="{{  url_for('admin.enroll_liveprojects_assessor', id=record.id, pclassid=pclass.id) }}"{% endif %}>
+                                            <i class="fa fa-cogs"></i> Make assessor for this year's live projects
                                         </a>
                                     </li>
                                 </ul>

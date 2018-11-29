@@ -28,8 +28,8 @@ from .buildings import buildings_data
 from .rooms import rooms_data
 from .outstanding_availability import outstanding_availability_data
 from .assessor_availability import assessor_session_availability_data, presentation_assessors_data
+from .submitter_availability import submitter_session_availability_data, presentation_attendees_data
 from .schedules import assessment_schedules_data
-from .attendees import presentation_attendees_data
 from .schedule_view_sessions import schedule_view_sessions
 from .modules import modules_data
 from .levels import FHEQ_levels_data

@@ -5645,6 +5645,71 @@ def session_all_unavailable(f_id, a_id):
     return redirect(request.referrer)
 
 
+@admin.route('/submitter_session_availability/<int:id>')
+@roles_required('root')
+def submitter_session_availability(id):
+    """
+    Edit/inspect submitter availabilities per session
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    sess = PresentationSession.query.get_or_404(id)
+
+    if sess.owner.is_deployed:
+        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
+              ' altered'.format(name=sess.owner.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_assessment(sess.owner):
+        return redirect(request.referrer)
+
+    pclass_filter = request.args.get('pclass_filter')
+
+    if pclass_filter is None and session.get('attendees_session_pclass_filter'):
+        pclass_filter = session['attendees_session_pclass_filter']
+
+    if pclass_filter is not None:
+        session['attendees_session_pclass_filter'] = pclass_filter
+
+    pclasses = sess.owner.available_pclasses
+
+    return render_template('admin/presentations/availability/submitter_session_availability.html',
+                           assessment=sess.owner, sess=sess, pclass_filter=pclass_filter, pclasses=pclasses)
+
+
+@admin.route('/submitter_session_availability_ajax/<int:id>')
+@roles_required('root')
+def submitter_session_availability_ajax(id):
+    """
+    AJAX entrypoint for edit/inspect submitter availability per session
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    sess = PresentationSession.query.get_or_404(id)
+
+    if sess.owner.is_deployed:
+        return jsonify({})
+
+    if not validate_assessment(sess.owner):
+        return jsonify({})
+
+    pclass_filter = request.args.get('pclass_filter')
+
+    data = sess.owner
+    talks = data.submitter_list.filter_by(attending=True)      # only include students who are marked as attending
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
+
+    return ajax.admin.submitter_session_availability_data(data, sess, talks)
+
+
 @admin.route('/assessment_schedules/<int:id>')
 @roles_required('root')
 def assessment_schedules(id):
@@ -6343,23 +6408,23 @@ def manage_attendees_ajax(id):
     if data.is_deployed:
         return jsonify({})
 
-    pclass_filter = request.args.get('pclass_filter')
-    attend_filter = request.args.get('attend_filter')
-
-    talks = data.available_talks
-    flag, pclass_value = is_integer(pclass_filter)
-    if flag:
-        talks = [t for t in talks if t.owner.config.pclass_id == pclass_value]
-
-    if attend_filter == 'attending':
-        talks = [t for t in talks if not data.not_attending(t.id)]
-    elif attend_filter == 'not-attending':
-        talks = [t for t in talks if data.not_attending(t.id)]
-
     if not validate_assessment(data):
         return jsonify({})
 
-    return ajax.admin.presentation_attendees_data(talks, data)
+    pclass_filter = request.args.get('pclass_filter')
+    attend_filter = request.args.get('attend_filter')
+
+    talks = data.submitter_list
+    flag, pclass_value = is_integer(pclass_filter)
+    if flag:
+        talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
+
+    if attend_filter == 'attending':
+        talks = [t for t in talks if t.attending]
+    elif attend_filter == 'not-attending':
+        talks = [t for t in talks if not t.attending]
+
+    return ajax.admin.presentation_attendees_data(data, talks)
 
 
 @admin.route('/assessment_attending/<int:a_id>/<int:s_id>')

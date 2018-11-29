@@ -177,16 +177,27 @@ def register_availability_tasks(celery):
                     eligible_assessor = True
                     break
 
+            if eligible_assessor:
+                print('Determined that {name} is an eligible assessor for assessment '
+                      '"{ass_name}"'.format(name=record.owner.user.name,
+                                            ass_name=assessment.name))
+            else:
+                print('Determined that {name} is not an eligible assessor for assessment '
+                      '"{ass_name}"'.format(name=record.owner.user.name,
+                                            ass_name=assessment.name))
+
             # if eligible but not included, fix
             if eligible_assessor and get_count(assessment.assessor_list.filter_by(faculty_id=record.owner_id)) == 0:
-                record = AssessorAttendanceData(assessment_id=assessment.id,
-                                                faculty_id=record.owner_id,
-                                                comment=None)
+                print('-- Assessor {name} is eligible but has no attendance record; generating a new '
+                      'one'.format(name=record.owner.user_name))
+                new_record = AssessorAttendanceData(assessment_id=assessment.id,
+                                                    faculty_id=record.owner_id,
+                                                    comment=None)
 
                 for session in assessment.sessions:
-                    record.available.append(session)
+                    new_record.available.append(session)
 
-                db.session.add(record)
+                db.session.add(new_record)
 
         try:
             db.session.commit()

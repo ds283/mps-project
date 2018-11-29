@@ -52,7 +52,7 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData
+    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses
@@ -952,6 +952,70 @@ def edit_enrollment(id, returnid):
             return home_dashboard()
 
     return render_template('admin/edit_enrollment.html', record=record, form=form, returnid=returnid, pane=pane)
+
+
+@admin.route('/enroll_projects_assessor/<int:id>/<int:pclassid>')
+@roles_accepted('admin', 'root')
+def enroll_projects_assessor(id, pclassid):
+    record = EnrollmentRecord.query.get_or_404(id)
+    faculty = record.owner
+
+    if record.marker_state != EnrollmentRecord.MARKER_ENROLLED \
+            and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
+        flash('Cannot attach {name} as an assessor for projects in class "{pclass}" because they do not have '
+              'an appropriate enrollment.'.format(name=faculty.user.name, pclass=record.pclass.name), 'error')
+        return redirect(request.referrer)
+
+    projects = db.session.query(Project).filter(Project.project_classes.any(id=pclassid)).all()
+
+    count = 0
+    for p in projects:
+        if get_count(p.assessors.filter_by(id=faculty.id)) == 0:
+            p.assessors.append(faculty)
+            count += 1
+
+    if count > 0:
+        db.session.commit()
+        flash('Attached {name} as an assessor for {n} projects.'.format(name=faculty.user.name, n=count), 'info')
+    else:
+        flash('{name} has already been attached as an assessor to all projects in this '
+              'class.'.format(name=faculty.user.name), 'info')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/enroll_liveprojects_assessor/<int:id>/<int:pclassid>')
+@roles_accepted('admin', 'root')
+def enroll_liveprojects_assessor(id, pclassid):
+    record = EnrollmentRecord.query.get_or_404(id)
+    faculty = record.owner
+
+    if record.marker_state != EnrollmentRecord.MARKER_ENROLLED \
+            and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
+        flash('Cannot attach {name} as an assessor for projects in class "{pclass}" because they do not have '
+              'an appropriate enrollment.'.format(name=faculty.user.name, pclass=record.pclass.name), 'error')
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    projects = db.session.query(LiveProject) \
+        .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \
+        .filter(ProjectClassConfig.year == year-1,
+                ProjectClassConfig.pclass_id == pclassid).all()
+
+    count = 0
+    for p in projects:
+        if get_count(p.assessors.filter_by(id=faculty.id)) == 0:
+            p.assessors.append(faculty)
+            count += 1
+
+    if count > 0:
+        db.session.commit()
+        flash('Attached {name} as an assessor for {n} live projects.'.format(name=faculty.user.name, n=count), 'info')
+    else:
+        flash('{name} has already been attached as an assessor to all live projects in this '
+              'class.'.format(name=faculty.user.name), 'info')
+
+    return redirect(request.referrer)
 
 
 @admin.route('/add_affiliation/<int:userid>/<int:groupid>')

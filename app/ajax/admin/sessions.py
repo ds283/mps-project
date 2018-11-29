@@ -112,12 +112,26 @@ _menu = \
 _faculty = \
 """
 {% if s.owner.availability_lifecycle > s.owner.AVAILABILITY_NOT_REQUESTED %}
-    {% set available = s.number_available_faculty %}
-    {% set ifneeded = s.number_ifneeded_faculty %}
-    {% if available > 0 or ifneeded > 0 %}
-        <span class="label label-primary">{{ available }}{% if ifneeded > 0 %}(+{{ ifneeded }}){% endif %} available</span>
+    {% set fac_available = s.number_available_faculty %}
+    {% set fac_ifneeded = s.number_ifneeded_faculty %}
+    {% set fac_unavailable = s.number_unavailable_faculty %}
+    {% if fac_available > 0 or fac_ifneeded > 0 %}
+        <div>
+            <span class="label label-primary">{{ fac_available }} available</span>
+            <span class="label label-warning">{{ fac_ifneeded }} if needed</span>
+            <span class="label label-danger">{{ fac_unavailable }} unavailable</span>
+            <span class="label label-info">Total {{ fac_available + fac_ifneeded }}</span>
+        </div>
     {% else %}
         <span class="label label-danger">No availability</span>
+    {% endif %}
+    {% set sub_unavailable = s.number_unavailable_submitters %}
+    {% if sub_unavailable > 0 %}
+        {% set pl = 's' %}
+        {% if sub_unavailable == 1 %}{% set pl = '' %}{% endif %}
+        <span class="label label-danger">{{ sub_unavailable }} submitter{{ pl }} unavailable</span>
+    {% else %}
+        <span class="label label-primary">All submitters available</span>
     {% endif %}
 {% else %}
     <span class="label label-default">Not yet requested</span>

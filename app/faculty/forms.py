@@ -238,7 +238,7 @@ def AvailabilityFormFactory(include_confirm=False):
 
     class AvailabilityForm(Form):
 
-        comment = TextAreaField('Please include any other information you would like the schedulers to '
+        comment = TextAreaField('Please include any other information you would like the scheduling team to '
                                 'take into account:', render_kw={'rows': 5}, validators=[Optional()])
 
         if include_confirm:

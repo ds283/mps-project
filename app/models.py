@@ -6280,7 +6280,7 @@ class PresentationAssessment(db.Model):
     submission_periods = db.relationship('SubmissionPeriodRecord', secondary=assessment_to_periods, lazy='dynamic',
                                          backref=db.backref('presentation_assessments', lazy='dynamic'))
 
-    # number of faculty assessors to schedule
+    # number of faculty assessors to schedule per session
     number_assessors = db.Column(db.Integer())
 
 

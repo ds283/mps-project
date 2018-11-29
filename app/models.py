@@ -6961,6 +6961,11 @@ class PresentationSession(db.Model):
 
 
     @property
+    def number_unavailable_faculty(self):
+        return get_count(self.unavailable_faculty)
+
+
+    @property
     def number_submitters(self):
         return get_count(self.available_submitters)
 

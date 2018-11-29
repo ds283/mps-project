@@ -957,29 +957,10 @@ def edit_enrollment(id, returnid):
 @admin.route('/enroll_projects_assessor/<int:id>/<int:pclassid>')
 @roles_accepted('admin', 'root')
 def enroll_projects_assessor(id, pclassid):
-    record = EnrollmentRecord.query.get_or_404(id)
-    faculty = record.owner
+    celery = current_app.extensions['celery']
+    subscribe_task = celery.tasks['app.tasks.assessors.projects']
 
-    if record.marker_state != EnrollmentRecord.MARKER_ENROLLED \
-            and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
-        flash('Cannot attach {name} as an assessor for projects in class "{pclass}" because they do not have '
-              'an appropriate enrollment.'.format(name=faculty.user.name, pclass=record.pclass.name), 'error')
-        return redirect(request.referrer)
-
-    projects = db.session.query(Project).filter(Project.project_classes.any(id=pclassid)).all()
-
-    count = 0
-    for p in projects:
-        if get_count(p.assessors.filter_by(id=faculty.id)) == 0:
-            p.assessors.append(faculty)
-            count += 1
-
-    if count > 0:
-        db.session.commit()
-        flash('Attached {name} as an assessor for {n} projects.'.format(name=faculty.user.name, n=count), 'info')
-    else:
-        flash('{name} has already been attached as an assessor to all projects in this '
-              'class.'.format(name=faculty.user.name), 'info')
+    subscribe_task.apply_async(args=(id, pclassid, current_user.id))
 
     return redirect(request.referrer)
 
@@ -987,33 +968,17 @@ def enroll_projects_assessor(id, pclassid):
 @admin.route('/enroll_liveprojects_assessor/<int:id>/<int:pclassid>')
 @roles_accepted('admin', 'root')
 def enroll_liveprojects_assessor(id, pclassid):
-    record = EnrollmentRecord.query.get_or_404(id)
-    faculty = record.owner
+    celery = current_app.extensions['celery']
+    subscribe_task = celery.tasks['app.tasks.assessors.live_projects']
+    adjust_task = celery.tasks['app.tasks.availability.adjust']
 
-    if record.marker_state != EnrollmentRecord.MARKER_ENROLLED \
-            and record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
-        flash('Cannot attach {name} as an assessor for projects in class "{pclass}" because they do not have '
-              'an appropriate enrollment.'.format(name=faculty.user.name, pclass=record.pclass.name), 'error')
-        return redirect(request.referrer)
-
-    year = get_current_year()
-    projects = db.session.query(LiveProject) \
-        .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \
-        .filter(ProjectClassConfig.year == year-1,
-                ProjectClassConfig.pclass_id == pclassid).all()
-
-    count = 0
-    for p in projects:
-        if get_count(p.assessors.filter_by(id=faculty.id)) == 0:
-            p.assessors.append(faculty)
-            count += 1
-
-    if count > 0:
-        db.session.commit()
-        flash('Attached {name} as an assessor for {n} live projects.'.format(name=faculty.user.name, n=count), 'info')
-    else:
-        flash('{name} has already been attached as an assessor to all live projects in this '
-              'class.'.format(name=faculty.user.name), 'info')
+    # for live projects we follow the subscription with use of availability.adjust, which will
+    # check whether the change in assessor status means that an attendance request should be
+    # generated for any active assessments
+    current_year = get_current_year()
+    tasks = chain(subscribe_task.si(id, pclassid, current_year, current_user.id),
+                  adjust_task.si(id, current_year))
+    tasks.apply_async()
 
     return redirect(request.referrer)
 

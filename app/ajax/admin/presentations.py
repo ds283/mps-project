@@ -25,7 +25,11 @@ _name = \
 {% if state == a.AVAILABILITY_NOT_REQUESTED %}
     <span class="label label-default">Availability not requested</span>
 {% elif state == a.AVAILABILITY_REQUESTED %}
-    <span class="label label-info">Availability requested</span>
+    <span class="label label-success">Availability requested</span>
+    {% set num_outstanding = a.availability_outstanding_count %}
+    {% if num_outstanding > 0 %}
+        <span class="label label-info">{{ num_outstanding }} outstanding</span>
+    {% endif %}
 {% elif state == a.AVAILABILITY_CLOSED %}
     <span class="label label-primary">Availability closed</span>
 {% else %}

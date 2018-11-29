@@ -1,7 +1,7 @@
 {% extends "base_app.html" %}
 
-{% if not state_filter or state_filter is none %}
-    {% set state_filter = 'all' %}
+{% if not pclass_filter or pclass_filter is none %}
+    {% set pclass_filter = 'all' %}
 {% endif %}
 
 {% block scripts %}
@@ -17,18 +17,18 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#availability-table').DataTable({
+            $('#attendee-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/assessor_session_availability_ajax/{{ sess.id }}?state_filter={{ state_filter }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/submitter_session_availability_ajax/{{ sess.id }}?pclass_filter={{ pclass_filter }}', dataSrc: '' },
                 columns: [
-                    { data: 'name',
+                    { data: 'student',
                       render: {
                         _: 'display',
                         sort: 'sortstring' }
                     },
-                    { data: 'comment' },
-                    { data: 'confirmed' },
+                    { data: 'pclass' },
+                    { data: 'project' },
                     { data: 'menu' }
                 ],
                 deferRender: true
@@ -49,31 +49,31 @@
     </div>
 
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Assessor availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></div>
+        <div class="panel-heading">Student availability for assessment event <strong>{{ assessment.name }}</strong>, session <strong>{{ sess.short_date_as_string }} {{ sess.session_type_string }}</strong></strong></div>
         <div class="panel-body">
-            <div class="well">
-                <p>Filter by state</p>
-                <a href="{{ url_for('admin.assessor_session_availability', id=sess.id, state_filter='all') }}"
-                   class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-                    All
-                </a>
-                <a href="{{ url_for('admin.assessor_session_availability', id=sess.id, state_filter='confirm') }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'confirm' %}btn-primary{% else %}btn-default{% endif %}">
-                    Confirmed
-                </a>
-                <a href="{{ url_for('admin.assessor_session_availability', id=sess.id, state_filter='not-confirm') }}"
-                   class="btn btn-sm filter-btn {% if state_filter == 'not-confirm' %}btn-primary{% else %}btn-default{% endif %}">
-                    Not confirmed
-                </a>
-            </div>
+            {% if pclasses is not none and pclasses|length > 0 %}
+                <div class="well">
+                    <p>Filter by project type</p>
+                    <a href="{{ url_for('admin.submitter_session_availability', id=sess.id, pclass_filter='all') }}"
+                       class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                        All
+                    </a>
+                    {% for pclass in pclasses %}
+                        <a href="{{ url_for('admin.submitter_session_availability', id=sess.id, pclass_filter=pclass.id) }}"
+                           class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
+                            {{ pclass.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
-            <table id="availability-table" class="table table-striped table-bordered">
+            <table id="attendee-table" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th width="25%"> Name</th>
-                        <th width="40%"> Comment</th>
-                        <th width="10%"> Confirmed</th>
-                        <th width="25%"> Availability</th>
+                        <th width="20%"> Student</th>
+                        <th width="20%"> Project class</th>
+                        <th width="40%"> Project</th>
+                        <th width="20%"> Actions</th>
                     </tr>
                 </thead>
             </table>

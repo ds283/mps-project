@@ -42,13 +42,13 @@
                             <div class="col-xs-1">{{ session.session_type_label|safe }}</div>
                             <div class="col-xs-7">
                                 <div class="pull-right">
-                                {% if session.submitter_available(submitter.id) %}
-                                    <a class="btn btn-success btn-sm"><i class="fa fa-check"></i> Available</a>
-                                    <a href="{{ url_for('admin.submitter_unavailable', sess_id=session.id, s_id=submitter.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
-                                {% else %}
-                                    <a href="{{ url_for('admin.submitter_available', sess_id=session.id, s_id=submitter.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
-                                    <a class="btn btn-danger btn-sm"><i class="fa fa-times"></i> Not available</a>
-                                {% endif %}
+                                    {% if session.submitter_available(submitter.id) %}
+                                        <a class="btn btn-success btn-sm"><i class="fa fa-check"></i> Available</a>
+                                        <a href="{{ url_for('admin.submitter_unavailable', sess_id=session.id, s_id=submitter.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
+                                    {% else %}
+                                        <a href="{{ url_for('admin.submitter_available', sess_id=session.id, s_id=submitter.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
+                                        <a class="btn btn-danger btn-sm"><i class="fa fa-times"></i> Not available</a>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>

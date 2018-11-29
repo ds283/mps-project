@@ -79,6 +79,7 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+        {% set a = s.owner %}
         {% set disabled = not s.owner.feedback_open %}
         <li class="dropdown-header">Edit session</li>
         <li {% if disabled %}class="disabled"{% endif %}>
@@ -86,11 +87,18 @@ _menu = \
                 <i class="fa fa-cogs"></i> Settings...
             </a>
         </li>
+        {% set disabled = not a.requested_availability or a.is_deployed %}
         <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Assessor availability...
+            <a {% if not disabled %}href="{{ url_for('admin.submitter_session_availability', id=s.id) }}"{% endif %}>
+                <i class="fa fa-cogs"></i> Submitters...
             </a>
         </li>
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.assessor_session_availability', id=s.id) }}"{% endif %}>
+                <i class="fa fa-cogs"></i> Assessors...
+            </a>
+        </li>
+        {% set disabled = not a.feedback_open %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.delete_session', id=s.id) }}"{% endif %}>
                 <i class="fa fa-trash"></i> Delete

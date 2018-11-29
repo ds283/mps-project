@@ -118,8 +118,12 @@ _faculty = \
     {% if fac_available > 0 or fac_ifneeded > 0 %}
         <div>
             <span class="label label-primary">{{ fac_available }} available</span>
-            <span class="label label-warning">{{ fac_ifneeded }} if needed</span>
-            <span class="label label-danger">{{ fac_unavailable }} unavailable</span>
+            {% if fac_ifneeded > 0 %}
+                <span class="label label-warning">{{ fac_ifneeded }} if needed</span>
+            {% endif %}
+            {% if fac_unavailable > 0 %}
+                <span class="label label-danger">{{ fac_unavailable }} unavailable</span>
+            {% endif %}
             <span class="label label-info">Total {{ fac_available + fac_ifneeded }}</span>
         </div>
     {% else %}

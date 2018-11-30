@@ -97,6 +97,7 @@ def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_s
     :return:
     """
     A = {}
+    C = {}
 
     for i in range(number_assessors):
         assessor = assessor_dict[i]
@@ -114,7 +115,14 @@ def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_s
             else:
                 A[idx] = 1
 
-    return A
+            # we store the 'if needed' states in a second matrix that is used to build
+            # a cost function
+            if slot.session.faculty_ifneeded(assessor.id):
+                C[idx] = 1
+            else:
+                C[idx] = 0
+
+    return A, C
 
 
 def _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict):
@@ -145,7 +153,8 @@ def _build_student_availability_matrix(number_talks, talk_dict, number_slots, sl
     return B
 
 
-def _generate_minimize_objective(X, Y, S, number_talks, number_assessors, number_slots):
+def _generate_minimize_objective(C, X, Y, S, number_talks, number_assessors, number_slots,
+                                 amax, amin, record):
     """
     Generate an objective function that tries to schedule as efficiently as possible,
     with workload balancing
@@ -163,15 +172,20 @@ def _generate_minimize_objective(X, Y, S, number_talks, number_assessors, number
     # ask optimizer to minimize the number of slots that are used
     objective += sum([S[i] for i in range(number_slots)])
 
-    # TODO: - workload balancing: share load evenly between faculty if possible
+    # optimizer should penalize any slots that use 'if needed'
+    objective += sum([Y[(i, j)] * C[(i, j)] * abs(record.if_needed_cost) for i in range(number_assessors) for j in range(number_slots)])
+
+    # optimizer should try to balance workloads as evenly as possible
+    objective += abs(record.levelling_tension) * (amax - amin)
+
     # TODO: - minimize number of days used in schedule
     # TODO: - minimize number of rooms used in schedule
-    # TODO: - prevent talks on same subject being scheduled in same session, if possible
 
     return objective
 
 
-def _generate_reschedule_objective(oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots):
+def _generate_reschedule_objective(oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots,
+                                   amax, amin, record):
     """
     Generate an objective function that tries to produce a feasible schedule matching oldX, oldY
     as closely as possible
@@ -206,6 +220,9 @@ def _generate_reschedule_objective(oldX, oldY, X, Y, S, number_talks, number_ass
                 objective += Y[idx]
             else:
                 objective += 1 - Y[idx]
+
+    # optimizer should try to balance workloads as evenly as possible
+    objective += abs(record.levelling_tension) * (amax - amin)
 
     return objective
 
@@ -287,10 +304,15 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # generate a 'size counting' variable for each slot
     S = pulp.LpVariable.dicts("s", range(number_slots), cat=pulp.LpBinary)
 
+    # variables representing maximum and minimum number of assignments
+    # we use these to tension the optimization so that workload tends to be balanced
+    amax = pulp.LpVariable("aMax", lowBound=0, cat=pulp.LpContinuous)
+    amin = pulp.LpVariable("aMin", lowBound=0, cat=pulp.LpContinuous)
+
 
     # OBJECTIVE FUNCTION
 
-    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots)
+    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots, amax, amin, record)
     prob += objective, "objective function"
 
 
@@ -320,6 +342,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # number of times each faculty member is scheduled should fall below the limit
     for i in range(number_assessors):
         prob += sum([Y[(i, j)] for j in range(number_slots)]) <= record.assessor_assigned_limit
+        constraints += 1
 
 
     # STUDENT (SUBMITTER) AVAILABILITY
@@ -423,6 +446,16 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
                 prob += X[(i, j)] == 0
                 constraints += 1
 
+
+    # WORKLOAD LEVELLING
+
+    # amax and amin should bracket the workload of each faculty member
+    for i in range(number_assessors):
+        prob += sum([Y[(i, j)] for j in range(number_slots)]) <= amax
+        prob += sum([Y[(i, j)] for j in range(number_slots)]) >= amin
+        constraints += 2
+
+
     print(' -- {num} total constraints'.format(num=constraints))
 
     return prob, X, Y
@@ -502,15 +535,27 @@ def _initialize(self, sched_id):
     progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
     try:
-        number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record.owner)
-        number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record.owner)
-        number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record)
+        with Timer() as talk_timer:
+            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record.owner)
+        print(' -- enumerated talks in time {s}'.format(s=talk_timer.interval))
 
-        # build faculty availability matrix
-        A = _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
+        with Timer() as assessor_timer:
+            number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record.owner)
+        print(' -- enumerated assessors in time {s}'.format(s=assessor_timer.interval))
+
+        with Timer() as slots_timer:
+            number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record)
+        print(' -- enumerated slots in time {s}'.format(s=slots_timer.interval))
+
+        # build faculty availability and 'ifneeded' cost matrix
+        with Timer() as fac_avail_timer:
+            A, C = _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
+        print(' -- computed faculty availabilities in time {s}'.format(s=fac_avail_timer.interval))
 
         # build submitter availability matrix
-        B = _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict)
+        with Timer() as sub_avail_timer:
+            B = _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict)
+        print(' -- computed submitter availabilities in time {s}'.format(s=sub_avail_timer.interval))
 
     except SQLAlchemyError:
         raise self.retry()
@@ -518,7 +563,7 @@ def _initialize(self, sched_id):
     return number_talks, number_assessors, number_slots, \
            talk_to_number, assessor_to_number, slot_to_number, \
            number_to_talk, number_to_assessor, number_to_slot, \
-           talk_dict, assessor_dict, slot_dict, A, B, record
+           talk_dict, assessor_dict, slot_dict, A, B, C, record
 
 
 def _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
@@ -530,9 +575,9 @@ def _execute(self, record, prob, X, Y, create_time, number_talks, number_assesso
 
     with Timer() as solve_time:
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
-            output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=600, fracGap=0.25))
+            output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
-            output = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=600, fracGap=0.25))
+            output = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
             output = prob.solve(solvers.GLPK_CMD())
         else:
@@ -588,7 +633,7 @@ def register_scheduling_tasks(celery):
         number_talks, number_assessors, number_slots, \
         talk_to_number, assessor_to_number, slot_to_number, \
         number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, record = _initialize(self, id)
+        talk_dict, assessor_dict, slot_dict, A, B, C, record = _initialize(self, id)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
@@ -596,7 +641,7 @@ def register_scheduling_tasks(celery):
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
                                               assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              _generate_minimize_objective)
+                                              partial(_generate_minimize_objective, C))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -609,7 +654,7 @@ def register_scheduling_tasks(celery):
         number_talks, number_assessors, number_slots, \
         talk_to_number, assessor_to_number, slot_to_number, \
         number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, record = _initialize(self, new_id)
+        talk_dict, assessor_dict, slot_dict, A, B, C, record = _initialize(self, new_id)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)

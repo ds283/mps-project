@@ -1052,6 +1052,15 @@ class ScheduleSettingsMixin():
                                                        'scheduled.',
                                            validators=[InputRequired('Please enter a positive integer')])
 
+    if_needed_cost = FloatField('Cost for using faculty tagged as <i>if needed</i>', default=1.5,
+                                description='Normalized relative to the cost for using a new slot.',
+                                validators=[InputRequired('Please enter a suitable positive decimal.')])
+
+    levelling_tension = FloatField('Tension used to level workloads', default=1.5,
+                                   description='Cost of introducing a workload inequality of one session, '
+                                               'normalized to the cost of using a new slot.',
+                                   validators=[InputRequired('Please enter a suitable positive decimal.')])
+
 
 def NewScheduleFormFactory(assessment):
 

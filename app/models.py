@@ -3861,7 +3861,6 @@ class LiveProject(db.Model):
         return self.assessor_list_query.all()
 
 
-    @property
     def is_assessor(self, fac_id):
         return get_count(self.assessors.filter_by(id=fac_id)) > 0
 
@@ -7352,6 +7351,13 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     # maximum number of assignments per faculty member
     assessor_assigned_limit = db.Column(db.Integer())
+
+    # cost of using an 'if needed' slot
+    if_needed_cost = db.Column(db.Numeric(8, 3))
+
+    # 'levelling tension', the relative cost of introducing an inequitable workload by adding an
+    # extra assignment to faculty who already have the maximum assignments
+    levelling_tension = db.Column(db.Numeric(8, 3))
 
 
 

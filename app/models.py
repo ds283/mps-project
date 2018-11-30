@@ -3861,6 +3861,11 @@ class LiveProject(db.Model):
         return self.assessor_list_query.all()
 
 
+    @property
+    def is_assessor(self, fac_id):
+        return get_count(self.assessors.filter_by(id=fac_id)) > 0
+
+
 class SelectingStudent(db.Model):
     """
     Model a student who is selecting a project in the current cycle
@@ -7344,6 +7349,9 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     # target number of students per group;
     max_group_size = db.Column(db.Integer())
+
+    # maximum number of assignments per faculty member
+    assessor_assigned_limit = db.Column(db.Integer())
 
 
 

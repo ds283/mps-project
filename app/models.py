@@ -322,11 +322,6 @@ session_to_rooms = db.Table('session_to_rooms',
                             db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True),
                             db.Column('room_id', db.Integer(), db.ForeignKey('rooms.id'), primary_key=True))
 
-# capture list of faculty who are still to return availability data for an assessment
-faculty_availability_waiting = db.Table('faculty_availability_waiting',
-                                        db.Column('assessment_id', db.Integer(), db.ForeignKey('presentation_assessments.id'), primary_key=True),
-                                        db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
-
 # faculty to slots map
 faculty_to_slots = db.Table('faculty_to_slots',
                             db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
@@ -6295,10 +6290,6 @@ class PresentationAssessment(db.Model):
 
     # what deadline has been set of availability information to be returned?
     availability_deadline = db.Column(db.Date())
-
-    # list of faculty members still to return availability data
-    availability_outstanding = db.relationship('FacultyData', secondary=faculty_availability_waiting, lazy='dynamic',
-                                               backref=db.backref('availability_waiting', lazy='dynamic'))
 
 
     # FEEDBACK LIFECYCLE

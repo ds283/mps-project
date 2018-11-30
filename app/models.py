@@ -1071,8 +1071,9 @@ class FacultyData(db.Model):
 
     @property
     def outstanding_availability_requests(self):
-        query = db.session.query(faculty_availability_waiting.c.assessment_id) \
-            .filter(faculty_availability_waiting.c.faculty_id == self.id).subquery()
+        query = db.session.query(AssessorAttendanceData) \
+            .filter(AssessorAttendanceData.faculty_id == self.id,
+                    AssessorAttendanceData.confirmed == False).subquery()
 
         return db.session.query(PresentationAssessment) \
             .join(query, query.c.assessment_id == PresentationAssessment.id) \
@@ -6356,11 +6357,16 @@ class PresentationAssessment(db.Model):
 
     @property
     def availability_outstanding_count(self):
-        return get_count(self.availability_outstanding)
+        return get_count(self.outstanding_assessors)
 
 
     def is_faculty_outstanding(self, faculty_id):
-        return get_count(self.availability_outstanding.filter_by(id=faculty_id)) > 0
+        return get_count(self.outstanding_assessors.filter_by(faculty_id=faculty_id)) > 0
+
+
+    @property
+    def outstanding_assessors(self):
+        return self.assessor_list.filter_by(confirmed=False)
 
 
     @property
@@ -6694,6 +6700,12 @@ class AssessorAttendanceData(db.Model):
 
     # optional textual comment
     comment = db.Column(db.Text(), default=None)
+
+    # has this assessor confirmed their response?
+    confirmed = db.Column(db.Boolean(), default=False)
+
+    # log a confirmation timestamp
+    confirmed_timestamp = db.Column(db.DateTime())
 
 
     @property

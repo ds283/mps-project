@@ -35,7 +35,7 @@ def register_availability_tasks(celery):
             progress_update(celery_id, TaskRecord.FAILURE, 100, "Database error", autocommit=True)
             return
 
-        progress_update(celery_id, TaskRecord.RUNNING, 30, "Building list of faculty assessors...", autocommit=True)
+        progress_update(celery_id, TaskRecord.RUNNING, 40, "Building list of faculty assessors...", autocommit=True)
 
         try:
             # first task is to build a list of faculty assessors
@@ -57,7 +57,9 @@ def register_availability_tasks(celery):
             for assessor in total_assessors:
                 a_record = AssessorAttendanceData(assessment_id=data.id,
                                                   faculty=assessor.id,
-                                                  comment=None)
+                                                  comment=None,
+                                                  confirmed=False,
+                                                  confirmed_timestamp=None)
 
                 # assume available for all sessions by default
                 for session in data.sessions:
@@ -69,7 +71,7 @@ def register_availability_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        progress_update(celery_id, TaskRecord.RUNNING, 50, "Building list of submitters...", autocommit=True)
+        progress_update(celery_id, TaskRecord.RUNNING, 80, "Building list of submitters...", autocommit=True)
 
         try:
             total_submitters = set()
@@ -92,18 +94,6 @@ def register_availability_tasks(celery):
 
                 db.session.add(s_record)
 
-            db.session.commit()
-        except SQLAlchemyError:
-            raise self.retry()
-
-        progress_update(celery_id, TaskRecord.RUNNING, 70, "Generating availability requests...", autocommit=True)
-
-        try:
-            # second task is to copy this to the list of faculty who have outstanding responses
-            data.availability_outstanding = []
-
-            for assessor in total_assessors:
-                data.availability_outstanding.append(assessor)
             db.session.commit()
         except SQLAlchemyError:
             raise self.retry()

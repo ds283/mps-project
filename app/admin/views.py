@@ -5287,7 +5287,7 @@ def outstanding_availability_ajax(id):
               'info')
         return jsonify({})
 
-    return ajax.admin.outstanding_availability_data(data.availability_outstanding, data)
+    return ajax.admin.outstanding_availability_data(data.outstanding_assessors.all(), data)
 
 
 @admin.route('/force_confirm_availability/<int:assessment_id>/<int:faculty_id>')
@@ -5309,14 +5309,17 @@ def force_confirm_availability(assessment_id, faculty_id):
 
     faculty = FacultyData.query.get_or_404(faculty_id)
 
-    if faculty not in data.assessors:
+    if not data.includes_faculty(faculty_id):
         flash('Cannot force confirm availability response for {name} because this faculty member is not attached '
               'to this assessment'.format(name=faculty.user.name), 'error')
         return redirect(request.referrer)
 
-    if faculty in data.availability_outstanding:
-        data.availability_outstanding.remove(faculty)
-        db.session.commit()
+    record = data.assessor_list.filter_by(faculty_id=faculty_id, confirmed=False).first()
+
+    if record is not None:
+        record.confirmed = True
+        record.confirmed_timestamp = datetime.now()
+        data.session.commit()
 
     return redirect(request.referrer)
 
@@ -5564,21 +5567,18 @@ def assessor_session_availability_ajax(id):
     data = sess.owner
 
     if state_filter == 'confirm':
-        missing_q = data.availability_outstanding.subquery()
         attached_q = data.assessor_list.subquery()
 
         assessors = db.session.query(AssessorAttendanceData) \
             .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
-            .join(missing_q, missing_q.c.id == AssessorAttendanceData.faculty_id, isouter=True) \
-            .filter(missing_q.c.id == None).all()
+            .filter(AssessorAttendanceData.confirmed == True).all()
 
     elif state_filter == 'not-confirm':
-        missing_q = data.availability_outstanding.subquery()
         attached_q = data.assessor_list.subquery()
 
         assessors = db.session.query(AssessorAttendanceData) \
             .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
-            .join(missing_q, missing_q.c.id == AssessorAttendanceData.faculty_id).all()
+            .filter(AssessorAttendanceData.confirmed == False).all()
 
     else:
         assessors = data.assessor_list.all()
@@ -6805,21 +6805,18 @@ def manage_assessors_ajax(id):
     state_filter = request.args.get('state_filter')
 
     if state_filter == 'confirm':
-        missing_q = data.availability_outstanding.subquery()
         attached_q = data.assessor_list.subquery()
 
         assessors = db.session.query(AssessorAttendanceData) \
             .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
-            .join(missing_q, missing_q.c.id == AssessorAttendanceData.faculty_id, isouter=True) \
-            .filter(missing_q.c.id == None).all()
+            .filter(AssessorAttendanceData.confirmed == True).all()
 
     elif state_filter == 'not-confirm':
-        missing_q = data.availability_outstanding.subquery()
         attached_q = data.assessor_list.subquery()
 
         assessors = db.session.query(AssessorAttendanceData) \
             .join(attached_q, attached_q.c.id == AssessorAttendanceData.id) \
-            .join(missing_q, missing_q.c.id == AssessorAttendanceData.faculty_id).all()
+            .filter(AssessorAttendanceData.confirmed == False).all()
 
     else:
         assessors = data.assessor_list.all()

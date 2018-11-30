@@ -20,11 +20,11 @@ _menu = \
 {% endif %}
 """
 
-def outstanding_availability_data(faculty, assessment):
+def outstanding_availability_data(assessors, assessment):
 
-    data = [{'name': {'display': f.user.name,
-                      'sortstring': f.user.last_name + f.user.first_name},
-             'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
-             'menu': render_template_string(_menu, a=assessment, f=f)} for f in faculty]
+    data = [{'name': {'display': f.faculty.user.name,
+                      'sortstring': f.faculty.user.last_name + f.faculty.user.first_name},
+             'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.faculty.user.email),
+             'menu': render_template_string(_menu, a=assessment, f=f.faculty)} for f in assessors]
 
     return jsonify(data)

@@ -26,13 +26,15 @@ from ..shared.timer import Timer
 
 def _enumerate_talks(assessment):
     # assessment is a PresentationAssessment instance
-
     number = 0
     talk_to_number = {}
     number_to_talk = {}
 
     talk_dict = {}
 
+    # the .schedulable_talks property returns a list of of SubmissionRecord instances,
+    # minus any students who are not attending the main assessment event and need to
+    # be scheduled for the make-up event.
     for p in assessment.schedulable_talks:
         talk_to_number[p.id] = number
         number_to_talk[number] = p.id
@@ -46,13 +48,14 @@ def _enumerate_talks(assessment):
 
 def _enumerate_assessors(record):
     # record is a PresentationAssessment instance
-
     number = 0
     assessor_to_number = {}
     number_to_assessor = {}
 
     assessor_dict = {}
 
+    # the .assessor_list property returns a list of AssessorAttendanceData instances,
+    # one for each assessor who has been invited to attend
     for assessor in record.assessor_list:
         assessor_to_number[assessor.faculty_id] = number
         number_to_assessor[number] = assessor.faculty_id
@@ -66,7 +69,6 @@ def _enumerate_assessors(record):
 
 def _enumerate_slots(record):
     # record is a ScheduleAttempt instance
-
     number = 0
     slot_to_number = {}
     number_to_slot = {}
@@ -86,7 +88,7 @@ def _enumerate_slots(record):
 
 def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict):
     """
-    Construct a dictionary mapping from (assessing-faculty, slot) pairs to availabilities,
+    Construct a dictionary mapping from (assessing-faculty, slot) pairs to yes/no availabilities,
     coded as 0 = not available, 1 = available
     :param number_assessors:
     :param assessor_dict:
@@ -104,12 +106,43 @@ def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_s
             slot = slot_dict[j]
 
             # is this assessor available in this slot?
-            if slot.session.faculty_available(assessor.id):
-                A[idx] = 1
-            else:
+            # notice that we don't distinguish *here* between 'available' and 'if needed'; both are coded
+            # as A_ij = 1. The point is that A is used to generate hard constraints.
+            # 'if needed' has to be enforced by an optimization goal.
+            if slot.session.faculty_unavailable(assessor.id):
                 A[idx] = 0
+            else:
+                A[idx] = 1
 
     return A
+
+
+def _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict):
+    """
+    Construct a dictionary mapping from (submitting-student, slot) pairs to yes/no availabilities,
+    coded a 0 = not available, 1 = not available
+    :param number_talks:
+    :param talk_dict:
+    :param number_slots:
+    :param slot_dict:
+    :return:
+    """
+    B = {}
+
+    for i in range(number_talks):
+        talk = talk_dict[i]
+
+        for j in range(number_slots):
+            idx = (i, j)
+            slot = slot_dict[j]
+
+            # is this student available in this slot?
+            if slot.session.submitter_unavailable(talk.id):
+                B[idx] = 0
+            else:
+                B[idx] = 1
+
+    return B
 
 
 def _generate_minimize_objective(X, Y, S, number_talks, number_assessors, number_slots):
@@ -124,7 +157,6 @@ def _generate_minimize_objective(X, Y, S, number_talks, number_assessors, number
     :param number_slots:
     :return:
     """
-
     # generate objective function
     objective = 0
 
@@ -222,12 +254,11 @@ def _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots, 
     return X, Y
 
 
-def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
-                         assessor_to_number,
-                         talk_dict, assessor_dict, slot_dict,
-                         make_objective):
+def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots, assessor_to_number, talk_dict,
+                         assessor_dict, slot_dict, make_objective):
     """
     Generate a PuLP problem to find an optimal assignment of student talks + faculty assessors to rooms
+    :param B:
     :param assessor_dict:
     :param talk_dict:
     :param slot_dict:
@@ -246,10 +277,11 @@ def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots
     prob = pulp.LpProblem(record.name, pulp.LpMinimize)
 
     # generate student-to-slot assignment matrix
-    # the entries of this matrix are either 0 or 1
+    # the entries of this matrix are either 0 or 1 representing 'unassigned' or 'assigned'
     X = pulp.LpVariable.dicts("x", itertools.product(range(number_talks), range(number_slots)), cat=pulp.LpBinary)
 
     # generate assessor-to-slot assignment matrix
+    # the entries of this matrix are either 0 or 1 representing 'unassigned' or 'assigned'
     Y = pulp.LpVariable.dicts("y", itertools.product(range(number_assessors), range(number_slots)), cat=pulp.LpBinary)
 
     # generate a 'size counting' variable for each slot
@@ -262,23 +294,40 @@ def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots
     prob += objective, "objective function"
 
 
+    constraints = 0
+
     # SIZE VARIABLES
 
     # size variable cannot be zero if a slot is occupied
     for i in range(number_slots):
         prob += S[i] >= sum([X[(j, i)] for j in range(number_talks)]) / (number_talks + 1.0)
+        constraints += 1
 
 
-    # FACULTY AVAILABILITY
+    # FACULTY (ASSESSOR) AVAILABILITY
 
     # faculty members should be scheduled only in slots for which they are available
     for key in Y:
         prob += Y[key] <= A[key]
+        constraints += 1
 
     # faculty members can only be in one place at once, so should be scheduled only once per room per slot
     for session in record.owner.sessions:
         for i in range(number_assessors):
             prob += sum([Y[(i, j)] for j in range(number_slots) if slot_dict[j].session_id == session.id]) <= 1
+            constraints += 1
+
+    # number of times each faculty member is scheduled should fall below the limit
+    for i in range(number_assessors):
+        prob += sum([Y[(i, j)] for j in range(number_slots)]) <= record.assessor_assigned_limit
+
+
+    # STUDENT (SUBMITTER) AVAILABILITY
+
+    # students should be scheduled only in slots for which the are available
+    for key in X:
+        prob += X[key] <= B[key]
+        constraints += 1
 
 
     # TALKS
@@ -286,24 +335,42 @@ def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots
     # talks should be scheduled in exactly one slot
     for i in range(number_talks):
         prob += sum([X[(i, j)] for j in range(number_slots)]) == 1
+        constraints += 1
 
     # each slot should have the required number of assessors if the slot is occupied:
     for i in range(number_slots):
         prob += sum([Y[(j, i)] for j in range(number_assessors)]) == record.owner.number_assessors * S[i]
+        constraints += 1
 
     # each slot should have no more than the maximum number of students:
     for i in range(number_slots):
         prob += sum([X[(j, i)] for j in range(number_talks)]) <= record.max_group_size
+        constraints += 1
 
 
-    # TALKS CAN ONLY BE SCHEDULED WITH OTHER TALKS OF THE SAME SELECTING PERIOD
+    # TALKS CAN ONLY BE SCHEDULED WITH OTHER TALKS OF THE SAME SUBMISSION PERIOD, BUT SHOULD NOT CLASH
+    # WITH OTHER TALKS ON THE SAME PROJECT, IF THAT OPTION IS SET (ON A PROJECT-BY-PROJECT BASIS)
 
     for i in range(number_talks):
         for j in range(i):
+
+            # note that we have j strictly less than i here, so i=j is excluded
             for k in range(number_slots):
                 talk_i = talk_dict[i]
                 talk_j = talk_dict[j]
-                prob += X[(i, k)] + X[(j, k)] <= (2 if talk_i.owner.config_id == talk_j.owner.config_id else 1)
+
+                limit = 1
+                if talk_i.owner.config_id == talk_j.owner.config_id:
+                    if talk_i.project_id == talk_j.project_id:
+                        if talk_i.project.dont_clash_presentations:
+                            limit = 1
+                        else:
+                            limit = 2
+                    else:
+                        limit = 2
+
+                prob += X[(i, k)] + X[(j, k)] <= limit
+                constraints += 1
 
 
     # TALKS CAN ONLY BE SCHEDULED WITH ASSESSORS WHO ARE SUITABLE
@@ -313,8 +380,9 @@ def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots
             for k in range(number_slots):
                 talk = talk_dict[i]
                 assessor = assessor_dict[j]
-                count = get_count(talk.project.assessors.filter_by(id=assessor.id))
-                prob += X[(i, k)] + Y[(j, k)] <= (2 if count == 1 else 1)
+
+                prob += X[(i, k)] + Y[(j, k)] <= (2 if talk.project.is_assessor(assessor.id) else 1)
+                constraints += 1
 
 
     # TALKS CANNOT BE SCHEDULED WITH THE SUPERVISOR AS AN ASSESSOR
@@ -331,7 +399,31 @@ def _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots
             if supervisor_id in assessor_to_number:
                 j = assessor_to_number[supervisor_id]
                 prob += X[(i, k)] + Y[(j, k)] <= 1
+                constraints += 1
 
+
+    # TALKS SHOULD ONLY BE SCHEDULED IN ROOMS WITH REQUIRED FACILITIES
+
+    for i in range(number_talks):
+        for j in range(number_slots):
+            slot_ok = True
+
+            talk = talk_dict[i]
+            slot = slot_dict[j]
+
+            if not talk.period.has_presentation:
+                raise RuntimeError('Inconsistent presentation state in SubmissionPeriodRecord')
+
+            if talk.period.lecture_capture and not slot.room.lecture_capture:
+                slot_ok = False
+
+            # future options can be inserted here
+
+            if not slot_ok:
+                prob += X[(i, j)] == 0
+                constraints += 1
+
+    print(' -- {num} total constraints'.format(num=constraints))
 
     return prob, X, Y
 
@@ -385,11 +477,11 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
     record.slots = store_slots
 
 
-def _initialize(self, id):
-    self.update_state(state='STARTED', meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+def _initialize(self, sched_id):
+    self.update_state(state='STARTED', meta='Looking up ScheduleAttempt record for id={id}'.format(id=sched_id))
 
     try:
-        record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+        record = db.session.query(ScheduleAttempt).filter_by(id=sched_id).first()
     except SQLAlchemyError:
         raise self.retry()
 
@@ -397,7 +489,7 @@ def _initialize(self, id):
         self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
         raise self.retry()
 
-    # add database records for each available slot
+    # add database records for each available slot (meaning a combination of session+room)
     for sess in record.owner.sessions:
         for room in sess.rooms:
             slot = ScheduleSlot(owner_id=record.id,
@@ -417,17 +509,22 @@ def _initialize(self, id):
         # build faculty availability matrix
         A = _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict)
 
+        # build submitter availability matrix
+        B = _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict)
+
     except SQLAlchemyError:
         raise self.retry()
 
     return number_talks, number_assessors, number_slots, \
            talk_to_number, assessor_to_number, slot_to_number, \
            number_to_talk, number_to_assessor, number_to_slot, \
-           talk_dict, assessor_dict, slot_dict, A, record
+           talk_dict, assessor_dict, slot_dict, A, B, record
 
 
 def _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
              talk_dict, assessor_dict, slot_dict):
+    print('Solving PuLP problem for schedule')
+
     progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
                     autocommit=True)
 
@@ -491,15 +588,17 @@ def register_scheduling_tasks(celery):
         number_talks, number_assessors, number_slots, \
         talk_to_number, assessor_to_number, slot_to_number, \
         number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, record = _initialize(self, id)
+        talk_dict, assessor_dict, slot_dict, A, B, record = _initialize(self, id)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
 
         with Timer() as create_time:
-            prob, X, Y = _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
+            prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
                                               assessor_to_number, talk_dict, assessor_dict, slot_dict,
                                               _generate_minimize_objective)
+
+        print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
         return _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
                         talk_dict, assessor_dict, slot_dict)
@@ -510,7 +609,7 @@ def register_scheduling_tasks(celery):
         number_talks, number_assessors, number_slots, \
         talk_to_number, assessor_to_number, slot_to_number, \
         number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, record = _initialize(self, new_id)
+        talk_dict, assessor_dict, slot_dict, A, B, record = _initialize(self, new_id)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
@@ -519,10 +618,11 @@ def register_scheduling_tasks(celery):
                                      talk_to_number, assessor_to_number, slot_dict)
 
         with Timer() as create_time:
-            prob, X, Y = _create_PuLP_problem(A, record, number_talks, number_assessors, number_slots,
-                                              assessor_to_number,
-                                              talk_dict, assessor_dict, slot_dict,
+            prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
+                                              assessor_to_number, talk_dict, assessor_dict, slot_dict,
                                               partial(_generate_reschedule_objective, oldX, oldY))
+
+        print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
         return _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
                         talk_dict, assessor_dict, slot_dict)

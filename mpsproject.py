@@ -50,6 +50,26 @@ def migrate_availability_data():
             db.session.add(new_record)
 
 
+def migrate_confirmation_data():
+    """
+    Migrate old-style confirmation data for PresentationAssessment (held in a separate association table)
+    to new-style (held as part of the AssessorAttendanceData record)
+    :return:
+    """
+    assessments = db.session.query(PresentationAssessment).all()
+
+    for assessment in assessments:
+        for record in assessment.assessor_list:
+            if record.faculty in assessment.availability_outstanding:
+                record.confirmed = False
+                record.confirmed_timestamp = None
+            else:
+                record.confirmed = True
+                record.confirmed_timestamp = None
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
 with app.app_context():
@@ -67,6 +87,7 @@ with app.app_context():
         pass
 
     # migrate_availability_data()
+    # migrate_confirmation_data()
 
     db.session.commit()
 

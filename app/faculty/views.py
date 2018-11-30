@@ -1931,11 +1931,15 @@ def set_availability(id):
         data.faculty_set_comment(current_user.faculty_data, comment)
 
         if hasattr(form, 'confirm') and form.confirm:
+            record = data.assessor_list.filter_by(faculty_id=current_user.id, confirmed=False).first()
+            if record is not None:
+                record.confirmed = True
+                record.confirmed_timestamp = datetime.now()
+
             flash('Your availability details have been recorded. Thank you for responding.', 'info')
-            data.availability_outstanding.remove(current_user.faculty_data)
 
         elif hasattr(form, 'update') and form.update:
-            flash('Your availability details have been updated', 'info')
+            flash('Thank you: your availability details have been updated', 'info')
 
         else:
             raise RuntimeError('Unknown submit button in faculty.set_availability')

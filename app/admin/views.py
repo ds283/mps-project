@@ -8,8 +8,11 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session
+from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
+    stream_with_context
 from werkzeug.local import LocalProxy
+from werkzeug.datastructures import Headers
+from werkzeug.wrappers import Response
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 from flask_security.utils import config_value, get_message, do_flash, send_mail
 from flask_security.confirmable import generate_confirmation_link
@@ -20,7 +23,7 @@ from collections import deque
 from celery import chain, group
 
 from ..limiter import limiter
-from .actions import register_user, estimate_CATS_load
+from .actions import register_user, estimate_CATS_load, availability_CSV_generator
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
     EditOfficeForm, EditFacultyForm, EditStudentForm, \
@@ -5316,6 +5319,36 @@ def force_confirm_availability(assessment_id, faculty_id):
         db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/availability_as_csv/<int:id>')
+@roles_required('root')
+def availability_as_csv(id):
+    """
+    Convert availability data to CSV and serve
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    if not validate_assessment(data):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot generate availability data for this assessment because it has not yet been collected.',
+              'info')
+        return redirect(request.referrer)
+
+    # add a filename
+    headers = Headers()
+    headers.set('Content-Disposition', 'attachment', filename='availability.csv')
+
+    # stream the response as the data is generated
+    return Response(stream_with_context(availability_CSV_generator(data)),
+                    mimetype='text/csv', headers=headers)
 
 
 @admin.route('/assessment_manage_sessions/<int:id>')

@@ -16,9 +16,13 @@ from flask_security.signals import user_registered
 from flask_security.confirmable import generate_confirmation_link
 
 from ..database import db
-from ..models import ProjectClass, ProjectClassConfig, EnrollmentRecord, FacultyData, SelectingStudent, User
+from ..models import ProjectClass, ProjectClassConfig, EnrollmentRecord, FacultyData, SelectingStudent, User, \
+    AssessorAttendanceData
 from ..shared.utils import get_current_year
 from ..shared.sqlalchemy import get_count
+
+import csv
+from io import StringIO
 
 from sqlalchemy import func
 
@@ -144,3 +148,47 @@ def estimate_CATS_load():
 
     return supervising_CATS, marking_CATS, presentation_CATS, \
            len(supervising_faculty), len(marking_faculty), len(presentation_faculty)
+
+
+def availability_CSV_generator(assessment):
+    data = StringIO()
+    w = csv.writer(data, quoting=csv.QUOTE_NONNUMERIC)
+
+    sessions = assessment.ordered_sessions.all()
+
+    headings = ['Name']
+    for s in sessions:
+        headings.append(s.short_date_as_string + ' ' + s.session_type_string)
+    headings.append('Comment')
+
+    w.writerow(headings)
+    yield data.getvalue()
+    data.seek(0)
+    data.truncate(0)
+
+    assessors = assessment.assessor_list.subquery()
+
+    faculty = db.session.query(AssessorAttendanceData) \
+        .join(assessors, assessors.c.id == AssessorAttendanceData.id) \
+        .join(User, User.id == AssessorAttendanceData.faculty_id) \
+        .order_by(User.last_name.asc(), User.first_name.asc()).all()
+
+    for item in faculty:
+        fac_id = item.faculty.id
+
+        row = [item.faculty.user.name]
+        for s in sessions:
+            if s.faculty_available(fac_id):
+                row.append('Yes')
+            elif s.faculty_ifneeded(fac_id):
+                row.append('If needed')
+            elif s.faculty_unavailable(fac_id):
+                row.append('No')
+            else:
+                row.append('Unknown')
+        row.append(item.comment)
+
+        w.writerow(row)
+        yield data.getvalue()
+        data.seek(0)
+        data.truncate(0)

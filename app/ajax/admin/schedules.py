@@ -101,6 +101,8 @@ _info = \
 """
 <span class="label label-info">Max group size {{ s.max_group_size }}</span>
 <span class="label label-info">Max assessor assignment {{ s.assessor_assigned_limit }}</span>
+<span class="label label-info">If needed cost {{ s.if_needed_cost }}</span>
+<span class="label label-info">Levelling tension {{ s.levelling_tension }}</span>
 {% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
     {% set value = s.number_sessions %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
     <span class="label label-info">Uses {{ value }} session{{ pl }}</span>

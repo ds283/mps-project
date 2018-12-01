@@ -13,3 +13,9 @@
     /*border-width: 3px;*/
     margin: 3px;
 }
+
+.dashboard-notification-panel {
+    text-align: left;
+    padding: 4px;
+    background-color: #e9ecef;
+}

@@ -3861,6 +3861,11 @@ class LiveProject(db.Model):
         return self.assessor_list_query.all()
 
 
+    @property
+    def number_assessors(self):
+        return get_count(self.assessors)
+
+
     def is_assessor(self, fac_id):
         return get_count(self.assessors.filter_by(id=fac_id)) > 0
 

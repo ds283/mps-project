@@ -67,9 +67,15 @@ _global_name = \
 <a href="mailto:{{ s.submitter.owner.student.user.email }}">{{ s.submitter.owner.student.user.name }}</a>
 {% set constraints = s.number_unavailable %}
 {% if constraints > 0 %}
-    <p></p>
+    &emsp;
     <span class="label label-info">{{ constraints }} session constraints</span>
 {% endif %}
+"""
+
+
+_project_name = \
+"""
+<a href="{{ url }}">{{ p.name }}<a>&emsp;<span class="label label-info">{{ p.number_assessors }} assessors</span>
 """
 
 
@@ -78,12 +84,12 @@ def submitter_session_availability_data(assessment, session, talks):
                                                                                  name=s.submitter.owner.student.user.name),
                          'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
              'pclass': render_template_string(_pclass, pclass=s.submitter.project.config.project_class),
-             'project': '<a href="{url}">{name}</a>'.format(name=s.submitter.project.name,
-                                                            url=url_for('faculty.live_project',
-                                                                        pid=s.submitter.project.id,
-                                                                        text='session attendee list',
-                                                                        url=url_for('admin.submitter_session_availability',
-                                                                                    id=session.id))),
+             'project': render_template_string(_project_name, p=s.submitter.project,
+                                               url=url_for('faculty.live_project',
+                                                           pid=s.submitter.project.id,
+                                                           text='session attendee list',
+                                                           url=url_for('admin.submitter_session_availability',
+                                                                       id=session.id))),
              'menu': render_template_string(_session_actions, s=s.submitter, a=assessment, sess=session)} for s in talks]
 
     return jsonify(data)
@@ -93,10 +99,11 @@ def presentation_attendees_data(assessment, talks):
     data = [{'student': {'display': render_template_string(_global_name, s=s, a=assessment),
                          'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
              'pclass': render_template_string(_pclass, pclass=s.submitter.project.config.project_class),
-             'project': '<a href="{url}">{name}</a>'.format(name=s.submitter.project.name,
-                                                            url=url_for('faculty.live_project', pid=s.submitter.project.id,
-                                                                        text='assessment attendee list',
-                                                                        url=url_for('admin.assessment_manage_attendees', id=assessment.id))),
+             'project': render_template_string(_project_name, p=s.submitter.project,
+                                               url=url_for('faculty.live_project', pid=s.submitter.project.id,
+                                                           text='assessment attendee list',
+                                                           url=url_for('admin.assessment_manage_attendees',
+                                                                       id=assessment.id))),
              'menu': render_template_string(_submitter_actions, s=s.submitter, a=assessment)} for s in talks]
 
     return jsonify(data)

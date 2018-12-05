@@ -25,6 +25,7 @@ class Config(object):
     """
     Common configuration options
     """
+    SERVER_NAME = os.environ.get('SERVER_NAME') or None
 
     # read database URI from DATABASE_URI environment variable, or
     # else store locally in this directory

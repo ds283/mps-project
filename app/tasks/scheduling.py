@@ -9,10 +9,11 @@
 #
 
 from ..database import db
-from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot
+from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, User
 
-from ..shared.sqlalchemy import get_count
-from ..task_queue import progress_update
+from ..task_queue import progress_update, register_task
+
+from celery.exceptions import Ignore
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -22,6 +23,12 @@ import itertools
 from functools import partial
 
 from ..shared.timer import Timer
+from ..shared.utils import make_generated_asset_filename
+
+from flask import current_app, render_template, url_for
+from flask_mail import Message
+
+from datetime import datetime
 
 
 def _enumerate_talks(assessment):
@@ -35,7 +42,7 @@ def _enumerate_talks(assessment):
     # the .schedulable_talks property returns a list of of SubmissionRecord instances,
     # minus any students who are not attending the main assessment event and need to
     # be scheduled for the make-up event.
-    for p in assessment.schedulable_talks:
+    for p in assessment.schedulable_talks:      # schedulable_talks comes with a defined order (needed for safe offline scheduling)
         talk_to_number[p.id] = number
         number_to_talk[number] = p.id
 
@@ -56,7 +63,7 @@ def _enumerate_assessors(record):
 
     # the .assessor_list property returns a list of AssessorAttendanceData instances,
     # one for each assessor who has been invited to attend
-    for assessor in record.assessor_list:
+    for assessor in record.assessor_list:       # assessor_list comes with a defined order (needed for safe offline scheduling)
         assessor_to_number[assessor.faculty_id] = number
         number_to_assessor[number] = assessor.faculty_id
 
@@ -75,7 +82,7 @@ def _enumerate_slots(record):
 
     slot_dict = {}
 
-    for slot in record.slots:
+    for slot in record.ordered_slots:           # ordered_slots comes with a defined order (needed for safe offline scheduling)
         slot_to_number[slot.id] = number
         number_to_slot[number] = slot.id
 
@@ -673,3 +680,82 @@ def register_scheduling_tasks(celery):
 
         return _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
                         talk_dict, assessor_dict, slot_dict)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def offline_schedule(self, schedule_id, user_id):
+        try:
+            user = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            raise Ignore
+
+        number_talks, number_assessors, number_slots, \
+        talk_to_number, assessor_to_number, slot_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, \
+        talk_dict, assessor_dict, slot_dict, A, B, C, record = _initialize(self, schedule_id)
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                        autocommit=True)
+
+        with Timer() as create_time:
+            prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
+                                              assessor_to_number, talk_dict, assessor_dict, slot_dict,
+                                              partial(_generate_minimize_objective, C))
+
+        print(' -- creation complete in time {t}'.format(t=create_time.interval))
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP and .MPS files...",
+                        autocommit=True)
+
+        lp_name, lp_abs_path = make_generated_asset_filename('lp')
+        mps_name, mps_abs_path = make_generated_asset_filename('mps')
+        prob.writeLP(lp_abs_path)
+        prob.writeMPS(mps_abs_path)
+
+        AssetLifetime = 24*60*60            # time to live is 24 hours
+
+        now = datetime.now()
+        lp_asset = GeneratedAsset(timestamp=now,
+                                  lifetime=AssetLifetime,
+                                  filename=lp_name,
+                                  mimetype=None,
+                                  target_name='schedule.lp')
+        lp_asset.access_control_list.append(user)
+
+        mps_asset = GeneratedAsset(timestamp=now,
+                                   lifetime=AssetLifetime,
+                                   filename=mps_name,
+                                   mimetype=None,
+                                   target_name='schedule.MPS')
+        mps_asset.access_control_list.append(user)
+
+        try:
+            db.session.add(lp_asset)
+            db.session.add(mps_asset)
+            db.session.commit()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        msg = Message(subject='Files for offline scheduling of {name} are now ready'.format(name=record.name),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=[User.email])
+
+        msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user,
+                                   lp_url=url_for('admin.download_generated_asset', asset_id=lp_asset.id),
+                                   mps_url=url_for('admin.download_generated_asset', asset_id=mps_asset.id))
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
+                        'File generation for offline scheduling now complete', autocommit=True)
+
+        user.post_message('The files necessary to perform offline scheduling have been generated, and a '
+                          'set of download links has been emailed to you. The files will be available '
+                          'for the next 24 hours.', 'info', autocommit=True)

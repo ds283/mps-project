@@ -69,6 +69,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379
       - BACKUP_FOLDER=/home/mpsproject/backups
       - ASSETS_FOLDER=/home/mpsproject/assets
+      - SERVER_NAME="mpsprojects.co.uk"
       - DATABASE_USER=mpsproject
       - DATABASE_PASSWORD=Bridle12Way2007
       - DATABASE_ROOT_PASSWORD=Wilberforce2008Road

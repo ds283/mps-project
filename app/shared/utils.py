@@ -9,7 +9,7 @@
 #
 
 
-from flask import redirect, url_for, flash
+from flask import redirect, url_for, flash, current_app
 from flask_security import current_user
 from sqlalchemy import and_
 
@@ -22,7 +22,8 @@ from ..models import project_assessors
 from .conversions import is_integer
 from .sqlalchemy import get_count
 
-from sqlalchemy import func
+from os import path
+from uuid import uuid4
 
 
 def get_main_config():
@@ -544,3 +545,33 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter):
         data = submitters.all()
 
     return data
+
+
+def make_generated_asset_filename(ext=None):
+    """
+    Generate a unique filename for a newly-generated asset
+    :return:
+    """
+    asset_folder = current_app.config.get('ASSETS_FOLDER')
+    if asset_folder is None:
+        raise RuntimeError('ASSETS_FOLDER configuration variable is not set')
+
+    if ext is not None:
+        filename = '{leaf}.{ext}'.format(leaf=uuid4(), ext=ext)
+    else:
+        filename = '{leaf}'.format(leaf=uuid4())
+
+    return filename, path.join(asset_folder, 'generated', filename)
+
+
+def canonical_generated_asset_filename(filename):
+    """
+    Turn a unique filename for a generated asset into an absolute path
+    :param filename:
+    :return:
+    """
+    asset_folder = current_app.config.get('ASSETS_FOLDER')
+    if asset_folder is None:
+        raise RuntimeError('ASSETS_FOLDER configuration variable is not set')
+
+    return path.join(asset_folder, 'generated', filename)

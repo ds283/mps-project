@@ -856,6 +856,7 @@ def register_matching_tasks(celery):
             progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Matching task complete', autocommit=False)
 
             record.finished = True
+            record.celery_finished = True
             db.session.commit()
 
         except SQLAlchemyError:
@@ -964,6 +965,7 @@ def register_matching_tasks(celery):
                                    selected=False,
                                    celery_id=None,
                                    finished=record.finished,
+                                   celery_finished=True,
                                    awaiting_upload=record.awaiting_upload,
                                    outcome=record.outcome,
                                    solver=record.solver,

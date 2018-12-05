@@ -3874,6 +3874,7 @@ def create_match():
                                name=form.name.data,
                                celery_id=uuid,
                                finished=False,
+                               celery_finished=False,
                                awaiting_upload=False,
                                outcome=None,
                                published=False,
@@ -4002,11 +4003,13 @@ def perform_terminate_match(id):
               'error')
         return redirect(url)
 
-    celery = current_app.extensions['celery']
-    celery.control.revoke(record.celery_id, terminate=True, signal='SIGUSR1')
+    if not record.celery_finished:
+        celery = current_app.extensions['celery']
+        celery.control.revoke(record.celery_id, terminate=True, signal='SIGUSR1')
 
     try:
-        progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+        if not record.celery_finished:
+            progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
 
         # delete all MatchingRecords associated with this MatchingAttempt; in fact should not be any, but this
         # is just to be sure
@@ -5959,6 +5962,7 @@ def create_assessment_schedule(id):
                                        name=form.name.data,
                                        celery_id=uuid,
                                        finished=False,
+                                       celery_finished=False,
                                        outcome=None,
                                        published=False,
                                        deployed=False,
@@ -6059,6 +6063,7 @@ def adjust_assessment_schedule(id):
                                        name=new_name,
                                        celery_id=uuid,
                                        finished=False,
+                                       celery_finished=False,
                                        awaiting_upload=False,
                                        outcome=None,
                                        published=old_schedule.published,
@@ -6124,11 +6129,13 @@ def perform_terminate_schedule(id):
               'error')
         return redirect(url)
 
-    celery = current_app.extensions['celery']
-    celery.control.revoke(record.celery_id, terminate=True, signal='SIGUSR1')
+    if not record.celery_finished:
+        celery = current_app.extensions['celery']
+        celery.control.revoke(record.celery_id, terminate=True, signal='SIGUSR1')
 
     try:
-        progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+        if not record.celery_finished:
+            progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
 
         # delete all ScheduleSlot records associated with this ScheduleAttempt; in fact should not be any, but this
         # is just to be sure
@@ -7168,7 +7175,7 @@ def download_generated_asset(asset_id):
         return redirect(request.referrer)
 
     abs_path = canonical_generated_asset_filename(asset.filename)
-    return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_filename)
+    return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name)
 
 
 @admin.route('/upload_schedule/<int:schedule_id>')

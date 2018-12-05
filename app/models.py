@@ -5412,11 +5412,8 @@ class PuLPMixin():
     SOLVER_GUROBI_CMD = 4
     SOLVER_SCIP_CMD = 5
 
-    # which solver to use
+    # which solver we are using
     solver = db.Column(db.Integer())
-
-    # are we waiting for manual upload?
-    awaiting_upload = db.Column(db.Boolean(), default=False)
 
     # time taken to construct the PuLP problem
     construct_time = db.Column(db.Numeric(8, 3))
@@ -5425,7 +5422,23 @@ class PuLPMixin():
     compute_time = db.Column(db.Numeric(8, 3))
 
 
-    # MATCHING OUTCOME
+    # TASK DETAILS
+
+    # Celery taskid, used in case we need to revoke the task;
+    # typically this will be a UUID
+    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+
+    # STATUS
+
+    # are we waiting for manual upload?
+    awaiting_upload = db.Column(db.Boolean(), default=False)
+    
+    # is the optimization job finished?
+    finished = db.Column(db.Boolean(), default=False)
+    
+    # is the celery task finished (need not be the same as whether the optimization job is finished)
+    celery_finished = db.Column(db.Boolean(), default=False)
 
     # value of objective function, if match was successful
     score = db.Column(db.Numeric(10, 2))
@@ -5489,16 +5502,6 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # flag whether this attempt has been published to convenors for comments/editing
     published = db.Column(db.Boolean())
-
-
-    # CELERY TASK DATA
-
-    # Celery taskid, used in case we need to revoke the task;
-    # typically this will be a UUID
-    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
-
-    # finished executing?
-    finished = db.Column(db.Boolean())
 
 
     # MATCHING OPTIONS
@@ -7361,16 +7364,6 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     # flag whether this attempt has been deployed as an official schedule
     deployed = db.Column(db.Boolean())
-
-
-    # CELERY TASK DATA
-
-    # Celery taskid, used in case we need to revoke the task;
-    # normally this will be the UUID
-    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
-
-    # finished executing?
-    finished = db.Column(db.Boolean())
 
 
     # CONFIGURATION

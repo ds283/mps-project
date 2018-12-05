@@ -529,7 +529,8 @@ def _initialize(self, sched_id):
         self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
         raise self.retry()
 
-    # add database records for each available slot (meaning a combination of session+room)
+    # add database records for each available slot (meaning a combination of session+room);
+    # the ones we don't use will be cleaned up later
     for sess in record.owner.sessions:
         for room in sess.rooms:
             slot = ScheduleSlot(owner_id=record.id,
@@ -626,6 +627,7 @@ def _execute(self, record, prob, X, Y, create_time, number_talks, number_assesso
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Scheduling task complete', autocommit=False)
 
         record.finished = True
+        record.celery_finished = True
         db.session.commit()
 
     except SQLAlchemyError:
@@ -736,6 +738,8 @@ def register_scheduling_tasks(celery):
         try:
             db.session.add(lp_asset)
             db.session.add(mps_asset)
+
+            record.celery_finished = True
             db.session.commit()
         except SQLAlchemyError:
             raise self.retry()
@@ -743,7 +747,7 @@ def register_scheduling_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='Files for offline scheduling of {name} are now ready'.format(name=record.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      recipients=[User.email])
+                      recipients=[user.email])
 
         msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user,
                                    lp_url=url_for('admin.download_generated_asset', asset_id=lp_asset.id),

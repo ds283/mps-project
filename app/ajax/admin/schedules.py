@@ -183,17 +183,16 @@ _menu = \
             {% set disabled = not current_user.has_role('root') %}
             {% if s.awaiting_upload %}
                 <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('admin.upload_schedule', id=s.id) }}"{% endif %}>
-                        <i class="fa fa-file-upload"></i> Upload solution...
-                    </a>
-                </li>
-            {% else %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('admin.terminate_schedule', id=s.id) }}"{% endif %}>
-                        <i class="fa fa-hand-paper-o"></i> Terminate
+                    <a {% if not disabled %}href="{{ url_for('admin.upload_schedule', schedule_id=s.id) }}"{% endif %}>
+                        <i class="fa fa-cloud-upload"></i> Upload solution...
                     </a>
                 </li>
             {% endif %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('admin.terminate_schedule', id=s.id) }}"{% endif %}>
+                    <i class="fa fa-hand-paper-o"></i> Terminate
+                </a>
+            </li>
         {% else %}
             {% if s.solution_usable %}
                 <li>

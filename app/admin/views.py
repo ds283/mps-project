@@ -9,7 +9,7 @@
 #
 
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
-    stream_with_context
+    stream_with_context, send_file
 from werkzeug.local import LocalProxy
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
@@ -55,10 +55,10 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project
+    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project, GeneratedAsset
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_root_dashboard_data, get_automatch_pclasses
+    get_root_dashboard_data, get_automatch_pclasses, canonical_generated_asset_filename
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector, \
@@ -5938,14 +5938,27 @@ def create_assessment_schedule(id):
 
     if form.validate_on_submit():
         if _validate_number_slots(data, form.max_group_size.data):
-            uuid = register_task('Schedule job "{name}"'.format(name=form.name.data),
-                                 owner=current_user, description="Automated assessment scheduling task")
+
+            offline = False
+
+            if form.submit.data:
+                task_name = 'Perform optimal scheduling for "{name}"'.format(name=form.name.data)
+                desc = 'Automated assessment scheduling task'
+
+            elif form.offline.data:
+                offline = True
+                task_name = 'Generate files for offline scheduling for "{name}"'.format(name=form.name.data)
+                desc = 'Produce .LP and .MPS files for download and offline scheduling'
+
+            else:
+                raise RuntimeError('Unknown submit button in create_assessment_schedule()')
+
+            uuid = register_task(task_name, owner=current_user, description=desc)
 
             schedule = ScheduleAttempt(owner_id=data.id,
                                        name=form.name.data,
                                        celery_id=uuid,
                                        finished=False,
-                                       awaiting_upload=False,
                                        outcome=None,
                                        published=False,
                                        deployed=False,
@@ -5962,15 +5975,29 @@ def create_assessment_schedule(id):
                                        last_edit_id=None,
                                        score=None)
 
-            db.session.add(schedule)
-            db.session.commit()
+            if offline:
+                schedule.awaiting_upload = True
+                db.session.add(schedule)
+                db.session.commit()
 
-            celery = current_app.extensions['celery']
-            schedule_task = celery.tasks['app.tasks.scheduling.create_schedule']
+                celery = current_app.extensions['celery']
+                schedule_task = celery.tasks['app.tasks.scheduling.offline_schedule']
 
-            schedule_task.apply_async(args=(schedule.id,), task_id=uuid)
+                schedule_task.apply_async(args=(schedule.id, current_user.id), task_id=uuid)
 
-            return redirect(url_for('admin.assessment_schedules', id=data.id))
+                return redirect(url_for('admin.assessment_schedules', id=data.id))
+
+            else:
+                schedule.awaiting_upload = False
+                db.session.add(schedule)
+                db.session.commit()
+
+                celery = current_app.extensions['celery']
+                schedule_task = celery.tasks['app.tasks.scheduling.create_schedule']
+
+                schedule_task.apply_async(args=(schedule.id,), task_id=uuid)
+
+                return redirect(url_for('admin.assessment_schedules', id=data.id))
 
     matches = get_count(data.scheduling_attempts)
 
@@ -7100,7 +7127,6 @@ def deactivate_building(id):
 @admin.route('/launch_test_task')
 @roles_required('root')
 def launch_test_task():
-
     task_id = register_task('Test task', owner=current_user, description="Long-running test task")
 
     celery = current_app.extensions['celery']
@@ -7114,11 +7140,10 @@ def launch_test_task():
 @admin.route('/login_as/<int:id>')
 @roles_required('root')
 def login_as(id):
-
     user = User.query.get_or_404(id)
 
     # store previous login identifier
-    # this is OK provided we only ever use server-side sessions for security, so that the session
+    # this is OK *provided* we only ever use server-side sessions for security, so that the session
     # variables can not be edited, inspected or faked by the user
     session['previous_login'] = current_user.id
 
@@ -7129,3 +7154,30 @@ def login_as(id):
     # don't commit changes to database to avoid confusing this with a real login
 
     return home_dashboard()
+
+
+@admin.route('/download_generated_asset/<int:asset_id>')
+@login_required
+def download_generated_asset(asset_id):
+    # asset_is is a GeneratedAsset
+    asset = GeneratedAsset.query.get_or_404(asset_id)
+
+    if get_count(asset.access_control_list.filter_by(id=current_user.id)) == 0:
+        flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
+              'a system administrator.', 'info')
+        return redirect(request.referrer)
+
+    abs_path = canonical_generated_asset_filename(asset.filename)
+    return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_filename)
+
+
+@admin.route('/upload_schedule/<int:schedule_id>')
+@roles_required('root')
+def upload_schedule(schedule_id):
+    return redirect(request.referrer)
+
+
+@admin.route('/upload_match/<int:match_id>')
+@roles_required('root')
+def upload_match(match_id):
+    return redirect(request.referrer)

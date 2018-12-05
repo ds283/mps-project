@@ -10,7 +10,7 @@
 
 import os
 
-from flask import current_app, request, session, render_template
+from flask import current_app, request, session, render_template, has_request_context
 from flask_migrate import Migrate
 from flask_security import current_user, SQLAlchemyUserDatastore, Security
 from flask_login.signals import user_logged_in
@@ -226,6 +226,9 @@ def create_app():
 
     @app.context_processor
     def global_context():
+        if not has_request_context():
+            return {}
+
         if session.get('previous_login', None) is not None:
             real_id = session['previous_login']
             real_user = db.session.query(User).filter_by(id=real_id).first()
@@ -237,6 +240,9 @@ def create_app():
 
     @app.context_processor
     def inject_home_dashboard_url():
+        if not has_request_context():
+            return {}
+
         return {'home_dashboard_url': home_dashboard_url()}
 
 

@@ -158,7 +158,7 @@ def register_backup_tasks(celery):
         self.update_state(state='STARTED', meta='Compressing database backup and website assets')
 
         # get location of assets folder from configuraiton
-        assets_folder = current_app.config['ASSETS_FOLDER']
+        assets_folder = current_app.config.get('ASSETS_FOLDER')
 
         temp_SQL_file, backup_folder, backup_abspath, backup_relpath = paths
 

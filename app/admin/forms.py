@@ -774,7 +774,8 @@ class PuLPSolverMixin():
 
     solver = SelectField('Solver', choices=solver_choices, coerce=int,
                          description='The optimizer can use a number of different solvers. If in doubt, use the '
-                                     'packaged CBC solver.')
+                                     'packaged CBC solver. Alternatively, download a version if the optimization '
+                                     'problem as a .LP or .MPS file and perform the optimization offline.')
 
 
 def MatchingMixinFactory(query_factory):
@@ -867,6 +868,8 @@ def NewMatchFormFactory(year):
     class NewMatchForm(Form, Mixin, PuLPSolverMixin):
 
         submit = SubmitField('Create new match')
+
+        offlien = SubmitField('Perform matching offline')
 
         @staticmethod
         def validate_name(form, field):
@@ -1067,6 +1070,8 @@ def NewScheduleFormFactory(assessment):
     class NewScheduleForm(Form, ScheduleNameMixin, ScheduleSettingsMixin, PuLPSolverMixin):
 
         submit = SubmitField('Create new schedule')
+
+        offline = SubmitField('Perform scheduling offline')
 
         @staticmethod
         def validate_name(form, field):

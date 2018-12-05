@@ -360,6 +360,14 @@ submitter_unavailable_sessions = db.Table('submitter_unavailable',
                                           db.Column('session_id', db.Integer(), db.ForeignKey('presentation_sessions.id'), primary_key=True))
 
 
+# ACCESS CONTROL LISTS
+
+# generated assets
+generated_acl = db.Table('acl_generated',
+                         db.Column('asset_id', db.Integer(), db.ForeignKey('generated_assets.id'), primary_key=True),
+                         db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
+
+
 class MainConfig(db.Model):
     """
     Main application configuration table; generally, there should only
@@ -6507,7 +6515,7 @@ class PresentationAssessment(db.Model):
 
     @property
     def schedulable_talks(self):
-        talks = self.available_talks
+        talks = self.available_talks.order_by(SubmissionRecord.id.asc())
         return [t for t in talks if not self.not_attending(t.id)]
 
 
@@ -7494,6 +7502,23 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
 
     @property
+    def slots_query(self):
+        q = self.slots.subquery()
+
+        return db.session.query(ScheduleSlot) \
+            .join(q, q.c.id == ScheduleSlot.id) \
+            .join(PresentationSession, PresentationSession.id == ScheduleSlot.session_id) \
+            .join(Room, Room.id == ScheduleSlot.room_id) \
+            .join(Building, Building.id == Room.building_id) \
+            .order_by(PresentationSession.date.asc(), Building.name.asc(), Room.name.asc())
+
+
+    @property
+    def ordered_slots(self):
+        return self.slots_query.all()
+
+
+    @property
     def is_valid(self):
         """
         Perform validation
@@ -7610,19 +7635,39 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 3. ASSESSORS SHOULD ALL BE AVAILABLE FOR THIS SESSION
     for assessor in obj.assessors:
-        if not assessor in obj.session.faculty:
+        if assessor in obj.session.unavailable_faculty:
             errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is not ' \
                                                'available'.format(name=assessor.user.name)
+        elif assessor in obj.session.ifneeded_faculty:
+            warnings[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is marked ' \
+                                                 'as "if needed"'.format(name=assessor.user.name)
+        elif assessor in obj.session.available_faculty:
+            pass
+        else:
+            errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but they do not ' \
+                                               'belong to this assessment'.format(name=assessor.user.name)
 
 
-    # CONSTRAINT 4. PROJECTS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
+    # CONSTRAINT 4. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
     for talk in obj.talks:
         if obj.owner.owner.not_attending(talk.id):
             errors[('talks', talk.id)] = 'Presentation for "{name}" is scheduled in this slot, but this student ' \
                                          'is not attending'.format(name=talk.owner.student.user.name)
 
 
-    # CONSTRAINT 5. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN THE TWO PLACES AT THE SAME TIME
+    # CONSTRAINT 5. SUBMITTERS SHOULD ALL BE AVAILABILE FOR THIS SESSION
+    for talk in obj.talks:
+        if talk in obj.session.unavailable_submitters:
+            errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but is not ' \
+                                             'available'.format(name=talk.owner.student.user.name)
+        elif talk in obj.session.available_submitters:
+            pass
+        else:
+            errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but they do not ' \
+                                             'belong to this assessment'.format(name=talk.owner.student.user.name)
+
+
+    # CONSTRAINT 6. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN THE TWO PLACES AT THE SAME TIME
     for assessor in obj.assessors:
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,
@@ -7641,7 +7686,7 @@ def _ScheduleSlot_is_valid(id):
                                                                    room=sess.room_full_name)
 
 
-    # CONSTRAINT 6. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
+    # CONSTRAINT 7. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
     for talk in obj.talks:
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,
@@ -7658,7 +7703,6 @@ def _ScheduleSlot_is_valid(id):
                                                                date=sess.short_date_as_string,
                                                                session=sess.session_type_as_string,
                                                                room=sess.room_full_name)
-
 
     if len(errors) > 0 or len(warnings) > 0:
         return False, errors, warnings
@@ -8062,8 +8106,17 @@ class GeneratedAsset(db.Model):
     # lifetime in seconds (will be cleaned up by automatic garbage collector after this time)
     lifetime = db.Column(db.Integer())
 
-    # path to file
-    path = db.Column(db.String(DEFAULT_STRING_LENGTH))
+    # filename (assumed to live under ASSETS_FOLDER/generated
+    filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # optional mimetype
+    mimetype = db.Column(db.String(DEFAULT_STRING_LENGTH), default=None)
+
+    # target filename
+    target_name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # access control list
+    access_control_list = db.relationship('User', secondary=generated_acl, lazy='dynamic')
 
 
 # ############################

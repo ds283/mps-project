@@ -10,6 +10,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - BACKUP_FOLDER=/home/mpsproject/backups
+      - ASSETS_FOLDER=/home/mpsproject/assets
       - DATABASE_USER=mpsproject
       - DATABASE_PASSWORD=Bridle12Way2007
       - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
@@ -23,6 +24,7 @@ services:
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
       - /data/mpsproject/backups:/home/mpsproject/backups
+      - /data/mpsproject/assets:/home/mpsproject/assets
       - /data/mpsproject/logs:/home/mpsproject/logs
     links:
       - mariadb
@@ -66,6 +68,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - BACKUP_FOLDER=/home/mpsproject/backups
+      - ASSETS_FOLDER=/home/mpsproject/assets
       - DATABASE_USER=mpsproject
       - DATABASE_PASSWORD=Bridle12Way2007
       - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
@@ -78,6 +81,7 @@ services:
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
       - /data/mpsproject/backups:/home/mpsproject/backups
+      - /data/mpsproject/assets:/home/mpsproject/assets
       - /data/mpsproject/logs:/home/mpsproject/logs
     links:
       - mariadb
@@ -100,6 +104,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379
       - CELERY_BROKER_URL=redis://redis:6379
       - BACKUP_FOLDER=/home/mpsproject/backups
+      - ASSETS_FOLDER=/home/mpsproject/assets
       - DATABASE_USER=mpsproject
       - DATABASE_PASSWORD=Bridle12Way2007
       - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
@@ -112,6 +117,7 @@ services:
     volumes:
       - /data/mpsproject/instance:/home/mpsproject/instance
       - /data/mpsproject/backups:/home/mpsproject/backups
+      - /data/mpsproject/assets:/home/mpsproject/assets
       - /data/mpsproject/logs:/home/mpsproject/logs
     links:
       - mariadb

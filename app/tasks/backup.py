@@ -30,11 +30,9 @@ import random
 
 
 def _count_dir_size(path):
-
     size = 0
 
     for entry in scandir(path):
-
         if entry.is_dir(follow_symlinks=False):
             size += _count_dir_size(entry.path)
 
@@ -45,7 +43,6 @@ def _count_dir_size(path):
 
 
 def _prune_empty_folders(path):
-
     file_count = 0
 
     for entry in scandir(path):
@@ -77,7 +74,6 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def build_backup_paths(self, tag):
-
         self.update_state(state='STARTED', meta='Preparing backup')
 
         # get name of backup folder
@@ -134,7 +130,6 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def backup_database(self, paths):
-
         self.update_state(state='STARTED', meta='Performing database backup')
 
         # get database details from configuraiton
@@ -150,7 +145,6 @@ def register_backup_tasks(celery):
         stdout, stderr = p.communicate()
 
         if path.exists(temp_SQL_file) and path.isfile(temp_SQL_file):
-
             self.update_state(state='SUCCESS')
             return paths
 
@@ -161,7 +155,6 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def make_backup_archive(self, paths):
-
         self.update_state(state='STARTED', meta='Compressing database backup and website assets')
 
         # get location of assets folder from configuraiton
@@ -171,11 +164,9 @@ def register_backup_tasks(celery):
 
         # embed into tar archive
         with tarfile.open(name=backup_abspath, mode="w:gz", format=tarfile.PAX_FORMAT) as archive:
-
             archive.add(name=temp_SQL_file, arcname="database.sql")
 
             if path.exists(assets_folder):
-
                 archive.add(name=assets_folder, arcname="assets", recursive=True)
 
             archive.close()
@@ -192,7 +183,6 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def insert_backup_record(self, paths, owner_id, type, description):
-
         self.update_state(state='STARTED', meta='Writing backup receipts')
 
         temp_SQL_file, backup_folder, backup_abspath, backup_relpath = paths
@@ -240,14 +230,11 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_bin(self, bin):
-
         self.update_state(state='STARTED', meta='Thinning backup bin')
 
         # l should be a list of ids for BackupRecords that need to be thinned down to just 1
-
         remain = bin
         while len(remain) > 1:
-
             index = random.randrange(len(remain))
             thin_id = remain[index]
             del remain[index]
@@ -264,7 +251,6 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def thin_bins(self, bins, name):
-
         self.update_state(state='STARTED', meta='Thinning {n} backup bins'.format(n=name))
 
         # build group of tasks for each collection of backups we need to thin
@@ -276,7 +262,6 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def do_thinning(self):
-
         self.update_state(state='STARTED', meta='Building list of backups to be thinned')
 
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
@@ -301,7 +286,6 @@ def register_backup_tasks(celery):
             raise self.retry()
 
         for record in records:
-
             age = now - record.date
 
             if age < max_hourly_age:
@@ -310,14 +294,12 @@ def register_backup_tasks(celery):
                 pass
 
             elif age < max_daily_age:
-
                 if age.days in daily:
                     daily[age.days].append(record.id)
                 else:
                     daily[age.days] = [record.id]
 
             else:
-
                 # work out age in weeks (as an integer)
                 age_weeks = floor(float(age.days) / float(7))   # returns an Integer in Python3
                 if age_weeks in weekly:
@@ -332,14 +314,12 @@ def register_backup_tasks(celery):
 
     @celery.task(default_retry_delay=30)
     def thin():
-
         seq = chain(drop_absent_backups.si(), do_thinning.si(), clean_up.si())
         seq.apply_async()
 
 
     @celery.task(bind=True, default_retry_delay=30)
     def drop_absent_backups(self):
-
         self.update_state(state='STARTED', meta='Building list of backups')
 
         # query database for backup records, and queue a retry if it fails
@@ -357,7 +337,6 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def drop_backup_if_absent(self, id):
-
         self.update_state(state='STARTED', meta='Testing whether backup is available')
 
         # query database for backup records, and queue a retry if it fails
@@ -381,7 +360,6 @@ def register_backup_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def apply_size_limit(self):
-
         self.update_state(state='STARTED', meta='Enforcing limit of maximum size of backup folder')
 
         keep_hourly, keep_daily, lim, backup_max, last_change = get_backup_config()
@@ -391,14 +369,12 @@ def register_backup_tasks(celery):
             return
 
         while get_backup_size() > backup_max and get_backup_count() > 0:
-
             try:
                 oldest_backup = db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()
             except SQLAlchemyError:
                 return self.retry()
 
             if oldest_backup is not None:
-
                 try:
                     success, msg = remove_backup(oldest_backup[0])
                 except SQLAlchemyError:
@@ -408,13 +384,11 @@ def register_backup_tasks(celery):
                     self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
 
             else:
-
                 self.update_state(state='FAILED', meta='Database record for oldest backup could not be loaded')
 
 
     @celery.task(default_retry_delay=30)
     def limit_size():
-
         seq = chain(drop_absent_backups.si(), apply_size_limit.si(), clean_up.si())
         seq.apply_async()
 
@@ -427,7 +401,6 @@ def register_backup_tasks(celery):
         :param previous_result: Not used, just a placeholder because this item always appears in a chain of tasks
         :return:
         """
-
         self.update_state(state='STARTED', meta='Cleaning up backup folder')
 
         backup_path = current_app.config['BACKUP_FOLDER']
@@ -444,7 +417,6 @@ def register_backup_tasks(celery):
         :param interval:
         :return:
         """
-
         if isinstance(limit, str):
             limit = parser.parse(limit)
 
@@ -469,7 +441,6 @@ def register_backup_tasks(celery):
         :param id:
         :return:
         """
-
         try:
             success, msg = remove_backup(id)
         except SQLAlchemyError:

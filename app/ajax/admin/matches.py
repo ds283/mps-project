@@ -15,7 +15,7 @@ _status = \
 """
 {% if m.finished %}
     <span class="label label-primary">Finished</span>
-    {% if m.outcome == m.OUTCOME_OPTIMAL %}
+    {% if m.solution_usable %}
         <span class="label label-success">Optimal solution</span>
     {% elif m.outcome == m.OUTCOME_NOT_SOLVED %}
         <span class="label label-warning">Not solved</span>
@@ -35,7 +35,11 @@ _status = \
         <span class="label label-success">Original</span>
     {% endif %}
 {% else %}
-    <span class="label label-success">In progress</span>
+    {% if m.awaiting_upload %}
+        <span class="label label-success">Awaiting upload</span>
+    {% else %}
+        <span class="label label-success">In progress</span>
+    {% endif %}
 {% endif %}
 """
 
@@ -161,7 +165,7 @@ _info = \
 
 _score = \
 """
-{% if m.outcome == m.OUTCOME_OPTIMAL %}
+{% if m.solution_usable %}
     <span class="label label-success">Score {{ m.score }} original</span>
     {% set score = m.current_score %}
     {% if score %}
@@ -189,7 +193,7 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
-        {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
+        {% if m.finished and m.solution_usable %}
             <li>
                 <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
                     <i class="fa fa-search"></i> Inspect match
@@ -200,16 +204,24 @@ _menu = \
         
         {% if not m.finished %}
             {% set disabled = not current_user.has_role('root') %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
-                    <i class="fa fa-times"></i> Terminate
-                </a>
-            </li>
+            {% if m.awaiting_upload %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('admin.upload_match', id=m.id) }}"{% endif %}>
+                        <i class="fa fa-file-upload"></i> Upload solution...
+                    </a>
+                </li>
+            {% else %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
+                        <i class="fa fa-hand-paper-o"></i> Terminate
+                    </a>
+                </li>
+            {% endif %}
         {% else %}
-            {% if m.outcome == m.OUTCOME_OPTIMAL %}
+            {% if m.solution_usable %}
                 <li>
                     <a href="{{ url_for('admin.rename_match', id=m.id, url=url) }}">
-                        <i class="fa fa-pencil"></i> Rename
+                        <i class="fa fa-exchange"></i> Rename
                     </a>
                 </li>
                 {% if m.is_modified %}
@@ -231,7 +243,7 @@ _menu = \
                 </li>
             {% else %}
                 <li class="disabled">
-                    <a><i class="fa fa-pencil"></i> Rename</a>
+                    <a><i class="fa fa-exchange"></i> Rename</a>
                 </li>
                 <li class="disabled">
                     <a><i class="fa fa-undo"></i> Revert to original</a>
@@ -297,7 +309,7 @@ _menu = \
 _name = \
 """
 <div>
-    {% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
+    {% if m.finished and m.solution_usable %}
         <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">{{ m.name }}</a>
         {% if not m.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
@@ -311,7 +323,7 @@ _name = \
     {% set pclass = config.project_class %}
     {{ pclass.make_label(pclass.abbreviation)|safe }}
 {% endfor %}
-{% if m.finished and m.outcome == m.OUTCOME_OPTIMAL %}
+{% if m.finished and m.solution_usable %}
     <p></p>
     {% if m.construct_time %}
         <span class="label label-default"><i class="fa fa-clock-o"></i> Construct {{ m.formatted_construct_time }}</span>
@@ -343,7 +355,7 @@ def matches_data(matches, text=None, url=None):
              'status': render_template_string(_status, m=m),
              'score': {
                  'display': render_template_string(_score, m=m),
-                 'value': float(m.score) if m.outcome == m.OUTCOME_OPTIMAL and m.score is not None else 0
+                 'value': float(m.score) if m.solution_usable and m.score is not None else 0
              },
              'timestamp': render_template_string(_timestamp, m=m),
              'info': render_template_string(_info, m=m),

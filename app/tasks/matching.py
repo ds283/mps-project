@@ -810,6 +810,8 @@ def register_matching_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...", autocommit=True)
 
         with Timer() as solve_time:
+            record.awaiting_upload = False
+
             if record.solver == MatchingAttempt.SOLVER_CBC_PACKAGED:
                 output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=600, fracGap=0.01))
             elif record.solver == MatchingAttempt.SOLVER_CBC_CMD:
@@ -962,6 +964,7 @@ def register_matching_tasks(celery):
                                    selected=False,
                                    celery_id=None,
                                    finished=record.finished,
+                                   awaiting_upload=record.awaiting_upload,
                                    outcome=record.outcome,
                                    solver=record.solver,
                                    construct_time=record.construct_time,

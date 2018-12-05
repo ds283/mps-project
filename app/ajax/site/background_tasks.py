@@ -36,7 +36,7 @@ _menu = \
         {% if t.status == t.PENDING or t.status == t.RUNNING %}
             <li>
                 <a href="{{ url_for('admin.terminate_background_task', id=t.id) }}">
-                    <i class="fa fa-times"></i> Terminate
+                    <i class="fa fa-hand-paper-o"></i> Terminate
                 </a>
             </li>
         {% else %}

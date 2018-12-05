@@ -64,7 +64,9 @@ academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs')
 matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '4 years'), (5, '5 years')]
 
 # PuLP solver choices
-solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GLPK external command')]
+solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GLPK external command'),
+                  (3, 'CPLEX external command (requires license)'), (4, 'Gurobi external command (requires license'),
+                  (5, 'SCIP external command (requires license)')]
 
 # session types
 session_choices = [(0, 'Morning'), (1, 'Afternoon')]
@@ -5390,6 +5392,7 @@ class PuLPMixin():
     OUTCOME_INFEASIBLE = 2
     OUTCOME_UNBOUNDED = 3
     OUTCOME_UNDEFINED = 4
+    OUTCOME_FEASIBLE = 5
 
     # outcome of calculation
     outcome = db.Column(db.Integer())
@@ -5397,9 +5400,15 @@ class PuLPMixin():
     SOLVER_CBC_PACKAGED = 0
     SOLVER_CBC_CMD = 1
     SOLVER_GLPK_CMD = 2
+    SOLVER_CPLEX_CMD = 3
+    SOLVER_GUROBI_CMD = 4
+    SOLVER_SCIP_CMD = 5
 
     # which solver to use
     solver = db.Column(db.Integer())
+
+    # are we waiting for manual upload?
+    awaiting_upload = db.Column(db.Boolean(), default=False)
 
     # time taken to construct the PuLP problem
     construct_time = db.Column(db.Numeric(8, 3))
@@ -5414,7 +5423,8 @@ class PuLPMixin():
     score = db.Column(db.Numeric(10, 2))
 
 
-    _solvers = {0: 'PuLP-CBC', 1: 'CBC-CMD', 2: 'GLPK-CMD'}
+    _solvers = {0: 'PuLP-packaged CBC', 1: 'CBC external', 2: 'GLPK external', 3: 'CPLEX external (requires license)',
+                4: 'Gurobi external (requires license)', 5: 'SCIP external (requires license)'}
 
     @property
     def solver_name(self):
@@ -5432,6 +5442,12 @@ class PuLPMixin():
     @property
     def formatted_compute_time(self):
         return format_time(self.compute_time)
+
+
+    @property
+    def solution_usable(self):
+        # we are happy to use a solution if it is OPTIMAL or FEASIBLE
+        return self.outcome == PuLPMixin.OUTCOME_OPTIMAL or self.outcome == PuLPMixin.OUTCOME_FEASIBLE
 
 
 class MatchingAttempt(db.Model, PuLPMixin):
@@ -8026,6 +8042,28 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
     @property
     def short_label(self):
         return self.make_label(text=self.short_name)
+
+
+class GeneratedAsset(db.Model):
+    """
+    Track generated assets
+    """
+
+    __tablename__ = 'generated_assets'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+
+    # timestamp
+    timestamp = db.Column(db.DateTime(), index=True)
+
+    # lifetime in seconds (will be cleaned up by automatic garbage collector after this time)
+    lifetime = db.Column(db.Integer())
+
+    # path to file
+    path = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
 
 # ############################

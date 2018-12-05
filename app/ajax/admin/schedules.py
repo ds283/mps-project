@@ -15,7 +15,7 @@ _status = \
 """
 {% if s.finished %}
     <span class="label label-primary">Finished</span>
-    {% if s.outcome == s.OUTCOME_OPTIMAL %}
+    {% if s.solution_usable %}
         <span class="label label-success">Optimal solution</span>
     {% elif s.outcome == s.OUTCOME_NOT_SOLVED %}
         <span class="label label-warning">Not solved</span>
@@ -30,7 +30,11 @@ _status = \
     {% endif %}
     <p></p>
 {% else %}
-    <span class="label label-success">In progress</span>
+    {% if s.awaiting_upload %}
+        <span class="label label-success">Awaiting upload</span>
+    {% else %}
+        <span class="label label-success">In progress</span>
+    {% endif %}
 {% endif %}
 """
 
@@ -58,7 +62,7 @@ on
 
 _score = \
 """
-{% if s.outcome == s.OUTCOME_OPTIMAL %}
+{% if s.solution_usable %}
     <span class="label label-success">Score {{ s.score }}</span>
 {% else %}
     <span class="label label-default">Invalid</span>
@@ -68,7 +72,7 @@ _score = \
 
 _name = \
 """
-    {% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
+    {% if s.finished and s.solution_usable %}
         <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
         {% if not s.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
@@ -78,7 +82,7 @@ _name = \
     {% endif %}
 </div>
 <p></p>
-{% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
+{% if s.finished and s.solution_usable %}
     <p></p>
     {% if s.construct_time %}
         <span class="label label-default"><i class="fa fa-clock-o"></i> Construct {{ s.formatted_construct_time }}</span>
@@ -103,7 +107,7 @@ _info = \
 <span class="label label-info">Max assessor assignment {{ s.assessor_assigned_limit }}</span>
 <span class="label label-info">If needed cost {{ s.if_needed_cost }}</span>
 <span class="label label-info">Levelling tension {{ s.levelling_tension }}</span>
-{% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
+{% if s.finished and s.solution_usable %}
     {% set value = s.number_sessions %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
     <span class="label label-info">Uses {{ value }} session{{ pl }}</span>
     {% set value = s.number_rooms %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
@@ -166,7 +170,7 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
-        {% if s.finished and s.outcome == s.OUTCOME_OPTIMAL %}
+        {% if s.finished and s.solution_usable %}
             <li>
                 <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">
                     <i class="fa fa-search"></i> Inspect schedule
@@ -177,16 +181,24 @@ _menu = \
 
         {% if not s.finished %}
             {% set disabled = not current_user.has_role('root') %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.terminate_schedule', id=s.id) }}"{% endif %}>
-                    <i class="fa fa-times"></i> Terminate
-                </a>
-            </li>
+            {% if s.awaiting_upload %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('admin.upload_schedule', id=s.id) }}"{% endif %}>
+                        <i class="fa fa-file-upload"></i> Upload solution...
+                    </a>
+                </li>
+            {% else %}
+                <li {% if disabled %}class="disabled"{% endif %}>
+                    <a {% if not disabled %}href="{{ url_for('admin.terminate_schedule', id=s.id) }}"{% endif %}>
+                        <i class="fa fa-hand-paper-o"></i> Terminate
+                    </a>
+                </li>
+            {% endif %}
         {% else %}
-            {% if s.outcome == s.OUTCOME_OPTIMAL %}
+            {% if s.solution_usable %}
                 <li>
                     <a href="{{ url_for('admin.rename_schedule', id=s.id, url=url) }}">
-                        <i class="fa fa-pencil"></i> Rename
+                        <i class="fa fa-exchange"></i> Rename
                     </a>
                 </li>
                 {% set disabled = valid %}
@@ -197,7 +209,7 @@ _menu = \
                 </li>
             {% else %}
                 <li class="disabled">
-                    <a><i class="fa fa-pencil"></i> Rename</a>
+                    <a><i class="fa fa-exchange"></i> Rename</a>
                 </li>
                 <li class="disabled">
                     <a><i class="fa fa-wrench"></i> Adjust to constraints
@@ -305,7 +317,7 @@ def assessment_schedules_data(schedules, text, url):
              'status': render_template_string(_status, s=s),
              'score': {
                  'display': render_template_string(_score, s=s),
-                 'value': float(s.score) if s.outcome == s.OUTCOME_OPTIMAL and s.score is not None else 0
+                 'value': float(s.score) if s.solution_usable and s.score is not None else 0
              },
              'timestamp': render_template_string(_timestamp, s=s),
              'info': render_template_string(_info, s=s),

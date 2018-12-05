@@ -3874,6 +3874,7 @@ def create_match():
                                name=form.name.data,
                                celery_id=uuid,
                                finished=False,
+                               awaiting_upload=False,
                                outcome=None,
                                published=False,
                                selected=False,
@@ -4112,11 +4113,15 @@ def revert_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Can not revert match "{name}" because it has not terminated.'.format(name=record.name),
-              'error')
+        if record.awaiting_upload:
+            flash('Can not revert match "{name}" because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Can not revert match "{name}" because it has not yet terminated.'.format(name=record.name),
+                  'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
@@ -4155,11 +4160,15 @@ def perform_revert_match(id):
         url = url_for('admin.manage_matching')
 
     if not record.finished:
-        flash('Can not revert match "{name}" because it has not terminated.'.format(name=record.name),
-              'error')
+        if record.awaiting_upload:
+            flash('Can not revert match "{name}" because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Can not revert match "{name}" because it has not yet terminated.'.format(name=record.name),
+                  'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Can not revert match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
@@ -4199,11 +4208,15 @@ def duplicate_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Can not duplicate match "{name}" because it has not terminated.'.format(name=record.name),
-              'error')
+        if record.awaiting_upload:
+            flash('Can not duplicate match "{name}" because it is still awaiting '
+                  'manual upload'.format(name=record.name), 'error')
+        else:
+            flash('Can not duplicate match "{name}" because it has not yet terminated.'.format(name=record.name),
+                  'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Can not duplicate match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
@@ -4288,11 +4301,14 @@ def compare_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record.name),
-              'error')
-        return redirect(request.referrer)
+        if record.awaiting_upload:
+            flash('Can not compare match "{name}" because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record.name),
+                  'error')
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
@@ -4325,21 +4341,29 @@ def do_compare(id1, id2):
         return redirect(request.referrer)
 
     if not record1.finished:
-        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record1.name),
-              'error')
+        if record1.awaiting_upload:
+            flash('Can not compare match "{name}" because it is still awaiting '
+                  'manual upload.'.format(name=record1.name), 'error')
+        else:
+            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record1.name),
+                  'error')
         return redirect(request.referrer)
 
-    if record1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record1.solution_usable:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record1.name),
               'error')
         return redirect(request.referrer)
 
     if not record2.finished:
-        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record2.name),
-              'error')
+        if record2.awaiting_upload:
+            flash('Can not comapre match "{name}" because it is still awaiting '
+                  'manual upload.'.format(name=record2.name), 'error')
+        else:
+            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name),
+                  'error')
         return redirect(request.referrer)
 
-    if record2.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record2.solution_usable:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name),
               'error')
         return redirect(request.referrer)
@@ -4369,8 +4393,12 @@ def do_compare_ajax(id1, id2):
         return redirect(request.referrer)
 
     if not record1.finished:
-        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record1.name),
-              'error')
+        if record1.awaiting_upload:
+            flash('Can not compare match "{name}" because it is still awaiting '
+                  'manual upload.'.format(name=record1.name), 'error')
+        else:
+            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record1.name),
+                  'error')
         return redirect(request.referrer)
 
     if record1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
@@ -4379,11 +4407,15 @@ def do_compare_ajax(id1, id2):
         return redirect(request.referrer)
 
     if not record2.finished:
-        flash('Can not compare match "{name}" because it has not terminated.'.format(name=record2.name),
-              'error')
+        if record2.awaiting_upload:
+            flash('Can not compare match "{name}" because it is still awaiting '
+                  'manual upload.'.format(name=record2.name), 'error')
+        else:
+            flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name),
+                  'error')
         return redirect(request.referrer)
 
-    if record2.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record2.solution_usable:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name),
               'error')
         return redirect(request.referrer)
@@ -4479,11 +4511,15 @@ def match_student_view(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
-        flash('Match "{name}" is not yet available for inspection '
-              'because the solver has not terminated.'.format(name=record.name), 'error')
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for inspection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" if not yet available for inspection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Match "{name}" is not available for inspection '
               'because it did not yield an optimal solution'.format(name=record.name), 'error')
         return redirect(request.referrer)
@@ -4513,11 +4549,15 @@ def match_faculty_view(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
-        flash('Match "{name}" is not yet available for inspection '
-              'because the solver has not terminated.'.format(name=record.name), 'error')
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for inspection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" if not yet available for inspection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Match "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'error')
         return redirect(request.referrer)
@@ -4550,11 +4590,15 @@ def match_dists_view(id):
     record = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
-        flash('Match "{name}" is not yet available for inspection '
-              'because the solver has not terminated.'.format(name=record.name), 'error')
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for inspection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" if not yet available for inspection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Match "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'error')
         return redirect(request.referrer)
@@ -4625,7 +4669,7 @@ def match_student_view_ajax(id):
     if not validate_match_inspector(record):
         return jsonify({})
 
-    if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.finished or not record.solution_usable:
         return jsonify({})
 
     pclass_filter = request.args.get('pclass_filter')
@@ -4647,7 +4691,7 @@ def match_faculty_view_ajax(id):
     if not validate_match_inspector(record):
         return jsonify({})
 
-    if not record.finished or record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.finished or not record.solution_usable:
         return jsonify({})
 
     pclass_filter = request.args.get('pclass_filter')
@@ -4759,11 +4803,15 @@ def publish_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be published until it has '
-              'completed successfully.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for publication because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" if not yet available for publication because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -4790,11 +4838,15 @@ def unpublish_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be unpublished until it has '
-              'completed successfully.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for unpublication because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" if not yet available for unpublication because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution and is not available for use during rollover. '
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -4821,11 +4873,15 @@ def select_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be selected until it has '
-              'completed successfully.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for selection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" if not yet available for selection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution '
               'and is not available for use during rollover.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -4875,11 +4931,15 @@ def deselect_match(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Match "{name}" cannot be selected until it has '
-              'completed successfully.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for deselection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" if not yet available for deselection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Match "{name}" did not yield an optimal solution '
               'and is not available for use during rollover.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -5885,6 +5945,7 @@ def create_assessment_schedule(id):
                                        name=form.name.data,
                                        celery_id=uuid,
                                        finished=False,
+                                       awaiting_upload=False,
                                        outcome=None,
                                        published=False,
                                        deployed=False,
@@ -5971,6 +6032,7 @@ def adjust_assessment_schedule(id):
                                        name=new_name,
                                        celery_id=uuid,
                                        finished=False,
+                                       awaiting_upload=False,
                                        outcome=None,
                                        published=old_schedule.published,
                                        construct_time=None,
@@ -6176,11 +6238,15 @@ def publish_schedule(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Schedule "{name}" cannot be published until it has '
-              'completed successfully.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -6208,11 +6274,15 @@ def unpublish_schedule(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Schedule "{name}" cannot be unpublished until it has '
-              'completed successfully.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for unpublication because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for unpublication because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
               'It cannot be shared with convenors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -6239,11 +6309,15 @@ def deploy_schedule(id):
               'deployed at a time.'.format(name=record.owner.name), 'info')
 
     if not record.finished:
-        flash('Schedule "{name}" cannot be deployed until it has '
-              'completed successfully.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for deployment because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for deployment because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for '
               'deployment.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -6267,11 +6341,15 @@ def undeploy_schedule(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Schedule "{name}" cannot be deployed or revoked until it has '
-              'completed successfully.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for undeployment because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for undeployment because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for '
               'deployment.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -6301,11 +6379,15 @@ def schedule_view_sessions(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Schedule "{name}" is not yet available for inspection '
-              'because the solver has not terminated.'.format(name=record.name), 'info')
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
-    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
+    if not record.solution_usable:
         flash('Schedule "{name}" is not available for inspection '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
         return redirect(request.referrer)
@@ -6372,13 +6454,9 @@ def schedule_view_sessions_ajax(id):
         return jsonify({})
 
     if not record.finished:
-        flash('Schedule "{name}" is not yet available for inspection '
-              'because the solver has not terminated.'.format(name=record.name), 'info')
         return jsonify({})
 
-    if record.outcome != ScheduleAttempt.OUTCOME_OPTIMAL:
-        flash('Schedule "{name}" is not available for inspection '
-              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+    if not record.solution_usable:
         return jsonify({})
 
     if not validate_schedule_inspector(record):

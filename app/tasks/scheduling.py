@@ -574,6 +574,8 @@ def _execute(self, record, prob, X, Y, create_time, number_talks, number_assesso
                     autocommit=True)
 
     with Timer() as solve_time:
+        record.awaiting_upload = False
+
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
             output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:

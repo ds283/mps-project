@@ -65,7 +65,7 @@ matching_history_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years'), (4, '
 
 # PuLP solver choices
 solver_choices = [(0, 'PuLP-packaged CBC'), (1, 'CBC external command'), (2, 'GLPK external command'),
-                  (3, 'CPLEX external command (requires license)'), (4, 'Gurobi external command (requires license'),
+                  (3, 'CPLEX external command (requires license)'), (4, 'Gurobi external command (requires license)'),
                   (5, 'SCIP external command (requires license)')]
 
 # session types
@@ -366,6 +366,12 @@ submitter_unavailable_sessions = db.Table('submitter_unavailable',
 generated_acl = db.Table('acl_generated',
                          db.Column('asset_id', db.Integer(), db.ForeignKey('generated_assets.id'), primary_key=True),
                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
+
+
+# uploaded assets
+uploaded_acl = db.Table('acl_uploaded',
+                        db.Column('asset_id', db.Integer(), db.ForeignKey('uploaded_assets.id'), primary_key=True),
+                        db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
 
 class MainConfig(db.Model):
@@ -7634,17 +7640,16 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 3. ASSESSORS SHOULD ALL BE AVAILABLE FOR THIS SESSION
     for assessor in obj.assessors:
-        if assessor in obj.session.unavailable_faculty:
+        if obj.session.faculty_unavailable(assessor.id):
             errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is not ' \
                                                'available'.format(name=assessor.user.name)
-        elif assessor in obj.session.ifneeded_faculty:
+        elif obj.session.faculty_ifneeded(assessor.id):
             warnings[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is marked ' \
                                                  'as "if needed"'.format(name=assessor.user.name)
-        elif assessor in obj.session.available_faculty:
-            pass
         else:
-            errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but they do not ' \
-                                               'belong to this assessment'.format(name=assessor.user.name)
+            if not obj.session.faculty_available(assessor.id):
+                errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but they do not ' \
+                                                   'belong to this assessment'.format(name=assessor.user.name)
 
 
     # CONSTRAINT 4. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
@@ -7656,14 +7661,13 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 5. SUBMITTERS SHOULD ALL BE AVAILABILE FOR THIS SESSION
     for talk in obj.talks:
-        if talk in obj.session.unavailable_submitters:
+        if obj.session.submitter_unavailable(talk.id):
             errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but is not ' \
                                              'available'.format(name=talk.owner.student.user.name)
-        elif talk in obj.session.available_submitters:
-            pass
         else:
-            errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but they do not ' \
-                                             'belong to this assessment'.format(name=talk.owner.student.user.name)
+            if not obj.session.submitter_available(talk.id):
+                errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but they do not ' \
+                                                 'belong to this assessment'.format(name=talk.owner.student.user.name)
 
 
     # CONSTRAINT 6. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN THE TWO PLACES AT THE SAME TIME
@@ -8116,6 +8120,31 @@ class GeneratedAsset(db.Model):
 
     # access control list
     access_control_list = db.relationship('User', secondary=generated_acl, lazy='dynamic')
+
+
+class UploadedAsset(db.Model):
+    """
+    Track uploaded assets
+    """
+
+    __tablename__ = 'uploaded_assets'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+
+    # timestamp
+    timestamp = db.Column(db.DateTime(), index=True)
+
+    # lifetime in seconds (will be cleaned up by automatic garbage collector after this time)
+    lifetime = db.Column(db.Integer())
+
+    # filename (assumed to live under ASSETS_FOLDER/generated
+    filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # access control list
+    access_control_list = db.relationship('User', secondary=uploaded_acl, lazy='dynamic')
 
 
 # ############################

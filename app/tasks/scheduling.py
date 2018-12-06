@@ -9,7 +9,7 @@
 #
 
 from ..database import db
-from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, User
+from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, UploadedAsset, User
 
 from ..task_queue import progress_update, register_task
 
@@ -23,12 +23,13 @@ import itertools
 from functools import partial
 
 from ..shared.timer import Timer
-from ..shared.utils import make_generated_asset_filename
+from ..shared.utils import make_generated_asset_filename, canonical_uploaded_asset_filename
 
 from flask import current_app, render_template, url_for
 from flask_mail import Message
 
 from datetime import datetime
+from os import path
 
 
 def _enumerate_talks(assessment):
@@ -180,10 +181,11 @@ def _generate_minimize_objective(C, X, Y, S, number_talks, number_assessors, num
     objective += sum([S[i] for i in range(number_slots)])
 
     # optimizer should penalize any slots that use 'if needed'
-    objective += sum([Y[(i, j)] * C[(i, j)] * abs(record.if_needed_cost) for i in range(number_assessors) for j in range(number_slots)])
+    objective += sum([Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors)
+                                                                                for j in range(number_slots)])
 
     # optimizer should try to balance workloads as evenly as possible
-    objective += abs(record.levelling_tension) * (amax - amin)
+    objective += abs(float(record.levelling_tension)) * (amax - amin)
 
     # TODO: - minimize number of days used in schedule
     # TODO: - minimize number of rooms used in schedule
@@ -348,7 +350,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # number of times each faculty member is scheduled should fall below the limit
     for i in range(number_assessors):
-        prob += sum([Y[(i, j)] for j in range(number_slots)]) <= record.assessor_assigned_limit
+        prob += sum([Y[(i, j)] for j in range(number_slots)]) <= int(record.assessor_assigned_limit)
         constraints += 1
 
 
@@ -517,18 +519,7 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
     record.slots = store_slots
 
 
-def _initialize(self, sched_id):
-    self.update_state(state='STARTED', meta='Looking up ScheduleAttempt record for id={id}'.format(id=sched_id))
-
-    try:
-        record = db.session.query(ScheduleAttempt).filter_by(id=sched_id).first()
-    except SQLAlchemyError:
-        raise self.retry()
-
-    if record is None:
-        self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
-        raise self.retry()
-
+def _create_slots(self, record):
     # add database records for each available slot (meaning a combination of session+room);
     # the ones we don't use will be cleaned up later
     for sess in record.owner.sessions:
@@ -538,8 +529,13 @@ def _initialize(self, sched_id):
                                 room_id=room.id)
             db.session.add(slot)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        raise self.retry()
 
+
+def _initialize(self, record):
     progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
     try:
@@ -571,11 +567,11 @@ def _initialize(self, sched_id):
     return number_talks, number_assessors, number_slots, \
            talk_to_number, assessor_to_number, slot_to_number, \
            number_to_talk, number_to_assessor, number_to_slot, \
-           talk_dict, assessor_dict, slot_dict, A, B, C, record
+           talk_dict, assessor_dict, slot_dict, A, B, C
 
 
-def _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
-             talk_dict, assessor_dict, slot_dict):
+def _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+                  talk_dict, assessor_dict, slot_dict):
     print('Solving PuLP problem for schedule')
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
@@ -585,15 +581,80 @@ def _execute(self, record, prob, X, Y, create_time, number_talks, number_assesso
         record.awaiting_upload = False
 
         if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
-            output = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(solvers.PULP_CBC_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
-            output = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
+            status = prob.solve(solvers.COIN_CMD(msg=1, maxSeconds=3600, fracGap=0.25))
         elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
-            output = prob.solve(solvers.GLPK_CMD())
+            status = prob.solve(solvers.GLPK_CMD())
+        elif record.solver == ScheduleAttempt.SOLVER_CPLEX_CMD:
+            status = prob.solve(solvers.CPLEX_CMD())
+        elif record.solver == ScheduleAttempt.SOLVER_GUROBI_CMD:
+            status = prob.solve(solvers.GUROBI_CMD())
+        elif record.solver == ScheduleAttempt.SOLVER_SCIP_CMD:
+            status = prob.solve(solvers.SCIP_CMD())
         else:
-            output = prob.solve()
+            status = prob.solve()
 
-    state = pulp.LpStatus[output]
+    _process_PuLP_solution(record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
+                           number_slots, talk_dict, assessor_dict, slot_dict)
+
+
+def _execute_from_solution(self, file, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+                           talk_dict, assessor_dict, slot_dict):
+    print('Processing PuLP solution from "{name}"'.format(name=file))
+
+    if not path.exists(file):
+        progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Could not locate uploaded solution file",
+                        autocommit=True)
+        raise Ignore
+
+    progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Processing uploaded solution file...",
+                    autocommit=True)
+
+    with Timer() as solve_time:
+        record.awaiting_upload = False
+        wasNone, dummyVar = prob.fixObjective()
+
+        if record.solver == ScheduleAttempt.SOLVER_CBC_PACKAGED:
+            solver = solvers.PULP_CBC_CMD()
+            status, values, reducedCosts, shadowPrices, slacks = solver.readsol_LP(file, prob, prob.variables())
+        elif record.solver == ScheduleAttempt.SOLVER_CBC_CMD:
+            solver = solvers.COIN_CMD()
+            status, values, reducedCosts, shadowPrices, slacks = solver.readsol_LP(file, prob, prob.variables())
+        elif record.solver == ScheduleAttempt.SOLVER_GLPK_CMD:
+            solver = solvers.GLPK_CMD()
+            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+        elif record.solver == ScheduleAttempt.SOLVER_CPLEX_CMD:
+            solver = solvers.CPLEX_CMD()
+            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+        elif record.solver == ScheduleAttempt.SOLVER_GUROBI_CMD:
+            solver = solvers.GUROBI_CMD()
+            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+        elif record.solver == ScheduleAttempt.SOLVER_SCIP_CMD:
+            solver = solvers.SCIP_CMD()
+            status, values, reducedCosts, shadowPrices, slacks = solver.readsol(file)
+        else:
+            progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Unknown solver",
+                            autocommit=True)
+            raise Ignore
+
+        if status != pulp.LpStatusInfeasible:
+            prob.assignVarsVals(values)
+            prob.assignVarsDj(reducedCosts)
+            prob.assignConsPi(shadowPrices)
+            prob.assignConsSlack(slacks)
+        prob.status = status
+
+        prob.restoreObjective(wasNone, dummyVar)
+        prob.solver = solver
+
+    _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
+                           number_slots, talk_dict, assessor_dict, slot_dict)
+
+
+def _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
+                           number_slots, talk_dict, assessor_dict, slot_dict):
+    state = pulp.LpStatus[status]
 
     if state == 'Optimal':
         record.outcome = ScheduleAttempt.OUTCOME_OPTIMAL
@@ -624,7 +685,7 @@ def _execute(self, record, prob, X, Y, create_time, number_talks, number_assesso
         raise RuntimeError('Unknown PuLP outcome')
 
     try:
-        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Scheduling task complete', autocommit=False)
+        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, 'Scheduling complete', autocommit=False)
 
         record.finished = True
         record.celery_finished = True
@@ -641,10 +702,21 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def create_schedule(self, id):
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise self.retry()
+
+        _create_slots(self, record)
+
         number_talks, number_assessors, number_slots, \
         talk_to_number, assessor_to_number, slot_to_number, \
         number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, C, record = _initialize(self, id)
+        talk_dict, assessor_dict, slot_dict, A, B, C = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
@@ -656,16 +728,27 @@ def register_scheduling_tasks(celery):
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        return _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
-                        talk_dict, assessor_dict, slot_dict)
+        return _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+                             talk_dict, assessor_dict, slot_dict)
 
 
     @celery.task(bind=True, default_retry_delay=30)
     def recompute_schedule(self, new_id, old_id):
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=new_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise self.retry()
+
+        _create_slots(self, record)
+
         number_talks, number_assessors, number_slots, \
         talk_to_number, assessor_to_number, slot_to_number, \
         number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, C, record = _initialize(self, new_id)
+        talk_dict, assessor_dict, slot_dict, A, B, C = _initialize(self, new_id)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
@@ -680,8 +763,8 @@ def register_scheduling_tasks(celery):
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        return _execute(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
-                        talk_dict, assessor_dict, slot_dict)
+        return _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+                             talk_dict, assessor_dict, slot_dict)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -695,10 +778,21 @@ def register_scheduling_tasks(celery):
             self.update_state(state='FAILURE', meta='Could not load owning User record')
             raise Ignore
 
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise self.retry()
+
+        _create_slots(self, record)
+
         number_talks, number_assessors, number_slots, \
         talk_to_number, assessor_to_number, slot_to_number, \
         number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, C, record = _initialize(self, schedule_id)
+        talk_dict, assessor_dict, slot_dict, A, B, C = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
@@ -763,3 +857,48 @@ def register_scheduling_tasks(celery):
         user.post_message('The files necessary to perform offline scheduling have been generated, and a '
                           'set of download links has been emailed to you. The files will be available '
                           'for the next 24 hours.', 'info', autocommit=True)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def process_offline_solution(self, schedule_id, asset_id, user_id):
+        try:
+            user = db.session.query(User).filter_by(id=user_id).first()
+            asset = db.session.query(UploadedAsset).filter_by(id=asset_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load owning User record')
+            raise Ignore
+
+        if asset is None:
+            self.update_state(state='FAILURE', meta='Could not load UploadedAsset record')
+            raise Ignore
+
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise self.retry()
+
+        number_talks, number_assessors, number_slots, \
+        talk_to_number, assessor_to_number, slot_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, \
+        talk_dict, assessor_dict, slot_dict, A, B, C = _initialize(self, record)
+
+        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                        autocommit=True)
+
+        with Timer() as create_time:
+            prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
+                                              assessor_to_number, talk_dict, assessor_dict, slot_dict,
+                                              partial(_generate_minimize_objective, C))
+
+        print(' -- creation complete in time {t}'.format(t=create_time.interval))
+
+        return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename),
+                                      record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+                                      talk_dict, assessor_dict, slot_dict)

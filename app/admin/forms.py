@@ -578,7 +578,7 @@ class ScheduledTaskMixin():
                        ('app.tasks.popularity.update_popularity_data', 'Update LiveProject popularity data'),
                        ('app.tasks.popularity.thin', 'Thin LiveProject popularity data'),
                        ('app.tasks.maintenance.maintenance', 'Perform regular database maintenance'),
-                       ('app.tasks.maintenance.generated_asset_garbage_collection', 'Garbage collection for generated assets')]
+                       ('app.tasks.maintenance.asset_garbage_collection', 'Garbage collection for temporary assets')]
                        # ('remote_backup', 'Backup to internet location')]
     task = SelectField('Task', choices=tasks_available)
 
@@ -1079,6 +1079,14 @@ def NewScheduleFormFactory(assessment):
             return globally_unique_schedule_name(assessment.id, form, field)
 
     return NewScheduleForm
+
+
+class UploadScheduleForm(Form):
+
+    solver = SelectField('Solver', choices=solver_choices, coerce=int,
+                         description='Select the solver used to produce the solution file you are uploading.')
+
+    submit = SubmitField('Upload solution')
 
 
 def RenameScheduleFormFactory(assessment):

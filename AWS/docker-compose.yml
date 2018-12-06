@@ -11,6 +11,8 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379
       - BACKUP_FOLDER=/home/mpsproject/backups
       - ASSETS_FOLDER=/home/mpsproject/assets
+      - ASSETS_GENERATED_SUBFOLDER=generated
+      - ASSETS_UPLOADED_SUBFOLDER=uploaded
       - DATABASE_USER=mpsproject
       - DATABASE_PASSWORD=Bridle12Way2007
       - DATABASE_ROOT_PASSWORD=Wilberforce2008Road
@@ -69,6 +71,8 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379
       - BACKUP_FOLDER=/home/mpsproject/backups
       - ASSETS_FOLDER=/home/mpsproject/assets
+      - ASSETS_GENERATED_SUBFOLDER=generated
+      - ASSETS_UPLOADED_SUBFOLDER=uploaded
       - SERVER_NAME=mpsprojects.co.uk
       - DATABASE_USER=mpsproject
       - DATABASE_PASSWORD=Bridle12Way2007
@@ -106,6 +110,8 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379
       - BACKUP_FOLDER=/home/mpsproject/backups
       - ASSETS_FOLDER=/home/mpsproject/assets
+      - ASSETS_GENERATED_SUBFOLDER=generated
+      - ASSETS_UPLOADED_SUBFOLDER=uploaded
       - DATABASE_USER=mpsproject
       - DATABASE_PASSWORD=Bridle12Way2007
       - DATABASE_ROOT_PASSWORD=Wilberforce2008Road

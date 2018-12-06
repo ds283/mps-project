@@ -22,10 +22,12 @@ from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
 from flask_sessionstore import Session
+from flask_uploads import configure_uploads, patch_request_class
 from flask import Flask
 from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
 from .limiter import limiter
+from .uploads import solution_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 
@@ -43,6 +45,8 @@ from mdx_smartypants import makeExtension
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 
 import latex2markdown
+
+from os import path, makedirs
 
 
 def create_app():
@@ -118,11 +122,26 @@ def create_app():
 
         app.logger.info('Profiling to disk enabled')
 
+    # configure behaviour for uploaded files
+    asset_folder = app.config.get('ASSETS_FOLDER')
+    uploaded_subfolder = app.config.get('ASSETS_UPLOADED_SUBFOLDER')
+    abs_uploaded_path = path.join(asset_folder, uploaded_subfolder)
+    makedirs(abs_uploaded_path, exist_ok=True)
+
+    app.config['UPLOADED_SOLUTIONS_DEST'] = abs_uploaded_path
+    configure_uploads(app, solution_files)
+
+    # set max uploade size = 64 Mb, optimizer solution files shouldn't be larger than this
+    # (though MPS files can be quite large if those are being used)
+    patch_request_class(app, 64*1024*1024)
+
+
+    # configure Flask-Security, which needs access to the database models for User and Role
     from app import models
 
     user_datastore = SQLAlchemyUserDatastore(db, models.User, models.Role)
 
-    # we don't override any of Security's internal forms, but we do replace its create user funciton
+    # we don't override any of Security's internal forms, but we do replace its create user function
     # that automatically uses our own replacements
     security = Security(app, user_datastore)
     if config_name == 'production':
@@ -132,6 +151,7 @@ def create_app():
         forgot = app.view_functions['security.forgot_password']
         limiter.limit("50/day;5/minute")(login)
         limiter.limit("50/day;5/minute")(forgot)
+
 
     # set up celery and store in extensions dictionary
     celery = make_celery(app)

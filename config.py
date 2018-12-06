@@ -71,6 +71,8 @@ class Config(object):
     # MPS-Project configuration
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'
     ASSETS_FOLDER = os.environ.get('ASSETS_FOLDER') or 'assets'
+    ASSETS_GENERATED_SUBFOLDER = os.environ.get('ASSETS_GENERATED_SUBFOLDER') or 'generated'
+    ASSETS_UPLOADED_SUBFOLDER = os.environ.get('ASSETS_UPLOADED_SUBFOLDER') or 'uploaded'
 
     DATABASE_USER = os.environ.get('DATABASE_USER') or 'mpsproject'
     DATABASE_PASSWORD = os.environ.get('DATABASE_PASSWORD') or None

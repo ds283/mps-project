@@ -23,6 +23,7 @@ from collections import deque
 from celery import chain, group
 
 from ..limiter import limiter
+from ..uploads import solution_files
 from .actions import register_user, estimate_CATS_load, availability_CSV_generator
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
@@ -44,7 +45,7 @@ from .forms import RoleSelectForm, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
-    NewScheduleFormFactory, RenameScheduleFormFactory, \
+    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, \
     LevelSelectorForm, \
     AddFHEQLevelForm, EditFHEQLevelForm
 
@@ -55,10 +56,11 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project, GeneratedAsset
+    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project, GeneratedAsset, UploadedAsset
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_root_dashboard_data, get_automatch_pclasses, canonical_generated_asset_filename
+    get_root_dashboard_data, get_automatch_pclasses, canonical_generated_asset_filename, \
+    make_uploaded_asset_filename, canonical_uploaded_asset_filename
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector, \
@@ -77,6 +79,7 @@ from datetime import date, datetime, timedelta
 from urllib.parse import urlsplit
 import json
 import re
+from pathlib import Path
 
 from math import pi
 from bokeh.plotting import figure
@@ -7178,10 +7181,64 @@ def download_generated_asset(asset_id):
     return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name)
 
 
-@admin.route('/upload_schedule/<int:schedule_id>')
+@admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])
 @roles_required('root')
 def upload_schedule(schedule_id):
-    return redirect(request.referrer)
+    # is is a ScheduleAttempt
+    record = ScheduleAttempt.query.get_or_404(schedule_id)
+
+    form = UploadScheduleForm(request.form)
+
+    if form.validate_on_submit():
+        if 'solution' in request.files:
+            sol_file = request.files['solution']
+
+            # generate new filename for upload
+            incoming_filename = Path(sol_file.filename)
+            extension = incoming_filename.suffix.lower()
+
+            if extension in ('.sol', '.lp', '.mps'):
+                if (form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED or
+                        form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD) and extension not in ('.lp',):
+                    flash('Solution files for the CBC optimizer must be in .LP format', 'error')
+
+                else:
+                    filename, abs_path = make_uploaded_asset_filename(extension[1:])
+                    solution_files.save(sol_file, name=filename)
+
+                    asset = UploadedAsset(timestamp=datetime.now(),
+                                          lifetime=24*60*60,
+                                          filename=filename)
+                    asset.access_control_list.append(current_user)
+
+                    uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
+                                         owner=current_user,
+                                         description='Import a solution file that has been produced offline and '
+                                                     'convert to a schedule')
+
+                    # update solver information from form
+                    record.solver = form.solver.data
+                    record.celery_finished = False
+                    record.celery_id = uuid
+
+                    db.session.add(asset)
+                    db.session.commit()
+
+                    celery = current_app.extensions['celery']
+                    schedule_task = celery.tasks['app.tasks.scheduling.process_offline_solution']
+
+                    schedule_task.apply_async(args=(record.id, asset.id, current_user.id), task_id=uuid)
+
+                    return redirect(url_for('admin.assessment_schedules', id=record.owner_id))
+
+            else:
+                flash('Optimizer solution files should have extension .sol or .mps.', 'error')
+
+    else:
+        if request.method == 'GET':
+            form.solver.data = record.solver
+
+    return render_template('admin/presentations/scheduling/upload.html', schedule=record, form=form)
 
 
 @admin.route('/upload_match/<int:match_id>')

@@ -79,17 +79,19 @@ with app.app_context():
 
     # any in-progress matching attempts or scheduling attempts will have been aborted when the app crashed or exited
     try:
-        in_progress_matching = MatchingAttempt.query.filter_by(finished=False)
+        in_progress_matching = MatchingAttempt.query.filter_by(celery_finished=False)
         for item in in_progress_matching:
             item.finished = True
+            item.celery_finished = True
             item.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
     except SQLAlchemyError:
         pass
 
     try:
-        in_progress_scheduling = ScheduleAttempt.query.filter_by(finished=False)
+        in_progress_scheduling = ScheduleAttempt.query.filter_by(celery_finished=False)
         for item in in_progress_scheduling:
             item.finished = True
+            item.celery_finished = True
             item.outcome = ScheduleAttempt.OUTCOME_NOT_SOLVED
     except SQLAlchemyError:
         pass

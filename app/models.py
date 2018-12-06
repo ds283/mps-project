@@ -5352,6 +5352,9 @@ def _MatchingAttempt_is_valid(id):
     student_issues = False
     faculty_issues = False
 
+    if not obj.finished:
+        return True, student_issues, faculty_issues, errors, warnings
+
     for record in obj.records:
         if not record.is_valid:
             errors[('basic', record.id)] \
@@ -7313,6 +7316,9 @@ def _ScheduleAttempt_is_valid(id):
 
     errors = {}
     warnings = {}
+
+    if not obj.finished:
+        return True, errors, warnings
 
     # CONSTRAINT 1 - slots should satisfy their own consistency rules
     for slot in obj.slots:

@@ -211,10 +211,9 @@ _menu = \
                     <a><i class="fa fa-exchange"></i> Rename</a>
                 </li>
                 <li class="disabled">
-                    <a><i class="fa fa-wrench"></i> Adjust to constraints
+                    <a><i class="fa fa-wrench"></i> Adjust to constraints</a>
                 </li>
             {% endif %}
-
             {% if current_user.has_role('root') or current_user.id == s.creator_id %}
                 <li>
                     <a href="{{ url_for('admin.delete_schedule', id=s.id) }}">

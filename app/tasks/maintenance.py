@@ -15,49 +15,64 @@ from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, PresentationSession, \
-    PresentationAssessment
-from ..shared.utils import get_current_year
+    PresentationAssessment, GeneratedAsset
+from ..shared.utils import get_current_year, canonical_generated_asset_filename
+
+from datetime import datetime
+from os import path, remove
 
 
 def register_maintenance_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def maintenance(self):
-        try:
-            projects = db.session.query(Project).all()
-        except SQLAlchemyError:
-            raise self.retry()
-
-        projects_task = group(project_maintenance.s(p.id) for p in projects)
-        projects_task.apply_async()
-
-        current_year = get_current_year()
-
-        try:
-            assessor_attendance = db.session.query(AssessorAttendanceData) \
-                .join(PresentationAssessment, PresentationAssessment.id == AssessorAttendanceData.assessment_id) \
-                .filter(PresentationAssessment.year == current_year).all()
-        except SQLAlchemyError:
-            raise self.retry()
-
-        assessors_task = group(assessor_maintenance.s(r.id) for r in assessor_attendance)
-        assessors_task.apply_async()
-
-        try:
-            submitter_attendance = db.session.query(SubmitterAttendanceData) \
-                .join(PresentationAssessment, PresentationAssessment.id == SubmitterAttendanceData.assessment_id) \
-                .filter(PresentationAssessment.year == current_year).all()
-        except SQLAlchemyError:
-            raise self.retry()
-
-        submitters_task = group(submitter_maintenance.s(r.id) for r in submitter_attendance)
-        submitters_task.apply_async()
+        projects_maintenance(self)
+        assessor_attendance_maintenance()
+        submitter_attendance_maintenance(self)
 
         self.update_state(state='SUCCESS')
 
 
+    def submitter_attendance_maintenance(self):
+        current_year = get_current_year()
+        try:
+            records = db.session.query(SubmitterAttendanceData) \
+                .join(PresentationAssessment, PresentationAssessment.id == SubmitterAttendanceData.assessment_id) \
+                .filter(PresentationAssessment.year == current_year).all()
+
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(submitter_attendance_record_maintenance.s(r.id) for r in records)
+        task.apply_async()
+
+
+    def assessor_attendance_maintenance(self):
+        current_year = get_current_year()
+        try:
+            records = db.session.query(AssessorAttendanceData) \
+                .join(PresentationAssessment, PresentationAssessment.id == AssessorAttendanceData.assessment_id) \
+                .filter(PresentationAssessment.year == current_year).all()
+
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(assessor_attendance_record_maintenance.s(r.id) for r in records)
+        task.apply_async()
+
+
+    def projects_maintenance(self):
+        try:
+            records = db.session.query(Project).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(project_record_maintenance.s(p.id) for p in records)
+        task.apply_async()
+
+
     @celery.task(bind=True, default_retry_delay=30)
-    def project_maintenance(self, pid):
+    def project_record_maintenance(self, pid):
         try:
             project = db.session.query(Project).filter_by(id=pid).first()
         except SQLAlchemyError:
@@ -77,7 +92,7 @@ def register_maintenance_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def assessor_maintenance(self, id):
+    def assessor_attendance_record_maintenance(self, id):
         try:
             record = db.session.query(AssessorAttendanceData).filter_by(id=id).first()
         except SQLAlchemyError:
@@ -97,7 +112,7 @@ def register_maintenance_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def submitter_maintenance(self, id):
+    def submitter_attendance_record_maintenance(self, id):
         try:
             record = db.session.query(SubmitterAttendanceData).filter_by(id=id).first()
         except SQLAlchemyError:
@@ -114,3 +129,65 @@ def register_maintenance_tasks(celery):
                 raise self.retry()
 
         self.update_state(state='SUCCESS')
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def generated_asset_garbage_collection(self):
+        try:
+            records = db.session.query(GeneratedAsset).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        expiry = group(generated_asset_check_expiry.si(r.id) for r in records)
+        expiry.apply_async()
+
+        orphan = group(generated_asset_check_orphan.si(r.id) for r in records)
+        orphan.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def generated_asset_check_expiry(self, id):
+        try:
+            record = db.session.query(GeneratedAsset).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            raise Ignore
+
+        now = datetime.now()
+        age = now - record.timestamp
+
+        if age.total_seconds() > record.lifetime:
+            abs_asset_path = canonical_generated_asset_filename(record.filename)
+
+            if path.exists(abs_asset_path) and path.isfile(abs_asset_path):
+                try:
+                    remove(abs_asset_path)
+                except OSError:
+                    raise Ignore
+
+                try:
+                    db.session.delete(record)
+                    db.session.commit()
+                except SQLAlchemyError:
+                    raise self.retry()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def generated_asset_check_orphan(self, id):
+        try:
+            record = db.session.query(GeneratedAsset).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            raise Ignore
+
+        abs_asset_path = canonical_generated_asset_filename(record.filename)
+        if not path.exists(abs_asset_path):
+            try:
+                db.session.delete(record)
+                db.session.commit()
+            except SQLAlchemyError:
+                raise self.retry()

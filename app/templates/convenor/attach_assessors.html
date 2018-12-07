@@ -78,7 +78,7 @@
                         <div class="row vertical-top marker-table">
                             <div class="col-xs-4">{{ pclass.name }}</div>
                             <div class="col-xs-2">
-                                {% if pclass.do_matching %}
+                                {% if pclass.uses_markers or pclass.uses_presentations %}
                                     <span class="label label-info">{{ pclass.number_assessors }}</span>
                                 {% else %}
                                     <span class="label label-default">Not required</span>
@@ -86,7 +86,7 @@
                             </div>
                             <div class="col-xs-6">
                                 {% set num = data.num_assessors(pclass) %}
-                                {% if pclass.do_matching %}
+                                {% if pclass.uses_markers or pclass.uses_presentations %}
                                     {% if num >= pclass.number_assessors %}
                                         <span class="label label-success">{{ num }}</span>
                                     {% else %}
@@ -94,6 +94,14 @@
                                     {% endif %}
                                 {% else %}
                                     <span class="label label-default">{{ num }}</span>
+                                {% endif %}
+                                {% set live_counterpart = data.live_counterpart(config.id) %}
+                                {% set running_counterpart = data.running_counterpart(config.id) %}
+                                {% if live_counterpart is not none %}
+                                    <span class="label label-success">LIVE</span>
+                                {% endif %}
+                                {% if running_counterpart is not none %}
+                                    <span class="label label-danger">RUNNING</span>
                                 {% endif %}
                                 <p></p>
                                 {% for marker in data.get_assessor_list(pclass) %}

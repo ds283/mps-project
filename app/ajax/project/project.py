@@ -14,12 +14,25 @@ from flask import render_template_string, jsonify
 _project_name = \
 """
 {% set offerable = project.is_offerable %}
+{% if config is not none %}
+    {% set live_counterpart = project.live_counterpart(config.id) %}
+    {% set running_counterpart = project.running_counterpart(config.id) %}
+{% else %}
+    {% set live_counterpart = none %}
+    {% set running_counterpart = none %}
+{% endif %}
 <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
     {{ project.name }}
-    {% if not offerable %}
-        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
-    {% endif %}
 </a>
+{% if not offerable %}
+    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+{% endif %}
+{% if live_counterpart is not none %}
+    <span class="label label-success">LIVE</span>
+{% endif %}
+{% if running_counterpart is not none %}
+    <span class="label label-danger">RUNNING</span>
+{% endif %}
 {% if name_labels %}
     <p></p>
     {% for pclass in project.project_classes %}
@@ -132,7 +145,8 @@ _project_skills = \
 
 def build_data(projects, menu_template, config=None, text=None, url=None, name_labels=False):
 
-    data = [{'name': render_template_string(_project_name, project=p, text=text, url=url, name_labels=name_labels),
+    data = [{'name': render_template_string(_project_name, project=p, config=config, text=text, url=url,
+                                            name_labels=name_labels),
              'owner': {
                  'display': '<a href="mailto:{em}">{nm}</a>'.format(em=p.owner.user.email, nm=p.owner.user.name),
                  'sortvalue': p.owner.user.last_name + p.owner.user.first_name},

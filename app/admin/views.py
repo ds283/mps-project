@@ -5385,7 +5385,39 @@ def force_confirm_availability(assessment_id, faculty_id):
     if record is not None:
         record.confirmed = True
         record.confirmed_timestamp = datetime.now()
-        data.session.commit()
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/remove_assessor/<int:assessment_id>/<int:faculty_id>')
+@roles_required('root')
+def remove_assessor(assessment_id, faculty_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(assessment_id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot remove assessors from this assessment because it has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    faculty = FacultyData.query.get_or_404(faculty_id)
+
+    if not data.includes_faculty(faculty_id):
+        flash('Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
+              'to this assessment'.format(name=faculty.user.name, assess_name=data.name), 'error')
+        return redirect(request.referrer)
+
+    record = data.assessor_list.filter_by(faculty_id=faculty_id).first()
+
+    if record is not None:
+        db.session.delete(record)
+        db.session.commit()
 
     return redirect(request.referrer)
 

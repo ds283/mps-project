@@ -77,7 +77,7 @@ _project_menu = \
         </li>
 
         <li>
-            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=config.pclass_id) }}">
+            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=config.pclass_id, url=url_for('convenor.attached', id=config.pclass_id), text='convenor dashboard') }}">
                 <i class="fa fa-cogs"></i> Assessors...
             </a>
         </li>
@@ -142,7 +142,7 @@ _unattached_project_menu = \
         </li>
 
         <li>
-            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0) }}">
+            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0, url=url_for('convenor.attached', id=0), text='convenor dashboard') }}">
                 <i class="fa fa-cogs"></i> Assessors...
             </a>
         </li>
@@ -179,7 +179,7 @@ _unattached_project_menu = \
 
 _marker_menu = \
 """
-{% if proj.is_assessor(f) %}
+{% if proj.is_assessor(f.id) %}
     <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
        class="btn btn-sm btn-block btn-default">
         <i class="fa fa-trash"></i> Remove
@@ -2371,6 +2371,9 @@ def attach_assessors(id, pclass_id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
+    url = request.args.get('url')
+    text = request.args.get('text')
+
     create = request.args.get('create', default=None)
 
     state_filter = request.args.get('state_filter')
@@ -2412,7 +2415,7 @@ def attach_assessors(id, pclass_id):
 
     return render_template('convenor/attach_assessors.html', data=proj, pclass_id=pclass_id, groups=groups,
                            pclasses=pclasses, state_filter=state_filter, pclass_filter=pclass_filter,
-                           group_filter=group_filter, create=create, config=config)
+                           group_filter=group_filter, create=create, config=config, url=url, text=text)
 
 
 @convenor.route('/attach_assessors_ajax/<int:id>/<int:pclass_id>')
@@ -2423,13 +2426,11 @@ def attach_assessors_ajax(id, pclass_id):
     proj = Project.query.get_or_404(id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return jsonify({})
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -2444,7 +2445,9 @@ def attach_assessors_ajax(id, pclass_id):
     faculty = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     return ajax.project.build_marker_data(faculty, proj, _marker_menu, pclass_id=pclass_id,
-                                          url=url_for('convenor.attach_assessors', id=id, pclass_id=pclass_id))
+                                          url=url_for('convenor.attach_assessors', id=id, pclass_id=pclass_id,
+                                                      url=url_for('convenor.attached', id=pclass_id),
+                                                      text='convenor dashboard'))
 
 
 @convenor.route('/add_assessor/<int:proj_id>/<int:pclass_id>/<int:mid>')

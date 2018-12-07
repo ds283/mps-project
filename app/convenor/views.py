@@ -181,16 +181,16 @@ _marker_menu = \
 """
 {% if proj.is_assessor(f) %}
     <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-       class="btn btn-sm btn-default">
+       class="btn btn-sm btn-block btn-default">
         <i class="fa fa-trash"></i> Remove
     </a>
 {% elif proj.can_enroll_assessor(f) %}
     <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-       class="btn btn-sm btn-default">
+       class="btn btn-sm btn-block btn-default">
         <i class="fa fa-plus"></i> Attach
     </a>
 {% else %}
-    <a class="btn btn-default btn-sm disabled">
+    <a class="btn btn-default btn-block btn-sm disabled">
         <i class="fa fa-ban"></i> Can't attach
     </a>
 {% endif %}
@@ -2092,7 +2092,6 @@ def delete_description(did, pclass_id):
 @convenor.route('/duplicate_description/<int:did>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def duplicate_description(did, pclass_id):
-
     desc = ProjectDescription.query.get_or_404(did)
 
     if pclass_id == 0:
@@ -2143,7 +2142,6 @@ def duplicate_description(did, pclass_id):
 @convenor.route('/make_default_description/<int:pid>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def make_default_description(pid, pclass_id, did=None):
-
     proj = Project.query.get_or_404(pid)
 
     if pclass_id == 0:
@@ -2179,7 +2177,6 @@ def make_default_description(pid, pclass_id, did=None):
 @convenor.route('/attach_skills/<int:id>/<int:pclass_id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def attach_skills(id, pclass_id, sel_id=None):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
@@ -2227,7 +2224,6 @@ def attach_skills(id, pclass_id, sel_id=None):
 @convenor.route('/add_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def add_skill(projectid, skillid, pclass_id, sel_id):
-
     # get project details
     proj = Project.query.get_or_404(projectid)
 
@@ -2249,7 +2245,6 @@ def add_skill(projectid, skillid, pclass_id, sel_id):
 @convenor.route('/remove_skill/<int:projectid>/<int:skillid>/<int:pclass_id>/<int:sel_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def remove_skill(projectid, skillid, pclass_id, sel_id):
-
     # get project details
     proj = Project.query.get_or_404(projectid)
 
@@ -2271,18 +2266,15 @@ def remove_skill(projectid, skillid, pclass_id, sel_id):
 @convenor.route('/attach_programmes/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def attach_programmes(id, pclass_id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -2301,18 +2293,15 @@ def attach_programmes(id, pclass_id):
 @convenor.route('/add_programme/<int:id>/<int:pclass_id>/<int:prog_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def add_programme(id, pclass_id, prog_id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -2332,18 +2321,15 @@ def add_programme(id, pclass_id, prog_id):
 @convenor.route('/remove_programme/<int:id>/<int:pclass_id>/<int:prog_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def remove_programme(id, pclass_id, prog_id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -2363,24 +2349,27 @@ def remove_programme(id, pclass_id, prog_id):
 @convenor.route('/attach_assessors/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def attach_assessors(id, pclass_id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
             return redirect(request.referrer)
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
 
@@ -2421,9 +2410,9 @@ def attach_assessors(id, pclass_id):
                                                 or_(ProjectClass.uses_marker == True,
                                                     ProjectClass.uses_presentations == True))).all()
 
-    return render_template('convenor/attach_assessors.html', data=proj, pclass_id=pclass_id, groups=groups, pclasses=pclasses,
-                           state_filter=state_filter, pclass_filter=pclass_filter, group_filter=group_filter,
-                           create=create)
+    return render_template('convenor/attach_assessors.html', data=proj, pclass_id=pclass_id, groups=groups,
+                           pclasses=pclasses, state_filter=state_filter, pclass_filter=pclass_filter,
+                           group_filter=group_filter, create=create, config=config)
 
 
 @convenor.route('/attach_assessors_ajax/<int:id>/<int:pclass_id>')
@@ -2454,7 +2443,8 @@ def attach_assessors_ajax(id, pclass_id):
 
     faculty = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
-    return ajax.project.build_marker_data(faculty, proj, _marker_menu, pclass_id)
+    return ajax.project.build_marker_data(faculty, proj, _marker_menu, pclass_id=pclass_id,
+                                          url=url_for('convenor.attach_assessors', id=id, pclass_id=pclass_id))
 
 
 @convenor.route('/add_assessor/<int:proj_id>/<int:pclass_id>/<int:mid>')
@@ -2586,7 +2576,6 @@ def remove_all_assessors(proj_id, pclass_id):
 @convenor.route('/issue_confirm_requests/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def issue_confirm_requests(id):
-
     # get details for project class
     config = ProjectClassConfig.query.get_or_404(id)
 

@@ -60,7 +60,7 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_automatch_pclasses, canonical_generated_asset_filename, \
-    make_uploaded_asset_filename, canonical_uploaded_asset_filename
+    make_uploaded_asset_filename, canonical_uploaded_asset_filename, home_dashboard_url
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector, \
@@ -899,15 +899,14 @@ def edit_enrollments(id):
                            create=create, pane=pane)
 
 
-@admin.route('/edit_enrollment/<int:id>/<int:returnid>', methods=['GET', 'POST'])
+@admin.route('/edit_enrollment/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
-def edit_enrollment(id, returnid):
+def edit_enrollment(id):
     """
     Edit enrollment details
     :param id:
     :return:
     """
-
     # check logged-in user is administrator or a convenor for the project
     record = EnrollmentRecord.query.get_or_404(id)
 
@@ -916,7 +915,9 @@ def edit_enrollment(id, returnid):
 
     form = EnrollmentRecordForm(obj=record)
 
-    pane = request.args.get('pane', None)
+    url = request.args.get('url')
+    if url is None:
+        url = home_dashboard_url()
 
     if form.validate_on_submit():
 
@@ -950,14 +951,9 @@ def edit_enrollment(id, returnid):
 
             adjust_task.apply_async(args=(record.id, get_current_year()))
 
-        if returnid == 0:
-            return redirect(url_for('admin.edit_enrollments', id=record.owner_id, pane=pane))
-        elif returnid == 1:
-            return redirect(url_for('convenor.faculty', id=record.pclass.id))
-        else:
-            return home_dashboard()
+        return redirect(url)
 
-    return render_template('admin/edit_enrollment.html', record=record, form=form, returnid=returnid, pane=pane)
+    return render_template('admin/edit_enrollment.html', record=record, form=form, url=url)
 
 
 @admin.route('/enroll_projects_assessor/<int:id>/<int:pclassid>')

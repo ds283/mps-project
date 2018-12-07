@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('admin.edit_enrollment', id=record.id, returnid=returnid, pane=pane) }}" method="POST" name="form">
+    <form action="{{ url_for('admin.edit_enrollment', id=record.id, url=url) }}" method="POST" name="form">
 
     {{ form.hidden_tag() }}
 

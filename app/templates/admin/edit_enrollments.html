@@ -34,7 +34,7 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="{{ url_for('admin.edit_enrollment', id=record.id, returnid=0, pane=pane) }}">
+                                        <a href="{{ url_for('admin.edit_enrollment', id=record.id, url=url_for('admin.edit_enrollments', id=record.owner_id, pane=pane), pane=pane) }}">
                                             <i class="fa fa-cogs"></i> Edit enrollment
                                         </a>
                                     </li>

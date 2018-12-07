@@ -121,16 +121,16 @@ _marker_menu = \
 """
 {% if proj.is_assessor(f) %}
     <a href="{{ url_for('faculty.remove_assessor', proj_id=proj.id, mid=f.id) }}"
-       class="btn btn-sm btn-default">
+       class="btn btn-sm btn-block btn-default">
         <i class="fa fa-trash"></i> Remove
     </a>
 {% elif proj.can_enroll_assessor(f) %}
     <a href="{{ url_for('faculty.add_assessor', proj_id=proj.id, mid=f.id) }}"
-       class="btn btn-sm btn-default">
+       class="btn btn-sm btn-block btn-default">
         <i class="fa fa-plus"></i> Attach
     </a>
 {% else %}
-    <a class="btn btn-default btn-sm disabled">
+    <a class="btn btn-default btn-block btn-sm disabled">
         <i class="fa fa-ban"></i> Can't attach
     </a>
 {% endif %}
@@ -1004,7 +1004,8 @@ def attach_assessors_ajax(id):
 
     faculty = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
-    return ajax.project.build_marker_data(faculty, proj, _marker_menu)
+    return ajax.project.build_marker_data(faculty, proj, _marker_menu, disable_enrollment_links=True,
+                                          url=url_for('faculty.attach_assessors', id=id))
 
 
 @faculty.route('/add_assessor/<int:proj_id>/<int:mid>')

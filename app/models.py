@@ -3247,6 +3247,38 @@ class Project(db.Model):
         return desc.capacity
 
 
+    def live_counterpart(self, config_id):
+        """
+        :param config_id: current ProjectClassConfig instance
+        :return:
+        """
+        return self.live_projects.filter_by(config_id=config_id).first()
+
+
+    def running_counterpart(self, config_id):
+        """
+        :param config_id: current ProjectClassConfig instance
+        :return:
+        """
+        current_config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+        if current_config is None:
+            return None
+
+        previous_config = db.session.query(ProjectClassConfig).filter_by(year=current_config.year-1,
+                                                                         pclass_id=current_config.pclass_id).first()
+        if previous_config is None:
+            return None
+
+        project = self.live_projects.filter_by(config_id=previous_config.id).first()
+        if project is None:
+            return None
+
+        if get_count(project.submission_records) == 0:
+            return None
+
+        return project
+
+
     def maintenance(self):
         """
         Perform regular basic maintenance, to ensure validity of the database
@@ -3257,7 +3289,7 @@ class Project(db.Model):
         self.assessors = [f for f in self.assessors if self._is_assessor_for_at_least_one_pclass(f)]
 
         for f in removed:
-            current_app.logger.info('Regular maintainance: pruned assessor "{name}" from project "{proj}" since '
+            current_app.logger.info('Regular maintenance: pruned assessor "{name}" from project "{proj}" since '
                                     'they no longer meet eligibility criteria'.format(name=f.user.name, proj=self.name))
 
         return len(removed) > 0

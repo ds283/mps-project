@@ -65,9 +65,33 @@ _confirmed = \
 
 _assessor_actions = \
 """
-<a href="{{ url_for('admin.assessment_assessor_availability', a_id=a.id, f_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}" class="btn btn-sm btn-info btn-block">
-    Sessions
-</a>
+<div class="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li class="dropdown-header">Management</li>
+        <li>
+            <a href="{{ url_for('admin.assessment_assessor_availability', a_id=a.id, f_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}">
+                Sessions...
+            </a>
+        </li>
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Admin</li>
+        {% set disabled = not a.is_faculty_outstanding(f.id) %} 
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
+                <i class="fa fa-check"></i> {% if not disabled %}Force confirm{% else %}Confirmed{% endif %}
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=f.id) }}">
+                <i class="fa fa-trash"></i> Remove
+            </a>
+        </li>
+    </ul>
+</div>
 """
 
 

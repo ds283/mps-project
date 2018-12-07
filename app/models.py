@@ -3111,13 +3111,13 @@ class Project(db.Model):
                 self.remove_programme(prog)
 
 
-    def is_assessor(self, faculty):
+    def is_assessor(self, faculty_id):
         """
         Determine whether a given FacultyData instance is a 2nd marker for this project
         :param faculty:
         :return:
         """
-        return get_count(self.assessors.filter_by(id=faculty.id)) > 0
+        return get_count(self.assessors.filter_by(id=faculty_id)) > 0
 
 
     def num_assessors(self, pclass):
@@ -3182,7 +3182,7 @@ class Project(db.Model):
         :param faculty:
         :return:
         """
-        if self.is_assessor(faculty):
+        if self.is_assessor(faculty.id):
             return False
 
         if not faculty.user.active:
@@ -3212,7 +3212,7 @@ class Project(db.Model):
         :param faculty:
         :return:
         """
-        if not self.is_assessor(faculty):
+        if not self.is_assessor(faculty.id):
             return
 
         self.assessors.remove(faculty)

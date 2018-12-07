@@ -28,6 +28,10 @@ p.copyright {
     display: inline-block;
 }
 
+.project-status-button {
+    display: inline-block;
+}
+
 .btn-table-block {
     margin-top: 5px;
 }

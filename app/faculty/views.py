@@ -119,7 +119,7 @@ _project_menu = \
 
 _marker_menu = \
 """
-{% if proj.is_assessor(f) %}
+{% if proj.is_assessor(f.id) %}
     <a href="{{ url_for('faculty.remove_assessor', proj_id=proj.id, mid=f.id) }}"
        class="btn btn-sm btn-block btn-default">
         <i class="fa fa-trash"></i> Remove

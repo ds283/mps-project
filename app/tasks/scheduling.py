@@ -64,7 +64,7 @@ def _enumerate_assessors(record):
 
     # the .assessor_list property returns a list of AssessorAttendanceData instances,
     # one for each assessor who has been invited to attend
-    for assessor in record.assessor_list:       # assessor_list comes with a defined order (needed for safe offline scheduling)
+    for assessor in record.ordered_assessors:  # ordered_assessors comes with a defined order (needed for safe offline scheduling)
         assessor_to_number[assessor.faculty_id] = number
         number_to_assessor[number] = assessor.faculty_id
 
@@ -342,7 +342,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
         prob += Y[key] <= A[key]
         constraints += 1
 
-    # faculty members can only be in one place at once, so should be scheduled only once per room per slot
+    # faculty members can only be in one place at once, so should be scheduled only once per session
     for session in record.owner.sessions:
         for i in range(number_assessors):
             prob += sum([Y[(i, j)] for j in range(number_slots) if slot_dict[j].session_id == session.id]) <= 1
@@ -356,7 +356,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # STUDENT (SUBMITTER) AVAILABILITY
 
-    # students should be scheduled only in slots for which the are available
+    # students should be scheduled only in slots for which they are available
     for key in X:
         prob += X[key] <= B[key]
         constraints += 1

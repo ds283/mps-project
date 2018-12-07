@@ -6522,13 +6522,37 @@ class PresentationAssessment(db.Model):
         q = self.submitter_list.subquery()
 
         return db.session.query(SubmissionRecord) \
-            .join(q, q.c.submitter_id == SubmissionRecord.id)
+            .join(q, q.c.submitter_id == SubmissionRecord.id) \
+            .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
+            .join(StudentData, StudentData.id == SubmittingStudent.student_id) \
+            .join(User, User.id == StudentData.id) \
+            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
+            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
+            .order_by(ProjectClassConfig.year.asc(), ProjectClassConfig.pclass_id.asc(),
+                      SubmissionPeriodRecord.submission_period.asc(),
+                      User.last_name.asc(), User.first_name.asc())
 
 
     @property
     def schedulable_talks(self):
-        talks = self.available_talks.order_by(SubmissionRecord.id.asc())
+        talks = self.available_talks.all()
         return [t for t in talks if not self.not_attending(t.id)]
+
+
+    @property
+    def assessors_query(self):
+        q = self.assessor_list.subquery()
+
+        return db.session.query(AssessorAttendanceData) \
+            .join(q, q.c.id == AssessorAttendanceData.id) \
+            .join(FacultyData, FacultyData.id == AssessorAttendanceData.faculty_id) \
+            .join(User, User.id == FacultyData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
+
+
+    @property
+    def ordered_assessors(self):
+        return self.assessors_query.all()
 
 
     def not_attending(self, record_id):
@@ -7680,13 +7704,13 @@ def _ScheduleSlot_is_valid(id):
         count = get_count(q)
 
         if count > 0:
-            for sess in q.all():
+            for slot in q.all():
                 errors[('assessors',
-                        (assessor.id, sess.id))] = 'Assessor "{name}" is clashed with session {date} {session} ' \
+                        (assessor.id, slot.id))] = 'Assessor "{name}" is clashed with session {date} {session} ' \
                                                    '{room}'.format(name=assessor.user.name,
-                                                                   date=sess.short_date_as_string,
-                                                                   session=sess.session_type_as_string,
-                                                                   room=sess.room_full_name)
+                                                                   date=slot.short_date_as_string,
+                                                                   session=slot.session_type_string,
+                                                                   room=slot.room_full_name)
 
 
     # CONSTRAINT 7. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
@@ -7699,13 +7723,13 @@ def _ScheduleSlot_is_valid(id):
         count = get_count(q)
 
         if count > 0:
-            for sess in q.all():
+            for slot in q.all():
                 errors[('assessors',
-                        (talk.id, sess.id))] = '"{name}" is also scheduled in session {date} {session} ' \
+                        (talk.id, slot.id))] = '"{name}" is also scheduled in session {date} {session} ' \
                                                '{room}'.format(name=talk.owner.student.user.name,
-                                                               date=sess.short_date_as_string,
-                                                               session=sess.session_type_as_string,
-                                                               room=sess.room_full_name)
+                                                               date=slot.short_date_as_string,
+                                                               session=slot.session_type_string,
+                                                               room=slot.room_full_name)
 
     if len(errors) > 0 or len(warnings) > 0:
         return False, errors, warnings

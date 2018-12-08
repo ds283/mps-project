@@ -1,0 +1,28 @@
+Dear {{ user.first_name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+
+We would like to gently remind you that a presentation assessment event is
+being scheduled between {{ event.earliest_date }} and {{ event.latest_date }}.
+In order to prepare a timetable we are collecting availability information
+from faculty members, but we do not yet appear to have received your details.
+
+To enter your availability, please log in to the project management web app
+at https://mpsprojects.co.uk. Once you have logged in, the information request box
+should appear highlighted in red at the top of your dashboard. It would be very
+helpful if you could provide your response by {{ event.availability_deadline.strftime("%a %d %b %Y") }} at latest.
+
+If you have already entered your details, please log in again and ensure you have
+clicked the 'Confirm' button at the bottom of the availability selector. This will
+ensure that you do not receive further unnecessary reminder emails.
+
+This presentation event is being organized by {{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }}).
+Please direct any queries or concerns to the organizer; this mail is sent
+from an email address that is not monitored or answered.
+
+Thank you for your help,
+{% for fac in event.convenor_list -%}
+{{ fac.user.first_name }} {{ fac.user.last_name }}
+{% endfor -%}
+(the project convenors)

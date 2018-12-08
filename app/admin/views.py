@@ -5279,6 +5279,30 @@ def close_availability(id):
     return redirect(request.referrer)
 
 
+@admin.route('/availability_reminder/<int:id>')
+@roles_required('root')
+def availability_reminder(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not data.requested_availability:
+        flash('Cannot send a reminder email for this assessment because it has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    email_task = celery.tasks['app.tasks.availability.reminder_email']
+
+    email_task.apply_async((id, current_user.id))
+
+    return redirect(request.referrer)
+
+
 @admin.route('/reopen_availability/<int:id>')
 @roles_required('root')
 def reopen_availability(id):

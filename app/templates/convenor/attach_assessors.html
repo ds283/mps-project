@@ -76,7 +76,7 @@
                         <div class="col-xs-4"></div>
                     </div>
 
-                    {% for pclass in pclasses %}
+                    {% for pclass, config in pclasses %}
                         <div class="row vertical-top marker-table">
                             <div class="col-xs-4">{{ pclass.name }}</div>
                             <div class="col-xs-2">
@@ -99,21 +99,6 @@
                                 {% endif %}
                                 {% set live_counterpart = data.live_counterpart(config.id) %}
                                 {% set running_counterpart = data.running_counterpart(config.id) %}
-                                {% if live_counterpart is not none %}
-                                    <div class="dropdown project-status-button" style="display: inline-block;">
-                                        <a href="#" class="label label-success dropdown-toggle" type="button" data-toggle="dropdown">
-                                            LIVE {{ live_counterpart.number_assessors }}
-                                            <span class="caret"></span>
-                                        </a>
-                                        <ul class="dropdown-menu dropdown-menu-right">
-                                            <li>
-                                                <a href="#">
-                                                    <i class="fa fa-refresh"></i> Sync with library version
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                {% endif %}
                                 {% if running_counterpart is not none %}
                                     <div class="dropdown project-status-button" style="display: inline-block;">
                                         <a class="label label-danger dropdown-toggle" type="button" data-toggle="dropdown">
@@ -122,7 +107,22 @@
                                         </a>
                                         <ul class="dropdown-menu dropdown-menu-right">
                                             <li>
-                                                <a href="#">
+                                                <a href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=running_counterpart.id) }}">
+                                                    <i class="fa fa-refresh"></i> Sync with library version
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                                {% if live_counterpart is not none %}
+                                    <div class="dropdown project-status-button" style="display: inline-block;">
+                                        <a href="#" class="label label-success dropdown-toggle" type="button" data-toggle="dropdown">
+                                            LIVE {{ live_counterpart.number_assessors }}
+                                            <span class="caret"></span>
+                                        </a>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li>
+                                                <a href="{{ url_for('convenor.liveproject_sync_assessors', proj_id=data.id, live_id=live_counterpart.id) }}">
                                                     <i class="fa fa-refresh"></i> Sync with library version
                                                 </a>
                                             </li>
@@ -149,13 +149,13 @@
                                             {% else %}
                                                 {% if running_counterpart.is_assessor(marker.id) %}
                                                     <li>
-                                                        <a href="#">
+                                                        <a href="{{ url_for('convenor.liveproject_remove_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
                                                             <i class="fa fa-trash"></i> Remove from running project
                                                         </a>
                                                     </li>
                                                 {% else %}
                                                     <li>
-                                                        <a href="#">
+                                                        <a href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
                                                             <i class="fa fa-plus"></i> Attach to running project
                                                         </a>
                                                     </li>
@@ -168,13 +168,13 @@
                                             {% else %}
                                                 {% if live_counterpart.is_assessor(marker.id) %}
                                                     <li>
-                                                        <a href="#">
+                                                        <a href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
                                                             <i class="fa fa-trash"></i> Remove from live project
                                                         </a>
                                                     </li>
                                                 {% else %}
                                                     <li>
-                                                        <a href="#">
+                                                        <a href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
                                                             <i class="fa fa-plus"></i> Attach to live project
                                                         </a>
                                                     </li>
@@ -192,7 +192,7 @@
                                                     <li class="dropdown-header">Not attached to library version</li>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
                                                     <li {% if disabled %}class="disabled"{% endif %}>
-                                                        <a {% if not disabled %}href="#"{% endif %}>
+                                                        <a {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
                                                             <i class="fa fa-plus"></i> Attach to library version
                                                         </a>
                                                     </li>
@@ -203,13 +203,13 @@
                                                     {% else %}
                                                         {% if live_counterpart.is_assessor(marker.id) %}
                                                             <li>
-                                                                <a href="#">
+                                                                <a href="{{ url_for('convenor.liveproject_remove_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
                                                                     <i class="fa fa-trash"></i> Remove from live project
                                                                 </a>
                                                             </li>
                                                         {% else %}
                                                             <li>
-                                                                <a href="#">
+                                                                <a href="{{ url_for('convenor.liveproject_attach_assessor', live_id=live_counterpart.id, fac_id=marker.id) }}">
                                                                     <i class="fa fa-plus"></i> Attach to live project
                                                                 </a>
                                                             </li>
@@ -229,7 +229,7 @@
                                                     <li class="dropdown-header">Not attached to library version</li>
                                                     {% set disabled = not data.can_enroll_assessor(marker) %}
                                                     <li {% if disabled %}class="disabled"{% endif %}>
-                                                        <a {% if not disabled %}href="#"{% endif %}>
+                                                        <a {% if not disabled %}href="{{ url_for('convenor.add_assessor', proj_id=data.id, pclass_id=pclass.id, mid=marker.id) }}"{% endif %}>
                                                             <i class="fa fa-plus"></i> Attach to library version
                                                         </a>
                                                     </li>
@@ -240,7 +240,7 @@
                                                     {% else %}
                                                         {# guaranteed not to be attached to the running project #}
                                                         <li>
-                                                            <a href="#">
+                                                            <a href="{{ url_for('convenor.liveproject_attach_assessor', live_id=running_counterpart.id, fac_id=marker.id) }}">
                                                                 <i class="fa fa-plus"></i> Attach to running project
                                                             </a>
                                                         </li>
@@ -283,7 +283,7 @@
                        class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
-                    {% for pclass in pclasses %}
+                    {% for pclass, config in pclasses %}
                         <a href="{{ url_for('convenor.attach_assessors', url=url, text=text, id=data.id, pclass_id=pclass_id, state_filter=state_filter, pclass_filter=pclass.id, group_filter=group_filter, create=create) }}"
                            class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ pclass.name }}

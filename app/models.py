@@ -3113,11 +3113,12 @@ class Project(db.Model):
 
     def is_assessor(self, faculty_id):
         """
-        Determine whether a given FacultyData instance is a 2nd marker for this project
+        Determine whether a given FacultyData instance is an assessor for this project
         :param faculty:
         :return:
         """
-        return get_count(self.assessors.filter_by(id=faculty_id)) > 0
+        return get_count(self.assessors.filter_by(id=faculty_id)) > 0 and \
+            self._is_assessor_for_at_least_one_pclass(faculty_id)
 
 
     def num_assessors(self, pclass):
@@ -3164,6 +3165,9 @@ class Project(db.Model):
 
 
     def _is_assessor_for_at_least_one_pclass(self, faculty):
+        if not isinstance(faculty, FacultyData):
+            faculty = db.session.query(FacultyData).filter_by(id=faculty).one()
+
         pclasses = self.project_classes.subquery()
 
         query = faculty.enrollments \
@@ -3895,10 +3899,10 @@ class LiveProject(db.Model):
 
     @property
     def assessor_list_query(self):
-        fac_ids = db.session.query(live_assessors.c.faculty_id).filter(live_assessors.c.project_id==self.id).subquery()
+        fac_ids = self.assessors.subquery()
 
         return db.session.query(FacultyData) \
-            .join(fac_ids, fac_ids.c.faculty_id == FacultyData.id) \
+            .join(fac_ids, fac_ids.c.id == FacultyData.id) \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True) \
             .order_by(User.last_name.asc(), User.first_name.asc())

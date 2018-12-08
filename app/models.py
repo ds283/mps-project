@@ -6517,6 +6517,21 @@ class PresentationAssessment(db.Model):
 
 
     @property
+    def convenor_list(self):
+        q = self.submission_periods.subquery()
+
+        convenor_ids = db.session.query(ProjectClass.convenor_id) \
+            .select_from(q) \
+            .join(ProjectClassConfig, ProjectClassConfig.id == q.c.config_id) \
+            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id).distinct().subquery()
+
+        return db.session.query(FacultyData) \
+            .join(convenor_ids, FacultyData.id == convenor_ids.c.convenor_id) \
+            .join(User, User.id == FacultyData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc()).all()
+
+
+    @property
     def available_buildings(self):
         q = self.sessions.subquery()
 
@@ -6671,6 +6686,34 @@ class PresentationAssessment(db.Model):
             return
 
         return data.comment
+
+
+    @property
+    def earliest_date(self):
+        q = self.sessions.subquery()
+        
+        record = db.session.query(PresentationSession) \
+            .join(q, q.c.id == PresentationSession.id) \
+            .order_by(PresentationSession.date.asc()).first()
+
+        if record is None:
+            return '<unknown>'
+
+        return record.date.strftime("%a %d %b %Y")
+
+
+    @property
+    def latest_date(self):
+        q = self.sessions.subquery()
+
+        record = db.session.query(PresentationSession) \
+            .join(q, q.c.id == PresentationSession.id) \
+            .order_by(PresentationSession.date.desc()).first()
+
+        if record is None:
+            return '<unknown>'
+
+        return record.date.strftime("%a %d %b %Y")
 
 
 @listens_for(PresentationAssessment, 'before_update')

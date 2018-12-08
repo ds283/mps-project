@@ -21,5 +21,6 @@ from .availability import register_availability_tasks
 from .scheduling import register_scheduling_tasks
 from .maintenance import register_maintenance_tasks
 from .assessors import register_assessor_tasks
+from .utilities import register_utility_tasks
 
 from .test import register_test_tasks

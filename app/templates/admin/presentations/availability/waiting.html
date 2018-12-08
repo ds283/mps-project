@@ -7,7 +7,7 @@
         <div class="panel-body">
 
             <div class="row vertical-top">
-                <div class="col-xs-9">
+                <div class="col-xs-8">
                     {% set count = assessment.availability_outstanding_count %}
                     {% if count > 0 %}
                         <p>Responses are outstanding from <strong>{{ count }} faculty</strong>.</p>
@@ -24,10 +24,14 @@
                         </p>
                     {% endif %}
                 </div>
-                <div class="col-xs-3">
+                <div class="col-xs-4" style="text-align: right;">
                     <div class="pull-right">
-                        <a href="{{ url_for('admin.close_availability', id=assessment.id) }}"
-                           class="btn btn-danger">
+                        {% if count > 0 %}
+                            <a href="{{ url_for('admin.availability_reminder', id=assessment.id) }}" class="btn btn-default btn-table-block">
+                                Email reminders
+                            </a>
+                        {% endif %}
+                        <a href="{{ url_for('admin.close_availability', id=assessment.id) }}" class="btn btn-danger btn-table-block">
                             Close collection
                         </a>
                     </div>

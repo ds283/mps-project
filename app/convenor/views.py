@@ -2365,12 +2365,6 @@ def attach_assessors(id, pclass_id):
         if not validate_is_convenor(pclass):
             return redirect(request.referrer)
 
-    # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
-
     url = request.args.get('url')
     text = request.args.get('text')
 
@@ -2413,9 +2407,20 @@ def attach_assessors(id, pclass_id):
                                                 or_(ProjectClass.uses_marker == True,
                                                     ProjectClass.uses_presentations == True))).all()
 
+    pcl_list = []
+    for pcl in pclasses:
+        # get current configuration record for this project class
+        config = ProjectClassConfig.query.filter_by(pclass_id=pcl.id).order_by(ProjectClassConfig.year.desc()).first()
+        if config is None:
+            flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.',
+                  'error')
+            return redirect(request.referrer)
+
+        pcl_list.append((pcl, config))
+
     return render_template('convenor/attach_assessors.html', data=proj, pclass_id=pclass_id, groups=groups,
-                           pclasses=pclasses, state_filter=state_filter, pclass_filter=pclass_filter,
-                           group_filter=group_filter, create=create, config=config, url=url, text=text)
+                           pclasses=pcl_list, state_filter=state_filter, pclass_filter=pclass_filter,
+                           group_filter=group_filter, create=create, url=url, text=text)
 
 
 @convenor.route('/attach_assessors_ajax/<int:id>/<int:pclass_id>')
@@ -2453,18 +2458,15 @@ def attach_assessors_ajax(id, pclass_id):
 @convenor.route('/add_assessor/<int:proj_id>/<int:pclass_id>/<int:mid>')
 @roles_accepted('faculty', 'admin', 'root')
 def add_assessor(proj_id, pclass_id, mid):
-
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -2482,18 +2484,15 @@ def add_assessor(proj_id, pclass_id, mid):
 @convenor.route('/remove_assessor/<int:proj_id>/<int:pclass_id>/<int:mid>')
 @roles_accepted('faculty', 'admin', 'root')
 def remove_assessor(proj_id, pclass_id, mid):
-
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -2511,18 +2510,15 @@ def remove_assessor(proj_id, pclass_id, mid):
 @convenor.route('/attach_all_assessors/<int:proj_id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def attach_all_assessors(proj_id, pclass_id):
-
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -2545,18 +2541,15 @@ def attach_all_assessors(proj_id, pclass_id):
 @convenor.route('/remove_all_assessors/<int:proj_id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def remove_all_assessors(proj_id, pclass_id):
-
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -2572,6 +2565,68 @@ def remove_all_assessors(proj_id, pclass_id):
 
     for assessor in assessors:
         proj.remove_assessor(assessor)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/liveproject_sync_assessors/<int:proj_id>/<int:live_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def liveproject_sync_assessors(proj_id, live_id):
+    # get library project
+    library_project = Project.query.get_or_404(proj_id)
+
+    # get liveproject
+    live_project = LiveProject.query.get_or_404(live_id)
+    # get project class details
+
+    # if logged in user is not a suitable convenor, or an administrator, object
+    if not validate_is_convenor(live_project.config.project_class):
+        return redirect(request.referrer)
+
+    live_project.assessors = library_project.assessors
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/liveproject_attach_assessor/<int:live_id>/<int:fac_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def liveproject_attach_assessor(live_id, fac_id):
+
+    # get liveproject
+    live_project = LiveProject.query.get_or_404(live_id)
+    # get project class details
+
+    # if logged in user is not a suitable convenor, or an administrator, object
+    if not validate_is_convenor(live_project.config.project_class):
+        return redirect(request.referrer)
+
+    faculty = FacultyData.query.get_or_404(fac_id)
+
+    if faculty not in live_project.assessors:
+        live_project.assessors.append(faculty)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/liveproject_remove_assessor/<int:live_id>/<int:fac_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def liveproject_remove_assessor(live_id, fac_id):
+
+    # get liveproject
+    live_project = LiveProject.query.get_or_404(live_id)
+    # get project class details
+
+    # if logged in user is not a suitable convenor, or an administrator, object
+    if not validate_is_convenor(live_project.config.project_class):
+        return redirect(request.referrer)
+
+    faculty = FacultyData.query.get_or_404(fac_id)
+
+    if faculty in live_project.assessors:
+        live_project.assessors.remove(faculty)
+        db.session.commit()
 
     return redirect(request.referrer)
 

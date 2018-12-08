@@ -163,6 +163,7 @@ def create_app():
     # to register callables. Then we write the callable into the app, in the 'tasks' dictionary
     app.tasks = {}
     tasks.register_send_log_email(celery, mail)
+    tasks.register_utility_tasks(celery)
     tasks.register_prune_email(celery)
     tasks.register_backup_tasks(celery)
     tasks.register_rollover_tasks(celery)

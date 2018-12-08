@@ -9,12 +9,16 @@
 #
 
 from celery import group, chain
+from celery.exceptions import Ignore
 from sqlalchemy.exc import SQLAlchemyError
+
+from flask import current_app, render_template
+from flask_mail import Message
 
 from ..database import db
 from ..models import User, PresentationAssessment, TaskRecord, FacultyData, EnrollmentRecord, PresentationSession, \
     AssessorAttendanceData, SubmitterAttendanceData
-from ..task_queue import progress_update
+from ..task_queue import progress_update, register_task
 from ..shared.sqlalchemy import get_count
 
 
@@ -253,7 +257,7 @@ def register_availability_tasks(celery):
 
         if data is None:
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
-            return
+            raise Ignore
 
         self.update_state(state='STARTED',
                           meta='Looking up PresentationSession record for id={id}'.format(id=sess_id))
@@ -288,3 +292,55 @@ def register_availability_tasks(celery):
             db.session.commit()
         except SQLAlchemyError:
             raise self.retry()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def reminder_email(self, assessment_id, user_id):
+        self.update_state(state='STARTED',
+                          meta='Looking up PresentationAssessment record for id={id}'.format(id=assessment_id))
+
+        try:
+            data = db.session.query(PresentationAssessment).filter_by(id=assessment_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if data is None:
+            self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
+            raise Ignore
+
+        recipients = []
+
+        for assessor in data.assessor_list:
+            if not assessor.confirmed:
+                recipients.append(assessor.id)
+
+        notify = celery.tasks['app.tasks.utilities.email_notification']
+
+        tasks = group(send_reminder_email.si(r) for r in recipients) | notify.s(user_id)
+        tasks.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def send_reminder_email(self, assessor_id):
+        try:
+            assessor = db.session.query(AssessorAttendanceData).filter_by(id=assessor_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if assessor is None:
+            self.update_status('FAILURE', meta='Could not load AssessorAttendanceData record from database')
+            raise Ignore
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        msg = Message(subject='Reminder: availability for event {name}'.format(name=assessor.assessment.name),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=[assessor.faculty.user.email])
+
+        msg.body = render_template('email/scheduling/availability_reminder.txt', event=assessor.assessment,
+                                   user=assessor.faculty.user)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Availability reminder email to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        return 1

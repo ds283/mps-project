@@ -68,7 +68,7 @@ _global_name = \
 {% set constraints = s.number_unavailable %}
 {% if constraints > 0 %}
     &emsp;
-    <span class="label label-info">{{ constraints }} session constraints</span>
+    <span class="label label-warning">{{ constraints }} session constraints</span>
 {% endif %}
 """
 

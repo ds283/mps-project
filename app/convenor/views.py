@@ -2583,6 +2583,7 @@ def liveproject_sync_assessors(proj_id, live_id):
     if not validate_is_convenor(live_project.config.project_class):
         return redirect(request.referrer)
 
+    # copy assessors from library project to live project, if they are current
     live_project.assessors = [f for f in library_project.assessors if library_project.is_assessor(f.id)]
     db.session.commit()
 

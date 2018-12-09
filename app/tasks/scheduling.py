@@ -9,7 +9,8 @@
 #
 
 from ..database import db
-from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, UploadedAsset, User
+from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, UploadedAsset, User, \
+    ScheduleEnumeration, SubmissionRecord, AssessorAttendanceData, ProjectClass
 
 from ..task_queue import progress_update, register_task
 
@@ -32,31 +33,37 @@ from datetime import datetime
 from os import path
 
 
-def _enumerate_talks(assessment):
-    # assessment is a PresentationAssessment instance
-    number = 0
+def _enumerate_talks(schedule, read_serialized=False):
+    # schedule is a ScheduleAttempt instance
     talk_to_number = {}
     number_to_talk = {}
 
     talk_dict = {}
 
     # the .schedulable_talks property returns a list of of SubmissionRecord instances,
-    # minus any students who are not attending the main assessment event and need to
-    # be scheduled for the make-up event.
-    for p in assessment.schedulable_talks:      # schedulable_talks comes with a defined order (needed for safe offline scheduling)
-        talk_to_number[p.id] = number
-        number_to_talk[number] = p.id
+    # minus any students who are not attending the main event and need to
+    # be scheduled into the make-up event.
+    if not read_serialized:
+        talks = enumerate(schedule.owner.schedulable_talks)
 
-        talk_dict[number] = p
+    else:
+        talk_data = db.session.query(ScheduleEnumeration) \
+            .filter_by(category=ScheduleEnumeration.SUBMITTER, schedule_id=schedule.id).subquery()
+        talks = db.session.query(talk_data.c.enumeration, SubmissionRecord) \
+            .select_from(SubmissionRecord) \
+            .join(talk_data, talk_data.c.key == SubmissionRecord.id).all()
 
-        number += 1
+    for n, p in talks:
+        talk_to_number[p.id] = n
+        number_to_talk[n] = p.id
 
-    return number, talk_to_number, number_to_talk, talk_dict
+        talk_dict[n] = p
+
+    return len(talks), talk_to_number, number_to_talk, talk_dict
 
 
-def _enumerate_assessors(record):
-    # record is a PresentationAssessment instance
-    number = 0
+def _enumerate_assessors(schedule, read_serialized=False):
+    # schedule is a ScheduleAttempt instance
     assessor_to_number = {}
     number_to_assessor = {}
 
@@ -64,34 +71,75 @@ def _enumerate_assessors(record):
 
     # the .assessor_list property returns a list of AssessorAttendanceData instances,
     # one for each assessor who has been invited to attend
-    for assessor in record.ordered_assessors:  # ordered_assessors comes with a defined order (needed for safe offline scheduling)
-        assessor_to_number[assessor.faculty_id] = number
-        number_to_assessor[number] = assessor.faculty_id
+    if not read_serialized:
+        assessors = enumerate(schedule.owner.ordered_assessors)
 
-        assessor_dict[number] = assessor.faculty
+    else:
+        assessor_data = db.session.query() \
+            .filter_by(category=ScheduleEnumeration.ASSESSOR, schedule_id=schedule.id).subquery()
+        assessors = db.session.query(assessor_data.c.enumeration, AssessorAttendanceData) \
+            .select_from(AssessorAttendanceData) \
+            .join(assessor_data, assessor_data.c.key == AssessorAttendanceData.id).all()
 
-        number += 1
+    for n, a in assessors:
+        assessor_to_number[a.faculty_id] = n
+        number_to_assessor[n] = a.faculty_id
 
-    return number, assessor_to_number, number_to_assessor, assessor_dict
+        assessor_dict[n] = a.faculty
+
+    return len(assessors), assessor_to_number, number_to_assessor, assessor_dict
 
 
-def _enumerate_slots(record):
-    # record is a ScheduleAttempt instance
-    number = 0
+def _enumerate_pclasses(schedule, read_serialized=False):
+    # schedule is a ScheduleAttempt instance
+    pclass_to_number = {}
+    number_to_pclass = {}
+
+    pclass_dict = {}
+
+    if not read_serialized:
+        pclasses = enumerate(schedule.owner.available_pclasses)
+
+    else:
+        pclass_data = db.session.query() \
+            .filter_by(category=ScheduleEnumeration.PCLASS, schedule_id=schedule.id).subquery()
+        pclasses = db.session.query(pclass_data.c.enumeration, ProjectClass) \
+            .select_from(ProjectClass) \
+            .join(pclass_data, pclass_data.c.key == ProjectClass.id).all()
+
+    for n, p in pclasses:
+        pclass_to_number[p.id] = n
+        number_to_pclass[n] = p.id
+
+        pclass_dict[n] = p
+
+    return len(pclasses), pclass_to_number, number_to_pclass, pclass_dict
+
+
+def _enumerate_slots(schedule, read_serialized=False):
+    # schedule is a ScheduleAttempt instance
     slot_to_number = {}
     number_to_slot = {}
 
     slot_dict = {}
 
-    for slot in record.ordered_slots:           # ordered_slots comes with a defined order (needed for safe offline scheduling)
-        slot_to_number[slot.id] = number
-        number_to_slot[number] = slot.id
+    if not read_serialized:
+        slots = enumerate(schedule.owner.ordered_slots)
 
-        slot_dict[number] = slot
+    else:
+        slot_data = db.session.query() \
+            .filter_by(category=ScheduleEnumeration.SLOT, schedule_id=schedule.id).subquery()
+        slots = db.session.query(slot_data.c.enumeration, ScheduleSlot) \
+            .select_from(ScheduleSlot) \
+            .join(slot_data, slot_data.c.key == ScheduleSlot.id).all()
 
-        number += 1
+    for n, s in slots:
+        slot_to_number[s.id] = n
+        number_to_slot[n] = s.id
 
-    return number, slot_to_number, number_to_slot, slot_dict
+        slot_dict[n] = s
+
+    return len(slots), slot_to_number, number_to_slot, slot_dict
 
 
 def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict):
@@ -280,10 +328,12 @@ def _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots, 
     return X, Y
 
 
-def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots, assessor_to_number, talk_dict,
-                         assessor_dict, slot_dict, make_objective):
+def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots, number_pclasses,
+                         assessor_to_number, talk_dict, assessor_dict, slot_dict, pclass_dict, make_objective):
     """
     Generate a PuLP problem to find an optimal assignment of student talks + faculty assessors to rooms
+    :param number_pclasses:
+    :param pclass_dict:
     :param B:
     :param assessor_dict:
     :param talk_dict:
@@ -535,20 +585,24 @@ def _create_slots(self, record):
         raise self.retry()
 
 
-def _initialize(self, record):
+def _initialize(self, record, read_serialized=False):
     progress_update(record.celery_id, TaskRecord.RUNNING, 5, "Collecting information...", autocommit=True)
 
     try:
         with Timer() as talk_timer:
-            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record.owner)
+            number_talks, talk_to_number, number_to_talk, talk_dict = _enumerate_talks(record, read_serialized=read_serialized)
         print(' -- enumerated talks in time {s}'.format(s=talk_timer.interval))
 
         with Timer() as assessor_timer:
-            number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record.owner)
+            number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record, read_serialized=read_serialized)
         print(' -- enumerated assessors in time {s}'.format(s=assessor_timer.interval))
 
+        with Timer() as pclasses_timer:
+            number_pclasses, pclass_to_number, number_to_pclass, pclass_dict = _enumerate_pclasses(record, read_serialized=read_serialized)
+        print('  -- enumerated pclasses in time {s}'.format(s=pclasses_timer.interval))
+
         with Timer() as slots_timer:
-            number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record)
+            number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record, read_serialized=read_serialized)
         print(' -- enumerated slots in time {s}'.format(s=slots_timer.interval))
 
         # build faculty availability and 'ifneeded' cost matrix
@@ -564,10 +618,11 @@ def _initialize(self, record):
     except SQLAlchemyError:
         raise self.retry()
 
-    return number_talks, number_assessors, number_slots, \
-           talk_to_number, assessor_to_number, slot_to_number, \
-           number_to_talk, number_to_assessor, number_to_slot, \
-           talk_dict, assessor_dict, slot_dict, A, B, C
+    return number_talks, number_assessors, number_slots, number_pclasses, \
+           talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
+           number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
+           talk_dict, assessor_dict, slot_dict, pclass_dict, \
+           A, B, C
 
 
 def _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
@@ -595,8 +650,8 @@ def _execute_live(self, record, prob, X, Y, create_time, number_talks, number_as
         else:
             status = prob.solve()
 
-    _process_PuLP_solution(record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
-                           number_slots, talk_dict, assessor_dict, slot_dict)
+    return _process_PuLP_solution(record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
+                                  number_slots, talk_dict, assessor_dict, slot_dict)
 
 
 def _execute_from_solution(self, file, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
@@ -648,8 +703,8 @@ def _execute_from_solution(self, file, record, prob, X, Y, create_time, number_t
         prob.restoreObjective(wasNone, dummyVar)
         prob.solver = solver
 
-    _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
-                           number_slots, talk_dict, assessor_dict, slot_dict)
+    return _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
+                                  number_slots, talk_dict, assessor_dict, slot_dict)
 
 
 def _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
@@ -698,6 +753,38 @@ def _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_
     return record.score
 
 
+def _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_pclass):
+    for number in number_to_talk:
+        data = ScheduleEnumeration(schedule_id=record.id,
+                                   enumeration=number,
+                                   key=number_to_talk[number],
+                                   category=ScheduleEnumeration.SUBMITTER)
+        db.session.add(data)
+
+    for number in number_to_assessor:
+        data = ScheduleEnumeration(schedule_id=record.id,
+                                   enumeration=number,
+                                   key=number_to_assessor[number],
+                                   category=ScheduleEnumeration.ASSESSOR)
+        db.session.add(data)
+
+    for number in number_to_slot:
+        data = ScheduleEnumeration(schedule_id=record.id,
+                                   enumeration=number,
+                                   key=number_to_slot[number],
+                                   category=ScheduleEnumeration.SLOT)
+        db.session.add(data)
+
+    for number in number_to_pclass:
+        data = ScheduleEnumeration(schedule_id=record.id,
+                                   enumeration=number,
+                                   key=number_to_pclass[number],
+                                   category=ScheduleEnumeration.PCLASS)
+        db.session.add(data)
+
+    db.session.commit()
+
+
 def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -713,18 +800,19 @@ def register_scheduling_tasks(celery):
 
         _create_slots(self, record)
 
-        number_talks, number_assessors, number_slots, \
-        talk_to_number, assessor_to_number, slot_to_number, \
-        number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, C = _initialize(self, record)
+        number_talks, number_assessors, number_slots, number_pclasses, \
+        talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
+        talk_dict, assessor_dict, slot_dict, pclass_dict, \
+        A, B, C = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              partial(_generate_minimize_objective, C))
+                                              number_pclasses, assessor_to_number, talk_dict, assessor_dict, slot_dict,
+                                              pclass_dict, partial(_generate_minimize_objective, C))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -745,10 +833,11 @@ def register_scheduling_tasks(celery):
 
         _create_slots(self, record)
 
-        number_talks, number_assessors, number_slots, \
-        talk_to_number, assessor_to_number, slot_to_number, \
-        number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, C = _initialize(self, new_id)
+        number_talks, number_assessors, number_slots, number_pclasses, \
+        talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
+        talk_dict, assessor_dict, slot_dict, pclass_dict, \
+        A, B, C = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
@@ -758,8 +847,8 @@ def register_scheduling_tasks(celery):
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              partial(_generate_reschedule_objective, oldX, oldY))
+                                              number_pclasses, assessor_to_number, talk_dict, assessor_dict, slot_dict,
+                                              pclass_dict, partial(_generate_reschedule_objective, oldX, oldY))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -789,18 +878,19 @@ def register_scheduling_tasks(celery):
 
         _create_slots(self, record)
 
-        number_talks, number_assessors, number_slots, \
-        talk_to_number, assessor_to_number, slot_to_number, \
-        number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, C = _initialize(self, record)
+        number_talks, number_assessors, number_slots, number_pclasses, \
+        talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
+        talk_dict, assessor_dict, slot_dict, pclass_dict, \
+        A, B, C = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              partial(_generate_minimize_objective, C))
+                                              number_pclasses, assessor_to_number, talk_dict, assessor_dict, slot_dict,
+                                              pclass_dict, partial(_generate_minimize_objective, C))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -851,6 +941,11 @@ def register_scheduling_tasks(celery):
         task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
+        progress_update(record.celery_id, TaskRecord.RUNNING, 80,
+                        'Storing schedule details for later processing...', autocommit=True)
+
+        _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_pclass)
+
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
                         'File generation for offline scheduling now complete', autocommit=True)
 
@@ -884,20 +979,24 @@ def register_scheduling_tasks(celery):
             self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
             raise self.retry()
 
-        number_talks, number_assessors, number_slots, \
-        talk_to_number, assessor_to_number, slot_to_number, \
-        number_to_talk, number_to_assessor, number_to_slot, \
-        talk_dict, assessor_dict, slot_dict, A, B, C = _initialize(self, record)
+        number_talks, number_assessors, number_slots, number_pclasses, \
+        talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
+        talk_dict, assessor_dict, slot_dict, pclass_dict, \
+        A, B, C = _initialize(self, record, read_serialized=True)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              partial(_generate_minimize_objective, C))
+                                              number_pclasses, assessor_to_number, talk_dict, assessor_dict, slot_dict,
+                                              pclass_dict, partial(_generate_minimize_objective, C))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
+
+        # ScheduleEnumeration records will be purged during normal database maintenance cycle,
+        # so there is no need to delete them explicitly here
 
         return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename),
                                       record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,

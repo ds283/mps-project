@@ -8250,6 +8250,36 @@ class UploadedAsset(db.Model):
     access_control_list = db.relationship('User', secondary=uploaded_acl, lazy='dynamic')
 
 
+class ScheduleEnumeration(db.Model):
+    """
+    Record mapping of record ids to enumeration values used in scheduling
+    """
+
+    __tablename__ = 'schedule_enumerations'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # enumeration type
+    ASSESSOR = 0
+    SUBMITTER = 1
+    SLOT = 2
+    PCLASS = 3
+    category = db.Column(db.Integer())
+
+    # enumerated value
+    enumeration = db.Column(db.Integer())
+
+    # key value
+    key = db.Column(db.Integer())
+    
+    # schedule identifier
+    schedule_id = db.Column(db.Integer(), db.ForeignKey('scheduling_attempts.id'))
+    schedule = db.relationship('ScheduleAttempt', foreign_keys=[schedule_id], uselist=False,
+                               backref=db.backref('enumerations', lazy='dynamic'))
+
+
 # ############################
 
 

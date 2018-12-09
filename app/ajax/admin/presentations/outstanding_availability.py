@@ -21,13 +21,18 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         {% set disabled = a.availability_closed %} 
         <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=assessor.faculty.id) }}"{% endif %}>
                 <i class="fa fa-check"></i> Force confirm
             </a>
         </li>
         <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=assessor.faculty.id) }}"{% endif %}>
                 <i class="fa fa-trash"></i> Remove
+            </a>
+        </li>
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.availability_reminder_individual', id=assessor.id) }}"{% endif %}>
+                <i class="fa fa-envelope-o"></i> Send reminder
             </a>
         </li>
     </ul>
@@ -36,9 +41,9 @@ _menu = \
 
 def outstanding_availability_data(assessors, assessment):
 
-    data = [{'name': {'display': f.faculty.user.name,
-                      'sortstring': f.faculty.user.last_name + f.faculty.user.first_name},
-             'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.faculty.user.email),
-             'menu': render_template_string(_menu, a=assessment, f=f.faculty)} for f in assessors]
+    data = [{'name': {'display': assessor.faculty.user.name,
+                      'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
+             'email': '<a href="mailto:{em}">{em}</a>'.format(em=assessor.faculty.user.email),
+             'menu': render_template_string(_menu, a=assessment, assessor=assessor)} for assessor in assessors]
 
     return jsonify(data)

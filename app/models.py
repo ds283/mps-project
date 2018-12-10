@@ -1899,6 +1899,9 @@ class SubmissionPeriodDefinition(db.Model):
     # if using a presentation, does it require lecture capture?
     lecture_capture = db.Column(db.Boolean())
 
+    # if using a presentation, number of faculty assessors to schedule per session
+    number_assessors = db.Column(db.Integer())
+
 
     # EDITING METADATA
 
@@ -2175,6 +2178,7 @@ class ProjectClassConfig(db.Model):
                                             name=template.name,
                                             has_presentation=template.has_presentation,
                                             lecture_capture=template.lecture_capture,
+                                            number_assessors=template.number_assessors,
                                             retired=False,
                                             submission_period=self.submission_period,
                                             feedback_open=False,
@@ -2412,6 +2416,9 @@ class SubmissionPeriodRecord(db.Model):
 
     # if using a presentation, does it require lecture capture?
     lecture_capture = db.Column(db.Boolean())
+
+    # if using a presentation, number of faculty assessors to schedule per session
+    number_assessors = db.Column(db.Integer())
 
     # retired flag, set by rollover code
     retired = db.Column(db.Boolean(), index=True)
@@ -6356,9 +6363,6 @@ class PresentationAssessment(db.Model):
     # submission sessions to which we are attached
     submission_periods = db.relationship('SubmissionPeriodRecord', secondary=assessment_to_periods, lazy='dynamic',
                                          backref=db.backref('presentation_assessments', lazy='dynamic'))
-
-    # number of faculty assessors to schedule per session
-    number_assessors = db.Column(db.Integer())
 
 
     # AVAILABILITY LIFECYCLE

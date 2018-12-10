@@ -437,6 +437,11 @@ class SubmissionPeriodMixin():
 
     has_presentation = BooleanField('This submission period includes a presentation assessment')
 
+    number_assessors = IntegerField('Number of assessors per group', default=2,
+                                    description='Enter the number of faculty assessors scheduler per group during '
+                                                'the presentation assessment',
+                                    validators=[InputRequired('Please enter a positive integer')])
+
     lecture_capture = BooleanField('The presentation assessment requires a venue with lecture capture')
 
 
@@ -918,10 +923,6 @@ def PresentationAssessmentMixinFactory(query_factory):
                                                               'presentations will be given',
                                                               query_factory=query_factory, get_label=BuildSubmissionPeriodName)
 
-        number_assessors = IntegerField('Number of assessors per group', default=2,
-                                        description='Enter the number of faculty assessors present at each event',
-                                        validators=[InputRequired('Please enter a positive integer')])
-
     return PresentationAssessmentMixin
 
 
@@ -945,8 +946,6 @@ def EditPresentationAssessmentFormFactory(year, assessment_id):
     Mixin = PresentationAssessmentMixinFactory(partial(GetUnattachedSubmissionPeriods, assessment_id))
 
     class EditPresentationAssessmentForm(Form, Mixin, SaveChangesMixin):
-
-        pass
 
         @staticmethod
         def validate_name(form, field):

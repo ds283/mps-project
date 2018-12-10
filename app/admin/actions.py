@@ -156,7 +156,7 @@ def availability_CSV_generator(assessment):
 
     sessions = assessment.ordered_sessions.all()
 
-    headings = ['Name']
+    headings = ['Name', 'Confirmed']
     for s in sessions:
         headings.append(s.short_date_as_string + ' ' + s.session_type_string)
     headings.append('Comment')
@@ -176,7 +176,7 @@ def availability_CSV_generator(assessment):
     for item in faculty:
         fac_id = item.faculty.id
 
-        row = [item.faculty.user.name]
+        row = [item.faculty.user.name, item.confirmed]
         for s in sessions:
             if s.faculty_available(fac_id):
                 row.append('Yes')

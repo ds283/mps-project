@@ -328,7 +328,7 @@ class ProjectClassMixin():
                                     description='Assessors are used to assign 2nd markers and presentation assessors. '
                                                 'Significantly more than one assessor is required per project to allow '
                                                 'sufficient flexibility during matching.',
-                                    validators=[NotOptionalIf(do_matching)])
+                                    validators=[NotOptionalIf('do_matching')])
 
     start_level = QuerySelectField('Starts in academic year',
                                    description='Select the academic year in which students join the project.',
@@ -431,16 +431,16 @@ class EditProjectClassForm(Form, ProjectClassMixin, SaveChangesMixin):
 
 class SubmissionPeriodMixin():
 
-    name = StringField('Name', description='Optional. Enter an alternatve text name for this submission '
+    name = StringField('Name', description='Optional. Enter an alternative text name for this submission '
                                            'period, such as "Autumn Term"',
                        validators=[Optional()])
 
     has_presentation = BooleanField('This submission period includes a presentation assessment')
 
     number_assessors = IntegerField('Number of assessors per group', default=2,
-                                    description='Enter the number of faculty assessors scheduler per group during '
+                                    description='Enter the number of faculty assessors scheduled per group during '
                                                 'the presentation assessment',
-                                    validators=[InputRequired('Please enter a positive integer')])
+                                    validators=[NotOptionalIf('has_presentation')])
 
     lecture_capture = BooleanField('The presentation assessment requires a venue with lecture capture')
 

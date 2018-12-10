@@ -15,11 +15,14 @@ _presentation = \
 """
 {% if p.has_presentation %}
     <span class="label label-success">Required</span>
+    <span class="label label-primary">{{ p.number_assessors }} assessors per group</span>
+    {% if p.lecture_capture %}
+        <span class="label label-info">Requires lecture capture</span>
+    {% else %}
+        <span class="label label-default">Lecture capture not required</span>
+    {% endif %}
 {% else %}
     <span class="label label-default">Not required</span>
-{% endif %}
-{% if p.lecture_capture %}
-    <span class="label label-info">Requires lecture capture</span>
 {% endif %}
 """
 
@@ -34,7 +37,7 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
             <a href="{{ url_for('admin.edit_period', id=period.id) }}">
-                <i class="fa fa-cogs"></i> Edit period
+                <i class="fa fa-cogs"></i> Edit period...
             </a>
         </li>
         <li>

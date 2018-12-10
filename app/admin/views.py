@@ -2049,6 +2049,7 @@ def add_pclass():
                                             name=template.name,
                                             has_presentation=template.has_presentation,
                                             lecture_capture=template.lecture_capture,
+                                            number_assessors=template.number_assessors,
                                             retired=False,
                                             submission_period=template.period,
                                             feedback_open=False,
@@ -2227,8 +2228,7 @@ def regenerate_period_records(id):
     # get current set of submission period records
     current_year = get_current_year()
     config = db.session.query(ProjectClassConfig) \
-        .filter(ProjectClassConfig.pclass_id == data.id) \
-        .order_by(ProjectClassConfig.year == current_year).first()
+        .filter(ProjectClassConfig.pclass_id == data.id, ProjectClassConfig.year == current_year).first()
 
     templates = config.template_periods.all()
     current = config.periods.order_by(SubmissionPeriodRecord.submission_period.asc()).all()
@@ -2237,10 +2237,11 @@ def regenerate_period_records(id):
         t = templates.pop(0)
         c = current.pop(0)
 
-        c.submission_period = t.submission_period
+        c.submission_period = t.period
         c.name = t.name
         c.has_presentation = t.has_presentation
         c.lecture_capture = t.lecture_capture
+        c.number_assessors = t.number_assessors
 
     # do we need to generate new records?
     while len(templates) > 0:
@@ -2250,6 +2251,7 @@ def regenerate_period_records(id):
                                         name=t.name,
                                         has_presentation=t.has_presentation,
                                         lecture_capture=t.lecture_capture,
+                                        number_assessors=t.number_assessors,
                                         retired=False,
                                         submission_period=t.period,
                                         feedback_open=False,
@@ -2320,6 +2322,7 @@ def add_period(id):
                                           name=form.name.data,
                                           has_presentation=form.has_presentation.data,
                                           lecture_capture=form.lecture_capture.data,
+                                          number_assessors=form.number_assessors.data,
                                           creator_id=current_user.id,
                                           creation_timestamp=datetime.now())
         pclass.periods.append(data)
@@ -2349,6 +2352,7 @@ def edit_period(id):
         data.name = form.name.data
         data.has_presentation = form.has_presentation.data
         data.lecture_capture = form.lecture_capture.data
+        data.number_assessors = form.number_assessors.data
 
         data.last_edit_id = current_user.id,
         data.last_edit_timestamp = datetime.now()
@@ -5001,7 +5005,6 @@ def add_assessment():
         data = PresentationAssessment(name=form.name.data,
                                       year=current_year,
                                       submission_periods=form.submission_periods.data,
-                                      number_assessors=form.number_assessors.data,
                                       requested_availability=False,
                                       availability_closed=False,
                                       availability_deadline=None,
@@ -5045,7 +5048,6 @@ def edit_assessment(id):
     if form.validate_on_submit():
         data.name = form.name.data
         data.submission_periods = form.submission_periods.data
-        data.number_assessors = form.number_assessors.data
 
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()

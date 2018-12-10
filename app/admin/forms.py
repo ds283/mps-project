@@ -16,7 +16,8 @@ from wtforms import StringField, IntegerField, SelectField, PasswordField, Boole
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, globally_unique_group_name, unique_or_original_group_name, \
+from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, \
+    globally_unique_group_name, unique_or_original_group_name, \
     globally_unique_group_abbreviation, unique_or_original_group_abbreviation, \
     globally_unique_degree_type, unique_or_original_degree_type,\
     globally_unique_degree_abbreviation, unique_or_original_degree_abbreviation,\
@@ -43,7 +44,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel
-from ..models import BackupConfiguration, EnrollmentRecord, extent_choices, year_choices, \
+from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, year_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
@@ -1063,6 +1064,8 @@ class ScheduleSettingsMixin():
                                    description='Cost of introducing a workload inequality of one session, '
                                                'normalized to the cost of using a new slot.',
                                    validators=[InputRequired('Please enter a suitable positive decimal.')])
+
+    all_assessors_in_pool = RadioField('Assessor configuration', choices=ScheduleAttempt.assessor_choices, coerce=int)
 
 
 def NewScheduleFormFactory(assessment):

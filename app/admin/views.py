@@ -6056,6 +6056,7 @@ def create_assessment_schedule(id):
                                        assessor_assigned_limit=form.assessor_assigned_limit.data,
                                        if_needed_cost=form.if_needed_cost.data,
                                        levelling_tension=form.levelling_tension.data,
+                                       all_assessors_in_pool=True if form.all_assessors_in_pool.data == 1 else False,
                                        solver=form.solver.data,
                                        creation_timestamp=datetime.now(),
                                        creator_id=current_user.id,
@@ -6086,6 +6087,10 @@ def create_assessment_schedule(id):
                 schedule_task.apply_async(args=(schedule.id,), task_id=uuid)
 
                 return redirect(url_for('admin.assessment_schedules', id=data.id))
+
+    else:
+        if request.method == 'GET':
+            form.all_assessors_in_pool.data = 0
 
     matches = get_count(data.scheduling_attempts)
 
@@ -6157,6 +6162,7 @@ def adjust_assessment_schedule(id):
                                        assessor_assigned_limit=old_schedule.assessor_assigned_limit,
                                        if_needed_cost=old_schedule.if_needed_cost,
                                        levelling_tension=old_schedule.levelling_tension,
+                                       all_assessors_in_pool=old_schedule.all_assessors_in_pool,
                                        solver=old_schedule.solver,
                                        creation_timestamp=datetime.now(),
                                        creator_id=current_user.id,

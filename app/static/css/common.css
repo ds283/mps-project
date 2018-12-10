@@ -152,7 +152,7 @@ p.copyright {
 }
 
 .email-display {
-    word-break: break-all;
+    word-break: normal;
 }
 
 .grouped-button-pad {

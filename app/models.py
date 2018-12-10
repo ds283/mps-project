@@ -6317,7 +6317,7 @@ def _PresentationAssessment_is_valid(id):
     # CONSTRAINT 3 - if availability requested, number of assessors should be nonzero
     lifecycle = obj.availability_lifecycle
     if lifecycle >= PresentationAssessment.AVAILABILITY_REQUESTED \
-            and (obj.number_assessors is None or obj.number_assessors == 0):
+            and get_count(obj.assessors_query) == 0:
         errors[('presentations', 0)] = 'Number of attached assessors is zero or unset'
 
 
@@ -6508,6 +6508,19 @@ class PresentationAssessment(db.Model):
         if not self._validated:
             check = self.is_valid
         return self._warnings.values()
+
+
+    @property
+    def available_periods(self):
+        q = self.submission_periods.subquery()
+
+        return db.session.query(SubmissionPeriodRecord) \
+            .join(q, q.c.id == SubmissionPeriodRecord.id) \
+            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
+            .join(ProjectClass, ProjectClass.id == ProjectClassConfig.pclass_id) \
+            .order_by(ProjectClass.name.asc(),
+                      ProjectClassConfig.year.asc(),
+                      SubmissionPeriodRecord.submission_period.asc()).all()
 
 
     @property
@@ -6771,16 +6784,6 @@ def _PresentationSession_is_valid(id):
                 errors['duplicate'] = 'This session is a duplicate'
 
 
-    # CONSTRAINT 3 - if faculty availability information is available, then there should be enough
-    # faculty available to cover all the available rooms
-    if obj.owner.requested_availability:
-        number_rooms = obj.number_rooms
-        number_faculty = obj.number_available_faculty + obj.number_ifneeded_faculty
-
-        if obj.owner.number_assessors is not None:
-            if number_faculty < obj.owner.number_assessors * number_rooms:
-                errors['assessors'] = 'Too few assessors are available for the number of rooms'
-
     if len(errors) > 0 or len(warnings) > 0:
         return False, errors, warnings
 
@@ -6788,7 +6791,6 @@ def _PresentationSession_is_valid(id):
 
 
 def _trim_session_list(list):
-
     data = {}
     changed = False
 
@@ -7499,6 +7501,11 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     # 'levelling tension', the relative cost of introducing an inequitable workload by adding an
     # extra assignment to faculty who already have the maximum assignments
     levelling_tension = db.Column(db.Numeric(8, 3))
+
+    # must all assessors be in the assessor pool for every project, or is just one enough?
+    assessor_choices = [(0, 'For each talk, at least one assessor should belong to its assessor pool'),
+                        (1, 'Each assessor should belong to the assessor pool for every talk')]
+    all_assessors_in_pool = db.Column(db.Boolean())
 
 
 
@@ -8269,7 +8276,7 @@ class ScheduleEnumeration(db.Model):
     ASSESSOR = 0
     SUBMITTER = 1
     SLOT = 2
-    PCLASS = 3
+    PERIOD = 3
     category = db.Column(db.Integer())
 
     # enumerated value
@@ -8281,7 +8288,7 @@ class ScheduleEnumeration(db.Model):
     # schedule identifier
     schedule_id = db.Column(db.Integer(), db.ForeignKey('scheduling_attempts.id'))
     schedule = db.relationship('ScheduleAttempt', foreign_keys=[schedule_id], uselist=False,
-                               backref=db.backref('enumerations', lazy='dynamic'))
+                               backref=db.backref('enumerations', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
 
 # ############################

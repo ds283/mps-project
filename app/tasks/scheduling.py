@@ -10,7 +10,7 @@
 
 from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, UploadedAsset, User, \
-    ScheduleEnumeration, SubmissionRecord, AssessorAttendanceData, ProjectClass
+    ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, ProjectClass
 
 from ..task_queue import progress_update, register_task
 
@@ -51,7 +51,8 @@ def _enumerate_talks(schedule, read_serialized=False):
             .filter_by(category=ScheduleEnumeration.SUBMITTER, schedule_id=schedule.id).subquery()
         talks = db.session.query(talk_data.c.enumeration, SubmissionRecord) \
             .select_from(SubmissionRecord) \
-            .join(talk_data, talk_data.c.key == SubmissionRecord.id).all()
+            .join(talk_data, talk_data.c.key == SubmissionRecord.id) \
+            .order_by(talk_data.c.enumeration.asc()).all()
 
     for n, p in talks:
         talk_to_number[p.id] = n
@@ -59,7 +60,7 @@ def _enumerate_talks(schedule, read_serialized=False):
 
         talk_dict[n] = p
 
-    return len(talks), talk_to_number, number_to_talk, talk_dict
+    return n+1, talk_to_number, number_to_talk, talk_dict
 
 
 def _enumerate_assessors(schedule, read_serialized=False):
@@ -75,11 +76,12 @@ def _enumerate_assessors(schedule, read_serialized=False):
         assessors = enumerate(schedule.owner.ordered_assessors)
 
     else:
-        assessor_data = db.session.query() \
+        assessor_data = db.session.query(ScheduleEnumeration) \
             .filter_by(category=ScheduleEnumeration.ASSESSOR, schedule_id=schedule.id).subquery()
         assessors = db.session.query(assessor_data.c.enumeration, AssessorAttendanceData) \
             .select_from(AssessorAttendanceData) \
-            .join(assessor_data, assessor_data.c.key == AssessorAttendanceData.id).all()
+            .join(assessor_data, assessor_data.c.key == AssessorAttendanceData.faculty_id) \
+            .order_by(assessor_data.c.enumeration.asc()).all()
 
     for n, a in assessors:
         assessor_to_number[a.faculty_id] = n
@@ -87,33 +89,34 @@ def _enumerate_assessors(schedule, read_serialized=False):
 
         assessor_dict[n] = a.faculty
 
-    return len(assessors), assessor_to_number, number_to_assessor, assessor_dict
+    return n+1, assessor_to_number, number_to_assessor, assessor_dict
 
 
-def _enumerate_pclasses(schedule, read_serialized=False):
+def _enumerate_periods(schedule, read_serialized=False):
     # schedule is a ScheduleAttempt instance
-    pclass_to_number = {}
-    number_to_pclass = {}
+    period_to_number = {}
+    number_to_period = {}
 
-    pclass_dict = {}
+    period_dict = {}
 
     if not read_serialized:
-        pclasses = enumerate(schedule.owner.available_pclasses)
+        periods = enumerate(schedule.owner.available_periods)
 
     else:
-        pclass_data = db.session.query() \
-            .filter_by(category=ScheduleEnumeration.PCLASS, schedule_id=schedule.id).subquery()
-        pclasses = db.session.query(pclass_data.c.enumeration, ProjectClass) \
-            .select_from(ProjectClass) \
-            .join(pclass_data, pclass_data.c.key == ProjectClass.id).all()
+        period_data = db.session.query(ScheduleEnumeration) \
+            .filter_by(category=ScheduleEnumeration.PERIOD, schedule_id=schedule.id).subquery()
+        periods = db.session.query(period_data.c.enumeration, SubmissionPeriodRecord) \
+            .select_from(SubmissionPeriodRecord) \
+            .join(period_data, period_data.c.key == SubmissionPeriodRecord.id) \
+            .order_by(period_data.c.enumeration.asc()).all()
 
-    for n, p in pclasses:
-        pclass_to_number[p.id] = n
-        number_to_pclass[n] = p.id
+    for n, p in periods:
+        period_to_number[p.id] = n
+        number_to_period[n] = p.id
 
-        pclass_dict[n] = p
+        period_dict[n] = p
 
-    return len(pclasses), pclass_to_number, number_to_pclass, pclass_dict
+    return n+1, period_to_number, number_to_period, period_dict
 
 
 def _enumerate_slots(schedule, read_serialized=False):
@@ -124,14 +127,15 @@ def _enumerate_slots(schedule, read_serialized=False):
     slot_dict = {}
 
     if not read_serialized:
-        slots = enumerate(schedule.owner.ordered_slots)
+        slots = enumerate(schedule.ordered_slots)
 
     else:
-        slot_data = db.session.query() \
+        slot_data = db.session.query(ScheduleEnumeration) \
             .filter_by(category=ScheduleEnumeration.SLOT, schedule_id=schedule.id).subquery()
         slots = db.session.query(slot_data.c.enumeration, ScheduleSlot) \
             .select_from(ScheduleSlot) \
-            .join(slot_data, slot_data.c.key == ScheduleSlot.id).all()
+            .join(slot_data, slot_data.c.key == ScheduleSlot.id) \
+            .order_by(slot_data.c.enumeration.asc()).all()
 
     for n, s in slots:
         slot_to_number[s.id] = n
@@ -139,7 +143,7 @@ def _enumerate_slots(schedule, read_serialized=False):
 
         slot_dict[n] = s
 
-    return len(slots), slot_to_number, number_to_slot, slot_dict
+    return n+1, slot_to_number, number_to_slot, slot_dict
 
 
 def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_slots, slot_dict):
@@ -184,7 +188,7 @@ def _build_faculty_availability_matrix(number_assessors, assessor_dict, number_s
 def _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict):
     """
     Construct a dictionary mapping from (submitting-student, slot) pairs to yes/no availabilities,
-    coded a 0 = not available, 1 = not available
+    coded a 0 = not available, 1 = available
     :param number_talks:
     :param talk_dict:
     :param number_slots:
@@ -226,7 +230,7 @@ def _generate_minimize_objective(C, X, Y, S, number_talks, number_assessors, num
     objective = 0
 
     # ask optimizer to minimize the number of slots that are used
-    objective += sum([S[i] for i in range(number_slots)])
+    objective += sum([S[idx] for idx in S])
 
     # optimizer should penalize any slots that use 'if needed'
     objective += sum([Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors)
@@ -328,12 +332,14 @@ def _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots, 
     return X, Y
 
 
-def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots, number_pclasses,
-                         assessor_to_number, talk_dict, assessor_dict, slot_dict, pclass_dict, make_objective):
+def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots, number_periods,
+                         assessor_to_number, period_to_number, talk_dict, assessor_dict, slot_dict, period_dict,
+                         make_objective):
     """
     Generate a PuLP problem to find an optimal assignment of student talks + faculty assessors to rooms
-    :param number_pclasses:
-    :param pclass_dict:
+    :param period_to_number:
+    :param number_periods:
+    :param period_dict:
     :param B:
     :param assessor_dict:
     :param talk_dict:
@@ -360,8 +366,9 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # the entries of this matrix are either 0 or 1 representing 'unassigned' or 'assigned'
     Y = pulp.LpVariable.dicts("y", itertools.product(range(number_assessors), range(number_slots)), cat=pulp.LpBinary)
 
-    # generate a 'size counting' variable for each slot
-    S = pulp.LpVariable.dicts("s", range(number_slots), cat=pulp.LpBinary)
+    # for each period, generate a 'used' variable for each slot
+    # this is used to determine (a) whether a slot is in use, and (b) which period the slot corresponds to
+    S = pulp.LpVariable.dicts("s", itertools.product(range(number_periods), range(number_slots)), cat=pulp.LpBinary)
 
     # variables representing maximum and minimum number of assignments
     # we use these to tension the optimization so that workload tends to be balanced
@@ -375,22 +382,37 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     prob += objective, "objective function"
 
 
+    # keep track of how many constraints we generate
     constraints = 0
 
-    # SIZE VARIABLES
 
-    # size variable cannot be zero if a slot is occupied
+    # SLOT OCCUPATION
+
+    # sum of occupation variables (over different periods) for each slot must be <= 1
+    # this allows just one period type per slot
     for i in range(number_slots):
-        prob += S[i] >= sum([X[(j, i)] for j in range(number_talks)]) / (number_talks + 1.0)
+        prob += sum([S[(j, i)] for j in range(number_periods)]) <= 1
         constraints += 1
+
+    # if a talk is scheduled in a slot, then the corresponding occupation variable must be nonzero
+    for i in range(number_talks):
+        talk = talk_dict[i]
+        k = period_to_number[talk.period_id]
+
+        for j in range(number_slots):
+            prob += S[(k, j)] >= X[(i, j)]
+            constraints += 1
 
 
     # FACULTY (ASSESSOR) AVAILABILITY
 
     # faculty members should be scheduled only in slots for which they are available
-    for key in Y:
-        prob += Y[key] <= A[key]
-        constraints += 1
+    for idx in A:
+        if A[idx] == 0:
+            # no need to add a constraint if occupation is allowed, because the upper limit of 1 is implied
+            # by use of boolean variables. Any constraint would just be removed in pre-solve.
+            prob += Y[idx] == 0
+            constraints += 1
 
     # faculty members can only be in one place at once, so should be scheduled only once per session
     for session in record.owner.sessions:
@@ -398,7 +420,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
             prob += sum([Y[(i, j)] for j in range(number_slots) if slot_dict[j].session_id == session.id]) <= 1
             constraints += 1
 
-    # number of times each faculty member is scheduled should fall below the limit
+    # number of times each faculty member is scheduled should fall below the hard limit
     for i in range(number_assessors):
         prob += sum([Y[(i, j)] for j in range(number_slots)]) <= int(record.assessor_assigned_limit)
         constraints += 1
@@ -407,9 +429,12 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # STUDENT (SUBMITTER) AVAILABILITY
 
     # students should be scheduled only in slots for which they are available
-    for key in X:
-        prob += X[key] <= B[key]
-        constraints += 1
+    for idx in B:
+        if B[idx] == 0:
+            # no need to add a constraint if occupation is allowed, because the upper limit of 1 is implied
+            # by use of boolean variables. Any constraint would just be removed in pre-solve.
+            prob += X[idx] == 0
+            constraints += 1
 
 
     # TALKS
@@ -419,9 +444,10 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
         prob += sum([X[(i, j)] for j in range(number_slots)]) == 1
         constraints += 1
 
-    # each slot should have the required number of assessors if the slot is occupied:
+    # each slot should have the required number of assessors (given its occupancy), *if* the slot is occupied:
     for i in range(number_slots):
-        prob += sum([Y[(j, i)] for j in range(number_assessors)]) == record.owner.number_assessors * S[i]
+        prob += sum([Y[(j, i)] for j in range(number_assessors)]) == \
+                sum([S[(k, i)] * period_dict[k].number_assessors for k in range(number_periods)])
         constraints += 1
 
     # each slot should have no more than the maximum number of students:
@@ -430,68 +456,80 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
         constraints += 1
 
 
-    # TALKS CAN ONLY BE SCHEDULED WITH OTHER TALKS OF THE SAME SUBMISSION PERIOD, BUT SHOULD NOT CLASH
-    # WITH OTHER TALKS ON THE SAME PROJECT, IF THAT OPTION IS SET (ON A PROJECT-BY-PROJECT BASIS)
+    # TALKS SHOULD NOT CLASH WITH OTHER TALKS BELONGING TO THE SAME PROJECT, IF THAT OPTION IS SET
+    # (talk should also be scheduled only with other talks belonging to the same project class, but
+    # this is taken care of by the constraints on occupation variables above, so doesn't have to be
+    # done explicitly here)
 
     for i in range(number_talks):
+        talk_i = talk_dict[i]
+
         for j in range(i):
+            talk_j = talk_dict[j]
 
             # note that we have j strictly less than i here, so i=j is excluded
             for k in range(number_slots):
-                talk_i = talk_dict[i]
-                talk_j = talk_dict[j]
-
-                limit = 1
+                cant_pair = False
                 if talk_i.owner.config_id == talk_j.owner.config_id:
                     if talk_i.project_id == talk_j.project_id:
                         if talk_i.project.dont_clash_presentations:
-                            limit = 1
-                        else:
-                            limit = 2
-                    else:
-                        limit = 2
+                            cant_pair = True
 
-                prob += X[(i, k)] + X[(j, k)] <= limit
-                constraints += 1
+                if cant_pair:
+                    prob += X[(i, k)] + X[(j, k)] <= 1
+                    constraints += 1
 
 
     # TALKS CAN ONLY BE SCHEDULED WITH ASSESSORS WHO ARE SUITABLE
 
-    for i in range(number_talks):
-        for j in range(number_assessors):
-            for k in range(number_slots):
-                talk = talk_dict[i]
+    if record.all_assessors_in_pool:
+        for i in range(number_talks):
+            talk = talk_dict[i]
+
+            for j in range(number_assessors):
                 assessor = assessor_dict[j]
 
-                prob += X[(i, k)] + Y[(j, k)] <= (2 if talk.project.is_assessor(assessor.id) else 1)
+                for k in range(number_slots):
+                    if not talk.project.is_assessor(assessor.id):
+                        prob += X[(i, k)] + Y[(j, k)] <= 1
+                        constraints += 1
+
+    else:
+        for i in range(number_talks):
+            talk = talk_dict[i]
+
+            for k in range(number_slots):
+                prob += sum([Y[(j, k)] for j in range(number_assessors)
+                            if talk.project.is_assessor(assessor_dict[j].id)]) >= X[(i, k)]
                 constraints += 1
 
 
     # TALKS CANNOT BE SCHEDULED WITH THE SUPERVISOR AS AN ASSESSOR
 
     for i in range(number_talks):
-        for k in range(number_slots):
-            talk = talk_dict[i]
-            supervisor_id = talk.supervisor.id
+        talk = talk_dict[i]
+        supervisor_id = talk.supervisor.id
 
-            # it's not an error if supervisor_id is not in assessor_to_number; this just means that the supervisor
-            # is not a possible assessor.
-            # that most likely way this could happen is if the supervisor is exempt/on sabbatical from
-            # presentation assessments, eg. as HoD or HoS
-            if supervisor_id in assessor_to_number:
-                j = assessor_to_number[supervisor_id]
+        # it's not an error if supervisor_id is not in assessor_to_number; this just means that the supervisor
+        # is not a possible assessor.
+        # that most likely way this could happen is if the supervisor is exempt/on sabbatical from
+        # presentation assessments, eg. as HoD or HoS
+        if supervisor_id in assessor_to_number:
+            j = assessor_to_number[supervisor_id]
+
+            for k in range(number_slots):
                 prob += X[(i, k)] + Y[(j, k)] <= 1
                 constraints += 1
 
 
-    # TALKS SHOULD ONLY BE SCHEDULED IN ROOMS WITH REQUIRED FACILITIES
+    # TALKS SHOULD ONLY BE SCHEDULED IN ROOMS WITH SUITABLE FACILITIES
 
     for i in range(number_talks):
-        for j in range(number_slots):
-            slot_ok = True
+        talk = talk_dict[i]
 
-            talk = talk_dict[i]
+        for j in range(number_slots):
             slot = slot_dict[j]
+            slot_ok = True
 
             if not talk.period.has_presentation:
                 raise RuntimeError('Inconsistent presentation state in SubmissionPeriodRecord')
@@ -597,9 +635,9 @@ def _initialize(self, record, read_serialized=False):
             number_assessors, assessor_to_number, number_to_assessor, assessor_dict = _enumerate_assessors(record, read_serialized=read_serialized)
         print(' -- enumerated assessors in time {s}'.format(s=assessor_timer.interval))
 
-        with Timer() as pclasses_timer:
-            number_pclasses, pclass_to_number, number_to_pclass, pclass_dict = _enumerate_pclasses(record, read_serialized=read_serialized)
-        print('  -- enumerated pclasses in time {s}'.format(s=pclasses_timer.interval))
+        with Timer() as periods_timer:
+            number_periods, period_to_number, number_to_period, period_dict = _enumerate_periods(record, read_serialized=read_serialized)
+        print('  -- enumerated periods in time {s}'.format(s=periods_timer.interval))
 
         with Timer() as slots_timer:
             number_slots, slot_to_number, number_to_slot, slot_dict = _enumerate_slots(record, read_serialized=read_serialized)
@@ -618,10 +656,10 @@ def _initialize(self, record, read_serialized=False):
     except SQLAlchemyError:
         raise self.retry()
 
-    return number_talks, number_assessors, number_slots, number_pclasses, \
-           talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
-           number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
-           talk_dict, assessor_dict, slot_dict, pclass_dict, \
+    return number_talks, number_assessors, number_slots, number_periods, \
+           talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
+           number_to_talk, number_to_assessor, number_to_slot, number_to_period, \
+           talk_dict, assessor_dict, slot_dict, period_dict, \
            A, B, C
 
 
@@ -753,7 +791,7 @@ def _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_
     return record.score
 
 
-def _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_pclass):
+def _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period):
     for number in number_to_talk:
         data = ScheduleEnumeration(schedule_id=record.id,
                                    enumeration=number,
@@ -775,11 +813,11 @@ def _store_enumeration_details(record, number_to_talk, number_to_assessor, numbe
                                    category=ScheduleEnumeration.SLOT)
         db.session.add(data)
 
-    for number in number_to_pclass:
+    for number in number_to_period:
         data = ScheduleEnumeration(schedule_id=record.id,
                                    enumeration=number,
-                                   key=number_to_pclass[number],
-                                   category=ScheduleEnumeration.PCLASS)
+                                   key=number_to_period[number],
+                                   category=ScheduleEnumeration.PERIOD)
         db.session.add(data)
 
     db.session.commit()
@@ -800,10 +838,10 @@ def register_scheduling_tasks(celery):
 
         _create_slots(self, record)
 
-        number_talks, number_assessors, number_slots, number_pclasses, \
-        talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
-        number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
-        talk_dict, assessor_dict, slot_dict, pclass_dict, \
+        number_talks, number_assessors, number_slots, number_periods, \
+        talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, number_to_period, \
+        talk_dict, assessor_dict, slot_dict, period_dict, \
         A, B, C = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
@@ -811,8 +849,9 @@ def register_scheduling_tasks(celery):
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              number_pclasses, assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              pclass_dict, partial(_generate_minimize_objective, C))
+                                              number_periods, assessor_to_number, period_to_number, talk_dict,
+                                              assessor_dict, slot_dict, period_dict,
+                                              partial(_generate_minimize_objective, C))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -833,10 +872,10 @@ def register_scheduling_tasks(celery):
 
         _create_slots(self, record)
 
-        number_talks, number_assessors, number_slots, number_pclasses, \
-        talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
-        number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
-        talk_dict, assessor_dict, slot_dict, pclass_dict, \
+        number_talks, number_assessors, number_slots, number_periods, \
+        talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, number_to_period, \
+        talk_dict, assessor_dict, slot_dict, period_dict, \
         A, B, C = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
@@ -847,8 +886,9 @@ def register_scheduling_tasks(celery):
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              number_pclasses, assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              pclass_dict, partial(_generate_reschedule_objective, oldX, oldY))
+                                              number_periods, assessor_to_number, period_to_number, talk_dict,
+                                              assessor_dict, slot_dict, period_dict,
+                                              partial(_generate_reschedule_objective, oldX, oldY))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -878,10 +918,10 @@ def register_scheduling_tasks(celery):
 
         _create_slots(self, record)
 
-        number_talks, number_assessors, number_slots, number_pclasses, \
-        talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
-        number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
-        talk_dict, assessor_dict, slot_dict, pclass_dict, \
+        number_talks, number_assessors, number_slots, number_periods, \
+        talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, number_to_period, \
+        talk_dict, assessor_dict, slot_dict, period_dict, \
         A, B, C = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
@@ -889,8 +929,9 @@ def register_scheduling_tasks(celery):
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              number_pclasses, assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              pclass_dict, partial(_generate_minimize_objective, C))
+                                              number_periods, assessor_to_number, period_to_number, talk_dict,
+                                              assessor_dict, slot_dict, period_dict,
+                                              partial(_generate_minimize_objective, C))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -944,7 +985,7 @@ def register_scheduling_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 80,
                         'Storing schedule details for later processing...', autocommit=True)
 
-        _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_pclass)
+        _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period)
 
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
                         'File generation for offline scheduling now complete', autocommit=True)
@@ -979,10 +1020,10 @@ def register_scheduling_tasks(celery):
             self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
             raise self.retry()
 
-        number_talks, number_assessors, number_slots, number_pclasses, \
-        talk_to_number, assessor_to_number, slot_to_number, pclass_to_number, \
-        number_to_talk, number_to_assessor, number_to_slot, number_to_pclass, \
-        talk_dict, assessor_dict, slot_dict, pclass_dict, \
+        number_talks, number_assessors, number_slots, number_periods, \
+        talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
+        number_to_talk, number_to_assessor, number_to_slot, number_to_period, \
+        talk_dict, assessor_dict, slot_dict, period_dict, \
         A, B, C = _initialize(self, record, read_serialized=True)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
@@ -990,8 +1031,9 @@ def register_scheduling_tasks(celery):
 
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
-                                              number_pclasses, assessor_to_number, talk_dict, assessor_dict, slot_dict,
-                                              pclass_dict, partial(_generate_minimize_objective, C))
+                                              number_periods, assessor_to_number, period_to_number, talk_dict,
+                                              assessor_dict, slot_dict, period_dict,
+                                              partial(_generate_minimize_objective, C))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 

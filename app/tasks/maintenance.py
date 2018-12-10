@@ -22,54 +22,6 @@ from datetime import datetime
 from os import path, remove
 
 
-def submitter_attendance_maintenance(self):
-    current_year = get_current_year()
-    try:
-        records = db.session.query(SubmitterAttendanceData) \
-            .join(PresentationAssessment, PresentationAssessment.id == SubmitterAttendanceData.assessment_id) \
-            .filter(PresentationAssessment.year == current_year).all()
-
-    except SQLAlchemyError:
-        raise self.retry()
-
-    task = group(submitter_attendance_record_maintenance.s(r.id) for r in records)
-    task.apply_async()
-
-
-def assessor_attendance_maintenance(self):
-    current_year = get_current_year()
-    try:
-        records = db.session.query(AssessorAttendanceData) \
-            .join(PresentationAssessment, PresentationAssessment.id == AssessorAttendanceData.assessment_id) \
-            .filter(PresentationAssessment.year == current_year).all()
-
-    except SQLAlchemyError:
-        raise self.retry()
-
-    task = group(assessor_attendance_record_maintenance.s(r.id) for r in records)
-    task.apply_async()
-
-
-def projects_maintenance(self):
-    try:
-        records = db.session.query(Project).all()
-    except SQLAlchemyError:
-        raise self.retry()
-
-    task = group(project_record_maintenance.s(p.id) for p in records)
-    task.apply_async()
-
-
-def schedule_enumeration_maintenance(self):
-    try:
-        records = db.session.query(ScheduleEnumeration).all()
-    except SQLAlchemyError:
-        raise self.retry()
-
-    task = group(schedule_enumeration_record_maintenance.s(r.id) for r in records)
-    task.apply_async()
-
-
 def register_maintenance_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -80,6 +32,54 @@ def register_maintenance_tasks(celery):
         schedule_enumeration_maintenance(self)
 
         self.update_state(state='SUCCESS')
+
+
+    def submitter_attendance_maintenance(self):
+        current_year = get_current_year()
+        try:
+            records = db.session.query(SubmitterAttendanceData) \
+                .join(PresentationAssessment, PresentationAssessment.id == SubmitterAttendanceData.assessment_id) \
+                .filter(PresentationAssessment.year == current_year).all()
+
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(submitter_attendance_record_maintenance.s(r.id) for r in records)
+        task.apply_async()
+
+
+    def assessor_attendance_maintenance(self):
+        current_year = get_current_year()
+        try:
+            records = db.session.query(AssessorAttendanceData) \
+                .join(PresentationAssessment, PresentationAssessment.id == AssessorAttendanceData.assessment_id) \
+                .filter(PresentationAssessment.year == current_year).all()
+
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(assessor_attendance_record_maintenance.s(r.id) for r in records)
+        task.apply_async()
+
+
+    def projects_maintenance(self):
+        try:
+            records = db.session.query(Project).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(project_record_maintenance.s(p.id) for p in records)
+        task.apply_async()
+
+
+    def schedule_enumeration_maintenance(self):
+        try:
+            records = db.session.query(ScheduleEnumeration).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(schedule_enumeration_record_maintenance.s(r.id) for r in records)
+        task.apply_async()
 
 
     @celery.task(bind=True, default_retry_delay=30)

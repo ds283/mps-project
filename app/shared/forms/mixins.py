@@ -58,7 +58,7 @@ def FacultyDataMixinFactory(admin=False):
 
         project_capacity = IntegerField('Default project capacity',
                                         description='Default number of students that can be assigned to a project',
-                                        validators=[NotOptionalIf(enforce_capacity)])
+                                        validators=[NotOptionalIf('enforce_capacity')])
 
         show_popularity = BooleanField('Show popularity indicators', default=True,
                                        description='By default, show popularity indicators on project webpages')

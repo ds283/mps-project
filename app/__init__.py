@@ -131,7 +131,7 @@ def create_app():
     app.config['UPLOADED_SOLUTIONS_DEST'] = abs_uploaded_path
     configure_uploads(app, solution_files)
 
-    # set max uploade size = 64 Mb, optimizer solution files shouldn't be larger than this
+    # set max upload size = 64 Mb, optimizer solution files shouldn't be larger than this
     # (though MPS files can be quite large if those are being used)
     patch_request_class(app, 64*1024*1024)
 

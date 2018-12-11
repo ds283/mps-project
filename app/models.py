@@ -5509,6 +5509,7 @@ class PuLPMixin():
     _solvers = {0: 'PuLP-packaged CBC', 1: 'CBC external', 2: 'GLPK external', 3: 'CPLEX external (requires license)',
                 4: 'Gurobi external (requires license)', 5: 'SCIP external (requires license)'}
 
+
     @property
     def solver_name(self):
         if self.solver in self._solvers:

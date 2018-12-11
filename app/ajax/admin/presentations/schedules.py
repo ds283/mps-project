@@ -215,7 +215,7 @@ _menu = \
                 {% endif %}
                 <li>
                     <a href="{{ url_for('admin.duplicate_schedule', id=s.id) }}">
-                        <i class="fa fa-clone"></i> Duplicate...
+                        <i class="fa fa-clone"></i> Duplicate
                     </a>
                 </li>
                 {% set disabled = valid %}
@@ -232,7 +232,7 @@ _menu = \
                     <a><i class="fa fa-undo"></i> Revert to original</a>
                 </li>
                 <li class="disabled">
-                    <a><i class="fa fa-clone"></i> Duplicate...</a>
+                    <a><i class="fa fa-clone"></i> Duplicate</a>
                 </li>
                 <li class="disabled">
                     <a><i class="fa fa-wrench"></i> Adjust to constraints</a>

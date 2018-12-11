@@ -1140,6 +1140,15 @@ def register_scheduling_tasks(celery):
             # generate a new ScheduleAttempt
             data = ScheduleAttempt(owner_id=record.owner_id,
                                    name=new_name,
+                                   solver=record.solver,
+                                   construct_time=record.construct_time,
+                                   compute_time=record.compute_time,
+                                   celery_id=None,
+                                   awaiting_upload=record.awaiting_upload,
+                                   outcome=record.outcome,
+                                   finished=record.finished,
+                                   celery_finished=True,
+                                   score=record.score,
                                    published=record.published,
                                    deployed=False,
                                    max_group_size=record.max_group_size,
@@ -1165,6 +1174,15 @@ def register_scheduling_tasks(celery):
                                    original_assessors=slot.assessors,
                                    original_talks=slot.original_talks)
                 db.session.add(rec)
+
+            # duplicate all enumerations
+            if data.awaiting_upload:
+                for item in record.enumerations:
+                    en = ScheduleEnumeration(category=item.category,
+                                             enumeration=item.enumeration,
+                                             key=item.key,
+                                             schedule_id=data.id)
+                    db.session.add(en)
 
             db.session.commit()
 

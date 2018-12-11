@@ -232,7 +232,7 @@ _menu = \
                 {% endif %}
                 <li>
                     <a href="{{ url_for('admin.duplicate_match', id=m.id) }}">
-                        <i class="fa fa-clone"></i> Duplicate...
+                        <i class="fa fa-clone"></i> Duplicate
                     </a>
                 </li>
                 <li {% if not compare %}class="disabled"{% endif %}>
@@ -248,7 +248,7 @@ _menu = \
                     <a><i class="fa fa-undo"></i> Revert to original</a>
                 </li>
                 <li class="disabled">
-                    <a><i class="fa fa-clone"></i> Duplicate...</a>
+                    <a><i class="fa fa-clone"></i> Duplicate</a>
                 </li>
                 <li>
                     <a><i class="fa fa-balance-scale"></i> Compare to...</a>

@@ -25,6 +25,11 @@ _assessors = \
 {% for assessor in s.assessors %}
     <div>
         <span class="label label-default">{{ assessor.user.name }}</span>
+        {% if s.session.faculty_ifneeded(assessor.id) %}
+            <span class="label label-warning">if-needed</span>
+        {% elif s.session.faculty_unavailable(assessor.id) %}
+            <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+        {% endif %}
     </div>
 {% endfor %}
 """
@@ -38,6 +43,9 @@ _talks = \
     <div>
         {% set style = talk.pclass.make_CSS_style() %}
         <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }} &ndash; {{ talk.project.name }} ({{ talk.supervisor.user.name }})</span>
+        {% if s.session.submitter_unavailable(talk.id) %}
+            <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+        {% endif %}
     </div>
 {% endfor %}
 {% if ns.count > 0 %}

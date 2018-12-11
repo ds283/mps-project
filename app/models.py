@@ -7683,6 +7683,18 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
 
     @property
+    def number_ifneeded(self):
+        count = 0
+
+        for slot in self.slots:
+            for assessor in slot.assessors:
+                if slot.session.faculty_ifneeded(assessor.id):
+                    count += 1
+
+        return count
+
+
+    @property
     def is_revokable(self):
         # can't revoke is parent event is closed for feedback
         if not self.owner.feedback_open:

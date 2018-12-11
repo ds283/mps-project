@@ -120,6 +120,12 @@ _info = \
     <span class="label label-primary">Uses {{ value }} room{{ pl }}</span>
     {% set value = s.number_buildings %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
     <span class="label label-primary">Uses {{ value }} building{{ pl }}</span>
+    {% set value = s.number_ifneeded %}
+    {% if value == 0 %}
+        <span class="label label-success">Uses 0 if-needed</span>
+    {% else %}
+        <span class="label label-warning">Uses {{ value }} if-needed</span>
+    {% endif %}
 {% endif %}
 <p><p>
 <span class="label label-success">Solver {{ s.solver_name }}</span>

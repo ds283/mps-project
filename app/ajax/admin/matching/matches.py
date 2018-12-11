@@ -196,7 +196,7 @@ _menu = \
         {% if m.finished and m.solution_usable %}
             <li>
                 <a href="{{ url_for('admin.match_student_view', id=m.id, text=text, url=url) }}">
-                    <i class="fa fa-search"></i> Inspect match
+                    <i class="fa fa-search"></i> Inspect match...
                 </a>
             </li>
             <li role="separator" class="divider">
@@ -220,7 +220,7 @@ _menu = \
             {% if m.solution_usable %}
                 <li>
                     <a href="{{ url_for('admin.rename_match', id=m.id, url=url) }}">
-                        <i class="fa fa-exchange"></i> Rename
+                        <i class="fa fa-exchange"></i> Rename...
                     </a>
                 </li>
                 {% if m.is_modified %}
@@ -232,7 +232,7 @@ _menu = \
                 {% endif %}
                 <li>
                     <a href="{{ url_for('admin.duplicate_match', id=m.id) }}">
-                        <i class="fa fa-clone"></i> Duplicate
+                        <i class="fa fa-clone"></i> Duplicate...
                     </a>
                 </li>
                 <li {% if not compare %}class="disabled"{% endif %}>
@@ -242,13 +242,13 @@ _menu = \
                 </li>
             {% else %}
                 <li class="disabled">
-                    <a><i class="fa fa-exchange"></i> Rename</a>
+                    <a><i class="fa fa-exchange"></i> Rename...</a>
                 </li>
                 <li class="disabled">
                     <a><i class="fa fa-undo"></i> Revert to original</a>
                 </li>
                 <li class="disabled">
-                    <a><i class="fa fa-clone"></i> Duplicate</a>
+                    <a><i class="fa fa-clone"></i> Duplicate...</a>
                 </li>
                 <li>
                     <a><i class="fa fa-balance-scale"></i> Compare to...</a>

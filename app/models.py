@@ -334,6 +334,16 @@ submitter_to_slots = db.Table('submitter_to_slots',
                               db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True),
                               db.Column('slot_id', db.Integer(), db.ForeignKey('schedule_slots.id'), primary_key=True))
 
+# original faculty to slots map - used for reverting
+orig_fac_to_slots = db.Table('orig_fac_to_slots',
+                             db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
+                             db.Column('slot_id', db.Integer(), db.ForeignKey('schedule_slots.id'), primary_key=True))
+
+# orig submitter to slots map - used for reverting
+orig_sub_to_slots = db.Table('orig_sub_to_slots',
+                             db.Column('submitter_id', db.Integer(), db.ForeignKey('submission_records.id'), primary_key=True),
+                             db.Column('slot_id', db.Integer(), db.ForeignKey('schedule_slots.id'), primary_key=True))
+
 # assessor attendance: available
 assessor_available_sessions = db.Table('assessor_available',
                                        db.Column('assessor_id', db.Integer(), db.ForeignKey('assessor_attendance_data.id'), primary_key=True),
@@ -7704,6 +7714,11 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         return True
 
 
+    @property
+    def is_modified(self):
+        return self.last_edit_timestamp is not None
+
+
 @listens_for(ScheduleAttempt, 'before_update')
 def _ScheduleAttempt_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
@@ -7859,6 +7874,15 @@ class ScheduleSlot(db.Model):
     # talks scheduled in this slot
     talks = db.relationship('SubmissionRecord', secondary=submitter_to_slots, lazy='dynamic',
                             backref=db.backref('scheduled_slot', lazy='dynamic'))
+
+
+    # ORIGINAL VERSIONS to allow reversion later
+
+    # original set of assessors attached to ths slot
+    original_assessors = db.relationship('FacultyData', secondary=orig_fac_to_slots, lazy='dynamic')
+
+    # original set of submitters attached to this slow
+    original_talks = db.relationship('SubmissionRecord', secondary=orig_sub_to_slots, lazy='dynamic')
 
 
     def _init__(self, *args, **kwargs):

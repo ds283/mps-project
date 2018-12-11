@@ -4065,7 +4065,6 @@ def delete_match(id):
 @admin.route('/perform_delete_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_delete_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
@@ -4107,7 +4106,6 @@ def perform_delete_match(id):
 @admin.route('/revert_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def revert_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4149,7 +4147,6 @@ def revert_match(id):
 @admin.route('/perform_revert_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_revert_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4202,7 +4199,6 @@ def perform_revert_match(id):
 @admin.route('/duplicate_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def duplicate_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4246,7 +4242,7 @@ def duplicate_match(id):
     duplicate = celery.tasks['app.tasks.matching.duplicate']
 
     tk_name = 'Duplicate {name}'.format(name=record.name)
-    tk_description = 'Duplicate a matching'
+    tk_description = 'Duplicate matching'
     task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
     init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
@@ -4264,7 +4260,6 @@ def duplicate_match(id):
 @admin.route('/rename_match/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def rename_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4300,7 +4295,6 @@ def rename_match(id):
 @admin.route('/compare_match/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def compare_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4339,7 +4333,6 @@ def compare_match(id):
 @admin.route('/do_compare/<int:id1>/<int:id2>')
 @roles_accepted('faculty', 'admin', 'root')
 def do_compare(id1, id2):
-
     record1 = MatchingAttempt.query.get_or_404(id1)
     record2 = MatchingAttempt.query.get_or_404(id2)
 
@@ -4391,7 +4384,6 @@ def do_compare(id1, id2):
 @admin.route('/do_compare_ajax/<int:id1>/<int:id2>')
 @roles_accepted('faculty', 'admin', 'root')
 def do_compare_ajax(id1, id2):
-
     record1 = MatchingAttempt.query.get_or_404(id1)
     record2 = MatchingAttempt.query.get_or_404(id2)
 
@@ -4446,7 +4438,6 @@ def do_compare_ajax(id1, id2):
     right = recs2.popleft()
 
     while left is not None:
-
         while right.selector_id < left.selector_id:
             right = recs2.popleft()
 
@@ -4472,7 +4463,6 @@ def do_compare_ajax(id1, id2):
 @admin.route('/merge_replace_records/<int:src_id>/<int:dest_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def merge_replace_records(src_id, dest_id):
-
     source = MatchingRecord.query.get_or_404(src_id)
     dest = MatchingRecord.query.get_or_404(dest_id)
 
@@ -4513,7 +4503,6 @@ def merge_replace_records(src_id, dest_id):
 @admin.route('/match_student_view/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_student_view(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
@@ -4551,7 +4540,6 @@ def match_student_view(id):
 @admin.route('/match_faculty_view/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_faculty_view(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
@@ -4592,7 +4580,6 @@ def match_faculty_view(id):
 @admin.route('/match_dists_view/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_dists_view(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not record.finished:
@@ -4669,7 +4656,6 @@ def match_dists_view(id):
 @admin.route('/match_student_view_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_student_view_ajax(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4691,7 +4677,6 @@ def match_student_view_ajax(id):
 @admin.route('/match_faculty_view_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def match_faculty_view_ajax(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4710,7 +4695,6 @@ def match_faculty_view_ajax(id):
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')
 @roles_accepted('faculty', 'admin', 'root')
 def reassign_match_project(id, pid):
-
     record = MatchingRecord.query.get_or_404(id)
 
     if not validate_match_inspector(record.matching_attempt):
@@ -4751,7 +4735,6 @@ def reassign_match_project(id, pid):
 @admin.route('/reassign_match_marker/<int:id>/<int:mid>')
 @roles_accepted('faculty', 'admin', 'root')
 def reassign_match_marker(id, mid):
-
     record = MatchingRecord.query.get_or_404(id)
 
     if not validate_match_inspector(record.matching_attempt):
@@ -4796,7 +4779,6 @@ def reassign_match_marker(id, mid):
 @admin.route('/publish_match/<int:id>')
 @roles_required('root')
 def publish_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4831,7 +4813,6 @@ def publish_match(id):
 @admin.route('/unpublish_match/<int:id>')
 @roles_required('root')
 def unpublish_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4866,7 +4847,6 @@ def unpublish_match(id):
 @admin.route('/select_match/<int:id>')
 @roles_required('root')
 def select_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -4924,7 +4904,6 @@ def select_match(id):
 @admin.route('/deselect_match/<int:id>')
 @roles_required('root')
 def deselect_match(id):
-
     record = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(record):
@@ -6315,6 +6294,154 @@ def perform_delete_schedule(id):
               'error')
 
     return redirect(url)
+
+
+@admin.route('/revert_schedule/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def revert_schedule(id):
+    record = ScheduleAttempt.query_get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Can not duplicate schedule "{name}" because it is still awaiting '
+                  'manual upload'.format(name=record.name), 'error')
+        else:
+            flash('Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name),
+                  'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    title = 'Revert schedule'
+    panel_title = 'Revert schedule <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_revert_schedule', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to revert the schedule ' \
+              '<strong>{name}</strong> to its original state.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Revert schedule'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_revert_schedule/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_revert_schedule(id):
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        # TODO consider an alternative implementation here
+        url = url_for('admin.assessment_schedules', id=record.owner_id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Can not duplicate schedule "{name}" because it is still awaiting '
+                  'manual upload'.format(name=record.name), 'error')
+        else:
+            flash('Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name),
+                  'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    # hand off revert job to asynchronous queue
+    celery = current_app.extensions['celery']
+    revert = celery.tasks['app.tasks.scheduling.revert']
+
+    tk_name = 'Revert {name}'.format(name=record.name)
+    tk_description = 'Revert schedule to its original state'
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                revert.si(record.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
+
+    return redirect(url)
+
+
+@admin.route('/duplicate_schedule/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def duplicate_schedule(id):
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Can not duplicate schedule "{name}" because it is still awaiting '
+                  'manual upload'.format(name=record.name), 'error')
+        else:
+            flash('Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name),
+                  'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    suffix = 2
+    while suffix < 100:
+        new_name = '{name} #{suffix}'.format(name=record.name, suffix=suffix)
+
+        if ScheduleAttempt.query.filter_by(name=new_name).first() is None:
+            break
+
+        suffix += 1
+
+    if suffix >= 100:
+        flash('Can not duplicate schedule "{name}" because a new unique tag could not '
+              'be generated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    # hand off duplicate job to asynchronous queue
+    celery = current_app.extensions['celery']
+    duplicate = celery.tasks['app.tasks.scheduling.duplicate']
+
+    tk_name = 'Duplicate {name}'.format(name=record.name)
+    tk_description = 'Duplicate presentation assessment schedule'
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                duplicate.si(record.id, new_name, current_user.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
+
+    return redirect(request.referrer)
 
 
 @admin.route('/rename_schedule/<int:id>', methods=['GET', 'POST'])

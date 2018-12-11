@@ -18,6 +18,7 @@ from ..task_queue import progress_update
 from sqlalchemy.exc import SQLAlchemyError
 
 from celery import group, chain
+from celery.exceptions import Ignore
 
 import pulp
 import pulp.solvers as solvers
@@ -878,7 +879,7 @@ def register_matching_tasks(celery):
 
         if record is None:
             self.update_state(state='FAILURE', meta='Could not load MatchingRecord record from database')
-            return
+            raise Ignore
 
         try:
             record.project_id = record.original_project_id
@@ -896,7 +897,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revert_finalize(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+                          meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -905,7 +906,7 @@ def register_matching_tasks(celery):
 
         if record is None:
             self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
-            return
+            raise Ignore
 
         try:
             record.last_edit_id = None
@@ -922,7 +923,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def revert(self, id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+                          meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -931,7 +932,7 @@ def register_matching_tasks(celery):
 
         if record is None:
             self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
-            return
+            raise Ignore
 
         wg = group(revert_record.si(r.id) for r in record.records.all())
         seq = chain(wg, revert_finalize.si(id))
@@ -942,7 +943,7 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def duplicate(self, id, new_name, current_id):
         self.update_state(state='STARTED',
-                          meta='Looking up MatchingRecord record for id={id}'.format(id=id))
+                          meta='Looking up MatchingAttempt record for id={id}'.format(id=id))
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
@@ -951,7 +952,7 @@ def register_matching_tasks(celery):
 
         if record is None:
             self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
-            return
+            raise Ignore
 
         # encapsulate the whole duplication process in a single transaction, so the process is as close to
         # atomic as we can make it

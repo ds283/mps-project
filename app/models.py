@@ -7756,19 +7756,39 @@ def _ScheduleSlot_is_valid(id):
                                '(scheduled={sch}, max={max})'.format(sch=num_talks, max=obj.owner.max_group_size)
 
 
-    # CONSTRAINT 2. NUMBER OF ASSESSORS SHOULD BE EQUAL TO PRESCRIBED NUMBER
-    num_assessors = get_count(obj.assessors)
-    if num_assessors > obj.owner.owner.number_assessors:
-        errors[('basic', 1)] = 'Too many assessors scheduled in this slot ' \
-                               '(scheduled={sch}, required={num})'.format(sch=num_assessors,
-                                                                          num=obj.owner.owner.number_assessors)
-    if num_assessors < obj.owner.owner.number_assessors:
-        errors[('basic', 1)] = 'Too few assessors scheduled in this slot ' \
-                               '(scheduled={sch}, required={num})'.format(sch=num_assessors,
-                                                                          num=obj.owner.owner.number_assessors)
+    # CONSTRAINT 2. TALKS SHOULD USUALLY BY DRAWN FROM THE SAME PROJECT CLASS
+    # (OR EQUIVALENTLY, SUBMISSION PERIOD)
+    if num_talks > 0:
+        tk = obj.talks.first()
+        period_id = tk.period_id
+
+        for talk in obj.talks:
+            if talk.period_id != period_id:
+                warnings[('period', talk.id)] = 'Submitter "{name}" is drawn from a mismatching project class ' \
+                                                '({pclass_a} vs. {pclass_b})'.format(name=talk.owner.student.user.name,
+                                                                                     pclass_a=talk.period.config.project_class.name,
+                                                                                     pclass_b=tk.period.config.project_class.name)
 
 
-    # CONSTRAINT 3. ASSESSORS SHOULD ALL BE AVAILABLE FOR THIS SESSION
+    # CONSTRAINT 3. NUMBER OF ASSESSORS SHOULD BE EQUAL TO REQUIRED NUMBER FOR THE
+    # PROJECT CLASS ASSOCIATED WITH THIS SLOT
+    if num_talks > 0:
+        num_assessors = get_count(obj.assessors)
+
+        tk = obj.talks.first()
+        expected_assessors = tk.period.number_assessors
+
+        if num_assessors > expected_assessors:
+            errors[('basic', 1)] = 'Too many assessors scheduled in this slot ' \
+                                   '(scheduled={sch}, required={num})'.format(sch=num_assessors,
+                                                                              num=expected_assessors)
+        if num_assessors < expected_assessors:
+            errors[('basic', 1)] = 'Too few assessors scheduled in this slot ' \
+                                   '(scheduled={sch}, required={num})'.format(sch=num_assessors,
+                                                                              num=expected_assessors)
+
+
+    # CONSTRAINT 4. ASSESSORS SHOULD ALL BE AVAILABLE FOR THIS SESSION
     for assessor in obj.assessors:
         if obj.session.faculty_unavailable(assessor.id):
             errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is not ' \
@@ -7782,14 +7802,22 @@ def _ScheduleSlot_is_valid(id):
                                                    'belong to this assessment'.format(name=assessor.user.name)
 
 
-    # CONSTRAINT 4. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
+    # CONSTRAINT 5. ASSESSORS SHOULD NOT BE PROJECT SUPERVISORS
+    for talk in obj.talks:
+        if talk.project.owner in obj.assessors:
+            errors[('supervisor', talk.id)] = 'Assessor "{name}" is project supervisor for ' \
+                                              '"{student}"'.format(name=talk.project.owner.user.name,
+                                                                   student=talk.owner.student.user.name)
+
+
+    # CONSTRAINT 6. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
     for talk in obj.talks:
         if obj.owner.owner.not_attending(talk.id):
-            errors[('talks', talk.id)] = 'Presentation for "{name}" is scheduled in this slot, but this student ' \
+            errors[('talks', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but this student ' \
                                          'is not attending'.format(name=talk.owner.student.user.name)
 
 
-    # CONSTRAINT 5. SUBMITTERS SHOULD ALL BE AVAILABILE FOR THIS SESSION
+    # CONSTRAINT 7. SUBMITTERS SHOULD ALL BE AVAILABILE FOR THIS SESSION
     for talk in obj.talks:
         if obj.session.submitter_unavailable(talk.id):
             errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but is not ' \
@@ -7800,7 +7828,21 @@ def _ScheduleSlot_is_valid(id):
                                                  'belong to this assessment'.format(name=talk.owner.student.user.name)
 
 
-    # CONSTRAINT 6. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN THE TWO PLACES AT THE SAME TIME
+    # CONSTRAINT 8. TALKS MARKED NOT TO CLASH SHOULD NOT BE SCHEDULED TOGETHER
+    talks_list = obj.talks.all()
+    for i in range(len(talks_list)):
+        for j in range(i):
+            talk_i = talks_list[i]
+            talk_j = talks_list[j]
+
+            if talk_i.project_id == talk_j.project_id and talk_i.project.dont_clash_presentations:
+                errors[('clash', (talk_i.id, talk_j.id))] = 'Submitters "{name_a}" and "{name_b}" share a project ' \
+                                                            '"{proj}" that is marked not to clash'.format(name_a=talk_i.owner.student.user.name,
+                                                                                                          name_b=talk_j.owner.student.user.name,
+                                                                                                          proj=talk_i.project.name)
+
+
+    # CONSTRAINT 9. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN THE TWO PLACES AT THE SAME TIME
     for assessor in obj.assessors:
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,
@@ -7819,7 +7861,7 @@ def _ScheduleSlot_is_valid(id):
                                                                    room=slot.room_full_name)
 
 
-    # CONSTRAINT 7. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
+    # CONSTRAINT 10. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
     for talk in obj.talks:
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,

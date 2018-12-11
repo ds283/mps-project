@@ -107,13 +107,19 @@ _info = \
 <span class="label label-info">Max assessor assignment {{ s.assessor_assigned_limit }}</span>
 <span class="label label-info">If needed cost {{ s.if_needed_cost }}</span>
 <span class="label label-info">Levelling tension {{ s.levelling_tension }}</span>
+{% if s.all_assessors_in_pool %}
+    <span class="label label-info">All assessors in pool</span>
+{% else %}
+    <span class="label label-default">At least 1 assessor in pool</span>
+{% endif %}
 {% if s.finished and s.solution_usable %}
+    <p></p>
     {% set value = s.number_sessions %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-info">Uses {{ value }} session{{ pl }}</span>
+    <span class="label label-primary">Uses {{ value }} session{{ pl }}</span>
     {% set value = s.number_rooms %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-info">Uses {{ value }} room{{ pl }}</span>
+    <span class="label label-primary">Uses {{ value }} room{{ pl }}</span>
     {% set value = s.number_buildings %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-info">Uses {{ value }} building{{ pl }}</span>
+    <span class="label label-primary">Uses {{ value }} building{{ pl }}</span>
 {% endif %}
 <p><p>
 <span class="label label-success">Solver {{ s.solver_name }}</span>

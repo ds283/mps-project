@@ -25,8 +25,8 @@ _menu = \
                 <i class="fa fa-check"></i> Force confirm
             </a>
         </li>
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=assessor.faculty.id) }}"{% endif %}>
+        <li>
+            <a href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=assessor.faculty.id) }}">
                 <i class="fa fa-trash"></i> Remove
             </a>
         </li>

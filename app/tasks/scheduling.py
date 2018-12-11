@@ -14,6 +14,7 @@ from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, 
 
 from ..task_queue import progress_update, register_task
 
+from celery import group, chain
 from celery.exceptions import Ignore
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -590,6 +591,7 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
 
                 if talk not in slot.talks:
                     slot.talks.append(talk)
+                    slot.original_talks.append(talk)
 
         for j in range(number_assessors):
             Y[(j, i)].round()
@@ -599,6 +601,7 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
 
                 if assessor not in slot.assessors:
                     slot.assessors.append(assessor)
+                    slot.original_assessors.append(assessor)
 
         if store:
             store_slots.append(slot)
@@ -1045,3 +1048,128 @@ def register_scheduling_tasks(celery):
         return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename),
                                       record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
                                       talk_dict, assessor_dict, slot_dict)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert_record(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up ScheduleSlot record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(ScheduleSlot).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load ScheduleSlot record from database')
+            raise Ignore
+
+        try:
+            record.talks = record.original_talks
+            record.assessors = record.original_assessors
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert_finalize(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            raise Ignore
+
+        try:
+            record.last_edit_id = None
+            record.last_edit_timestamp = None
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revert(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            raise Ignore
+
+        wg = group(revert_record.si(s.id) for s in record.slots.all())
+        seq = chain(wg, revert_finalize.si(id))
+
+        seq.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def duplicate(self, id, new_name, current_id):
+        self.update_state(state='STARTED',
+                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
+            return
+
+        try:
+            # generate a new ScheduleAttempt
+            data = ScheduleAttempt(owner_id=record.owner_id,
+                                   name=new_name,
+                                   published=record.published,
+                                   deployed=False,
+                                   max_group_size=record.max_group_size,
+                                   assessor_assigned_limit=record.assessor_assigned_limit,
+                                   if_needed_cost=record.if_needed_cost,
+                                   levelling_tension=record.levelling_tension,
+                                   all_assessors_in_pool=record.all_assessors_in_pool,
+                                   creator_id=current_id,
+                                   creation_timestamp=datetime.now(),
+                                   last_edit_id=None,
+                                   last_edit_timestamp=None)
+
+            db.session.add(data)
+            db.session.flush()
+
+            # duplicate all slots
+            for slot in record.slots:
+                rec = ScheduleSlot(owner_id=data.id,
+                                   session_id=slot.session_id,
+                                   room_id=slot.room_id,
+                                   assessors=slot.assessors,
+                                   talks=slot.talks,
+                                   original_assessors=slot.assessors,
+                                   original_talks=slot.original_talks)
+                db.session.add(rec)
+
+            db.session.commit()
+
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return None

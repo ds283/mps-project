@@ -179,7 +179,7 @@ _menu = \
         {% if s.finished and s.solution_usable %}
             <li>
                 <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">
-                    <i class="fa fa-search"></i> Inspect schedule
+                    <i class="fa fa-search"></i> Inspect schedule...
                 </a>
             </li>
             <li role="separator" class="divider">
@@ -203,7 +203,19 @@ _menu = \
             {% if s.solution_usable %}
                 <li>
                     <a href="{{ url_for('admin.rename_schedule', id=s.id, url=url) }}">
-                        <i class="fa fa-exchange"></i> Rename
+                        <i class="fa fa-exchange"></i> Rename...
+                    </a>
+                </li>
+                {% if s.is_modified %}
+                    <li>
+                        <a href="{{ url_for('admin.revert_schedule', id=s.id) }}">
+                            <i class="fa fa-undo"></i> Revert to original
+                        </a>
+                    </li>
+                {% endif %}
+                <li>
+                    <a href="{{ url_for('admin.duplicate_schedule', id=s.id) }}">
+                        <i class="fa fa-clone"></i> Duplicate...
                     </a>
                 </li>
                 {% set disabled = valid %}
@@ -214,12 +226,19 @@ _menu = \
                 </li>
             {% else %}
                 <li class="disabled">
-                    <a><i class="fa fa-exchange"></i> Rename</a>
+                    <a><i class="fa fa-exchange"></i> Rename...</a>
+                </li>
+                <li class="disabled">
+                    <a><i class="fa fa-undo"></i> Revert to original</a>
+                </li>
+                <li class="disabled">
+                    <a><i class="fa fa-clone"></i> Duplicate...</a>
                 </li>
                 <li class="disabled">
                     <a><i class="fa fa-wrench"></i> Adjust to constraints</a>
                 </li>
             {% endif %}
+
             {% if current_user.has_role('root') or current_user.id == s.creator_id %}
                 <li>
                     <a href="{{ url_for('admin.delete_schedule', id=s.id) }}">

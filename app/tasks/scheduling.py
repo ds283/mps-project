@@ -704,6 +704,8 @@ def _execute_from_solution(self, file, record, prob, X, Y, create_time, number_t
     progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Processing uploaded solution file...",
                     autocommit=True)
 
+    # TODO: catch pulp.solvers.PulpSolverError: Unknown status returned by CPLEX
+    #  and handle it gracefully (or fix it on the fly)
     with Timer() as solve_time:
         record.awaiting_upload = False
         wasNone, dummyVar = prob.fixObjective()

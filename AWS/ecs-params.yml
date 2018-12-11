@@ -7,18 +7,15 @@ task_definition:
     nginx:
       cpu_shares: 128
       mem_limit: 0.7G
-    worker1:
-      cpu_shares: 128
-      mem_limit: 0.9G
     worker2:
       cpu_shares: 128
-      mem_limit: 0.9G
+      mem_limit: 2.0G
     scheduler:
-      cpu_shares: 64
+      cpu_shares: 128
       mem_limit: 0.9G
     flower:
-      cpu_shares: 64
-      mem_limit: 0.9G
+      cpu_shares: 128
+      mem_limit: 0.7G
     mariadb:
       cpu_shares: 128
       mem_limit: 0.7G

@@ -118,12 +118,24 @@
                             <div class="panel-heading">Automatic scheduling proposal</div>
                             <div class="panel-body">
                                 <div class="row vertical-align final-selection-table">
-                                    <div class="col-xs-10"><strong>Name</strong></div>
-                                    <div class="col-xs-3"></div>
+                                    <div class="col-xs-4"><strong>Name</strong></div>
+                                    <div class="col-xs-6"><strong>In pool for</strong></div>
+                                    <div class="col-xs-2"></div>
                                 </div>
                                 {% for item in original_assessors %}
                                     <div class="row vertical-align final-selection-table">
-                                        <div class="col-xs-10">{{ faculty_data(item, slot) }}</div>
+                                        <div class="col-xs-4">{{ faculty_data(item, slot) }}</div>
+                                        <div class="col-xs-6">
+                                            {% for talk in slot.talks %}
+                                                {% if talk.is_in_assessor_pool(item.id) %}
+                                                    {% set style = talk.pclass.make_CSS_style() %}
+                                                    <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }}</span>
+                                                    {% if slot.session.submitter_unavailable(talk.id) %}
+                                                        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
                                         <div class="col-xs-2">
                                             <div class="pull-right">
                                                 {% if slot.is_assessor(item.id) %}

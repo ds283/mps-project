@@ -355,6 +355,7 @@ def register_rollover_tasks(celery):
                                                 has_presentation=template.has_presentation,
                                                 lecture_capture=template.lecture_capture,
                                                 number_assessors=template.number_assessors,
+                                                max_group_size=template.max_group_size,
                                                 retired=False,
                                                 submission_period=template.period,
                                                 feedback_open=False,

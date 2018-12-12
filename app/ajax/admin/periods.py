@@ -16,6 +16,7 @@ _presentation = \
 {% if p.has_presentation %}
     <span class="label label-success">Required</span>
     <span class="label label-primary">{{ p.number_assessors }} assessors per group</span>
+    <span class="label label-primary">Max group size = {{ p.max_group_size }}</span> 
     {% if p.lecture_capture %}
         <span class="label label-info">Requires lecture capture</span>
     {% else %}

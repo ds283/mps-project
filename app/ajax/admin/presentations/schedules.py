@@ -103,7 +103,6 @@ _name = \
 
 _info = \
 """
-<span class="label label-info">Max group size {{ s.max_group_size }}</span>
 <span class="label label-info">Max assessor assignment {{ s.assessor_assigned_limit }}</span>
 <span class="label label-info">If needed cost {{ s.if_needed_cost }}</span>
 <span class="label label-info">Levelling tension {{ s.levelling_tension }}</span>

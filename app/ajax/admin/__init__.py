@@ -32,6 +32,7 @@ from .presentations.assessor_availability import assessor_session_availability_d
 from .presentations.outstanding_availability import outstanding_availability_data
 from .presentations.presentations import presentation_assessments_data
 from .presentations.schedule_view_sessions import schedule_view_sessions
+from .presentations.schedule_view_faculty import schedule_view_faculty
 from .presentations.schedules import assessment_schedules_data
 from .presentations.sessions import assessment_sessions_data
 from .presentations.submitter_availability import submitter_session_availability_data, presentation_attendees_data

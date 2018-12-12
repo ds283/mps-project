@@ -6626,6 +6626,7 @@ class PresentationAssessment(db.Model):
             .join(q, q.c.id == AssessorAttendanceData.id) \
             .join(FacultyData, FacultyData.id == AssessorAttendanceData.faculty_id) \
             .join(User, User.id == FacultyData.id) \
+            .filter(User.active == True) \
             .order_by(User.last_name.asc(), User.first_name.asc())
 
 

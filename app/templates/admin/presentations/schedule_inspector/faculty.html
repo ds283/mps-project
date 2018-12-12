@@ -18,20 +18,23 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#schedule_sessions').DataTable({
+            $('#schedule_faculty').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/schedule_view_sessions_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&building_filter={{ building_filter }}&room_filter={{ room_filter }}&session_filter={{ session_filter }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/schedule_view_faculty_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&building_filter={{ building_filter }}&room_filter={{ room_filter }}&session_filter={{ session_filter }}', dataSrc: '' },
                 columns: [
-                    { data: 'session',
+                    { data: 'name',
+                      render: {
+                        _: 'display',
+                        sort: 'sortstring',
+                      } },
+                    { data: 'availability' },
+                    { data: 'sessions',
                       render: {
                         _: 'display',
                         sort: 'sortvalue',
                         type: 'sortvalue'
-                      } },
-                    { data: 'room' },
-                    { data: 'assessors' },
-                    { data: 'talks' }
+                      } }
                 ],
                 deferRender: true
             });
@@ -40,7 +43,7 @@
 {% endblock %}
 
 {% block title %}
-    Schedule inspector: Sessions view
+    Schedule inspector: Faculty view
 {% endblock %}
 
 {% block bodyblock %}
@@ -53,18 +56,18 @@
     {% endif %}
 
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Sessions view of schedule <strong>{{ record.name }}</strong> for assessment <strong>{{ record.owner.name }}</strong></div>
+        <div class="panel-heading">Faculty view of schedule <strong>{{ record.name }}</strong> for assessment <strong>{{ record.owner.name }}</strong></div>
         <div class="panel-body">
             {% if pclasses and pclasses is not none and pclasses|length > 1 %}
                 <div class="well">
                     <p>Filter by project class</p>
                     <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter='all', building_filter=building_filter, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
+                        href="{{ url_for('admin.schedule_view_faculty', id=record.id, pclass_filter='all', building_filter=building_filter, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
                         All
                     </a>
                     {% for pclass in pclasses %}
                         <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass.id, building_filter=building_filter, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
+                            href="{{ url_for('admin.schedule_view_faculty', id=record.id, pclass_filter=pclass.id, building_filter=building_filter, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
                             {{ pclass.name }}
                         </a>
                     {% endfor %}
@@ -75,12 +78,12 @@
                 <div class="well">
                     <p>Filter by building</p>
                     <a class="btn btn-sm filter-btn {% if building_filter is none or building_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter='all', room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
+                        href="{{ url_for('admin.schedule_view_faculty', id=record.id, pclass_filter=pclass_filter, building_filter='all', room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
                         All
                     </a>
                     {% for building in buildings %}
                         <a class="btn btn-sm filter-btn {% if building_filter == building.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building.id, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
+                            href="{{ url_for('admin.schedule_view_faculty', id=record.id, pclass_filter=pclass_filter, building_filter=building.id, room_filter=room_filter, session_filter=session_filter, text=text, url=url) }}">
                             {{ building.name }}
                         </a>
                     {% endfor %}
@@ -91,12 +94,12 @@
                 <div class="well">
                     <p>Filter by room</p>
                     <a class="btn btn-sm filter-btn {% if room_filter is none or room_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter='all', session_filter=session_filter, text=text, url=url) }}">
+                        href="{{ url_for('admin.schedule_view_faculty', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter='all', session_filter=session_filter, text=text, url=url) }}">
                         All
                     </a>
                     {% for room in rooms %}
                         <a class="btn btn-sm filter-btn {% if room_filter == room.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room.id, session_filter=session_filter, text=text, url=url) }}">
+                            href="{{ url_for('admin.schedule_view_faculty', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room.id, session_filter=session_filter, text=text, url=url) }}">
                             {{ room.full_name }}
                         </a>
                     {% endfor %}
@@ -107,25 +110,24 @@
                 <div class="well">
                     <p>Filter by session</p>
                     <a class="btn btn-sm filter-btn {% if session_filter is none or session_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter='all', text=text, url=url) }}">
+                        href="{{ url_for('admin.schedule_view_faculty', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter='all', text=text, url=url) }}">
                         All
                     </a>
                     {% for session in sessions %}
                         <a class="btn btn-sm filter-btn {% if session_filter == session.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('admin.schedule_view_sessions', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter=session.id, text=text, url=url) }}">
+                            href="{{ url_for('admin.schedule_view_faculty', id=record.id, pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter, session_filter=session.id, text=text, url=url) }}">
                             {{ session.short_date_as_string }} ({{ session.session_type_string }})
                         </a>
                     {% endfor %}
                 </div>
             {% endif %}
 
-            <table id="schedule_sessions" class="table table-striped table-bordered">
+            <table id="schedule_faculty" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th width="15%"> Session</th>
-                        <th width="15%"> Room</th>
-                        <th width="20%"> Assessors</th>
-                        <th width="50%"> Talks</th>
+                        <th width="20%"> Name</th>
+                        <th width="10%"> Availability</th>
+                        <th width="70%"> Sessions</th>
                     </tr>
                 </thead>
             </table>

@@ -9,5 +9,10 @@
                 Sessions view
             </a>
         </li>
+        <li {% if pane == 'faculty' %}class="active"{% endif %}>
+            <a href="{{ url_for('admin.schedule_view_faculty', id=record.id, text=text, url=url) }}">
+                Faculty view
+            </a>
+        </li>
     </ul>
 {% endblock %}

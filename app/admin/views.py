@@ -6646,12 +6646,76 @@ def schedule_view_sessions(id):
     if not validate_schedule_inspector(record):
         return redirect(request.referrer)
 
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    building_filter, pclass_filter, room_filter, session_filter = _store_schedule_filters()
+
+    pclasses = record.available_pclasses
+    buildings = record.available_buildings
+    rooms = record.available_rooms
+    sessions = record.available_sessions
+
+    return render_template('admin/presentations/schedule_inspector/sessions.html', pane='sessions', record=record,
+                           pclasses=pclasses, buildings=buildings, rooms=rooms, sessions=sessions,
+                           pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter,
+                           session_filter=session_filter,
+                           text=text, url=url)
+
+
+@admin.route('/schedule_view_faculty/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def schedule_view_faculty(id):
+    """
+    Faculty view in schedule inspector
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" is not available for inspection '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    building_filter, pclass_filter, room_filter, session_filter = _store_schedule_filters()
+
+    pclasses = record.available_pclasses
+    buildings = record.available_buildings
+    rooms = record.available_rooms
+    sessions = record.available_sessions
+
+    return render_template('admin/presentations/schedule_inspector/faculty.html', pane='faculty', record=record,
+                           pclasses=pclasses, buildings=buildings, rooms=rooms, sessions=sessions,
+                           pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter,
+                           session_filter=session_filter,
+                           text=text, url=url)
+
+
+def _store_schedule_filters():
     pclass_filter = request.args.get('pclass_filter')
     building_filter = request.args.get('building_filter')
     room_filter = request.args.get('room_filter')
     session_filter = request.args.get('session_filter')
-    text = request.args.get('text', None)
-    url = request.args.get('url', None)
 
     # if no state filter supplied, check if one is stored in session
     if pclass_filter is None and session.get('admin_schedule_pclass_filter'):
@@ -6678,16 +6742,7 @@ def schedule_view_sessions(id):
     if session_filter is not None:
         session['admin_match_session_filter'] = session_filter
 
-    pclasses = record.available_pclasses
-    buildings = record.available_buildings
-    rooms = record.available_rooms
-    sessions = record.available_sessions
-
-    return render_template('admin/presentations/schedule_inspector/sessions.html', pane='sessions', record=record,
-                           pclasses=pclasses, buildings=buildings, rooms=rooms, sessions=sessions,
-                           pclass_filter=pclass_filter, building_filter=building_filter, room_filter=room_filter,
-                           session_filter=session_filter,
-                           text=text, url=url)
+    return building_filter, pclass_filter, room_filter, session_filter
 
 
 @admin.route('/schedule_view_sessions_ajax/<int:id>')
@@ -6744,6 +6799,65 @@ def schedule_view_sessions_ajax(id):
         slots = slots.all()
 
     return ajax.admin.schedule_view_sessions(slots, record)
+
+
+@admin.route('/schedule_view_faculty_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def schedule_view_faculty_ajax(id):
+    """
+    AJAX data point for Faculty view in Schedule inspector
+    """
+    if not validate_using_assessment():
+        return jsonify({})
+
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_assessment(record.owner):
+        return jsonify({})
+
+    if not record.finished:
+        return jsonify({})
+
+    if not record.solution_usable:
+        return jsonify({})
+
+    if not validate_schedule_inspector(record):
+        return jsonify({})
+
+    pclass_filter = request.args.get('pclass_filter')
+    building_filter = request.args.get('building_filter')
+    room_filter = request.args.get('room_filter')
+    session_filter = request.args.get('session_filter')
+
+    assessors = []
+    for assessor in record.owner.ordered_assessors:
+        slots = record.get_faculty_slots(assessor.faculty.id)
+        joined_room = False
+
+        flag, session_value = is_integer(session_filter)
+        if flag:
+            slots = slots.filter_by(session_id=session_value)
+
+        flag, building_value = is_integer(building_filter)
+        if flag:
+            slots = slots.join(Room, Room.id == ScheduleSlot.room_id).filter(Room.building_id == building_value)
+            joined_room = True
+
+        flag, room_value = is_integer(room_filter)
+        if flag:
+            if not joined_room:
+                slots = slots.join(Room, Room.id == ScheduleSlot.room_id)
+            slots = slots.filter(Room.id == room_value)
+
+        flag, pclass_value = is_integer(pclass_filter)
+        if flag:
+            slots = [t for t in slots.all() if t.has_pclass(pclass_value)]
+        else:
+            slots = slots.all()
+
+        assessors.append((assessor, slots))
+
+    return ajax.admin.schedule_view_faculty(assessors, record)
 
 
 @admin.route('/assessment_manage_attendees/<int:id>')

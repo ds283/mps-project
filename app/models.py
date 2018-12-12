@@ -4698,6 +4698,15 @@ class SubmissionRecord(db.Model):
         return slot_query.first()
 
 
+    def is_in_assessor_pool(self, fac_id):
+        """
+        Determine whether a given faculty member is in the assessor pool for this submission
+        :param fac_id:
+        :return:
+        """
+        return get_count(self.project.assessors.filter_by(id=fac_id)) > 0
+
+
 class Bookmark(db.Model):
     """
     Model an (orderable) bookmark
@@ -7690,8 +7699,12 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         return get_count(self.get_faculty_slots(fac_id))
 
 
-    def get_student_slot(self, submitter_id):
-        return self.slots.filter(ScheduleSlot.talks.any(owner_id=submitter_id))
+    def get_student_slot(self, sub_id):
+        return self.slots.filter(ScheduleSlot.talks.any(owner_id=sub_id))
+
+
+    def get_original_student_slot(self, student_id):
+        return self.slots.filter(ScheduleSlot.original_talks.any(owner_id=student_id))
 
 
     @property
@@ -7780,8 +7793,7 @@ def _ScheduleSlot_is_valid(id):
                                '(scheduled={sch}, max={max})'.format(sch=num_talks, max=obj.owner.max_group_size)
 
 
-    # CONSTRAINT 2. TALKS SHOULD USUALLY BY DRAWN FROM THE SAME PROJECT CLASS
-    # (OR EQUIVALENTLY, SUBMISSION PERIOD)
+    # CONSTRAINT 2. TALKS SHOULD USUALLY BY DRAWN FROM THE SAME PROJECT CLASS (OR EQUIVALENTLY, SUBMISSION PERIOD)
     if num_talks > 0:
         tk = obj.talks.first()
         period_id = tk.period_id
@@ -7794,8 +7806,7 @@ def _ScheduleSlot_is_valid(id):
                                                                                      pclass_b=tk.period.config.project_class.name)
 
 
-    # CONSTRAINT 3. NUMBER OF ASSESSORS SHOULD BE EQUAL TO REQUIRED NUMBER FOR THE
-    # PROJECT CLASS ASSOCIATED WITH THIS SLOT
+    # CONSTRAINT 3. NUMBER OF ASSESSORS SHOULD BE EQUAL TO REQUIRED NUMBER FOR THE PROJECT CLASS ASSOCIATED WITH THIS SLOT
     if num_talks > 0:
         num_assessors = get_count(obj.assessors)
 
@@ -7812,7 +7823,7 @@ def _ScheduleSlot_is_valid(id):
                                                                               num=expected_assessors)
 
 
-    # CONSTRAINT 4. ASSESSORS SHOULD ALL BE AVAILABLE FOR THIS SESSION
+    # CONSTRAINT 4. ALL ASSESSORS SHOULD BE AVAILABLE FOR THIS SESSION
     for assessor in obj.assessors:
         if obj.session.faculty_unavailable(assessor.id):
             errors[('faculty', assessor.id)] = 'Assessor "{name}" is scheduled in this slot, but is not ' \
@@ -7833,15 +7844,28 @@ def _ScheduleSlot_is_valid(id):
                                               '"{student}"'.format(name=talk.project.owner.user.name,
                                                                    student=talk.owner.student.user.name)
 
+    # CONSTRAINT 6. PREFERABLY, EACH TALK SHOULD HAVE AT LEAST ONE ASSESSOR BELONGING TO ITS ASSESSOR POOL
+    # (but we mark this as a warning rather than an error)
+    for talk in obj.talks:
+        found_match = False
+        for assessor in talk.project.assessor_list:
+            if get_count(obj.assessors.filter_by(id=assessor.id)) > 0:
+                found_match = True
+                break
 
-    # CONSTRAINT 6. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
+        if not found_match:
+            warnings[('pool', talk.id)] = 'No assessor belongs to the pool for submitter ' \
+                                          '"{name}"'.format(name=talk.owner.student.user.name)
+
+
+    # CONSTRAINT 7. SUBMITTERS MARKED 'CAN'T ATTEND' SHOULD NOT BE SCHEDULED
     for talk in obj.talks:
         if obj.owner.owner.not_attending(talk.id):
             errors[('talks', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but this student ' \
                                          'is not attending'.format(name=talk.owner.student.user.name)
 
 
-    # CONSTRAINT 7. SUBMITTERS SHOULD ALL BE AVAILABILE FOR THIS SESSION
+    # CONSTRAINT 8. SUBMITTERS SHOULD ALL BE AVAILABLE FOR THIS SESSION
     for talk in obj.talks:
         if obj.session.submitter_unavailable(talk.id):
             errors[('submitter', talk.id)] = 'Submitter "{name}" is scheduled in this slot, but is not ' \
@@ -7852,7 +7876,7 @@ def _ScheduleSlot_is_valid(id):
                                                  'belong to this assessment'.format(name=talk.owner.student.user.name)
 
 
-    # CONSTRAINT 8. TALKS MARKED NOT TO CLASH SHOULD NOT BE SCHEDULED TOGETHER
+    # CONSTRAINT 9. TALKS MARKED NOT TO CLASH SHOULD NOT BE SCHEDULED TOGETHER
     talks_list = obj.talks.all()
     for i in range(len(talks_list)):
         for j in range(i):
@@ -7866,7 +7890,7 @@ def _ScheduleSlot_is_valid(id):
                                                                                                           proj=talk_i.project.name)
 
 
-    # CONSTRAINT 9. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN THE TWO PLACES AT THE SAME TIME
+    # CONSTRAINT 10. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN TWO PLACES AT THE SAME TIME
     for assessor in obj.assessors:
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,
@@ -7885,7 +7909,7 @@ def _ScheduleSlot_is_valid(id):
                                                                    room=slot.room_full_name)
 
 
-    # CONSTRAINT 10. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
+    # CONSTRAINT 11. TALKS SHOULD BE SCHEDULED IN ONLY ONE SLOT
     for talk in obj.talks:
         q = db.session.query(ScheduleSlot) \
             .filter(ScheduleSlot.id != obj.id,
@@ -8100,6 +8124,36 @@ class ScheduleSlot(db.Model):
             total += 1
 
         return submitted, total
+
+
+    def assessor_has_overlap(self, fac_id):
+        for talk in self.talks:
+            if get_count(talk.project.assessors.filter_by(id=fac_id)) > 0:
+                return True
+
+        return False
+
+
+    def assessor_makes_valid(self, fac_id):
+        no_pool_talks = []
+        for talk in self.talks:
+            has_match = False
+            for assessor in self.assessors:
+                if get_count(talk.project.assessors.filter_by(id=assessor.id)) > 0:
+                    has_match = True
+                    break
+
+            if not has_match:
+                no_pool_talks.append(talk)
+
+        if len(no_pool_talks) == 0:
+            return False
+
+        for talk in no_pool_talks:
+            if get_count(talk.project.assessors.filter_by(id=fac_id)) == 0:
+                return False
+
+        return True
 
 
 @listens_for(ScheduleSlot, 'before_update')

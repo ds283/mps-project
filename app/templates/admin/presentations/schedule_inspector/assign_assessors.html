@@ -74,19 +74,31 @@
                 <div class="panel-heading">
                     Manually assign assessors for <strong>{{ slot.date_as_string }} {{ slot.session_type_string }}</strong>,
                     schedule <strong>{{ rec.name }}</strong>,
-                    assessment <strong>{{ slot.event_nanme }}</strong>
+                    assessment <strong>{{ slot.event_name }}</strong>
                 </div>
                 <div class="panel-body">
                     <div class="panel panel-default">
                         <div class="panel-heading">Current allocation</div>
                         <div class="panel-body">
                             <div class="row vertical-align final-selection-table">
-                                <div class="col-xs-10"><strong>Name</strong></div>
-                                <div class="col-xs-3"></div>
+                                <div class="col-xs-4"><strong>Name</strong></div>
+                                <div class="col-xs-6"><strong>In pool for</strong></div>
+                                <div class="col-xs-2"></div>
                             </div>
                             {% for item in slot.assessors %}
                                 <div class="row vertical-align final-selection-table">
-                                    <div class="col-xs-10">{{ faculty_data(item, slot) }}</div>
+                                    <div class="col-xs-4">{{ faculty_data(item, slot) }}</div>
+                                    <div class="col-xs-6">
+                                        {% for talk in slot.talks %}
+                                            {% if talk.is_in_assessor_pool(item.id) %}
+                                                {% set style = talk.pclass.make_CSS_style() %}
+                                                <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }}</span>
+                                                {% if slot.session.submitter_unavailable(talk.id) %}
+                                                    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
                                     <div class="col-xs-2">
                                         <div class="pull-right">
                                             <a href="{{ url_for('admin.schedule_remove_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-warning btn-sm"><i class="fa fa-trash"></i> Remove</a>
@@ -102,7 +114,7 @@
                     {% set original_assessors = slot.original_assessors.all() %}
                     {% set original_length = original_assessors|length %}
                     {% if original_length > 0 %}
-                        <div class="panel panel-defaukt">
+                        <div class="panel panel-default">
                             <div class="panel-heading">Automatic scheduling proposal</div>
                             <div class="panel-body">
                                 <div class="row vertical-align final-selection-table">
@@ -111,7 +123,7 @@
                                 </div>
                                 {% for item in original_assessors %}
                                     <div class="row vertical-align final-selection-table">
-                                        <div class="col-xs-10">{{ faculty_data(item) }}</div>
+                                        <div class="col-xs-10">{{ faculty_data(item, slot) }}</div>
                                         <div class="col-xs-2">
                                             <div class="pull-right">
                                                 {% if slot.is_assessor(item.id) %}

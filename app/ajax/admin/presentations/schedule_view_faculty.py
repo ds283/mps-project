@@ -47,8 +47,20 @@ _sessions = \
         {% endif %}
         &emsp;
         {% for talk in slot.talks %}
-            {% set style = talk.pclass.make_CSS_style() %}
-            <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }}</span>
+            <div class="dropdown schedule-assign-button" style="display: inline-block;">
+                {% set style = talk.pclass.make_CSS_style() %}
+                <a class="label {% if style %}label-default{% else %}label-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                    {{ talk.owner.student.user.name }}
+                    <span class="caret"></span>
+                </a>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url_for('admin.schedule_view_faculty', id=rec.id, url=back_url, text=back_text), text='schedule inspector faculty view') }}">
+                            Reassign presentation...
+                        </a>
+                    </li>
+                </ul>
+            </div>
             {% if slot.session.submitter_unavailable(talk.id) %}
                 <i class="fa fa-exclamation-triangle" style="color:red;"></i>
             {% endif %}

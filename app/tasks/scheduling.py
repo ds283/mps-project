@@ -291,7 +291,7 @@ def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, U, number_talks, numb
                                                                                 for j in range(number_slots)])
 
     # optimizer should try to balance workloads as evenly as possible
-    objective += abs(record.levelling_tension) * (amax - amin)
+    objective += abs(float(record.levelling_tension)) * (amax - amin)
 
     # optimizer should leave the minimum number of faculty without work
     objective += sum([1 - U[i] for i in range(number_assessors)])
@@ -712,7 +712,7 @@ def _execute_live(self, record, prob, X, Y, create_time, number_talks, number_as
         else:
             status = prob.solve()
 
-    return _process_PuLP_solution(record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
+    return _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_time, number_talks, number_assessors,
                                   number_slots, talk_dict, assessor_dict, slot_dict)
 
 
@@ -918,6 +918,7 @@ def register_scheduling_tasks(celery):
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
+        record.solver = ScheduleAttempt.SOLVER_CBC_PACKAGED
         return _execute_live(self, record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
                              talk_dict, assessor_dict, slot_dict)
 

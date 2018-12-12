@@ -41,10 +41,10 @@ from .shared.utils import home_dashboard_url
 import app.tasks as tasks
 
 from mdx_smartypants import makeExtension
-
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
-
 import latex2markdown
+from urllib import parse
+from markupsafe import Markup
 
 from os import path, makedirs
 
@@ -243,6 +243,13 @@ def create_app():
         l2m_obj = latex2markdown.LaTeX2Markdown(latex_string)
         mathjax_string = l2m_obj.to_markdown()
         return mathjax_string
+
+
+    @app.template_filter('urlencode')
+    def urlencode_filter(s):
+        s = s.encode('utf8')
+        s = parse.quote_plus(s)
+        return bleach.clean(s)
 
 
     @app.context_processor

@@ -23,6 +23,14 @@ _name = \
     {% if slot.session.faculty_ifneeded(a.faculty_id) %}
         <span class="label label-warning">If needed</span>
     {% endif %}
+    {% if slot.assessor_has_overlap(a.faculty_id) %}
+        <span class="label label-success"><i class="fa fa-check"></i> Pool overlap</span>
+    {% else %}
+        <span class="label label-danger"><i class="fa fa-times"></i> No pool overlap</span>
+    {% endif %}
+    {% if slot.assessor_makes_valid(a.faculty_id) %}
+        <span class="label label-success"><i class="fa fa-check"></i> Makes valid</span>
+    {% endif %}
 </div>
 """
 

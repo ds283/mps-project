@@ -14,6 +14,7 @@ from flask import render_template_string, jsonify
 _name = \
 """
 <a href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
+&emsp;
 {% if a.confirmed %}
     <span class="label label-success">Confirmed</span>
 {% else %}

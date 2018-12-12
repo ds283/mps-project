@@ -24,7 +24,19 @@ _assessors = \
 """
 {% for assessor in s.assessors %}
     <div>
-        <span class="label label-default">{{ assessor.user.name }}</span>
+        <div class="dropdown schedule-assign-button" style="display: inline-block;">
+            <a class="label label-default" type="button" data-toggle="dropdown">
+                {{ assessor.user.name }}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+                        Reassign assessors...
+                    </a>
+                </li>
+            </ul>
+        </div>
         {% if s.session.faculty_ifneeded(assessor.id) %}
             <span class="label label-warning">if-needed</span>
         {% elif s.session.faculty_unavailable(assessor.id) %}
@@ -92,11 +104,11 @@ _talks = \
 """
 
 
-def schedule_view_sessions(slots, record):
+def schedule_view_sessions(slots, record, url=None, text=None):
     data = [{'session': {'display': render_template_string(_name, s=s),
                          'sortvalue': s.session.date.isoformat()},
              'room': s.room.label,
-             'assessors': render_template_string(_assessors, s=s),
+             'assessors': render_template_string(_assessors, s=s, rec=record, back_url=url, back_text=text),
              'talks': render_template_string(_talks, s=s)} for s in slots]
 
     return jsonify(data)

@@ -20,6 +20,10 @@ p.copyright {
     display: inline-block;
 }
 
+.schedule-assign-button {
+    display: inline-block;
+}
+
 .rank-hint-button {
     display: inline-block;
 }

@@ -6954,6 +6954,10 @@ def schedule_attach_assessor(slot_id, fac_id):
 
     if get_count(slot.assessors.filter_by(id=item.faculty_id)) == 0:
         slot.assessors.append(item.faculty)
+
+        record.last_edit_id = current_user.id
+        record.last_edit_timestamp = datetime.now()
+
         db.session.commit()
 
     return redirect(request.referrer)
@@ -7000,6 +7004,10 @@ def schedule_remove_assessor(slot_id, fac_id):
 
     if get_count(slot.assessors.filter_by(id=item.faculty_id)) > 0:
         slot.assessors.remove(item.faculty)
+
+        record.last_edit_id = current_user.id
+        record.last_edit_timestamp = datetime.now()
+
         db.session.commit()
 
     return redirect(request.referrer)
@@ -7121,6 +7129,9 @@ def schedule_move_submitter(old_id, new_id, talk_id):
 
     if get_count(new_slot.talks.filter_by(id=talk.id)) == 0:
         new_slot.talks.append(talk)
+
+    record.last_edit_id = current_user.id
+    record.last_edit_timestamp = datetime.now()
 
     db.session.commit()
 

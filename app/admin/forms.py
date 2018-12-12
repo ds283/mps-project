@@ -445,6 +445,11 @@ class SubmissionPeriodMixin():
 
     lecture_capture = BooleanField('The presentation assessment requires a venue with lecture capture')
 
+    max_group_size = IntegerField('Maximum group size', default=5,
+                                  description='Enter the desired maximum group size. Some groups may be smaller '
+                                              'if this is required.',
+                                  validators=[NotOptionalIf('has_presentation')])
+
 
 class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin):
 
@@ -1045,11 +1050,6 @@ class ScheduleNameMixin():
 
 
 class ScheduleSettingsMixin():
-
-    max_group_size = IntegerField('Maximum group size', default=5,
-                                  description='Enter the desired maximum group size. Some groups may be smaller '
-                                              'if this is required.',
-                                  validators=[InputRequired('Please enter a positive integer')])
 
     assessor_assigned_limit = IntegerField('Maximum number of assignments per assessor', default=3,
                                            description='Enter the maximum number of times each assessor can be '

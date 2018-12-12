@@ -1912,6 +1912,9 @@ class SubmissionPeriodDefinition(db.Model):
     # if using a presentation, number of faculty assessors to schedule per session
     number_assessors = db.Column(db.Integer())
 
+    # target number of students per group
+    max_group_size = db.Column(db.Integer())
+
 
     # EDITING METADATA
 
@@ -2189,6 +2192,7 @@ class ProjectClassConfig(db.Model):
                                             has_presentation=template.has_presentation,
                                             lecture_capture=template.lecture_capture,
                                             number_assessors=template.number_assessors,
+                                            max_group_size=template.max_group_size,
                                             retired=False,
                                             submission_period=self.submission_period,
                                             feedback_open=False,
@@ -2429,6 +2433,9 @@ class SubmissionPeriodRecord(db.Model):
 
     # if using a presentation, number of faculty assessors to schedule per session
     number_assessors = db.Column(db.Integer())
+
+    # target number of students per group;
+    max_group_size = db.Column(db.Integer())
 
     # retired flag, set by rollover code
     retired = db.Column(db.Boolean(), index=True)
@@ -7517,9 +7524,6 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     # CONFIGURATION
 
-    # target number of students per group;
-    max_group_size = db.Column(db.Integer())
-
     # maximum number of assignments per faculty member
     assessor_assigned_limit = db.Column(db.Integer())
 
@@ -7788,9 +7792,13 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 1. NUMBER OF TALKS SHOULD BE LESS THAN PRESCRIBED MAXIMUM
     num_talks = get_count(obj.talks)
-    if num_talks > obj.owner.max_group_size:
-        errors[('basic', 0)] = 'Too many talks scheduled in this slot ' \
-                               '(scheduled={sch}, max={max})'.format(sch=num_talks, max=obj.owner.max_group_size)
+    if num_talks > 0:
+        tk = obj.talks.first()
+        expected_size = tk.period.max_group_size
+
+        if num_talks > expected_size:
+            errors[('basic', 0)] = 'Too many talks scheduled in this slot ' \
+                                   '(scheduled={sch}, max={max})'.format(sch=num_talks, max=expected_size)
 
 
     # CONSTRAINT 2. TALKS SHOULD USUALLY BY DRAWN FROM THE SAME PROJECT CLASS (OR EQUIVALENTLY, SUBMISSION PERIOD)

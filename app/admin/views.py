@@ -2050,6 +2050,7 @@ def add_pclass():
                                             has_presentation=template.has_presentation,
                                             lecture_capture=template.lecture_capture,
                                             number_assessors=template.number_assessors,
+                                            max_group_size=template.max_group_size,
                                             retired=False,
                                             submission_period=template.period,
                                             feedback_open=False,
@@ -2242,6 +2243,7 @@ def regenerate_period_records(id):
         c.has_presentation = t.has_presentation
         c.lecture_capture = t.lecture_capture
         c.number_assessors = t.number_assessors
+        c.max_group_size = t.max_group_size
 
     # do we need to generate new records?
     while len(templates) > 0:
@@ -2252,6 +2254,7 @@ def regenerate_period_records(id):
                                         has_presentation=t.has_presentation,
                                         lecture_capture=t.lecture_capture,
                                         number_assessors=t.number_assessors,
+                                        max_group_size=t.max_group_size,
                                         retired=False,
                                         submission_period=t.period,
                                         feedback_open=False,
@@ -2353,6 +2356,7 @@ def edit_period(id):
         data.has_presentation = form.has_presentation.data
         data.lecture_capture = form.lecture_capture.data
         data.number_assessors = form.number_assessors.data
+        data.max_group_size = form.max_group_size.data
 
         data.last_edit_id = current_user.id,
         data.last_edit_timestamp = datetime.now()
@@ -5949,29 +5953,6 @@ def assessment_schedules_ajax(id):
                                                 url=url_for('admin.assessment_schedules', id=id))
 
 
-def _validate_number_slots(assessment, max_group_size):
-    # perform absolute basic validation, to check that there are enough dates available
-    # with the specified maximum group size
-    available_slots = assessment.number_slots
-    required_slots = 0
-
-    for period in assessment.submission_periods:
-        projects = period.number_projects
-        p, r = divmod(projects, max_group_size)
-
-        # whatever strategy we choose to deal with the leftover students in the remainder r,
-        # we are always going to require *at least* p+1 slots
-        required_slots += p + 1
-
-    if required_slots > available_slots:
-        flash('Can not construct a schedule. The minimum possible number of slots ({min}) exceeds the '
-              'available number ({avail}), so the scheduling problem is infeasible. Please increase the number '
-              'of rooms, or dates, or both.'.format(min=required_slots, avail=available_slots), 'error')
-        return False
-
-    return True
-
-
 @admin.route('/create_assessment_schedule/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
 def create_assessment_schedule(id):
@@ -6003,69 +5984,66 @@ def create_assessment_schedule(id):
     form = NewScheduleForm(request.form)
 
     if form.validate_on_submit():
-        if _validate_number_slots(data, form.max_group_size.data):
+        offline = False
 
-            offline = False
+        if form.submit.data:
+            task_name = 'Perform optimal scheduling for "{name}"'.format(name=form.name.data)
+            desc = 'Automated assessment scheduling task'
 
-            if form.submit.data:
-                task_name = 'Perform optimal scheduling for "{name}"'.format(name=form.name.data)
-                desc = 'Automated assessment scheduling task'
+        elif form.offline.data:
+            offline = True
+            task_name = 'Generate files for offline scheduling for "{name}"'.format(name=form.name.data)
+            desc = 'Produce .LP and .MPS files for download and offline scheduling'
 
-            elif form.offline.data:
-                offline = True
-                task_name = 'Generate files for offline scheduling for "{name}"'.format(name=form.name.data)
-                desc = 'Produce .LP and .MPS files for download and offline scheduling'
+        else:
+            raise RuntimeError('Unknown submit button in create_assessment_schedule()')
 
-            else:
-                raise RuntimeError('Unknown submit button in create_assessment_schedule()')
+        uuid = register_task(task_name, owner=current_user, description=desc)
 
-            uuid = register_task(task_name, owner=current_user, description=desc)
+        schedule = ScheduleAttempt(owner_id=data.id,
+                                   name=form.name.data,
+                                   celery_id=uuid,
+                                   finished=False,
+                                   celery_finished=False,
+                                   outcome=None,
+                                   published=False,
+                                   deployed=False,
+                                   construct_time=None,
+                                   compute_time=None,
+                                   assessor_assigned_limit=form.assessor_assigned_limit.data,
+                                   if_needed_cost=form.if_needed_cost.data,
+                                   levelling_tension=form.levelling_tension.data,
+                                   all_assessors_in_pool=True if form.all_assessors_in_pool.data == 1 else False,
+                                   solver=form.solver.data,
+                                   creation_timestamp=datetime.now(),
+                                   creator_id=current_user.id,
+                                   last_edit_timestamp=None,
+                                   last_edit_id=None,
+                                   score=None)
 
-            schedule = ScheduleAttempt(owner_id=data.id,
-                                       name=form.name.data,
-                                       celery_id=uuid,
-                                       finished=False,
-                                       celery_finished=False,
-                                       outcome=None,
-                                       published=False,
-                                       deployed=False,
-                                       construct_time=None,
-                                       compute_time=None,
-                                       max_group_size=form.max_group_size.data,
-                                       assessor_assigned_limit=form.assessor_assigned_limit.data,
-                                       if_needed_cost=form.if_needed_cost.data,
-                                       levelling_tension=form.levelling_tension.data,
-                                       all_assessors_in_pool=True if form.all_assessors_in_pool.data == 1 else False,
-                                       solver=form.solver.data,
-                                       creation_timestamp=datetime.now(),
-                                       creator_id=current_user.id,
-                                       last_edit_timestamp=None,
-                                       last_edit_id=None,
-                                       score=None)
+        if offline:
+            schedule.awaiting_upload = True
+            db.session.add(schedule)
+            db.session.commit()
 
-            if offline:
-                schedule.awaiting_upload = True
-                db.session.add(schedule)
-                db.session.commit()
+            celery = current_app.extensions['celery']
+            schedule_task = celery.tasks['app.tasks.scheduling.offline_schedule']
 
-                celery = current_app.extensions['celery']
-                schedule_task = celery.tasks['app.tasks.scheduling.offline_schedule']
+            schedule_task.apply_async(args=(schedule.id, current_user.id), task_id=uuid)
 
-                schedule_task.apply_async(args=(schedule.id, current_user.id), task_id=uuid)
+            return redirect(url_for('admin.assessment_schedules', id=data.id))
 
-                return redirect(url_for('admin.assessment_schedules', id=data.id))
+        else:
+            schedule.awaiting_upload = False
+            db.session.add(schedule)
+            db.session.commit()
 
-            else:
-                schedule.awaiting_upload = False
-                db.session.add(schedule)
-                db.session.commit()
+            celery = current_app.extensions['celery']
+            schedule_task = celery.tasks['app.tasks.scheduling.create_schedule']
 
-                celery = current_app.extensions['celery']
-                schedule_task = celery.tasks['app.tasks.scheduling.create_schedule']
+            schedule_task.apply_async(args=(schedule.id,), task_id=uuid)
 
-                schedule_task.apply_async(args=(schedule.id,), task_id=uuid)
-
-                return redirect(url_for('admin.assessment_schedules', id=data.id))
+            return redirect(url_for('admin.assessment_schedules', id=data.id))
 
     else:
         if request.method == 'GET':
@@ -6108,54 +6086,52 @@ def adjust_assessment_schedule(id):
         flash('This schedule does not contain any validation errors, so does not require adjustment.', 'info')
         return redirect(request.referrer)
 
-    if _validate_number_slots(old_schedule.owner, old_schedule.max_group_size):
-        # find name for adjusted schedule
-        suffix = 2
-        while suffix < 100:
-            new_name = '{name} #{suffix}'.format(name=old_schedule.name, suffix=suffix)
+    # find name for adjusted schedule
+    suffix = 2
+    while suffix < 100:
+        new_name = '{name} #{suffix}'.format(name=old_schedule.name, suffix=suffix)
 
-            if ScheduleAttempt.query.filter_by(name=new_name, owner_id=old_schedule.owner_id).first() is None:
-                break
+        if ScheduleAttempt.query.filter_by(name=new_name, owner_id=old_schedule.owner_id).first() is None:
+            break
 
-            suffix += 1
+        suffix += 1
 
-        if suffix > 100:
-            flash('Can not adjust schedule "{name}" because a new unique tag could not '
-                  'be generated.'.format(name=old_schedule.name), 'error')
-            return redirect(request.referrer)
+    if suffix > 100:
+        flash('Can not adjust schedule "{name}" because a new unique tag could not '
+              'be generated.'.format(name=old_schedule.name), 'error')
+        return redirect(request.referrer)
 
-        uuid = register_task('Schedule job "{name}"'.format(name=new_name),
-                             owner=current_user, description="Automated assessment scheduling task")
+    uuid = register_task('Schedule job "{name}"'.format(name=new_name),
+                         owner=current_user, description="Automated assessment scheduling task")
 
-        new_schedule = ScheduleAttempt(owner_id=old_schedule.owner_id,
-                                       name=new_name,
-                                       celery_id=uuid,
-                                       finished=False,
-                                       celery_finished=False,
-                                       awaiting_upload=False,
-                                       outcome=None,
-                                       published=old_schedule.published,
-                                       construct_time=None,
-                                       compute_time=None,
-                                       max_group_size=old_schedule.max_group_size,
-                                       assessor_assigned_limit=old_schedule.assessor_assigned_limit,
-                                       if_needed_cost=old_schedule.if_needed_cost,
-                                       levelling_tension=old_schedule.levelling_tension,
-                                       all_assessors_in_pool=old_schedule.all_assessors_in_pool,
-                                       solver=old_schedule.solver,
-                                       creation_timestamp=datetime.now(),
-                                       creator_id=current_user.id,
-                                       last_edit_timestamp=None,
-                                       last_edit_id=None,
-                                       score=None)
+    new_schedule = ScheduleAttempt(owner_id=old_schedule.owner_id,
+                                   name=new_name,
+                                   celery_id=uuid,
+                                   finished=False,
+                                   celery_finished=False,
+                                   awaiting_upload=False,
+                                   outcome=None,
+                                   published=old_schedule.published,
+                                   construct_time=None,
+                                   compute_time=None,
+                                   assessor_assigned_limit=old_schedule.assessor_assigned_limit,
+                                   if_needed_cost=old_schedule.if_needed_cost,
+                                   levelling_tension=old_schedule.levelling_tension,
+                                   all_assessors_in_pool=old_schedule.all_assessors_in_pool,
+                                   solver=old_schedule.solver,
+                                   creation_timestamp=datetime.now(),
+                                   creator_id=current_user.id,
+                                   last_edit_timestamp=None,
+                                   last_edit_id=None,
+                                   score=None)
 
-        db.session.add(new_schedule)
-        db.session.commit()
+    db.session.add(new_schedule)
+    db.session.commit()
 
-        celery = current_app.extensions['celery']
-        schedule_task = celery.tasks['app.tasks.scheduling.recompute_schedule']
+    celery = current_app.extensions['celery']
+    schedule_task = celery.tasks['app.tasks.scheduling.recompute_schedule']
 
-        schedule_task.apply_async(args=(new_schedule.id, old_schedule.id,), task_id=uuid)
+    schedule_task.apply_async(args=(new_schedule.id, old_schedule.id,), task_id=uuid)
 
     return redirect(url_for('admin.assessment_schedules', id=old_schedule.owner.id))
 

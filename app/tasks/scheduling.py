@@ -474,7 +474,8 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # each slot should have no more than the maximum number of students:
     for i in range(number_slots):
-        prob += sum([X[(j, i)] for j in range(number_talks)]) <= record.max_group_size
+        prob += sum([X[(j, i)] for j in range(number_talks)]) <= \
+                sum([S[(k, i)] * period_dict[k].max_group_size for k in range(number_periods)])
         constraints += 1
 
 
@@ -1173,7 +1174,6 @@ def register_scheduling_tasks(celery):
                                    score=record.score,
                                    published=record.published,
                                    deployed=False,
-                                   max_group_size=record.max_group_size,
                                    assessor_assigned_limit=record.assessor_assigned_limit,
                                    if_needed_cost=record.if_needed_cost,
                                    levelling_tension=record.levelling_tension,

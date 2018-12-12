@@ -6768,6 +6768,9 @@ def schedule_view_sessions_ajax(id):
     if not validate_schedule_inspector(record):
         return jsonify({})
 
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
     pclass_filter = request.args.get('pclass_filter')
     building_filter = request.args.get('building_filter')
     room_filter = request.args.get('room_filter')
@@ -6798,7 +6801,7 @@ def schedule_view_sessions_ajax(id):
     else:
         slots = slots.all()
 
-    return ajax.admin.schedule_view_sessions(slots, record)
+    return ajax.admin.schedule_view_sessions(slots, record, url=url, text=text)
 
 
 @admin.route('/schedule_view_faculty_ajax/<int:id>')
@@ -6823,6 +6826,9 @@ def schedule_view_faculty_ajax(id):
 
     if not validate_schedule_inspector(record):
         return jsonify({})
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
 
     pclass_filter = request.args.get('pclass_filter')
     building_filter = request.args.get('building_filter')
@@ -6857,7 +6863,170 @@ def schedule_view_faculty_ajax(id):
 
         assessors.append((assessor, slots))
 
-    return ajax.admin.schedule_view_faculty(assessors, record)
+    return ajax.admin.schedule_view_faculty(assessors, record, url=url, text=text)
+
+
+@admin.route('/schedule_adjust_assessors/<int:id>')
+@roles_required('root', 'admin', 'faculty')
+def schedule_adjust_assessors(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    slot = ScheduleSlot.query.get_or_404(id)
+    record = slot.owner # = ScheduleAttempt
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" is not available for inspection '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    return render_template('admin/presentations/schedule_inspector/assign_assessors.html', url=url, text=text,
+                           slot=slot, rec=record)
+
+
+@admin.route('/schedule_assign_assessors_ajax/<int:id>')
+@roles_required('root', 'admin', 'faculty')
+def schedule_assign_assessors_ajax(id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    slot = ScheduleSlot.query.get_or_404(id)
+    record = slot.owner # = ScheduleAttempt
+
+    if not validate_assessment(record.owner):
+        return jsonify({})
+
+    if not record.finished:
+        return jsonify({})
+
+    if not record.solution_usable:
+        return jsonify({})
+
+    if not validate_schedule_inspector(record):
+        return jsonify({})
+
+    candidates = []
+    for item in record.owner.ordered_assessors:
+        if slot.session.faculty_available(item.faculty_id) or slot.session.faculty_ifneeded(item.faculty_id):
+            num_existing = get_count(db.session.query(ScheduleSlot).filter(ScheduleSlot.owner_id == record.id,
+                                                                           ScheduleSlot.session_id == slot.session_id,
+                                                                           ScheduleSlot.assessors.any(id=item.faculty_id)))
+
+            if num_existing == 0:
+                slots = record.get_faculty_slots(item.faculty_id).all()
+                candidates.append((item, slots))
+
+    return ajax.admin.assign_assessor_data(candidates, slot)
+
+
+@admin.route('/schedule_adjust_assessors/<int:slot_id>/<int:fac_id>')
+@roles_required('root', 'admin', 'faculty')
+def schedule_attach_assessor(slot_id, fac_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    slot = ScheduleSlot.query.get_or_404(slot_id)
+    record = slot.owner # = ScheduleAttempt
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" is not available for inspection '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not record.owner.includes_faculty(fac_id):
+        flash('The specified faculty member is not attached to this assessment', 'error')
+        return redirect(request.referrer)
+
+    item = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
+
+    if item is None:
+        flash('Could not attach this faculty member due to a database error', 'error')
+        return redirect(request.referrer)
+
+    if get_count(slot.assessors.filter_by(id=item.faculty_id)) == 0:
+        slot.assessors.append(item.faculty)
+        db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/schedule_remove_assessors/<int:slot_id>/<int:fac_id>')
+@roles_required('root', 'admin', 'faculty')
+def schedule_remove_assessor(slot_id, fac_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    slot = ScheduleSlot.query.get_or_404(slot_id)
+    record = slot.owner # = ScheduleAttempt
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" is not available for inspection '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not record.owner.includes_faculty(fac_id):
+        flash('The specified faculty member is not attached to this assessment', 'error')
+        return redirect(request.referrer)
+
+    item = record.owner.assessors_query.filter(AssessorAttendanceData.faculty_id == fac_id).first()
+
+    if item is None:
+        flash('Could not attach this faculty member due to a database error', 'error')
+        return redirect(request.referrer)
+
+    if get_count(slot.assessors.filter_by(id=item.faculty_id)) > 0:
+        slot.assessors.remove(item.faculty)
+        db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @admin.route('/assessment_manage_attendees/<int:id>')

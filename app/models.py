@@ -7040,6 +7040,13 @@ class PresentationSession(db.Model):
         self._warnings = {}
 
 
+    def get_label_type(self):
+        if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
+            return PresentationSession.SESSION_LABEL_TYPES[self.session_type]
+
+        return 'label-default'
+
+
     def make_label(self, text):
         if self.session_type in PresentationSession.SESSION_LABEL_TYPES:
             label_type = PresentationSession.SESSION_LABEL_TYPES[self.session_type]
@@ -7679,6 +7686,10 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         return self.slots.filter(ScheduleSlot.assessors.any(id=fac_id))
 
 
+    def get_number_faculty_slots(self, fac_id):
+        return get_count(self.get_faculty_slots(fac_id))
+
+
     def get_student_slot(self, submitter_id):
         return self.slots.filter(ScheduleSlot.talks.any(owner_id=submitter_id))
 
@@ -7997,6 +8008,14 @@ class ScheduleSlot(db.Model):
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id) \
             .filter(ProjectClassConfig.pclass_id == pclass_id)
         return get_count(q) > 0
+
+
+    def is_assessor(self, fac_id):
+        return get_count(self.assessors.filter_by(id=fac_id)) > 0
+
+
+    def is_submitter(self, sub_id):
+        return get_count(self.talks.filter_by(id=sub_id)) > 0
 
 
     @property

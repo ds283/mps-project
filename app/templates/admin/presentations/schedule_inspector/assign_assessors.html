@@ -1,0 +1,159 @@
+{% extends "base_app.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#manual-assessor-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/schedule_assign_assessors_ajax/{{ slot.id }}', dataSrc: '' },
+                columns: [
+                    { data: 'name',
+                      render: {
+                        _: 'display',
+                        sort: 'sortstring',
+                      } },
+                    { data: 'sessions',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                      } },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Manually reassign assesssors
+{% endblock %}
+
+{% macro faculty_data(fac, slot) %}
+    {% if fac is not none %}
+        <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+        {% set count = rec.get_number_faculty_slots(fac.id) %}
+        {% set pl = 's' %}
+        {% if count == 1 %}{% set pl = '' %}{% endif %}
+        &emsp;
+        <span class="label label-info">{{ count }} session{{ pl }}</span>
+        {% if slot.session.faculty_ifneeded(fac.id) %}
+            <span class="label label-warning">If needed</span>
+        {% endif %}
+    {% else %}
+        <span class="label label-danger">No assignment</span>
+    {% endif %}
+{% endmacro %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            {% if url and text %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    Manually assign assessors for <strong>{{ slot.date_as_string }} {{ slot.session_type_string }}</strong>,
+                    schedule <strong>{{ rec.name }}</strong>,
+                    assessment <strong>{{ slot.event_nanme }}</strong>
+                </div>
+                <div class="panel-body">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Current allocation</div>
+                        <div class="panel-body">
+                            <div class="row vertical-align final-selection-table">
+                                <div class="col-xs-10"><strong>Name</strong></div>
+                                <div class="col-xs-3"></div>
+                            </div>
+                            {% for item in slot.assessors %}
+                                <div class="row vertical-align final-selection-table">
+                                    <div class="col-xs-10">{{ faculty_data(item, slot) }}</div>
+                                    <div class="col-xs-2">
+                                        <div class="pull-right">
+                                            <a href="{{ url_for('admin.schedule_remove_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-warning btn-sm"><i class="fa fa-trash"></i> Remove</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <span class="label label-danger">Error: missing content</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% set original_assessors = slot.original_assessors.all() %}
+                    {% set original_length = original_assessors|length %}
+                    {% if original_length > 0 %}
+                        <div class="panel panel-defaukt">
+                            <div class="panel-heading">Automatic scheduling proposal</div>
+                            <div class="panel-body">
+                                <div class="row vertical-align final-selection-table">
+                                    <div class="col-xs-10"><strong>Name</strong></div>
+                                    <div class="col-xs-3"></div>
+                                </div>
+                                {% for item in original_assessors %}
+                                    <div class="row vertical-align final-selection-table">
+                                        <div class="col-xs-10">{{ faculty_data(item) }}</div>
+                                        <div class="col-xs-2">
+                                            <div class="pull-right">
+                                                {% if slot.is_assessor(item.id) %}
+                                                    <a class="btn btn-default btn-sm disabled">Already attached</a>
+                                                {% else %}
+                                                    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-default btn-sm"><i class="fa fa-plus"></i> Attach</a>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <hr class="intro-divider">
+                    {% if original_length > 0 %}
+                        <p>Alternatively, select an assessor from the available list:</p>
+                    {% else %}
+                        <p>Select an assessor from the available list:</p>
+                    {% endif %}
+
+                    <table id="manual-assessor-table" class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th width="20%"> Name</th>
+                            <th width="65%"> Current assignments</th>
+                            <th width="15%"> Actions</th>
+                        </tr>
+                        </thead>
+                    </table>
+
+                </div>
+            </div>
+
+            {% if url and text %}
+                <div>
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

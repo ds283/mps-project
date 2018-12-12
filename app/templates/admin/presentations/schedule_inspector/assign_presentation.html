@@ -1,0 +1,172 @@
+{% extends "base_app.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.css"/>
+
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/pdfmake.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.32/vfs_fonts.js"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/v/bs/jszip-2.5.0/dt-1.10.16/b-1.5.1/b-colvis-1.5.1/b-html5-1.5.1/b-print-1.5.1/cr-1.4.1/r-2.2.1/datatables.min.js"></script>
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('#manual-session-table').DataTable({
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/schedule_assign_submitter_ajax/{{ slot.id }}/{{ talk.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}', dataSrc: '' },
+                columns: [
+                    { data: 'session',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                      } },
+                    { data: 'room' },
+                    { data: 'assessors' },
+                    { data: 'talks' },
+                    { data: 'menu' }
+                ],
+                deferRender: true
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    Manually reassign presentation
+{% endblock %}
+
+{% macro faculty_data(fac, slot) %}
+    {% if fac is not none %}
+        <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
+        {% set count = rec.get_number_faculty_slots(fac.id) %}
+        {% set pl = 's' %}
+        {% if count == 1 %}{% set pl = '' %}{% endif %}
+        &emsp;
+        <span class="label label-info">{{ count }} session{{ pl }}</span>
+        {% if slot.session.faculty_ifneeded(fac.id) %}
+            <span class="label label-warning">If needed</span>
+        {% endif %}
+    {% else %}
+        <span class="label label-danger">No assignment</span>
+    {% endif %}
+{% endmacro %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            {% if url and text %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    Manually assign presentation for <i class="fa fa-user"></i> <strong>{{ talk.owner.student.user.name }}</strong>,
+                    schedule <strong>{{ rec.name }}</strong>,
+                    assessment <strong>{{ slot.event_name }}</strong>
+                </div>
+                <div class="panel-body">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Current allocation</div>
+                        <div class="panel-body">
+                            <p>
+                                <strong>{{ slot.session.date_as_string }}</strong>
+                                {{ slot.session.session_type_string }}
+                                &mdash;
+                                <strong>{{ slot.room_full_name }}</strong>
+                                {% if not slot.is_valid %}
+                                    <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                {% endif %}
+                                &emsp;
+                                {{ talk.project.config.project_class.make_label()|safe }}
+                            </p>
+                            <div class="row vertical-align final-selection-table">
+                                <div class="col-xs-3"><strong>Name</strong></div>
+                                <div class="col-xs-5"><strong>Project</strong></div>
+                                <div class="col-xs-4"><strong>Supervisor</strong></div>
+                            </div>
+                            {% for talk in slot.talks %}
+                                <div class="row vertical-align final-selection-table">
+                                    <div class="col-xs-3">
+                                        <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.owner.student.user.name }}</a>
+                                        {% if slot.session.submitter_unavailable(talk.id) %}
+                                            <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-xs-5">
+                                        <a href="{{ url_for('faculty.live_project', pid=talk.project_id, url=url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text), text='reassign presentation view') }}">{{ talk.project.name }}</a>
+                                    </div>
+                                    <div class="col-xs-4">
+                                        <a href="mailto:{{ talk.project.owner.user.emaiul }}">{{ talk.project.owner.user.name }}</a>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {% set original_slot = rec.get_original_student_slot(talk.owner_id).first() %}
+                    {% if original_slot is not none %}
+                        <div class="panel panel-default">
+                            <div class="panel-heading">Automatic scheduling proposal</div>
+                            <div class="panel-body">
+                                <div class="row vertical-align final-selection-table">
+                                    <div class="col-xs-10">
+                                        <strong>{{ slot.session.date_as_string }}</strong>
+                                        {{ slot.session.session_type_string }}
+                                        &mdash;
+                                        <strong>{{ slot.room_full_name }}</strong>
+                                    </div>
+                                    <div class="col-xs-2">
+                                        <div class="pull-right">
+                                            {% if original_slot.id != slot.id %}
+                                                <a href="{{ url_for('admin.schedule_move_submitter', old_id=slot.id, new_id=original_slot.id, talk_id=talk.id, url=url, text=text) }}" class="btn btn-default btn-sm"><i class="fa fa-arrows"></i> Move</a>
+                                            {% else %}
+                                                <a class="btn btn-default btn-sm disabled"><i class="fa fa-arrows"></i> Move</a>
+                                            {% endif %}
+                                         </div>
+                                   </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <hr class="intro-divider">
+                    {% if original_slot is not none %}
+                        <p>Alternatively, select a slot to transfer this presentation:</p>
+                    {% else %}
+                        <p>Select a slot to transfer this presentation:</p>
+                    {% endif %}
+
+                    <table id="manual-session-table" class="table table-striped">
+                        <thead>
+                        <tr>
+                            <th width="10%"> Session</th>
+                            <th width="10%"> Room</th>
+                            <th width="20%"> Assessors</th>
+                            <th width="50%"> Talks</th>
+                            <th width="10%"> Actions</th>
+                        </tr>
+                        </thead>
+                    </table>
+
+                </div>
+            </div>
+
+            {% if url and text %}
+                <div>
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
+        <div class="col-xs-1"></div>
+    </div>
+{% endblock %}

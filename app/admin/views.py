@@ -6867,7 +6867,7 @@ def schedule_view_faculty_ajax(id):
 
 
 @admin.route('/schedule_adjust_assessors/<int:id>')
-@roles_required('root', 'admin', 'faculty')
+@roles_accepted('root', 'admin', 'faculty')
 def schedule_adjust_assessors(id):
     if not validate_using_assessment():
         return redirect(request.referrer)
@@ -6903,7 +6903,7 @@ def schedule_adjust_assessors(id):
 
 
 @admin.route('/schedule_assign_assessors_ajax/<int:id>')
-@roles_required('root', 'admin', 'faculty')
+@roles_accepted('root', 'admin', 'faculty')
 def schedule_assign_assessors_ajax(id):
     if not validate_using_assessment():
         return redirect(request.referrer)
@@ -6938,7 +6938,7 @@ def schedule_assign_assessors_ajax(id):
 
 
 @admin.route('/schedule_adjust_assessors/<int:slot_id>/<int:fac_id>')
-@roles_required('root', 'admin', 'faculty')
+@roles_accepted('root', 'admin', 'faculty')
 def schedule_attach_assessor(slot_id, fac_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
@@ -6984,7 +6984,7 @@ def schedule_attach_assessor(slot_id, fac_id):
 
 
 @admin.route('/schedule_remove_assessors/<int:slot_id>/<int:fac_id>')
-@roles_required('root', 'admin', 'faculty')
+@roles_accepted('root', 'admin', 'faculty')
 def schedule_remove_assessor(slot_id, fac_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
@@ -6997,15 +6997,15 @@ def schedule_remove_assessor(slot_id, fac_id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
+            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+            flash('Schedule "{name}" cannot yet be adjusted because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
     if not record.solution_usable:
-        flash('Schedule "{name}" is not available for inspection '
+        flash('Schedule "{name}" cannot yet be adjusted '
               'because it did not yield an optimal solution.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -7027,6 +7027,128 @@ def schedule_remove_assessor(slot_id, fac_id):
         db.session.commit()
 
     return redirect(request.referrer)
+
+
+@admin.route('/schedule_adjust_submitter/<int:slot_id>/<int:talk_id>')
+@roles_accepted('root', 'admin', 'faculty')
+def schedule_adjust_submitter(slot_id, talk_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    slot = ScheduleSlot.query.get_or_404(slot_id)
+    record = slot.owner # = ScheduleAttempt
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" cannot yet be adjusted because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" cannot yet be adjusted '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    talk = SubmissionRecord.query.get_or_404(talk_id)
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    return render_template('admin/presentations/schedule_inspector/assign_presentation.html', url=url, text=text,
+                           slot=slot, rec=record, talk=talk)
+
+
+@admin.route('/schedule_assign_submitter_ajax/<int:slot_id>/<int:talk_id>')
+@roles_accepted('root', 'admin', 'faculty')
+def schedule_assign_submitter_ajax(slot_id, talk_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    slot = ScheduleSlot.query.get_or_404(slot_id)
+    record = slot.owner # = ScheduleAttempt
+
+    if not validate_assessment(record.owner):
+        return jsonify({})
+
+    if not record.finished:
+        return jsonify({})
+
+    if not record.solution_usable:
+        return jsonify({})
+
+    if not validate_schedule_inspector(record):
+        return jsonify({})
+
+    talk = SubmissionRecord.query.get_or_404(talk_id)
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    return ajax.admin.assign_submitter_data(record.slots, slot, talk, url=url, text=text)
+
+
+@admin.route('/schedule_move_submitter/<int:old_id>/<int:new_id>/<int:talk_id>')
+@roles_accepted('root', 'admin', 'faculty')
+def schedule_move_submitter(old_id, new_id, talk_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    old_slot = ScheduleSlot.query.get_or_404(old_id)
+    new_slot = ScheduleSlot.query.get_or_404(new_id)
+    record = old_slot.owner # = ScheduleAttempt
+
+    if old_slot.owner_id != new_slot.owner_id:
+        flash('Cannot move specified talk because destination slot does not belong to the same'
+              'ScheduleAttempt instance.', 'error')
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" cannot yet be adjustedn because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" cannot yet be adjusted '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    talk = SubmissionRecord.query.get_or_404(talk_id)
+
+    if not record.owner.includes_submitter(talk.id):
+        flash('The specified submitting student is not attached to this assessment', 'error')
+        return redirect(request.referrer)
+
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    if get_count(old_slot.talks.filter_by(id=talk.id)) > 0:
+        old_slot.talks.remove(talk)
+
+    if get_count(new_slot.talks.filter_by(id=talk.id)) == 0:
+        new_slot.talks.append(talk)
+
+    db.session.commit()
+
+    return redirect(url_for('admin.schedule_adjust_submitter', slot_id=new_id, talk_id=talk_id, url=url, text=text))
 
 
 @admin.route('/assessment_manage_attendees/<int:id>')

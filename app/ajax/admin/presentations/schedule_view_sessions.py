@@ -52,13 +52,23 @@ _talks = \
 {% set ns = namespace(count=0) %}
 {% for talk in s.talks %}
     {% set ns.count = ns.count + 1 %}
-    <div>
+    <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
-        <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }} &ndash; {{ talk.project.name }} ({{ talk.supervisor.user.name }})</span>
-        {% if s.session.submitter_unavailable(talk.id) %}
-            <i class="fa fa-exclamation-triangle" style="color:red;"></i>
-        {% endif %}
+        <a class="label {% if style %}label-default{% else %}label-info{% endif %} dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+            {{ talk.owner.student.user.name }}
+            <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+            <li>
+                <a href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url_for('admin.schedule_view_sessions', id=rec.id, url=back_url, text=back_text), text='schedule inspector sessions view') }}">
+                    Reassign presentation...
+                </a>
+            </li>
+        </ul>
     </div>
+    {% if s.session.submitter_unavailable(talk.id) %}
+        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+    {% endif %}
 {% endfor %}
 {% if ns.count > 0 %}
     <p></p>
@@ -109,6 +119,6 @@ def schedule_view_sessions(slots, record, url=None, text=None):
                          'sortvalue': s.session.date.isoformat()},
              'room': s.room.label,
              'assessors': render_template_string(_assessors, s=s, rec=record, back_url=url, back_text=text),
-             'talks': render_template_string(_talks, s=s)} for s in slots]
+             'talks': render_template_string(_talks, s=s, rec=record, back_url=url, back_text=text)} for s in slots]
 
     return jsonify(data)

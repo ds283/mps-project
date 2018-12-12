@@ -214,7 +214,7 @@ def _build_student_availability_matrix(number_talks, talk_dict, number_slots, sl
     return B
 
 
-def _generate_minimize_objective(C, X, Y, S, number_talks, number_assessors, number_slots,
+def _generate_minimize_objective(C, X, Y, S, U, number_talks, number_assessors, number_slots,
                                  amax, amin, record):
     """
     Generate an objective function that tries to schedule as efficiently as possible,
@@ -240,13 +240,16 @@ def _generate_minimize_objective(C, X, Y, S, number_talks, number_assessors, num
     # optimizer should try to balance workloads as evenly as possible
     objective += abs(float(record.levelling_tension)) * (amax - amin)
 
+    # optimizer should leave the minimum number of faculty without work
+    objective += sum([1 - U[i] for i in range(number_assessors)])
+
     # TODO: - minimize number of days used in schedule
     # TODO: - minimize number of rooms used in schedule
 
     return objective
 
 
-def _generate_reschedule_objective(oldX, oldY, X, Y, S, number_talks, number_assessors, number_slots,
+def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, U, number_talks, number_assessors, number_slots,
                                    amax, amin, record):
     """
     Generate an objective function that tries to produce a feasible schedule matching oldX, oldY
@@ -283,8 +286,15 @@ def _generate_reschedule_objective(oldX, oldY, X, Y, S, number_talks, number_ass
             else:
                 objective += 1 - Y[idx]
 
+    # optimizer should penalize any slots that use 'if needed'
+    objective += sum([Y[(i, j)] * C[(i, j)] * abs(float(record.if_needed_cost)) for i in range(number_assessors)
+                                                                                for j in range(number_slots)])
+
     # optimizer should try to balance workloads as evenly as possible
     objective += abs(record.levelling_tension) * (amax - amin)
+
+    # optimizer should leave the minimum number of faculty without work
+    objective += sum([1 - U[i] for i in range(number_assessors)])
 
     return objective
 
@@ -371,6 +381,11 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # this is used to determine (a) whether a slot is in use, and (b) which period the slot corresponds to
     S = pulp.LpVariable.dicts("s", itertools.product(range(number_periods), range(number_slots)), cat=pulp.LpBinary)
 
+    # for each assessor, generate a 'used' variable
+    # this is used to bias ths scheduler to spread work around so that the minimum number of
+    # assessors are left with no work
+    U = pulp.LpVariable.dicts("u", range(number_assessors), cat=pulp.LpBinary)
+
     # variables representing maximum and minimum number of assignments
     # we use these to tension the optimization so that workload tends to be balanced
     amax = pulp.LpVariable("aMax", lowBound=0, cat=pulp.LpContinuous)
@@ -379,7 +394,7 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
 
     # OBJECTIVE FUNCTION
 
-    objective = make_objective(X, Y, S, number_talks, number_assessors, number_slots, amax, amin, record)
+    objective = make_objective(X, Y, S, U, number_talks, number_assessors, number_slots, amax, amin, record)
     prob += objective, "objective function"
 
 
@@ -424,6 +439,12 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # number of times each faculty member is scheduled should fall below the hard limit
     for i in range(number_assessors):
         prob += sum([Y[(i, j)] for j in range(number_slots)]) <= int(record.assessor_assigned_limit)
+        constraints += 1
+
+    # if an assessor is scheduled in any slot, their occupation variable is allowed to become 1, otherwise
+    # it is forced it zero
+    for i in range(number_assessors):
+        prob += U[i] <= sum([Y[(i, j)] for j in range(number_slots)])
         constraints += 1
 
 
@@ -893,7 +914,7 @@ def register_scheduling_tasks(celery):
             prob, X, Y = _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots,
                                               number_periods, assessor_to_number, period_to_number, talk_dict,
                                               assessor_dict, slot_dict, period_dict,
-                                              partial(_generate_reschedule_objective, oldX, oldY))
+                                              partial(_generate_reschedule_objective, C, oldX, oldY))
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 

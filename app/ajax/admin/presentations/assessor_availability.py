@@ -55,10 +55,13 @@ _session_actions = \
 
 _confirmed = \
 """
-{% if a.is_faculty_outstanding(f.id) %}
-    <span class="label label-warning">No</span>
-{% else %}
+{% if rec.confirmed %}
     <span class="label label-primary">Yes</span>
+    {% if rec.confirmed_timestamp is not none %}
+        <span class="label label-info">{{ rec.confirmed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+    {% endif %}
+{% else %}
+    <span class="label label-warning">No</span>
 {% endif %}
 """
 
@@ -71,18 +74,20 @@ _assessor_actions = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
-        <li class="dropdown-header">Management</li>
         <li>
             <a href="{{ url_for('admin.assessment_assessor_availability', a_id=a.id, f_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}">
-                Sessions...
+                <i class="fa fa-calendar"></i> Sessions...
             </a>
         </li>
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Admin</li>
         {% set disabled = not a.is_faculty_outstanding(f.id) %} 
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
                 <i class="fa fa-check"></i> {% if not disabled %}Force confirm{% else %}Confirmed{% endif %}
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.schedule_set_limit', assessment_id=a.id, faculty_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}">
+                <i class="fa fa-cogs"></i> Set assignment limit...
             </a>
         </li>
         <li>
@@ -113,12 +118,22 @@ _availability = \
 """
 
 
+_name = \
+"""
+<a href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>
+{% if rec.assigned_limit is not none %}
+    <div>
+        <span class="label label-primary">Assignment limit {{ rec.assigned_limit }}</span>
+    </div>
+{% endif %}
+"""
+
+
 
 def assessor_session_availability_data(assessment, session, assessors):
-    data = [{'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=assessor.faculty.user.email,
-                                                                              name=assessor.faculty.user.name),
+    data = [{'name': {'display': render_template_string(_name, rec=assessor),
                       'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
-             'confirmed': render_template_string(_confirmed, a=assessment, f=assessor.faculty),
+             'confirmed': render_template_string(_confirmed, a=assessment, rec=assessor),
              'comment': render_template_string(_comment, rec=assessor),
              'availability': {'display': render_template_string(_availability, rec=assessor),
                               'sortvalue': assessor.number_available},
@@ -128,10 +143,9 @@ def assessor_session_availability_data(assessment, session, assessors):
 
 
 def presentation_assessors_data(assessment, assessors):
-    data = [{'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=assessor.faculty.user.email,
-                                                                              name=assessor.faculty.user.name),
+    data = [{'name': {'display': render_template_string(_name, rec=assessor),
                       'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
-             'confirmed': render_template_string(_confirmed, a=assessment, f=assessor.faculty),
+             'confirmed': render_template_string(_confirmed, a=assessment, rec=assessor),
              'comment': render_template_string(_comment, rec=assessor),
              'availability': {'display': render_template_string(_availability, rec=assessor),
                               'sortvalue': assessor.number_available},

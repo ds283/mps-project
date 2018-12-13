@@ -1104,6 +1104,12 @@ def RenameScheduleFormFactory(assessment):
     return RenameScheduleForm
 
 
+class AssignmentLimitForm(Form, SaveChangesMixin):
+
+    assigned_limit = IntegerField('Maximum number of sessions to assign to this assessor',
+                                  validators=[Optional()])
+
+
 class LevelSelectorMixin():
 
     selector = QuerySelectField('Select courses from FHEQ level', query_factory=GetFHEQLevels, get_label='name')

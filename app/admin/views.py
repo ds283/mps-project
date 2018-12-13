@@ -45,9 +45,8 @@ from .forms import RoleSelectForm, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
-    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, \
-    LevelSelectorForm, \
-    AddFHEQLevelForm, EditFHEQLevelForm
+    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm, \
+    LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm
 
 from ..database import db
 from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -5422,6 +5421,53 @@ def force_confirm_availability(assessment_id, faculty_id):
     return redirect(request.referrer)
 
 
+@admin.route('/set_assignment_limit/<int:assessment_id>/<int:faculty_id>', methods=['GET', 'POST'])
+@roles_required('root')
+def schedule_set_limit(assessment_id, faculty_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    data = PresentationAssessment.query.get_or_404(assessment_id)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    if url is None:
+        url = url_for('admin.assessment_manage_assessors', id=assessment_id)
+        text = 'assessment assessor list'
+
+    current_year = get_current_year()
+    if not validate_assessment(data, current_year=current_year):
+        return redirect(url)
+
+    if not data.requested_availability:
+        flash('Cannot remove assessors from this assessment because it has not yet been opened', 'info')
+        return redirect(url)
+
+    faculty = FacultyData.query.get_or_404(faculty_id)
+
+    if not data.includes_faculty(faculty_id):
+        flash('Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
+              'to this assessment'.format(name=faculty.user.name, assess_name=data.name), 'error')
+        return redirect(url)
+
+    record = data.assessor_list.filter_by(faculty_id=faculty_id).first()
+
+    if record is None:
+        return redirect(url)
+
+    form = AssignmentLimitForm(obj=record)
+
+    if form.validate_on_submit():
+        record.assigned_limit = form.assigned_limit.data
+        db.session.commit()
+
+        return redirect(url)
+
+    return render_template('admin/presentations/edit_assigned_limit.html', form=form, fac=faculty, rec=record, a=data,
+                           url=url, text=text)
+
+
 @admin.route('/remove_assessor/<int:assessment_id>/<int:faculty_id>')
 @roles_required('root')
 def remove_assessor(assessment_id, faculty_id):
@@ -6285,15 +6331,15 @@ def revert_schedule(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not duplicate schedule "{name}" because it is still awaiting '
+            flash('Can not revert schedule "{name}" because it is still awaiting '
                   'manual upload'.format(name=record.name), 'error')
         else:
-            flash('Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name),
+            flash('Can not revert schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
         return redirect(request.referrer)
 
     if not record.solution_usable:
-        flash('Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+        flash('Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
@@ -6329,15 +6375,15 @@ def perform_revert_schedule(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not duplicate schedule "{name}" because it is still awaiting '
+            flash('Can not revert schedule "{name}" because it is still awaiting '
                   'manual upload'.format(name=record.name), 'error')
         else:
-            flash('Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name),
+            flash('Can not revert schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
         return redirect(request.referrer)
 
     if not record.solution_usable:
-        flash('Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
+        flash('Can not revert schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
 
@@ -6374,14 +6420,16 @@ def duplicate_schedule(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Can not duplicate schedule "{name}" because it is still awaiting '
-                  'manual upload'.format(name=record.name), 'error')
+            if not record.celery_finished:
+                flash('Can not duplicate schedule "{name}" because the files for offline processing '
+                      'are still being generated.'.format(name=record.name), 'error')
+                return redirect(request.referrer)
         else:
             flash('Can not duplicate schedule "{name}" because it has not yet terminated.'.format(name=record.name),
                   'error')
-        return redirect(request.referrer)
+            return redirect(request.referrer)
 
-    if not record.solution_usable:
+    if record.finished and not record.solution_usable:
         flash('Can not duplicate schedule "{name}" because it did not yield a usable outcome.'.format(name=record.name),
               'error')
         return redirect(request.referrer)
@@ -6900,15 +6948,26 @@ def schedule_assign_assessors_ajax(id):
         return jsonify({})
 
     candidates = []
-    for item in record.owner.ordered_assessors:
-        if slot.session.faculty_available(item.faculty_id) or slot.session.faculty_ifneeded(item.faculty_id):
-            num_existing = get_count(db.session.query(ScheduleSlot).filter(ScheduleSlot.owner_id == record.id,
-                                                                           ScheduleSlot.session_id == slot.session_id,
-                                                                           ScheduleSlot.assessors.any(id=item.faculty_id)))
+    pclass = slot.pclass
 
-            if num_existing == 0:
-                slots = record.get_faculty_slots(item.faculty_id).all()
-                candidates.append((item, slots))
+    for item in record.owner.ordered_assessors:
+        # assessors should be available in this slot
+        if slot.session.faculty_available(item.faculty_id) or slot.session.faculty_ifneeded(item.faculty_id):
+
+            # assessors should also be enrolled for the project class corresponding to this slot
+            enrollment = item.faculty.get_enrollment_record(pclass.id)
+            if enrollment is not None and \
+                    enrollment.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
+
+                # check whether this faculty has any existing assignments in this session
+                num_existing = get_count(db.session.query(ScheduleSlot).filter(ScheduleSlot.owner_id == record.id,
+                                                                               ScheduleSlot.session_id == slot.session_id,
+                                                                               ScheduleSlot.assessors.any(id=item.faculty_id)))
+
+                # if not, can offer them as a candidate
+                if num_existing == 0:
+                    slots = record.get_faculty_slots(item.faculty_id).all()
+                    candidates.append((item, slots))
 
     return ajax.admin.assign_assessor_data(candidates, slot)
 

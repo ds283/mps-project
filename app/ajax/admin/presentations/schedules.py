@@ -198,7 +198,13 @@ _menu = \
                         <i class="fa fa-cloud-upload"></i> Upload solution...
                     </a>
                 </li>
+                <li role="separator" class="divider">
             {% endif %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('admin.duplicate_schedule', id=s.id) }}"{% endif %}>
+                    <i class="fa fa-clone"></i> Duplicate
+                </a>
+            </li>
             <li {% if disabled %}class="disabled"{% endif %}>
                 <a {% if not disabled %}href="{{ url_for('admin.terminate_schedule', id=s.id) }}"{% endif %}>
                     <i class="fa fa-hand-paper-o"></i> Terminate

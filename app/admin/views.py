@@ -6275,7 +6275,7 @@ def perform_delete_schedule(id):
 @admin.route('/revert_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def revert_schedule(id):
-    record = ScheduleAttempt.query_get_or_404(id)
+    record = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(request.referrer)

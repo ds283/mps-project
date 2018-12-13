@@ -6969,7 +6969,7 @@ def _AssessorAttendanceData_delete_handler(mapper, connection, target):
 
 
 @listens_for(AssessorAttendanceData.available, 'append')
-def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+def _AssessorAttendanceData_available_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -6981,7 +6981,7 @@ def _AssessorAttendanceData_insert_handler(mapper, connection, target):
 
 
 @listens_for(AssessorAttendanceData.available, 'remove')
-def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+def _AssessorAttendanceData_available_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -6993,7 +6993,7 @@ def _AssessorAttendanceData_insert_handler(mapper, connection, target):
 
 
 @listens_for(AssessorAttendanceData.unavailable, 'append')
-def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+def _AssessorAttendanceData_unavailable_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -7005,7 +7005,7 @@ def _AssessorAttendanceData_insert_handler(mapper, connection, target):
 
 
 @listens_for(AssessorAttendanceData.unavailable, 'remove')
-def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+def _AssessorAttendanceData_unavailable_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -7017,7 +7017,7 @@ def _AssessorAttendanceData_insert_handler(mapper, connection, target):
 
 
 @listens_for(AssessorAttendanceData.if_needed, 'append')
-def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+def _AssessorAttendanceData_ifneeded_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -7029,7 +7029,7 @@ def _AssessorAttendanceData_insert_handler(mapper, connection, target):
 
 
 @listens_for(AssessorAttendanceData.if_needed, 'remove')
-def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+def _AssessorAttendanceData_ifneeded_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -7140,7 +7140,7 @@ def _SubmitterAttendanceData_delete_handler(mapper, connection, target):
 
 
 @listens_for(SubmitterAttendanceData.available, 'append')
-def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+def _SubmitterAttendanceData_available_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -7152,7 +7152,7 @@ def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
 
 
 @listens_for(SubmitterAttendanceData.available, 'remove')
-def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+def _SubmitterAttendanceData_available_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -7164,7 +7164,7 @@ def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
 
 
 @listens_for(SubmitterAttendanceData.unavailable, 'append')
-def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+def _SubmitterAttendanceData_unavailable_append_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:
@@ -7176,7 +7176,7 @@ def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
 
 
 @listens_for(SubmitterAttendanceData.unavailable, 'remove')
-def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+def _SubmitterAttendanceData_unavailable_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
         for schedule in schedules:

@@ -141,7 +141,7 @@
                                                 {% if slot.is_assessor(item.id) %}
                                                     <a class="btn btn-default btn-sm disabled">Already attached</a>
                                                 {% else %}
-                                                    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-default btn-sm"><i class="fa fa-plus"></i> Attach</a>
+                                                    <a href="{{ url_for('admin.schedule_attach_assessor', slot_id=slot.id, fac_id=item.id) }}" class="btn btn-default btn-sm"><i class="fa fa-undo"></i> Revert</a>
                                                 {% endif %}
                                             </div>
                                         </div>

@@ -6742,29 +6742,29 @@ def _store_schedule_filters():
     session_filter = request.args.get('session_filter')
 
     # if no state filter supplied, check if one is stored in session
-    if pclass_filter is None and session.get('admin_schedule_pclass_filter'):
-        pclass_filter = session['admin_schedule_pclass_filter']
+    if pclass_filter is None and session.get('admin_pclass_filter'):
+        pclass_filter = session['admin_pclass_filter']
 
     if pclass_filter is not None:
-        session['admin_match_pclass_filter'] = pclass_filter
+        session['admin_pclass_filter'] = pclass_filter
 
-    if building_filter is None and session.get('admin_schedule_building_filter'):
-        building_filter = session['admin_schedule_building_filter']
+    if building_filter is None and session.get('admin_building_filter'):
+        building_filter = session['admin_building_filter']
 
     if building_filter is not None:
-        session['admin_match_building_filter'] = building_filter
+        session['admin_building_filter'] = building_filter
 
-    if room_filter is None and session.get('admin_schedule_room_filter'):
-        building_filter = session['admin_schedule_room_filter']
+    if room_filter is None and session.get('admin_room_filter'):
+        building_filter = session['admin_room_filter']
 
     if room_filter is not None:
-        session['admin_match_room_filter'] = room_filter
+        session['admin_room_filter'] = room_filter
 
-    if session_filter is None and session.get('admin_schedule_session_filter'):
-        session_filter = session['admin_schedule_session_filter']
+    if session_filter is None and session.get('admin_session_filter'):
+        session_filter = session['admin_session_filter']
 
     if session_filter is not None:
-        session['admin_match_session_filter'] = session_filter
+        session['admin_session_filter'] = session_filter
 
     return building_filter, pclass_filter, room_filter, session_filter
 
@@ -6947,6 +6947,9 @@ def schedule_assign_assessors_ajax(id):
     if not validate_schedule_inspector(record):
         return jsonify({})
 
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
     candidates = []
     pclass = slot.pclass
 
@@ -6969,7 +6972,7 @@ def schedule_assign_assessors_ajax(id):
                     slots = record.get_faculty_slots(item.faculty_id).all()
                     candidates.append((item, slots))
 
-    return ajax.admin.assign_assessor_data(candidates, slot)
+    return ajax.admin.assign_assessor_data(candidates, slot, url=url, text=text)
 
 
 @admin.route('/schedule_adjust_assessors/<int:slot_id>/<int:fac_id>')
@@ -7136,7 +7139,10 @@ def schedule_assign_submitter_ajax(slot_id, talk_id):
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
-    return ajax.admin.assign_submitter_data(record.slots, slot, talk, url=url, text=text)
+    pclass = slot.pclass
+    slots = [s for s in record.slots.all() if s.pclass.id == pclass.id]
+
+    return ajax.admin.assign_submitter_data(slots, slot, talk, url=url, text=text)
 
 
 @admin.route('/schedule_move_submitter/<int:old_id>/<int:new_id>/<int:talk_id>')

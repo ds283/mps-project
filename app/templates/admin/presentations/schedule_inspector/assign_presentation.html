@@ -97,7 +97,10 @@
                             {% for talk in slot.talks %}
                                 <div class="row vertical-align final-selection-table">
                                     <div class="col-xs-3">
-                                        <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.owner.student.user.name }}</a>
+                                        {% set style = talk.pclass.make_CSS_style() %}
+                                        <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
+                                            {{ talk.owner.student.user.name }}
+                                        </a>
                                         {% if slot.session.submitter_unavailable(talk.id) %}
                                             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                         {% endif %}
@@ -128,9 +131,9 @@
                                     <div class="col-xs-2">
                                         <div class="pull-right">
                                             {% if original_slot.id != slot.id %}
-                                                <a href="{{ url_for('admin.schedule_move_submitter', old_id=slot.id, new_id=original_slot.id, talk_id=talk.id, url=url, text=text) }}" class="btn btn-default btn-sm"><i class="fa fa-arrows"></i> Move</a>
+                                                <a href="{{ url_for('admin.schedule_move_submitter', old_id=slot.id, new_id=original_slot.id, talk_id=talk.id, url=url, text=text) }}" class="btn btn-default btn-sm"><i class="fa fa-undo"></i> Revert</a>
                                             {% else %}
-                                                <a class="btn btn-default btn-sm disabled"><i class="fa fa-arrows"></i> Move</a>
+                                                <a class="btn btn-default btn-sm disabled">Already attached</a>
                                             {% endif %}
                                          </div>
                                    </div>

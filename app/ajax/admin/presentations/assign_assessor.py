@@ -39,7 +39,8 @@ _sessions = \
 """
 {% for slot in slots %}
     <div style="display: inline-block; margin-bottom: 2px; margin-top: 2px;">
-        {{ slot.session.label|safe }}
+        {% set style = slot.session.get_label_type() %}
+        <a class="label {% if style is not none %}{{ style }}{% else %}label-default{% endif %}" href="{{ url_for('admin.schedule_adjust_assessors', id=slot.id, url=url, text=text) }}">{{ slot.session.short_date_as_string }} {{ slot.session.session_type_string }}</a>
         {{ slot.room.label|safe }}
         {% if not slot.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
@@ -47,7 +48,7 @@ _sessions = \
         &emsp;
         {% for talk in slot.talks %}
             {% set style = talk.pclass.make_CSS_style() %}
-            <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.last_name }}</span>
+            <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">{{ talk.owner.student.user.name }}</a>
             {% if slot.session.submitter_unavailable(talk.id) %}
                 <i class="fa fa-exclamation-triangle" style="color:red;"></i>
             {% endif %}
@@ -67,10 +68,10 @@ _menu = \
 """
 
 
-def assign_assessor_data(assessors, slot):
+def assign_assessor_data(assessors, slot, url=None, text=None):
     data = [{'name': {'display': render_template_string(_name, a=a, slot=slot),
                       'sortstring': a.faculty.user.last_name + a.faculty.user.first_name},
-             'sessions': {'display': render_template_string(_sessions, a=a, slots=slots),
+             'sessions': {'display': render_template_string(_sessions, a=a, slots=slots, url=url, text=text),
                           'sortvalue': len(slots)},
              'menu': render_template_string(_menu, a=a, slot=slot)} for a, slots in assessors]
 

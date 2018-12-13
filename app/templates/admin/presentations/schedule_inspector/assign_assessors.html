@@ -17,7 +17,7 @@
             $('#manual-assessor-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/schedule_assign_assessors_ajax/{{ slot.id }}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/admin/schedule_assign_assessors_ajax/{{ slot.id }}?url={{ url|urlencode }}&text={{ text|urlencode }}', dataSrc: '' },
                 columns: [
                     { data: 'name',
                       render: {
@@ -92,7 +92,7 @@
                                         {% for talk in slot.talks %}
                                             {% if talk.is_in_assessor_pool(item.id) %}
                                                 {% set style = talk.pclass.make_CSS_style() %}
-                                                <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }}</span>
+                                                <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">{{ talk.owner.student.user.name }}</a>
                                                 {% if slot.session.submitter_unavailable(talk.id) %}
                                                     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                                 {% endif %}
@@ -129,7 +129,7 @@
                                             {% for talk in slot.talks %}
                                                 {% if talk.is_in_assessor_pool(item.id) %}
                                                     {% set style = talk.pclass.make_CSS_style() %}
-                                                    <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }}</span>
+                                                    <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">{{ talk.owner.student.user.name }}</a>
                                                     {% if slot.session.submitter_unavailable(talk.id) %}
                                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                                     {% endif %}

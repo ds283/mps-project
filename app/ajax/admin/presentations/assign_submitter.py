@@ -24,7 +24,7 @@ _assessors = \
 """
 {% for assessor in s.assessors %}
     <div>
-        <span class="label label-default">{{ assessor.user.name }}</span>
+        <a class="label label-default" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url, text=text) }}">{{ assessor.user.name }}</a>
         {% if s.session.faculty_ifneeded(assessor.id) %}
             <span class="label label-warning">if-needed</span>
         {% elif s.session.faculty_unavailable(assessor.id) %}
@@ -41,7 +41,7 @@ _talks = \
 {% for talk in s.talks %}
     {% set ns.count = ns.count + 1 %}
     {% set style = talk.pclass.make_CSS_style() %}
-    <span class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %}>{{ talk.owner.student.user.name }}</span>
+    <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url, text=text) }}">{{ talk.owner.student.user.name }}</a>
     {% if s.session.submitter_unavailable(talk.id) %}
         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
     {% endif %}
@@ -63,8 +63,8 @@ def assign_submitter_data(slots, old_slot, talk, url=None, text=None):
     data = [{'session': {'display': render_template_string(_name, s=s),
                          'sortvalue': s.session.date.isoformat()},
              'room': s.room.label,
-             'assessors': render_template_string(_assessors, s=s),
-             'talks': render_template_string(_talks, s=s),
+             'assessors': render_template_string(_assessors, s=s, url=url, text=text),
+             'talks': render_template_string(_talks, s=s, url=url, text=text),
              'menu': render_template_string(_menu, old_slot=old_slot, new_slot=s, talk=talk, back_url=url, back_text=text)} for s in slots]
 
     return jsonify(data)

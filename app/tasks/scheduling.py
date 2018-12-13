@@ -469,13 +469,13 @@ def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_sl
     # each slot should have the required number of assessors (given its occupancy), *if* the slot is occupied:
     for i in range(number_slots):
         prob += sum([Y[(j, i)] for j in range(number_assessors)]) == \
-                sum([S[(k, i)] * period_dict[k].number_assessors for k in range(number_periods)])
+                sum([S[(k, i)] * int(period_dict[k].number_assessors) for k in range(number_periods)])
         constraints += 1
 
     # each slot should have no more than the maximum number of students:
     for i in range(number_slots):
         prob += sum([X[(j, i)] for j in range(number_talks)]) <= \
-                sum([S[(k, i)] * period_dict[k].max_group_size for k in range(number_periods)])
+                sum([S[(k, i)] * int(period_dict[k].max_group_size) for k in range(number_periods)])
         constraints += 1
 
 

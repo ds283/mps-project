@@ -863,7 +863,7 @@ class FacultyData(db.Model):
 
 
     def enrolled_labels(self, pclass):
-        record = self.get_enrollment_record(pclass)
+        record = self.get_enrollment_record(pclass.id)
 
         if record is None:
             return '<span class="label label-warning">Not enrolled</span>'
@@ -871,8 +871,13 @@ class FacultyData(db.Model):
         return record.enrolled_labels
 
 
-    def get_enrollment_record(self, pclass):
-        return self.enrollments.filter_by(pclass_id=pclass.id).first()
+    def get_enrollment_record(self, pclass_id):
+        if isinstance(pclass_id, ProjectClass):
+            pcl_id = pclass_id.id
+        else:
+            pcl_id = pclass_id
+
+        return self.enrollments.filter_by(pclass_id=pcl_id).first()
 
 
     @property
@@ -6880,6 +6885,9 @@ class AssessorAttendanceData(db.Model):
     # log a confirmation timestamp
     confirmed_timestamp = db.Column(db.DateTime())
 
+    # over-ride session limit on a per-faculty basis
+    assigned_limit = db.Column(db.Integer(), default=None)
+
 
     @property
     def number_available(self):
@@ -6922,6 +6930,114 @@ class AssessorAttendanceData(db.Model):
                 changed = True
 
         return changed
+
+
+@listens_for(AssessorAttendanceData, 'before_update')
+def _AssessorAttendanceData_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(AssessorAttendanceData, 'before_insert')
+def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(AssessorAttendanceData, 'before_delete')
+def _AssessorAttendanceData_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(AssessorAttendanceData.available, 'append')
+def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(AssessorAttendanceData.available, 'remove')
+def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(AssessorAttendanceData.unavailable, 'append')
+def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(AssessorAttendanceData.unavailable, 'remove')
+def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(AssessorAttendanceData.if_needed, 'append')
+def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(AssessorAttendanceData.if_needed, 'remove')
+def _AssessorAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
 
 
 class SubmitterAttendanceData(db.Model):
@@ -6985,6 +7101,90 @@ class SubmitterAttendanceData(db.Model):
                 changed = True
 
         return changed
+
+
+@listens_for(SubmitterAttendanceData, 'before_update')
+def _SubmitterAttendanceData_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(SubmitterAttendanceData, 'before_insert')
+def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(SubmitterAttendanceData, 'before_delete')
+def _SubmitterAttendanceData_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(SubmitterAttendanceData.available, 'append')
+def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(SubmitterAttendanceData.available, 'remove')
+def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(SubmitterAttendanceData.unavailable, 'append')
+def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(SubmitterAttendanceData.unavailable, 'remove')
+def _SubmitterAttendanceData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        schedules = db.session.query(ScheduleAttempt).filter_by(owner_id=target.id)
+        for schedule in schedules:
+            cache.delete_memoized(_ScheduleAttempt_is_valid, schedule.id)
+
+            slots = db.session.query(ScheduleSlot).filter_by(owner_id=schedule.id)
+            for slot in slots:
+                cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
 
 
 class PresentationSession(db.Model):
@@ -8040,6 +8240,18 @@ class ScheduleSlot(db.Model):
             .join(ProjectClassConfig, ProjectClassConfig.id == SubmittingStudent.config_id) \
             .filter(ProjectClassConfig.pclass_id == pclass_id)
         return get_count(q) > 0
+
+
+    @property
+    def pclass(self):
+        if get_count(self.talks) == 0:
+            return None
+
+        tk = self.talks.first()
+        if tk is None:
+            return None
+
+        return tk.project.config.project_class
 
 
     def is_assessor(self, fac_id):

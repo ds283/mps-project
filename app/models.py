@@ -1920,6 +1920,15 @@ class SubmissionPeriodDefinition(db.Model):
     # target number of students per group
     max_group_size = db.Column(db.Integer())
 
+    # morning session times, eg 10am-12pm
+    morning_session = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # afternoon session times, eg 2pm-4pm
+    afternoon_session = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # talk format
+    talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
 
     # EDITING METADATA
 
@@ -2198,6 +2207,9 @@ class ProjectClassConfig(db.Model):
                                             lecture_capture=template.lecture_capture,
                                             number_assessors=template.number_assessors,
                                             max_group_size=template.max_group_size,
+                                            morning_session=template.morning_session,
+                                            afternoon_session=template.afternoon_session,
+                                            talk_format=template.talk_format,
                                             retired=False,
                                             submission_period=self.submission_period,
                                             feedback_open=False,
@@ -2441,6 +2453,15 @@ class SubmissionPeriodRecord(db.Model):
 
     # target number of students per group;
     max_group_size = db.Column(db.Integer())
+
+    # morning session times, eg 10am-12pm
+    morning_session = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # afternoon session times, eg 2pm-4pm
+    afternoon_session = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # talk format
+    talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # retired flag, set by rollover code
     retired = db.Column(db.Boolean(), index=True)
@@ -7740,6 +7761,14 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     all_assessors_in_pool = db.Column(db.Boolean())
 
 
+    # CIRCULATION STATUS
+
+    # draft circulated to submitters?
+    draft_to_submitters = db.Column(db.DateTime())
+
+    # draft circulated to assessors?
+    draft_to_assessors = db.Column(db.DateTime())
+
 
     # EDITING METADATA
 
@@ -7932,7 +7961,7 @@ class ScheduleAttempt(db.Model, PuLPMixin):
 
     @property
     def is_revokable(self):
-        # can't revoke is parent event is closed for feedback
+        # can't revoke if parent event is closed for feedback
         if not self.owner.feedback_open:
             return False
 
@@ -8291,6 +8320,24 @@ class ScheduleSlot(db.Model):
 
     def belongs_to(self, period):
         return get_count(self.talks.filter_by(period_id=period.id)) > 0
+
+
+    @property
+    def session_details(self):
+        if get_count(self.talks) == 0:
+            return 'missing data'
+
+        tk = self.talks.first()
+        if tk is None:
+            return 'missing data'
+
+        period = tk.period
+        if self.session.session_type == PresentationSession.MORNING_SESSION:
+            return period.morning_session
+        elif self.session.session_type == PresentationSession.AFTERNOON_SESSION:
+            return period.afteroon_session
+
+        return 'unknown session type'
 
 
     @property

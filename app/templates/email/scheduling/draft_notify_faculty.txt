@@ -1,0 +1,23 @@
+Dear {{ user.first_name }}
+
+Thank you for entering your availability to assess the project presentation event
+taking place between {{ event.earliest_date }} and {{ event.latest_date }}.
+
+We now have a draft of the assessment timetable, and we would like to ask you
+to cover the following sessions:
+
+{% for slot in slots -%}
+{{ slot.date_as_string }} {{ slot.session_type_string }} in {{ slot.room_full_name }} ({{ slot.session_details }})
+{% endfor %}
+If you anticipate any difficulties with this, please let the event organizer know
+as soon as possible: {{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }})
+
+This is an automated email. Please do not reply to it directly, because messages
+sent to this mailbox are not monitored or answered. If you have questions or
+concerns, please direct these to the event organizer.
+
+Best wishes,
+{% for fac in event.convenor_list -%}
+{{ fac.user.first_name }} {{ fac.user.last_name }}
+{% endfor -%}
+(the project convenors)

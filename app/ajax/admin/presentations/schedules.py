@@ -29,6 +29,14 @@ _status = \
         <span class="label label-danger">Unknown outcome</span>
     {% endif %}
     <p></p>
+    {% if s.solution_usable %}
+        {% if s.draft_to_submitters is not none %}
+            <span class="label label-info">To submitters: {{ s.draft_to_submitters.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+        {% if s.draft_to_assessors is not none %}
+            <span class="label label-info">To assessors: {{ s.draft_to_assessors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+    {% endif %}
 {% else %}
     {% if s.awaiting_upload %}
         <span class="label label-success">Awaiting upload</span>
@@ -72,6 +80,7 @@ _score = \
 
 _name = \
 """
+<div>
     {% if s.finished and s.solution_usable %}
         <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
         {% if not s.is_valid %}
@@ -81,7 +90,6 @@ _name = \
         {{ s.name }}
     {% endif %}
 </div>
-<p></p>
 {% if s.finished and s.solution_usable %}
     <p></p>
     {% if s.construct_time %}
@@ -272,6 +280,16 @@ _menu = \
                     <li>
                         <a href="{{ url_for('admin.unpublish_schedule', id=s.id) }}">
                             <i class="fa fa-stop-circle"></i> Unpublish
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.publish_schedule_submitters', id=s.id) }}">
+                            <i class="fa fa-envelope-o"></i> Notify submitters of draft
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.publish_schedule_assessors', id=s.id) }}">
+                            <i class="fa fa-envelope-o"></i> Notify assessors of draft
                         </a>
                     </li>
                 {% else %}

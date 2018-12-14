@@ -2050,6 +2050,9 @@ def add_pclass():
                                             lecture_capture=template.lecture_capture,
                                             number_assessors=template.number_assessors,
                                             max_group_size=template.max_group_size,
+                                            morning_session=template.morning_session,
+                                            afternoon_session=template.afternoon_session,
+                                            talk_format=template.talk_format,
                                             retired=False,
                                             submission_period=template.period,
                                             feedback_open=False,
@@ -2243,6 +2246,9 @@ def regenerate_period_records(id):
         c.lecture_capture = t.lecture_capture
         c.number_assessors = t.number_assessors
         c.max_group_size = t.max_group_size
+        c.morning_session = t.morning_session
+        c.afternoon_session = t.afternoon_session
+        c.talk_format = t.talk_format
 
     # do we need to generate new records?
     while len(templates) > 0:
@@ -2254,6 +2260,9 @@ def regenerate_period_records(id):
                                         lecture_capture=t.lecture_capture,
                                         number_assessors=t.number_assessors,
                                         max_group_size=t.max_group_size,
+                                        morning_session=t.morning_session,
+                                        afternoon_session=t.afternoon_session,
+                                        talk_format=t.talk_format,
                                         retired=False,
                                         submission_period=t.period,
                                         feedback_open=False,
@@ -2356,6 +2365,9 @@ def edit_period(id):
         data.lecture_capture = form.lecture_capture.data
         data.number_assessors = form.number_assessors.data
         data.max_group_size = form.max_group_size.data
+        data.morning_session = form.morning_session.data
+        data.afternoon_session = form.afternoon_session.data
+        data.talk_format = form.talk_format.data
 
         data.last_edit_id = current_user.id,
         data.last_edit_timestamp = datetime.now()
@@ -6564,6 +6576,80 @@ def unpublish_schedule(id):
 
     record.published = False
     db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/publish_schedule_submitters/<int:id>')
+@roles_required('root')
+def publish_schedule_submitters(id):
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for sharing with submitters because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for sharing with submitters because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with submitters as a draft.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    task_id = register_task('Send draft schedule to submitters', owner=current_user,
+                            description='Email details of schedule "{name}" to submitters as a '
+                                        'draft'.format(name=record.name))
+
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.scheduling.draft_to_submitters']
+
+    task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
+
+    return redirect(request.referrer)
+
+
+@admin.route('/publish_schedule_assessors/<int:id>')
+@roles_required('root')
+def publish_schedule_assessors(id):
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for sharing with assessors because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for sharing with assessors because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with assessors as a draft.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    task_id = register_task('Send draft schedule to assessors', owner=current_user,
+                            description='Email details of schedule "{name}" to assessors as a '
+                                        'draft'.format(name=record.name))
+
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.scheduling.draft_to_assessors']
+
+    task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 
     return redirect(request.referrer)
 

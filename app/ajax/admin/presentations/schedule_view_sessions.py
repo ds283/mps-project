@@ -9,6 +9,7 @@
 #
 
 from flask import render_template_string, jsonify
+from ....models import PresentationSession
 
 
 _name = \
@@ -114,10 +115,37 @@ _talks = \
 """
 
 
+_room = \
+"""
+{% set style = s.room.building.make_CSS_style() %}
+<div class="dropdown schedule-assign-button">
+    <a class="label {% if style is none %}label-info{% else %}label-default{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+        {{ s.room.full_name }}
+        <span class="caret"></span>
+    </a>
+    <ul class="dropdown-menu">
+        <li class="dropdown-header">Alternative venues</li>
+        {% set rooms = s.alternative_rooms %}
+        {% for room in rooms %}
+            <li>
+                <a href="{{ url_for('admin.schedule_move_room', slot_id=s.id, room_id=room.id) }}">
+                    {{ room.full_name }}
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a><i class="fa fa-bar"></i> None available</a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+"""
+
+
 def schedule_view_sessions(slots, record, url=None, text=None):
     data = [{'session': {'display': render_template_string(_name, s=s),
-                         'sortvalue': s.session.date.isoformat()},
-             'room': s.room.label,
+                         'sortvalue': s.session.date.isoformat()+('-AA' if s.session.session_type == PresentationSession.MORNING_SESSION else '-BB')},
+             'room': render_template_string(_room, s=s),
              'assessors': render_template_string(_assessors, s=s, rec=record, back_url=url, back_text=text),
              'talks': render_template_string(_talks, s=s, rec=record, back_url=url, back_text=text)} for s in slots]
 

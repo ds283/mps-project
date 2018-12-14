@@ -7168,7 +7168,7 @@ def schedule_move_submitter(old_id, new_id, talk_id):
             flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" cannot yet be adjustedn because it has not yet '
+            flash('Schedule "{name}" cannot yet be adjusted because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -7201,6 +7201,47 @@ def schedule_move_submitter(old_id, new_id, talk_id):
     db.session.commit()
 
     return redirect(url_for('admin.schedule_adjust_submitter', slot_id=new_id, talk_id=talk_id, url=url, text=text))
+
+
+
+@admin.route('/schedule_move_room/<int:slot_id>/<int:room_id>')
+@roles_accepted('root', 'admin', 'faculty')
+def schedule_move_room(slot_id, room_id):
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    slot = ScheduleSlot.query.get_or_404(slot_id)
+    room = Room.query.get_or_404(room_id)
+
+    record = slot.owner
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" cannot yet be adjusted because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" cannot yet be adjusted because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" cannot yet be adjusted '
+              'because it did not yield an optimal solution.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    available_rooms = slot.alternative_rooms
+    if room in available_rooms:
+        slot.room_id = room.id
+        db.session.commit()
+
+    else:
+        flash('Cannot assign venue "{room}" to this slot because it is unavailable, or does not meet '
+              'the required criteria.'.format(room=room.full_name))
+
+    return redirect(request.referrer)
 
 
 @admin.route('/assessment_manage_attendees/<int:id>')

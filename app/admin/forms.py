@@ -450,6 +450,16 @@ class SubmissionPeriodMixin():
                                               'if this is required.',
                                   validators=[NotOptionalIf('has_presentation')])
 
+    morning_session = StringField('Times for morning session',
+                                  description='e.g. 10am-12pm', validators=[NotOptionalIf('has_presentation')])
+
+    afternoon_session = StringField('Times for afternoon session',
+                                    description='e.g. 2pm-4pm', validators=[NotOptionalIf('has_presentation')])
+
+    talk_format = StringField('Specify talk format',
+                              description='e.g. 15 mins + 3 mins for questions',
+                              validators=[NotOptionalIf('has_presentation')])
+
 
 class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin):
 

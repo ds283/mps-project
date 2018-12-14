@@ -22,6 +22,10 @@ _presentation = \
     {% else %}
         <span class="label label-default">Lecture capture not required</span>
     {% endif %}
+    <p></p>
+    <span class="label label-info">Morning: {{ p.morning_session }}</span>
+    <span class="label label-info">Afternoon: {{ p.afternoon_session }}</span>
+    <span class="label label-info">Format: {{ p.talk_format }}</span>
 {% else %}
     <span class="label label-default">Not required</span>
 {% endif %}

@@ -11,7 +11,7 @@
 from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, UploadedAsset, User, \
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, ProjectClass, \
-    EnrollmentRecord
+    EnrollmentRecord, SubmitterAttendanceData
 
 from ..task_queue import progress_update, register_task
 
@@ -1247,3 +1247,135 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         return None
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def draft_to_submitters(self, id, user_id, task_id):
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise self.retry()
+
+        progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of student submitters...", autocommit=True)
+
+        recipients = []
+        for a in record.owner.submitter_list:
+            if a.attending:
+                recipients.append(a)
+
+        notify = celery.tasks['app.tasks.utilities.email_notification']
+
+        task = group(send_draft_to_submitter.si(id, a.id) for a in recipients) | notify.s(user_id)
+        task.apply_async()
+
+        record.draft_to_submitters = datetime.now()
+        db.session.commit()
+
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def send_draft_to_submitter(self, schedule_id, attend_id):
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
+            attend_data = db.session.query(SubmitterAttendanceData).filter_by(id=attend_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise self.retry()
+
+        if attend_data is None:
+            self.update_state('FAILIURE', meta='Could not load SubmitterAttendanceData record from database')
+            raise self.retry()
+
+        sub_record = attend_data.submitter
+        student = sub_record.owner.student
+        user = student.user
+        event = record.owner
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        msg = Message(subject='Draft timetable for project assessment "{name}"'.format(name=event.name),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=[user.email])
+
+        msg.body = render_template('email/scheduling/draft_notify_students.txt', user=user, event=event,
+                                   slot=record.get_student_slot(sub_record.owner_id).first(),
+                                   period=sub_record.period)
+
+        # register a new task in the database
+        # task_id = register_task(msg.subject, description='Send draft schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        # send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        print(msg)
+
+        return 1
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def draft_to_assessors(self, id, user_id, task_id):
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise self.retry()
+
+        notify = celery.tasks['app.tasks.utilities.email_notification']
+
+        progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of faculty assessors...", autocommit=True)
+
+        task = group(send_draft_to_assessor.si(id, a.id) for a in record.owner.assessor_list.all()) | notify.s(user_id)
+        task.apply_async()
+
+        record.draft_to_assessors = datetime.now()
+        db.session.commit()
+
+        progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def send_draft_to_assessor(self, schedule_id, attend_id):
+        try:
+            record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
+            attend_data = db.session.query(AssessorAttendanceData).filter_by(id=attend_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise self.retry()
+
+        if attend_data is None:
+            self.update_state('FAILIURE', meta='Could not load AssessorAttendanceData record from database')
+            raise self.retry()
+
+        faculty = attend_data.faculty
+        user = faculty.user
+        event = record.owner
+
+        slots = record.get_faculty_slots(faculty.id).all()
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        msg = Message(subject='Draft timetable for project assessment "{name}"'.format(name=event.name),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=[user.email])
+
+        if len(slots) > 0:
+            msg.body = render_template('email/scheduling/draft_notify_faculty.txt', user=user, event=event,
+                                       slots=slots)
+        else:
+            msg.body = render_template('email/scheduling/draft_unneeded_faculty.txt', user=user, event=event)
+
+        # register a new task in the database
+        # task_id = register_task(msg.subject, description='Send draft schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        # send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        print(msg)
+
+        return 1

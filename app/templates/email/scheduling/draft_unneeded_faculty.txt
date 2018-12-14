@@ -1,0 +1,21 @@
+Dear {{ user.first_name }}
+
+Thank you for entering your availability to assess the project presentation
+event taking place between {{ event.earliest_date }} and {{ event.latest_date }}.
+
+We now have a draft of the assessment timetable. As things stand, we hope not to
+have to ask you to assess any sessions in the event. This may change as other
+faculty members update their constraints, in which case we will advise you as
+soon as possible.
+
+This is an automated email. Please do not reply to it directly, because messages
+sent to this mailbox are not monitored or answered. If you have questions or
+concerns, please direct these to the event organizer:
+
+{{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }})
+
+Best wishes,
+{% for fac in event.convenor_list -%}
+{{ fac.user.first_name }} {{ fac.user.last_name }}
+{% endfor -%}
+(the project convenors)

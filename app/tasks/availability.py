@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from celery import group, chain
+from celery import group
 from celery.exceptions import Ignore
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -37,7 +37,7 @@ def register_availability_tasks(celery):
         if data is None:
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
             progress_update(celery_id, TaskRecord.FAILURE, 100, "Database error", autocommit=True)
-            return
+            raise Ignore()
 
         progress_update(celery_id, TaskRecord.RUNNING, 40, "Building list of faculty assessors...", autocommit=True)
 
@@ -47,7 +47,7 @@ def register_availability_tasks(celery):
             total_assessors = set()
 
             # build list of eligible assessors for each submission period included in this assessment,
-            # and merge into total_assessors is required
+            # and merge into total_assessors if required
             for period in data.submission_periods:
                 assessors = period.assessors_list \
                     .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
@@ -102,7 +102,7 @@ def register_availability_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        progress_update(celery_id, TaskRecord.SUCCESS, 90, 'Availability requests issued', autocommit=False)
+        progress_update(celery_id, TaskRecord.SUCCESS, 100, 'Availability requests issued', autocommit=False)
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()

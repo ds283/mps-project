@@ -98,9 +98,19 @@
                                 <div class="row vertical-align final-selection-table">
                                     <div class="col-xs-3">
                                         {% set style = talk.pclass.make_CSS_style() %}
-                                        <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
-                                            {{ talk.owner.student.user.name }}
-                                        </a>
+                                        <div class="dropdown schedule-assign-button" style="display: inline-block;">
+                                            <a class="label {% if style %}label-default{% else %}label-info{% endif %} dropdown" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+                                                {{ talk.owner.student.user.name }}
+                                                <span class="caret"></span>
+                                            </a>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a href="{{ url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text) }}">
+                                                        Reassign presentation...
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
                                         {% if slot.session.submitter_unavailable(talk.id) %}
                                             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                         {% endif %}
@@ -109,7 +119,7 @@
                                         <a href="{{ url_for('faculty.live_project', pid=talk.project_id, url=url_for('admin.schedule_adjust_submitter', slot_id=slot.id, talk_id=talk.id, url=url, text=text), text='reassign presentation view') }}">{{ talk.project.name }}</a>
                                     </div>
                                     <div class="col-xs-4">
-                                        <a href="mailto:{{ talk.project.owner.user.emaiul }}">{{ talk.project.owner.user.name }}</a>
+                                        <a href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
                                     </div>
                                 </div>
                             {% endfor %}

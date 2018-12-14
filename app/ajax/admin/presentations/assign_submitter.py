@@ -24,7 +24,19 @@ _assessors = \
 """
 {% for assessor in s.assessors %}
     <div>
-        <a class="label label-default" href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url, text=text) }}">{{ assessor.user.name }}</a>
+        <div class="dropdown schedule-assign-button" style="display: inline-block;">
+            <a class="label label-default" type="button" data-toggle="dropdown">
+                {{ assessor.user.name }}
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="{{ url_for('admin.schedule_adjust_assessors', id=s.id, url=url, text=text) }}">
+                        Reassign assessors...
+                    </a>
+                </li>
+            </ul>
+        </div>
         {% if s.session.faculty_ifneeded(assessor.id) %}
             <span class="label label-warning">if-needed</span>
         {% elif s.session.faculty_unavailable(assessor.id) %}
@@ -40,8 +52,20 @@ _talks = \
 {% set ns = namespace(count=0) %}
 {% for talk in s.talks %}
     {% set ns.count = ns.count + 1 %}
-    {% set style = talk.pclass.make_CSS_style() %}
-    <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url, text=text) }}">{{ talk.owner.student.user.name }}</a>
+    <div class="dropdown schedule-assign-button" style="display: inline-block;">
+        {% set style = talk.pclass.make_CSS_style() %}
+        <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
+            {{ talk.owner.student.user.name }}
+            <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+            <li>
+                <a href="{{ url_for('admin.schedule_adjust_submitter', slot_id=s.id, talk_id=talk.id, url=url, text=text) }}">
+                    Reassign presentation...
+                </a>
+            </li>
+        </ul>
+    </div>
     {% if s.session.submitter_unavailable(talk.id) %}
         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
     {% endif %}

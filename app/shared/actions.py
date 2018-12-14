@@ -16,9 +16,12 @@ import re
 
 def render_project(data, desc, form=None, text=None, url=None):
 
-    # build list of keywords
-    keywords = [kw.strip() for kw in re.split("[;,]", data.keywords)]
-    keywords = [w for w in keywords if len(w) > 0]
+    # build list of keywords, if present
+    if data.keywords is not None:
+        keywords = [kw.strip() for kw in re.split("[;,]", data.keywords)]
+        keywords = [w for w in keywords if len(w) > 0]
+    else:
+        keywords = []
 
     # without the sel variable, won't render any of the student-specific items
     return render_template('student/show_project.html', title=data.name, project=data, desc=desc, keywords=keywords,

@@ -7812,11 +7812,13 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     def rooms_query(self):
         q = self.slots.subquery()
 
+        room_ids = db.session.query(ScheduleSlot.room_id) \
+            .join(q, q.c.id == ScheduleSlot.id).distinct().subquery()
+
         return db.session.query(Room) \
-            .select_from(q) \
-            .join(Room, Room.id == q.c.room_id) \
+            .join(room_ids, room_ids.c.room_id == Room.id) \
             .join(Building, Building.id == Room.building_id) \
-            .order_by(Building.name.asc(), Room.name.asc()).distinct()
+            .order_by(Building.name.asc(), Room.name.asc())
 
 
     @property
@@ -7867,6 +7869,11 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     @property
     def ordered_slots(self):
         return self.slots_query.all()
+
+
+    @property
+    def number_slots(self):
+        return get_count(self.slots_query)
 
 
     @property
@@ -8374,6 +8381,38 @@ class ScheduleSlot(db.Model):
                 return False
 
         return True
+
+
+    @property
+    def alternative_rooms(self):
+        needs_lecture_capture = False
+
+        if get_count(self.talks) > 0:
+            tk = self.talks.first()
+
+            if tk is not None:
+                if not tk.period.has_presentation:
+                    raise RuntimeError('Inconsistent SubmissionPeriodDefinition in ScheduleSlot.alternative_rooms')
+                if tk.period.lecture_capture:
+                    needs_lecture_capture = True
+
+        rooms = self.session.rooms.subquery()
+
+        used_rooms = db.session.query(ScheduleSlot.room_id) \
+            .filter(ScheduleSlot.owner_id == self.owner_id,
+                    ScheduleSlot.session_id == self.session_id).distinct().subquery()
+
+        query = db.session.query(Room) \
+            .join(rooms, rooms.c.id == Room.id) \
+            .join(used_rooms, used_rooms.c.room_id == Room.id, isouter=True) \
+            .filter(used_rooms.c.room_id == None)
+
+        if needs_lecture_capture:
+            query = query.filter(Room.lecture_capture == True)
+
+        return query \
+            .join(Building, Building.id == Room.building_id) \
+            .order_by(Building.name.asc(), Room.name.asc()).all()
 
 
 @listens_for(ScheduleSlot, 'before_update')

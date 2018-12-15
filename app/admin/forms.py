@@ -43,7 +43,8 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
-    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel
+    GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
+    ScheduleSessionQuery, BuildScheduleSessionLabel
 from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, year_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices
 
@@ -1163,3 +1164,14 @@ class EditFHEQLevelForm(Form, FHEQLevelMixin, SaveChangesMixin):
 
     academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
                                                               unique_or_original_FHEQ_year])
+
+
+def PublicScheduleFormFactory(schedule):
+
+    class PublicScheduleForm(Form):
+
+        selector = QuerySelectField('Select the session you wish to view:',
+                                    query_factory=partial(ScheduleSessionQuery, schedule.id),
+                                    get_label=BuildScheduleSessionLabel)
+
+    return PublicScheduleForm

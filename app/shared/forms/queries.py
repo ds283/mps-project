@@ -15,7 +15,7 @@ from ...database import db
 from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
-    Building, Room, PresentationFeedback, Module, FHEQ_Level
+    Building, Room, PresentationFeedback, Module, FHEQ_Level, ScheduleSlot, PresentationSession
 
 from ..utils import get_current_year
 
@@ -258,3 +258,16 @@ def GetFHEQLevels():
 
 def BuildFHEQYearLabel(level):
     return 'Year {n}'.format(n=level.academic_year)
+
+
+def ScheduleSessionQuery(schedule_id):
+    sessions = db.session.query(ScheduleSlot.session_id) \
+        .filter(ScheduleSlot.owner_id == schedule_id).distinct().subquery()
+
+    return db.session.query(PresentationSession) \
+        .join(sessions, sessions.c.session_id == PresentationSession.id) \
+        .order_by(PresentationSession.date.asc(), PresentationSession.session_type.asc())
+
+
+def BuildScheduleSessionLabel(session):
+    return session.date_as_string + ' ' + session.session_type_string

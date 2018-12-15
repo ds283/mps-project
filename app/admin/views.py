@@ -9,7 +9,7 @@
 #
 
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
-    stream_with_context, send_file
+    stream_with_context, send_file, abort
 from werkzeug.local import LocalProxy
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
@@ -46,7 +46,8 @@ from .forms import RoleSelectForm, \
     AddSessionForm, EditSessionForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
     NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm, \
-    LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm
+    LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
+    PublicScheduleFormFactory
 
 from ..database import db
 from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -68,6 +69,7 @@ from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count
 
 from ..task_queue import register_task, progress_update
+from ..shared.forms.queries import ScheduleSessionQuery
 
 from sqlalchemy.exc import SQLAlchemyError
 import app.ajax as ajax
@@ -8043,3 +8045,35 @@ def upload_schedule(schedule_id):
 @roles_required('root')
 def upload_match(match_id):
     return redirect(request.referrer)
+
+
+@admin.route('/view_schedule/<int:schedule_id>', methods=['GET', 'POST'])
+def view_schedule(schedule_id):
+    schedule = ScheduleAttempt.query.get_or_404(schedule_id)
+
+    if not schedule.published:
+        abort(404)
+
+    PublicScheduleForm = PublicScheduleFormFactory(schedule)
+    form = PublicScheduleForm(request.form)
+
+    if not form.validate_on_submit() and request.method == 'GET':
+        form.selector.data = ScheduleSessionQuery().first()
+
+    event = schedule.owner
+
+    selected_session = form.selector.data
+
+    if selected_session is not None:
+        slots = db.session.query(ScheduleSlot) \
+            .filter(ScheduleSlot.owner_id == schedule_id,
+                    ScheduleSlot.session_id == selected_session.id) \
+            .join(Room, ScheduleSlot.room_id == Room.id) \
+            .join(Building, Room.building_id == Building.id) \
+            .order_by(Building.name.asc(), Room.name.asc()).all()
+
+    else:
+        slots = []
+
+    return render_template('admin/presentations/public/schedule.html', form=form, event=event, schedule=schedule,
+                           slots=slots)

@@ -58,13 +58,15 @@
                             <table class="table table-striped table-bordered">
                                 <thead>
                                     <tr>
-                                        <th width="100%"> Name</th>
+                                        <th width="50%"> Name</th>
+                                        <th width="50%"> Supervisor</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for talk in slot.talks %}
                                         <tr>
                                             <td>{{ talk.owner.student.user.name }}</td>
+                                            <td>{{ talk.project.owner.user.name }}</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>

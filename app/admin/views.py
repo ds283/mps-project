@@ -8058,7 +8058,7 @@ def view_schedule(schedule_id):
     form = PublicScheduleForm(request.form)
 
     if not form.validate_on_submit() and request.method == 'GET':
-        form.selector.data = ScheduleSessionQuery().first()
+        form.selector.data = ScheduleSessionQuery(schedule.id).first()
 
     event = schedule.owner
 

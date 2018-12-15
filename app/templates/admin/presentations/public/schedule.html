@@ -1,0 +1,79 @@
+{% extends "bootstrap/base.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import on_click_selector_field %}
+
+{% block styles %}
+    {{ super() }}
+    {% assets filters="cssmin", output="gen/public-pages.css", "css/public-pages.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+{%- endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row vertical-top">
+            <div class="col-xs-2"></div>
+            <div class="col-xs-8">
+                <div class="event-title">{{ event.name }}</div>
+                <hr class="intro-divider">
+                <div class="event-subheader">{{ event.earliest_date }}&mdash;{{ event.latest_date }}</div>
+                <div class="well" style="margin-top: 18px;">
+                    <form action="{{ url_for('admin.view_schedule', schedule_id=schedule.id) }}" method="POST" name="display_form">
+                        {{ form.hidden_tag() }}
+                        {{ on_click_selector_field(form.selector, true) }}
+                    </form>
+                </div>
+                {% for slot in slots %}
+                    <div class="well">
+                        <div>
+                            <div class="row vertical-top">
+                                <div class="col-xs-7 slot-title">
+                                    {{ slot.date_as_string }} {{ slot.session_type_string }}
+                                </div>
+                                <div class="col-xs-5 slot-title">
+                                    <div class="pull-right">
+                                        {{ slot.room_full_name }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="row vertical-top">
+                                <div class="col-xs-7">
+                                    <ol class="breadcrumb">
+                                        {% for assessor in slot.assessors %}
+                                            <li>
+                                                <a href="mailto:{{ assessor.user.name }}">{{ assessor.user.name }}</a>
+                                            </li>
+                                        {% endfor %}
+                                    </ol>
+                                </div>
+                                <div class="col-xs-5">
+                                    <div class="pull-right">
+                                        {{ slot.pclass.make_label()|safe }}
+                                    </div>
+                                </div>
+                            </div>
+                            <table class="table table-striped table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th width="100%"> Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for talk in slot.talks %}
+                                        <tr>
+                                            <td>{{ talk.owner.student.user.name }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="col-xs-2"></div>
+        </div>
+    </div>
+{% endblock %}

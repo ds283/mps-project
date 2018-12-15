@@ -8335,7 +8335,7 @@ class ScheduleSlot(db.Model):
         if self.session.session_type == PresentationSession.MORNING_SESSION:
             return period.morning_session
         elif self.session.session_type == PresentationSession.AFTERNOON_SESSION:
-            return period.afteroon_session
+            return period.afternoon_session
 
         return 'unknown session type'
 

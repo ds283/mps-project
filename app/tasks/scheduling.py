@@ -1306,12 +1306,11 @@ def register_scheduling_tasks(celery):
 
         msg.body = render_template('email/scheduling/draft_notify_students.txt', user=user, event=event,
                                    slot=record.get_student_slot(sub_record.owner_id).first(),
-                                   period=sub_record.period)
+                                   period=sub_record.period, schedule=record)
 
         # register a new task in the database
-        # task_id = register_task(msg.subject, description='Send draft schedule email to {r}'.format(r=', '.join(msg.recipients)))
-        # send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-        print(msg)
+        task_id = register_task(msg.subject, description='Send draft schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
 
@@ -1369,13 +1368,13 @@ def register_scheduling_tasks(celery):
 
         if len(slots) > 0:
             msg.body = render_template('email/scheduling/draft_notify_faculty.txt', user=user, event=event,
-                                       slots=slots)
+                                       slots=slots, schedule=record)
         else:
-            msg.body = render_template('email/scheduling/draft_unneeded_faculty.txt', user=user, event=event)
+            msg.body = render_template('email/scheduling/draft_unneeded_faculty.txt', user=user, event=event,
+                                       schedule=record)
 
         # register a new task in the database
-        # task_id = register_task(msg.subject, description='Send draft schedule email to {r}'.format(r=', '.join(msg.recipients)))
-        # send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-        print(msg)
+        task_id = register_task(msg.subject, description='Send draft schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

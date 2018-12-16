@@ -3972,6 +3972,30 @@ class LiveProject(db.Model):
         return get_count(self.assessors.filter_by(id=fac_id)) > 0
 
 
+@listens_for(LiveProject.assessors, 'append')
+def _LiveProject_assessors_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        match_records = db.session.query(MatchingRecord).filter_by(project_id=target.id)
+        for record in match_records:
+            cache.delete_memoized(_MatchingRecord_is_valid, record.id)
+
+        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.talks.any(project_id=target.id))
+        for slot in schedule_slots:
+            cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
+@listens_for(LiveProject.assessors, 'remove')
+def _LiveProject_assessors_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        match_records = db.session.query(MatchingRecord).filter_by(project_id=target.id)
+        for record in match_records:
+            cache.delete_memoized(_MatchingRecord_is_valid, record.id)
+
+        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.talks.any(project_id=target.id))
+        for slot in schedule_slots:
+            cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+
+
 class SelectingStudent(db.Model):
     """
     Model a student who is selecting a project in the current cycle

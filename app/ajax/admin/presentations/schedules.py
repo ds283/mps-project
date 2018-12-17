@@ -284,12 +284,12 @@ _menu = \
                     </li>
                     <li>
                         <a href="{{ url_for('admin.publish_schedule_submitters', id=s.id) }}">
-                            <i class="fa fa-envelope-o"></i> Notify submitters of draft
+                            <i class="fa fa-envelope-o"></i> Email to submitters
                         </a>
                     </li>
                     <li>
                         <a href="{{ url_for('admin.publish_schedule_assessors', id=s.id) }}">
-                            <i class="fa fa-envelope-o"></i> Notify assessors of draft
+                            <i class="fa fa-envelope-o"></i> Email to assessors
                         </a>
                     </li>
                 {% else %}

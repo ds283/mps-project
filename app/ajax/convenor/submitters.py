@@ -237,8 +237,8 @@ _menu = \
 _presentations = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
-    {% if state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="label label-default">{{ label }}: not yet required</span> #}
+    {% if state == obj.FEEDBACK_NOT_YET or state == obj.FEEDBACK_NOT_REQUIRED %}
+        {# empty #}
     {% elif state == obj.FEEDBACK_WAITING %}
         <span class="label label-default">{{ label }}: to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
@@ -322,7 +322,7 @@ _presentations = \
                             {% endif %}
                         </ul>
                     </div>
-                    {% if rec.number_presentation_feedback == 0 %}
+                    {% if slot is not none and slot.feedback_state > slot.FEEDBACK_NOT_YET and rec.number_presentation_feedback == 0 %}
                         <span class="label label-danger">Feedback required</span>
                     {% endif %}
                 {% endif %}

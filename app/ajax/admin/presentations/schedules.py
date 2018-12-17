@@ -37,6 +37,13 @@ _status = \
             <span class="label label-info">To assessors: {{ s.draft_to_assessors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
     {% endif %}
+    <p></p>
+    {% if s.published and current_user.has_role('root') %}
+        <span class="label label-primary">Published</span>
+    {% endif %}
+    {% if s.deployed and current_user.has_role('root') %}
+        <span class="label label-success"><i class="fa fa-check"></i> Deployed</span>
+    {% endif %}
 {% else %}
     {% if s.awaiting_upload %}
         <span class="label label-success">Awaiting upload</span>
@@ -98,13 +105,6 @@ _name = \
     {% if s.compute_time %}
         <span class="label label-default"><i class="fa fa-clock-o"></i> Compute {{ s.formatted_compute_time }}</span>
     {% endif %}
-{% endif %}
-<p></p>
-{% if s.published and current_user.has_role('root') %}
-    <span class="label label-primary">Published</span>
-{% endif %}
-{% if s.deployed and current_user.has_role('root') %}
-    <span class="label label-success"><i class="fa fa-check"></i> Deployed</span>
 {% endif %}
 """
 

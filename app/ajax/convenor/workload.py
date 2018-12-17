@@ -148,10 +148,8 @@ _marking = \
 _presentations = \
 """
 {% macro feedback_state_tag(obj, state, label) %}
-    {% if state == obj.FEEDBACK_NOT_REQUIRED %}
-        <span class="label label-danger">Inconsistent feedback state</span>
-    {% elif state == obj.FEEDBACK_NOT_YET %}
-        {# <span class="label label-default">{{ label }} not yet required</span> #}
+    {% if state == obj.FEEDBACK_NOT_REQUIRED or state == obj.FEEDBACK_NOT_YET %}
+        {# empty #}
     {% elif state == obj.FEEDBACK_WAITING %}
         <span class="label label-info">{{ label }} to do</span>
     {% elif state == obj.FEEDBACK_SUBMITTED %}
@@ -188,7 +186,7 @@ _presentations = \
             <span class="label label-default">{{ slot.room_full_name }}</span>
             {% set state = slot.feedback_state(f.id) %}
             {{ feedback_state_tag(slot, state, 'Feedback') }}
-            {% if state < slot.FEEDBACK_SUBMITTED %}
+            {% if state > slot.FEEDBACK_NOT_YET and state < slot.FEEDBACK_SUBMITTED %}
                 {% set numbers = slot.feedback_number(f.id) %}
                 {% if numbers is not none %}
                     {% set submitted, total = numbers %}

@@ -152,7 +152,7 @@ def register_maintenance_tasks(celery):
         if record is None:
             raise Ignore
 
-        if not record.awaiting_upload:
+        if not record.schedule.awaiting_upload:
             # can purge this record
             try:
                 db.session.delete(record)

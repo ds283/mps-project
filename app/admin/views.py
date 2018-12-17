@@ -8051,7 +8051,9 @@ def upload_match(match_id):
 def view_schedule(schedule_id):
     schedule = ScheduleAttempt.query.get_or_404(schedule_id)
 
-    if not schedule.published:
+    # deployed schedules are automatically unpublished, so we should allow public viewing
+    # if either flag is set
+    if not (schedule.published or schedule.deployed):
         abort(404)
 
     PublicScheduleForm = PublicScheduleFormFactory(schedule)

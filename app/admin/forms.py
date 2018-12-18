@@ -44,7 +44,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
-    ScheduleSessionQuery, BuildScheduleSessionLabel
+    ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules
 from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, year_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices
 
@@ -1175,3 +1175,15 @@ def PublicScheduleFormFactory(schedule):
                                     get_label=BuildScheduleSessionLabel)
 
     return PublicScheduleForm
+
+
+def CompareScheduleFormFactory(assessment_id, self_id):
+
+    class CompareScheduleForm(Form):
+
+        target = QuerySelectField('Compare to', query_factory=partial(GetComparatorSchedules, assessment_id, self_id),
+                                  get_label='name')
+
+        compare = SubmitField('Compare')
+
+    return CompareScheduleForm

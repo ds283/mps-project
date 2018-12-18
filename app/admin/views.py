@@ -24,7 +24,7 @@ from celery import chain, group
 
 from ..limiter import limiter
 from ..uploads import solution_files
-from .actions import register_user, estimate_CATS_load, availability_CSV_generator
+from .actions import register_user, estimate_CATS_load, availability_CSV_generator, pair_slots
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
     EditOfficeForm, EditFacultyForm, EditStudentForm, \
@@ -47,7 +47,7 @@ from .forms import RoleSelectForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
     NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
-    PublicScheduleFormFactory
+    PublicScheduleFormFactory, CompareScheduleFormFactory
 
 from ..database import db
 from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -4336,25 +4336,31 @@ def compare_match(id):
     year = get_current_year()
     our_pclasses = {x.id for x in record.available_pclasses}
 
-    CompareMatchForm = CompareMatchFormFactory(year, record.id, our_pclasses)
+    CompareMatchForm = CompareMatchFormFactory(year, record.id, our_pclasses, current_user.has_role('root'))
     form = CompareMatchForm(request.form)
 
     if form.validate_on_submit():
-
         comparator = form.target.data
-        return redirect(url_for('admin.do_compare', id1=id, id2=comparator.id, text=text, url=url))
+        return redirect(url_for('admin.do_match_compare', id1=id, id2=comparator.id, text=text, url=url))
 
     return render_template('admin/match_inspector/compare_setup.html', form=form, record=record, text=text, url=url)
 
 
-@admin.route('/do_compare/<int:id1>/<int:id2>')
+@admin.route('/do_match_compare/<int:id1>/<int:id2>')
 @roles_accepted('faculty', 'admin', 'root')
-def do_compare(id1, id2):
+def do_match_compare(id1, id2):
     record1 = MatchingAttempt.query.get_or_404(id1)
     record2 = MatchingAttempt.query.get_or_404(id2)
 
+    pclass_filter = request.args.get('pclass_filter')
+    text = request.args.get('text', None)
+    url = request.args.get('url', None)
+
+    if url is None:
+        url = request.referrer
+
     if not validate_match_inspector(record1) or not validate_match_inspector(record2):
-        return redirect(request.referrer)
+        return redirect(url)
 
     if not record1.finished:
         if record1.awaiting_upload:
@@ -4363,12 +4369,12 @@ def do_compare(id1, id2):
         else:
             flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record1.name),
                   'error')
-        return redirect(request.referrer)
+        return redirect(url)
 
     if not record1.solution_usable:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record1.name),
               'error')
-        return redirect(request.referrer)
+        return redirect(url)
 
     if not record2.finished:
         if record2.awaiting_upload:
@@ -4377,16 +4383,12 @@ def do_compare(id1, id2):
         else:
             flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name),
                   'error')
-        return redirect(request.referrer)
+        return redirect(url)
 
     if not record2.solution_usable:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name),
               'error')
-        return redirect(request.referrer)
-
-    pclass_filter = request.args.get('pclass_filter')
-    text = request.args.get('text', None)
-    url = request.args.get('url', None)
+        return redirect(url)
 
     # if no state filter supplied, check if one is stored in session
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
@@ -4398,14 +4400,14 @@ def do_compare(id1, id2):
                            pclasses=pclasses, pclass_filter=pclass_filter)
 
 
-@admin.route('/do_compare_ajax/<int:id1>/<int:id2>')
+@admin.route('/do_match_compare_ajax/<int:id1>/<int:id2>')
 @roles_accepted('faculty', 'admin', 'root')
-def do_compare_ajax(id1, id2):
+def do_match_compare_ajax(id1, id2):
     record1 = MatchingAttempt.query.get_or_404(id1)
     record2 = MatchingAttempt.query.get_or_404(id2)
 
     if not validate_match_inspector(record1) or not validate_match_inspector(record2):
-        return redirect(request.referrer)
+        return jsonify({})
 
     if not record1.finished:
         if record1.awaiting_upload:
@@ -4414,12 +4416,12 @@ def do_compare_ajax(id1, id2):
         else:
             flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record1.name),
                   'error')
-        return redirect(request.referrer)
+        return jsonify({})
 
     if record1.outcome != MatchingAttempt.OUTCOME_OPTIMAL:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record1.name),
               'error')
-        return redirect(request.referrer)
+        return jsonify({})
 
     if not record2.finished:
         if record2.awaiting_upload:
@@ -4428,12 +4430,12 @@ def do_compare_ajax(id1, id2):
         else:
             flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name),
                   'error')
-        return redirect(request.referrer)
+        return jsonify({})
 
     if not record2.solution_usable:
         flash('Can not compare match "{name}" because it did not yield a usable outcome.'.format(name=record2.name),
               'error')
-        return redirect(request.referrer)
+        return jsonify({})
 
     pclass_filter = request.args.get('pclass_filter')
     flag, pclass_value = is_integer(pclass_filter)
@@ -6513,6 +6515,164 @@ def rename_schedule(id):
         return redirect(url)
 
     return render_template('admin/presentations/scheduling/rename.html', form=form, record=record, url=url)
+
+
+@admin.route('/compare_schedule/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'route')
+def compare_schedule(id):
+    record = ScheduleAttempt.query.get_or_404(id)
+
+    if not validate_schedule_inspector(record):
+        return redirect(request.referrer)
+
+    if not validate_assessment(record.owner):
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with convenors.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    CompareScheduleForm = CompareScheduleFormFactory(record.owner_id, record.id, current_user.has_role('root'))
+    form = CompareScheduleForm(request.form)
+
+    if form.validate_on_submit():
+        comparator = form.target.data
+        return redirect(url_for('admin.do_schedule_compare', id1=id, id2=comparator.id, text=text, url=url))
+
+    return render_template('admin/presentations/schedule_inspector/compare_setup.html', form=form, record=record,
+                           text=text, url=url)
+
+
+@admin.route('/do_schedule_compare/<int:id1>/<int:id2>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_schedule_compare(id1, id2):
+    record1 = ScheduleAttempt.query.get_or_404(id1)
+    record2 = ScheduleAttempt.query.get_or_404(id2)
+
+    pclass_filter = request.args.get('pclass_filter')
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    if url is None:
+        url = request.referrer
+
+    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(record2):
+        return redirect(url)
+
+    if record1.owner_id != record2.owner_id:
+        flash('It is only possible to compare two schedules belonging to the same assessment. '
+              'Schedule "{name1}" belongs to assessment "{assess1}", but schedule '
+              '"{name2}" belongs to assessment "{assess2}"'.format(name1=record1.name, name2=record2.name,
+                                                                   assess1=record1.owner.name, assess2=record2.owner.name))
+        return redirect(url)
+
+    if not validate_assessment(record1.owner):
+        return redirect(url)
+
+    if not record1.finished:
+        if record1.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+                  'manual upload.'.format(name=record1.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+                  'terminated.'.format(name=record1.name), 'error')
+        return redirect(url)
+
+    if not record1.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with convenors.'.format(name=record1.name), 'info')
+        return redirect(url)
+
+    if not record2.finished:
+        if record2.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+                  'manual upload.'.format(name=record2.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+                  'terminated.'.format(name=record2.name), 'error')
+        return redirect(url)
+
+    if not record2.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with convenors.'.format(name=record2.name), 'info')
+        return redirect(url)
+
+    # if no state filter supplied, check if one is stored in session
+    if pclass_filter is None and session.get('admin_schedule_pclass_filter'):
+        pclass_filter = session['admin_schedule_pclass_filter']
+
+    pclasses = record1.available_pclasses
+
+    return render_template('admin/presentations/schedule_inspector/compare.html', record1=record1, record2=record2,
+                           text=text, url=url, pclasses=pclasses, pclass_filter=pclass_filter)
+
+
+@admin.route('/do_schedule_compare_ajax/<int:id1>/<int:id2>')
+@roles_accepted('faculty', 'admin', 'root')
+def do_schedule_compare_ajax(id1, id2):
+    record1 = ScheduleAttempt.query.get_or_404(id1)
+    record2 = ScheduleAttempt.query.get_or_404(id2)
+
+    if not validate_schedule_inspector(record1) or not validate_schedule_inspector(record2):
+        return jsonify({})
+
+    if record1.owner_id != record2.owner_id:
+        flash('It is only possible to compare two schedules belonging to the same assessment. '
+              'Schedule "{name1}" belongs to assessment "{assess1}", but schedule '
+              '"{name2}" belongs to assessment "{assess2}"'.format(name1=record1.name, name2=record2.name,
+                                                                   assess1=record1.owner.name, assess2=record2.owner.name))
+        return jsonify({})
+
+    if not validate_assessment(record1.owner):
+        return jsonify({})
+
+    if not record1.finished:
+        if record1.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+                  'manual upload.'.format(name=record1.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+                  'terminated.'.format(name=record1.name), 'error')
+        return jsonify({})
+
+    if not record1.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with convenors.'.format(name=record1.name), 'info')
+        return jsonify({})
+
+    if not record2.finished:
+        if record2.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+                  'manual upload.'.format(name=record2.name), 'error')
+        else:
+            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+                  'terminated.'.format(name=record2.name), 'error')
+        return jsonify({})
+
+    if not record2.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared with convenors.'.format(name=record2.name), 'info')
+        return jsonify({})
+
+    pclass_filter = request.args.get('pclass_filter')
+    flag, pclass_value = is_integer(pclass_filter)
+
+    pairs = pair_slots(record1.ordered_slots, record2.ordered_slots, flag, pclass_value)
+
+    return ajax.admin.compare_schedule_data(pairs)
 
 
 @admin.route('/publish_schedule/<int:id>')

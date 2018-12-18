@@ -31,6 +31,7 @@ from .matching.matches import matches_data
 from .presentations.assessor_availability import assessor_session_availability_data, presentation_assessors_data
 from .presentations.assign_assessor import assign_assessor_data
 from .presentations.assign_submitter import assign_submitter_data
+from .presentations.compare_schedules import compare_schedule_data
 from .presentations.outstanding_availability import outstanding_availability_data
 from .presentations.presentations import presentation_assessments_data
 from .presentations.schedule_view_sessions import schedule_view_sessions

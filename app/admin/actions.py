@@ -29,6 +29,7 @@ from sqlalchemy import func
 from datetime import datetime
 import string
 import random
+from collections import deque
 
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
@@ -192,3 +193,117 @@ def availability_CSV_generator(assessment):
         yield data.getvalue()
         data.seek(0)
         data.truncate(0)
+
+
+def _score_similarities(item1, item2):
+    score = 0
+
+    if item1.session_id == item2.session_id:
+        score += 1
+
+    if item1.room_id == item2.session_id:
+        score += 1
+
+    item1_assessors = [a.id for a in item1.assessors]
+    item2_assessors = [a.id for a in item2.assessors]
+    for assessor in item1_assessors:
+        if assessor in item2_assessors:
+            score += 1
+
+    item1_talks = [t.id for t in item1.talks]
+    item2_talks = [t.id for t in item2.talks]
+    for talk in item1_talks:
+        if talk in item2_talks:
+            score += 1
+
+    return score
+
+
+def _exact_match(item1, item2):
+    if item1.session_id != item2.session_id:
+        return False
+
+    if item1.room_id != item2.room_id:
+        return False
+
+    item1_assessors = sorted([a.id for a in item1.assessors])
+    item2_assessors = sorted([a.id for a in item2.assessors])
+    if len(item1_assessors) != len(item2_assessors):
+        return False
+
+    for i in range(len(item1_assessors)):
+        if item1_assessors[i] != item2_assessors[i]:
+            return False
+
+    item1_talks = sorted([t.id for t in item1.talks])
+    item2_talks = sorted([t.id for t in item2.talks])
+    if len(item1_talks) != len(item2_talks):
+        return False
+
+    for i in range(len(item1_talks)):
+        if item1_talks[i] != item2_talks[i]:
+            return False
+
+    return True
+
+
+def _same_slot(item1, item2):
+    return (item1.session_id == item2.session_id) and (item1.room_id == item2.room_id)
+
+
+def pair_slots(s1, s2, flag, pclass_value):
+    slots1 = deque(s1)
+    slots2 = deque(s2)
+
+    pairs = []
+
+    while len(slots1) > 0 and len(slots2) > 0:
+        item = slots1.popleft()
+
+        if flag:
+            if item.pclass.id != pclass_value:
+                continue
+
+        # iterate thorugh slots2, assigning a 'score' to each slot.
+        # the highest-scoring slot is the closest match
+        scores = {}
+        lookup = {}
+        for candidate in slots2:
+            scores[candidate.id] = _score_similarities(item, candidate)
+            lookup[candidate.id] = candidate
+
+        score_list = sorted(list(scores.items()), key=lambda x: x[1], reverse=True)
+        best_match = score_list[0]
+        match_slot = lookup[best_match[0]]
+
+        if _exact_match(item, match_slot):
+            slots2.remove(match_slot)
+
+        elif best_match[1] > 1:
+            slots2.remove(match_slot)
+
+            if _same_slot(item, match_slot):
+                pairs.append(('edit', item, match_slot))
+            else:
+                pairs.append(('move', item, match_slot))
+
+        else:
+            pairs.append(('delete', item, None))
+
+    while len(slots1) > 0:
+        item = slots1.popleft()
+        if flag:
+            if item.pclass.id != pclass_value:
+                continue
+
+        pairs.append(('delete', item, None))
+
+    while len(slots2) > 0:
+        item = slots2.popleft()
+        if flag:
+            if item.pclass.id != pclass_value:
+                continue
+
+        pairs.append(('add', item, None))
+
+    return pairs

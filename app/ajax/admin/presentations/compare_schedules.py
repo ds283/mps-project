@@ -16,6 +16,7 @@ _source = \
 {% macro slot_id(slot) %}
     {{ slot.session.label|safe }}
     {{ slot.room.label|safe }} 
+    {{ slot.pclass.make_label()|safe }}
 {% endmacro %}
 {% macro show_changes(s, t) %}
     {% for assessor in s.assessors: %}
@@ -64,7 +65,8 @@ _target = \
 """
 {% macro slot_id(slot) %}
     {{ slot.session.label|safe }}
-    {{ slot.room.label|safe }} 
+    {{ slot.room.label|safe }}
+    {{ slot.pclass.make_label()|safe }}
 {% endmacro %}
 {% macro show_changes(s, t) %}
     {% for assessor in t.assessors: %}

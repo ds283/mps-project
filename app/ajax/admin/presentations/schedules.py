@@ -122,7 +122,7 @@ _info = \
 {% if s.finished and s.solution_usable %}
     <p></p>
     {% set value = s.number_slots %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
-    <span class="label label-primary">Uses {{ value }} slots{{ pl }}</span>
+    <span class="label label-primary">Uses {{ value }} slot{{ pl }}</span>
     {% set value = s.number_sessions %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}
     <span class="label label-primary">Uses {{ value }} session{{ pl }}</span>
     {% set value = s.number_rooms %}{% set pl = 's' %}{% if value == 1 %}{% set pl = '' %}{% endif %}

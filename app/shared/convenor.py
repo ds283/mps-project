@@ -9,9 +9,12 @@
 #
 
 
+from flask import current_app
+
+from ..shared.utils import get_current_year
 from ..database import db
 from ..models import Project, LiveProject, StudentData, SelectingStudent, SubmittingStudent, \
-    ProjectClassConfig, EnrollmentRecord, SubmissionRecord
+    ProjectClassConfig, SubmissionRecord
 
 
 def add_liveproject(number, project, config_id, autocommit=False):
@@ -139,3 +142,8 @@ def add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
 
     if autocommit:
         db.session.commit()
+
+    celery = current_app.extensions['celery']
+    adjust_task = celery.tasks['app.tasks.assessment.adjust_submitter']
+
+    adjust_task.apply_async(args=(submitter.id, get_current_year()))

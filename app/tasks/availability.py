@@ -149,7 +149,7 @@ def register_availability_tasks(celery):
 
         if record is None:
             self.update_state('FAILURE', meta='Could not load EnrollmentRecord record from database')
-            return
+            return Ignore()
 
         # find all assessments that are actively searching for availability
         assessments = db.session.query(PresentationAssessment) \

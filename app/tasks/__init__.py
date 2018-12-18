@@ -20,6 +20,7 @@ from .matching import register_matching_tasks
 from .availability import register_availability_tasks
 from .scheduling import register_scheduling_tasks
 from .maintenance import register_maintenance_tasks
+from .assessment import register_assessment_tasks
 from .assessors import register_assessor_tasks
 from .utilities import register_utility_tasks
 

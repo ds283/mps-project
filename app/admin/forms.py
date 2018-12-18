@@ -917,11 +917,12 @@ def RenameMatchFormFactory(year):
     return RenameMatchForm
 
 
-def CompareMatchFormFactory(year, self_id, pclasses):
+def CompareMatchFormFactory(year, self_id, pclasses, is_root):
 
     class CompareMatchForm(Form):
 
-        target = QuerySelectField('Compare to', query_factory=partial(GetComparatorMatches, year, self_id, pclasses),
+        target = QuerySelectField('Compare to',
+                                  query_factory=partial(GetComparatorMatches, year, self_id, pclasses, is_root),
                                   get_label='name')
 
         compare = SubmitField('Compare')
@@ -1177,11 +1178,12 @@ def PublicScheduleFormFactory(schedule):
     return PublicScheduleForm
 
 
-def CompareScheduleFormFactory(assessment_id, self_id):
+def CompareScheduleFormFactory(assessment_id, self_id, is_root):
 
     class CompareScheduleForm(Form):
 
-        target = QuerySelectField('Compare to', query_factory=partial(GetComparatorSchedules, assessment_id, self_id),
+        target = QuerySelectField('Compare to',
+                                  query_factory=partial(GetComparatorSchedules, assessment_id, self_id, is_root),
                                   get_label='name')
 
         compare = SubmitField('Compare')

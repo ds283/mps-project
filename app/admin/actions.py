@@ -251,7 +251,7 @@ def _same_slot(item1, item2):
     return (item1.session_id == item2.session_id) and (item1.room_id == item2.room_id)
 
 
-def pair_slots(s1, s2):
+def pair_slots(s1, s2, flag, pclass_value):
     slots1 = deque(s1)
     slots2 = deque(s2)
 
@@ -259,6 +259,10 @@ def pair_slots(s1, s2):
 
     while len(slots1) > 0 and len(slots2) > 0:
         item = slots1.popleft()
+
+        if flag:
+            if item.pclass.id != pclass_value:
+                continue
 
         # iterate thorugh slots2, assigning a 'score' to each slot.
         # the highest-scoring slot is the closest match
@@ -288,10 +292,18 @@ def pair_slots(s1, s2):
 
     while len(slots1) > 0:
         item = slots1.popleft()
+        if flag:
+            if item.pclass.id != pclass_value:
+                continue
+
         pairs.append(('delete', item, None))
 
     while len(slots2) > 0:
         item = slots2.popleft()
+        if flag:
+            if item.pclass.id != pclass_value:
+                continue
+
         pairs.append(('add', item, None))
 
     return pairs

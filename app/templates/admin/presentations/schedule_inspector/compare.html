@@ -15,20 +15,21 @@
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
         $(document).ready(function () {
-            $('#compare_match').DataTable({
+            $('#compare_schedule').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/do_match_compare_ajax/{{ record1.id }}/{{ record2.id }}?pclass_filter={{ pclass_filter }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/do_schedule_compare_ajax/{{ record1.id }}/{{ record2.id }}?pclass_filter={{ pclass_filter }}', dataSrc: '' },
                 columns: [
-                    { data: 'student',
+                    { data: 'source',
                       render: {
                         _: 'display',
                         sort: 'sortvalue'
                       } },
-                    { data: 'cohort' },
-                    { data: 'record1' },
-                    { data: 'record2' },
-                    { data: 'menu' }
+                    { data: 'target',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue'
+                      } }
                 ],
                 deferRender: true
             });
@@ -37,7 +38,7 @@
 {% endblock %}
 
 {% block title %}
-    Compare matches
+    Compare schedules
 {% endblock %}
 
 {% block bodyblock %}
@@ -50,29 +51,29 @@
     {% endif %}
 
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Compare matches <strong>{{ record1.name }}</strong> and <strong>{{ record2.name }}</strong></div>
+        <div class="panel-heading">
+            Compare schedules <strong>{{ record1.name }}</strong> and <strong>{{ record2.name }}</strong>
+            (assessment <strong>{{ record1.owner.name }}</strong>)
+        </div>
         <div class="panel-body">
             <div class="well">
                 <p>Filter by project class</p>
                 <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter='all', text=text, url=url) }}">
+                    href="{{ url_for('admin.do_schedule_compare', id1=record1.id, id2=record2.id, pclass_filter='all', text=text, url=url) }}">
                     All
                 </a>
                 {% for pclass in pclasses %}
                     <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass.id, text=text, url=url) }}">
+                        href="{{ url_for('admin.do_schedule_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass.id, text=text, url=url) }}">
                         {{ pclass.name }}
                     </a>
                 {% endfor %}
             </div>
-            <table id="compare_match" class="table table-striped table-bordered">
+            <table id="compare_schedule" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th width="10%"> Student</th>
-                        <th width="15%"> Cohort</th>
-                        <th width="30%"> {{ record1.name }}</th>
-                        <th width="30%"> {{ record2.name }}</th>
-                        <th width="15%"> Actions</th>
+                        <th width="50%"> {{ record1.name }}</th>
+                        <th width="50%"> {{ record2.name }}</th>
                     </tr>
                 </thead>
             </table>

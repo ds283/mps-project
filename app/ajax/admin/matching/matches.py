@@ -235,8 +235,8 @@ _menu = \
                         <i class="fa fa-clone"></i> Duplicate
                     </a>
                 </li>
-                <li {% if not compare %}class="disabled"{% endif %}>
-                    <a {% if compare %}href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}"{% endif %}>
+                <li class="disabled"}>
+                    <a href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
                         <i class="fa fa-balance-scale"></i> Compare to...
                     </a>
                 </li>
@@ -250,7 +250,7 @@ _menu = \
                 <li class="disabled">
                     <a><i class="fa fa-clone"></i> Duplicate</a>
                 </li>
-                <li>
+                <li class="disabled">
                     <a><i class="fa fa-balance-scale"></i> Compare to...</a>
                 </li>
             {% endif %}

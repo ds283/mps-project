@@ -15,7 +15,8 @@ from ...database import db
 from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
-    Building, Room, PresentationFeedback, Module, FHEQ_Level, ScheduleSlot, PresentationSession
+    Building, Room, PresentationFeedback, Module, FHEQ_Level, ScheduleSlot, PresentationSession, \
+    ScheduleAttempt
 
 from ..utils import get_current_year
 
@@ -174,6 +175,13 @@ def GetComparatorMatches(year, self_id, pclasses):
         q = q.filter(MatchingAttempt.config_members.any(pclass_id=pid))
 
     return  q.order_by(MatchingAttempt.name.asc())
+
+
+def GetComparatorSchedules(assessment_id, self_id):
+    return db.session.query(ScheduleAttempt) \
+        .filter(ScheduleAttempt.owner_id == assessment_id,
+                ScheduleAttempt.id != self_id) \
+        .order_by(ScheduleAttempt.name.asc())
 
 
 def MarkerQuery(live_project):

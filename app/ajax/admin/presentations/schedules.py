@@ -239,12 +239,17 @@ _menu = \
                         <i class="fa fa-clone"></i> Duplicate
                     </a>
                 </li>
+                <li>
+                    <a href="{{ url_for('admin.compare_schedule', id=s.id, url=url, text=text) }}">
+                        <i class="fa fa-balance-scale"></i> Compare to...
+                    </a>
+                </li>
                 {% set disabled = valid %}
                 <li {% if disabled %}class="disabled"{% endif %}>
                     <a {% if not disabled %}href="{{ url_for('admin.adjust_assessment_schedule', id=s.id) }}"{% endif %}>
-                        <i class="fa fa-wrench"></i> Adjust to constraints
+                        <i class="fa fa-wrench"></i> Impose constraints...
                     </a>
-                </li>
+                </li>                
             {% else %}
                 <li class="disabled">
                     <a><i class="fa fa-exchange"></i> Rename...</a>
@@ -255,8 +260,11 @@ _menu = \
                 <li class="disabled">
                     <a><i class="fa fa-clone"></i> Duplicate</a>
                 </li>
+                <li class="disabled">>
+                    <a><i class="fa fa-balance-scale"></i> Compare to...
+                </li>
                 <li class="disabled">
-                    <a><i class="fa fa-wrench"></i> Adjust to constraints</a>
+                    <a><i class="fa fa-wrench"></i> Impose constraints....</a>
                 </li>
             {% endif %}
 

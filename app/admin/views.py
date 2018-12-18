@@ -4336,7 +4336,7 @@ def compare_match(id):
     year = get_current_year()
     our_pclasses = {x.id for x in record.available_pclasses}
 
-    CompareMatchForm = CompareMatchFormFactory(year, record.id, our_pclasses)
+    CompareMatchForm = CompareMatchFormFactory(year, record.id, our_pclasses, current_user.has_role('root'))
     form = CompareMatchForm(request.form)
 
     if form.validate_on_submit():
@@ -6545,7 +6545,7 @@ def compare_schedule(id):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    CompareScheduleForm = CompareScheduleFormFactory(record.owner_id, record.id)
+    CompareScheduleForm = CompareScheduleFormFactory(record.owner_id, record.id, current_user.has_role('root'))
     form = CompareScheduleForm(request.form)
 
     if form.validate_on_submit():
@@ -6670,7 +6670,7 @@ def do_schedule_compare_ajax(id1, id2):
     pclass_filter = request.args.get('pclass_filter')
     flag, pclass_value = is_integer(pclass_filter)
 
-    pairs = pair_slots(record1.ordered_slots, record2.ordered_slots)
+    pairs = pair_slots(record1.ordered_slots, record2.ordered_slots, flag, pclass_value)
 
     return ajax.admin.compare_schedule_data(pairs)
 

@@ -167,21 +167,28 @@ def GetMatchingAttempts(year):
         .order_by(MatchingAttempt.name.asc())
 
 
-def GetComparatorMatches(year, self_id, pclasses):
+def GetComparatorMatches(year, self_id, pclasses, is_root):
     q = db.session.query(MatchingAttempt) \
         .filter(MatchingAttempt.year == year, MatchingAttempt.id != self_id)
 
     for pid in pclasses:
         q = q.filter(MatchingAttempt.config_members.any(pclass_id=pid))
 
-    return  q.order_by(MatchingAttempt.name.asc())
+    if not is_root:
+        q = q.filter(MatchingAttempt.published == True)
+
+    return q.order_by(MatchingAttempt.name.asc())
 
 
-def GetComparatorSchedules(assessment_id, self_id):
-    return db.session.query(ScheduleAttempt) \
+def GetComparatorSchedules(assessment_id, self_id, is_root):
+    q = db.session.query(ScheduleAttempt) \
         .filter(ScheduleAttempt.owner_id == assessment_id,
-                ScheduleAttempt.id != self_id) \
-        .order_by(ScheduleAttempt.name.asc())
+                ScheduleAttempt.id != self_id)
+
+    if not is_root:
+        q = q.filter(ScheduleAttempt.published == True)
+
+    return q.order_by(ScheduleAttempt.name.asc())
 
 
 def MarkerQuery(live_project):

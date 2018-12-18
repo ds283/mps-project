@@ -44,7 +44,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
-    ScheduleSessionQuery, BuildScheduleSessionLabel
+    ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules
 from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, year_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices
 
@@ -917,11 +917,12 @@ def RenameMatchFormFactory(year):
     return RenameMatchForm
 
 
-def CompareMatchFormFactory(year, self_id, pclasses):
+def CompareMatchFormFactory(year, self_id, pclasses, is_root):
 
     class CompareMatchForm(Form):
 
-        target = QuerySelectField('Compare to', query_factory=partial(GetComparatorMatches, year, self_id, pclasses),
+        target = QuerySelectField('Compare to',
+                                  query_factory=partial(GetComparatorMatches, year, self_id, pclasses, is_root),
                                   get_label='name')
 
         compare = SubmitField('Compare')
@@ -1175,3 +1176,16 @@ def PublicScheduleFormFactory(schedule):
                                     get_label=BuildScheduleSessionLabel)
 
     return PublicScheduleForm
+
+
+def CompareScheduleFormFactory(assessment_id, self_id, is_root):
+
+    class CompareScheduleForm(Form):
+
+        target = QuerySelectField('Compare to',
+                                  query_factory=partial(GetComparatorSchedules, assessment_id, self_id, is_root),
+                                  get_label='name')
+
+        compare = SubmitField('Compare')
+
+    return CompareScheduleForm

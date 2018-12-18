@@ -15,7 +15,8 @@ from ...database import db
 from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
-    Building, Room, PresentationFeedback, Module, FHEQ_Level, ScheduleSlot, PresentationSession
+    Building, Room, PresentationFeedback, Module, FHEQ_Level, ScheduleSlot, PresentationSession, \
+    ScheduleAttempt
 
 from ..utils import get_current_year
 
@@ -166,14 +167,28 @@ def GetMatchingAttempts(year):
         .order_by(MatchingAttempt.name.asc())
 
 
-def GetComparatorMatches(year, self_id, pclasses):
+def GetComparatorMatches(year, self_id, pclasses, is_root):
     q = db.session.query(MatchingAttempt) \
         .filter(MatchingAttempt.year == year, MatchingAttempt.id != self_id)
 
     for pid in pclasses:
         q = q.filter(MatchingAttempt.config_members.any(pclass_id=pid))
 
-    return  q.order_by(MatchingAttempt.name.asc())
+    if not is_root:
+        q = q.filter(MatchingAttempt.published == True)
+
+    return q.order_by(MatchingAttempt.name.asc())
+
+
+def GetComparatorSchedules(assessment_id, self_id, is_root):
+    q = db.session.query(ScheduleAttempt) \
+        .filter(ScheduleAttempt.owner_id == assessment_id,
+                ScheduleAttempt.id != self_id)
+
+    if not is_root:
+        q = q.filter(ScheduleAttempt.published == True)
+
+    return q.order_by(ScheduleAttempt.name.asc())
 
 
 def MarkerQuery(live_project):

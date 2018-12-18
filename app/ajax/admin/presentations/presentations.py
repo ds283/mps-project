@@ -151,7 +151,7 @@ _menu = \
         {% set disabled = not a.availability_closed %}
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.assessment_schedules', id=a.id) }}"{% endif %}>
-                <i class="fa fa-wrench"></i> Schedule...
+                <i class="fa fa-wrench"></i> Edit schedules...
             </a>
         </li>
         

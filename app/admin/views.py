@@ -4529,7 +4529,7 @@ def match_student_view(id):
             flash('Match "{name}" is not yet available for inspection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Match "{name}" if not yet available for inspection because it has not yet '
+            flash('Match "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -4566,7 +4566,7 @@ def match_faculty_view(id):
             flash('Match "{name}" is not yet available for inspection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Match "{name}" if not yet available for inspection because it has not yet '
+            flash('Match "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -4606,7 +4606,7 @@ def match_dists_view(id):
             flash('Match "{name}" is not yet available for inspection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Match "{name}" if not yet available for inspection because it has not yet '
+            flash('Match "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -4814,7 +4814,7 @@ def publish_match(id):
             flash('Match "{name}" is not yet available for publication because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Match "{name}" if not yet available for publication because it has not yet '
+            flash('Match "{name}" is not yet available for publication because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -4848,7 +4848,7 @@ def unpublish_match(id):
             flash('Match "{name}" is not yet available for unpublication because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Match "{name}" if not yet available for unpublication because it has not yet '
+            flash('Match "{name}" is not yet available for unpublication because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -4882,7 +4882,7 @@ def select_match(id):
             flash('Match "{name}" is not yet available for selection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Match "{name}" if not yet available for selection because it has not yet '
+            flash('Match "{name}" is not yet available for selection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -4939,7 +4939,7 @@ def deselect_match(id):
             flash('Match "{name}" is not yet available for deselection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Match "{name}" if not yet available for deselection because it has not yet '
+            flash('Match "{name}" is not yet available for deselection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -6530,16 +6530,16 @@ def compare_schedule(id):
 
     if not record.finished:
         if record.awaiting_upload:
-            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+            flash('Schedule "{name}" is not yet available for comparison because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+            flash('Schedule "{name}" is not yet available for comparison because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with convenors.'.format(name=record.name), 'info')
+              'It cannot be used for comparison.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -6584,30 +6584,30 @@ def do_schedule_compare(id1, id2):
 
     if not record1.finished:
         if record1.awaiting_upload:
-            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+            flash('Schedule "{name}" is not yet available for comparison because it is still awaiting '
                   'manual upload.'.format(name=record1.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+            flash('Schedule "{name}" is not yet available for comparison because it has not yet '
                   'terminated.'.format(name=record1.name), 'error')
         return redirect(url)
 
     if not record1.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with convenors.'.format(name=record1.name), 'info')
+              'It cannot be used for comparison.'.format(name=record1.name), 'info')
         return redirect(url)
 
     if not record2.finished:
         if record2.awaiting_upload:
-            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+            flash('Schedule "{name}" is not yet available for comparison because it is still awaiting '
                   'manual upload.'.format(name=record2.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+            flash('Schedule "{name}" is not yet available for comparison because it has not yet '
                   'terminated.'.format(name=record2.name), 'error')
         return redirect(url)
 
     if not record2.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with convenors.'.format(name=record2.name), 'info')
+              'It cannot be used for comparison.'.format(name=record2.name), 'info')
         return redirect(url)
 
     # if no state filter supplied, check if one is stored in session
@@ -6641,30 +6641,30 @@ def do_schedule_compare_ajax(id1, id2):
 
     if not record1.finished:
         if record1.awaiting_upload:
-            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+            flash('Schedule "{name}" is not yet available for comparison because it is still awaiting '
                   'manual upload.'.format(name=record1.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+            flash('Schedule "{name}" is not yet available for comparison because it has not yet '
                   'terminated.'.format(name=record1.name), 'error')
         return jsonify({})
 
     if not record1.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with convenors.'.format(name=record1.name), 'info')
+              'It cannot be used for comparison.'.format(name=record1.name), 'info')
         return jsonify({})
 
     if not record2.finished:
         if record2.awaiting_upload:
-            flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
+            flash('Schedule "{name}" is not yet available for comparison because it is still awaiting '
                   'manual upload.'.format(name=record2.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+            flash('Schedule "{name}" is not yet available for comparison because it has not yet '
                   'terminated.'.format(name=record2.name), 'error')
         return jsonify({})
 
     if not record2.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with convenors.'.format(name=record2.name), 'info')
+              'It cannot be used for comparison.'.format(name=record2.name), 'info')
         return jsonify({})
 
     pclass_filter = request.args.get('pclass_filter')
@@ -6672,7 +6672,7 @@ def do_schedule_compare_ajax(id1, id2):
 
     pairs = pair_slots(record1.ordered_slots, record2.ordered_slots, flag, pclass_value)
 
-    return ajax.admin.compare_schedule_data(pairs)
+    return ajax.admin.compare_schedule_data(pairs, record1.id, record2.id)
 
 
 @admin.route('/publish_schedule/<int:id>')
@@ -6691,7 +6691,7 @@ def publish_schedule(id):
             flash('Schedule "{name}" is not yet available for publication because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for publication because it has not yet '
+            flash('Schedule "{name}" is not yet available for publication because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -6727,7 +6727,7 @@ def unpublish_schedule(id):
             flash('Schedule "{name}" is not yet available for unpublication because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for unpublication because it has not yet '
+            flash('Schedule "{name}" is not yet available for unpublication because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -6758,7 +6758,7 @@ def publish_schedule_submitters(id):
             flash('Schedule "{name}" is not yet available for sharing with submitters because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for sharing with submitters because it has not yet '
+            flash('Schedule "{name}" is not yet available for sharing with submitters because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -6795,7 +6795,7 @@ def publish_schedule_assessors(id):
             flash('Schedule "{name}" is not yet available for sharing with assessors because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for sharing with assessors because it has not yet '
+            flash('Schedule "{name}" is not yet available for sharing with assessors because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -6836,7 +6836,7 @@ def deploy_schedule(id):
             flash('Schedule "{name}" is not yet available for deployment because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for deployment because it has not yet '
+            flash('Schedule "{name}" is not yet available for deployment because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -6868,7 +6868,7 @@ def undeploy_schedule(id):
             flash('Schedule "{name}" is not yet available for undeployment because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for undeployment because it has not yet '
+            flash('Schedule "{name}" is not yet available for undeployment because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -6906,7 +6906,7 @@ def schedule_view_sessions(id):
             flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+            flash('Schedule "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -6954,7 +6954,7 @@ def schedule_view_faculty(id):
             flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+            flash('Schedule "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -7155,7 +7155,7 @@ def schedule_adjust_assessors(id):
             flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+            flash('Schedule "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -7240,7 +7240,7 @@ def schedule_attach_assessor(slot_id, fac_id):
             flash('Schedule "{name}" is not yet available for inspection because it is still awaiting '
                   'manual upload.'.format(name=record.name), 'error')
         else:
-            flash('Schedule "{name}" if not yet available for inspection because it has not yet '
+            flash('Schedule "{name}" is not yet available for inspection because it has not yet '
                   'terminated.'.format(name=record.name), 'error')
         return redirect(request.referrer)
 
@@ -7903,6 +7903,101 @@ def manage_assessors_ajax(id):
         assessors = data.assessor_list.all()
 
     return ajax.admin.presentation_assessors_data(data, assessors)
+
+
+@admin.route('/merge_change_schedule/<int:source_id>/<int:target_id>/<int:source_sched>/<int:target_sched>')
+@roles_accepted('root', 'faculty', 'admin')
+def merge_change_schedule(source_id, target_id, source_sched, target_sched):
+    """
+    Makes target into a copy of source
+    :param source_id:
+    :param target_id:
+    :return:
+    """
+    if source_id is not None:
+        source = ScheduleSlot.query.get_or_404(source_id)
+    else:
+        source = None
+
+    if target_id is not None:
+        target = ScheduleSlot.query.get_or_404(target_id)
+    else:
+        target = None
+
+    source_schedule = ScheduleAttempt.query.get_or_404(source_sched)
+    target_schedule = ScheduleAttempt.query.get_or_404(target_sched)
+
+    if not validate_schedule_inspector(source_schedule) or not validate_schedule_inspector(target_schedule):
+        return redirect(request.referrer)
+
+    # check that source and target schedules are owned by the same assessent
+    if source_schedule.owner_id != target_schedule.owner_id:
+        flash('It is only possible to merge two schedules belonging to the same assessment. '
+              'Schedule "{name1}" belongs to assessment "{assess1}", but schedule '
+              '"{name2}" belongs to assessment "{assess2}"'.format(name1=source_schedule.name,
+                                                                   name2=target_schedule.name,
+                                                                   assess1=source_schedule.owner.name,
+                                                                   assess2=target_schedule.owner.name))
+        return redirect(request.referrer)
+
+    if not validate_assessment(source_schedule.owner):
+            return redirect(request.referrer)
+
+    if not source_schedule.finished:
+        if source_schedule.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for merging because it is still awaiting '
+                  'manual upload.'.format(name=source_schedule.name), 'error')
+        else:
+            flash('Schedule "{name}" is not yet available for merging because it has not yet '
+                  'terminated.'.format(name=source_schedule.name), 'error')
+        return redirect(request.referrer)
+
+    if not source_schedule.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be used for merging.'.format(name=source_schedule.name), 'info')
+        return redirect(request.referrer)
+
+    if target_schedule is not None and not target_schedule.finished:
+        if target_schedule.awaiting_upload:
+            flash('Schedule "{name}" is not yet available for merging because it is still awaiting '
+                  'manual upload.'.format(name=target_schedule.name), 'error')
+        else:
+            flash('Schedule "{name}" is not yet available for merging because it has not yet '
+                  'terminated.'.format(name=target_schedule.name), 'error')
+        return redirect(request.referrer)
+
+    if target_schedule is not None and not target_schedule.solution_usable:
+        flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be used for merging.'.format(name=target_schedule.name), 'info')
+        return redirect(request.referrer)
+
+    if source is None and target is not None:
+        # remove target session
+        db.session.delete(target)
+
+    elif target is None and source is not None:
+        # create new target slot
+        data = ScheduleSlot(owner_id=target_schedule.id,
+                            session_id=source.session_id,
+                            room_id=source.room_id,
+                            assessors=source.assessors,
+                            talks=source.talks,
+                            original_assessors=source.original_assessors,
+                            original_talks=source.original_talks)
+        db.session.add(data)
+
+    else:
+        target.session_id = source.session_id
+        target.room_id = source.room_id
+        target.assessors = source.assessors
+        target.talks = source.talks
+
+    target_schedule.last_edit_id = current_user.id
+    target_schedule.last_edit_timestamp = datetime.now()
+
+    db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @admin.route('/edit_rooms')

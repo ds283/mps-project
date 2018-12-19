@@ -29,7 +29,8 @@
                       render: {
                         _: 'display',
                         sort: 'sortvalue'
-                      } }
+                      } },
+                    { data: 'menu' }
                 ],
                 deferRender: true
             });
@@ -72,8 +73,9 @@
             <table id="compare_schedule" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th width="50%"> {{ record1.name }}</th>
-                        <th width="50%"> {{ record2.name }}</th>
+                        <th width="42%"> {{ record1.name }}</th>
+                        <th width="43%"> {{ record2.name }}</th>
+                        <th width="15%"> Actions</th>
                     </tr>
                 </thead>
             </table>

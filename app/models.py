@@ -7800,7 +7800,7 @@ def _ScheduleAttempt_is_valid(id):
                     'Submitter "{name}" is enrolled in this assessment, but their talk has not been ' \
                     'scheduled'.format(name=rec.submitter.owner.student.user.name)
 
-        elif get_count(obj.get_student_slot(rec.submitter_id)) > 1:
+        if get_count(obj.get_student_slot(rec.submitter.owner_id)) > 1:
             errors[('talks', rec.submitter_id)] = \
                 'Submitter "{name}" has been scheduled in more than one ' \
                 'slot'.format(name=rec.submitter.owner.student.user.name)
@@ -8591,6 +8591,42 @@ def _ScheduleSlot_insert_handler(mapper, connection, target):
 
 @listens_for(ScheduleSlot, 'before_delete')
 def _ScheduleSlot_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
+        if target.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+
+
+@listens_for(ScheduleSlot.assessors, 'append')
+def _ScheduleSlot_assessors_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
+        if target.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+
+
+@listens_for(ScheduleSlot.assessors, 'remove')
+def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
+        if target.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+
+
+@listens_for(ScheduleSlot.talks, 'append')
+def _ScheduleSlot_talks_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)
+        if target.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, target.owner.owner_id)
+
+
+@listens_for(ScheduleSlot.talks, 'remove')
+def _ScheduleSlot_talks_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         cache.delete_memoized(_ScheduleSlot_is_valid, target.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, target.owner_id)

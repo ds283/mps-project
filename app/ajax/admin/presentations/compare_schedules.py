@@ -110,10 +110,35 @@ _target = \
 """
 
 
-def compare_schedule_data(pairs):
+_menu = \
+"""
+<div class="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
+            data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li>
+            <a href="{{ url_for('admin.merge_change_schedule', source_id=t.id if t is not none else -1, target_id=s.id if s is not none else -1, source_sched=tid, target_sched=sid) }}">
+                <i class="fa fa-chevron-circle-left"></i> Apply change to source
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.merge_change_schedule', source_id=s.id if s is not none else -1, target_id=t.id if t is not none else -1, source_sched=sid, target_sched=tid) }}">
+                <i class="fa fa-chevron-circle-right"></i> Revert change in target
+            </a>
+        </li>
+    </ul>
+</div>
+"""
+
+
+def compare_schedule_data(pairs, source_id, target_id):
     data = [{'source': {'display': render_template_string(_source, op=op, s=s, t=t),
                         'sortvalue': op},
              'target': {'display': render_template_string(_target, op=op, s=s, t=t),
-                        'sortvalue': op}} for op, s, t in pairs]
+                        'sortvalue': op},
+             'menu': render_template_string(_menu, op=op, s=s, t=t, sid=source_id, tid=target_id)} for op, s, t in pairs]
 
     return jsonify(data)

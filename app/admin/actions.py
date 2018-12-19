@@ -219,12 +219,27 @@ def _score_similarities(item1, item2):
     return score
 
 
-def _exact_match(item1, item2):
-    if item1.session_id != item2.session_id:
-        return False
+def _find_match(slot, search_list):
+    max_score = get_count(slot.assessors) + get_count(slot.talks)
 
-    if item1.room_id != item2.room_id:
-        return False
+    score_list = [(_score_similarities(slot, s), s) for s in search_list]
+    filter_list = [p for p in score_list if p[0] > max_score/2]
+
+    sorted_list = sorted(filter_list, key=lambda x: x[0])
+
+    if len(sorted_list) == 0:
+        return None
+
+    return (sorted_list[0])[1]
+
+
+def _exact_match(item1, item2):
+    # can assume that item1 and item2 are matching slots
+    if item1.session_id != item2.session_id or item1.room_id != item2.room_id:
+        raise RuntimeError('Incorrect matching of shared slots in _exact_match()')
+
+    # determine whether item1 and item2 have matching assessors and talks,
+    # as efficiently as possible
 
     item1_assessors = sorted([a.id for a in item1.assessors])
     item2_assessors = sorted([a.id for a in item2.assessors])
@@ -247,63 +262,73 @@ def _exact_match(item1, item2):
     return True
 
 
-def _same_slot(item1, item2):
-    return (item1.session_id == item2.session_id) and (item1.room_id == item2.room_id)
+def _slot_exists(slot, slot_list):
+    """
+    Determines whether a counterpart for 'slot' is present in slot_list
+    :param slot:
+    :param slot_list:
+    :return:
+    """
+    sublist = [s for s in slot_list if s.session_id == slot.session_id and s.room_id == slot.room_id]
+
+    if len(sublist) > 1:
+        raise RuntimeError('Multiple slots present in _slot_exists')
+
+    return len(sublist) > 0
 
 
-def pair_slots(s1, s2, flag, pclass_value):
-    slots1 = deque(s1)
-    slots2 = deque(s2)
+def pair_slots(s1, s2, flag=False, pclass_value=None):
+    """
+    Computes the changes needed to convert the schedule represented by slot list s1
+    into the schedule represented by slot list s2
+    """
+    if flag:
+        assert(pclass_value is not None)
 
+    # break slots1 into slots that have been deleted in slots2, and those that are still present
+    slots1_deleted = deque(sorted([s for s in s1 if not _slot_exists(s, s2)], key=lambda x: (x.session_id, x.room_id)))
+    slots1_shared  = deque(sorted([s for s in s1 if _slot_exists(s, s2)], key=lambda x: (x.session_id, x.room_id)))
+
+    # break slots2 into slots that are new compared to slots1, and those that are shared
+    slots2_new = deque(sorted([s for s in s2 if not _slot_exists(s, s1)], key=lambda x: (x.session_id, x.room_id)))
+    slots2_shared = deque(sorted([s for s in s2 if _slot_exists(s, s1)], key=lambda x: (x.session_id, x.room_id)))
+
+    # pairs is a list of (op, source, target), where op is one of 'add', 'delete', 'move' or 'edit'
     pairs = []
 
-    while len(slots1) > 0 and len(slots2) > 0:
-        item = slots1.popleft()
+    # slots removed from slots1 could have been moved to a new location (session, room) in slots2.
+    # in that case, their counterparts should show up in slots2_new.
+    # this makes moves 'atomic', ie. we don't get long chains where if we move A -> B then we have to displace
+    # the original B -> C, and displace the original C to ... etc.
+    delete_list = []
+    for s in slots1_deleted:
+        m = _find_match(s, slots2_new)
 
-        if flag:
-            if item.pclass.id != pclass_value:
-                continue
+        if m is not None:
+            pairs.append(('move', s, m))
+            delete_list.append(s)
+            slots2_new.remove(m)
 
-        # iterate thorugh slots2, assigning a 'score' to each slot.
-        # the highest-scoring slot is the closest match
-        scores = {}
-        lookup = {}
-        for candidate in slots2:
-            scores[candidate.id] = _score_similarities(item, candidate)
-            lookup[candidate.id] = candidate
+    for s in delete_list:
+        slots1_deleted.remove(s)
 
-        score_list = sorted(list(scores.items()), key=lambda x: x[1], reverse=True)
-        best_match = score_list[0]
-        match_slot = lookup[best_match[0]]
+    # remaining elements in slots1_deleted are removed
+    while len(slots1_deleted) > 0:
+        s = slots1_deleted.popleft()
+        pairs.append(('delete', s, None))
 
-        if _exact_match(item, match_slot):
-            slots2.remove(match_slot)
+    # remaining elements in slots2_new are added
+    while len(slots2_new) > 0:
+        s = slots2_new.popleft()
+        pairs.append(('add', None, s))
 
-        elif best_match[1] > 1:
-            slots2.remove(match_slot)
+    # elements in slots1_shared and slots2_shared just require edits
+    # since they are sorted in order, we can just peel off slots from the left hand side of each deque
+    while len(slots1_shared) > 0 and len(slots2_shared) > 0:
+        l = slots1_shared.popleft()
+        r = slots2_shared.popleft()
 
-            if _same_slot(item, match_slot):
-                pairs.append(('edit', item, match_slot))
-            else:
-                pairs.append(('move', item, match_slot))
-
-        else:
-            pairs.append(('delete', item, None))
-
-    while len(slots1) > 0:
-        item = slots1.popleft()
-        if flag:
-            if item.pclass.id != pclass_value:
-                continue
-
-        pairs.append(('delete', item, None))
-
-    while len(slots2) > 0:
-        item = slots2.popleft()
-        if flag:
-            if item.pclass.id != pclass_value:
-                continue
-
-        pairs.append(('add', item, None))
+        if not _exact_match(l, r):
+            pairs.append(('edit', l, r))
 
     return pairs

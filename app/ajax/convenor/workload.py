@@ -167,7 +167,9 @@ _presentations = \
         <div {% if loop.index < loop.length %}style="padding-bottom: 10px;"{% endif %}>
             <div class="dropdown assignment-label">
                 <a class="label label-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
-                    {{ slot.event_name }}
+                    {{ slot.short_date_as_string }}
+                    {{ slot.session_type_string }}
+                    {{ slot.room_full_name }}
                     <span class="caret"></span>
                 </a>
                 <ul class="dropdown-menu">
@@ -181,9 +183,6 @@ _presentations = \
                     {% endfor %}
                 </ul>
             </div>
-            <span class="label label-default">{{ slot.short_date_as_string }}</span>
-            <span class="label label-default">{{ slot.session_type_string }}</span>
-            <span class="label label-default">{{ slot.room_full_name }}</span>
             {% set state = slot.feedback_state(f.id) %}
             {{ feedback_state_tag(slot, state, 'Feedback') }}
             {% if state > slot.FEEDBACK_NOT_YET and state < slot.FEEDBACK_SUBMITTED %}

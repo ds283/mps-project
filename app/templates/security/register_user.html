@@ -17,19 +17,19 @@
 {% block form_content %}
     {% if user %}
         {% if user.has_role('office') %}
-            <form action="{{ url_for('admin.edit_office', id=user.id, pane=pane) }}" method="POST" name="user_form">
+            <form action="{{ url_for('admin.edit_office', id=user.id, pane=pane, url=url) }}" method="POST" name="user_form">
         {% elif user.has_role('faculty') %}
-            <form action="{{ url_for('admin.edit_faculty', id=user.id, pane=pane) }}" method="POST" name="user_form">
+            <form action="{{ url_for('admin.edit_faculty', id=user.id, pane=pane, url=url) }}" method="POST" name="user_form">
         {% else %} {# current role == 'student' is only choice #}
-            <form action="{{ url_for('admin.edit_student', id=user.id, pane=pane) }}" method="POST" name="user_form">
+            <form action="{{ url_for('admin.edit_student', id=user.id, pane=pane, url=url) }}" method="POST" name="user_form">
         {% endif %}
     {% else %}
         {% if role == 'office' %}
-            <form action="{{ url_for('admin.create_office', role=role, pane=pane) }}" method="POST" name="user_form">
+            <form action="{{ url_for('admin.create_office', role=role, pane=pane, url=url) }}" method="POST" name="user_form">
         {% elif role == 'faculty' %}
-            <form action="{{ url_for('admin.create_faculty', role=role, pane=pane) }}" method="POST" name="user_form">
+            <form action="{{ url_for('admin.create_faculty', role=role, pane=pane, url=url) }}" method="POST" name="user_form">
         {% else %} {# current role == 'student' is only choice #}
-            <form action="{{ url_for('admin.create_student', role=role, pane=pane) }}" method="POST" name="user_form">
+            <form action="{{ url_for('admin.create_student', role=role, pane=pane, url=url) }}" method="POST" name="user_form">
         {% endif %}
     {% endif %}
 

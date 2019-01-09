@@ -112,7 +112,7 @@ class StudentDataMixin():
 
     cohort = IntegerField('Cohort', validators=[InputRequired(message="Cohort is required")],
                           description='Enter the year the student joined the university. '
-                                      'If this needs to be adjusted because the student did a foundation year,'
+                                      'If this needs to be adjusted because the student did a foundation year, '
                                       'or for other reasons such as resitting years, this will be accommodated '
                                       'separately.')
 

@@ -37,6 +37,7 @@ _projects = \
             <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
+                #{{ r.owner.student.exam_number }}
                 <span class="caret"></span>
             </a>
             <ul class="dropdown-menu">
@@ -118,6 +119,7 @@ _marking = \
             <a class="label {% if style %}label-default{% else %}label-info{% endif %} btn-table-block dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                 {% if show_period %}#{{ r.submission_period }}: {% endif %}
                 {{ r.owner.student.user.name }}
+                #{{ r.owner.student.exam_number }}
                 <span class="caret"></span>
             </a>
             <ul class="dropdown-menu">

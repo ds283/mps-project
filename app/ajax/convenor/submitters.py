@@ -350,7 +350,11 @@ _name = \
 <a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
 <div>
 {% if current_user.has_role('admin') or current_user.has_role('root') %}
-    <a href="{{ url_for('admin.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="label label-default">#{{ sub.student.exam_number }}</a>
+    <a href="{{ url_for('admin.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="label label-default">
+        #{{ sub.student.exam_number }}
+    </a>
+{% else %}
+    <span class="label label-default">#{{ sub.student.exam_number }}</span>
 {% endif %}
 {% if sub.published %}
     <span class="label label-primary"><i class="fa fa-eye"></i> Published</span>

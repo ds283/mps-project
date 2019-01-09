@@ -18,7 +18,10 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 # website revision number
-revision = '2019.1'
+site_revision = '2019.1'
+
+# website copyright dates
+site_copyright_dates = '2018, 2019'
 
 
 class Config(object):

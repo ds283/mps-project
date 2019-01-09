@@ -33,7 +33,7 @@ from flask_profiler import Profiler
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
-from config import app_config, revision
+from config import app_config, site_revision, site_copyright_dates
 from .database import db
 from .models import User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
@@ -264,7 +264,9 @@ def create_app():
         else:
             real_user = None
 
-        return {'real_user': real_user, 'website_revision': revision}
+        return {'real_user': real_user,
+                'website_revision': site_revision,
+                'website_copyright_dates': site_copyright_dates}
 
 
     @app.context_processor

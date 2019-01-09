@@ -806,6 +806,7 @@ def edit_student(id):
     data = StudentData.query.get_or_404(id)
 
     pane = request.args.get('pane', default=None)
+    url = request.args.get('url', default=None)
 
     if form.validate_on_submit():
 
@@ -836,7 +837,10 @@ def edit_student(id):
         if resend_confirmation:
             _resend_confirm_email(user)
 
-        if pane is None or pane == 'accounts':
+        # if a return URL is supplied, it takes precedence over a named pane
+        if url is not None:
+            return redirect(url)
+        elif pane is None or pane == 'accounts':
             return redirect(url_for('admin.edit_users'))
         elif pane == 'faculty':
             return redirect(url_for('admin.edit_users_faculty'))
@@ -857,7 +861,7 @@ def edit_student(id):
             form.programme.data = data.programme
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account',
-                           pane=pane)
+                           pane=pane, url=url)
 
 
 @admin.route('/edit_affiliations/<int:id>')

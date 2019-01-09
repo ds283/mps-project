@@ -178,12 +178,20 @@ _markers = \
 
 _menu = \
 """
+{% set pclass = sub.config.project_class %}
 <div class="dropdown">
     <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
         Actions
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+        {% if current_user.has_role('admin') or current_user.has_role('root') %}
+            <li>
+                <a href="{{ url_for('admin.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
+                    <i class="fa fa-pencil"></i> Edit student...
+                </a>
+            </li>
+        {% endif %}
         {% if sub.published %}
             <li>
                 <a href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
@@ -199,7 +207,6 @@ _menu = \
         {% endif %}
 
         {% set recs = sub.ordered_assignments.all() %}
-        {% set pclass = sub.config.project_class %}
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Manual reassignment</li>
@@ -264,7 +271,9 @@ _presentations = \
                 {% if slot is not none %}
                     <div class="dropdown assignment-label">
                         <a class="label label-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
-                            {{ slot.event_name }}
+                            {{ slot.short_date_as_string }}
+                            {{ slot.session_type_string }}
+                            {{ slot.room_full_name }}
                             <span class="caret"></span>
                         </a>
                         <ul class="dropdown-menu">
@@ -273,9 +282,6 @@ _presentations = \
                             </li>
                         </ul>
                     </div>
-                    <span class="label label-default">{{ slot.short_date_as_string }}</span>
-                    <span class="label label-default">{{ slot.session_type_string }}</span>
-                    <span class="label label-default">{{ slot.room_full_name }}</span>
                     {% for a in slot.assessors %}
                         {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
                     {% endfor %}
@@ -340,8 +346,12 @@ _presentations = \
 
 _name = \
 """
+{% set pclass = sub.config.project_class %}
 <a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
 <div>
+{% if current_user.has_role('admin') or current_user.has_role('root') %}
+    <a href="{{ url_for('admin.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="label label-default">#{{ sub.student.exam_number }}</a>
+{% endif %}
 {% if sub.published %}
     <span class="label label-primary"><i class="fa fa-eye"></i> Published</span>
 {% else %}

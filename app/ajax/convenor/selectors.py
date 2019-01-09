@@ -13,6 +13,7 @@ from flask import render_template_string, jsonify
 
 _menu = \
 """
+{% set pclass = student.config.project_class %}
 <div class="dropdown">
     <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button"
             data-toggle="dropdown">
@@ -20,6 +21,13 @@ _menu = \
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
+        {% if current_user.has_role('admin') or current_user.has_role('root') %}
+            <li>
+                <a href="{{ url_for('admin.edit_student', id=student.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
+                    <i class="fa fa-pencil"></i> Edit student...
+                </a>
+            </li>
+        {% endif %}
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.has_bookmarks %}
             <li>
                 <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">

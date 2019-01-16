@@ -1172,6 +1172,19 @@ class StudentData(db.Model):
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
 
+    # validation state
+    VALIDATION_QUEUED = 2
+    VALIDATION_REJECTED = 1
+    VALIDATION_VALIDATED = 0
+    validation_state = db.Column(db.Integer(), default=VALIDATION_QUEUED)
+
+    # who validated this record?
+    validator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    validated_by = db.relationship('User', foreign_keys=[validator_id], uselist=False)
+
+    # validator timestamp
+    validated_timestamp = db.Column(db.DateTime())
+
 
     @property
     def cohort_label(self):

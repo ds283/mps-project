@@ -342,5 +342,8 @@ def create_app():
     from .exec import exec as exec_blueprint
     app.register_blueprint(exec_blueprint, url_prefix='/exec')
 
+    from .user_approver import user_approver as user_approver_blueprint
+    app.register_blueprint(user_approver_blueprint, url_prefix='/user_approver')
+
     return app, celery
 

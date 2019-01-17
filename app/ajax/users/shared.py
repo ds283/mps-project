@@ -20,7 +20,7 @@ name = \
         {% elif state == u.student_data.VALIDATION_REJECTED %}
             <span class="label label-danger">REJECTED</span>
         {% elif state == u.student_data.VALIDATION_VALIDATED %}
-            <span class="label label-success"><i class="fa fa-check"></i></span>
+            <span class="label label-success"><i class="fa fa-check"></i> VALIDATED</span>
         {% else %}
             <span class="label label-danger">Unknown validation</span>
         {% endif %}

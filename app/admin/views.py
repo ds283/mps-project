@@ -341,7 +341,6 @@ def edit_users_students():
     View function that handles listing of all registered students
     :return: HTML string
     """
-
     prog_filter = request.args.get('prog_filter')
 
     if prog_filter is None and session.get('accounts_prog_filter'):
@@ -389,7 +388,6 @@ def edit_users_faculty():
     View function that handles listing of all registered faculty
     :return: HTML string
     """
-
     group_filter = request.args.get('group_filter')
 
     if group_filter is None and session.get('accounts_group_filter'):
@@ -422,7 +420,6 @@ def users_ajax():
     Return JSON structure representing users table
     :return:
     """
-
     filter = request.args.get('filter')
 
     if filter == 'active':

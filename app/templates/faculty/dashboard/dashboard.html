@@ -4,20 +4,36 @@
 {% from "faculty/dashboard/availability_card.html" import availability_card %}
 {% from "admin/admin_dashboard/admin_card.html" import admin_dashboard_card %}
 {% from "admin/admin_dashboard/root_functions.html" import root_functions, root_messages %}
+{% from "user_approver/dashboard_panel.html" import user_approver_panel %}
 {% from "macros.html" import message_card %}
 
-{% if (enrollments and enrollments|length > 0) or current_user.has_role('root') %}
+{% if (enrollments and enrollments|length > 0) or current_user.has_role('root') or current_user.has_role('user_approver') %}
     {% block pillblock %}
         <ul class="nav nav-pills dashboard-nav">
             {% if current_user.has_role('root') %}
-                {% set config_warning = root_dash_data['warning'] %}
+                {% set warning = root_dash_data['warning'] %}
                 {% set messages = root_dash_data['messages'] %}
                 <li {% if pane == 'system' %}class="active"{% endif %}>
                     <a href="{{ url_for('faculty.dashboard', pane='system') }}">
-                        {% if config_warning or (messages is not none and messages|length > 0) %}
+                        {% if warning or (messages is not none and messages|length > 0) %}
                             <i class="fa fa-exclamation-triangle"></i>
                         {% endif %}
-                        Administrator dashboard
+                        Administration
+                    </a>
+                </li>
+            {% endif %}
+            {% if current_user.has_role('user_approver') %}
+                {% set warning = root_dash_data['approval_user_rejected'] > 0 %}
+                {% set to_approve = root_dash_data['approval_user_outstanding'] %}
+                <li {% if pane == 'approve' %}class="active"{% endif %}>
+                    <a href="{{ url_for('faculty.dashboard', pane='approve') }}">
+                        {% if warning %}
+                            <i class="fa fa-exclamation-triangle"></i>
+                        {% endif %}
+                        Approvals
+                        {% if to_approve > 0 %}
+                            <span class="badge badge-info">{{ to_approve }}</span>
+                        {% endif %}
                     </a>
                 </li>
             {% endif %}
@@ -59,6 +75,10 @@
 
             {% if current_user.has_role('root') and pane == 'system' %}
                 {{ root_messages(root_dash_data) }}
+            {% endif %}
+
+            {% if current_user.has_role('user_approver') and pane == 'approve' %}
+                {{ user_approver_panel(root_dash_data) }}
             {% endif %}
 
             {% if current_user.faculty_data.has_outstanding_availability_requests %}

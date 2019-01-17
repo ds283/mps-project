@@ -17,3 +17,4 @@ from . import users
 from . import polling
 from . import faculty
 from . import exec
+from . import user_approver

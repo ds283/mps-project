@@ -1,42 +1,50 @@
 {% macro prelive_capacity(data, sel_count) %}
     {% set group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = data %}
     <div class="row vertical-align capacity-table">
-        <div class="col-xs-5"><strong>Research group</strong></div>
-        <div class="col-xs-2"><strong>Projects</strong></div>
-        <div class="col-xs-2"><strong>Capacity</strong></div>
-        <div class="col-xs-3"><strong>Unique faculty</strong></div>
+        <div class="col-xs-4"><strong>Research group</strong></div>
+        <div class="col-xs-2"><strong>Projects offered</strong></div>
+        <div class="col-xs-2"><strong>Student capacity</strong></div>
+        <div class="col-xs-2"><strong>Number of unique faculty</strong></div>
+        <div class="col-xs-2"><strong>Enrollment</strong></div>
     </div>
     <hr class="intro-divider">
     {% for group in group_data %}
         {% set label, proj_count, fac_count, enrolled, total, capacity, bounded = group %}
         <div class="row vertical-align capacity-table">
-            <div class="col-xs-5">{{ label|safe }}</div>
+            <div class="col-xs-4">{{ label|safe }}</div>
             <div class="col-xs-2">
                 {% if proj_count > 0 %}
-                    <strong>{{ proj_count }}</strong>
-                {% else %}
                     {{ proj_count }}
+                {% else %}
+                    <span class="label label-danger">None</span>
                 {% endif %}
             </div>
             <div class="col-xs-2">
                 {% if capacity > 0 %}
-                    {% if not bounded %}>= {% endif %}<strong>{{ capacity }}</strong>
+                    {% if not bounded %}>= {% endif %}{{ capacity }}
                 {% else %}
-                    {% if not bounded %}>= {% endif %}0
+                    <span class="label label-danger">None</span>
                 {% endif %}
             </div>
-            <div class="col-xs-3">
-                <strong>{{ fac_count }}</strong>
-                <span class="label label-info">{{ enrolled }} enrolled</span>
-                <span class="label label-info">{{ total }} total</span>
+            <div class="col-xs-2">
+                {% if fac_count > 0 %}
+                    {{ fac_count }}
+                {% else %}
+                    <span class="label label-danger">None</span>
+                {% endif %}
+            </div>
+            <div class="col-xs-2">
+                {{ enrolled }}/{{ total }}
             </div>
         </div>
     {% endfor %}
     <hr class="into-divider">
     <div class="row vertical-align capacity-table">
-        <div class="col-xs-5"><strong>Total</strong></div>
-        <div class="col-xs-2"><strong>{{ total_projects }}</strong></div>
-        <div class="col-xs-2">{% if not total_capacity_bounded %}>= {% endif %}<strong>{{ total_capacity }}</strong></div>
+        <div class="col-xs-4"><strong>Total</strong></div>
+        <div class="col-xs-2"><span class="badge badge-info">{{ total_projects }}</span></div>
+        <div class="col-xs-2">{% if not total_capacity_bounded %}>= {% endif %}<span class="badge badge-info">{{ total_capacity }}</span></div>
+        <div class="col-xs-2"></div>
+        <div class="col-xs-2"></div>
     </div>
     {% if total_capacity < sel_count %}
         <div class="alert alert-danger">

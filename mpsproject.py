@@ -10,7 +10,7 @@
 
 from app import create_app, db
 from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
-    AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt
+    AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -70,6 +70,21 @@ def migrate_confirmation_data():
     db.session.commit()
 
 
+def populate_validation_data():
+    """
+    Populate validation state in StudentData table
+    :return:
+    """
+
+    students = db.session.query(StudentData).all()
+
+    for student in students:
+        if student.validation_state is None:
+            student.validation_state = StudentData.VALIDATION_QUEUED
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
 with app.app_context():
@@ -98,6 +113,7 @@ with app.app_context():
 
     # migrate_availability_data()
     # migrate_confirmation_data()
+    populate_validation_data()
 
     db.session.commit()
 

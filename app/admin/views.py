@@ -281,7 +281,8 @@ def create_student(role):
                            foundation_year=form.foundation_year.data,
                            repeated_years=ry,
                            creator_id=current_user.id,
-                           creation_timestamp=datetime.now())
+                           creation_timestamp=datetime.now(),
+                           validation_state=StudentData.VALIDATION_QUEUED)
 
         db.session.add(data)
         db.session.commit()
@@ -810,6 +811,11 @@ def edit_student(id):
         data.programme_id = form.programme.data.id
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
+
+        # send into the validation queue
+        data.validation_state = StudentData.VALIDATION_QUEUED
+        data.validator_id = None
+        data.validated_timestamp = None
 
         _datastore.commit()
 

@@ -778,6 +778,8 @@ class RoleMixin():
 
     description = StringField('Description')
 
+    colour = StringField('Colour', description='Specify a colour to help distinguish different roles')
+
 
 class AddRoleForm(Form, RoleMixin):
 

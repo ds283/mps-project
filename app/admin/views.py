@@ -441,8 +441,10 @@ def users_ajax():
         users = User.query.filter(User.roles.any(Role.name == 'root')).all()
     else:
         users = User.query.all()
+    
+    roles = db.session.query(Role).all()
 
-    return ajax.users.build_accounts_data(users)
+    return ajax.users.build_accounts_data(users, roles)
 
 
 @admin.route('/users_students_ajax')
@@ -2605,7 +2607,6 @@ def edit_roles():
     Display list of roles
     :return:
     """
-
     return render_template('admin/edit_roles.html')
 
 
@@ -2616,7 +2617,6 @@ def roles_ajax():
     Ajax data point for roles list
     :return:
     """
-
     roles = db.session.query(Role).all()
     return ajax.admin.roles_data(roles)
 
@@ -2628,13 +2628,12 @@ def add_role():
     Add a new user role
     :return:
     """
-
     form = AddRoleForm(request.form)
 
     if form.validate_on_submit():
-
         data = Role(name=form.name.data,
-                    description=form.description.data)
+                    description=form.description.data,
+                    colour=form.colour.data,)
         db.session.add(data)
         db.session.commit()
 
@@ -2651,16 +2650,15 @@ def edit_role(id):
     :param id:
     :return:
     """
-
     data = Role.query.get_or_404(id)
 
     form = EditRoleForm(obj=data)
     form.role = data
 
     if form.validate_on_submit():
-
         data.name = form.name.data
         data.description = form.description.data
+        data.colour = form.colour.data
         db.session.commit()
 
         return redirect(url_for('admin.edit_roles'))

@@ -22,7 +22,7 @@ from ..shared.forms.wtf_validators import globally_unique_project, unique_or_ori
     project_unique_or_original_label
 from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, CurrentUserResearchGroups, \
     AllResearchGroups, CurrentUserProjectClasses, AllProjectClasses, GetSupervisorRoles, GetSkillGroups, \
-    AvailableProjectDescriptionClasses, ProjectDescriptionClasses
+    AvailableProjectDescriptionClasses, ProjectDescriptionClasses, GetMaskableRoles
 
 from functools import partial
 
@@ -228,10 +228,18 @@ class SupervisorResponseForm(Form, SupervisorResponseMixin):
     pass
 
 
-class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False),
-                          FirstLastNameMixin, SaveChangesMixin, ThemeMixin):
+def FacultySettingsFormFactory(user=None):
 
-    pass
+    class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False),
+                              FirstLastNameMixin, SaveChangesMixin, ThemeMixin):
+
+        if user is not None and user.has_role('root', skip_mask=True):
+            mask_roles = CheckboxQuerySelectMultipleField('Temporarily mask roles',
+                                                          query_factory=partial(GetMaskableRoles, user.id),
+                                                          get_label='name')
+
+
+    return FacultySettingsForm
 
 
 def AvailabilityFormFactory(include_confirm=False):

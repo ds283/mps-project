@@ -162,7 +162,9 @@ def get_pclass_config_data(configs=None):
         if total_capacity < 1.15*config.number_selectors:
             config_warning = True
 
-        config_list.append((config, total_capacity, total_capacity_bounded))
+        config_list.append({'config': config,
+                            'capacity': total_capacity,
+                            'is_bounded': total_capacity_bounded})
 
     return {'config_list': config_list,
             'config_warning': config_warning}

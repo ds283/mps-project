@@ -13,7 +13,10 @@
                 <div class="col-xs-2"><strong>Academic year</strong></div>
                 <div class="col-xs-5"><strong>Status</strong></div>
             </div>
-            {% for config, capacity, bounded in config_list %}
+            {% for cdata in config_list %}
+                {% set config = cdata['config'] %}
+                {% set capacity = cdata['capacity'] %}
+                {% set bounded = cdata['is_bounded'] %}
                 {% set pclass = config.project_class %}
                 <div class="row vertical-top root-dashboard-table">
                     <div class="col-xs-3">

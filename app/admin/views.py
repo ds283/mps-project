@@ -59,8 +59,9 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project, GeneratedAsset, UploadedAsset
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_root_dashboard_data, get_automatch_pclasses, canonical_generated_asset_filename, \
-    make_uploaded_asset_filename, canonical_uploaded_asset_filename, home_dashboard_url
+    get_root_dashboard_data, get_rollover_data, get_matching_data, get_ready_to_match_data, get_automatch_pclasses, \
+    canonical_generated_asset_filename, make_uploaded_asset_filename, canonical_uploaded_asset_filename, \
+    home_dashboard_url
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector, \
@@ -2513,15 +2514,13 @@ def confirm_global_rollover():
     Show confirmation box for global advance of academic year
     :return:
     """
+    data = get_rollover_data()
 
-    config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments, messages = get_root_dashboard_data()
-
-    if not rollover_ready:
+    if not data['rollover_ready']:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
         return redirect(request.referrer)
 
-    if rollover_in_progress:
+    if not data['rollover_in_progress']:
         flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
         return redirect(request.referrer)
 
@@ -2550,14 +2549,13 @@ def perform_global_rollover():
     :return:
     """
 
-    config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments, messages = get_root_dashboard_data()
+    data = get_rollover_data()
 
-    if not rollover_ready:
+    if not data['rollover_ready']:
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
         return redirect(request.referrer)
 
-    if rollover_in_progress:
+    if data['rollover_in_progress']:
         flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
         return redirect(request.referrer)
 
@@ -2569,6 +2567,7 @@ def perform_global_rollover():
 
         db.session.query(MatchingAttempt).filter_by(selected=False).delete()
         db.session.commit()
+
     except SQLAlchemyError:
         flash('Could not complete rollover due to database error. Please check the logs.', 'error')
         db.session.rollback()
@@ -3858,14 +3857,13 @@ def manage_matching():
     """
 
     # check that all projects are ready to match
-    config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments, messages = get_root_dashboard_data()
+    data = get_ready_to_match_data()
 
-    if not matching_ready:
+    if not data['matching_ready']:
         flash('Automated matching is not yet available because some project classes are not ready', 'error')
         return redirect(request.referrer)
 
-    if rollover_in_progress:
+    if data['rollover_in_progress']:
         flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(request.referrer)
 
@@ -3881,7 +3879,6 @@ def skip_matching():
     Mark current set of ProjectClassConfig instances to skip automated matching
     :return:
     """
-
     pcs = db.session.query(ProjectClass) \
         .filter_by(active=True) \
         .order_by(ProjectClass.name.asc()).all()
@@ -3909,10 +3906,9 @@ def matches_ajax():
     """
 
     # check that all projects are ready to match
-    config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments, messages = get_root_dashboard_data()
+    data = get_ready_to_match_data()
 
-    if not matching_ready or rollover_in_progress:
+    if not data['matching_ready'] or data['rollover_in_progress']:
         return jsonify({})
 
     current_year = get_current_year()
@@ -3929,14 +3925,14 @@ def create_match():
     :return:
     """
     # check that all projects are ready to match
-    config_list, config_warning, current_year, rollover_ready, matching_ready, \
-        rollover_in_progress, assessments, messages = get_root_dashboard_data()
+    data = get_ready_to_match_data()
+    current_year = get_current_year()
 
-    if not matching_ready:
+    if not data['matching_ready']:
         flash('Automated matching is not yet available because some project classes are not ready', 'info')
         return redirect(request.referrer)
 
-    if rollover_in_progress:
+    if data['rollover_in_progress']:
         flash('Automated matching is not available because a rollover of the academic year is underway', 'info'),
         return redirect(request.referrer)
 

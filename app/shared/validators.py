@@ -12,7 +12,7 @@
 from flask import flash
 from flask_login import current_user
 
-from .utils import get_current_year, get_root_dashboard_data, get_assessments_in_use
+from .utils import get_current_year, get_assessment_data
 from ..shared.utils import get_count
 from ..models import ProjectClassConfig
 
@@ -190,9 +190,9 @@ def validate_submission_viewable(record):
 
 def validate_using_assessment():
     # check that assessment events are actually required
-    assessments = get_assessments_in_use()
+    data = get_assessment_data()
 
-    if not assessments:
+    if not data['has_assessments']:
         flash('Presentation assessments are not currently required', 'error')
         return False
 

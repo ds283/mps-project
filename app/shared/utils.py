@@ -48,7 +48,6 @@ def home_dashboard_url():
         return '#'
 
 
-
 def home_dashboard():
     url = home_dashboard_url()
 
@@ -59,97 +58,168 @@ def home_dashboard():
     return redirect(url_for('auth.logged_out'))
 
 
-def get_assessments_in_use():
-    pcs = db.session.query(ProjectClass).filter_by(active=True).all()
+def get_rollover_data(configs=None, current_year=None):
+    if configs is None:
+        configs = _get_pclass_config_list()
+
+    if current_year is None:
+        current_year = get_current_year()
+
+    rollover_ready = True
+    rollover_in_progress = False
+
+    # loop through all active project classes
+    for config in configs:
+        # if MainConfig year has already been advanced, then we shouldn't offer
+        # matching or rollover options on the dashboard
+        if config.year < current_year:
+            rollover_in_progress = True
+
+        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
+            rollover_ready = False
+
+        if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+            rollover_ready = False
+
+    return {'rollover_ready': rollover_ready,
+            'rollover_in_progress': rollover_in_progress}
+
+
+def get_schedule_message_data(configs=None):
+    if configs is None:
+        configs = _get_pclass_config_list()
+
+    messages = []
+    error_events = set()
+    error_schedules = set()
+
+    # loop through all active project classes
+    for config in configs:
+        for period in config.periods:
+            if period.has_deployed_schedule:
+                schedule = period.deployed_schedule
+
+                if not schedule.owner.is_valid:
+                    if schedule.event_name not in error_events:
+                        messages.append(('error', 'Event "{event}" and deployed schedule "{name}" for project class '
+                                         '"{pclass}" contain validation errors. Please attend to these as soon '
+                                         'as possible.'.format(name=schedule.name, event=schedule.event_name,
+                                                               pclass=pclass.name)))
+                        error_events.add(schedule.event_name)
+
+                elif not schedule.is_valid:
+                    if schedule.name not in error_schedules:
+                        messages.append(('error', 'Deployed schedule "{name}" for event "{event}" and project class "{pclass}") '
+                                         'contains validation errors. Please attend to these as soon as '
+                                         'possible.'.format(name=schedule.name, event=schedule.event_name,
+                                                            pclass=pclass.name)))
+                        error_schedules.add(schedule.name)
+
+    return {'messages': messages}
+
+
+def get_matching_data(configs=None):
+    if configs is None:
+        configs = _get_pclass_config_list()
+
+    matching_ready = True
+
+    # loop through all active project classes
+    for config in configs:
+        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+            matching_ready = False
+
+    return {'matching_ready': matching_ready}
+
+
+def get_assessment_data(pcs=None):
+    if pcs is None:
+        pcs = _get_pclass_list()
 
     presentation_assessments = False
 
     # loop through all active project classes
     for pclass in pcs:
-
         if pclass.uses_presentations:
             presentation_assessments = True
-            break
 
-    return presentation_assessments
+    return {'has_assessments': presentation_assessments}
+
+
+def get_pclass_config_data(configs=None):
+    if configs is None:
+        configs = _get_pclass_config_list()
+
+    config_list = []
+    config_warning = False
+
+    # loop through all active project classes
+    for config in configs:
+        # compute capacity data for this project class
+        group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = \
+            get_capacity_data(config.project_class)
+
+        if total_capacity < 1.15*config.number_selectors:
+            config_warning = True
+
+        config_list.append((config, total_capacity, total_capacity_bounded))
+
+    return {'config_list': config_list,
+            'config_warning': config_warning}
+
+
+def _get_pclass_list():
+    return db.session.query(ProjectClass) \
+        .filter_by(active=True) \
+        .order_by(ProjectClass.name.asc()).all()
+
+
+def _get_pclass_config_list(pcs=None):
+    if pcs is None:
+        pcs = _get_pclass_config_list()
+
+    cs = [db.session.query(ProjectClassConfig). \
+              filter_by(pclass_id=pclass.id). \
+              order_by(ProjectClassConfig.year.desc()).first() for pclass in pcs]
+
+    # strip out 'None' entries before returning
+    return [x for x in cs if x is not None]
+
+
+def get_ready_to_match_data():
+    pcs = _get_pclass_list()
+    configs = _get_pclass_config_list(pcs=pcs)
+
+    rollover_data = get_rollover_data(configs=configs)
+    matching_data = get_matching_data(configs=configs)
+
+    return rollover_data.update(matching_data)
 
 
 def get_root_dashboard_data():
     current_year = get_current_year()
 
-    pcs = db.session.query(ProjectClass) \
-        .filter_by(active=True) \
-        .order_by(ProjectClass.name.asc()).all()
+    pcs = _get_pclass_list()
+    configs = _get_pclass_config_list(pcs=pcs)
 
-    config_list = []
+    rollover_data = get_rollover_data(configs=configs, current_year=current_year)
+    message_data = get_schedule_message_data(configs=configs)
+    matching_data = get_matching_data(configs=configs)
+    assessment_data = get_assessment_data(pcs=pcs)
+    config_data = get_pclass_config_data(configs=configs)
 
-    matching_ready = True
-    rollover_ready = True
-    rollover_in_progress = False
-    config_warning = False
+    data = {'warning': (config_data['config_warning']
+                        or matching_data['matching_ready']
+                        or rollover_data['rollover_ready']),
+            'current_year': current_year}
 
-    presentation_assessments = False
+    data.update(rollover_data)
+    data.update(message_data)
+    data.update(matching_data)
+    data.update(assessment_data)
+    data.update(config_data)
 
-    messages = []
-    error_events = set()
-    error_schedules = ()
-
-    # loop through all active project classes
-    for pclass in pcs:
-        if pclass.uses_presentations:
-            presentation_assessments = True
-
-        # get current configuration record for this project class
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pclass.id) \
-            .order_by(ProjectClassConfig.year.desc()).first()
-
-        if config is not None:
-            # compute capacity data for this project class
-            group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = \
-                get_capacity_data(pclass)
-
-            if total_capacity < 1.15*config.number_selectors:
-                config_warning = True
-
-            config_list.append((config, total_capacity, total_capacity_bounded))
-
-            # if MainConfig year has already been advanced, then we shouldn't offer
-            # matching or rollover options on the dashboard
-            if config.year < current_year:
-                rollover_in_progress = True
-
-            if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-                matching_ready = False
-
-            if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
-                rollover_ready = False
-
-            if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-                rollover_ready = False
-
-            for period in config.periods:
-                if period.has_deployed_schedule:
-                    schedule = period.deployed_schedule
-
-                    if not schedule.owner.is_valid:
-                        if schedule.event_name not in error_events:
-                            messages.append(('error', 'Event "{event}" and deployed schedule "{name}" for project class '
-                                             '"{pclass}" contain validation errors. Please attend to these as soon '
-                                             'as possible.'.format(name=schedule.name, event=schedule.event_name,
-                                                                   pclass=pclass.name)))
-                            error_events.add(schedule.event_name)
-
-                    elif not schedule.is_valid:
-                        if schedule.name not in error_schedules:
-                            messages.append(('error', 'Deployed schedule "{name}" for event "{event}" and project class "{pclass}") '
-                                             'contains validation errors. Please attend to these as soon as '
-                                             'possible.'.format(name=schedule.name, event=schedule.event_name,
-                                                                pclass=pclass.name)))
-                            error_schedules.add(schedule.name)
-
-    return config_list, (config_warning or matching_ready or rollover_ready), current_year, \
-        rollover_ready, matching_ready, rollover_in_progress, presentation_assessments, messages
+    return data
 
 
 def get_convenor_dashboard_data(pclass, config):
@@ -276,7 +346,6 @@ def get_matching_dashboard_data():
 
 
 def filter_projects(plist, groups, skills, getter=None, setter=None):
-
     projects = []
 
     for item in plist:

@@ -9,7 +9,7 @@
 #
 
 
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, session
 from flask_security import current_user, roles_required
 
 from . import office
@@ -27,9 +27,19 @@ def dashboard():
     Render dashboard for an office user
     :return:
     """
+    pane = request.args.get('pane', None)
+    if pane is None and session.get('office_dashboard_pane'):
+        pane = session['office_dashboard_pane']
+
+    if pane != 'overview' and pane != 'approve':
+        pane = 'overview'
+
+    if pane is not None:
+        session['office_dashboard_pane'] = pane
+
     data = get_root_dashboard_data()
 
-    return render_template('office/dashboard.html', root_data=data)
+    return render_template('office/dashboard.html', root_data=data, pane=pane)
 
 
 @office.route('/settings', methods=['GET', 'POST'])

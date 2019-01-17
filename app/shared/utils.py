@@ -11,7 +11,7 @@
 
 from flask import redirect, url_for, flash, current_app
 from flask_security import current_user
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
@@ -170,6 +170,21 @@ def get_pclass_config_data(configs=None):
             'config_warning': config_warning}
 
 
+def get_approvals_data():
+    to_approve = get_count(db.session.query(StudentData). \
+                           filter(StudentData.validation_state == StudentData.VALIDATION_QUEUED,
+                                  or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
+                                      and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id))))
+
+    to_correct = get_count(db.session.query(StudentData). \
+                           filter(StudentData.validation_state == StudentData.VALIDATION_REJECTED,
+                                  or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
+                                      and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id))))
+
+    return {'approval_user_outstanding': to_approve,
+            'approval_user_rejected': to_correct}
+
+
 def _get_pclass_list():
     return db.session.query(ProjectClass) \
         .filter_by(active=True) \
@@ -209,6 +224,7 @@ def get_root_dashboard_data():
     message_data = get_schedule_message_data(configs=configs)
     matching_data = get_matching_data(configs=configs)
     config_data = get_pclass_config_data(configs=configs)
+    approval_data = get_approvals_data()
 
     data = {'warning': (config_data['config_warning']
                         or matching_data['matching_ready']
@@ -219,6 +235,7 @@ def get_root_dashboard_data():
     data.update(message_data)
     data.update(matching_data)
     data.update(config_data)
+    data.update(approval_data)
 
     return data
 

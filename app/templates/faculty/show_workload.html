@@ -1,0 +1,62 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Show workload
+{% endblock %}
+
+{% block formtitle %}
+    Show my current workload limits
+{% endblock %}
+
+{% block form_content %}
+    <strong>CATS limits</strong>
+
+    <div class="row vertical-top" style="margin-bottom: 5px;">
+        <div class="col-xs-4">
+            Supervising
+        </div>
+        <div class="col-xs-4">
+            2nd-marking
+        </div>
+        <div class="col-xs-4">
+            Presentation assessment
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-xs-4">
+            {% if data.CATS_supervision is none or data.CATS_supervision == 0 %}
+                <span class="label label-default">Default</span>
+            {% else %}
+                <span class="label label-info">{{ data.CATS_supervision }} CATS</span>
+            {% endif %}
+        </div>
+        <div class="col-xs-4">
+            {% if data.CATS_marking is none or data.CATS_marking == 0 %}
+                <span class="label label-default">Default</span>
+            {% else %}
+                <span class="label label-info">{{ data.CATS_marking }} CATS</span>
+            {% endif %}
+        </div>
+        <div class="col-xs-4">
+            {% if data.CATS_presentation is none or data.CATS_presentation == 0 %}
+                <span class="label label-default">Default</span>
+            {% else %}
+                <span class="label label-info">{{ data.CATS_presentation }} CATS</span>
+            {% endif %}
+        </div>
+    </div>
+    <hr class="intro-divider">
+    <p>Most users will be marked <strong>Default</strong>.</p>
+    <p>Users who have significant CATS commitments elsewhere can have their project CATS
+    capped, if approved by the head of department. If you need your CATS to be capped
+    in this way, please contact a system administrator.</p>
+
+    {% if url %}
+        <a href="{{ url }}">
+            <i class="fa fa-backward"></i> Return to previous page
+        </a>
+    {% endif %}
+{% endblock %}

@@ -37,7 +37,7 @@ from config import app_config, site_revision, site_copyright_dates
 from .database import db
 from .models import User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
-from .shared.utils import home_dashboard_url
+from .shared.utils import home_dashboard_url, get_assessment_data
 import app.tasks as tasks
 
 from mdx_smartypants import makeExtension
@@ -264,9 +264,15 @@ def create_app():
         else:
             real_user = None
 
-        return {'real_user': real_user,
-                'website_revision': site_revision,
-                'website_copyright_dates': site_copyright_dates}
+        ctx = {'real_user': real_user,
+               'website_revision': site_revision,
+               'website_copyright_dates': site_copyright_dates}
+
+        if current_user is not None and current_user.has_role('root'):
+            assessment_data = get_assessment_data()
+            ctx.update(assessment_data)
+
+        return ctx
 
 
     @app.context_processor

@@ -295,7 +295,6 @@ _desc_menu = \
 @convenor.route('/overview/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def overview(id):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -348,20 +347,18 @@ def overview(id):
         else:
             feedback_form.feedback_deadline.data = date.today() + timedelta(weeks=3)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
     capacity_data = get_capacity_data(pclass)
 
     return render_template('convenor/dashboard/overview.html', pane='overview',
                            golive_form=golive_form, issue_form=issue_form, feedback_form=feedback_form,
-                           pclass=pclass, config=config, current_year=current_year,
-                           fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, capacity_data=capacity_data)
+                           pclass=pclass, config=config, current_year=current_year, convenor_data=data,
+                           capacity_data=capacity_data)
 
 
 @convenor.route('/attached/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def attached(id):
-
     if id == 0:
         return redirect(url_for('convenor.show_unofferable'))
 
@@ -381,7 +378,7 @@ def attached(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
     groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
@@ -391,10 +388,8 @@ def attached(id):
     filter_record = get_convenor_filter_record(config)
 
     return render_template('convenor/dashboard/attached.html', pane='attached',
-                           pclass=pclass, config=config, current_year=current_year,
-                           fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, groups=groups, skills=skills,
-                           filter_record=filter_record)
+                           pclass=pclass, config=config, current_year=current_year, convenor_data=data,
+                           groups=groups, skills=skills, filter_record=filter_record)
 
 
 @convenor.route('/attached_ajax/<int:id>', methods=['GET', 'POST'])
@@ -496,13 +491,11 @@ def faculty(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/faculty.html', pane='faculty', subpane='list',
                            pclass=pclass, config=config, current_year=current_year,
-                           faculty=faculty, fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count,
-                           enroll_filter=enroll_filter, state_filter=state_filter)
+                           faculty=faculty, convenor_data=data, enroll_filter=enroll_filter, state_filter=state_filter)
 
 
 @convenor.route('faculty_ajax/<int:id>', methods=['GET', 'POST'])
@@ -662,12 +655,11 @@ def selectors(id):
                   DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
-                           pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           pclass=pclass, config=config, convenor_data=data,
+                           current_year=current_year, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter)
 
 
@@ -784,12 +776,10 @@ def enroll_selectors(id):
                   DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/enroll_selectors.html', pane='selectors', subpane='enroll',
-                           pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           pclass=pclass, config=config, convenor_data=data, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter)
 
 
@@ -897,7 +887,6 @@ def delete_selector(sid):
 @convenor.route('/selector_grid/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def selector_grid(id):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -954,12 +943,11 @@ def selector_grid(id):
         .filter_by(active=True) \
         .order_by(ResearchGroup.name.asc()).all()
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selector_grid.html', pane='selectors', subpane='grid',
-                           pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           pclass=pclass, config=config, convenor_data=data,
+                           current_year=current_year, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, groups=groups)
 
 
@@ -1007,7 +995,6 @@ def selector_grid_ajax(id):
 @convenor.route('/submitters/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def submitters(id):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -1063,12 +1050,11 @@ def submitters(id):
                   DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/submitters.html', pane='submitters', subpane='list',
-                           pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           pclass=pclass, config=config, convenor_data=data,
+                           current_year=current_year, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter)
 
 
@@ -1157,12 +1143,11 @@ def enroll_submitters(id):
                   DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/enroll_submitters.html', pane='submitters', subpane='enroll',
-                           pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count, cohorts=sorted(cohorts), progs=progs,
+                           pclass=pclass, config=config, convenor_data=data,
+                           current_year=current_year, cohorts=sorted(cohorts), progs=progs,
                            cohort_filter=cohort_filter, prog_filter=prog_filter)
 
 
@@ -1272,7 +1257,6 @@ def delete_submitter(sid):
 @convenor.route('/liveprojects/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def liveprojects(id):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -1297,7 +1281,7 @@ def liveprojects(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
     groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
@@ -1307,9 +1291,7 @@ def liveprojects(id):
     filter_record = get_convenor_filter_record(config)
 
     return render_template('convenor/dashboard/liveprojects.html', pane='live', subpane='list',
-                           pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count,
+                           pclass=pclass, config=config, convenor_data=data, current_year=current_year,
                            groups=groups, skills=skills, filter_record=filter_record,
                            state_filter=state_filter)
 
@@ -1366,7 +1348,6 @@ def attach_liveproject(id):
     :param id:
     :return:
     """
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -1392,12 +1373,10 @@ def attach_liveproject(id):
         flash('Manual attachment of projects is only possible before student choices are closed', 'error')
         return redirect(request.referrer)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/attach_liveproject.html', pane='live', subpane='attach',
-                           pclass=pclass, config=config, fac_data=fac_data,
-                           current_year=current_year, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count)
+                           pclass=pclass, config=config, convenor_data=data)
 
 
 _attach_liveproject_action = \
@@ -3872,7 +3851,6 @@ def view_feedback(id):
 @convenor.route('/faculty_workload/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def faculty_workload(id):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -3907,13 +3885,11 @@ def faculty_workload(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
-    fac_data, live_count, proj_count, sel_count, sub_count = get_convenor_dashboard_data(pclass, config)
+    data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/workload.html', pane='faculty', subpane='workload',
                            pclass=pclass, config=config, current_year=current_year,
-                           faculty=faculty, fac_data=fac_data, sel_count=sel_count, sub_count=sub_count,
-                           live_count=live_count, proj_count=proj_count,
-                           enroll_filter=enroll_filter, state_filter=state_filter)
+                           faculty=faculty, convenor_data=data, enroll_filter=enroll_filter, state_filter=state_filter)
 
 
 @convenor.route('faculty_workload_ajax/<int:id>', methods=['GET', 'POST'])

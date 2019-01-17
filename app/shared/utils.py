@@ -254,7 +254,12 @@ def get_convenor_dashboard_data(pclass, config):
     sub_count = get_count(config.submitting_students.filter_by(retired=False))
     live_count = get_count(config.live_projects)
 
-    return (fac_count, fac_total), live_count, proj_count, sel_count, sub_count
+    return {'faculty': fac_count,
+            'total_faculty': fac_total,
+            'live_projects': live_count,
+            'attached_projects': proj_count,
+            'selectors': sel_count,
+            'submitters': sub_count}
 
 
 def _compute_group_capacity_data(pclass, group):

@@ -126,6 +126,11 @@ roles_to_users = db.Table('roles_users',
                           db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True),
                           db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
 
+# association table: temporary mask roles
+mask_roles_to_users = db.Table('roles_users_masked',
+                               db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True),
+                               db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
+
 # association table giving faculty research group affiliations
 faculty_affiliations = db.Table('faculty_affiliations',
                                 db.Column('user_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True),
@@ -443,6 +448,7 @@ class User(db.Model, UserMixin):
 
     active = db.Column(db.Boolean())
 
+    # Flask-Security user model: tracking fields
     confirmed_at = db.Column(db.DateTime())
     last_login_at = db.Column(db.DateTime())
     current_login_at = db.Column(db.DateTime())
@@ -450,7 +456,11 @@ class User(db.Model, UserMixin):
     current_login_ip = db.Column(db.String(IP_LENGTH))
     login_count = db.Column(db.Integer())
 
-    roles = db.relationship('Role', secondary=roles_to_users, backref=db.backref('users', lazy='dynamic'))
+    # assigned roles
+    roles = db.relationship('Role', secondary=roles_to_users, lazy='dynamic', backref=db.backref('users', lazy='dynamic'))
+
+    # masked roles
+    mask_roles = db.relationship('Role', secondary=mask_roles_to_users, lazy='dynamic')
 
 
     THEME_DEFAULT = 0
@@ -459,6 +469,15 @@ class User(db.Model, UserMixin):
 
     # theme options
     theme = db.Column(db.Integer(), default=THEME_DEFAULT, nullable=False)
+
+
+    # override inherited has_role method
+    def has_role(self, role, skip_mask=False):
+        if not skip_mask:
+            if get_count(self.mask_roles.filter_by(name=role)) > 0:
+                return False
+
+        return super().has_role(role)
 
 
     # allow user objects to get all project classes so that we can render
@@ -593,6 +612,13 @@ class User(db.Model, UserMixin):
 
         if autocommit:
             db.session.commit()
+
+
+@listens_for(User.roles, 'remove')
+def _User_role_remove_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if value in target.mask_roles:
+            target.mask_roles.remove(value)
 
 
 class ResearchGroup(db.Model, ColouredLabelMixin):

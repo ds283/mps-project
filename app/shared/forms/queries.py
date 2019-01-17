@@ -286,3 +286,9 @@ def ScheduleSessionQuery(schedule_id):
 
 def BuildScheduleSessionLabel(session):
     return session.date_as_string + ' ' + session.session_type_string
+
+
+def GetMaskableRoles(user_id):
+    user = db.session.query(User).filter_by(id=user_id).one()
+
+    return user.roles.filter(Role.name != 'faculty', Role.name != 'student', Role.name != 'office')

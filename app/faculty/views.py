@@ -8,8 +8,9 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template, redirect, url_for, flash, request, session, jsonify
+from flask import render_template, redirect, url_for, flash, request, session, jsonify, current_app
 from flask_security import roles_required, roles_accepted, current_user
+from werkzeug.local import LocalProxy
 
 from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
@@ -23,7 +24,7 @@ from . import faculty
 
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, DescriptionSelectorFormFactory, SupervisorFeedbackForm, \
-    MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsForm, \
+    MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsFormFactory, \
     AvailabilityFormFactory
 from ..admin.forms import LevelSelectorForm
 
@@ -39,6 +40,10 @@ from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime
+
+
+_security = LocalProxy(lambda: current_app.extensions['security'])
+_datastore = LocalProxy(lambda: _security.datastore)
 
 
 _project_menu = \
@@ -2142,6 +2147,7 @@ def settings():
     user = User.query.get_or_404(current_user.id)
     data = FacultyData.query.get_or_404(current_user.id)
 
+    FacultySettingsForm = FacultySettingsFormFactory(current_user)
     form = FacultySettingsForm(obj=data)
     form.user = user
 
@@ -2150,6 +2156,17 @@ def settings():
         user.last_name = form.last_name.data
         user.username = form.username.data
         user.theme = form.theme.data
+
+        if hasattr(form, 'mask_roles'):
+            user.mask_roles = form.mask_roles.data
+
+            root = _datastore.find_role('root')
+            admin = _datastore.find_role('admin')
+
+            if admin in user.mask_roles and root not in user.mask_roles:
+                user.mask_roles.append(root)
+        else:
+            user.mask_roles = []
 
         data.academic_title = form.academic_title.data
         data.use_academic_title = form.use_academic_title.data
@@ -2175,5 +2192,8 @@ def settings():
             form.last_name.data = user.last_name
             form.username.data = user.username
             form.theme.data = user.theme
+
+            if hasattr(form, 'mask_roles'):
+                form.mask_roles.data = user.mask_roles
 
     return render_template('faculty/settings.html', settings_form=form, data=data)

@@ -42,6 +42,22 @@
         {{ wtf.form_field(settings_form.dont_clash_presentations) }}
     </div>
 
+    {% if settings_form.mask_roles %}
+        <div class="well">
+            <p>Temporarily mask roles</p>
+            {% for widget in settings_form.mask_roles %}
+                {{ wtf.form_field(widget) }}
+            {% else %}
+                <span class="label label-danger">No roles currently available</span>
+            {% endfor %}
+            {% if settings_form.mask_roles.errors %}
+                {% for error in settings_form.mask_roles.errors %}
+                    <p class="help-block">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+    {% endif %}
+
     {{ wtf.form_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

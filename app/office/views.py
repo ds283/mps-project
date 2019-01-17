@@ -27,7 +27,6 @@ def dashboard():
     Render dashboard for an office user
     :return:
     """
-
     data = get_root_dashboard_data()
 
     return render_template('office/dashboard.html', root_data=data)

@@ -10,7 +10,8 @@
     {% block pillblock %}
         <ul class="nav nav-pills dashboard-nav">
             {% if current_user.has_role('root') %}
-                {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments, messages = root_dash_data %}
+                {% set config_warning = root_dash_data['warning'] %}
+                {% set messages = root_dash_data['messages'] %}
                 <li {% if pane == 'system' %}class="active"{% endif %}>
                     <a href="{{ url_for('faculty.dashboard', pane='system') }}">
                         {% if config_warning or (messages is not none and messages|length > 0) %}
@@ -81,7 +82,7 @@
                 {% else %}
 
                     <div class="well">
-                        <h3 class="dashboard-subtitle"> You have no active project enrollments </h3>
+                        <h3 class="dashboard-subtitle"> You have no active project enrollments</h3>
                         <p>
                             Project classes for which you are enrolled, but are not active because of
                             sabbatical, buy-out or exemption, are not shown.

@@ -1,5 +1,6 @@
-{% macro admin_dashboard_card(root_dash_data) %}
-    {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments, messages = root_dash_data %}
+{% macro admin_dashboard_card(data) %}
+    {% set config_list = data['config_list'] %}
+    {% set current_year = data['current_year'] %}
 
     <p><span class="dashboard-project-title">Administrator dashboard</span></p>
 

@@ -1,14 +1,17 @@
 {% from "macros.html" import flashed_messages %}
 
-{% macro root_messages(root_dash_data) %}
-    {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments, messages = root_dash_data %}
+{% macro root_messages(data) %}
+    {% set messages = data['messages'] %}
     {% if messages is defined and messages is not none and messages|length > 0 %}
         {{ flashed_messages(messages=messages, default_category='error', dismissible=True) }}
     {% endif %}
 {% endmacro %}
 
-{% macro root_functions(root_dash_data) %}
-    {% set config_list, config_warning, current_year, rollover_ready, matching_ready, rollover_in_progress, assessments, messages = root_dash_data %}
+{% macro root_functions(data) %}
+    {% set rollover_ready = data['rollover_ready'] %}
+    {% set rollover_in_progress = data['rollover_in_progress'] %}
+    {% set matching_ready = data['matching_ready'] %}
+    {% set assessments = data['has_assessments'] %}
 
     {% if assessments %}
         <div class="panel panel-info">

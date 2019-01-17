@@ -381,6 +381,11 @@
                                 {% if current_user.has_role('root') %}
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Sysadmin only</li>
+                                    {% if has_assessments is defined and has_assessments %}
+                                        <li><a href="{{ url_for('admin.manage_assessments') }}">
+                                            <i class="fa fa-cogs"></i> Manage assessments
+                                        </a></li>
+                                    {% endif %}
                                     <li><a href="{{ url_for('admin.edit_project_classes') }}">
                                         <i class="fa fa-cogs"></i> Project classes
                                     </a></li>

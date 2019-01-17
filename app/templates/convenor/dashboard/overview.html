@@ -62,6 +62,7 @@
                 {% endif %}
 
                 {% set state = config.selector_lifecycle %}
+                {% set sel_count = convenor_data['selectors'] %}
                 {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
 
                     {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}

@@ -17,6 +17,12 @@
 {% endblock %}
 
 {% block pillblock %}
+    {% set enrolled = convenor_data['faculty'] %}
+    {% set total = convenor_data['total_faculty'] %}
+    {% set live_count = convenor_data['live_projects'] %}
+    {% set proj_count = convenor_data['attached_projects'] %}
+    {% set sel_count = convenor_data['selectors'] %}
+    {% set sub_count = convenor_data['submitters'] %}
     <ul class="nav nav-pills dashboard-nav">
         <li {% if pane == 'overview' %}class="active"{% endif %}><a href="{{ url_for('convenor.overview', id=pclass.id) }}">
             Overview
@@ -29,8 +35,7 @@
         </a></li>
         <li {% if pane == 'faculty' %}class="active"{% endif %}><a href="{{ url_for('convenor.faculty', id=pclass.id) }}">
             Faculty
-            {% if fac_data is defined %}
-                {% set enrolled, total = fac_data %}
+            {% if enrolled is defined and total is defined%}
                 <span class="badge">{{ enrolled }}/{{ total }}</span>
             {% else %}
                 <span class="badge">0</span>

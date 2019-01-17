@@ -15,26 +15,17 @@ from .shared import menu, name
 
 _roles = \
 """
-{% if user.has_role('faculty') %}
-   <span class="label label-info">faculty</span>
-{% elif user.has_role('office') %}
-   <span class="label label-info">office</span>
-{% elif user.has_role('student') %}
-   <span class="label label-info">student</span>
-{% endif %}
-{% if user.has_role('exec') %}
-   <span class="label label-primary">exec</span>
-{% endif %}
-{% if user.has_role('admin') %}
-   <span class="label label-warning">admin</span>
-{% endif %}
-{% if user.has_role('root') %}
-   <span class="label label-danger">sysadmin</span>
-{% endif %}
+{% for r in roles %}
+    {% if user.has_role(r.name) %}
+        {{ r.make_label()|safe }}
+    {% endif %}
+{% else %}
+    <span class="label label-default">None</span>
+{% endfor %}
 """
 
 
-def build_accounts_data(users):
+def build_accounts_data(users, roles):
 
     data = [{'name': {
                 'display': render_template_string(name, u=u),
@@ -60,7 +51,7 @@ def build_accounts_data(users):
              },
              'ip': u.last_login_ip if u.last_login_ip is not None and len(u.last_login_ip) > 0
                  else '<span class="label label-default">None</a>',
-             'role': render_template_string(_roles, user=u),
+             'role': render_template_string(_roles, user=u, roles=roles),
              'menu': render_template_string(menu, user=u, pane='accounts')} for u in users]
 
     return jsonify(data)

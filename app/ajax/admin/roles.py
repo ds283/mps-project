@@ -32,6 +32,7 @@ def roles_data(roles):
 
     data = [{'name': r.name,
              'description': r.description,
+             'color': r.make_label(r.colour),
              'menu': render_template_string(_menu, role=r)} for r in roles]
 
     return jsonify(data)

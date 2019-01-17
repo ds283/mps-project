@@ -394,7 +394,7 @@ class MainConfig(db.Model):
     year = db.Column(db.Integer(), primary_key=True)
 
 
-class Role(db.Model, RoleMixin):
+class Role(db.Model, RoleMixin, ColouredLabelMixin):
     """
     Model a row from the roles table in the application database
     """
@@ -402,9 +402,26 @@ class Role(db.Model, RoleMixin):
     # make table name plural
     __tablename__ = 'roles'
 
+    # unique id
     id = db.Column(db.Integer(), primary_key=True)
+
+    # role name
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
+
+    # role description
     description = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+
+    def make_label(self, text=None, user_classes=None):
+        """
+        Make appropriately coloured label
+        :param text:
+        :return:
+        """
+        if text is None:
+            text = self.name
+
+        return self._make_label(text, user_classes)
 
 
 class User(db.Model, UserMixin):
@@ -639,7 +656,7 @@ class ResearchGroup(db.Model, ColouredLabelMixin):
 
     def make_label(self, text=None, user_classes=None):
         """
-        Make approriately coloured label
+        Make appropriately coloured label
         :param text:
         :return:
         """
@@ -8810,7 +8827,7 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
 
     def make_label(self, text=None, user_classes=None):
         """
-        Make approriately coloured label
+        Make appropriately coloured label
         :param text:
         :return:
         """

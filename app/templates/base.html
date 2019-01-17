@@ -264,13 +264,13 @@
         <li class="dropdown-header">Convenorships</li>
         {% for project_class in pclasses %}
             <li><a href="{{ url_for('convenor.overview', id=project_class.id) }}">
-                <i class="fa fa-briefcase"></i> {{ project_class.name }}
+                <i class="fa fa-briefcase"></i> {{ project_class.name }}...
             </a></li>
         {% endfor %}
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
             <li role="separator" class="divider"></li>
             <li><a href="{{ url_for('convenor.show_unofferable', id=0) }}">
-                <i class="fa fa-exclamation-circle"></i> Unofferable projects
+                <i class="fa fa-exclamation-circle"></i> Unofferable projects...
             </a></li>
         {% endif %}
         </ul>
@@ -314,18 +314,18 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('faculty.edit_projects') }}">
-                                    <i class="fa fa-pencil"></i> My project library
+                                    <i class="fa fa-pencil"></i> My project library...
                                 </a></li>
                                 <li><a href="{{ url_for('faculty.assessor_for') }}">
-                                    <i class="fa fa-book"></i> My assessor projects
+                                    <i class="fa fa-book"></i> My assessor projects...
                                 </a></li>
                                 <li role="separator" class="divider"></li>
                                 <li class="dropdown-header">Browse history</li>
                                 <li><a href="{{ url_for('faculty.past_projects') }}">
-                                    <i class="fa fa-archive"></i> Offered projects
+                                    <i class="fa fa-archive"></i> Offered projects...
                                 </a></li>
                                 <li><a href="#">
-                                    <i class="fa fa-archive"></i> Students
+                                    <i class="fa fa-archive"></i> Students...
                                 </a></li>
                             </ul>
                         </li>
@@ -339,7 +339,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('exec.workload') }}">
-                                    <i class="fa fa-line-chart"></i> Workload
+                                    <i class="fa fa-line-chart"></i> Workload...
                                 </a></li>
                             </ul>
                         </li>
@@ -362,41 +362,41 @@
                             <ul class="dropdown-menu">
                                 {% if current_user.has_role('admin') or current_user.has_role('root') %}
                                     <li><a href="{{ url_for('admin.edit_users') }}">
-                                        <i class="fa fa-users"></i> Users
+                                        <i class="fa fa-users"></i> Manage users...
                                     </a></li>
                                     <li role="separator" class="divider"></li>
                                 {% endif %}
                                 <li class="dropdown-header">Tools</li>
                                 <li><a href="{{ url_for('admin.edit_messages') }}">
-                                    <i class="fa fa-comment"></i> Messages
+                                    <i class="fa fa-comment"></i> Messages...
                                 </a></li>
                                 <li role="separator" class="divider"></li>
                                 <li class="dropdown-header">Project components</li>
                                 <li><a href="{{ url_for('admin.edit_skills') }}">
-                                    <i class="fa fa-cogs"></i> Transferable skills
+                                    <i class="fa fa-cogs"></i> Transferable skills...
                                 </a></li>
                                 <li><a href="{{ url_for('admin.edit_supervisors') }}">
-                                    <i class="fa fa-cogs"></i> Supervisory team
+                                    <i class="fa fa-cogs"></i> Supervisory team...
                                 </a></li>
                                 {% if current_user.has_role('root') %}
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Sysadmin only</li>
                                     {% if has_assessments is defined and has_assessments %}
                                         <li><a href="{{ url_for('admin.manage_assessments') }}">
-                                            <i class="fa fa-cogs"></i> Manage assessments
+                                            <i class="fa fa-cogs"></i> Manage assessments...
                                         </a></li>
                                     {% endif %}
                                     <li><a href="{{ url_for('admin.edit_project_classes') }}">
-                                        <i class="fa fa-cogs"></i> Project classes
+                                        <i class="fa fa-cogs"></i> Project classes...
                                     </a></li>
                                     <li><a href="{{ url_for('admin.edit_groups') }}">
-                                        <i class="fa fa-cogs"></i> Research groups
+                                        <i class="fa fa-cogs"></i> Research groups...
                                     </a></li>
                                     <li><a href="{{ url_for('admin.edit_degree_programmes') }}">
-                                        <i class="fa fa-cogs"></i> Degree programmes
+                                        <i class="fa fa-cogs"></i> Degree programmes...
                                     </a></li>
                                     <li><a href="{{ url_for('admin.edit_rooms') }}">
-                                        <i class="fa fa-cogs"></i> Presentation venues
+                                        <i class="fa fa-cogs"></i> Presentation venues...
                                     </a></li>
                                 {% endif %}
                             </ul>
@@ -412,19 +412,19 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('admin.edit_roles') }}">
-                                    <i class="fa fa-cogs"></i> Role editor
+                                    <i class="fa fa-cogs"></i> Role editor...
                                 </a></li>
                                 <li><a href="{{ url_for('admin.email_log') }}">
-                                    <i class="fa fa-wrench"></i> Email log
+                                    <i class="fa fa-wrench"></i> Email log...
                                 </a></li>
                                 <li><a href="{{ url_for('admin.background_tasks') }}">
-                                    <i class="fa fa-wrench"></i> Background tasks
+                                    <i class="fa fa-wrench"></i> Background tasks...
                                 </a></li>
                                 <li><a href="{{ url_for('admin.scheduled_tasks') }}">
-                                    <i class="fa fa-wrench"></i> Scheduled tasks
+                                    <i class="fa fa-wrench"></i> Scheduled tasks...
                                 </a></li>
                                 <li><a href="{{ url_for('admin.backups_overview') }}">
-                                    <i class="fa fa-wrench"></i> Manage backups
+                                    <i class="fa fa-wrench"></i> Manage backups...
                                 </a></li>
                             </ul>
                         </li>
@@ -447,7 +447,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('home.homepage') }}">
-                                    <i class="fa fa-line-chart"></i> Dashboard
+                                    <i class="fa fa-line-chart"></i> Dashboard...
                                 </a></li>
                                 {% if current_user.faculty_data.has_editable_availability_requests %}
                                     <li role="separator" class="divider"></li>
@@ -500,7 +500,7 @@
                                 {% endif %}
                                 <li>
                                     <a href="{{ url_for_security('change_password') }}">
-                                        <i class="fa fa-cogs"></i> Change password
+                                        <i class="fa fa-cogs"></i> Change password...
                                     </a>
                                 </li>
                                 <li role="separator" class="divider"></li>

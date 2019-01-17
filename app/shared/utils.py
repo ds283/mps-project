@@ -204,10 +204,10 @@ def get_root_dashboard_data():
     pcs = _get_pclass_list()
     configs = _get_pclass_config_list(pcs=pcs)
 
+    # don't need get_assessment_data since these keys are made available in the global context
     rollover_data = get_rollover_data(configs=configs, current_year=current_year)
     message_data = get_schedule_message_data(configs=configs)
     matching_data = get_matching_data(configs=configs)
-    assessment_data = get_assessment_data(pcs=pcs)
     config_data = get_pclass_config_data(configs=configs)
 
     data = {'warning': (config_data['config_warning']
@@ -218,7 +218,6 @@ def get_root_dashboard_data():
     data.update(rollover_data)
     data.update(message_data)
     data.update(matching_data)
-    data.update(assessment_data)
     data.update(config_data)
 
     return data

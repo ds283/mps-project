@@ -1,0 +1,66 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    Assign roles
+{% endblock %}
+
+{% block formtitle %}
+    Assign roles for user <i class="fa fa-user"></i> <strong>{{ user.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <div class="panel panel-default">
+        <div class="panel-body">
+            {% set ns = namespace(count=0) %}
+            {% if user and roles %}
+                <h4>
+                    {% for role in roles %}
+                        {% if user.has_role(role.name) %}
+                            <a class="btn btn-default selection-label" style="{{ role.make_CSS_style() }}"
+                               href="{{ url_for('admin.remove_role', user_id=user.id, role_id=role.id, url=url) }}">
+                                <i class="fa fa-times"></i>
+                                {{ role.name }}
+                            </a>
+                            {% set ns.count = ns.count + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if ns.count == 0 %}
+                        <p>No roles currently assigned</p>
+                    {% endif %}
+                </h4>
+            {% else %}
+                <p>No roles currently assigned</p>
+            {% endif %}
+        </div>
+        <div class="panel-footer">
+            {% set ns = namespace(count=0) %}
+            {% if user and roles %}
+                <h4>
+                    {% for role in roles %}
+                        {% if not user.has_role(role.name) %}
+                            <a class="btn btn-default selection-label" style="{{ role.make_CSS_style() }}"
+                               href="{{ url_for('admin.attach_role', user_id=user.id, role_id=role.id, url=url) }}">
+                                <i class="fa fa-plus"></i>
+                                {{ role.name }}
+                            </a>
+                            {% set ns.count = ns.count + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if ns.count == 0 %}
+                        <p>No roles currently available</p>
+                    {% endif %}
+                </h4>
+            {% else %}
+                <p>No roles currently available</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if url %}
+        <a href="{{ url }}">
+            <i class="fa fa-backward"></i> Return to user dashboard
+        </a>
+    {% endif %}
+{% endblock %}

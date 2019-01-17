@@ -591,30 +591,6 @@ def remove_root(id):
     return redirect(request.referrer)
 
 
-@admin.route('/make_exec/<int:id>')
-@roles_required('admin', 'root')
-def make_exec(id):
-
-    user = User.query.get_or_404(id)
-
-    _datastore.add_role_to_user(user, 'exec')
-    _datastore.commit()
-
-    return redirect(request.referrer)
-
-
-@admin.route('/remove_exec/<int:id>')
-@roles_required('admin', 'root')
-def remove_exec(id):
-
-    user = User.query.get_or_404(id)
-
-    _datastore.remove_role_from_user(user, 'exec')
-    _datastore.commit()
-
-    return redirect(request.referrer)
-
-
 @admin.route('/activate_user/<int:id>')
 @roles_accepted('admin', 'root')
 def activate_user(id):
@@ -2664,6 +2640,87 @@ def edit_role(id):
         return redirect(url_for('admin.edit_roles'))
 
     return render_template('admin/edit_role.html', role=data, title='Edit role', role_form=form)
+
+
+@admin.route('/assign_roles/<int:id>')
+@roles_required('root')
+def assign_roles(id):
+    """
+    Assign roles to a user
+    :param id:
+    :return:
+    """
+    data = User.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    roles = db.session.query(Role) \
+        .filter(Role.name != 'root', Role.name != 'admin',
+                Role.name != 'faculty', Role.name != 'student', Role.name != 'office').all()
+
+    return render_template('admin/users_dashboard/assign_roles.html', roles=roles, user=data, url=url)
+
+
+@admin.route('/attach_role/<int:user_id>/<int:role_id>')
+@roles_required('root')
+def attach_role(user_id, role_id):
+    """
+    Attach a role to a user
+    :param user_id:
+    :param role_id:
+    :return:
+    """
+    data = User.query.get_or_404(user_id)
+    role = Role.query.get_or_404(role_id)
+
+    url = request.args.get('url')
+    if url is None:
+        url = request.referrer      # this will lose original return destination
+
+    if role.name == 'root' or role.name == 'admin':
+        flash('Admin roles cannot be assigned through the API', 'error')
+        return redirect(request.referrer)
+
+    if role.name == 'faculty' or role.name == 'office' or role.name == 'student':
+        flash('Account types cannot be assigned through the API', 'error')
+        return redirect(request.referrer)
+
+    _datastore.add_role_to_user(data, role.name)
+    _datastore.commit()
+
+    return redirect(url_for('admin.assign_roles', id=user_id, url=url))
+
+
+@admin.route('/remove_role/<int:user_id>/<int:role_id>')
+@roles_required('root')
+def remove_role(user_id, role_id):
+    """
+    Remove a role from a user
+    :param user_id:
+    :param role_id:
+    :return:
+    """
+    data = User.query.get_or_404(user_id)
+    role = Role.query.get_or_404(role_id)
+
+    url = request.args.get('url')
+    if url is None:
+        url = request.referrer      # this will lose original return destination
+
+    if role.name == 'root' or role.name == 'admin':
+        flash('Admin roles cannot be assigned through the API', 'error')
+        return redirect(request.referrer)
+
+    if role.name == 'faculty' or role.name == 'office' or role.name == 'student':
+        flash('Account types cannot be assigned through the API', 'error')
+        return redirect(request.referrer)
+
+    _datastore.remove_role_from_user(data, role.name)
+    _datastore.commit()
+
+    return redirect(url_for('admin.assign_roles', id=user_id, url=url))
 
 
 @admin.route('/email_log', methods=['GET', 'POST'])

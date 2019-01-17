@@ -79,7 +79,7 @@ menu = \
                 {% else %}
                     <li {% if not user.is_active %}class="disabled"{% endif %}>
                         <a {% if user.is_active %}href="{{ url_for('admin.make_admin', id=user.id) }}{% endif %}">
-                            <i class="fa fa-wrench"></i> Make admin
+                            <i class="fa fa-wrench"></i> Promote to admin
                         </a>
                     </li>
                 {% endif %}
@@ -95,27 +95,19 @@ menu = \
                 {% else %}
                     <li {% if not user.is_active %}class="disabled"{% endif %}>
                         <a {% if user.is_active %}href="{{ url_for('admin.make_root', id=user.id) }}{% endif %}">
-                            <i class="fa fa-wrench"></i> Make sysadmin
+                            <i class="fa fa-wrench"></i> Promote to sysadmin
                         </a>
                     </li>
                 {% endif %}
             {% endif %}
     
-            {# check whether we should offer executive role #}
-            {% if not user.has_role('student') %}
-                {% if user.has_role('exec') %}
-                    <li>
-                        <a href="{{ url_for('admin.remove_exec', id=user.id) }}">
-                            <i class="fa fa-wrench"></i> Remove executive
-                        </a>
-                    </li>
-                {% else %}
-                    <li>
-                        <a href="{{ url_for('admin.make_exec', id=user.id) }}">
-                            <i class="fa fa-wrench"></i> Make executive
-                        </a>
-                    </li>
-                {% endif %}
+            {# check whether we should offer role editor in the menu #}
+            {% if current_user.has_role('root') and not user.has_role('student') %}
+                <li>
+                    <a href="{{ url_for('admin.assign_roles', id=user.id) }}">
+                        <i class="fa fa-wrench"></i> Assign roles...
+                    </a>
+                </li>
             {% endif %}
             
             {% if current_user.has_role('root') and not current_user.has_role('student') %}

@@ -457,6 +457,16 @@
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Faculty options</li>
                                     <li>
+                                        <a href="{{ url_for('faculty.show_enrollments') }}">
+                                            <i class="fa fa-info-circle"></i> Show enrollments...
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="{{ url_for('faculty.show_workload') }}">
+                                            <i class="fa fa-info-circle"></i> Show workload limits...
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a href="{{ url_for('faculty.settings') }}">
                                             <i class="fa fa-cogs"></i> Settings...
                                         </a>

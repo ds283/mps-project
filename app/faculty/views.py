@@ -2098,6 +2098,40 @@ def change_availability():
     return render_template('faculty/change_availability.html')
 
 
+@faculty.route('/show_enrollments')
+@roles_required('faculty')
+def show_enrollments():
+    data = FacultyData.query.get_or_404(current_user.id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+        # avoid circular references
+        if 'show_enrollments' in url:
+            url = None
+
+    pclasses = ProjectClass.query.filter_by(active=True)
+    return render_template('faculty/show_enrollments.html', data=data, url=url,
+                           project_classes=pclasses)
+
+
+@faculty.route('/show_workload')
+@roles_required('faculty')
+def show_workload():
+    data = FacultyData.query.get_or_404(current_user.id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+        # avoid circular references
+        if 'show_workload' in url:
+            url = None
+
+    return render_template('faculty/show_workload.html', data=data, url=url)
+
+
 @faculty.route('/settings', methods=['GET', 'POST'])
 @roles_required('faculty')
 def settings():
@@ -2142,5 +2176,4 @@ def settings():
             form.username.data = user.username
             form.theme.data = user.theme
 
-    return render_template('faculty/settings.html', settings_form=form, data=data,
-                           project_classes=ProjectClass.query.filter_by(active=True))
+    return render_template('faculty/settings.html', settings_form=form, data=data)

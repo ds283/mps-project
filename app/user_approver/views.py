@@ -25,6 +25,8 @@ from ..shared.conversions import is_integer
 
 import app.ajax as ajax
 
+from datetime import datetime
+
 
 @user_approver.route('/validate')
 @roles_required('user_approver')
@@ -115,6 +117,8 @@ def approve(id):
     text = request.args.get('text', None)
 
     record.validation_state = StudentData.VALIDATION_VALIDATED
+    record.validator_id = current_user.id
+    record.validated_timestamp = datetime.now()
     db.session.commit()
 
     return redirect(url_for('user_approver.validate', url=url, text=text))
@@ -129,6 +133,8 @@ def reject(id):
     text = request.args.get('text', None)
 
     record.validation_state = StudentData.VALIDATION_REJECTED
+    record.validator_id = current_user.id
+    record.validated_timestamp = datetime.now()
     db.session.commit()
 
     return redirect(url_for('user_approver.validate', url=url, text=text))

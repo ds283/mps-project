@@ -11,7 +11,7 @@
 from flask import render_template_string, jsonify, url_for
 
 from ...database import db
-from ...models import SelectingStudent, LiveProject, Bookmark, SelectionRecord
+from ...models import ConfirmRequest, SelectingStudent, LiveProject, Bookmark
 from ...cache import cache
 
 from sqlalchemy.event import listens_for
@@ -165,28 +165,22 @@ def _element(sel_id, project_id):
              'menu': render_template_string(_menu, sel=sel, project=p)}
 
 
-@listens_for(SelectingStudent.confirm_requests, 'append')
-def _SelectingStudent_confirm_requests_append_handler(value, target, initiator):
+@listens_for(ConfirmRequest, 'before_insert')
+def _ConfirmRequest_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, value.id, target.id)
+        cache.delete_memoized(_element, target.owner_id, target.project_id)
 
 
-@listens_for(SelectingStudent.confirm_requests, 'remove')
-def _SelectingStudent_confirm_requests_remove_handler(value, target, initiator):
+@listens_for(ConfirmRequest, 'before_update')
+def _ConfirmRequest_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, value.id, target.id)
+        cache.delete_memoized(_element, target.owner_id, target.project_id)
 
 
-@listens_for(SelectingStudent.confirmed, 'append')
-def _SelectingStudent_confirmed_append_handler(value, target, initiator):
+@listens_for(ConfirmRequest, 'before_delete')
+def _ConfirmRequest_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, value.id, target.id)
-
-
-@listens_for(SelectingStudent.confirmed, 'remove')
-def _SelectingStudent_confirmed_remove_handler(value, target, initiator):
-    with db.session.no_autoflush:
-        cache.delete_memoized(_element, value.id, target.id)
+        cache.delete_memoized(_element, target.owner_id, target.project_id)
 
 
 @listens_for(Bookmark, 'before_update')

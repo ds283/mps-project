@@ -26,7 +26,8 @@
 
                         <hr class="intro-divider">
 
-                        {% for project in sel.confirmed %}
+                        {% for req in sel.requests_confirmed %}
+                            {% set project = req.project %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
@@ -83,7 +84,8 @@
 
                         {% if sel.number_confirmed > 0 and sel.number_pending > 0 %}<hr class="intro-divider">{% endif %}
 
-                        {% for project in sel.confirm_requests %}
+                        {% for req in sel.requests_waiting %}
+                            {% set project = req.project %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">

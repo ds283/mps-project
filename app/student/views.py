@@ -415,19 +415,17 @@ def request_confirmation(sid, pid):
         return redirect(request.referrer)
 
     # check if confirmation has already been issued
-    if sel in project.confirmed_students:
-
+    if project.is_confirmed(sel):
         flash('Confirmation has already been issued for project "{n}"'.format(n=project.name), 'info')
         return redirect(request.referrer)
 
     # check if confirmation is already pending
-    if sel in project.confirm_waiting:
-
+    if project.is_waiting(sel):
         flash('Confirmation is already pending for project "{n}"'.format(n=project.name), 'info')
         return redirect(request.referrer)
 
     # add confirm request
-    project.confirm_waiting.append(sel)
+    db.session.add(project.make_confirm_request(sel))
     db.session.commit()
 
     return redirect(request.referrer)
@@ -455,14 +453,14 @@ def cancel_confirmation(sid, pid):
         return redirect(request.referrer)
 
     # check if confirmation has already been issued
-    if sel in project.confirmed_students:
-
+    if project.is_confirmed(sel):
         flash('Confirmation has already been issued for project "{n}"'.format(n=project.name), 'info')
         return redirect(request.referrer)
 
     # remove confirm request if one exists
-    if sel in project.confirm_waiting:
-        project.confirm_waiting.remove(sel)
+    if project.is_waiting(sel):
+        req = project.get_confirm_request(sel)
+        db.session.delete(req)
         db.session.commit()
 
     return redirect(request.referrer)

@@ -145,7 +145,7 @@
                 </div>
                 <div class="col-xs-4">
                     {% if not project.is_available(sel) %}
-                        {% if sel in project.confirm_waiting %}
+                        {% if project.is_confirmed(sel) %}
                             <div class="row vertical-align">
                                 <div class="col-xs-8">
                                     <span class="label label-info"><i class="fa fa-clock-o"></i> Meeting confirmation requested</span>
@@ -173,7 +173,7 @@
                             </div>
                         {% endif %}
                     {% else %}
-                        {% if sel in project.confirmed_students %}
+                        {% if project.is_confirmed(sel) %}
                             <span class="label label-success"><i class="fa fa-check"></i> Available for selection</span>
                             <span class="label label-primary"><i class="fa fa-check"></i> Meeting confirmed</span>
                         {% else %}

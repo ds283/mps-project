@@ -3,37 +3,35 @@
 {% from "admin/admin_dashboard/admin_card.html" import admin_dashboard_card %}
 {% from "user_approver/dashboard_panel.html" import user_approver_panel %}
 
-{% if current_user.has_role('user_approver') %}
-    {% block pillblock %}
-        <ul class="nav nav-pills dashboard-nav">
-            {% set warning = root_data['warning'] %}
-            {% set messages = root_data['messages'] %}
-            <li {% if pane == 'overview' %}class="active"{% endif %}>
-                <a href="{{ url_for('office.dashboard', pane='overview') }}">
-                    {% if warning or (messages is not none and messages|length > 0) %}
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        {% set warning = root_data['warning'] %}
+        {% set messages = root_data['messages'] %}
+        <li {% if pane == 'overview' %}class="active"{% endif %}>
+            <a href="{{ url_for('office.dashboard', pane='overview') }}">
+                {% if warning or (messages is not none and messages|length > 0) %}
+                    <i class="fa fa-exclamation-triangle"></i>
+                {% endif %}
+                Administration
+            </a>
+        </li>
+        {% set warning = approvals_data['approval_user_rejected'] > 0 %}
+        {% set to_approve = approvals_data['approval_user_outstanding'] %}
+        {% if current_user.has_role('user_approver') or (warning and (current_user.has_role('admin') or current_user.has_role('root'))) %}
+            <li {% if pane == 'approve' %}class="active"{% endif %}>
+                <a href="{{ url_for('office.dashboard', pane='approve') }}">
+                    {% if warning %}
                         <i class="fa fa-exclamation-triangle"></i>
                     {% endif %}
-                    Administration
+                    Approvals
+                    {% if to_approve > 0 %}
+                        <span class="badge badge-info">{{ to_approve }}</span>
+                    {% endif %}
                 </a>
             </li>
-            {% if current_user.has_role('user_approver') %}
-                {% set warning = approvals_data['approval_user_rejected'] > 0 %}
-                {% set to_approve = approvals_data['approval_user_outstanding'] %}
-                <li {% if pane == 'approve' %}class="active"{% endif %}>
-                    <a href="{{ url_for('office.dashboard', pane='approve') }}">
-                        {% if warning %}
-                            <i class="fa fa-exclamation-triangle"></i>
-                        {% endif %}
-                        Approvals
-                        {% if to_approve > 0 %}
-                            <span class="badge badge-info">{{ to_approve }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-            {% endif %}
-        </ul>
-    {% endblock %}
-{% endif %}
+        {% endif %}
+    </ul>
+{% endblock %}
 
 {% block title %}
     Dashboard
@@ -48,8 +46,8 @@
                     {{ admin_dashboard_card(root_data) }}
                 {% endif %}
 
-                {% if current_user.has_role('user_approver') and pane == 'approve' %}
-                    {{ user_approver_panel(approvals_data) }}
+                {% if current_user.has_role('user_approver') or (approvals_data['approval_user_rejected'] > 0 and (current_user.has_role('admin') or current_user.has_role('root'))) and pane == 'approve' %}
+                    {{ user_approver_panel(approvals_data, current_user) }}
                 {% endif %}
             </div>
         </div>

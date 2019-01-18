@@ -38,11 +38,7 @@ def dashboard():
         session['office_dashboard_pane'] = pane
 
     root_data = get_root_dashboard_data()
-
-    if current_user.has_role('user_approver'):
-        approvals_data = get_approvals_data()
-    else:
-        approvals_data = None
+    approvals_data = get_approvals_data()
 
     return render_template('office/dashboard.html', root_data=root_data, approvals_data=approvals_data, pane=pane)
 

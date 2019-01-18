@@ -1196,7 +1196,8 @@ def dashboard():
             else:
                 pane = None
     elif pane == 'approve':
-        if not current_user.has_role('user_approver'):
+        if not (current_user.has_role('user_approver')
+                or current_user.has_role('admin') or current_user.has_role('root')):
             if len(valid_panes) > 0:
                 pane = valid_panes[0]
             else:
@@ -1216,10 +1217,7 @@ def dashboard():
     else:
         root_dash_data = None
 
-    if current_user.has_role('user_approver'):
-        approvals_data = get_approvals_data()
-    else:
-        approvals_data = None
+    approvals_data = get_approvals_data()
 
     return render_template('faculty/dashboard/dashboard.html', enrollments=enrollments, messages=messages,
                            root_dash_data=root_dash_data, approvals_data=approvals_data, pane=pane)

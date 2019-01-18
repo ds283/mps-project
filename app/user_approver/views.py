@@ -135,7 +135,7 @@ def reject(id):
 
 
 @user_approver.route('/correct')
-@roles_required('user_approver')
+@roles_accepted('user_approver', 'admin', 'root')
 def correct():
     """
     Correct a student record that has been rejected for containing errors
@@ -175,7 +175,7 @@ def correct():
 
 
 @user_approver.route('/correct_ajax')
-@roles_required('user_approver')
+@roles_accepted('user_approver', 'admin', 'root')
 def correct_ajax():
     url = request.args.get('url', None)
     text = request.args.get('text', None)

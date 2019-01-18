@@ -7,56 +7,54 @@
 {% from "user_approver/dashboard_panel.html" import user_approver_panel %}
 {% from "macros.html" import message_card %}
 
-{% if (enrollments and enrollments|length > 0) or current_user.has_role('root') or current_user.has_role('user_approver') %}
-    {% block pillblock %}
-        <ul class="nav nav-pills dashboard-nav">
-            {% if current_user.has_role('root') %}
-                {% set warning = root_dash_data['warning'] %}
-                {% set messages = root_dash_data['messages'] %}
-                <li {% if pane == 'system' %}class="active"{% endif %}>
-                    <a href="{{ url_for('faculty.dashboard', pane='system') }}">
-                        {% if warning or (messages is not none and messages|length > 0) %}
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        {% if current_user.has_role('root') %}
+            {% set warning = root_dash_data['warning'] %}
+            {% set messages = root_dash_data['messages'] %}
+            <li {% if pane == 'system' %}class="active"{% endif %}>
+                <a href="{{ url_for('faculty.dashboard', pane='system') }}">
+                    {% if warning or (messages is not none and messages|length > 0) %}
+                        <i class="fa fa-exclamation-triangle"></i>
+                    {% endif %}
+                    Administration
+                </a>
+            </li>
+        {% endif %}
+        {% set warning = approvals_data['approval_user_rejected'] > 0 %}
+        {% set to_approve = approvals_data['approval_user_outstanding'] %}
+        {% if current_user.has_role('user_approver') or (warning and (current_user.has_role('admin') or current_user.has_role('root'))) %}
+            <li {% if pane == 'approve' %}class="active"{% endif %}>
+                <a href="{{ url_for('faculty.dashboard', pane='approve') }}">
+                    {% if warning %}
+                        <i class="fa fa-exclamation-triangle"></i>
+                    {% endif %}
+                    Approvals
+                    {% if to_approve > 0 %}
+                        <span class="badge badge-info">{{ to_approve }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        {% endif %}
+        {% if enrollments %}
+            {% for config, live_projects in enrollments %}
+                <li {% if pane == config.id|string %}class="active"{% endif %}>
+                    <a href="{{ url_for('faculty.dashboard', pane=config.id) }}">
+                        {% set selector_state = config.selector_lifecycle %}
+                        {% set submitter_state = config.submitter_lifecycle %}
+                        {% set nproj = current_user.faculty_data.projects_offered(config.project_class) %}
+                        {% if selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required
+                           or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY
+                           or (nproj == 0 and config.uses_supervisor) %}
                             <i class="fa fa-exclamation-triangle"></i>
                         {% endif %}
-                        Administration
+                        {{ config.name }}
                     </a>
                 </li>
-            {% endif %}
-            {% if current_user.has_role('user_approver') %}
-                {% set warning = approvals_data['approval_user_rejected'] > 0 %}
-                {% set to_approve = approvals_data['approval_user_outstanding'] %}
-                <li {% if pane == 'approve' %}class="active"{% endif %}>
-                    <a href="{{ url_for('faculty.dashboard', pane='approve') }}">
-                        {% if warning %}
-                            <i class="fa fa-exclamation-triangle"></i>
-                        {% endif %}
-                        Approvals
-                        {% if to_approve > 0 %}
-                            <span class="badge badge-info">{{ to_approve }}</span>
-                        {% endif %}
-                    </a>
-                </li>
-            {% endif %}
-            {% if enrollments %}
-                {% for config, live_projects in enrollments %}
-                    <li {% if pane == config.id|string %}class="active"{% endif %}>
-                        <a href="{{ url_for('faculty.dashboard', pane=config.id) }}">
-                            {% set selector_state = config.selector_lifecycle %}
-                            {% set submitter_state = config.submitter_lifecycle %}
-                            {% set nproj = current_user.faculty_data.projects_offered(config.project_class) %}
-                            {% if selector_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required
-                               or submitter_state == config.SUBMITTER_LIFECYCLE_MARKING_ACTIVITY
-                               or (nproj == 0 and config.uses_supervisor) %}
-                                <i class="fa fa-exclamation-triangle"></i>
-                            {% endif %}
-                            {{ config.name }}
-                        </a>
-                    </li>
-                {% endfor %}
-            {% endif %}
-        </ul>
-    {% endblock %}
-{% endif %}
+            {% endfor %}
+        {% endif %}
+    </ul>
+{% endblock %}
 
 {% block title %}
     Faculty dashboard
@@ -77,8 +75,8 @@
                 {{ root_messages(root_dash_data) }}
             {% endif %}
 
-            {% if current_user.has_role('user_approver') and pane == 'approve' %}
-                {{ user_approver_panel(approvals_data) }}
+            {% if current_user.has_role('user_approver') or (approvals_data['approval_user_rejected'] > 0 and (current_user.has_role('admin') or current_user.has_role('root'))) and pane == 'approve' %}
+                {{ user_approver_panel(approvals_data, current_user) }}
             {% endif %}
 
             {% if current_user.faculty_data.has_outstanding_availability_requests %}

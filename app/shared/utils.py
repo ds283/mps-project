@@ -224,7 +224,6 @@ def get_root_dashboard_data():
     message_data = get_schedule_message_data(configs=configs)
     matching_data = get_matching_data(configs=configs)
     config_data = get_pclass_config_data(configs=configs)
-    approval_data = get_approvals_data()
 
     data = {'warning': (config_data['config_warning']
                         or matching_data['matching_ready']
@@ -235,7 +234,6 @@ def get_root_dashboard_data():
     data.update(message_data)
     data.update(matching_data)
     data.update(config_data)
-    data.update(approval_data)
 
     return data
 

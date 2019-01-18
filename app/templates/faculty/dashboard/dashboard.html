@@ -23,8 +23,8 @@
                 </li>
             {% endif %}
             {% if current_user.has_role('user_approver') %}
-                {% set warning = root_dash_data['approval_user_rejected'] > 0 %}
-                {% set to_approve = root_dash_data['approval_user_outstanding'] %}
+                {% set warning = approvals_data['approval_user_rejected'] > 0 %}
+                {% set to_approve = approvals_data['approval_user_outstanding'] %}
                 <li {% if pane == 'approve' %}class="active"{% endif %}>
                     <a href="{{ url_for('faculty.dashboard', pane='approve') }}">
                         {% if warning %}
@@ -78,7 +78,7 @@
             {% endif %}
 
             {% if current_user.has_role('user_approver') and pane == 'approve' %}
-                {{ user_approver_panel(root_dash_data) }}
+                {{ user_approver_panel(approvals_data) }}
             {% endif %}
 
             {% if current_user.faculty_data.has_outstanding_availability_requests %}

@@ -46,7 +46,7 @@
                     {{ admin_dashboard_card(root_data) }}
                 {% endif %}
 
-                {% if current_user.has_role('user_approver') or (approvals_data['approval_user_rejected'] > 0 and (current_user.has_role('admin') or current_user.has_role('root'))) and pane == 'approve' %}
+                {% if (current_user.has_role('user_approver') or (approvals_data['approval_user_rejected'] > 0 and (current_user.has_role('admin') or current_user.has_role('root')))) and pane == 'approve' %}
                     {{ user_approver_panel(approvals_data, current_user) }}
                 {% endif %}
             </div>

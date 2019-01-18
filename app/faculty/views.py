@@ -29,7 +29,7 @@ from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorF
 from ..admin.forms import LevelSelectorForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
-    get_current_year, get_count
+    get_current_year, get_count, get_approvals_data
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor
@@ -1216,8 +1216,13 @@ def dashboard():
     else:
         root_dash_data = None
 
+    if current_user.has_role('user_approver'):
+        approvals_data = get_approvals_data()
+    else:
+        approvals_data = None
+
     return render_template('faculty/dashboard/dashboard.html', enrollments=enrollments, messages=messages,
-                           root_dash_data=root_dash_data, pane=pane)
+                           root_dash_data=root_dash_data, approvals_data=approvals_data, pane=pane)
 
 
 @faculty.route('/confirm_pclass/<int:id>')

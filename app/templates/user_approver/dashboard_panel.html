@@ -1,6 +1,6 @@
-{% macro user_approver_panel(root_dash_data) %}
-    {% set to_approve = root_dash_data['approval_user_outstanding'] %}
-    {% set to_correct = root_dash_data['approval_user_rejected'] %}
+{% macro user_approver_panel(data) %}
+    {% set to_approve = data['approval_user_outstanding'] %}
+    {% set to_correct = data['approval_user_rejected'] %}
     <div class="panel {% if to_approve > 0 %}panel-danger{% else %}panel-default{% endif %}">
         <div class="panel-heading">{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation</div>
         <div class="panel-body">

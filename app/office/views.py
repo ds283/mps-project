@@ -17,7 +17,7 @@ from . import office
 from ..database import db
 from ..models import User
 from .forms import OfficeSettingsForm
-from ..shared.utils import home_dashboard, get_root_dashboard_data
+from ..shared.utils import home_dashboard, get_root_dashboard_data, get_approvals_data
 
 
 @office.route('/dashboard')
@@ -37,9 +37,14 @@ def dashboard():
     if pane is not None:
         session['office_dashboard_pane'] = pane
 
-    data = get_root_dashboard_data()
+    root_data = get_root_dashboard_data()
 
-    return render_template('office/dashboard.html', root_data=data, pane=pane)
+    if current_user.has_role('user_approver'):
+        approvals_data = get_approvals_data()
+    else:
+        approvals_data = None
+
+    return render_template('office/dashboard.html', root_data=root_data, approvals_data=approvals_data, pane=pane)
 
 
 @office.route('/settings', methods=['GET', 'POST'])

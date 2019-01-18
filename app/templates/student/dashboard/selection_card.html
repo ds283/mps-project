@@ -145,31 +145,35 @@
                 </div>
                 <div class="col-xs-4">
                     {% if not project.is_available(sel) %}
-                        {% if project.is_confirmed(sel) %}
-                            <div class="row vertical-align">
-                                <div class="col-xs-8">
-                                    <span class="label label-info"><i class="fa fa-clock-o"></i> Meeting confirmation requested</span>
-                                </div>
-                                <div class="col-xs-4">
-                                    <div class="pull-right">
-                                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}" class="label label-warning">
+                        {% if project.is_waiting(sel) %}
+                            <div class="dropdown student-confirm-button" style="display: inline-block;">
+                                <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <i class="fa fa-clock-o"></i>
+                                    Meeting confirmation requested
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
                                             Cancel request
                                         </a>
-                                    </div>
-                                </div>
+                                    </li>
+                                </ul>
                             </div>
                         {% else %}
-                            <div class="row vertical-align">
-                                <div class="col-xs-8">
-                                    <span class="label label-danger"><i class="fa fa-exclamation-triangle"></i> Requires meeting confirmation</span>
-                                </div>
-                                <div class="col-xs-4">
-                                    <div class="pull-right">
+                            <div class="dropdown student-confirm-button" style="display: inline-block;">
+                                <a class="label label-danger dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <i class="fa fa-exclamation-triangle"></i>
+                                    Requires meeting confirmation
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown=menu">
+                                    <li>
                                         <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}" class="label label-primary">
-                                            Request
+                                            Request confirmation
                                         </a>
-                                    </div>
-                                </div>
+                                    </li>
+                                </ul>
                             </div>
                         {% endif %}
                     {% else %}

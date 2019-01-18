@@ -11,6 +11,8 @@
 
 from flask import render_template
 
+from ..database import db
+
 import re
 
 
@@ -30,52 +32,58 @@ def render_project(data, desc, form=None, text=None, url=None):
 
 
 def do_confirm(sel, project):
-
-    if sel not in project.confirm_waiting:
+    if not project.is_waiting(sel):
         return False
 
-    project.confirm_waiting.remove(sel)
+    req = project.get_confirm_request(sel)
+    if req is None:
+        return False
 
-    if sel not in project.confirmed_students:
-        project.confirmed_students.append(sel)
-        sel.student.user.post_message('Your confirmation request for the project "{name}" has been '
-                                      'approved.'.format(name=project.name), 'success')
+    req.confirm()
+    db.session.commit()
 
     return True
 
 
 def do_deconfirm(sel, project):
+    if not project.is_confirmed(sel):
+        return False
 
-    if sel in project.confirmed_students:
-        project.confirmed_students.remove(sel)
-        sel.student.user.post_message('Your confirmation approval for the project "{name}" has been removed. '
-                                      'If you were not expecting this event, please make an appointment to discuss '
-                                      'with the supervisor.'.format(name=project.name), 'info')
-        return True
+    req = project.get_confirm_request(sel)
+    if req is None:
+        return False
 
-    return False
+    req.remove()
+    db.session.delete(req)
+    db.session.commit()
+
+    return True
 
 
 def do_deconfirm_to_pending(sel, project):
-
-    if sel not in project.confirmed_students:
+    if not project.is_confirmed(sel):
         return False
 
-    project.confirmed_students.remove(sel)
+    req = project.get_confirm_request(sel)
+    if req is None:
+        return False
 
-    if sel not in project.confirm_waiting:
-        project.confirm_waiting.append(sel)
-        sel.student.user.post_message('Your confirmation approval for the project "{name}" has been reverted to "pending". '
-                                      'If you were not expecting this event, please make an appointment to discuss '
-                                      'with the supervisor.'.format(name=project.name), 'info')
+    req.waiting()
+    db.session.commit()
 
     return True
 
 
 def do_cancel_confirm(sel, project):
-
-    if sel not in project.confirm_waiting:
+    if not project.is_waiting(sel):
         return False
 
-    project.confirm_waiting.remove(sel)
+    req = project.get_confirm_request(sel)
+    if req is None:
+        return False
+
+    req.remove()
+    db.session.delete(req)
+    db.session.commit()
+
     return True

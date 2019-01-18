@@ -24,7 +24,8 @@
 
                         <hr class="intro-divider">
 
-                        {% for sel in project.confirmed_students %}
+                        {% for req in project.requests_confirmed %}
+                            {% set sel = req.owner %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     {{ sel.student.user.name }}
@@ -69,7 +70,8 @@
 
                         {% if project.number_confirmed > 0 and project.number_pending > 0%}<hr class="intro-divider">{% endif %}
 
-                        {% for sel in project.confirm_waiting %}
+                        {% for req in project.requests_waiting %}
+                            {% set sel = project.owner %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     {{ sel.student.user.name }}

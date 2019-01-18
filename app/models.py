@@ -250,19 +250,6 @@ live_project_to_modules = db.Table('live_project_to_modules',
                                    db.Column('module_id', db.Integer(), db.ForeignKey('modules.id'), primary_key=True))
 
 
-# LIVE STUDENT ASSOCIATIONS
-
-# association table: faculty confirmation requests
-confirmation_requests = db.Table('confirmation_requests',
-                                 db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                 db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True))
-
-# association table: faculty confirmed meetings
-faculty_confirmations = db.Table('faculty_confirmations',
-                                 db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                 db.Column('student_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True))
-
-
 # CONVENOR FILTERS
 
 # association table : active research group filters
@@ -3824,12 +3811,34 @@ class LiveProject(db.Model):
         return False
 
 
+    @property
+    def _is_waiting_query(self):
+        return self.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED)
+
+
+    @property
+    def _is_confirmed_query(self):
+        return self.confirmation_requests.filter_by(state=ConfirmRequest.CONFIRMED)
+
+
     def is_waiting(self, sel):
-        return get_count(self.confirm_waiting.filter_by(id=sel.id)) > 0
+        return get_count(self._is_waiting_query.filter_by(owner_id=sel.id)) > 0
 
 
     def is_confirmed(self, sel):
-        return get_count(self.confirmed_students.filter_by(id=sel.id)) > 0
+        return get_count(self._is_confirmed_query.filter_by(owner_id=sel.id)) > 0
+
+
+    def get_confirm_request(self, sel):
+        return self.confirmation_requests.filter_by(owner_id=sel.id).first()
+
+
+    def make_confirm_request(self, sel):
+        req = ConfirmRequest(owner_id=sel.id,
+                             project_id=self.id,
+                             state=ConfirmRequest.REQUESTED,
+                             request_timestamp=datetime.now())
+        return req
 
 
     @property
@@ -3947,12 +3956,22 @@ class LiveProject(db.Model):
 
     @property
     def number_pending(self):
-        return get_count(self.confirm_waiting)
+        return get_count(self._is_waiting_query)
 
 
     @property
     def number_confirmed(self):
-        return get_count(self.confirmed_students)
+        return get_count(self._is_confirmed_query)
+
+
+    @property
+    def requests_waiting(self):
+        return self._is_waiting_query.all()
+
+
+    @property
+    def requests_confirmed(self):
+        return self._is_confirmed_query.all()
 
 
     def format_popularity_label(self, css_classes=None):
@@ -4096,6 +4115,79 @@ def _LiveProject_assessors_append_handler(target, value, initiator):
                 cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
 
 
+class ConfirmRequest(db.Model):
+    """
+    Model a confirmation request from a student
+    """
+
+    __tablename__ = 'confirm_requests'
+
+
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link to parent SelectingStudent
+    owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+    owner = db.relationship('SelectingStudent', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('confirmation_requests', lazy='dynamic',
+                                               cascade='all, delete, delete-orphan'))
+
+    # link to LiveProject that for which we are requesting confirmation
+    project_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    project = db.relationship('LiveProject', foreign_keys=[project_id], uselist=False,
+                              backref=db.backref('confirmation_requests', lazy='dynamic'))
+
+    REQUESTED = 0
+    CONFIRMED = 1
+    DECLINED = 2
+    # confirmation state
+    state = db.Column(db.Integer())
+
+    # timestamp of request
+    request_timestamp = db.Column(db.DateTime())
+
+    # timestamp of response
+    response_timestamp = db.Column(db.DateTime())
+
+    # if declined, a short justification
+    decline_justifcation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+
+    def confirm(self):
+        self.state = ConfirmRequest.CONFIRMED
+
+        # notify student of confirmation
+        self.owner.student.user.post_message('Your confirmation request for project "{name}" has been '
+                                             'approved.'.format(name=self.project.name), 'success')
+        # TODO: add notification to email queue
+
+
+    def waiting(self):
+        if self.state == ConfirmRequest.CONFIRMED:
+            self.owner.student.user.post_message(
+                'Your confirmation approval for the project "{name}" has been reverted to "pending". '
+                'If you were not expecting this event, please make an appointment to discuss '
+                'with the supervisor.'.format(name=self.project.name), 'info')
+            # TODO: add notification to email queue
+
+        self.state = ConfirmRequest.REQUESTED
+
+
+    def remove(self):
+        if self.state == ConfirmRequest.CONFIRMED:
+            self.owner.student.user.post_message(
+                'Your confirmation approval for project "{name}" has been removed. '
+                'If you were not expecting this event, please make an appointment to discuss '
+                'with the supervisor.'.format(name=self.project.name), 'info')
+            # TODO: add notification to email queue
+
+        elif self.state == ConfirmRequest.DECLINED:
+            self.owner.student.user.post_message(
+                'Your declined request for approval to select project "{name}" has been removed. '
+                'If you still wish to select this project, you may now make a new request '
+                'for approval.'.format(name=self.project.name), 'info')
+            # TODO: add notification to email queue
+
+
 class SelectingStudent(db.Model):
     """
     Model a student who is selecting a project in the current cycle
@@ -4119,14 +4211,6 @@ class SelectingStudent(db.Model):
     student = db.relationship('StudentData', foreign_keys=[student_id], uselist=False,
                               backref=db.backref('selecting', lazy='dynamic'))
 
-    # confirmation requests issued
-    confirm_requests = db.relationship('LiveProject', secondary=confirmation_requests, lazy='dynamic',
-                                       backref=db.backref('confirm_waiting', lazy='dynamic'))
-
-    # confirmation requests granted
-    confirmed = db.relationship('LiveProject', secondary=faculty_confirmations, lazy='dynamic',
-                                backref=db.backref('confirmed_students', lazy='dynamic'))
-
     # research group filters applied
     group_filters = db.relationship('ResearchGroup', secondary=sel_group_filter_table, lazy='dynamic',
                                     backref=db.backref('filtering_students', lazy='dynamic'))
@@ -4149,13 +4233,48 @@ class SelectingStudent(db.Model):
 
 
     @property
+    def _requests_waiting_query(self):
+        return self.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED)
+
+
+    @property
+    def _requests_confirmed_query(self):
+        return self.confirmation_requests.filter_by(state=ConfirmRequest.CONFIRMED)
+
+
+    @property
+    def _requests_declined_query(self):
+        return self.confirmation_requests.filter_by(state=ConfirmRequest.DECLINED)
+
+
+    @property
+    def requests_waiting(self):
+        return self._requests_waiting_query.all()
+
+
+    @property
+    def requests_confirmed(self):
+        return self._requests_confirmed_query.all()
+
+
+    @property
+    def requests_declined(self):
+        return self._requests_declined_query.all()
+
+
+    @property
     def number_pending(self):
-        return get_count(self.confirm_requests)
+        return get_count(self._requests_waiting_query)
 
 
     @property
     def number_confirmed(self):
-        return get_count(self.confirmed)
+        return get_count(self._requests_confirmed_query)
+
+
+    @property
+    def number_declined(self):
+        return get_count(self._requests_declined_query)
 
 
     @property

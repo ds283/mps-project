@@ -118,7 +118,8 @@
                                 {{ project_metadata(project) }}
                             </div>
                             <div class="col-xs-3 faculty-confirm-area">
-                                {% for sel in project.confirm_waiting %}
+                                {% for req in project.requests_waiting %}
+                                    {% set sel = req.owner %}
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
@@ -160,7 +161,8 @@
                                 {% endfor %}
                             </div>
                             <div class="col-xs-3 faculty-confirm-area">
-                                {% for sel in project.confirmed_students %}
+                                {% for req in project.requests_confirmed %}
+                                    {% set sel = req.owner %}
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">

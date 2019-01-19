@@ -2166,6 +2166,9 @@ def settings():
         user.username = form.username.data
         user.theme = form.theme.data
 
+        user.group_summaries = form.group_summaries.data
+        user.summary_frequency = form.summary_frequency.data
+
         if hasattr(form, 'mask_roles'):
             user.mask_roles = form.mask_roles.data
 
@@ -2201,6 +2204,9 @@ def settings():
             form.last_name.data = user.last_name
             form.username.data = user.username
             form.theme.data = user.theme
+
+            form.group_summaries.data = user.group_summaries
+            form.summary_frequency.data = user.summary_frequency
 
             if hasattr(form, 'mask_roles'):
                 form.mask_roles.data = user.mask_roles

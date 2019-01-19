@@ -19,6 +19,13 @@
 {#        {{ wtf.form_errors(settings_form) }}#}
 
     {{ wtf.form_field(settings_form.theme) }}
+
+    <div class="well">
+        <p>Email notifications</p>
+        {{ wtf.form_field(settings_form.group_summaries) }}
+        {{ wtf.form_field(settings_form.summary_frequency) }}
+    </div>
+
     {{ wtf.form_field(settings_form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

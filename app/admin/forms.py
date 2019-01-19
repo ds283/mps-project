@@ -45,7 +45,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules
-from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, year_choices, \
+from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
@@ -187,16 +187,6 @@ class EditStudentForm(EditOfficeForm, StudentDataMixin):
 
     exam_number = IntegerField('Exam number', validators=[InputRequired(message="Exam number is required"),
                                                           unique_or_original_exam_number])
-
-
-class StudentSettingsForm(Form, ThemeMixin, SaveChangesMixin):
-
-    pass
-
-
-class OfficeSettingsForm(Form, ThemeMixin, SaveChangesMixin):
-
-    pass
 
 
 class ResearchGroupMixin():

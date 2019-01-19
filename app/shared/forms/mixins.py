@@ -11,7 +11,7 @@
 from wtforms import SubmitField, StringField, SelectField, BooleanField, IntegerField, TextAreaField
 from wtforms.validators import InputRequired, Optional
 
-from ...models import theme_choices, academic_titles
+from ...models import theme_choices, academic_titles, email_freq_choices
 from .wtf_validators import valid_username, unique_or_original_username, NotOptionalIf
 
 
@@ -36,6 +36,13 @@ class FirstLastNameMixin():
 class ThemeMixin():
 
     theme = SelectField('Theme', choices=theme_choices, coerce=int)
+
+
+class EmailSettingsMixin():
+
+    group_summaries = BooleanField('Group notifications into summaries')
+
+    summary_frequency = SelectField('Frequency of summaries', choices=email_freq_choices, coerce=int)
 
 
 def FacultyDataMixinFactory(admin=False):

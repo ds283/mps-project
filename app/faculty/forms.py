@@ -17,7 +17,7 @@ from ..models import Project
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
-    FacultyDataMixinFactory, FeedbackMixin
+    FacultyDataMixinFactory, FeedbackMixin, EmailSettingsMixin
 from ..shared.forms.wtf_validators import globally_unique_project, unique_or_original_project, project_unique_label, \
     project_unique_or_original_label
 from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, CurrentUserResearchGroups, \
@@ -231,7 +231,7 @@ class SupervisorResponseForm(Form, SupervisorResponseMixin):
 def FacultySettingsFormFactory(user=None):
 
     class FacultySettingsForm(Form, EditUserNameMixin, FacultyDataMixinFactory(admin=False),
-                              FirstLastNameMixin, SaveChangesMixin, ThemeMixin):
+                              FirstLastNameMixin, SaveChangesMixin, ThemeMixin, EmailSettingsMixin):
 
         if user is not None and user.has_role('root', skip_mask=True):
             mask_roles = CheckboxQuerySelectMultipleField('Temporarily mask roles',

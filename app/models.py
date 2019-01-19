@@ -78,6 +78,10 @@ theme_choices = [(0, 'Default'), (1, 'Flat'), (2, 'Dark')]
 semester_choices = [(0, 'Autumn Semester'), (1, 'Spring Semester'), (2, 'Autumn & Spring teaching'),
                     (3, 'All-year teaching')]
 
+# frequency of email summaires
+email_freq_choices = [(1, '1 day'), (2, '2 days'), (3, '3 days'), (4, '4 days'), (5, '5 days'),
+                      (6, '6 days'), (7, '7 days')]
+
 
 class ColouredLabelMixin():
 
@@ -435,7 +439,9 @@ class User(db.Model, UserMixin):
 
     active = db.Column(db.Boolean())
 
-    # Flask-Security user model: tracking fields
+
+    # FLASK-SECURITY USER MODEL: TRACKING FIELDS
+
     confirmed_at = db.Column(db.DateTime())
     last_login_at = db.Column(db.DateTime())
     current_login_at = db.Column(db.DateTime())
@@ -443,12 +449,17 @@ class User(db.Model, UserMixin):
     current_login_ip = db.Column(db.String(IP_LENGTH))
     login_count = db.Column(db.Integer())
 
+
+    # ROLES
+
     # assigned roles
     roles = db.relationship('Role', secondary=roles_to_users, lazy='dynamic', backref=db.backref('users', lazy='dynamic'))
 
-    # masked roles
+    # masked roles (currently available only to 'root' users)
     mask_roles = db.relationship('Role', secondary=mask_roles_to_users, lazy='dynamic')
 
+
+    # THEME
 
     THEME_DEFAULT = 0
     THEME_FLAT = 1
@@ -456,6 +467,18 @@ class User(db.Model, UserMixin):
 
     # theme options
     theme = db.Column(db.Integer(), default=THEME_DEFAULT, nullable=False)
+
+
+    # EMAIL PREFERENCES
+
+    # time last summary email was sent
+    last_email = db.Column(db.DateTime())
+
+    # group email notifications into summaries?
+    group_summaries = db.Column(db.Boolean())
+
+    # how frequently to send summaries, in days
+    summary_frequency = db.Column(db.Integer())
 
 
     # override inherited has_role method

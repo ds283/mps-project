@@ -10,7 +10,7 @@
 
 from app import create_app, db
 from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
-    AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData
+    AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -75,7 +75,6 @@ def populate_validation_data():
     Populate validation state in StudentData table
     :return:
     """
-
     students = db.session.query(StudentData).all()
 
     for student in students:
@@ -83,6 +82,14 @@ def populate_validation_data():
             student.validation_state = StudentData.VALIDATION_QUEUED
 
     db.session.commit()
+
+
+def populate_email_options():
+    users = db.session.query(User).all()
+
+    for user in users:
+        user.group_summaries = True
+        user.summary_frequency = 1
 
 
 app, celery = create_app()
@@ -113,7 +120,8 @@ with app.app_context():
 
     # migrate_availability_data()
     # migrate_confirmation_data()
-    populate_validation_data()
+    # populate_validation_data()
+    # populate_email_options()
 
     db.session.commit()
 

@@ -325,7 +325,7 @@ def overview(id):
     # change labels and text depending on current lifecycle state
     if config.requests_issued:
         issue_form.request_deadline.label.text = 'The current deadline for responses is'
-        issue_form.requests_issued.label.text = 'Save changes'
+        issue_form.issue_requests.label.text = 'Save changes'
 
     if period is not None and period.feedback_open:
         feedback_form.feedback_deadline.label.text = 'The current deadline for feedback is'
@@ -2623,7 +2623,7 @@ def issue_confirm_requests(id):
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
-    if issue_form.is_submitted() and issue_form.requests_issued.data is True:
+    if issue_form.is_submitted() and issue_form.issue_requests.data is True:
         # set request deadline and issue requests if needed
 
         # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline

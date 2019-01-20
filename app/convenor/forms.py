@@ -36,7 +36,7 @@ class IssueFacultyConfirmRequestForm(Form):
     request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
 
     # submit button: issue requests
-    requests_issued = SubmitField('Issue confirmation requests')
+    issue_requests = SubmitField('Issue confirmation requests')
 
 
 class OpenFeedbackForm(Form):

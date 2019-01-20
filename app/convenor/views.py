@@ -2722,7 +2722,7 @@ def force_confirm_all(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    config.golive_required = []
+    config.confirmation_required = []
     db.session.commit()
 
     flash('All outstanding confirmation requests have been removed.', 'success')
@@ -2743,8 +2743,8 @@ def force_confirm(id, uid):
 
     faculty = FacultyData.query.get_or_404(uid)
 
-    if faculty in config.golive_required:
-        config.golive_required.remove(faculty)
+    if faculty in config.confirmation_required:
+        config.confirmation_required.remove(faculty)
         db.session.commit()
 
     return redirect(request.referrer)

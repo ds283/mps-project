@@ -1239,8 +1239,8 @@ def confirm_pclass(id):
             project=config.name, yeara=config.year, yearb=config.year+1))
         return home_dashboard()
 
-    if current_user.faculty_data in config.golive_required:
-        config.golive_required.remove(current_user.faculty_data)
+    if current_user.faculty_data in config.confirmation_required:
+        config.confirmation_required.remove(current_user.faculty_data)
         db.session.commit()
 
         flash('Thank-you. You confirmation has been recorded.')

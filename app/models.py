@@ -2057,6 +2057,13 @@ class ProjectClassConfig(db.Model):
     # are faculty requests to confirm projects open?
     requests_issued = db.Column(db.Boolean())
 
+    # who issued confirmation requests?
+    requests_issued_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    requests_issued_by = db.relationship('User', uselist=False, foreign_keys=[requests_issued_id])
+
+    # requests issued timestamp
+    requests_timestamp = db.Column(db.DateTime())
+
     # deadline for confirmation requests
     request_deadline = db.Column(db.Date())
 
@@ -2417,28 +2424,6 @@ class ProjectClassConfig(db.Model):
             return self.convenor.user.name
         else:
             raise RuntimeError('convenor not set')
-
-
-    def generate_golive_requests(self):
-        """
-        Generate sign-off requests to all active faculty
-        :return:
-        """
-        # exit if called in error
-        if not self.require_confirm:
-            return
-
-        # select faculty that are enrolled on this particular project class
-        eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id) \
-            .filter_by(pclass_id=self.pclass_id).subquery()
-        fd = db.session.query(eq.c.owner_id, User, FacultyData) \
-            .join(User, User.id == eq.c.owner_id) \
-            .join(FacultyData, FacultyData.id == eq.c.owner_id) \
-            .filter(User.active == True)
-
-        for id, user, data in fd:
-            if data not in self.golive_required:      # don't object if we are generating a duplicate request
-                self.golive_required.append(data)
 
 
     @property
@@ -5353,11 +5338,13 @@ class BackupRecord(db.Model):
     PROJECT_ROLLOVER_FALLBACK = 2
     PROJECT_GOLIVE_FALLBACK = 3
     PROJECT_CLOSE_FALLBACK = 4
+    PROJECT_ISSUE_CONFIRM_FALLBACK = 5
 
     _type_index = {SCHEDULED_BACKUP: 'Scheduled backup',
                    PROJECT_ROLLOVER_FALLBACK: 'Rollover restore point',
                    PROJECT_GOLIVE_FALLBACK: 'Go Live restore point',
-                   PROJECT_CLOSE_FALLBACK: 'Close selection restore point'}
+                   PROJECT_CLOSE_FALLBACK: 'Close selection restore point',
+                   PROJECT_ISSUE_CONFIRM_FALLBACK: 'Issue confirmation requests restore point'}
 
     type = db.Column(db.Integer())
 

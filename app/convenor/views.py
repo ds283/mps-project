@@ -2621,30 +2621,30 @@ def issue_confirm_requests(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    issue_form = IssueFacultyConfirmRequestForm(request.form)
+    year = get_current_year()
+    form = IssueFacultyConfirmRequestForm(request.form)
 
-    if issue_form.is_submitted() and issue_form.issue_requests.data is True:
-        # set request deadline and issue requests if needed
+    if form.is_submitted() and form.issue_requests.data is True:
+        # schedule an asynchronous issue task
 
-        # only generate requests if they haven't been issued; subsequent clicks might be changes to deadline
-        if not config.requests_issued:
+        # get issue task instance
+        celery = current_app.extensions['celery']
+        issue = celery.tasks['app.tasks.issue_confirm.pclass_issue']
+        issue_fail = celery.tasks['app.tasks.issue_confirm.issue_fail']
 
-            config.generate_golive_requests()
-            requests = config.golive_required.count()
-            plural = 's'
-            if requests == 0:
-                plural = ''
+        # register as a new background task and push it to the scheduler
+        task_id = register_task('Issue project confirmations for "{proj}" {yra}-{yrb}'.format(proj=config.name,
+                                                                                              yra=year, yrb=year+1),
+                                owner=current_user,
+                                description='Issue project confirmations for "{proj}"'.format(proj=config.name))
 
-            flash('{n} confirmation request{plural} have been issued'.format(n=requests, plural=plural))
-
-        config.requests_issued = True
-
-        deadline = issue_form.request_deadline.data
+        deadline = form.request_deadline.data
         if deadline < date.today():
             deadline = date.today() + timedelta(weeks=2)
-        config.request_deadline = deadline
 
-        db.session.commit()
+        issue.apply_async(args=(task_id, id, current_user.id, deadline),
+                          task_id=task_id,
+                          link_error=issue_fail.si(task_id, current_user.id))
 
     return redirect(request.referrer)
 
@@ -2753,7 +2753,6 @@ def force_confirm(id, uid):
 @convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def go_live(id):
-
     # get details for current pclass configuration
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -2765,6 +2764,7 @@ def go_live(id):
     form = GoLiveForm(request.form)
 
     if form.is_submitted():
+        # schedule an asynchronous go-live task
 
         # get golive task instance
         celery = current_app.extensions['celery']

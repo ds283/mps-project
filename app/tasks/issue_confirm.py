@@ -8,14 +8,15 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app
+from flask import current_app, render_template
+from flask_mail import Message
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
-    Project, FacultyData, EnrollmentRecord
+from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, FacultyData, EnrollmentRecord
 
-from ..task_queue import progress_update
+from ..task_queue import progress_update, register_task
 
 from celery import chain, group
 
@@ -59,36 +60,41 @@ def register_issue_confirm_tasks(celery):
             return issue_fail.apply_async(args=(task_id, convenor_id))
 
         config.confirmation_required = []
-        confirmations_needed = set()
+        faculty = set()
 
         # issue confirmation requests if this project is set up to require them
-        if config.require_confirm:
-            # select faculty that are enrolled on this particular project class
-            eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id) \
-                .filter_by(pclass_id=config.pclass_id).subquery()
-            fd = db.session.query(eq.c.owner_id, User, FacultyData) \
-                .join(User, User.id == eq.c.owner_id) \
-                .join(FacultyData, FacultyData.id == eq.c.owner_id) \
-                .filter(User.active == True)
+        if not config.require_confirm:
+            return None
 
-            for id, user, data in fd:
-                if data.id not in confirmations_needed:
-                    confirmations_needed.add(data.id)
+        # select faculty that are enrolled on this particular project class
+        eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id) \
+            .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED).subquery()
 
-            issue_group = group(issue_confirm.si(d, config_id) for d in confirmations_needed)
+        fd = db.session.query(eq.c.owner_id, User, FacultyData) \
+            .join(User, User.id == eq.c.owner_id) \
+            .join(FacultyData, FacultyData.id == eq.c.owner_id) \
+            .filter(User.active == True)
 
-            # get backup task from celery instance
-            celery = current_app.extensions['celery']
-            backup = celery.tasks['app.tasks.backup.backup']
+        for id, user, data in fd:
+            if data.id not in faculty:
+                faculty.add(data.id)
 
-            seq = chain(issue_initialize.si(task_id),
-                        backup.si(convenor_id, type=BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK, tag='issue_confirm',
-                                  description='Rollback snapshot for issuing confirmation requests for '
-                                              '{proj} confirmations {yr}'.format(proj=config.name, yr=year)),
-                        issue_group,
-                        issue_finalize.si(task_id, config_id, convenor_id, deadline)).on_error(issue_fail.si(task_id, convenor_id))
+        issue_group = group(issue_confirm.si(d, config_id) for d in faculty)
 
-            seq.apply_async()
+        # get backup task from celery instance
+        celery = current_app.extensions['celery']
+        backup = celery.tasks['app.tasks.backup.backup']
+
+        seq = chain(issue_initialize.si(task_id),
+                    backup.si(convenor_id, type=BackupRecord.PROJECT_ISSUE_CONFIRM_FALLBACK, tag='issue_confirm',
+                              description='Rollback snapshot for issuing confirmation requests for '
+                                          '{proj} confirmations {yr}'.format(proj=config.name, yr=year)),
+                    issue_group,
+                    issue_update_db.s(task_id, config_id, convenor_id, deadline),
+                    issue_notifications.s(task_id, config_id, convenor_id),
+                    issue_finalize.si(task_id, config_id, convenor_id)).on_error(issue_fail.si(task_id, convenor_id))
+
+        seq.apply_async()
 
 
     @celery.task()
@@ -97,11 +103,10 @@ def register_issue_confirm_tasks(celery):
 
 
     @celery.task(bind=True, serializer='pickle')
-    def issue_finalize(self, task_id, config_id, convenor_id, deadline):
-        progress_update(task_id, TaskRecord.SUCCESS, 100, 'Issue confirmation requests complete', autocommit=False)
+    def issue_update_db(self, notify_list, task_id, config_id, convenor_id, deadline):
+        progress_update(task_id, TaskRecord.RUNNING, 80, 'Updating database...', autocommit=False)
 
         try:
-            convenor = User.query.filter_by(id=convenor_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError:
             raise self.retry()
@@ -112,21 +117,46 @@ def register_issue_confirm_tasks(celery):
             config.requests_issued_id = convenor_id
             config.requests_timestamp = datetime.now()
 
+        db.session.commit()
+
+        return notify_list
+
+
+    @celery.task(bind=True)
+    def issue_notifications(self, notify_list, task_id, config_id, convenor_id):
+        progress_update(task_id, TaskRecord.RUNNING, 90, 'Sending email notifications...', autocommit=True)
+
+        try:
+            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if config is None:
+            return 0
+
+        send_task = group(send_notification_email.si(d, config_id) for d in notify_list if d is not None)
+
+        task = chain(send_task, notify_email_summary.s(convenor_id))
+        task.apply_async()
+
+
+    @celery.task(bind=True)
+    def issue_finalize(self, task_id, config_id, convenor_id):
+        progress_update(task_id, TaskRecord.SUCCESS, 100, 'Issue confirmation requests complete', autocommit=False)
+
+        try:
+            convenor = User.query.filter_by(id=convenor_id).first()
+            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
         if convenor is not None:
             # send direct message to user announcing successful Go Live event
-            convenor.post_message('Issue confirmation requests for "{proj}" '
+            convenor.post_message('Issuing confirmation requests for "{proj}" '
                                   'for {yra}-{yrb} is now complete'.format(proj=config.name,
                                                                            yra=config.year,
                                                                            yrb=config.year+1),
                                   'success', autocommit=False)
-
-            requests = config.confirmation_required.count()
-            plural = 's'
-            if requests == 0:
-                plural = ''
-
-            convenor.post_message('{n} confirmation request{plural} issued'.format(n=requests, plural=plural), 'info',
-                                  autocommit=False)
 
         db.session.commit()
 
@@ -140,10 +170,11 @@ def register_issue_confirm_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        if convenor is not None:
-            convenor.post_message('Issuing confirmation requests failed. Please contact a system administrator', 'error',
-                                  autocommit=False)
+        if convenor is None:
+            return None
 
+        convenor.post_message('Issuing confirmation requests failed. Please contact a system administrator', 'error',
+                              autocommit=False)
         db.session.commit()
 
 
@@ -155,10 +186,62 @@ def register_issue_confirm_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        if data not in config.confirmation_required:      # don't object if we are generating a duplicate request
-            try:
-                config.confirmation_required.append(data)
-                db.session.commit()
-            except SQLAlchemyError:
-                db.session.rollback()
-                raise self.retry()
+        if data is None or config is None:
+            return None
+
+        if data in config.confirmation_required:
+            return None
+
+        try:
+            config.confirmation_required.append(data)
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return faculty_id
+
+
+    @celery.task(bind=True)
+    def send_notification_email(self, faculty_id, config_id):
+        try:
+            data = FacultyData.query.filter_by(id=faculty_id).first()
+            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if data is None or config is None:
+            return None
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        msg = Message(subject='Please check projects for {name}'.format(name=config.project_class.name),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=[data.user.email])
+
+        msg.body = render_template('email/project_confirmation/confirmation_requested.txt', user=data.user,
+                                   pclass=config.project_class, config=config)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        return 1
+
+
+    @celery.task(bind=True)
+    def notify_email_summary(self, sent_data, convenor_id):
+        try:
+            convenor = User.query.filter_by(id=convenor_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if convenor is None:
+            return None
+
+        num_sent = sum([n for n in sent_data if n is not None])
+        plural = 's'
+        if num_sent == 1:
+            plural = ''
+
+        convenor.post_message('{n} confirmation request{plural} issued'.format(n=num_sent, plural=plural), 'info',
+                              autocommit=True)

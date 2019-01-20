@@ -1,0 +1,43 @@
+Dear {{ user.first_name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+
+You are receiving this email because you are enrolled as a supervisor for
+projects of type "{{ pclass.name }}". If you believe this to be
+incorrect, please contact the project convenor to have your enrollment
+status changed.
+
+The convenor is now preparing to publish project descriptions to this year's
+Y{{ pclass.start_level.academic_year-1 }} students, from which they will select a ranked list of preferences.
+To help us with this process we would like to ask you to confirm that
+the project descriptions in your library are up-to-date.
+
+To check your projects, please log in to the project management web app
+at https://mpsprojects.co.uk and select 'My projects/My project library...'
+from the drop-down menu in the menubar. All active projects associated
+with this project type will be published to the students. If you wish
+to withdraw a project from this year's selection, please deactivate the
+project using the 'Actions/Make inactive' menu option.
+
+When you are satisfied that your project descriptions are up-to-date,
+return to your dashboard and select the "{{ pclass.name }}" tab.
+An information request box labelled "Selections: Confirmation of projects
+required" should appear highlighted in yellow at the top of the page.
+Please click the red 'Confirm' button to indicate that your projects are
+ready to go.
+{%- if config.request_deadline is defined and config.request_deadline is not none -%}
+ It would be very helpful if you could provide your response
+by {{ config.request_deadline.strftime("%a %d %b %Y") }} at latest.
+{%- endif %}
+
+You will receive one copy of this email for each project type in which you
+are enrolled as a supervisor. Please note that you need to provide confirmation
+for each project type individually.
+
+This email is sent from an address that is not monitored or answered.
+Please direct any queries to the project convenor.
+
+Thank you for your help,
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
+project convenor

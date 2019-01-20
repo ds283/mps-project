@@ -117,7 +117,7 @@ def register_golive_tasks(celery):
 
     @celery.task()
     def golive_initialize(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 5, 'Building Go Live snapshot...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 5, 'Building rollback Go Live snapshot...', autocommit=True)
 
 
     @celery.task(bind=True, serializer='pickle')
@@ -150,7 +150,6 @@ def register_golive_tasks(celery):
 
     @celery.task(bind=True)
     def golive_fail(self, task_id, convenor_id):
-
         progress_update(task_id, TaskRecord.FAILURE, 100, 'Encountered error during Go Live', autocommit=False)
 
         try:

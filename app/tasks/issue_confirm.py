@@ -58,7 +58,7 @@ def register_issue_confirm_tasks(celery):
             self.update_state('FAILURE', meta='Confirmation requests have not been issued')
             return issue_fail.apply_async(args=(task_id, convenor_id))
 
-        config.golive_required = []
+        config.confirmation_required = []
         confirmations_needed = set()
 
         # issue confirmation requests if this project is set up to require them
@@ -120,7 +120,7 @@ def register_issue_confirm_tasks(celery):
                                                                            yrb=config.year+1),
                                   'success', autocommit=False)
 
-            requests = config.golive_required.count()
+            requests = config.confirmation_required.count()
             plural = 's'
             if requests == 0:
                 plural = ''
@@ -155,9 +155,9 @@ def register_issue_confirm_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        if data not in config.golive_required:      # don't object if we are generating a duplicate request
+        if data not in config.confirmation_required:      # don't object if we are generating a duplicate request
             try:
-                config.golive_required.append(data)
+                config.confirmation_required.append(data)
                 db.session.commit()
             except SQLAlchemyError:
                 db.session.rollback()

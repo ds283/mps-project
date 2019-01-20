@@ -45,7 +45,7 @@ _golive = \
 """
 {% if config.require_confirm %}
     {% if config.requests_issued %}
-        {% if userdata in config.golive_required %}
+        {% if userdata in config.confirmation_required %}
             <span class="label label-warning"><i class="fa fa-times"></i> Outstanding</span>
         {% else %}
             {% if userdata.is_enrolled(pclass) %}

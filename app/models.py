@@ -2092,8 +2092,8 @@ class ProjectClassConfig(db.Model):
     closed_timestamp = db.Column(db.DateTime())
 
     # capture which faculty have still to sign-off on this configuration
-    golive_required = db.relationship('FacultyData', secondary=golive_confirmation, lazy='dynamic',
-                                      backref=db.backref('live', lazy='dynamic'))
+    confirmation_required = db.relationship('FacultyData', secondary=golive_confirmation, lazy='dynamic',
+                                            backref=db.backref('live', lazy='dynamic'))
 
 
     # SUBMISSION LIFECYCLE MANAGEMENT
@@ -2245,7 +2245,7 @@ class ProjectClassConfig(db.Model):
         if self.require_confirm:
             if self.requests_issued:
 
-                if self.golive_required.count() > 0:
+                if self.confirmation_required.count() > 0:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
                 else:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
@@ -2469,7 +2469,7 @@ class ProjectClassConfig(db.Model):
 
     @property
     def confirm_outstanding_count(self):
-        return get_count(self.golive_required)
+        return get_count(self.confirmation_required)
 
 
 class SubmissionPeriodRecord(db.Model):

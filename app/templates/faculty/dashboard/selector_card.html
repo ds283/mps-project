@@ -16,7 +16,7 @@
             panel-success
         {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
             panel-default
-        {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
+        {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.confirmation_required %}
             panel-warning
         {% else %}
             panel-info
@@ -42,7 +42,7 @@
         <div class="panel-body">
 
             {# show confirmation request if one is active #}
-            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.golive_required %}
+            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.confirmation_required %}
                 <p>Please review your projects to ensure the descriptions are up-to-date,
                 and those you wish to offer next year are active and attached to
                 the correct project classes.</p>

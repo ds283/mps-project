@@ -9,6 +9,8 @@
 #
 
 
+from flask import current_app
+
 from ..database import db
 from ..models import User, EmailLog, TaskRecord
 from ..task_queue import progress_update
@@ -34,14 +36,12 @@ def register_send_log_email(celery, mail):
         progress_update(task_id, TaskRecord.RUNNING, 80, "Logging email in database", autocommit=True)
 
         try:
-
             log = None
 
             # store message in email log
             if len(msg.recipients) == 1:
                 user = User.query.filter_by(email=msg.recipients[0]).first()
                 if user is not None:
-
                     log = EmailLog(user_id=user.id,
                                    recipient=None,
                                    send_date=datetime.now(),
@@ -50,7 +50,6 @@ def register_send_log_email(celery, mail):
                                    html=msg.html)
 
             if log is None:
-
                 log = EmailLog(user_id=None,
                                recipient=', '.join(msg.recipients),
                                send_date=datetime.now(),
@@ -62,7 +61,6 @@ def register_send_log_email(celery, mail):
             db.session.commit()
 
         except SQLAlchemyError:
-
             raise self.retry()
 
 
@@ -80,6 +78,11 @@ def register_send_log_email(celery, mail):
     def send_log_email(task_id, msg):
         progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to send email", autocommit=True)
 
-        seq = chain(send_email.si(task_id, msg), log_email.si(task_id, msg), email_success.si(task_id)).on_error(
-            email_failure.si(task_id))
-        seq.apply_async()
+        # only send email if the EMAIL_IS_LIVE key is set in app configuration
+        if app.config.get('EMAIL_IS_LIVE', False):
+            seq = chain(send_email.si(task_id, msg), log_email.si(task_id, msg),
+                        email_success.si(task_id)).on_error(email_failure.si(task_id))
+            seq.apply_async()
+
+        else:
+            print(msg)

@@ -112,7 +112,8 @@ def register_golive_tasks(celery):
                             backup.si(convenor_id, type=BackupRecord.PROJECT_GOLIVE_FALLBACK, tag='golive',
                                       description='Rollback snapshot for '
                                                   '{proj} Go Live {yr}'.format(proj=config.name, yr=year)),
-                            projects_group)
+                            projects_group,
+                            golive_update_db.si(task_id, config_id, convenor_id, deadline))
 
         # if this is a go-live-then-close job, don't bother sending email notifications
         if not auto_close:
@@ -272,7 +273,7 @@ def register_golive_tasks(celery):
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       recipients=[data.student.user.email])
 
-        msg.body = render_template('email/go_live/selector.txt', user=data.student.user,
+        msg.body = render_template('email/go_live/selector.txt', user=data.student.user, student=data,
                                    pclass=config.project_class, config=config)
 
         # register a new task in the database

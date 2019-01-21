@@ -20,7 +20,24 @@ _projects = \
 
 _menu = \
 """
-<a href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}" class="btn btn-sm btn-table-block btn-warning">Force confirm</a>
+<div class="dropdown">
+    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+        Actions
+        <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li>
+            <a href="{{ url_for('convenor.force_confirm', id=config.id, uid=f.id) }}">
+                <i class="fa fa-check"></i> Force confirm
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('convenor.confirmation_reminder_individual', fac_id=f.id, config_id=config.id) }}">
+                <i class="fa fa-envelope-o"></i> Send reminder
+            </a>
+        </li>
+    </ul>
+</div>
 """
 
 def outstanding_confirm_data(config):

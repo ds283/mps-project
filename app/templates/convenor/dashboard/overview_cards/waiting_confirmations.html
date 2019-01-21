@@ -33,6 +33,9 @@
                 <div class="row">
                     <div class="col-xs-12">
                         <div class="pull-right">
+                            <a href="{{ url_for('convenor.confirmation_reminder', id=config.id) }}" class="btn btn-default">
+                                Send reminders
+                            </a>
                             {{ wtf.form_field(issue_form.issue_requests, button_map={'issue_requests': 'default'}) }}
                         </div>
                     </div>

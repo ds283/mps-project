@@ -18,7 +18,7 @@ from ..models import User
 def register_utility_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
-    def email_notification(self, results, user_id):
+    def email_notification(self, sent_data, user_id, message, priority):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError:
@@ -28,6 +28,12 @@ def register_utility_tasks(celery):
             self.update_state('FAILURE', meta='Could not load User record from database')
             raise Ignore
 
-        sent_emails = sum(results)
+        if not isinstance(sent_data, list):
+            sent_data = [sent_data]
 
-        user.post_message('{n} emails have been sent.'.format(n=sent_emails), 'info', autocommit=True)
+        num_sent = sum([n for n in sent_data if n is not None])
+        plural = 's'
+        if num_sent == 1:
+            plural = ''
+
+        user.post_message(message.format(n=num_sent, pl=plural), priority, autocommit=True)

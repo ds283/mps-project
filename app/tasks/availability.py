@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from celery import group
+from celery import group, chain
 from celery.exceptions import Ignore
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -308,15 +308,16 @@ def register_availability_tasks(celery):
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
             raise Ignore
 
-        recipients = []
+        recipients = set()
 
         for assessor in data.assessor_list:
             if not assessor.confirmed:
-                recipients.append(assessor.id)
+                recipients.add(assessor.id)
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
 
-        tasks = group(send_reminder_email.si(r) for r in recipients) | notify.s(user_id)
+        tasks = chain(group(send_reminder_email.si(r) for r in recipients if r is not None),
+                      notify.s(user_id, '{n} email notification{pl} issued', 'info'))
         tasks.apply_async()
 
 
@@ -340,7 +341,7 @@ def register_availability_tasks(celery):
                                    user=assessor.faculty.user)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Availability reminder email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send availability reminder email to {r}'.format(r=', '.join(msg.recipients)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

@@ -19,15 +19,15 @@ from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, Faculty
 from ..task_queue import progress_update, register_task
 
 from celery import chain, group
+from celery.exceptions import Ignore
 
 from datetime import datetime
 
 
 def register_issue_confirm_tasks(celery):
 
-    @celery.task(bind=True, serializer='pickle')
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
     def pclass_issue(self, task_id, config_id, convenor_id, deadline):
-
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to issue confirmation requests...', autocommit=True)
 
         # get database records for this project class
@@ -102,7 +102,7 @@ def register_issue_confirm_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 5, 'Building rollback confirmation requests snapshot...', autocommit=True)
 
 
-    @celery.task(bind=True, serializer='pickle')
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
     def issue_update_db(self, notify_list, task_id, config_id, convenor_id, deadline):
         progress_update(task_id, TaskRecord.RUNNING, 80, 'Updating database...', autocommit=False)
 
@@ -111,18 +111,21 @@ def register_issue_confirm_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        if config is not None:
-            config.requests_issued = True
-            config.request_deadline = deadline
-            config.requests_issued_id = convenor_id
-            config.requests_timestamp = datetime.now()
+        if config is None:
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        config.requests_issued = True
+        config.request_deadline = deadline
+        config.requests_issued_id = convenor_id
+        config.requests_timestamp = datetime.now()
 
         db.session.commit()
 
         return notify_list
 
 
-    @celery.task(bind=True)
+    @celery.task(bind=True, default_retry_delay=30)
     def issue_notifications(self, notify_list, task_id, config_id, convenor_id):
         progress_update(task_id, TaskRecord.RUNNING, 90, 'Sending email notifications...', autocommit=True)
 
@@ -132,15 +135,17 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if config is None:
-            return 0
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
 
-        send_task = group(send_notification_email.si(d, config_id) for d in notify_list if d is not None)
+        notify = celery.tasks['app.tasks.utilities.email_notification']
 
-        task = chain(send_task, notify_email_summary.s(convenor_id))
+        task = chain(group(send_notification_email.si(d, config_id) for d in notify_list if d is not None),
+                     notify.s(convenor_id, '{n} confirmation request{pl} issued', 'info'))
         task.apply_async()
 
 
-    @celery.task(bind=True)
+    @celery.task(bind=True, default_retry_delay=30)
     def issue_finalize(self, task_id, config_id, convenor_id):
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Issue confirmation requests complete', autocommit=False)
 
@@ -161,7 +166,7 @@ def register_issue_confirm_tasks(celery):
         db.session.commit()
 
 
-    @celery.task(bind=True)
+    @celery.task(bind=True, default_retry_delay=30)
     def issue_fail(self, task_id, convenor_id):
         progress_update(task_id, TaskRecord.FAILURE, 100, 'Encountered error when issuing confirmation requests', autocommit=False)
 
@@ -171,14 +176,15 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if convenor is None:
-            return None
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
 
         convenor.post_message('Issuing confirmation requests failed. Please contact a system administrator', 'error',
                               autocommit=False)
         db.session.commit()
 
 
-    @celery.task(bind=True)
+    @celery.task(bind=True, default_retry_delay=30)
     def issue_confirm(self, faculty_id, config_id):
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
@@ -187,7 +193,8 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if data is None or config is None:
-            return None
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
 
         if data in config.confirmation_required:
             return None
@@ -202,7 +209,7 @@ def register_issue_confirm_tasks(celery):
         return faculty_id
 
 
-    @celery.task(bind=True)
+    @celery.task(bind=True, default_retry_delay=30)
     def send_notification_email(self, faculty_id, config_id):
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
@@ -211,7 +218,8 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if data is None or config is None:
-            return None
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='Please check projects for {name}'.format(name=config.project_class.name),
@@ -228,20 +236,51 @@ def register_issue_confirm_tasks(celery):
         return 1
 
 
-    @celery.task(bind=True)
-    def notify_email_summary(self, sent_data, convenor_id):
+    @celery.task(bind=True, default_retry_delay=30)
+    def reminder_email(self, config_id, convenor_id):
         try:
-            convenor = User.query.filter_by(id=convenor_id).first()
+            config = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        if convenor is None:
-            return None
+        if config is None:
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
 
-        num_sent = sum([n for n in sent_data if n is not None])
-        plural = 's'
-        if num_sent == 1:
-            plural = ''
+        recipients = set()
 
-        convenor.post_message('{n} confirmation request{plural} issued'.format(n=num_sent, plural=plural), 'info',
-                              autocommit=True)
+        for faculty in config.confirmation_required:
+            recipients.add(faculty.id)
+
+        notify = celery.tasks['app.tasks.utilities.email_notification']
+
+        tasks = chain(group(send_reminder_email.si(r, config_id) for r in recipients if r is not None),
+                      notify.s(convenor_id, '{n} reminder email{pl} issued', 'info'))
+        tasks.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def send_reminder_email(self, faculty_id, config_id):
+        try:
+            data = FacultyData.query.filter_by(id=faculty_id).first()
+            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if data is None or config is None:
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        msg = Message(subject='Reminder: please check projects for {name}'.format(name=config.project_class.name),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=[data.user.email])
+
+        msg.body = render_template('email/project_confirmation/confirmation_reminder.txt', user=data.user,
+                                   pclass=config.project_class, config=config)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Send confirmation reminder email to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        return 1

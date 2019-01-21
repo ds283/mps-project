@@ -79,7 +79,7 @@ def register_issue_confirm_tasks(celery):
             if data.id not in faculty:
                 faculty.add(data.id)
 
-        issue_group = group(issue_confirm.si(d, config_id) for d in faculty)
+        issue_group = group(issue_confirm.si(d, config_id) for d in faculty if d is not None)
 
         # get backup task from celery instance
         celery = current_app.extensions['celery']
@@ -104,7 +104,7 @@ def register_issue_confirm_tasks(celery):
 
     @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
     def issue_update_db(self, notify_list, task_id, config_id, convenor_id, deadline):
-        progress_update(task_id, TaskRecord.RUNNING, 80, 'Updating database...', autocommit=False)
+        progress_update(task_id, TaskRecord.RUNNING, 80, 'Updating database records...', autocommit=False)
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()

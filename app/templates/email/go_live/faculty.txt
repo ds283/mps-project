@@ -1,0 +1,48 @@
+Dear {{ user.first_name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+
+You are receiving this email because you are enrolled as a supervisor for
+projects of type "{{ pclass.name }}". If you believe this to be
+incorrect, please contact the project convenor to have your enrollment
+status changed.
+
+Thank you for preparing your project library for {{ pclass.name }}.
+The projects for this cycle have now been published to students, so any
+further changes made to your library will not be visible to selectors.
+
+{% if number_projects == 0 -%}
+This year, no projects belonging to you were published. If this is not the
+outcome you were expecting then please contact the convenor as soon as
+possible.
+{%- else -%}
+The following projects have now been published on the live platform:
+{% for p in projects -%}
+- {{ p.name }}
+  https://mpsprojects.co.uk/faculty/live_project/{{ p.id }}
+{% endfor -%}
+Follow the links to see how each project will appear to student selectors.
+{%- endif %}
+
+{% if not expect_requests -%}
+None of your projects require students to obtain a sign-off before inclusion
+in their ranked list of preferences. Therefore you may not receive any
+further emails until student selection is closed, but you can monitor
+the popularity of your projects and the number of students that have
+bookmarked or selected each one.
+{%- else -%}
+One or more of your projects requires students to obtain a sign-off before
+inclusion in their ranked list of preferences. You will be notified by
+email when students request confirmation. You can select the frequency with
+which to receive emails from the Settings option available from your account
+drop-down menu.
+
+In addition, you can use your dashboard to monitor the popularity of your
+projects and the number of students that have bookmarked or selected each one.
+You can also manage student confirmations from the dashboard.
+{%- endif %}
+
+Thank you for your help,
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
+project convenor

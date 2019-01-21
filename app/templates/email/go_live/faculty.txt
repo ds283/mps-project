@@ -33,10 +33,12 @@ the popularity of your projects and the number of students that have
 bookmarked or selected each one.
 {%- else -%}
 One or more of your projects requires students to obtain a sign-off before
-inclusion in their ranked list of preferences. You will be notified by
-email when students request confirmation. You can select the frequency with
-which to receive emails from the Settings option available from your account
-drop-down menu.
+inclusion in their ranked list of preferences. This allows you to screen
+students where appropriate to ensure they have sufficient preparation,
+but we ask you to provide the sign-off if at all possible.  You will be
+notified by email when students request confirmation. You can select the
+frequency with which to receive emails from the Settings option available
+from your account drop-down menu.
 
 In addition, you can use your dashboard to monitor the popularity of your
 projects and the number of students that have bookmarked or selected each one.

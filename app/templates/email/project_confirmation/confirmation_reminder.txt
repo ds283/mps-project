@@ -1,0 +1,40 @@
+Dear {{ user.first_name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+
+You are receiving this email because you are enrolled as a supervisor for
+projects of type "{{ pclass.name }}". If you believe this to be
+incorrect, please contact the project convenor to have your enrollment
+status changed.
+
+We would like to gently remind you that the deadline to check or modify
+your project descriptions for "{{ pclass.name }}" is getting close.
+{% if config.request_deadline is defined and config.request_deadline is not none -%}
+The current deadline is {{ config.request_deadline.strftime("%a %d %b %Y") }}, and it would be very helpful
+if you could confirm your projects before then.
+{%- endif %}
+
+To check your projects, please log in to the project management web app
+at https://mpsprojects.co.uk and select 'My projects/My project library...'
+from the drop-down menu in the menubar. All active projects associated
+with this project type will be published to the students. If you wish
+to withdraw a project from this year's selection, please deactivate the
+project using the 'Actions/Make inactive' menu option.
+
+When you are satisfied that your project descriptions are up-to-date,
+return to your dashboard and select the "{{ pclass.name }}" tab.
+An information request box labelled "Selections: Confirmation of projects
+required" should appear highlighted in yellow at the top of the page.
+Please click the red 'Confirm' button to indicate that your projects are
+ready to go.
+
+If you have already reviewed your projects, please log in again and ensure
+you have clicked the 'Confirm' button. This will ensure that you do not
+receive further unnecessary reminder emails. Please note that you need to
+provide separate confirmation for each project type in which you are
+enrolled.
+
+Thank you for your help,
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
+project convenor

@@ -2652,7 +2652,6 @@ def issue_confirm_requests(id):
 @convenor.route('/outstanding_confirm/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def outstanding_confirm(id):
-
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -2671,7 +2670,6 @@ def outstanding_confirm_ajax(id):
     :param id:
     :return:
     """
-
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -2682,10 +2680,67 @@ def outstanding_confirm_ajax(id):
     return ajax.convenor.outstanding_confirm_data(config)
 
 
+@convenor.route('/confirmation_reminder/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def confirmation_reminder(id):
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
+        flash('Cannot issue reminder emails for this project class because confirmation requests '
+              'have not yet been generated', 'info')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
+        flash('Cannot issue reminder emails for this project class because no further confirmation '
+              'requests are outstanding', 'info')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    email_task = celery.tasks['app.tasks.issue_confirm.reminder_email']
+
+    email_task.apply_async((id, current_user.id))
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/confirmation_reminder_individual/<int:fac_id>/<int:config_id>')
+def confirmation_reminder_individual(fac_id, config_id):
+    # id is a ProjectClassConfig
+    faculty = FacultyData.query.get_or_404(fac_id)
+    config = ProjectClassConfig.query.get_or_404(config_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
+        flash('Cannot issue reminder emails for this project class because confirmation requests '
+              'have not yet been generated', 'info')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
+        flash('Cannot issue reminder emails for this project class because no further confirmation '
+              'requests are outstanding', 'info')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    email_task = celery.tasks['app.tasks.issue_confirm.send_reminder_email']
+    notify_task = celery.tasks['app.tasks.utilities.email_notification']
+
+    tk = email_task.si(fac_id, config_id) | notify_task.s(current_user.id, 'Reminder email has been sent', 'info')
+    tk.apply_async()
+
+    return redirect(request.referrer)
+
+
 @convenor.route('/show_unofferable')
 @roles_accepted('faculty', 'admin', 'root')
 def show_unofferable():
-
     # special-case of unattached projects; reject user if not administrator
     if not validate_is_administrator():
         return redirect(request.referrer)

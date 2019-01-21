@@ -5350,7 +5350,7 @@ def availability_reminder(id):
         return redirect(request.referrer)
 
     if not data.requested_availability:
-        flash('Cannot send a reminder email for this assessment because it has not yet been opened', 'info')
+        flash('Cannot issue reminder emails for this assessment because it has not yet been opened', 'info')
         return redirect(request.referrer)
 
     celery = current_app.extensions['celery']
@@ -5382,7 +5382,7 @@ def availability_reminder_individual(id):
     email_task = celery.tasks['app.tasks.availability.send_reminder_email']
     notify_task = celery.tasks['app.tasks.utilities.email_notification']
 
-    tk = email_task.si(record.id) | notify_task.s(current_user.id)
+    tk = email_task.si(record.id) | notify_task.s(current_user.id, 'Reminder email has been sent', 'info')
     tk.apply_async()
 
     return redirect(request.referrer)

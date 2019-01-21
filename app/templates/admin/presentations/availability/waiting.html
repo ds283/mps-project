@@ -28,7 +28,7 @@
                     <div class="pull-right">
                         {% if count > 0 %}
                             <a href="{{ url_for('admin.availability_reminder', id=assessment.id) }}" class="btn btn-default btn-table-block">
-                                Email reminders
+                                Send reminders
                             </a>
                         {% endif %}
                         <a href="{{ url_for('admin.close_availability', id=assessment.id) }}" class="btn btn-danger btn-table-block">

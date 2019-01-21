@@ -774,14 +774,27 @@ class FacultyData(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
-    def projects_offered(self, pclass):
+    def _projects_offered_query(self, pclass):
+        if isinstance(pclass, ProjectClass):
+            pclass_id = pclass.id
+        else:
+            pclass_id = pclass
+
         return Project.query.filter(Project.active,
                                     Project.owner_id == self.id,
-                                    Project.project_classes.any(id=pclass.id)).count()
+                                    Project.project_classes.any(id=pclass_id))
+
+
+    def projects_offered(self, pclass):
+        return self._projects_offered_query(pclass).all()
+
+
+    def number_projects_offered(self, pclass):
+        return get_count(self._projects_offered_query(pclass))
 
 
     def projects_offered_label(self, pclass):
-        n = self.projects_offered(pclass)
+        n = self.number_projects_offered(pclass)
 
         if n == 0:
             return '<span class="label label-danger"><i class="fa fa-times"></i> 0 available</span>'

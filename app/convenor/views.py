@@ -584,7 +584,7 @@ def faculty_ajax(id):
 
     # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
     if state_filter == 'no-projects' and pclass.uses_supervisor:
-        data = [ rec for rec in faculty.all() if rec[1].projects_offered(pclass) == 0 ]
+        data = [rec for rec in faculty.all() if rec[1].number_projects_offered(pclass) == 0]
     elif state_filter == 'no-marker' and pclass.uses_supervisor:
         data = [ rec for rec in faculty.all() if rec[1].number_assessor == 0 ]
     elif state_filter == 'unofferable':

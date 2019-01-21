@@ -3,7 +3,7 @@
 {% macro selector_card(config, sel_state, live_projects, current_user) %}
     {% set pclass = config.project_class %}
 
-    {% set nproj = current_user.faculty_data.projects_offered(pclass) %}
+    {% set nproj = current_user.faculty_data.number_projects_offered(pclass) %}
     {% if nproj == 1 %}
         {% set nproj_plural = '' %}
     {% else %}

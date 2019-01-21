@@ -22,6 +22,19 @@ with this project type will be published to the students. If you wish
 to withdraw a project from this year's selection, please deactivate the
 project using the 'Actions/Make inactive' menu option.
 
+{% if number_projects == 0 -%}
+Please note that you currently have no projects in your library that are
+eligible for this project type. If you wish one or more projects to be
+offered to students in this cycle you will need to edit an existing
+project, or create a new one.
+{%- else -%}
+{%- set pl = 's' %}{%- if number_projects == 1 -%}{%- set pl = '' -%}{%- endif -%}
+You currently have {{ number_projects }} project{{ pl }} eligible for this project type:
+{% for p in projects -%}
+- {{ p.name }}
+{%- endfor %}
+{%- endif %}
+
 When you are satisfied that your project descriptions are up-to-date,
 return to your dashboard and select the "{{ pclass.name }}" tab.
 An information request box labelled "Selections: Confirmation of projects

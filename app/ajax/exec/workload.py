@@ -38,7 +38,7 @@ _enrollments = \
         {{ record.pclass.make_label()|safe }}
 
         {% if record.pclass.uses_supervisor %}
-            {% set offered = f.projects_offered(record.pclass) %}
+            {% set offered = f.number_projects_offered(record.pclass) %}
             {% if offered > 0 %}
                 <span class="label label-info">Offered={{ offered }}</span>
             {% else %}

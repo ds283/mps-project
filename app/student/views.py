@@ -21,7 +21,7 @@ from .forms import StudentFeedbackForm, StudentSettingsForm
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord, \
-    User
+    User, EmailNotification, add_notification
 
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count
 
@@ -101,13 +101,11 @@ def dashboard():
     pcs = []
 
     for item in current_user.student_data.selecting.filter_by(retired=False).all():
-
         pclass = item.config.project_class
         if pclass.active and pclass not in pcs:
             pcs.append(pclass)
 
     for item in current_user.student_data.submitting.filter_by(retired=False).all():
-
         pclass = item.config.project_class
         if pclass.active and pclass not in pcs:
             pcs.append(pclass)
@@ -115,7 +113,6 @@ def dashboard():
     # map list of project classes into ProjectClassConfig instance, and selector/submitter cards
     enrollments = []
     for item in pcs:
-
         # extract live configuration for this project class
         config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
 
@@ -425,7 +422,9 @@ def request_confirmation(sid, pid):
         return redirect(request.referrer)
 
     # add confirm request
-    db.session.add(project.make_confirm_request(sel))
+    req = project.make_confirm_request(sel)
+    db.session.add(req)
+    add_notification(project.owner, EmailNotification.CONFIRMATION_REQUEST_CREATED, req, autocommit=False)
     db.session.commit()
 
     return redirect(request.referrer)
@@ -460,8 +459,10 @@ def cancel_confirmation(sid, pid):
     # remove confirm request if one exists
     if project.is_waiting(sel):
         req = project.get_confirm_request(sel)
-        db.session.delete(req)
-        db.session.commit()
+        if req is not None:
+            req.remove()
+            db.session.delete(req)
+            db.session.commit()
 
     return redirect(request.referrer)
 

@@ -24,5 +24,6 @@ from .maintenance import register_maintenance_tasks
 from .assessment import register_assessment_tasks
 from .assessors import register_assessor_tasks
 from .utilities import register_utility_tasks
+from .email_notifications import register_email_notification_tasks
 
 from .test import register_test_tasks

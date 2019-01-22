@@ -31,9 +31,6 @@ from time import time
 from uuid import uuid4
 
 
-# make db available as a static variable, so we can import into other parts of the code
-
-
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
 
@@ -629,6 +626,373 @@ def _User_role_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
         if value in target.mask_roles:
             target.mask_roles.remove(value)
+
+
+class EmailNotification(db.Model):
+    """
+    Represent an event for which the user should be notified by email
+    """
+
+    __tablename__ = 'email_notifications'
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # user to whom this notification applies
+    owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    owner = db.relationship('User', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('email_notifications', lazy='dynamic',
+                                               cascade='all, delete, delete-orphan'))
+
+    CONFIRMATION_REQUEST_CREATED = 0
+    CONFIRMATION_REQUEST_CANCELLED = 1
+
+    CONFIRMATION_REQUEST_DELETED = 2
+    CONFIRMATION_GRANT_DELETED = 3
+    CONFIRMATION_DECLINE_DELETED = 4
+    CONFIRMATION_GRANTED = 5
+    CONFIRMATION_DECLINED = 6
+    CONFIRMATION_TO_PENDING = 7
+
+    FACULTY_REENROLL_SUPERVISOR = 8
+    FACULTY_REENROLL_MARKER = 9
+    FACULTY_REENROLL_PRESENTATIONS = 10
+
+    # notification type
+    event_type = db.Column(db.Integer())
+
+    # index
+    # the meaning of these fields varies depending on the notification type
+    # it's usually the primary key, but the record type associated with it varies
+    data_1 = db.Column(db.Integer())
+    data_2 = db.Column(db.Integer())
+
+
+    # set up dispatch table of methods to handle each notification type
+
+    # dispatch table for __str__
+    str_operations = {}
+
+    # dispatch table for subject()
+    subject_operations = {}
+
+    # define utility decorator to insert into dispatch table
+    assign = lambda table, key: lambda f: table.setdefault(key, f)
+
+
+    @assign(str_operations, CONFIRMATION_REQUEST_CREATED)
+    def _reqested_created(self):
+        req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
+        if req is None:
+            return '<missing database row>'
+
+        return '{student} requested a meeting confirmation for project ' \
+               '"{proj}".'.format(student=req.owner.student.user.name, proj=req.project.name)
+
+
+    @assign(str_operations, CONFIRMATION_REQUEST_CANCELLED)
+    def _request_cancelled(self):
+        user = db.session.query(User).filter_by(id=self.data_1).first()
+        proj = db.session.query(LiveProject).filter_by(id=self.data_2).first()
+        if user is None or proj is None:
+            return '<missing database row>'
+
+        return '{student} cancelled their confirmation request for project ' \
+               '"{proj}".'.format(student=user.name, proj=proj.name)
+
+
+    @assign(str_operations, CONFIRMATION_REQUEST_DELETED)
+    def _request_deleted(self):
+        user = db.session.query(User).filter_by(id=self.data_1).first()
+        proj = db.session.query(LiveProject).filter_by(id=self.data_2).first()
+        if user is None or proj is None:
+            return '<missing database row>'
+
+        return '{supervisor} deleted your confirmation request for project ' \
+               '"{proj}". If you were not expecting this to happen, please contact the supervisor ' \
+               'directly.'.format(supervisor=proj.owner.user.name, proj=proj.name)
+
+
+    @assign(str_operations, CONFIRMATION_GRANT_DELETED)
+    def _grant_deleted(self):
+        proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
+        if proj is None:
+            return '<missing database row>'
+
+        return '{supervisor} removed your meeting confirmation for project ' \
+               '"{proj}". If you were not expecting this to happen, please contact the supervisor ' \
+               'directly.'.format(supervisor=proj.owner.user.name, proj=proj.name)
+
+
+    @assign(str_operations, CONFIRMATION_DECLINE_DELETED)
+    def _decline_deleted(self):
+        proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
+        if proj is None:
+            return '<missing database row>'
+
+        return '{supervisor} removed your declined request for meeting confirmation for project ' \
+               '"{proj}". If you were not expecting this to happen, please contact the supervisor ' \
+               'directly. Should you be interested in applying for this project, you are now able ' \
+               'to generate a new confirmation request.'.format(supervisor=proj.owner.user.name, proj=proj.name)
+
+
+    @assign(str_operations, CONFIRMATION_GRANTED)
+    def _request_granted(self):
+        req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
+        if req is None:
+            return '<missing database row>'
+
+        return '{supervisor} confirmed your request to sign-off on project ' \
+               '"{proj}". If you are interested in applying for this project, you are now able ' \
+               'to include it when submitting your list of ranked ' \
+               'choices.'.format(supervisor=req.project.owner.user.name, proj=req.project.name)
+
+
+    @assign(str_operations, CONFIRMATION_DECLINED)
+    def _request_declined(self):
+        req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
+        if req is None:
+            return '<missing database row>'
+
+        return '{supervisor} declined your request to sign-off on project ' \
+               '"{proj}". If you were not expecting this to happen, please contact the supervisor ' \
+               'directly.'.format(supervisor=req.project.owner.user.name, proj=req.project.name)
+
+
+    @assign(str_operations, CONFIRMATION_TO_PENDING)
+    def _request_to_pending(self):
+        req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
+        if req is None:
+            return '<missing database row>'
+
+        return '{supervisor} changed your meeting confirmation request for project ' \
+               '"{proj}" to "pending". If you were not expecting this to happen, please contact the supervisor ' \
+               'directly.'.format(supervisor=req.project.owner.user.name, proj=req.project.name)
+
+
+    @assign(str_operations, FACULTY_REENROLL_SUPERVISOR)
+    def _request_reenroll_supervisor(self):
+        record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
+        if record is None:
+            return '<missing database row>'
+
+        return 'You have been automatically re-enrolled as a supervisor for the project class "{proj}". ' \
+               'This has probably happened because you were previously marked as "on sabbatical", and you are ' \
+               'expected to return from sabbatical in the *next* academic year. (This means that students will need ' \
+               'to offer projects for selection in the next cycle.)'.format(proj=record.pclass.name)
+
+
+    @assign(str_operations, FACULTY_REENROLL_MARKER)
+    def _request_reenroll_marker(self):
+        record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
+        if record is None:
+            return '<missing database row>'
+
+        return 'You have been automatically re-enrolled as a 2nd-marker for the project class "{proj}". ' \
+               'This has probably happened because you were previously marked as "on sabbatical", and you are ' \
+               'expected to return from sabbatical in the next project cycle.'.format(proj=record.pclass.name)
+
+
+    @assign(str_operations, FACULTY_REENROLL_PRESENTATIONS)
+    def _request_reenroll_presentations(self):
+        record = db.session.query(EnrollmentRecord).filter_by(id=self.data_1).first()
+        if record is None:
+            return '<missing database row>'
+
+        return 'You have been automatically re-enrolled as a presentation assessor for the project class "{proj}". ' \
+               'This has probably happened because you were previously marked as "on sabbatical", and you are ' \
+               'expected to return from sabbatical in the next project cycle.'.format(proj=record.pclass.name)
+
+
+    @assign(subject_operations, CONFIRMATION_REQUEST_CREATED)
+    def _subj_request_created(self):
+        return 'New meeting confirmation request'
+
+
+    @assign(subject_operations, CONFIRMATION_REQUEST_CANCELLED)
+    def _subj_request_cancelled(self):
+        return 'Meeting confirmation request cancelled'
+
+
+    @assign(subject_operations, CONFIRMATION_REQUEST_DELETED)
+    def _subj_request_deleted(self):
+        return 'Meeting confirmation request deleted'
+
+
+    @assign(subject_operations, CONFIRMATION_GRANT_DELETED)
+    def _subj_grant_deleted(self):
+        return 'Meeting confirmation deleted'
+
+
+    @assign(subject_operations, CONFIRMATION_DECLINE_DELETED)
+    def _subj_decline_deleted(self):
+        return 'Declined meeting confirmation deleted'
+
+
+    @assign(subject_operations, CONFIRMATION_GRANTED)
+    def _subj_granted(self):
+        return 'Meeting confirmation signed off'
+
+
+    @assign(subject_operations, CONFIRMATION_DECLINED)
+    def _subj_declined(self):
+        return 'Meeting confirmation declined'
+
+
+    @assign(subject_operations, CONFIRMATION_TO_PENDING)
+    def _subj_to_pending(self):
+        return 'Meeting confirmation changed to "pending"'
+
+
+    @assign(subject_operations, FACULTY_REENROLL_SUPERVISOR)
+    def _subj_reenroll_supervisor(self):
+        return 'You have been re-enrolled as a project supervisor'
+
+
+    @assign(subject_operations, FACULTY_REENROLL_MARKER)
+    def _subj_reenroll_marker(self):
+        return 'You have been re-enrolled as a project marker'
+
+
+    @assign(subject_operations, FACULTY_REENROLL_PRESENTATIONS)
+    def _subj_reenroll_presentations(self):
+        return 'You have been re-enrolled as a project presentation assessor'
+
+
+    def __str__(self):
+        try:
+            method = self.str_operations[self.event_type].__get__(self, type(self))
+        except KeyError:
+            assert self.event_type in self.str_operations, "invalid notification type: " + repr(k)
+        return method()
+
+
+    def msg_subject(self):
+        try:
+            method = self.subject_operations[self.event_type].__get__(self, type(self))
+        except KeyError:
+            assert self.event_type in self.subject_operations, "invalid notification type: " + repr(k)
+        return method()
+
+
+def _get_object_id(obj):
+    if obj is None:
+        return None
+
+    if isinstance(obj, int):
+        return obj
+
+    return obj.id
+
+
+def add_notification(user, event, object_1, object_2=None, autocommit=True, notification_id=None):
+    if isinstance(user, User) or isinstance(user, FacultyData) or isinstance(user, StudentData):
+        user_id = user.id
+    else:
+        user_id = user
+
+    object_1_id = _get_object_id(object_1)
+    object_2_id = _get_object_id(object_2)
+
+    check_list = []
+
+    # check whether we can collapse with any existing messages
+    if event == EmailNotification.CONFIRMATION_REQUEST_CREATED:
+        # object_1 = ConfirmRequest, object2 = None
+        check_list.append((EmailNotification.CONFIRMATION_REQUEST_CANCELLED, object_1.owner_id, object_1.project_id))
+
+    if event == EmailNotification.CONFIRMATION_REQUEST_CANCELLED:
+        # object_1 = SelectingStudent, object_2 = LiveProject
+        # this one has to be done by hand; we want to search for an EmailNotification with the given particulars
+        if notification_id is not None and isinstance(notification_id, int):
+            check_list.append((EmailNotification.CONFIRMATION_REQUEST_CREATED, notification_id, None))
+
+    if event == EmailNotification.CONFIRMATION_GRANT_DELETED:
+        # object_1 = ConfirmRequest, object2 = None
+        check_list.append((EmailNotification.CONFIRMATION_GRANTED, object_1_id, object_2_id))
+
+    if event == EmailNotification.CONFIRMATION_GRANTED:
+        # object_1 = ConfirmRequest, object2 = None
+        check_list.append((EmailNotification.CONFIRMATION_GRANT_DELETED, object_1_id, object_2_id))
+
+    if event == EmailNotification.CONFIRMATION_DECLINE_DELETED:
+        # object_1 = ConfirmRequest, object2 = None
+        check_list.append((EmailNotification.CONFIRMATION_DECLINED, object_1_id, object_2_id))
+
+    if event == EmailNotification.CONFIRMATION_DECLINED:
+        # object_1 = ConfirmRequest, object2 = None
+        check_list.append((EmailNotification.CONFIRMATION_DECLINE_DELETED, object_1_id, object_2_id))
+
+    dont_save = False
+    for t, obj1_id, obj2_id in check_list:
+        q = db.session.query(EmailNotification).filter_by(owner_id=user_id, data_1=obj1_id, data_2=obj2_id,
+                                                          event_type=t)
+
+        if get_count(q) > 0:
+            q.delete()
+            db.session.commit()
+            dont_save = True
+
+    if dont_save:
+        return
+
+    # check whether an existing message with the same content already exists
+    q = db.session.query(EmailNotification).filter_by(owner_id=user_id, data_1=object_1_id, data_2=object_2_id,
+                                                      event_type=event)
+    if get_count(q) > 0:
+        return
+
+    # insert new notification
+    obj = EmailNotification(owner_id=user_id, data_1=object_1_id, data_2=object_2_id, event_type=event)
+    db.session.add(obj)
+
+    # send immediately if we are not grouping notifications into summaries
+    if isinstance(user, User):
+        user_obj = user
+    elif isinstance(user, (FacultyData, StudentData)):
+        user_obj = user.user
+    else:
+        user_obj = db.session.query(User).filter_by(id=user_id).first()
+
+    # trigger immediate send if notifications are not being grouped into summaries
+    if user_obj is not None and not user_obj.group_summaries:
+        celery = current_app.extensions['celery']
+        send_notify = celery.tasks['app.tasks.email_notifications.notify_user']
+
+        task_id = str(uuid4())
+
+        data = TaskRecord(id=task_id,
+                          name="Generate notification email",
+                          owner_id=None,
+                          description="Automatically triggered notification email to {r}".format(r=user_obj.name),
+                          start_date=datetime.now(),
+                          status=TaskRecord.PENDING,
+                          progress=None,
+                          message=None)
+        db.session.add(data)
+        db.session.flush()
+
+        # queue Celery task to send the email, deferred 10 seconds into the future to allow time for
+        # all database records to be synced
+        send_notify.apply_async(args=(task_id, user_id), task_id=task_id, countdown=10)
+
+    if autocommit:
+        db.session.commit()
+
+
+def delete_notification(user, event, object_1, object_2=None):
+    if isinstance(user, User) or isinstance(user, FacultyData) or isinstance(user, StudentData):
+        user_id = user.id
+    else:
+        user_id = user
+
+    q = db.session.query(EmailNotification).filter_by(owner_id=user_id,
+                                                      data_1=object_1.id if object_1 is not None else None,
+                                                      data_2=object_2.id if object_2 is not None else None,
+                                                      event_type=event)
+
+    q.delete()
+    db.session.commit()
 
 
 class ResearchGroup(db.Model, ColouredLabelMixin):
@@ -4174,12 +4538,14 @@ class ConfirmRequest(db.Model):
 
 
     def confirm(self):
-        self.state = ConfirmRequest.CONFIRMED
+        if self.state != ConfirmRequest.CONFIRMED:
+            self.owner.student.user.post_message(
+                'Your confirmation request for project "{name}" has been '
+                'approved.'.format(name=self.project.name), 'success')
+            add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANTED, self)
 
-        # notify student of confirmation
-        self.owner.student.user.post_message('Your confirmation request for project "{name}" has been '
-                                             'approved.'.format(name=self.project.name), 'success')
-        # TODO: add notification to email queue
+        self.state = ConfirmRequest.CONFIRMED
+        delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 
     def waiting(self):
@@ -4188,25 +4554,41 @@ class ConfirmRequest(db.Model):
                 'Your confirmation approval for the project "{name}" has been reverted to "pending". '
                 'If you were not expecting this event, please make an appointment to discuss '
                 'with the supervisor.'.format(name=self.project.name), 'info')
-            # TODO: add notification to email queue
+            add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_TO_PENDING, self)
 
         self.state = ConfirmRequest.REQUESTED
 
 
     def remove(self):
+        if current_user.id == self.owner.student.id:
+            add_notification(self.project.owner, EmailNotification.CONFIRMATION_REQUEST_CANCELLED, self.owner.student,
+                             object_2=self.project, notification_id=self.id)
+
         if self.state == ConfirmRequest.CONFIRMED:
-            self.owner.student.user.post_message(
-                'Your confirmation approval for project "{name}" has been removed. '
-                'If you were not expecting this event, please make an appointment to discuss '
-                'with the supervisor.'.format(name=self.project.name), 'info')
-            # TODO: add notification to email queue
+            if current_user.id == self.project.owner.id:
+                self.owner.student.user.post_message(
+                    'Your confirmation approval for project "{name}" has been removed. '
+                    'If you were not expecting this event, please make an appointment to discuss '
+                    'with the supervisor.'.format(name=self.project.name), 'info')
+                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANT_DELETED, self.project)
 
         elif self.state == ConfirmRequest.DECLINED:
-            self.owner.student.user.post_message(
-                'Your declined request for approval to select project "{name}" has been removed. '
-                'If you still wish to select this project, you may now make a new request '
-                'for approval.'.format(name=self.project.name), 'info')
-            # TODO: add notification to email queue
+            if current_user.id == self.project.owner.id:
+                self.owner.student.user.post_message(
+                    'Your declined request for approval to select project "{name}" has been removed. '
+                    'If you still wish to select this project, you may now make a new request '
+                    'for approval.'.format(name=self.project.name), 'info')
+                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_DECLINE_DELETED, self.project)
+
+        elif self.state == ConfirmRequest.REQUESTED:
+            if current_user.id == self.project.owner.id:
+                self.owner.student.user.post_message(
+                    'Your request for confirmation approval for project "{name}" has been deleted by '
+                    'the project supervisor. If you were not expecting this event, please make an '
+                    'appointment to discuss with the supervisor.'.format(name=self.project.name), 'info')
+                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_REQUEST_DELETED,
+                                 self.owner.student, object_2=self.project, notification_id=self.id)
+                delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 
 class SelectingStudent(db.Model):

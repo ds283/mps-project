@@ -16,7 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
-    SubmissionRecord, SubmissionPeriodRecord
+    SubmissionRecord, SubmissionPeriodRecord, add_notification, EmailNotification
 
 from ..task_queue import progress_update
 
@@ -620,23 +620,26 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', meta='Could not load EnrollmentRecord')
             return
 
+        # supervisors re-enroll in the year *before* they come off sabbatical, so they can offer
+        # projects during the selection cycle
         if record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-            if record.supervisor_reenroll is not None and record.supervisor_reenroll <= current_year:
+            if record.supervisor_reenroll is not None and record.supervisor_reenroll <= current_year+1:
                 record.supervisor_state = EnrollmentRecord.SUPERVISOR_ENROLLED
                 record.supervisor_comment = 'Automatically re-enrolled during academic year rollover'
-                # TODO: issue email to faculty member, informing them of re-enrollment
+                add_notification(record.owner, EmailNotification.FACULTY_REENROLL_SUPERVISOR, record)
 
+        # markers (and presentation assessors) re-enroll in the year they come off sabbatical
         if record.marker_state != EnrollmentRecord.MARKER_ENROLLED:
             if record.marker_reenroll is not None and record.marker_reenroll <= current_year:
                 record.marker_state = EnrollmentRecord.MARKER_ENROLLED
                 record.marker_comment = 'Automatically re-enrolled during academic year rollover'
-                # TODO: issue email to faculty member, informing them of re-enrollment
+                add_notification(record.owner, EmailNotification.FACULTY_REENROLL_MARKER, record)
 
         if record.presentations_state != EnrollmentRecord.PRESENTATIONS_ENROLLED:
             if record.presentations_reenroll is not None and record.presentations_reenroll <= current_year:
                 record.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
                 record.presentations_comment = 'Automatically re-enrolled during academic year rollover'
-                # TODO: issue email to faculty member, informing them of re-enrollment
+                add_notification(record.owner, EmailNotification.FACULTY_REENROLL_PRESENTATIONS, record)
 
         try:
             db.session.commit()

@@ -1,7 +1,7 @@
 Dear {{ user.first_name }}
 
-Thank you for entering your availability to assess the project presentation event
-taking place between {{ event.earliest_date }} and {{ event.latest_date }}.
+Thank you for entering your availability to assess the project presentation
+event taking place between {{ event.earliest_date }} and {{ event.latest_date }}.
 
 We now have a draft of the assessment timetable, and we would like to ask you
 to cover the following sessions:
@@ -18,9 +18,9 @@ https://mpsprojects.co.uk/admin/view_schedule/{{ schedule.id }}
 If you anticipate any difficulties, please let the event organizer know
 as soon as possible: {{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }})
 
-This is an automated email. Please do not reply to it directly, because messages
-sent to this mailbox are not monitored or answered. If you have questions or
-concerns, please direct these to the event organizer.
+This is an automated email. Please do not reply to it directly, because
+messages sent to this mailbox are not monitored or answered. If you have
+questions or concerns, please direct these to the event organizer.
 
 Best wishes,
 {% for fac in event.convenor_list -%}

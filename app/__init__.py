@@ -178,6 +178,7 @@ def create_app():
     tasks.register_maintenance_tasks(celery)
     tasks.register_assessment_tasks(celery)
     tasks.register_assessor_tasks(celery)
+    tasks.register_email_notification_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

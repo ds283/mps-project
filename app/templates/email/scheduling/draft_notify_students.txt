@@ -5,8 +5,8 @@ presentation assessment taking place between {{ event.earliest_date }} and
 {{ event.latest_date }}.
 
 A draft timetable for this assessment is now available. Please be aware that
-this is not yet the final version, and some details may change. If changes are
-required we will advise you as soon as we are able.
+this is not yet the final version, and some details may change. If changes
+are required we will advise you as soon as we are able.
 
 Your presentation has been scheduled on:
 

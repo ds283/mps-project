@@ -1,0 +1,16 @@
+Dear {{ user.name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+
+The following events have occurred since your last summary email:
+
+{% for notify in notifications -%}
+- {{ notify|string|wordwrap(75) }}
+
+{% endfor -%}
+
+This is an automated email. Please do not reply to it directly, because
+messages sent to this mailbox are not monitored or answered. If you have
+questions or concerns, please direct these to the project convenor or a
+system administrator, as appropriate.

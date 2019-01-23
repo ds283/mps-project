@@ -469,13 +469,13 @@ class User(db.Model, UserMixin):
     # EMAIL PREFERENCES
 
     # time last summary email was sent
-    last_email = db.Column(db.DateTime())
+    last_email = db.Column(db.DateTime(), default=None)
 
     # group email notifications into summaries?
-    group_summaries = db.Column(db.Boolean())
+    group_summaries = db.Column(db.Boolean(), default=True, nullable=False)
 
     # how frequently to send summaries, in days
-    summary_frequency = db.Column(db.Integer())
+    summary_frequency = db.Column(db.Integer(), default=1, nullable=False)
 
 
     # override inherited has_role method
@@ -703,9 +703,8 @@ class EmailNotification(db.Model):
 
     @assign(str_operations, CONFIRMATION_REQUEST_DELETED)
     def _request_deleted(self):
-        user = db.session.query(User).filter_by(id=self.data_1).first()
-        proj = db.session.query(LiveProject).filter_by(id=self.data_2).first()
-        if user is None or proj is None:
+        proj = db.session.query(LiveProject).filter_by(id=self.data_1).first()
+        if proj is None:
             return '<missing database row>'
 
         return '{supervisor} deleted your confirmation request for project ' \
@@ -909,19 +908,23 @@ def add_notification(user, event, object_1, object_2=None, autocommit=True, noti
 
     if event == EmailNotification.CONFIRMATION_GRANT_DELETED:
         # object_1 = ConfirmRequest, object2 = None
-        check_list.append((EmailNotification.CONFIRMATION_GRANTED, object_1_id, object_2_id))
+        # this one has to be done by hand; we want to search for an EmailNotification with the given particulars
+        if notification_id is not None and isinstance(notification_id, int):
+            check_list.append((EmailNotification.CONFIRMATION_GRANTED, notification_id, None))
 
     if event == EmailNotification.CONFIRMATION_GRANTED:
         # object_1 = ConfirmRequest, object2 = None
-        check_list.append((EmailNotification.CONFIRMATION_GRANT_DELETED, object_1_id, object_2_id))
+        check_list.append((EmailNotification.CONFIRMATION_GRANT_DELETED, object_1.project_id, None))
 
     if event == EmailNotification.CONFIRMATION_DECLINE_DELETED:
         # object_1 = ConfirmRequest, object2 = None
-        check_list.append((EmailNotification.CONFIRMATION_DECLINED, object_1_id, object_2_id))
+        # this one has to be done by hand; we want to search for an EmailNotification with the given particulars
+        if notification_id is not None and isinstance(notification_id, int):
+            check_list.append((EmailNotification.CONFIRMATION_DECLINED, notification_id, None))
 
     if event == EmailNotification.CONFIRMATION_DECLINED:
         # object_1 = ConfirmRequest, object2 = None
-        check_list.append((EmailNotification.CONFIRMATION_DECLINE_DELETED, object_1_id, object_2_id))
+        check_list.append((EmailNotification.CONFIRMATION_DECLINE_DELETED, object_1.project_id, None))
 
     dont_save = False
     for t, obj1_id, obj2_id in check_list:
@@ -4545,6 +4548,9 @@ class ConfirmRequest(db.Model):
             add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANTED, self)
 
         self.state = ConfirmRequest.CONFIRMED
+        if self.response_timestamp is None:
+            self.response_timestamp = datetime.now()
+
         delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 
@@ -4570,7 +4576,8 @@ class ConfirmRequest(db.Model):
                     'Your confirmation approval for project "{name}" has been removed. '
                     'If you were not expecting this event, please make an appointment to discuss '
                     'with the supervisor.'.format(name=self.project.name), 'info')
-                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANT_DELETED, self.project)
+                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_GRANT_DELETED, self.project,
+                                 notification_id=self.id)
 
         elif self.state == ConfirmRequest.DECLINED:
             if current_user.id == self.project.owner.id:
@@ -4578,7 +4585,8 @@ class ConfirmRequest(db.Model):
                     'Your declined request for approval to select project "{name}" has been removed. '
                     'If you still wish to select this project, you may now make a new request '
                     'for approval.'.format(name=self.project.name), 'info')
-                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_DECLINE_DELETED, self.project)
+                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_DECLINE_DELETED, self.project,
+                                 notification_id=self.id)
 
         elif self.state == ConfirmRequest.REQUESTED:
             if current_user.id == self.project.owner.id:
@@ -4586,8 +4594,8 @@ class ConfirmRequest(db.Model):
                     'Your request for confirmation approval for project "{name}" has been deleted by '
                     'the project supervisor. If you were not expecting this event, please make an '
                     'appointment to discuss with the supervisor.'.format(name=self.project.name), 'info')
-                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_REQUEST_DELETED,
-                                 self.owner.student, object_2=self.project, notification_id=self.id)
+                add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_REQUEST_DELETED, self.project,
+                                 notification_id=self.id)
                 delete_notification(self.project.owner.user, EmailNotification.CONFIRMATION_REQUEST_CREATED, self)
 
 

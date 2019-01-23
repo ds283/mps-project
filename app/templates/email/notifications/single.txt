@@ -3,9 +3,27 @@ Dear {{ user.name }}
 This is an automated email from the Sussex Physics & Astronomy
 project management web app at https://mpsprojects.co.uk.
 
-{{ notification|string|wordwrap }}
+{% for notify in notifications -%}
+- {{ notify|string|wordwrap(75) }}
+
+{% endfor -%}
+
+{% if outstanding|length > 0 -%}
+The following confirmation requests still require a response. It would
+be appreciated if they could be dealt with at your earliest convenience:
+
+{% for req in outstanding -%}
+{%- set line = req.owner.student.user.name + ' for "' + req.project.name + '" (' + req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") + ')' -%}
+- {{ line|wordwrap(75) }}
+
+{% endfor -%}
+{%- endif -%}
 
 This is an automated email. Please do not reply to it directly, because
 messages sent to this mailbox are not monitored or answered. If you have
 questions or concerns, please direct these to the project convenor or a
 system administrator, as appropriate.
+
+You can adjust your email preferences, including the frequency with which
+you will be mailed notifications, in the 'Settings...' section of your
+account.

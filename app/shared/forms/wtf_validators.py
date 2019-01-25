@@ -326,6 +326,18 @@ def unique_or_original_schedule_name(assessment_id, form, field):
     return globally_unique_schedule_name(assessment_id, form, field)
 
 
+def globally_unique_schedule_tag(form, field):
+    if ScheduleAttempt.query.filter_by(tag=field.data).first():
+        raise ValidationError('{tag} is already in use for a schedule tag'.format(tag=field.data))
+
+
+def unique_or_original_schedule_tag(form, field):
+    if field.data == form.schedule.tag:
+        return
+
+    return globally_unique_schedule_tag(form, field)
+
+
 def globally_unique_module_code(form, field):
     if Module.query.filter_by(code=field.data).first():
         raise ValidationError('{name} is already in use as a module code'.format(name=field.data))

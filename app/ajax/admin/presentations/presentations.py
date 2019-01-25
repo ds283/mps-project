@@ -18,6 +18,9 @@ _name = \
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
 <p></p>
+{% if a.is_deployed %}
+    <span class="label label-success"><i class="fa fa-check"></i> Deployed</span>
+{% endif %}
 {% if not a.feedback_open %}
     <span class="label label-success">Feedback closed</span>
 {% endif %}

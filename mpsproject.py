@@ -91,6 +91,18 @@ def populate_email_options():
         user.group_summaries = True
         user.summary_frequency = 1
 
+    db.session.commit()
+
+
+def populate_schedule_tags():
+    schedules = db.session.query(ScheduleAttempt).all()
+
+    for s in schedules:
+        if s.tag is None:
+            s.tag = 'schedule_{n}'.format(n=s.id)
+
+    db.session.commit()
+
 
 app, celery = create_app()
 
@@ -122,6 +134,7 @@ with app.app_context():
     # migrate_confirmation_data()
     # populate_validation_data()
     # populate_email_options()
+    # populate_schedule_tags()
 
     db.session.commit()
 

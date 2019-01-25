@@ -12,7 +12,7 @@ from flask import request
 from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin, get_form_field_label
 from flask_security.forms import password_length, email_required, email_validator, EqualTo
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
-    TextAreaField, DateField, DateTimeField, FloatField, RadioField
+    TextAreaField, DateField, DateTimeField, FloatField, RadioField, ValidationError
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
@@ -34,6 +34,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_building_name, unique_or_original_building_name, \
     globally_unique_room_name, unique_or_original_room_name, \
     globally_unique_schedule_name, unique_or_original_schedule_name, \
+    globally_unique_schedule_tag, unique_or_original_schedule_tag, \
     globally_unique_module_code, unique_or_original_module_code, \
     globally_unique_FHEQ_level_name, unique_or_original_FHEQ_level_name, \
     globally_unique_FHEQ_short_name, unique_or_original_FHEQ_short_name, \
@@ -53,6 +54,8 @@ from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLast
     FacultyDataMixinFactory
 
 from functools import partial
+
+import re
 
 
 class UniqueUserNameMixin():
@@ -1050,8 +1053,12 @@ class AvailabilityForm(Form):
 class ScheduleNameMixin():
 
     name = StringField('Name',
-                       description='Enter a short tag to identify this schedule',
+                       description='Enter a short name to identify this schedule',
                        validators=[InputRequired(message='Please supply a unique name')])
+
+    tag = StringField('Tag',
+                      description='Enter a unique tag (containing no white space) for use as part of a URL',
+                      validators=[InputRequired(message='Please supply a unique tag')])
 
 
 class ScheduleSettingsMixin():
@@ -1085,6 +1092,15 @@ def NewScheduleFormFactory(assessment):
         def validate_name(form, field):
             return globally_unique_schedule_name(assessment.id, form, field)
 
+        @staticmethod
+        def validate_tag(form, field):
+            isvalid = re.match(r'[\w-]*$', field.data)
+            if not isvalid:
+                raise ValidationError('The tag should contain only letters, numbers, underscores or dashes, '
+                                      'and be valid as part of a URL')
+
+            return globally_unique_schedule_tag(form, field)
+
     return NewScheduleForm
 
 
@@ -1105,6 +1121,15 @@ def RenameScheduleFormFactory(assessment):
         @staticmethod
         def validate_name(form, field):
             return unique_or_original_schedule_name(assessment.id, form, field)
+
+        @staticmethod
+        def validate_tag(form, field):
+            isvalid = re.match(r'[\w-]*$', field.data)
+            if not isvalid:
+                raise ValidationError('The tag should contain only letters, numbers, underscores or dashes, '
+                                      'and be valid as part of a URL')
+
+            return unique_or_original_schedule_tag(form, field)
 
     return RenameScheduleForm
 

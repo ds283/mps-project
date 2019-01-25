@@ -39,10 +39,12 @@ _status = \
     {% endif %}
     <p></p>
     {% if s.published and current_user.has_role('root') %}
-        <span class="label label-primary">Published</span>
+        <span class="label label-primary"><i class="fa fa-check"></i> Published</span>
+        (<a href="{{ url_for('admin.view_schedule', tag=s.tag) }}">link</a>)
     {% endif %}
     {% if s.deployed and current_user.has_role('root') %}
         <span class="label label-success"><i class="fa fa-check"></i> Deployed</span>
+        (<a href="{{ url_for('admin.view_schedule', tag=s.tag) }}">link</a>)
     {% endif %}
 {% else %}
     {% if s.awaiting_upload %}

@@ -104,7 +104,7 @@ def get_schedule_message_data(configs=None):
                         messages.append(('error', 'Event "{event}" and deployed schedule "{name}" for project class '
                                          '"{pclass}" contain validation errors. Please attend to these as soon '
                                          'as possible.'.format(name=schedule.name, event=schedule.event_name,
-                                                               pclass=pclass.name)))
+                                                               pclass=config.project_class.name)))
                         error_events.add(schedule.event_name)
 
                 elif not schedule.is_valid:
@@ -112,7 +112,7 @@ def get_schedule_message_data(configs=None):
                         messages.append(('error', 'Deployed schedule "{name}" for event "{event}" and project class "{pclass}") '
                                          'contains validation errors. Please attend to these as soon as '
                                          'possible.'.format(name=schedule.name, event=schedule.event_name,
-                                                            pclass=pclass.name)))
+                                                            pclass=config.project_class.name)))
                         error_schedules.add(schedule.name)
 
     return {'messages': messages}

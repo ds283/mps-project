@@ -1197,6 +1197,7 @@ def register_scheduling_tasks(celery):
             # generate a new ScheduleAttempt
             data = ScheduleAttempt(owner_id=record.owner_id,
                                    name=new_name,
+                                   tag=None,
                                    solver=record.solver,
                                    construct_time=record.construct_time,
                                    compute_time=record.compute_time,
@@ -1219,6 +1220,8 @@ def register_scheduling_tasks(celery):
 
             db.session.add(data)
             db.session.flush()
+
+            data.tag = 'schedule_{n}'.format(n=data.id)
 
             # duplicate all slots
             for slot in record.slots:

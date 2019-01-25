@@ -6122,8 +6122,10 @@ def create_assessment_schedule(id):
 
         schedule = ScheduleAttempt(owner_id=data.id,
                                    name=form.name.data,
+                                   tag=form.name.tag,
                                    celery_id=uuid,
                                    finished=False,
+                                   awaiting_upload=offline,
                                    celery_finished=False,
                                    outcome=None,
                                    published=False,
@@ -6141,11 +6143,10 @@ def create_assessment_schedule(id):
                                    last_edit_id=None,
                                    score=None)
 
-        if offline:
-            schedule.awaiting_upload = True
-            db.session.add(schedule)
-            db.session.commit()
+        db.session.add(schedule)
+        db.session.commit()
 
+        if offline:
             celery = current_app.extensions['celery']
             schedule_task = celery.tasks['app.tasks.scheduling.offline_schedule']
 
@@ -6154,10 +6155,6 @@ def create_assessment_schedule(id):
             return redirect(url_for('admin.assessment_schedules', id=data.id))
 
         else:
-            schedule.awaiting_upload = False
-            db.session.add(schedule)
-            db.session.commit()
-
             celery = current_app.extensions['celery']
             schedule_task = celery.tasks['app.tasks.scheduling.create_schedule']
 
@@ -6246,6 +6243,9 @@ def adjust_assessment_schedule(id):
                                    score=None)
 
     db.session.add(new_schedule)
+    db.session.flush()
+
+    new_schedule.tag = 'schedule_{n}'.format(n=new_schedule.id)
     db.session.commit()
 
     celery = current_app.extensions['celery']
@@ -6577,13 +6577,15 @@ def rename_schedule(id):
         return redirect(request.referrer)
 
     RenameScheduleForm = RenameScheduleFormFactory(record.owner)
-    form = RenameScheduleForm(request.form)
+    form = RenameScheduleForm(obj=record)
     form.schedule = record
 
     if form.validate_on_submit():
         try:
             record.name = form.name.data
+            record.tag = form.tag.data
             db.session.commit()
+
         except SQLAlchemyError:
             db.session.rollback()
             flash('Could not rename schedule "{name}" due to a database error. '
@@ -8379,9 +8381,11 @@ def upload_match(match_id):
     return redirect(request.referrer)
 
 
-@admin.route('/view_schedule/<int:schedule_id>', methods=['GET', 'POST'])
-def view_schedule(schedule_id):
-    schedule = ScheduleAttempt.query.get_or_404(schedule_id)
+@admin.route('/view_schedule/<string:tag>', methods=['GET', 'POST'])
+def view_schedule(tag):
+    schedule = db.session.query(ScheduleAttempt).filter_by(tag=tag).first()
+    if schedule is None:
+        abort(404)
 
     # deployed schedules are automatically unpublished, so we should allow public viewing
     # if either flag is set
@@ -8400,7 +8404,7 @@ def view_schedule(schedule_id):
 
     if selected_session is not None:
         slots = db.session.query(ScheduleSlot) \
-            .filter(ScheduleSlot.owner_id == schedule_id,
+            .filter(ScheduleSlot.owner_id == schedule.id,
                     ScheduleSlot.session_id == selected_session.id) \
             .join(Room, ScheduleSlot.room_id == Room.id) \
             .join(Building, Room.building_id == Building.id) \

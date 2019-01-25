@@ -6330,18 +6330,34 @@ def delete_schedule(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name),
-              'error')
+        flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if record.deployed:
+        flash('Can not delete schedule "{name}" because it has been deployed.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not current_user.has_role('root') and current_user.id != record.creator_id:
+        flash('Schedule "{name}" cannot be deleted because it belongs to another user', 'info')
         return redirect(request.referrer)
 
     title = 'Delete schedule'
     panel_title = 'Delete schedule <strong>{name}</strong>'.format(name=record.name)
 
     action_url = url_for('admin.perform_delete_schedule', id=id, url=request.referrer)
-    message = '<p>Please confirm that you wish to delete the schedule ' \
-              '<strong>{name}</strong>.</p>' \
-              '<p>This action cannot be undone.</p>' \
-        .format(name=record.name)
+
+    if record.published:
+        message = '<p>Please confirm that you wish to delete the schedule ' \
+                  '<strong>{name}</strong>. Note that this schedule has been ' \
+                  'published to project convenors.</p>' \
+                  '<p>This action cannot be undone.</p>' \
+            .format(name=record.name)
+    else:
+        message = '<p>Please confirm that you wish to delete the schedule ' \
+                  '<strong>{name}</strong>.</p>' \
+                  '<p>This action cannot be undone.</p>' \
+            .format(name=record.name)
+
     submit_label = 'Delete schedule'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -6364,12 +6380,15 @@ def perform_delete_schedule(id):
         return redirect(request.referrer)
 
     if not record.finished:
-        flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name),
-              'error')
+        flash('Can not delete schedule "{name}" because it has not terminated.'.format(name=record.name), 'info')
+        return redirect(url)
+
+    if record.deployed:
+        flash('Can not delete schedule "{name}" because it has been deployed.'.format(name=record.name), 'info')
         return redirect(url)
 
     if not current_user.has_role('root') and current_user.id != record.creator_id:
-        flash('Schedule "{name}" cannot be deleted because it belongs to another user')
+        flash('Schedule "{name}" cannot be deleted because it belongs to another user', 'info')
         return redirect(url)
 
     try:

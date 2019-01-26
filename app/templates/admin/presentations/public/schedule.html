@@ -78,7 +78,7 @@
                     Last revised by
                     {% if schedule.last_edit_id is none or schedule.last_edit_timestamp is none %}
                         {{ schedule.created_by.name }}
-                        {{ schedule.created_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                        {{ schedule.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
                     {% else %}
                         {{ schedule.last_edited_by.name }}
                         {{ schedule.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}

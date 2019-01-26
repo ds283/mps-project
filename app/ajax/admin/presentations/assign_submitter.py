@@ -44,18 +44,33 @@ _assessors = \
         {% endif %}
     </div>
 {% endfor %}
+<div>
+{% if s.presenter_has_overlap(t) %}
+    <span class="label label-success"><i class="fa fa-check"></i> Pool overlap</span>
+{% else %}
+    <span class="label label-danger"><i class="fa fa-times"></i> No pool overlap</span>
+{% endif %}
+</div>
 """
 
 
 _talks = \
 """
+{% macro truncate_name(name) %}
+    {% if name|length > 18 %}
+        {{ name[0:18] }}...
+    {% else %}
+        {{ name }}
+    {% endif %}
+{% endmacro %}
 {% set ns = namespace(count=0) %}
 {% for talk in s.talks %}
     {% set ns.count = ns.count + 1 %}
     <div class="dropdown schedule-assign-button" style="display: inline-block;">
         {% set style = talk.pclass.make_CSS_style() %}
         <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
-            {{ talk.owner.student.user.name }}
+            {{ talk.owner.student.user.last_name }}
+            ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
             <span class="caret"></span>
         </a>
         <ul class="dropdown-menu">
@@ -70,6 +85,47 @@ _talks = \
         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
     {% endif %}
 {% endfor %}
+{% if not s.is_valid %}
+    <p></p>
+    {% set errors = s.errors %}
+    {% set warnings = s.warnings %}
+    {% if errors|length == 1 %}
+        <span class="label label-danger">1 error</span>
+    {% elif errors|length > 1 %}
+        <span class="label label-danger">{{ errors|length }} errors</span>
+    {% else %}
+        <span class="label label-success">0 errors</span>
+    {% endif %}
+    {% if warnings|length == 1 %}
+        <span class="label label-warning">1 warning</span>
+    {% elif warnings|length > 1 %}
+        <span class="label label-warning">{{ warnings|length }} warnings</span>
+    {% else %}
+        <span class="label label-success">0 warnings</span>
+    {% endif %}
+    {% if errors|length > 0 %}
+        <div class="has-error">
+            {% for item in errors %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">{{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}            
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if warnings|length > 0 %}
+        <div class="has-error">
+            {% for item in warnings %}
+                {% if loop.index <= 5 %}
+                    <p class="help-block">Warning: {{ item }}</p>
+                {% elif loop.index == 6 %}
+                    <p class="help-block">...</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}
 """
 
 
@@ -87,7 +143,7 @@ def assign_submitter_data(slots, old_slot, talk, url=None, text=None):
     data = [{'session': {'display': render_template_string(_name, s=s),
                          'sortvalue': s.session.date.isoformat()},
              'room': s.room.label,
-             'assessors': render_template_string(_assessors, s=s, url=url, text=text),
+             'assessors': render_template_string(_assessors, s=s, t=talk, url=url, text=text),
              'talks': render_template_string(_talks, s=s, url=url, text=text),
              'menu': render_template_string(_menu, old_slot=old_slot, new_slot=s, talk=talk, back_url=url, back_text=text)} for s in slots]
 

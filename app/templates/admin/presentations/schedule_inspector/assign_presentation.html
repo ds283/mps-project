@@ -81,14 +81,53 @@
                             <p>
                                 <strong>{{ slot.session.date_as_string }}</strong>
                                 {{ slot.session.session_type_string }}
-                                &mdash;
+                                &ndash;
                                 <strong>{{ slot.room_full_name }}</strong>
                                 {% if not slot.is_valid %}
                                     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                 {% endif %}
-                                &emsp;
                                 {{ talk.project.config.project_class.make_label()|safe }}
                             </p>
+                            {% if not slot.is_valid %}
+                                {% set errors = slot.errors %}
+                                {% set warnings = slot.warnings %}
+                                {% if errors|length == 1 %}
+                                    <span class="label label-danger">1 error</span>
+                                {% elif errors|length > 1 %}
+                                    <span class="label label-danger">{{ errors|length }} errors</span>
+                                {% else %}
+                                    <span class="label label-success">0 errors</span>
+                                {% endif %}
+                                {% if warnings|length == 1 %}
+                                    <span class="label label-warning">1 warning</span>
+                                {% elif warnings|length > 1 %}
+                                    <span class="label label-warning">{{ warnings|length }} warnings</span>
+                                {% else %}
+                                    <span class="label label-success">0 warnings</span>
+                                {% endif %}
+                                {% if errors|length > 0 %}
+                                    <div class="has-error">
+                                        {% for item in errors %}
+                                            {% if loop.index <= 10 %}
+                                                <p class="help-block">{{ item }}</p>
+                                            {% elif loop.index == 11 %}
+                                                <p class="help-block">...</p>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                {% if warnings|length > 0 %}
+                                    <div class="has-error">
+                                        {% for item in warnings %}
+                                            {% if loop.index <= 10 %}
+                                                <p class="help-block">Warning: {{ item }}</p>
+                                            {% elif loop.index == 11 %}
+                                                <p class="help-block">...</p>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endif %}
                             <div class="row vertical-align final-selection-table">
                                 <div class="col-xs-3"><strong>Name</strong></div>
                                 <div class="col-xs-5"><strong>Project</strong></div>

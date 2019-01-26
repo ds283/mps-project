@@ -37,6 +37,13 @@ _name = \
 
 _sessions = \
 """
+{% macro truncate_name(name) %}
+    {% if name|length > 18 %}
+        {{ name[0:18] }}...
+    {% else %}
+        {{ name }}
+    {% endif %}
+{% endmacro %}
 {% for slot in slots %}
     <div class="row vertical-top" style="margin-bottom: 3px;">
         <div class="col-xs-5">
@@ -57,6 +64,23 @@ _sessions = \
             {{ slot.room.label|safe }}
             {% if not slot.is_valid %}
                 <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                <p></p>
+                {% set errors = slot.errors %}
+                {% set warnings = slot.warnings %}
+                {% if errors|length == 1 %}
+                    <span class="label label-danger">1 error</span>
+                {% elif errors|length > 1 %}
+                    <span class="label label-danger">{{ errors|length }} errors</span>
+                {% else %}
+                    <span class="label label-success">0 errors</span>
+                {% endif %}
+                {% if warnings|length == 1 %}
+                    <span class="label label-warning">1 warning</span>
+                {% elif warnings|length > 1 %}
+                    <span class="label label-warning">{{ warnings|length }} warnings</span>
+                {% else %}
+                    <span class="label label-success">0 warnings</span>
+                {% endif %}
             {% endif %}
         </div>
         <div class="col-xs-7">
@@ -64,7 +88,8 @@ _sessions = \
                 {% set style = talk.pclass.make_CSS_style() %}
                 <div class="dropdown schedule-assign-button" style="display: inline-block;">
                     <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
-                        {{ talk.owner.student.user.name }}
+                        {{ talk.owner.student.user.last_name }}
+                        ({{ talk.project.owner.user.last_name }})
                         <span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu">
@@ -79,6 +104,33 @@ _sessions = \
                     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                 {% endif %}
             {% endfor %}
+            {% if not slot.is_valid %}
+                <p></p>
+                {% set errors = slot.errors %}
+                {% set warnings = slot.warnings %}
+                {% if errors|length > 0 %}
+                    <div class="has-error">
+                        {% for item in errors %}
+                            {% if loop.index <= 5 %}
+                                <p class="help-block">{{ item }}</p>
+                            {% elif loop.index == 6 %}
+                                <p class="help-block">...</p>
+                            {% endif %}            
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                {% if warnings|length > 0 %}
+                    <div class="has-error">
+                        {% for item in warnings %}
+                            {% if loop.index <= 5 %}
+                                <p class="help-block">Warning: {{ item }}</p>
+                            {% elif loop.index == 6 %}
+                                <p class="help-block">...</p>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endif %}
         </div>
     </div>
 {% else %}

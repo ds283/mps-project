@@ -8844,10 +8844,11 @@ def _ScheduleSlot_is_valid(id):
             talk_j = talks_list[j]
 
             if talk_i.project_id == talk_j.project_id and talk_i.project.dont_clash_presentations:
-                errors[('clash', (talk_i.id, talk_j.id))] = 'Submitters "{name_a}" and "{name_b}" share a project ' \
-                                                            '"{proj}" that is marked not to clash'.format(name_a=talk_i.owner.student.user.name,
-                                                                                                          name_b=talk_j.owner.student.user.name,
-                                                                                                          proj=talk_i.project.name)
+                errors[('clash', (talk_i.id, talk_j.id))] = \
+                    'Submitters "{name_a}" and "{name_b}" share a project ' \
+                    '"{proj}" that is marked not to be co-scheduled'.format(name_a=talk_i.owner.student.user.name,
+                                                                            name_b=talk_j.owner.student.user.name,
+                                                                            proj=talk_i.project.name)
 
 
     # CONSTRAINT 11. ASSESSORS SHOULD NOT BE SCHEDULED TO BE IN TWO PLACES AT THE SAME TIME
@@ -9117,8 +9118,33 @@ class ScheduleSlot(db.Model):
 
 
     def assessor_has_overlap(self, fac_id):
+        """
+        Determine whether a given assessor lies in the assessor pool for at least one of the presenters,
+        and is therefore a candidate to assess this slot
+        :param fac_id:
+        :return:
+        """
         for talk in self.talks:
             if get_count(talk.project.assessors.filter_by(id=fac_id)) > 0:
+                return True
+
+        return False
+
+
+    def presenter_has_overlap(self, sub):
+        """
+        Determine whether a given student's assessor pool includes any of the assessors already attached
+        to this slot, making the student a candidate to move to this slot
+        :param sub_id:
+        :return:
+        """
+        if isinstance(sub, SubmissionRecord):
+            rec = sub
+        else:
+            rec = db.session.query(SubmissionRecord).filter_by(id=sub).one()
+
+        for assessor in self.assessors:
+            if get_count(rec.project.assessors.filter_by(id=assessor.id)) > 0:
                 return True
 
         return False

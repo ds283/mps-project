@@ -1,0 +1,28 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    Adjust schedule
+{% endblock %}
+
+{% block formtitle %}
+    Adjust schedule <strong>{{ record.name }}</strong> to re-impose constraints
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.adjust_assessment_schedule', id=record.id) }}" method="POST" name="rename_form">
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(role_form) }}#}
+
+        {{ wtf.form_field(form.name) }}
+        {{ wtf.form_field(form.tag) }}
+
+        {{ wtf.form_field(form.allow_new_slots) }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

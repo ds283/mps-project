@@ -45,7 +45,8 @@ from .forms import RoleSelectForm, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
-    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm, \
+    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm,\
+    ImposeConstraintsScheduleFormFactory, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory
 
@@ -67,7 +68,7 @@ from ..shared.backup import get_backup_config, set_backup_config, get_backup_cou
 from ..shared.validators import validate_is_convenor, validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..shared.conversions import is_integer
-from ..shared.sqlalchemy import get_count
+from ..shared.sqlalchemy import get_count, func
 
 from ..task_queue import register_task, progress_update
 from ..shared.forms.queries import ScheduleSessionQuery
@@ -6122,7 +6123,7 @@ def create_assessment_schedule(id):
 
         schedule = ScheduleAttempt(owner_id=data.id,
                                    name=form.name.data,
-                                   tag=form.name.tag,
+                                   tag=form.tag.data,
                                    celery_id=uuid,
                                    finished=False,
                                    awaiting_upload=offline,
@@ -6176,7 +6177,76 @@ def create_assessment_schedule(id):
 @roles_required('root')
 def adjust_assessment_schedule(id):
     """
-    Create a new schedule associated with a given assessment
+    Generate options page for re-imposition of constraints
+    :param id:
+    :return:
+    """
+    if not validate_using_assessment():
+        return redirect(request.referrer)
+
+    schedule = ScheduleAttempt.query.get_or_404(id)
+
+    current_year = get_current_year()
+    if not validate_assessment(schedule.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if not schedule.owner.availability_closed:
+        flash('It is only possible to adjust a schedule once collection of faculty availabilities is closed.',
+              'info')
+        return redirect(request.referrer)
+
+    if not schedule.owner.is_valid and len(schedule.owner.errors) > 0:
+        flash('It is not possible to adjust a schedule for an assessment that contains validation errors. '
+              'Correct any indicated errors before attempting to try again.', 'info')
+        return redirect(request.referrer)
+
+    if schedule.is_valid:
+        flash('This schedule does not contain any validation errors, so does not require adjustment.', 'info')
+        return redirect(request.referrer)
+
+    ImposeConstraintsScheduleForm = ImposeConstraintsScheduleFormFactory(schedule.owner)
+    form = ImposeConstraintsScheduleForm(request.form)
+
+    if form.validate_on_submit():
+        allow_new_slots = form.allow_new_slots.data
+        name = form.name.data
+        tag = form.tag.data
+
+        return redirect(url_for('admin.perform_adjust_assessment_schedule', id=id, name=name, tag=tag,
+                                new_slots=allow_new_slots))
+
+    else:
+        if request.method == 'GET':
+            # find name for adjusted schedule
+            suffix = 2
+            while suffix < 100:
+                new_name = '{name} #{suffix}'.format(name=schedule.name, suffix=suffix)
+
+                if ScheduleAttempt.query.filter_by(name=new_name, owner_id=schedule.owner_id).first() is None:
+                    break
+
+                suffix += 1
+
+            if suffix > 100:
+                flash('Can not adjust schedule "{name}" because a new unique tag could not '
+                      'be generated.'.format(name=schedule.name), 'error')
+                return redirect(request.referrer)
+
+            form.name.data = new_name
+
+            guess_id = db.session.query(func.max(ScheduleAttempt.id)).scalar() + 1
+            new_tag = 'schedule_{n}'.format(n=guess_id)
+
+            form.tag.data = new_tag
+
+    return render_template('admin/presentations/scheduling/adjust_options.html', record=schedule, form=form)
+
+
+@admin.route('/perform_adjust_assessment_schedule/<int:id>')
+@roles_required('root')
+def perform_adjust_assessment_schedule(id):
+    """
+    Adjust an existing schedule to re-impost constraints
     :param id:
     :return:
     """
@@ -6203,26 +6273,25 @@ def adjust_assessment_schedule(id):
         flash('This schedule does not contain any validation errors, so does not require adjustment.', 'info')
         return redirect(request.referrer)
 
-    # find name for adjusted schedule
-    suffix = 2
-    while suffix < 100:
-        new_name = '{name} #{suffix}'.format(name=old_schedule.name, suffix=suffix)
+    new_name = request.args.get('name', None)
+    new_tag = request.args.get('tag', None)
 
-        if ScheduleAttempt.query.filter_by(name=new_name, owner_id=old_schedule.owner_id).first() is None:
-            break
-
-        suffix += 1
-
-    if suffix > 100:
-        flash('Can not adjust schedule "{name}" because a new unique tag could not '
-              'be generated.'.format(name=old_schedule.name), 'error')
+    if new_name is None:
+        flash('A name for the adjusted schedule was not supplied.', 'error')
         return redirect(request.referrer)
+
+    if new_tag is None:
+        flash('A tag for the adjusted schedule was not supplied.', 'error')
+        return redirect(request.referrer)
+
+    allow_new_slots = request.args.get('new_slots', False)
 
     uuid = register_task('Schedule job "{name}"'.format(name=new_name),
                          owner=current_user, description="Automated assessment scheduling task")
 
     new_schedule = ScheduleAttempt(owner_id=old_schedule.owner_id,
                                    name=new_name,
+                                   tag=new_tag,
                                    celery_id=uuid,
                                    finished=False,
                                    celery_finished=False,
@@ -6242,11 +6311,14 @@ def adjust_assessment_schedule(id):
                                    last_edit_id=None,
                                    score=None)
 
-    db.session.add(new_schedule)
-    db.session.flush()
+    try:
+        db.session.add(new_schedule)
+        db.session.commit()
 
-    new_schedule.tag = 'schedule_{n}'.format(n=new_schedule.id)
-    db.session.commit()
+    except SQLAlchemyError:
+        flash('A database error was encountered. Please check that the supplied name and tag are unique.', 'error')
+        db.session.rollback()
+        return redirect(request.referrer)
 
     celery = current_app.extensions['celery']
     schedule_task = celery.tasks['app.tasks.scheduling.recompute_schedule']

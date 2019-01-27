@@ -22,11 +22,14 @@ _name = \
 
 _assessors = \
 """
+{% set rec = s.owner %}
 {% for assessor in s.assessors %}
     <div>
         <div class="dropdown schedule-assign-button" style="display: inline-block;">
             <a class="label label-default" type="button" data-toggle="dropdown">
                 {{ assessor.user.name }}
+                {% set count = rec.get_number_faculty_slots(assessor.id) %}
+                ({{ count }})
                 <span class="caret"></span>
             </a>
             <ul class="dropdown-menu">

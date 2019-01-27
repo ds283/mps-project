@@ -49,10 +49,10 @@ _source = \
         <span class="label label-danger">DELETE</span>
         {{ slot_id(s) }}
     </div>  
-    {% for assessor in assessors %}
+    {% for assessor in s.assessors %}
         <span class="label label-danger"><i class="fa fa-minus"></i> Assessor: {{ assessor.user.name }}</span>
     {% endfor %}
-    {% for talk in talks %}
+    {% for talk in s.talks %}
         <span class="label label-danger"><i class="fa fa-minus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
     {% endfor %}
 {% else %}
@@ -96,10 +96,10 @@ _target = \
         <span class="label label-success">ADD</span>
         {{ slot_id(t) }}
     </div>
-    {% for assessor in assessors %}
+    {% for assessor in t.assessors %}
         <span class="label label-success"><i class="fa fa-plus"></i> Assessor: {{ assessor.user.name }}</span>
     {% endfor %}
-    {% for talk in talks %}
+    {% for talk in t.talks %}
         <span class="label label-success"><i class="fa fa-plus"></i> Presenter: {{ talk.owner.student.user.name }}</span>
     {% endfor %}
 {% elif op == 'delete' %}

@@ -1061,6 +1061,46 @@ class ScheduleNameMixin():
                       validators=[InputRequired(message='Please supply a unique tag')])
 
 
+def ScheduleNameCreateValidatorFactory(assessment):
+
+    class Validator():
+
+        @staticmethod
+        def validate_name(form, field):
+            return globally_unique_schedule_name(assessment.id, form, field)
+
+        @staticmethod
+        def validate_tag(form, field):
+            isvalid = re.match(r'[\w-]*$', field.data)
+            if not isvalid:
+                raise ValidationError('The tag should contain only letters, numbers, underscores or dashes, '
+                                      'and be valid as part of a URL')
+
+            return globally_unique_schedule_tag(form, field)
+
+    return Validator
+
+
+def ScheduleNameRenameValidatorFactory(assessment):
+
+    class Validator():
+
+        @staticmethod
+        def validate_name(form, field):
+            return unique_or_original_schedule_name(assessment.id, form, field)
+
+        @staticmethod
+        def validate_tag(form, field):
+            isvalid = re.match(r'[\w-]*$', field.data)
+            if not isvalid:
+                raise ValidationError('The tag should contain only letters, numbers, underscores or dashes, '
+                                      'and be valid as part of a URL')
+
+            return unique_or_original_schedule_tag(form, field)
+
+    return Validator
+
+
 class ScheduleSettingsMixin():
 
     assessor_assigned_limit = IntegerField('Maximum number of assignments per assessor', default=3,
@@ -1082,24 +1122,13 @@ class ScheduleSettingsMixin():
 
 def NewScheduleFormFactory(assessment):
 
-    class NewScheduleForm(Form, ScheduleNameMixin, ScheduleSettingsMixin, PuLPSolverMixin):
+    validator = ScheduleNameCreateValidatorFactory(assessment)
+
+    class NewScheduleForm(Form, ScheduleNameMixin, validator, ScheduleSettingsMixin, PuLPSolverMixin):
 
         submit = SubmitField('Create new schedule')
 
         offline = SubmitField('Perform scheduling offline')
-
-        @staticmethod
-        def validate_name(form, field):
-            return globally_unique_schedule_name(assessment.id, form, field)
-
-        @staticmethod
-        def validate_tag(form, field):
-            isvalid = re.match(r'[\w-]*$', field.data)
-            if not isvalid:
-                raise ValidationError('The tag should contain only letters, numbers, underscores or dashes, '
-                                      'and be valid as part of a URL')
-
-            return globally_unique_schedule_tag(form, field)
 
     return NewScheduleForm
 
@@ -1114,24 +1143,26 @@ class UploadScheduleForm(Form):
 
 def RenameScheduleFormFactory(assessment):
 
-    class RenameScheduleForm(Form, ScheduleNameMixin):
+    validator = ScheduleNameRenameValidatorFactory(assessment)
+
+    class RenameScheduleForm(Form, ScheduleNameMixin, validator):
 
         submit = SubmitField('Rename schedule')
 
-        @staticmethod
-        def validate_name(form, field):
-            return unique_or_original_schedule_name(assessment.id, form, field)
-
-        @staticmethod
-        def validate_tag(form, field):
-            isvalid = re.match(r'[\w-]*$', field.data)
-            if not isvalid:
-                raise ValidationError('The tag should contain only letters, numbers, underscores or dashes, '
-                                      'and be valid as part of a URL')
-
-            return unique_or_original_schedule_tag(form, field)
-
     return RenameScheduleForm
+
+
+def ImposeConstraintsScheduleFormFactory(assessment):
+
+    validator = ScheduleNameCreateValidatorFactory(assessment)
+
+    class ImposeConstraintsScheduleForm(Form, ScheduleNameMixin, validator):
+
+        allow_new_slots = BooleanField('Allow new slots to be created', default=False)
+
+        submit = SubmitField('Perform adjustment')
+
+    return ImposeConstraintsScheduleForm
 
 
 class AssignmentLimitForm(Form, SaveChangesMixin):

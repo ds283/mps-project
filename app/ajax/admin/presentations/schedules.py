@@ -92,11 +92,13 @@ _name = \
 <div>
     {% if s.finished and s.solution_usable %}
         <a href="{{ url_for('admin.schedule_view_sessions', id=s.id, text=text, url=url) }}">{{ s.name }}</a>
+        <span class="label label-default">{{ s.tag }}</span>
         {% if not s.is_valid %}
             <i class="fa fa-exclamation-triangle" style="color:red;"></i>
         {% endif %}
     {% else %}
         {{ s.name }}
+        <span class="label label-default">{{ s.tag }}</span>
     {% endif %}
 </div>
 {% if s.finished and s.solution_usable %}

@@ -7260,7 +7260,7 @@ def schedule_assign_assessors_ajax(id):
         return redirect(request.referrer)
 
     slot = ScheduleSlot.query.get_or_404(id)
-    record = slot.owner # = ScheduleAttempt
+    record = slot.owner  # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
         return jsonify({})
@@ -7447,7 +7447,7 @@ def schedule_assign_submitter_ajax(slot_id, talk_id):
         return redirect(request.referrer)
 
     slot = ScheduleSlot.query.get_or_404(slot_id)
-    record = slot.owner # = ScheduleAttempt
+    record = slot.owner  # = ScheduleAttempt
 
     if not validate_assessment(record.owner):
         return jsonify({})
@@ -7467,7 +7467,7 @@ def schedule_assign_submitter_ajax(slot_id, talk_id):
     url = request.args.get('url', None)
 
     pclass = slot.pclass
-    slots = [s for s in record.slots.all() if s.pclass.id == pclass.id]
+    slots = [s for s in record.slots.all() if s.pclass.id == pclass.id and s.id != slot.id]
 
     return ajax.admin.assign_submitter_data(slots, slot, talk, url=url, text=text)
 

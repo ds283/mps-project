@@ -7467,7 +7467,8 @@ def schedule_assign_submitter_ajax(slot_id, talk_id):
     url = request.args.get('url', None)
 
     pclass = slot.pclass
-    slots = [s for s in record.slots.all() if s.pclass.id == pclass.id and s.id != slot.id]
+    slots = [s for s in record.slots.all()
+             if s.pclass.id == pclass.id and slot.session.submitter_available(talk.id) and s.id != slot.id]
 
     return ajax.admin.assign_submitter_data(slots, slot, talk, url=url, text=text)
 

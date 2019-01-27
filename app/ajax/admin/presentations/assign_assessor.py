@@ -23,6 +23,10 @@ _name = \
     {% if slot.session.faculty_ifneeded(a.faculty_id) %}
         <span class="label label-warning">If needed</span>
     {% endif %}
+    {% set rec = slot.owner %}
+    {% set count = rec.get_number_faculty_slots(a.faculty_id) %}
+    {% set pl = 's' %}{% if count == 1 %}{% set pl = '' %}{% endif %}
+    <span class="label label-info">{{ count }} session{{ pl }}</span>
     {% if slot.assessor_has_overlap(a.faculty_id) %}
         <span class="label label-success"><i class="fa fa-check"></i> Pool overlap</span>
     {% else %}
@@ -46,7 +50,7 @@ _sessions = \
 {% endmacro %}
 {% for slot in slots %}
     <div class="row vertical-top" style="margin-bottom: 3px;">
-        <div class="col-xs-5">
+        <div class="col-xs-3">
             {% set style = slot.session.get_label_type() %}
             <div class="dropdown schedule-assign-button" style="display: inline-block;">
                 <a class="label {% if style is not none %}{{ style }}{% else %}label-default{% endif %}" type="button" data-toggle="dropdown">
@@ -83,13 +87,13 @@ _sessions = \
                 {% endif %}
             {% endif %}
         </div>
-        <div class="col-xs-7">
+        <div class="col-xs-9">
             {% for talk in slot.talks %}
                 {% set style = talk.pclass.make_CSS_style() %}
                 <div class="dropdown schedule-assign-button" style="display: inline-block;">
                     <a class="label {% if style %}label-default{% else %}label-info{% endif %}" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">
                         {{ talk.owner.student.user.last_name }}
-                        ({{ talk.project.owner.user.last_name }})
+                        ({{ talk.project.owner.user.last_name }} &ndash; {{ truncate_name(talk.project.name) }})
                         <span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu">

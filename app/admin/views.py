@@ -6915,15 +6915,14 @@ def publish_schedule_submitters(id):
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with submitters as a draft.'.format(name=record.name), 'info')
+              'It cannot be shared with submitters.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
-    task_id = register_task('Send draft schedule to submitters', owner=current_user,
-                            description='Email details of schedule "{name}" to submitters as a '
-                                        'draft'.format(name=record.name))
+    task_id = register_task('Send schedule to submitters', owner=current_user,
+                            description='Email details of schedule "{name}" to submitters'.format(name=record.name))
 
     celery = current_app.extensions['celery']
-    task = celery.tasks['app.tasks.scheduling.draft_to_submitters']
+    task = celery.tasks['app.tasks.scheduling.publish_to_submitters']
 
     task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 
@@ -6952,15 +6951,14 @@ def publish_schedule_assessors(id):
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with assessors as a draft.'.format(name=record.name), 'info')
+              'It cannot be shared with assessors.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     task_id = register_task('Send draft schedule to assessors', owner=current_user,
-                            description='Email details of schedule "{name}" to assessors as a '
-                                        'draft'.format(name=record.name))
+                            description='Email details of schedule "{name}" to assessors'.format(name=record.name))
 
     celery = current_app.extensions['celery']
-    task = celery.tasks['app.tasks.scheduling.draft_to_assessors']
+    task = celery.tasks['app.tasks.scheduling.publish_to_assessors']
 
     task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
 

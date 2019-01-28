@@ -8471,6 +8471,12 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     # draft circulated to assessors?
     draft_to_assessors = db.Column(db.DateTime())
 
+    # final verison circulated to submitters?
+    final_to_submitters = db.Column(db.DateTime())
+
+    # final version circulated to assessors?
+    final_to_assessors = db.Column(db.DateTime())
+
 
     # EDITING METADATA
 

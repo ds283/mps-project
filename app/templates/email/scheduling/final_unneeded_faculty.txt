@@ -1,0 +1,20 @@
+Dear {{ user.first_name }}
+
+You are receiving this email because you are participating in an upcoming
+presentation assessment taking place between {{ event.earliest_date }} and
+{{ event.latest_date }}.
+
+The final timetable for this event is now available, and the good news is that
+we do not need to ask you to assess any sessions in the event.
+
+This is an automated email. Please do not reply to it directly, because
+messages sent to this mailbox are not monitored or answered. If you have
+questions or concerns, please direct these to the event organizer:
+
+{{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }})
+
+Best wishes,
+{% for fac in event.convenor_list -%}
+{{ fac.user.first_name }} {{ fac.user.last_name }}
+{% endfor -%}
+(the project convenors)

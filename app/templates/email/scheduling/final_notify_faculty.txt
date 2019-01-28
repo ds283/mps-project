@@ -1,0 +1,32 @@
+Dear {{ user.first_name }}
+
+You are receiving this email because you are participating in an upcoming
+presentation assessment taking place between {{ event.earliest_date }} and
+{{ event.latest_date }}.
+
+The final timetable for this event is now available. Unless you have already
+been contacted to discuss changes, there should be no variation compared to the
+draft timetable you have already received. You have been scheduled to cover
+the following sessions:
+
+{% for slot in slots -%}
+{{ slot.date_as_string }} {{ slot.session_type_string }} in {{ slot.room_full_name }} ({{ slot.pclass.abbreviation }}, {{ slot.session_details }})
+{% for talk in slot.talks -%}
+  -  {{ talk.owner.student.user.name }}  (supervisor {{ talk.project.owner.user.name }})
+{% endfor %}
+{% endfor -%}
+The entire schedule can be viewed online at
+https://mpsprojects.co.uk/admin/view_schedule/{{ schedule.tag }}
+
+If you anticipate any difficulties, please let the event organizer know
+as soon as possible: {{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }})
+
+This is an automated email. Please do not reply to it directly, because
+messages sent to this mailbox are not monitored or answered. If you have
+questions or concerns, please direct these to the event organizer.
+
+Best wishes,
+{% for fac in event.convenor_list -%}
+{{ fac.user.first_name }} {{ fac.user.last_name }}
+{% endfor -%}
+(the project convenors)

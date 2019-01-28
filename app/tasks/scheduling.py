@@ -1274,7 +1274,7 @@ def register_scheduling_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def draft_to_submitters(self, id, user_id, task_id):
+    def publish_to_submitters(self, id, user_id, task_id):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError:
@@ -1293,17 +1293,24 @@ def register_scheduling_tasks(celery):
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
 
-        task = group(send_draft_to_submitter.si(id, a.id) for a in recipients) | notify.s(user_id)
+        task = group(publish_email_to_submitter.si(id, a.id, not bool(record.deployed)) for a in recipients) | notify.s(user_id)
         task.apply_async()
 
-        record.draft_to_submitters = datetime.now()
+        if record.deployed:
+            record.final_to_submitters = datetime.now()
+        else:
+            record.draft_to_submitters = datetime.now()
+
         db.session.commit()
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_draft_to_submitter(self, schedule_id, attend_id):
+    def publish_email_to_submitter(self, schedule_id, attend_id, is_draft):
+        if isinstance(is_draft, str):
+            is_draft = strtobool(is_draft)
+
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
             attend_data = db.session.query(SubmitterAttendanceData).filter_by(id=attend_id).first()
@@ -1324,23 +1331,30 @@ def register_scheduling_tasks(celery):
         event = record.owner
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='Draft timetable for project assessment "{name}"'.format(name=event.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       recipients=[user.email])
 
-        msg.body = render_template('email/scheduling/draft_notify_students.txt', user=user, event=event,
-                                   slot=record.get_student_slot(sub_record.owner_id).first(),
-                                   period=sub_record.period, schedule=record)
+        if is_draft:
+            msg.subject ='Draft timetable for project assessment "{name}"'.format(name=event.name)
+            msg.body = render_template('email/scheduling/draft_notify_students.txt', user=user, event=event,
+                                       slot=record.get_student_slot(sub_record.owner_id).first(),
+                                       period=sub_record.period, schedule=record)
+
+        else:
+            msg.subject ='Final timetable for project assessment "{name}"'.format(name=event.name)
+            msg.body = render_template('email/scheduling/final_notify_students.txt', user=user, event=event,
+                                       slot=record.get_student_slot(sub_record.owner_id).first(),
+                                       period=sub_record.period, schedule=record)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send draft schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def draft_to_assessors(self, id, user_id, task_id):
+    def publish_to_assessors(self, id, user_id, task_id):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError:
@@ -1354,17 +1368,24 @@ def register_scheduling_tasks(celery):
 
         progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of faculty assessors...", autocommit=True)
 
-        task = group(send_draft_to_assessor.si(id, a.id) for a in record.owner.assessor_list.all()) | notify.s(user_id)
+        task = group(publish_email_to_assessor.si(id, a.id, not bool(record.deployed)) for a in record.owner.assessor_list.all()) | notify.s(user_id)
         task.apply_async()
 
-        record.draft_to_assessors = datetime.now()
+        if record.deployed:
+            record.final_to_assessors = datetime.now()
+        else:
+            record.draft_to_assessors = datetime.now()
+
         db.session.commit()
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_draft_to_assessor(self, schedule_id, attend_id):
+    def publish_email_to_assessor(self, schedule_id, attend_id, is_draft):
+        if isinstance(is_draft, str):
+            is_draft = strtobool(is_draft)
+
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
             attend_data = db.session.query(AssessorAttendanceData).filter_by(id=attend_id).first()
@@ -1386,19 +1407,31 @@ def register_scheduling_tasks(celery):
         slots = record.get_faculty_slots(faculty.id).all()
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='Draft timetable for project assessment "{name}"'.format(name=event.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       recipients=[user.email])
 
-        if len(slots) > 0:
-            msg.body = render_template('email/scheduling/draft_notify_faculty.txt', user=user, event=event,
-                                       slots=slots, schedule=record)
+        if is_draft:
+            msg.subject = 'Draft timetable for project assessment "{name}"'.format(name=event.name)
+
+            if len(slots) > 0:
+                msg.body = render_template('email/scheduling/draft_notify_faculty.txt', user=user, event=event,
+                                           slots=slots, schedule=record)
+            else:
+                msg.body = render_template('email/scheduling/draft_unneeded_faculty.txt', user=user, event=event,
+                                           schedule=record)
+
         else:
-            msg.body = render_template('email/scheduling/draft_unneeded_faculty.txt', user=user, event=event,
-                                       schedule=record)
+            msg.subject = 'Final timetable for project assessment "{name}"'.format(name=event.name)
+
+            if len(slots) > 0:
+                msg.body = render_template('email/scheduling/final_notify_faculty.txt', user=user, event=event,
+                                           slots=slots, schedule=record)
+            else:
+                msg.body = render_template('email/scheduling/final_unneeded_faculty.txt', user=user, event=event,
+                                           schedule=record)
 
         # register a new task in the database
-        task_id = register_task(msg.subject, description='Send draft schedule email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send schedule email to {r}'.format(r=', '.join(msg.recipients)))
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1

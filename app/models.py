@@ -7009,18 +7009,26 @@ def _PresentationAssessment_is_valid(id):
     for sess in obj.sessions:
         # check whether each session validates individually
         if not sess.is_valid:
-            errors[('sessions', sess.id)] = \
-                'Session {date} has validation errors'.format(date=sess.short_date_as_string)
+            if sess.has_errors:
+                errors[('sessions', sess.id)] = \
+                    'Session {date} has validation errors'.format(date=sess.short_date_as_string)
+            elif sess.has_warnings:
+                warnings[('sessions', sess.id)] = \
+                    'Session {date} has validation warnings'.format(date=sess.short_date_as_string)
 
 
     # CONSTRAINT 2 - schedules should satisfy their own consistency rules
-    # if any schedule exists which validates, don't raise concer
+    # if any schedule exists which validates, don't raise concerns
     if all([not s.is_valid for s in obj.scheduling_attempts]):
         for schedule in obj.scheduling_attempts:
             # check whether each schedule validates individually
             if not schedule.is_valid:
-                warnings[('scheduling', schedule.id)] = \
-                    'Schedule "{name}" has validation errors'.format(name=schedule.name)
+                if schedule.has_errors:
+                    warnings[('scheduling', schedule.id)] = \
+                        'Schedule {name} has validation errors'.format(name=schedule.name)
+                elif schedule.has_warnings:
+                    warnings[('scheduling', schedule.id)] = \
+                        'Schedule "{name}" has validation warnings'.format(name=schedule.name)
 
 
     # CONSTRAINT 3 - if availability requested, number of assessors should be nonzero
@@ -7203,6 +7211,20 @@ class PresentationAssessment(db.Model):
         self._validated = True
 
         return flag
+
+
+    @property
+    def has_errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0
+
+
+    @property
+    def has_warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._warnings) > 0
 
 
     @property
@@ -8025,6 +8047,20 @@ class PresentationSession(db.Model):
 
 
     @property
+    def has_errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0
+
+
+    @property
+    def has_warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._warnings) > 0
+
+
+    @property
     def errors(self):
         if not self._validated:
             check = self.is_valid
@@ -8623,6 +8659,20 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         self._validated = True
 
         return flag
+
+
+    @property
+    def has_errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._errors) > 0
+
+
+    @property
+    def has_warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return len(self._warnings) > 0
 
 
     @property

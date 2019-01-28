@@ -31,10 +31,16 @@ _status = \
     <p></p>
     {% if s.solution_usable %}
         {% if s.draft_to_submitters is not none %}
-            <span class="label label-info">To submitters: {{ s.draft_to_submitters.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="label label-info">Draft to submitters: {{ s.draft_to_submitters.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
         {% if s.draft_to_assessors is not none %}
-            <span class="label label-info">To assessors: {{ s.draft_to_assessors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            <span class="label label-info">Draft to assessors: {{ s.draft_to_assessors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+        {% if s.final_to_submitters is not none %}
+            <span class="label label-primary">Final to submitters: {{ s.final_to_submitters.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+        {% if s.final_to_assessors is not none %}
+            <span class="label label-primary">Final to assessors: {{ s.final_to_assessors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
     {% endif %}
     <p></p>
@@ -294,16 +300,6 @@ _menu = \
                             <i class="fa fa-stop-circle"></i> Unpublish
                         </a>
                     </li>
-                    <li>
-                        <a href="{{ url_for('admin.publish_schedule_submitters', id=s.id) }}">
-                            <i class="fa fa-envelope-o"></i> Email to submitters
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{{ url_for('admin.publish_schedule_assessors', id=s.id) }}">
-                            <i class="fa fa-envelope-o"></i> Email to assessors
-                        </a>
-                    </li>
                 {% else %}
                     {% if not s.deployed %}
                         <li>
@@ -336,6 +332,20 @@ _menu = \
                             </a>
                         </li>
                     {% endif %}
+                {% endif %}
+                
+                {% if s.published or s.deployed %}
+                    <li role="separator" class="divider">
+                    <li>
+                        <a href="{{ url_for('admin.publish_schedule_submitters', id=s.id) }}">
+                            <i class="fa fa-envelope-o"></i> Email to submitters
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.publish_schedule_assessors', id=s.id) }}">
+                            <i class="fa fa-envelope-o"></i> Email to assessors
+                        </a>
+                    </li>
                 {% endif %}
             {% endif %}            
         {% endif %}        

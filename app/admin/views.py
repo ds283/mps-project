@@ -6323,7 +6323,7 @@ def perform_adjust_assessment_schedule(id):
     celery = current_app.extensions['celery']
     schedule_task = celery.tasks['app.tasks.scheduling.recompute_schedule']
 
-    schedule_task.apply_async(args=(new_schedule.id, old_schedule.id,), task_id=uuid)
+    schedule_task.apply_async(args=(new_schedule.id, old_schedule.id, allow_new_slots), task_id=uuid)
 
     return redirect(url_for('admin.assessment_schedules', id=old_schedule.owner.id))
 

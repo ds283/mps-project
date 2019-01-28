@@ -27,12 +27,14 @@ from functools import partial
 
 from ..shared.timer import Timer
 from ..shared.utils import make_generated_asset_filename, canonical_uploaded_asset_filename
+from ..shared.sqlalchemy import get_count
 
 from flask import current_app, render_template, url_for
 from flask_mail import Message
 
 from datetime import datetime
 from os import path
+from distutils.util import strtobool
 
 
 def _enumerate_talks(schedule, read_serialized=False):
@@ -304,17 +306,8 @@ def _generate_reschedule_objective(C, oldX, oldY, X, Y, S, U, number_talks, numb
     return objective
 
 
-def _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots, talk_to_number, assessor_to_number,
-                    slot_dict):
-    try:
-        record = db.session.query(ScheduleAttempt).filter_by(id=old_id).first()
-    except SQLAlchemyError:
-        raise self.retry()
-
-    if record is None:
-        self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
-        raise self.retry()
-
+def _reconstruct_XY(self, old_record, number_talks, number_assessors, number_slots, talk_to_number,
+                    assessor_to_number, slot_dict):
     X = {}
     Y = {}
 
@@ -323,7 +316,7 @@ def _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots, 
         slot = slot_dict[number]
         reverse_slot_dict[(slot.session_id, slot.room_id)] = number
 
-    for slot in record.slots:
+    for slot in old_record.slots:
         k = reverse_slot_dict[(slot.session_id, slot.room_id)]
 
         for talk in slot.talks:
@@ -346,6 +339,25 @@ def _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots, 
                 Y[(j, k)] = 0
 
     return X, Y
+
+
+def _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, old_record):
+    for k in slot_dict:
+        slot = slot_dict[k]
+
+        present = get_count(db.session.query(ScheduleSlot).filter_by(owner_id=old_record.id,
+                                                                     session_id=slot.session_id,
+                                                                     room_id=slot.room_id)) > 0
+
+        if not present:
+            print('-- removing slot: session = {session} {type} {room}'.format(session=slot.session.short_date_as_string,
+                                                                               type=slot.session.session_type_string,
+                                                                               room=slot.room.full_name))
+            for i in range(number_talks):
+                prob += X[(i, k)] == 0
+
+            for i in range(number_assessors):
+                prob += Y[(i, k)] == 0
 
 
 def _create_PuLP_problem(A, B, record, number_talks, number_assessors, number_slots, number_periods, assessor_to_number,
@@ -658,7 +670,8 @@ def _store_PuLP_solution(X, Y, record, number_talks, number_assessors, number_sl
         if store:
             store_slots.append(slot)
 
-    # slots are marked cascade='all, delete, delete-orphan', so SQLAlchemy will tidy up after us here
+    # slots are marked cascade='all, delete, delete-orphan', so SQLAlchemy will tidy up after us here;
+    # we don't have to *explicitly* delete any instances of ScheduleSlot
     record.slots = store_slots
 
 
@@ -921,13 +934,17 @@ def register_scheduling_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def recompute_schedule(self, new_id, old_id):
+    def recompute_schedule(self, new_id, old_id, allow_new_slots):
+        if isinstance(allow_new_slots, str):
+            allow_new_slots = strtobool(allow_new_slots)
+
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=new_id).first()
+            old_record = db.session.query(ScheduleAttempt).filter_by(id=old_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        if record is None:
+        if record is None or old_record is None:
             self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
             raise self.retry()
 
@@ -942,7 +959,7 @@ def register_scheduling_tasks(celery):
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
 
-        oldX, oldY = _reconstruct_XY(self, old_id, number_talks, number_assessors, number_slots,
+        oldX, oldY = _reconstruct_XY(self, old_record, number_talks, number_assessors, number_slots,
                                      talk_to_number, assessor_to_number, slot_dict)
 
         with Timer() as create_time:
@@ -950,6 +967,10 @@ def register_scheduling_tasks(celery):
                                               number_periods, assessor_to_number, period_to_number, talk_dict,
                                               assessor_dict, slot_dict, period_dict, assessor_limits,
                                               partial(_generate_reschedule_objective, C, oldX, oldY))
+
+            if not allow_new_slots:
+                print(' -- new slots are not allowed; disallowing use of any slots not present in original schedule')
+                _forbid_unused_slots(prob, X, Y, number_assessors, number_talks, slot_dict, old_record)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 

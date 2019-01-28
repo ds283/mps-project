@@ -113,12 +113,14 @@ def register_email_notification_tasks(celery):
                 msg.subject = 'Physics & Astronomy projects: new notifications'
 
             msg.body = render_template('email/notifications/single.txt', user=user,
-                                       notifications=user.email_notifications, outstanding=outstanding_crqs.all())
+                                       notifications=user.email_notifications.all(),
+                                       outstanding=outstanding_crqs.all())
 
         else:
             msg.subject = 'Physics & Astronomy projects: summary of notifications'
             msg.body = render_template('email/notifications/rollup.txt', user=user,
-                                       notifications=user.email_notifications, outstanding=outstanding_crqs.all())
+                                       notifications=user.email_notifications.all(),
+                                       outstanding=outstanding_crqs.all())
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 

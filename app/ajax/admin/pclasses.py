@@ -63,12 +63,12 @@ _pclasses_menu = \
 </div>
 """
 
-_status = \
+_options = \
 """
-{% if p.active %}
-    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+{% if p.colour and p.colour is not none %}
+  {{ p.make_label(p.colour)|safe }}
 {% else %}
-    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+  <span class="label label-default">None</span>'
 {% endif %}
 {% if p.do_matching %}
     <span class="label label-default">Auto-match</span>
@@ -135,6 +135,7 @@ _submissions = \
 {% endif %}
 """
 
+
 _configuration = \
 """
 {% if p.start_level is not none %}
@@ -146,11 +147,23 @@ _configuration = \
 """
 
 
+_name = \
+"""
+{{ p.name }} {{ p.make_label(p.abbreviation)|safe }}
+<div>
+{% if p.active %}
+    <span class="label label-success"><i class="fa fa-check"></i> Active</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
+{% endif %}
+</div>
+"""
+
+
 def pclasses_data(classes):
 
     data = [{'name': '{name} {ab}'.format(name=p.name, ab=p.make_label(p.abbreviation)),
-             'status': render_template_string(_status, p=p),
-             'colour': '<span class="label label-default">None</span>' if p.colour is None else p.make_label(p.colour),
+             'options': render_template_string(_options, p=p),
              'config': render_template_string(_configuration, p=p),
              'cats': render_template_string(_workload, p=p),
              'submissions': render_template_string(_submissions, p=p),

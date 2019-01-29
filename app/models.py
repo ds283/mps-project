@@ -2047,8 +2047,11 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     # user-facing abbreviatiaon
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
 
+    # publish to students/faculty?
+    publish = db.Column(db.Boolean(), default=True)
+
     # active?
-    active = db.Column(db.Boolean())
+    active = db.Column(db.Boolean(), default=True)
 
 
     # PRACTICAL DATA
@@ -9004,7 +9007,7 @@ class ScheduleSlot(db.Model):
     # original set of assessors attached to ths slot
     original_assessors = db.relationship('FacultyData', secondary=orig_fac_to_slots, lazy='dynamic')
 
-    # original set of submitters attached to this slow
+    # original set of submitters attached to this slot
     original_talks = db.relationship('SubmissionRecord', secondary=orig_sub_to_slots, lazy='dynamic')
 
 
@@ -9111,6 +9114,15 @@ class ScheduleSlot(db.Model):
 
 
     @property
+    def submission_period(self):
+        talk = self.talks.first()
+        if talk is None:
+            return None
+
+        return talk.period
+
+
+    @property
     def session_details(self):
         if get_count(self.talks) == 0:
             return 'missing data'
@@ -9155,6 +9167,15 @@ class ScheduleSlot(db.Model):
 
 
     def feedback_state(self, faculty_id):
+        # determine whether feedback is enabled for the SubmissionPeriodRecord shared
+        # by our talks
+        period = self.submission_period
+        if period is None:
+            return ScheduleSlot.FEEDBACK_NOT_REQUIRED
+
+        if not period.collect_presentation_feedback:
+            return ScheduleSlot.FEEDBACK_NOT_REQUIRED
+
         count = get_count(self.assessors.filter_by(id=faculty_id))
         if count == 0:
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED

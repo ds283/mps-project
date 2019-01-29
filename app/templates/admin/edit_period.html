@@ -34,9 +34,12 @@
 
         <div class="well">
             {{ wtf.form_field(form.has_presentation) }}
+            {{ wtf.form_field(form.collect_presentation_feedback) }}
+            <hr class="intro-divider">
             {{ wtf.form_field(form.lecture_capture) }}
             {{ wtf.form_field(form.number_assessors) }}
             {{ wtf.form_field(form.max_group_size) }}
+            <hr class="intro-divider">
             {{ wtf.form_field(form.morning_session) }}
             {{ wtf.form_field(form.afternoon_session) }}
             {{ wtf.form_field(form.talk_format) }}

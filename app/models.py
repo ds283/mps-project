@@ -2266,6 +2266,7 @@ class ProjectClass(db.Model, ColouredLabelMixin):
                                                   period=1,
                                                   name=None,
                                                   has_presentation=self.uses_presentations,
+                                                  collect_presentation_feedback=True,
                                                   creator_id=current_user.id,
                                                   creation_timestamp=datetime.now())
                 self.periods = [data]
@@ -2381,6 +2382,9 @@ class SubmissionPeriodDefinition(db.Model):
 
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # use platform to collect presentation feedback?
+    collect_presentation_feedback = db.Column(db.Boolean(), default=True)
 
 
     # EDITING METADATA
@@ -2665,6 +2669,7 @@ class ProjectClassConfig(db.Model):
                                             name=template.name,
                                             has_presentation=template.has_presentation,
                                             lecture_capture=template.lecture_capture,
+                                            collect_presentation_feedback=template.collect_presentation_feedback,
                                             number_assessors=template.number_assessors,
                                             max_group_size=template.max_group_size,
                                             morning_session=template.morning_session,
@@ -2900,6 +2905,9 @@ class SubmissionPeriodRecord(db.Model):
 
     # talk format
     talk_format = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # use platform to collect presentation feedback?
+    collect_presentation_feedback = db.Column(db.Boolean(), default=True)
 
     # retired flag, set by rollover code
     retired = db.Column(db.Boolean(), index=True)

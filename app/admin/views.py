@@ -2038,6 +2038,7 @@ def add_pclass():
                                             name=template.name,
                                             has_presentation=template.has_presentation,
                                             lecture_capture=template.lecture_capture,
+                                            collect_presentation_feedback=template.collect_presentation_feedback,
                                             number_assessors=template.number_assessors,
                                             max_group_size=template.max_group_size,
                                             morning_session=template.morning_session,
@@ -2235,6 +2236,7 @@ def regenerate_period_records(id):
         c.name = t.name
         c.has_presentation = t.has_presentation
         c.lecture_capture = t.lecture_capture
+        c.collect_presentation_feedback = t.collect_presentation_feedback
         c.number_assessors = t.number_assessors
         c.max_group_size = t.max_group_size
         c.morning_session = t.morning_session
@@ -2249,6 +2251,7 @@ def regenerate_period_records(id):
                                         name=t.name,
                                         has_presentation=t.has_presentation,
                                         lecture_capture=t.lecture_capture,
+                                        collect_presentation_feedback=t.collect_presentation_feedback,
                                         number_assessors=t.number_assessors,
                                         max_group_size=t.max_group_size,
                                         morning_session=t.morning_session,
@@ -2325,6 +2328,7 @@ def add_period(id):
                                           has_presentation=form.has_presentation.data,
                                           lecture_capture=form.lecture_capture.data,
                                           number_assessors=form.number_assessors.data,
+                                          collect_presentation_feedback=form.collect_presentation_feedback.data,
                                           creator_id=current_user.id,
                                           creation_timestamp=datetime.now())
         pclass.periods.append(data)
@@ -2354,6 +2358,7 @@ def edit_period(id):
         data.name = form.name.data
         data.has_presentation = form.has_presentation.data
         data.lecture_capture = form.lecture_capture.data
+        data.collect_presentation_feedback = form.collect_presentation_feedback.data
         data.number_assessors = form.number_assessors.data
         data.max_group_size = form.max_group_size.data
         data.morning_session = form.morning_session.data

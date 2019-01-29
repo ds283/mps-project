@@ -459,6 +459,8 @@ class SubmissionPeriodMixin():
                               description='e.g. 15 mins + 3 mins for questions',
                               validators=[NotOptionalIf('has_presentation')])
 
+    collect_presentation_feedback = BooleanField('Collect presentation feedback online')
+
 
 class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin):
 

@@ -14,7 +14,12 @@ from flask import render_template_string, jsonify
 _presentation = \
 """
 {% if p.has_presentation %}
-    <span class="label label-success">Required</span>
+    <span class="label label-success"><i class="fa fa-check"></i> Required</span>
+    {% if p.collect_presentation_feedback %}
+        <span class="label label-success"><i class="fa fa-check"></i> Collect feedback</span>
+    {% else %}
+        <span class="label label-warning"><i class="fa fa-times"></i> Do not collect feedback</span>
+    {% endif %}
     <span class="label label-primary">Assessors per group = {{ p.number_assessors }}</span>
     <span class="label label-primary">Max group size = {{ p.max_group_size }}</span> 
     {% if p.lecture_capture %}

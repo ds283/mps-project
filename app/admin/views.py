@@ -1993,6 +1993,7 @@ def add_pclass():
                             uses_supervisor=form.uses_supervisor.data,
                             uses_marker=form.uses_marker.data,
                             uses_presentations=form.uses_presentations.data,
+                            reenroll_supervisors_early=form.reenroll_supervisors_early.data,
                             convenor=form.convenor.data,
                             coconvenors=coconvenors,
                             selection_open_to_all=form.selection_open_to_all.data,
@@ -2102,6 +2103,7 @@ def edit_pclass(id):
         data.uses_supervisor = form.uses_supervisor.data
         data.uses_marker = form.uses_marker.data
         data.uses_presentations = form.uses_presentations.data
+        data.reenroll_supervisors_early = form.reenroll_supervisors_early.data
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
         data.selection_open_to_all = form.selection_open_to_all.data
@@ -8465,8 +8467,7 @@ def view_schedule(tag):
     if schedule is None:
         abort(404)
 
-    # deployed schedules are automatically unpublished, so we should allow public viewing
-    # if either flag is set
+    # deployed schedules are automatically unpublished, so we should allow public viewing if either flag is set
     if not (schedule.published or schedule.deployed):
         abort(404)
 

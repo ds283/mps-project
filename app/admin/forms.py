@@ -317,7 +317,8 @@ class ProjectClassMixin():
 
     colour = StringField('Colour', description='Assign a colour to help students identify this project class.')
 
-    do_matching = BooleanField('Participate in automated global matching of faculty to projects')
+    do_matching = BooleanField('Participate in automated global matching of faculty to projects',
+                               default=True)
 
     number_assessors = IntegerField('Number of assessors required per project',
                                     description='Assessors are used to assign 2nd markers and presentation assessors. '
@@ -332,15 +333,19 @@ class ProjectClassMixin():
     extent = SelectField('Duration', choices=extent_choices, coerce=int,
                          description='For how many academic years do students participate in the project?')
 
-    require_confirm = BooleanField('Require faculty to confirm projects yearly')
+    require_confirm = BooleanField('Require faculty to confirm projects yearly', default=True)
 
     supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')
 
-    uses_supervisor = BooleanField('Projects are supervisor by a named faculty member')
+    uses_supervisor = BooleanField('Projects are supervisor by a named faculty member',
+                                   default=True)
 
     uses_marker = BooleanField('Submissions are second-marked')
 
     uses_presentations = BooleanField('Includes one or more assessed presentations')
+
+    reenroll_supervisors_early = BooleanField('Re-enroll supervisors one year before end of sabbatical/buyout',
+                                              default=True)
 
     initial_choices = IntegerField('Number of initial project preferences',
                                    description='Select number of preferences students should list before joining.')

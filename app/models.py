@@ -777,8 +777,8 @@ class EmailNotification(db.Model):
 
         return 'You have been automatically re-enrolled as a supervisor for the project class "{proj}". ' \
                'This has probably happened because you were previously marked as "on sabbatical", and you are ' \
-               'expected to return from sabbatical in the *next* academic year. (This means that students will need ' \
-               'to offer projects for selection in the next cycle.)'.format(proj=record.pclass.name)
+               'expected to return from sabbatical in the *next* academic year. If you wish to offer projects, ' \
+               'you will need to do so in the next selection cycle.'.format(proj=record.pclass.name)
 
 
     @assign(str_operations, FACULTY_REENROLL_MARKER)
@@ -2138,6 +2138,13 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     # associate this project class with a set of degree programmes
     programmes = db.relationship('DegreeProgramme', secondary=pclass_programme_associations, lazy='dynamic',
                                  backref=db.backref('project_classes', lazy='dynamic'))
+
+
+    # AUTOMATIC RE-ENROLLMENT
+
+    # re-enroll supervisors one year early (normally we want this to be yes, because projects are
+    # *offered* one academic year before they *run*)
+    reenroll_supervisors_early = db.Column(db.Boolean(), default=True)
 
 
     # EDITING METADATA

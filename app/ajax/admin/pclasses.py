@@ -71,13 +71,16 @@ _status = \
     <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
 {% if p.do_matching %}
-    <span class="label label-info">Auto-match</span>
+    <span class="label label-default">Auto-match</span>
 {% endif %}
 {% if p.require_confirm %}
-    <span class="label label-info">Confirm</span>
+    <span class="label label-default">Confirm</span>
 {% endif %}
 {% if p.supervisor_carryover %}
-     <span class="label label-info">Carryover</span>
+     <span class="label label-default">Carryover</span>
+{% endif %}
+{% if p.reenroll_supervisors_early %}
+    <span class="label label-default">Re-enroll early</span>
 {% endif %}
 """
 
@@ -100,8 +103,8 @@ _popularity = \
 {% if p.keep_hourly_popularity == 1 %}{% set hourly_pl = '' %}{% endif %}
 {% set daily_pl = 's' %}
 {% if p.keep_daily_popularity == 1 %}{% set daily_pl = '' %}{% endif %}
-<span class="label label-info">Hourly: {{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
-<span class="label label-info">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
+<span class="label label-default">Hourly: {{ p.keep_hourly_popularity }} day{{ hourly_pl }}</span>
+<span class="label label-default">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
 """
 
 _convenor = \
@@ -139,7 +142,7 @@ _configuration = \
 {% else %}
     <span class="label label-danger">Start level missing</span>
 {% endif %}
-<span class="label label-info">extent: {{ p.extent }} yr</span>
+<span class="label label-default">extent: {{ p.extent }} yr</span>
 """
 
 

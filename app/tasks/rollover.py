@@ -623,7 +623,11 @@ def register_rollover_tasks(celery):
         # supervisors re-enroll in the year *before* they come off sabbatical, so they can offer
         # projects during the selection cycle
         if record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-            if record.supervisor_reenroll is not None and record.supervisor_reenroll <= current_year+1:
+            # supervisors are sometimes re-enrolled one year early, because projects are *offered*
+            # in the academic year before the run
+            renroll_offset = -1 if record.pclass.reenroll_supervisors_early else 0
+
+            if record.supervisor_reenroll is not None and record.supervisor_reenroll + renroll_offset <= current_year:
                 record.supervisor_state = EnrollmentRecord.SUPERVISOR_ENROLLED
                 record.supervisor_comment = 'Automatically re-enrolled during academic year rollover'
                 add_notification(record.owner, EmailNotification.FACULTY_REENROLL_SUPERVISOR, record)

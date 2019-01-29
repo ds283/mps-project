@@ -8468,6 +8468,9 @@ def upload_match(match_id):
 
 @admin.route('/view_schedule/<string:tag>', methods=['GET', 'POST'])
 def view_schedule(tag):
+    if tag == '16':
+        return redirect(url_for('admin.view_schedule', tag='jan19'))
+
     schedule = db.session.query(ScheduleAttempt).filter_by(tag=tag).first()
     if schedule is None:
         abort(404)

@@ -2349,15 +2349,36 @@ def add_period(id):
     form = AddSubmissionPeriodForm(form=request.form)
 
     if form.validate_on_submit():
-        data = SubmissionPeriodDefinition(owner_id=pclass.id,
-                                          period=pclass.submissions+1,
-                                          name=form.name.data,
-                                          has_presentation=form.has_presentation.data,
-                                          lecture_capture=form.lecture_capture.data,
-                                          number_assessors=form.number_assessors.data,
-                                          collect_presentation_feedback=form.collect_presentation_feedback.data,
-                                          creator_id=current_user.id,
-                                          creation_timestamp=datetime.now())
+        if form.has_presentation.data:
+            data = SubmissionPeriodDefinition(owner_id=pclass.id,
+                                              period=pclass.submissions+1,
+                                              name=form.name.data,
+                                              has_presentation=True,
+                                              lecture_capture=form.lecture_capture.data,
+                                              number_assessors=form.number_assessors.data,
+                                              collect_presentation_feedback=form.collect_presentation_feedback.data,
+                                              max_group_size=form.max_group_size.data,
+                                              morning_session=form.morning_session.data,
+                                              afternoon_session=form.afternoon_session.data,
+                                              talk_format=form.talk_format.data,
+                                              creator_id=current_user.id,
+                                              creation_timestamp=datetime.now())
+
+        else:
+            data = SubmissionPeriodDefinition(owner_id=pclass.id,
+                                              period=pclass.submissions+1,
+                                              name=form.name.data,
+                                              has_presentation=False,
+                                              lecture_capture=False,
+                                              number_assessors=None,
+                                              collect_presentation_feedback=False,
+                                              max_group_size=None,
+                                              morning_session=None,
+                                              afternoon_session=None,
+                                              talk_format=None,
+                                              creator_id=current_user.id,
+                                              creation_timestamp=datetime.now())
+
         pclass.periods.append(data)
 
         db.session.commit()
@@ -2384,13 +2405,24 @@ def edit_period(id):
     if form.validate_on_submit():
         data.name = form.name.data
         data.has_presentation = form.has_presentation.data
-        data.lecture_capture = form.lecture_capture.data
-        data.collect_presentation_feedback = form.collect_presentation_feedback.data
-        data.number_assessors = form.number_assessors.data
-        data.max_group_size = form.max_group_size.data
-        data.morning_session = form.morning_session.data
-        data.afternoon_session = form.afternoon_session.data
-        data.talk_format = form.talk_format.data
+
+        if data.has_presentation:
+            data.lecture_capture = form.lecture_capture.data
+            data.collect_presentation_feedback = form.collect_presentation_feedback.data
+            data.number_assessors = form.number_assessors.data
+            data.max_group_size = form.max_group_size.data
+            data.morning_session = form.morning_session.data
+            data.afternoon_session = form.afternoon_session.data
+            data.talk_format = form.talk_format.data
+
+        else:
+            data.lecture_capture = False
+            data.collect_presentation_feedback = False
+            data.number_assessors = None
+            data.max_group_size = None
+            data.morning_session = None
+            data.afternoon_session = None
+            data.talk_format = None
 
         data.last_edit_id = current_user.id,
         data.last_edit_timestamp = datetime.now()
@@ -2421,7 +2453,6 @@ def delete_period(id):
     pclass.validate_presentations()
 
     return redirect(request.referrer)
-
 
 
 @admin.route('/edit_supervisors')

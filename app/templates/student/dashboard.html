@@ -160,7 +160,13 @@
                         {% if sub %}
                             {% for n in range(config.submissions) %}
                                 {{ submission_card(config, sub, n) }}
+                            {% else %}
+                                <p>You are enrolled on this project class, but it does not have marked assessments.</p>
                             {% endfor %}
+                        {% endif %}
+
+                        {% if sel is none and sub is none %}
+                            <p>No current activity.</p>
                         {% endif %}
 
                     </div>

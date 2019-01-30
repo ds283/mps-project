@@ -84,6 +84,20 @@ def validate_project_open(config):
     return True
 
 
+def validate_project_class(pclass):
+    """
+    Validate that a project class is editable/usable
+    :param pclass:
+    :return:
+    """
+
+    if not pclass.publish:
+        flash("'{name}' is not published and is not available for certain lifecycle events.".format(name=pclass.name))
+        return False
+
+    return True
+
+
 def validate_is_admin_or_convenor():
     """
     Validate that the logged-in user is an administrator or is a convenor for any project class

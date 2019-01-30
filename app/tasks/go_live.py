@@ -32,7 +32,6 @@ def register_golive_tasks(celery):
 
     @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
     def pclass_golive(self, task_id, config_id, convenor_id, deadline, auto_close):
-
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to Go Live...', autocommit=True)
 
         # get database records for this project class
@@ -54,6 +53,9 @@ def register_golive_tasks(celery):
                 self.update_state('FAILURE', meta='Could not load convenor User record from database')
 
             return golive_fail.apply_async(args=(task_id, convenor_id))
+
+        if not config.project_class.publish:
+            return None
 
         year = config.year
 

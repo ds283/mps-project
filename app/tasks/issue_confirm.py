@@ -50,6 +50,9 @@ def register_issue_confirm_tasks(celery):
 
             return issue_fail.apply_async(args=(task_id, convenor_id))
 
+        if not config.project_class.publish:
+            return None
+
         year = config.year
 
         if config.selector_lifecycle > ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED:

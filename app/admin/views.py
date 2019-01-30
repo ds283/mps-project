@@ -2086,7 +2086,6 @@ def edit_pclass(id):
     old_convenor = data.convenor
 
     if form.validate_on_submit():
-
         # make sure convenor and coconvenors don't have overlap
         coconvenors = form.coconvenors.data
         if form.convenor.data in coconvenors:
@@ -2153,7 +2152,6 @@ def activate_pclass(id):
     :param id:
     :return:
     """
-
     data = ProjectClass.query.get_or_404(id)
     data.enable()
     db.session.commit()
@@ -2169,9 +2167,38 @@ def deactivate_pclass(id):
     :param id:
     :return:
     """
-
     data = ProjectClass.query.get_or_404(id)
     data.disable()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/publish_pclass/<int:id>')
+@roles_required('root')
+def publish_pclass(id):
+    """
+    Set a project class as 'published'
+    :param id:
+    :return:
+    """
+    data = ProjectClass.query.get_or_404(id)
+    data.set_published()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/unpublish_pclass/<int:id>')
+@roles_required('root')
+def unpublish_pclass(id):
+    """
+    Set a project class as 'unpublished'
+    :param id:
+    :return:
+    """
+    data = ProjectClass.query.get_or_404(id)
+    data.set_unpublished()
     db.session.commit()
 
     return redirect(request.referrer)

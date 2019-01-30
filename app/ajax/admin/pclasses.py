@@ -11,14 +11,14 @@
 from flask import render_template_string, jsonify
 
 
-_pclasses_programmes = \
+_programmes = \
 """
 {% for programme in pcl.programmes %}
     {{ programme.short_label|safe }}
 {% endfor %}
 """
 
-_pclasses_menu = \
+_menu = \
 """
 <div class="dropdown">
     <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
@@ -54,9 +54,23 @@ _pclasses_menu = \
                 </a></li>
             {% else %}
                 <li class="disabled"><a>
-                    <i class="fa fa-ban"></i> Programmes inactive
-                </a>
-                </li>
+                    <i class="fa fa-ban"></i> Can't make active
+                </a></li>
+            {% endif %}
+        {% endif %}
+        {% if pcl.publish %}
+            <li><a href="{{ url_for('admin.unpublish_pclass', id=pcl.id) }}">
+                <i class="fa fa-wrench"></i> Unpublish
+            </a></li>
+        {% else %}
+            {% if pcl.available %}
+                <li><a href="{{ url_for('admin.publish_pclass', id=pcl.id) }}">
+                    <i class="fa fa-wrench"></i> Publish
+                </a></li>
+            {% else %}
+                <li class="disabled"><a>
+                    <i class="fa fa-ban"></i> Can't publish
+                </a></li>
             {% endif %}
         {% endif %}
     </ul>
@@ -156,20 +170,25 @@ _name = \
 {% else %}
     <span class="label label-warning"><i class="fa fa-times"></i> Inactive</span>
 {% endif %}
+{% if p.publish %}
+    <span class="label label-success"><i class="fa fa-eye"></i> Published</span>
+{% else %}
+    <span class="label label-warning"><i class="fa fa-eye-slash"></i> Unpublished</span>
+{% endif %}
 </div>
 """
 
 
 def pclasses_data(classes):
 
-    data = [{'name': '{name} {ab}'.format(name=p.name, ab=p.make_label(p.abbreviation)),
+    data = [{'name': render_template_string(_name, p=p),
              'options': render_template_string(_options, p=p),
              'config': render_template_string(_configuration, p=p),
              'cats': render_template_string(_workload, p=p),
              'submissions': render_template_string(_submissions, p=p),
              'popularity': render_template_string(_popularity, p=p),
              'convenor': render_template_string(_convenor, p=p),
-             'programmes': render_template_string(_pclasses_programmes, pcl=p),
-             'menu': render_template_string(_pclasses_menu, pcl=p)} for p in classes]
+             'programmes': render_template_string(_programmes, pcl=p),
+             'menu': render_template_string(_menu, pcl=p)} for p in classes]
 
     return jsonify(data)

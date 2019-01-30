@@ -96,7 +96,9 @@ def CurrentUserProjectClasses():
 
 
 def AllProjectClasses():
-    return ProjectClass.query.filter_by(active=True, uses_supervisor=True).order_by(ProjectClass.name.asc())
+    # don't require uses_supervisor=True because eg. MPhys Labs doesn't have this flag set,
+    # but we still need to attach projects to it!
+    return ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc())
 
 
 def GetProjectClasses():

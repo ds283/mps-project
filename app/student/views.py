@@ -98,17 +98,17 @@ def dashboard():
     """
 
     # build list of all project classes for which this student has roles
-    pcs = []
+    pcs = set()
 
     for item in current_user.student_data.selecting.filter_by(retired=False).all():
         pclass = item.config.project_class
-        if pclass.active and pclass not in pcs:
-            pcs.append(pclass)
+        if pclass.active and pclass.publish:
+            pcs.add(pclass)
 
     for item in current_user.student_data.submitting.filter_by(retired=False).all():
         pclass = item.config.project_class
-        if pclass.active and pclass not in pcs:
-            pcs.append(pclass)
+        if pclass.active and pclass.publish:
+            pcs.add(pclass)
 
     # map list of project classes into ProjectClassConfig instance, and selector/submitter cards
     enrollments = []
@@ -135,6 +135,8 @@ def dashboard():
         sub = submit_q.first()
 
         enrollments.append((config, sel, sub))
+
+    enrollments.sort(key=lambda x: x[0].project_class.name)
 
     # list of all project classes used to generate a simple informational dashboard in the event
     # that this student doesn't have any live selector or submitter roles

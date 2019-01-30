@@ -618,7 +618,6 @@ def edit_description(did):
     form.desc = desc
 
     if form.validate_on_submit():
-
         desc.label = form.label.data
         desc.project_classes = form.project_classes.data
         desc.description = form.description.data
@@ -1150,11 +1149,10 @@ def dashboard():
     enrollments = []
     valid_panes = []
     for record in current_user.faculty_data.ordered_enrollments:
-
         if ((record.pclass.uses_supervisor and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
             or (record.pclass.uses_marker and record.marker_state == EnrollmentRecord.MARKER_ENROLLED)
             or (record.pclass.uses_presentations and record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)) \
-                and record.pclass.active:
+                and record.pclass.active and record.pclass.publish:
             config = record.pclass.configs.order_by(ProjectClassConfig.year.desc()).first()
 
             # get live projects belonging to both this config item and the active user

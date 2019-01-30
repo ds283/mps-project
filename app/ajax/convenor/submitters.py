@@ -54,8 +54,9 @@ _projects = \
                     ({{r.supervisor.user.last_name}})
                 <span class="caret"></span></a>
                 <ul class="dropdown-menu">
-                    <li>
-                        <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                    {% set disabled = not pclass.publish %}
+                    <li {% if disabled %}class="disabled"{% endif %}>
+                        <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                     </li>
                     
                     {% set disabled = r.period.feedback_open or r.student_engaged %}
@@ -146,8 +147,9 @@ _markers = \
                     <span class="caret"></span>
                 </a>
                 <ul class="dropdown-menu">
-                    <li>
-                        <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                    {% set disabled = not pclass.publish %}
+                    <li {% if disabled %}class="disabled"{% endif %}>
+                        <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                     </li>
                     
                     {% set disabled = r.period.feedback_open or r.student_engaged %}
@@ -192,18 +194,26 @@ _menu = \
                 </a>
             </li>
         {% endif %}
-        {% if sub.published %}
+        {% if sub.published and pclass.publish %}
             <li>
                 <a href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
                     <i class="fa fa-eye-slash"></i> Unpublish
                 </a>
             </li>
         {% else %}
-            <li>
-                <a href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
-                    <i class="fa fa-eye"></i> Publish to student
-                </a>
-            </li>
+            {% if pclass.publish %}
+                <li>
+                    <a href="{{ url_for('convenor.publish_assignment', id=sub.id) }}">
+                        <i class="fa fa-eye"></i> Publish to student
+                    </a>
+                </li>
+            {% else %}
+                <li class="disabled">
+                    <a>
+                        <i class="fa fa-eye-slash"></i> Cannot publish
+                    </a>
+                </li>
+            {% endif %}
         {% endif %}
 
         {% set recs = sub.ordered_assignments.all() %}
@@ -277,8 +287,9 @@ _presentations = \
                             <span class="caret"></span>
                         </a>
                         <ul class="dropdown-menu">
-                            <li>
-                                <a href="{{ url_for('convenor.view_feedback', id=rec.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                            {% set disabled = not pclass.publish %}
+                            <li {% if disabled %}class="disabled"{% endif %}>
+                                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=rec.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                             </li>
                         </ul>
                     </div>
@@ -322,8 +333,9 @@ _presentations = \
                                 </a>
                             </li>
                             {% if ns.count > 0 %}
-                                <li>
-                                    <a href="{{ url_for('convenor.view_feedback', id=rec.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Show feedback</a>
+                                {% set disabled = not pclass.publish %}
+                                <li {% if disabled %}class="disabled"{% endif %}>
+                                    <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=rec.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                                 </li>
                             {% endif %}
                         </ul>
@@ -356,7 +368,7 @@ _name = \
 {% else %}
     <span class="label label-default">#{{ sub.student.exam_number }}</span>
 {% endif %}
-{% if sub.published %}
+{% if sub.published and pclass.publish %}
     <span class="label label-primary"><i class="fa fa-eye"></i> Published</span>
 {% else %}
     <span class="label label-warning"><i class="fa fa-eye-slash"></i> Unpublished</span>

@@ -24,7 +24,7 @@ from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashbo
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
     build_enroll_submitter_candidates, build_submitters_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
-    validate_project_open, validate_not_attending
+    validate_project_open, validate_not_attending, validate_project_class
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
@@ -2621,6 +2621,10 @@ def issue_confirm_requests(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
     year = get_current_year()
     form = IssueFacultyConfirmRequestForm(request.form)
 
@@ -2659,6 +2663,10 @@ def outstanding_confirm(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
     return render_template('convenor/dashboard/outstanding_confirm.html', config=config, pclass=config.project_class)
 
 
@@ -2675,7 +2683,11 @@ def outstanding_confirm_ajax(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
+        return jsonify({})
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return jsonify({})
 
     return ajax.convenor.outstanding_confirm_data(config)
 
@@ -2688,6 +2700,10 @@ def confirmation_reminder(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
@@ -2716,6 +2732,10 @@ def confirmation_reminder_individual(fac_id, config_id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
@@ -2769,12 +2789,15 @@ def unofferable_ajax():
 @convenor.route('/force_confirm_all/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def force_confirm_all(id):
-
     # get details for project class
     config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     config.confirmation_required = []
@@ -2788,12 +2811,15 @@ def force_confirm_all(id):
 @convenor.route('/force_confirm/<int:id>/<int:uid>')
 @roles_accepted('faculty', 'admin', 'root')
 def force_confirm(id, uid):
-
     # get details for project class
     config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     faculty = FacultyData.query.get_or_404(uid)
@@ -2813,6 +2839,10 @@ def go_live(id):
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     year = get_current_year()
@@ -2852,12 +2882,15 @@ def go_live(id):
 @convenor.route('/close_selections/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def close_selections(id):
-
     # get details for current pclass configuration
     config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     year = get_current_year()
@@ -2882,12 +2915,15 @@ def close_selections(id):
 @convenor.route('/enroll/<int:userid>/<int:pclassid>')
 @roles_accepted('faculty', 'admin', 'root')
 def enroll(userid, pclassid):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(pclassid)
 
     # reject user if not a suitable convenor or administrator
     if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
@@ -2899,12 +2935,15 @@ def enroll(userid, pclassid):
 @convenor.route('/unenroll/<int:userid>/<int:pclassid>')
 @roles_accepted('faculty', 'admin', 'root')
 def unenroll(userid, pclassid):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(pclassid)
 
     # reject user if not a suitable convenor or administrator
     if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
@@ -3657,12 +3696,15 @@ def audit_schedules_ajax(pclass_id):
 @convenor.route('/open_feedback/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def open_feedback(id):
-
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     state = config.submitter_lifecycle
@@ -3695,12 +3737,15 @@ def open_feedback(id):
 @convenor.route('/close_feedback/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def close_feedback(id):
-
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     state = config.submitter_lifecycle
@@ -3727,9 +3772,12 @@ def close_feedback(id):
 @convenor.route('/publish_assignment/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def publish_assignment(id):
-
     # id is a SubmittingStudent
     sub = SubmittingStudent.query.get_or_404(id)
+
+    # reject if project class not published
+    if not validate_project_class(sub.config.project_class):
+        return redirect(request.referrer)
 
     # reject if logged-in user is not a convenor for this SubmittingStudent
     if not validate_is_convenor(sub.config.project_class):
@@ -3756,6 +3804,10 @@ def unpublish_assignment(id):
     if not validate_is_convenor(sub.config.project_class):
         return redirect(request.referrer)
 
+    # reject if project class not published
+    if not validate_project_class(sub.config.project_class):
+        return redirect(request.referrer)
+
     if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to publish an assignment to students', 'error')
         return redirect(request.referrer)
@@ -3769,12 +3821,15 @@ def unpublish_assignment(id):
 @convenor.route('/publish_all_assignments/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def publish_all_assignments(id):
-
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
     # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
@@ -3798,12 +3853,15 @@ def publish_all_assignments(id):
 @convenor.route('/unpublish_all_assignments/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def unpublish_all_assignments(id):
-
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
     # reject if logged-in user is not a convenor for this project class
     if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
@@ -3827,12 +3885,15 @@ def unpublish_all_assignments(id):
 @convenor.route('/mark_started/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def mark_started(id):
-
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
     # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_is_convenor(rec.owner.config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(rec.owner.config.project_class):
         return redirect(request.referrer)
 
     if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
@@ -3864,6 +3925,10 @@ def mark_waiting(id):
     if not validate_is_convenor(rec.owner.config.project_class):
         return redirect(request.referrer)
 
+    # reject if project class not published
+    if not validate_project_class(rec.owner.config.project_class):
+        return redirect(request.referrer)
+
     if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
         flash('It is now too late to mark a submission period as started', 'error')
         return redirect(request.referrer)
@@ -3885,12 +3950,15 @@ def mark_waiting(id):
 @convenor.route('/view_feedback/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def view_feedback(id):
-
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
     # reject if logged-in user is not a convenor for the project class associated with this submission record
     if not validate_is_convenor(rec.owner.config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(rec.owner.config.project_class):
         return redirect(request.referrer)
 
     text = request.args.get('text', None)

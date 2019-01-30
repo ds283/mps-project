@@ -38,8 +38,15 @@
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
-            <div class="well">
+            <div class="well well-lg">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
+                <hr class="intro-divider">
+                Submission periods:
+                {% for p in pclass.periods %}
+                    <span class="label label-primary">{{ p.display_name() }}</span>
+                {% else %}
+                    <span class="label label-default">None</span>
+                {% endfor %}
             </div>
 
             {# offer rollover of academic year if available #}
@@ -47,84 +54,94 @@
                 {{ rollover_card(current_year, pclass, config) }}
             {% endif %}
 
-            {# SELECTING #}
-            <div class="well">
-                {# provide summary #}
+            {% if pclass.publish %}
+                {# SELECTING #}
+                <div class="well">
+                    {# provide summary #}
 
-                {% if config.has_published_schedules %}
-                    <div class="panel panel-danger">
-                        <div class="panel-heading">Proposed assessment schedules are available to view</div>
-                        <div class="panel-body">
-                            <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
-                            <a href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
+                    {% if config.has_published_schedules %}
+                        <div class="panel panel-danger">
+                            <div class="panel-heading">Proposed assessment schedules are available to view</div>
+                            <div class="panel-body">
+                                <p>An administrator has published one or more proposed schedules for presentation assessments.</p>
+                                <a href="{{ url_for('convenor.audit_schedules', pclass_id=config.pclass_id) }}">View or edit proposed schedules...</a>
+                            </div>
                         </div>
-                    </div>
-                {% endif %}
+                    {% endif %}
 
-                {% set state = config.selector_lifecycle %}
-                {% set sel_count = convenor_data['selectors'] %}
-                {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                    {% set state = config.selector_lifecycle %}
+                    {% set sel_count = convenor_data['selectors'] %}
+                    {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
 
-                    {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}
+                        {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}
 
-                {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                    {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
 
-                    {# if we get here then we can assume requests have been issued because of the outermost if #}
-                    {{ waiting_confirmations(config, issue_form, capacity_data, sel_count) }}
+                        {# if we get here then we can assume requests have been issued because of the outermost if #}
+                        {{ waiting_confirmations(config, issue_form, capacity_data, sel_count) }}
 
-                {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                    {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
 
-                    {{ golive(config, golive_form, capacity_data, sel_count) }}
+                        {{ golive(config, golive_form, capacity_data, sel_count) }}
 
-                {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                    {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
 
-                    {{ selection_open(config) }}
+                        {{ selection_open(config) }}
 
-                {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
+                    {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
 
-                    {{ selection_closed(config, config.year < current_year) }}
+                        {{ selection_closed(config, config.year < current_year) }}
 
-                {% else %}
+                    {% else %}
 
-                    <div class="panel panel-danger">
-                        <div class="panel-heading">Error</div>
-                        <div class="panel-body">
-                            <strong>Error:</strong>
-                            Unknown project lifecycle state {{ state }}
+                        <div class="panel panel-danger">
+                            <div class="panel-heading">Error</div>
+                            <div class="panel-body">
+                                <strong>Error:</strong>
+                                Unknown project lifecycle state {{ state }}
+                            </div>
                         </div>
-                    </div>
 
-                {% endif %}
-            </div>
+                    {% endif %}
+                </div>
 
-            {# SUBMITTING #}
-            <div class="well">
-                {# provide summary #}
-                {% set state = config.submitter_lifecycle %}
-                {% if state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
+                {# SUBMITTING #}
+                <div class="well">
+                    {# provide summary #}
 
-                    {{ project_activity(config, feedback_form) }}
+                    {% set state = config.submitter_lifecycle %}
+                    {% if state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
 
-                {% elif state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
+                        {{ project_activity(config, feedback_form) }}
 
-                    {{ feedback_marking(config, feedback_form) }}
+                    {% elif state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
 
-                {% elif state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
+                        {{ feedback_marking(config, feedback_form) }}
 
-                    {{ submitter_rollover(config) }}
+                    {% elif state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
 
-                {% else %}
+                        {{ submitter_rollover(config) }}
 
-                    <div class="panel panel-danger">
-                        <div class="panel-heading">Error</div>
-                        <div class="panel-body">
-                            <strong>Error:</strong>
-                            Unknown project lifecycle state {{ state }}
+                    {% else %}
+
+                        <div class="panel panel-danger">
+                            <div class="panel-heading">Error</div>
+                            <div class="panel-body">
+                                <strong>Error:</strong>
+                                Unknown project lifecycle state {{ state }}
+                            </div>
                         </div>
-                    </div>
 
-                {% endif %}
-            </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="well">
+                    <p>
+                        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                        This project class is not published, so its administration options are limited.
+                    </p>
+                </div>
+            {% endif %}
         </div>
         <div class="col-xs-1"></div>
     </div>

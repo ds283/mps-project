@@ -37,8 +37,13 @@
     <div class="row">
         <div class="col-xs-12">
             <div class="pull-right">
-                <a href="{{ url_for('convenor.unpublish_all_assignments', id=config.id) }}" class="btn btn-default top-row-button"><i class="fa fa-eye-slash"></i> Unpublish all</a>
-                <a href="{{ url_for('convenor.publish_all_assignments', id=config.id) }}" class="btn btn-default top-row-button"><i class="fa fa-eye"></i> Publish all</a>
+                {% if pclass.publish %}
+                    <a href="{{ url_for('convenor.unpublish_all_assignments', id=config.id) }}" class="btn btn-default top-row-button"><i class="fa fa-eye-slash"></i> Unpublish all</a>
+                    <a href="{{ url_for('convenor.publish_all_assignments', id=config.id) }}" class="btn btn-default top-row-button"><i class="fa fa-eye"></i> Publish all</a>
+                {% else %}
+                    <a class="btn btn-default top-row-button disabled"><i class="fa fa-eye-slash"></i> Unpublish all</a>
+                    <a class="btn btn-default top-row-button disabled"><i class="fa fa-eye"></i> Publish all</a>
+                {% endif %}
             </div>
         </div>
     </div>

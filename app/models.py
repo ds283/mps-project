@@ -2185,10 +2185,11 @@ class ProjectClass(db.Model, ColouredLabelMixin):
         """
 
         self.active = False
+        self.publish = False
 
         # remove this project class from any projects that have been attached with it
         for proj in self.projects:
-            proj.project_classes.remove(self)
+            proj.remove_pclass(self)
 
 
     def enable(self):
@@ -2199,6 +2200,25 @@ class ProjectClass(db.Model, ColouredLabelMixin):
 
         if self.available:
             self.active = True
+
+
+    def set_unpublished(self):
+        """
+        Unpublish this project class
+        :return:
+        """
+
+        self.publish = False
+
+
+    def set_published(self):
+        """
+        Publish this project class
+        :return:
+        """
+
+        if self.available:
+            self.publish = True
 
 
     @property
@@ -2407,12 +2427,12 @@ class SubmissionPeriodDefinition(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
-    @property
+    # @property
     def display_name(self):
         if self.name is not None and len(self.name) > 0:
             return self.name
 
-        return 'Submission Period #{n}'.format(n=self.submission_period)
+        return 'Submission Period #{n}'.format(n=self.period)
 
 
 class ProjectClassConfig(db.Model):
@@ -3532,6 +3552,18 @@ class Project(db.Model):
         self.active = True
 
 
+    def remove_project_class(self, pclass):
+        """
+        Remove ourselves from a given pclass
+        :param pclass:
+        :return:
+        """
+        self.project_classes.remove(pclass)
+
+        for desc in self.descriptions:
+            desc.remove_project_class(pclass)
+
+
     @property
     def is_offerable(self):
         """
@@ -3598,10 +3630,6 @@ class Project(db.Model):
             .join(query, query.c.programme_id == DegreeProgramme.id) \
             .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
             .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
-
-
-    def remove_project_class(self, pclass):
-        self.project_classes.remove(pclass)
 
 
     @property
@@ -3987,6 +4015,10 @@ class ProjectDescription(db.Model):
         if not self._validated:
             check = self.is_valid
         return self._warnings.values()
+
+
+    def remove_project_class(self, pclass):
+        self.project_classes.remove(pclass)
 
 
     def _level_modules_query(self, level_id):
@@ -5196,6 +5228,9 @@ class SubmissionRecord(db.Model):
     def _feedback_state(self, valid):
         period = self.period
 
+        if not period.config.project_class.publish:
+            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
+
         if not period.feedback_open:
             return SubmissionRecord.FEEDBACK_NOT_YET
 
@@ -5229,7 +5264,10 @@ class SubmissionRecord(db.Model):
 
     @property
     def presentation_feedback_late(self):
-        if not self.period.has_presentation:
+        if not self.period.has_presentation or not self.period.collect_presentation_feedback:
+            return False
+
+        if not self.period.config.project_class.publish:
             return False
 
         slot = self.schedule_slot
@@ -5241,7 +5279,10 @@ class SubmissionRecord(db.Model):
 
 
     def presentation_feedback_state(self, faculty_id):
-        if not self.period.has_presentation:
+        if not self.period.has_presentation or not self.period.collect_presentation_feedback:
+            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
+
+        if not self.period.config.project_class.publish:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
         slot = self.schedule_slot
@@ -5268,6 +5309,9 @@ class SubmissionRecord(db.Model):
     def supervisor_response_state(self):
         period = self.period
 
+        if not self.period.config.project_class.publish:
+            return SubmissionRecord.FEEDBACK_NOT_REQUIRED
+
         if not period.feedback_open or not self.student_feedback_submitted:
             return SubmissionRecord.FEEDBACK_NOT_YET
 
@@ -5289,7 +5333,7 @@ class SubmissionRecord(db.Model):
         Determines whether any feedback is available, irrespective of whether it is visible to the student
         :return:
         """
-        if self.period.has_presentation:
+        if self.period.has_presentation and self.period.collect_presentation_feedback:
             for feedback in self.presentation_feedback:
                 if feedback.submitted:
                     return True
@@ -5303,7 +5347,7 @@ class SubmissionRecord(db.Model):
         Determines whether feedback should be offered to the student
         :return:
         """
-        if self.period.has_presentation:
+        if self.period.has_presentation and self.period.collect_presentation_feedback:
             slot = self.schedule_slot
 
             if slot is not None:
@@ -9173,7 +9217,7 @@ class ScheduleSlot(db.Model):
         if period is None:
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED
 
-        if not period.collect_presentation_feedback:
+        if not period.collect_presentation_feedback or not period.config.project_class.publish:
             return ScheduleSlot.FEEDBACK_NOT_REQUIRED
 
         count = get_count(self.assessors.filter_by(id=faculty_id))

@@ -17,7 +17,6 @@
     {% if sel.is_optional %}
         <p>
             This project is <strong>optional</strong> for your degree programme
-            ({{ current_user.student_data.programme.full_name }}).
             If you wish to participate, add bookmarks to keep track of the projects
             in which you are interested. Drag-and-drop your bookmarks using the drag handle
             to rank them in order of preference. Submit your selection when you are finished.
@@ -31,8 +30,7 @@
     {% else %}
         {% if sel.is_initial_selection %}
             <p>
-                This project is <strong>mandatory</strong> for your degree programme
-                ({{ current_user.student_data.programme.full_name }}).
+                This project is <strong>mandatory</strong> for your degree programme.
                 Add bookmarks to keep track of the projects in which you are interested,
                 then drag-and-drop to rank them in order of preference.
                 Submit your selection when you are finished.

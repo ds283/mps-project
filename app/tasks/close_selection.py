@@ -26,7 +26,6 @@ def register_close_selection_tasks(celery):
 
     @celery.task(bind=True)
     def pclass_close(self, task_id, config_id, convenor_id):
-
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to close...', autocommit=True)
 
         # get database records for this project class
@@ -45,6 +44,9 @@ def register_close_selection_tasks(celery):
             print('config: {x}'.format(x=config))
             print('convenor: {x}').format(x=convenor)
             return close_fail.apply_async(args=(task_id, convenor_id))
+
+        if not config.project_class.publish:
+            return None
 
         year = config.year
 

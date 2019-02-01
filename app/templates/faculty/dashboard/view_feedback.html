@@ -80,7 +80,7 @@
                 {% endif %}
             {% endif %}
 
-            {% if record.period.has_presentation %}
+            {% if record.period.has_presentation and record.period.collect_presentation_feedback %}
                 {% set ns = namespace(count=0) %}
                 {% for feedback in record.presentation_feedback %}
                     {% if feedback.submitted or (feedback.positive or feedback.negative) and preview %}

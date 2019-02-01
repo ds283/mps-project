@@ -30,6 +30,7 @@ from .limiter import limiter
 from .uploads import solution_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
+from flask_rollbar import Rollbar
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
 
@@ -58,6 +59,7 @@ def create_app():
     app.config.from_object(app_config[config_name])
     app.config.from_pyfile('config.py')
     app.config.from_pyfile('mail.py')
+    app.config.from_pyfile('rollbar.py')
 
     app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
 
@@ -67,6 +69,7 @@ def create_app():
     mail = Mail(app)
     bleach = Bleach(app)
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
+    rb = Rollbar(app)
 
     session_store = Session(app)
 

@@ -87,9 +87,10 @@ _name = \
 
 
 @cache.memoize()
-def _element(user_id):
+def _element(user_id, current_user_id):
     f = db.session.query(FacultyData).filter_by(id=user_id).one()
     u = db.session.query(User).filter_by(id=user_id).one()
+    cu = db.session.query(User).filter_by(id=current_user_id).one()
 
     return {'name': {
                 'display': render_template_string(_name, u=u, f=f),
@@ -99,7 +100,7 @@ def _element(user_id):
              'settings': render_template_string(_settings, f=f),
              'affiliation': render_template_string(_affiliation, f=f),
              'enrolled': render_template_string(_enrolled, f=f),
-             'menu': render_template_string(menu, user=u, pane='faculty')}
+             'menu': render_template_string(menu, user=u, cuser=cu, pane='faculty')}
 
 
 @listens_for(User, 'before_insert')
@@ -156,7 +157,7 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
         cache.delete_memoized(_element, target.owner_id)
 
 
-def build_faculty_data(faculty_ids):
-    data = [_element(f_id) for f_id in faculty_ids]
+def build_faculty_data(faculty_ids, current_user_id):
+    data = [_element(f_id, current_user_id) for f_id in faculty_ids]
 
     return jsonify(data)

@@ -15,7 +15,7 @@ _cohort = \
 """
 {{ sub.student.programme.short_label|safe }}
 {{ sub.student.cohort_label|safe }}
-{{ sub.academic_year_label|safe }}
+{{ sub.academic_year_label(show_details=True)|safe }}
 """
 
 

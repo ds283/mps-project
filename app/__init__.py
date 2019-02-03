@@ -39,6 +39,7 @@ from .database import db
 from .models import User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
 from .shared.utils import home_dashboard_url, get_assessment_data
+from .shared.precompute import do_precompute
 import app.tasks as tasks
 
 from mdx_smartypants import makeExtension
@@ -48,6 +49,7 @@ from urllib import parse
 from markupsafe import Markup
 
 from os import path, makedirs
+from datetime import datetime
 
 
 def create_app():
@@ -182,6 +184,7 @@ def create_app():
     tasks.register_assessment_tasks(celery)
     tasks.register_assessor_tasks(celery)
     tasks.register_email_notification_tasks(celery)
+    tasks.register_precompute_tasks(celery)
     tasks.register_test_tasks(celery)
 
 
@@ -318,8 +321,18 @@ def create_app():
 
     @user_logged_in.connect_via(app)
     def login_callback(self, user):
-        # clear notifications for the user who has just logged in
-        Notification.query.filter_by(user_id=user.id).delete()
+        # DS 3 Feb 2019 - why did we want to clear notifications?
+        # disabled this for now
+
+        # # clear notifications for the user who has just logged in
+        # Notification.query.filter_by(user_id=user.id).delete()
+
+        # force precompute of expensive views
+        do_precompute(user)
+
+        user.last_active = datetime.now()
+        db.session.commit()
+
 
     # IMPORT BLUEPRINTS
 

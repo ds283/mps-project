@@ -96,7 +96,6 @@ def dashboard():
     Render dashboard for a student user
     :return:
     """
-
     # build list of all project classes for which this student has roles
     pcs = set()
 
@@ -193,7 +192,6 @@ def projects_ajax(id):
     :param id:
     :return:
     """
-
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
 
@@ -210,7 +208,6 @@ def projects_ajax(id):
 @student.route('/add_group_filter/<id>/<gid>')
 @roles_accepted('student')
 def add_group_filter(id, gid):
-
     group = ResearchGroup.query.get_or_404(gid)
     sel = SelectingStudent.query.get_or_404(id)
 

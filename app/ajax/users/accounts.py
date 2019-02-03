@@ -32,8 +32,9 @@ _roles = \
 
 
 @cache.memoize()
-def _element(user_id):
+def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
+    cu = db.session.query(User).filter_by(id=current_user_id).one()
 
     roles = db.session.query(Role).all()
 
@@ -62,7 +63,7 @@ def _element(user_id):
              'ip': u.last_login_ip if u.last_login_ip is not None and len(u.last_login_ip) > 0
                  else '<span class="label label-default">None</a>',
              'role': render_template_string(_roles, user=u, roles=roles),
-             'menu': render_template_string(menu, user=u, pane='accounts')}
+             'menu': render_template_string(menu, user=u, cuser=cu, pane='accounts')}
 
 
 @listens_for(User, 'before_insert')
@@ -95,7 +96,7 @@ def _User_delete_handler(target, value, initiator):
         cache.delete_memoized(_element, target.id)
 
 
-def build_accounts_data(user_ids):
-    data = [_element(u_id) for u_id in user_ids]
+def build_accounts_data(user_ids, current_user_id):
+    data = [_element(u_id, current_user_id) for u_id in user_ids]
 
     return jsonify(data)

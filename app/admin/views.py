@@ -444,7 +444,7 @@ def users_ajax():
 
     user_ids = [u[0] for u in users]
 
-    return ajax.users.build_accounts_data(user_ids)
+    return ajax.users.build_accounts_data(user_ids, current_user.id)
 
 
 @admin.route('/users_students_ajax')
@@ -487,7 +487,7 @@ def users_students_ajax():
 
     student_ids = [s[0] for s in data.all()]
 
-    return ajax.users.build_student_data(student_ids)
+    return ajax.users.build_student_data(student_ids, current_user.id)
 
 
 @admin.route('/users_faculty_ajax')
@@ -511,7 +511,7 @@ def users_faculty_ajax():
 
     faculty_ids = [f[0] for f in data.all()]
 
-    return ajax.users.build_faculty_data(faculty_ids)
+    return ajax.users.build_faculty_data(faculty_ids, current_user.id)
 
 
 @admin.route('/make_admin/<int:id>')
@@ -3906,17 +3906,15 @@ def notifications_ajax():
         .order_by(Notification.timestamp.asc()).all()
 
     # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
-    modified = False
     for n in notifications:
         if n.type == Notification.USER_MESSAGE \
                 or n.type == Notification.SHOW_HIDE_REQUEST \
                 or n.type == Notification.REPLACE_TEXT_REQUEST:
 
             n.remove_on_pageload = True
-            modified = True
 
-    if modified:
-        db.session.commit()
+    current_user.last_active = datetime.now()
+    db.session.commit()
 
     return ajax.polling.notifications_payload(notifications)
 

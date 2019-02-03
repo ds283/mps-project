@@ -14,7 +14,7 @@ from flask import render_template_string, jsonify
 _cohort = \
 """
 {{ sel.student.cohort_label|safe }}
-{{ sel.academic_year_label|safe }}
+{{ sel.academic_year_label(show_details=True)|safe }}
 """
 
 _selections = \

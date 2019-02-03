@@ -37,7 +37,7 @@ def _element(record_id, current_year):
              'email': r.user.email,
              'exam_number': r.exam_number,
              'programme': r.programme.full_name,
-             'year': r.academic_year_label(current_year),
+             'year': r.academic_year_label(current_year, show_details=True),
              'menu': render_template_string(_actions, s=r, url='REPURL', text='REPTEXT')}
 
 
@@ -62,7 +62,7 @@ def _StudentData_delete_handler(mapper, connection, target):
         cache.delete_memoized(_element, target.id, current_year)
 
 
-def validate_data(record_ids, url=None, text=None):
+def validate_data(record_ids, url='', text=''):
     current_year = get_current_year()
 
     bleach = current_app.extensions['bleach']

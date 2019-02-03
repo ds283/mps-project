@@ -68,9 +68,9 @@ menu = \
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Operations</li>
 
-        <li {% if user.username == current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
+        <li {% if user.username == cuser.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
             {% if user.is_active %}
-                <a {% if user.username != current_user.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.deactivate_user', id=user.id) }}"{% endif %}>
+                <a {% if user.username != cuser.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.deactivate_user', id=user.id) }}"{% endif %}>
                     <i class="fa fa-wrench"></i> Make inactive
                 </a>
             {% else %}
@@ -83,8 +83,8 @@ menu = \
         {# current user always has role of at least 'admin', so no need to check here #}
         {% if not user.has_role('student') and not user.has_role('root') %}
             {% if user.has_role('admin') %}
-                <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
-                    <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>
+                <li {% if user.username == cuser.username %}class="disabled"{% endif %}>
+                    <a {% if user.username != cuser.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>
                         <i class="fa fa-wrench"></i> Remove admin
                     </a>
                 </li>
@@ -97,10 +97,10 @@ menu = \
             {% endif %}
         {% endif %}
 
-        {% if current_user.has_role('root') and not user.has_role('student') %}
+        {% if cuser.has_role('root') and not user.has_role('student') %}
             {% if user.has_role('root') %}
-                <li {% if user.username == current_user.username %}class="disabled"{% endif %}>
-                    <a {% if user.username != current_user.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>
+                <li {% if user.username == cuser.username %}class="disabled"{% endif %}>
+                    <a {% if user.username != cuser.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>
                         <i class="fa fa-wrench"></i> Remove sysadmin
                     </a>
                 </li>
@@ -114,7 +114,7 @@ menu = \
         {% endif %}
 
         {# check whether we should offer role editor in the menu #}
-        {% if current_user.has_role('root') and not user.has_role('student') %}
+        {% if cuser.has_role('root') and not user.has_role('student') %}
             <li>
                 <a href="{{ url_for('admin.assign_roles', id=user.id) }}">
                     <i class="fa fa-wrench"></i> Assign roles...
@@ -122,7 +122,7 @@ menu = \
             </li>
         {% endif %}
         
-        {% if current_user.has_role('root') and not current_user.has_role('student') %}
+        {% if cuser.has_role('root') and not cuser.has_role('student') %}
             <li role="separator" class="divider"></li>
             <li class="dropdown-header">Superuser functions</li>
             <li>

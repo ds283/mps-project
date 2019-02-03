@@ -21,9 +21,10 @@ from .shared import menu, name
 
 
 @cache.memoize()
-def _element(user_id):
-    u = db.session.query(User).filter_by(id=user_id).one()
+def _element(user_id, current_user_id):
     s = db.session.query(StudentData).filter_by(id=user_id).one()
+    u = db.session.query(User).filter_by(id=user_id).one()
+    cu = db.session.query(User).filter_by(id=current_user_id).one()
 
     year = get_current_year()
 
@@ -34,9 +35,9 @@ def _element(user_id):
              'programme': s.programme.label,
              'cohort': s.cohort_label,
              'acadyear': {
-                 'display': s.academic_year_label(year),
+                 'display': s.academic_year_label(year, show_details=True),
                  'sortvalue': s.academic_year(year)},
-             'menu': render_template_string(menu, user=u, pane='students')}
+             'menu': render_template_string(menu, user=u, cuser=cu, pane='students')}
 
 
 @listens_for(User, 'before_insert')
@@ -75,7 +76,7 @@ def _StudentData_delete_handler(mapper, connection, target):
         cache.delete_memoized(_element, target.id)
 
 
-def build_student_data(student_ids):
-    data = [_element(s_id) for s_id in student_ids]
+def build_student_data(student_ids, current_user_id):
+    data = [_element(s_id, current_user_id) for s_id in student_ids]
 
     return jsonify(data)

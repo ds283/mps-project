@@ -36,7 +36,7 @@ _pclass = \
 _cohort = \
 """
 {{ sel.student.programme.label|safe }}
-{{ sel.academic_year_label|safe }}
+{{ sel.academic_year_label(show_details=True)|safe }}
 {{ sel.student.cohort_label|safe }}
 """
 

@@ -424,27 +424,27 @@ def users_ajax():
     filter = request.args.get('filter')
 
     if filter == 'active':
-        users = User.query.filter_by(active=True).all()
+        users = db.session.query(User.id).filter_by(active=True).all()
     elif filter == 'inactive':
-        users = User.query.filter_by(active=False).all()
+        users = db.session.query(User.id).filter_by(active=False).all()
     elif filter == 'student':
-        users = User.query.filter(User.roles.any(Role.name == 'student')).all()
+        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'student')).all()
     elif filter == 'faculty':
-        users = User.query.filter(User.roles.any(Role.name == 'faculty')).all()
+        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'faculty')).all()
     elif filter == 'office':
-        users = User.query.filter(User.roles.any(Role.name == 'office')).all()
+        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'office')).all()
     elif filter == 'exec':
-        users = User.query.filter(User.roles.any(Role.name == 'exec')).all()
+        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'exec')).all()
     elif filter == 'admin':
-        users = User.query.filter(User.roles.any(Role.name == 'admin')).all()
+        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'admin')).all()
     elif filter == 'root':
-        users = User.query.filter(User.roles.any(Role.name == 'root')).all()
+        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'root')).all()
     else:
-        users = User.query.all()
-    
-    roles = db.session.query(Role).all()
+        users = db.session.query(User.id).all()
 
-    return ajax.users.build_accounts_data(users, roles)
+    user_ids = [u[0] for u in users]
+
+    return ajax.users.build_accounts_data(user_ids, current_user.id)
 
 
 @admin.route('/users_students_ajax')
@@ -456,7 +456,7 @@ def users_students_ajax():
     cohort_filter = request.args.get('cohort_filter')
     year_filter = request.args.get('year_filter')
 
-    data = db.session.query(StudentData, User) \
+    data = db.session.query(StudentData.id, User) \
         .join(User, User.id == StudentData.id)
 
     flag, prog_value = is_integer(prog_filter)
@@ -485,7 +485,9 @@ def users_students_ajax():
 
         data = nonf.union(foun)
 
-    return ajax.users.build_student_data(data.all())
+    student_ids = [s[0] for s in data.all()]
+
+    return ajax.users.build_student_data(student_ids, current_user.id)
 
 
 @admin.route('/users_faculty_ajax')
@@ -496,7 +498,7 @@ def users_faculty_ajax():
     group_filter = request.args.get('group_filter')
     pclass_filter = request.args.get('pclass_filter')
 
-    data = db.session.query(FacultyData, User) \
+    data = db.session.query(FacultyData.id) \
         .join(User, User.id == FacultyData.id)
 
     flag, group_value = is_integer(group_filter)
@@ -507,7 +509,9 @@ def users_faculty_ajax():
     if flag:
         data = data.filter(FacultyData.enrollments.any(pclass_id=pclass_value))
 
-    return ajax.users.build_faculty_data(data.all())
+    faculty_ids = [f[0] for f in data.all()]
+
+    return ajax.users.build_faculty_data(faculty_ids, current_user.id)
 
 
 @admin.route('/make_admin/<int:id>')
@@ -3902,17 +3906,15 @@ def notifications_ajax():
         .order_by(Notification.timestamp.asc()).all()
 
     # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
-    modified = False
     for n in notifications:
         if n.type == Notification.USER_MESSAGE \
                 or n.type == Notification.SHOW_HIDE_REQUEST \
                 or n.type == Notification.REPLACE_TEXT_REQUEST:
 
             n.remove_on_pageload = True
-            modified = True
 
-    if modified:
-        db.session.commit()
+    current_user.last_active = datetime.now()
+    db.session.commit()
 
     return ajax.polling.notifications_payload(notifications)
 

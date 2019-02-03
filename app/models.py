@@ -478,6 +478,15 @@ class User(db.Model, UserMixin):
     summary_frequency = db.Column(db.Integer(), default=1, nullable=False)
 
 
+    # KEEP-ALIVE AND PRECOMPUTE
+
+    # keep track of when this user was last active on the site
+    last_active = db.Column(db.DateTime(), default=None)
+
+    # keep track of when precompute was last run for this user
+    last_precompute = db.Column(db.DateTime(), default=None)
+
+
     # override inherited has_role method
     def has_role(self, role, skip_mask=False):
         if not skip_mask:
@@ -1638,7 +1647,7 @@ class StudentData(db.Model):
         return base_year
 
 
-    def academic_year_label(self, current_year):
+    def academic_year_label(self, current_year, show_details=False):
         academic_year = self.academic_year(current_year)
 
         if academic_year < 0:
@@ -1651,7 +1660,7 @@ class StudentData(db.Model):
             text = 'Y{y}'.format(y=self.academic_year(current_year))
             type = 'info'
 
-        if not current_user.has_role('student'):
+        if show_details:
             if self.foundation_year:
                 text += ' +F'
 
@@ -4770,9 +4779,8 @@ class SelectingStudent(db.Model):
         return self.student.academic_year(self.config.year)
 
 
-    @property
-    def academic_year_label(self):
-        return self.student.academic_year_label(self.config.year)
+    def academic_year_label(self, show_details=False):
+        return self.student.academic_year_label(self.config.year, show_details=show_details)
 
 
     @property
@@ -4919,9 +4927,8 @@ class SubmittingStudent(db.Model):
         return self.student.academic_year(self.config.year)
 
 
-    @property
-    def academic_year_label(self):
-        return self.student.academic_year_label(self.config.year)
+    def academic_year_label(self, show_details=False):
+        return self.student.academic_year_label(self.config.year, show_details=show_details)
 
 
     def get_assignment(self, period):

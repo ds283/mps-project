@@ -48,7 +48,7 @@ def _element(record_id, current_year):
              'email': r.user.email,
              'exam_number': r.exam_number,
              'programme': r.programme.full_name,
-             'year': r.academic_year_label(current_year),
+             'year': r.academic_year_label(current_year, show_details=True),
              'rejected_by': render_template_string(_rejected, s=r),
              'menu': render_template_string(_actions, s=r, url='REPURL', text='REPTEXT')}
 
@@ -74,7 +74,7 @@ def _StudentData_delete_handler(mapper, connection, target):
         cache.delete_memoized(_element, target.id, current_year)
 
 
-def correction_data(records, url=None, text=None):
+def correction_data(record_ids, url='', text=''):
     current_year = get_current_year()
 
     bleach = current_app.extensions['bleach']
@@ -91,6 +91,6 @@ def correction_data(records, url=None, text=None):
         d.update({'menu': d['menu'].replace('REPURL', url_enc, 1).replace('REPTEXT', text_enc, 1)})
         return d
 
-    data = [update(_element(r.id, current_year)) for r in records]
+    data = [update(_element(r_id, current_year)) for r_id in record_ids]
 
     return jsonify(data)

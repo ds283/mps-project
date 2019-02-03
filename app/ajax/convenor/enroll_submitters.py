@@ -29,7 +29,7 @@ def enroll_submitters_data(students, config):
              'programme': s.programme.label,
              'cohort': s.cohort_label,
              'acadyear': {
-                 'display': s.academic_year_label(config.year),
+                 'display': s.academic_year_label(config.year, show_details=True),
                  'sortvalue': s.academic_year(config.year)},
              'actions': render_template_string(_enroll_action, s=s, config=config)} for s in students]
 

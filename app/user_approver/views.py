@@ -77,7 +77,7 @@ def validate_ajax():
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
-    records = db.session.query(StudentData). \
+    records = db.session.query(StudentData.id). \
         filter(StudentData.validation_state == StudentData.VALIDATION_QUEUED,
                or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
                    and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id)))
@@ -105,7 +105,9 @@ def validate_ajax():
 
         records = nonf.union(foun)
 
-    return ajax.user_approver.validate_data(records.all(), url=url, text=text)
+    record_ids = [r[0] for r in records.all()]
+
+    return ajax.user_approver.validate_data(record_ids, url=url, text=text)
 
 
 @user_approver.route('/approve/<int:id>')
@@ -189,7 +191,7 @@ def correct_ajax():
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
-    records = db.session.query(StudentData). \
+    records = db.session.query(StudentData.id). \
         filter(StudentData.validation_state == StudentData.VALIDATION_REJECTED,
                or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
                    and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id)))
@@ -217,4 +219,6 @@ def correct_ajax():
 
         records = nonf.union(foun)
 
-    return ajax.user_approver.correction_data(records.all(), url=url, text=text)
+    record_ids = [r[0] for r in records.all()]
+
+    return ajax.user_approver.correction_data(record_ids, url=url, text=text)

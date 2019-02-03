@@ -62,7 +62,7 @@ def _StudentData_delete_handler(mapper, connection, target):
         cache.delete_memoized(_element, target.id, current_year)
 
 
-def validate_data(records, url=None, text=None):
+def validate_data(record_ids, url=None, text=None):
     current_year = get_current_year()
 
     bleach = current_app.extensions['bleach']
@@ -79,6 +79,6 @@ def validate_data(records, url=None, text=None):
         d.update({'menu': d['menu'].replace('REPURL', url_enc, 2).replace('REPTEXT', text_enc, 2)})
         return d
 
-    data = [update(_element(r.id, current_year)) for r in records]
+    data = [update(_element(r_id, current_year)) for r_id in record_ids]
 
     return jsonify(data)

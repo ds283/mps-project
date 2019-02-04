@@ -29,6 +29,10 @@ def do_precompute(user):
         users = celery.tasks['app.tasks.precompute.administrator']
         users.apply_async(args=(user.id,))
 
+    if user.has_role('exec'):
+        users = celery.tasks['app.tasks.precompute.executive']
+        users.apply_async()
+
     uc = celery.tasks['app.tasks.precompute.user_corrections']
     uc.apply_async(args=(user.id,))
 

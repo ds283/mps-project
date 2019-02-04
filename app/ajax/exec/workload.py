@@ -187,6 +187,6 @@ def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
 
 
 def workload_data(faculty_ids):
-    data = [_element(f.id) for f in faculty_ids]
+    data = [_element(f_id) for f_id in faculty_ids]
 
     return jsonify(data)

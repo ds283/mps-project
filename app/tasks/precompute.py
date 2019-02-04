@@ -171,6 +171,30 @@ def register_precompute_tasks(celery):
 
 
     @celery.task(bind=True)
+    def executive(self):
+        task = group(workload_data.si(),)
+        task.apply_async()
+
+
+    @celery.task(bind=True)
+    def workload_data(self):
+        try:
+            data = db.session.query(FacultyData) \
+                .join(User, User.id == FacultyData.id) \
+                .filter(User.active == True).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(workload_faculty.si(f.id) for f in data)
+        task.apply_async()
+
+
+    @celery.task(bind=True)
+    def workload_faculty(self, user_id):
+        ajax.exec.workload_data([user_id])
+
+
+    @celery.task(bind=True)
     def periodic_precompute(self, interval_secs=10*60):
         try:
             data = db.session.query(User).filter_by(active=True).all()

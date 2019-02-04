@@ -9,7 +9,15 @@
 #
 
 from flask import render_template_string, jsonify, url_for
+
+from ...database import db
+from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot
+from ...cache import cache
 from ...shared.sqlalchemy import get_count
+from ...shared.utils import get_current_year
+
+from sqlalchemy.event import listens_for
+
 
 
 _name = \
@@ -97,25 +105,88 @@ _workload = \
 """
 
 
-def workload_data(faculty):
-    data = []
+@cache.memoize()
+def _element(faculty_id):
+    f = db.session.query(FacultyData).filter_by(id=faculty_id).one()
 
-    for f in faculty:
-        workload = {}
-        total_workload = 0
+    workload = {}
+    total_workload = 0
 
-        for record in f.enrollments:
-            CATS = sum(f.CATS_assignment(record.pclass))
-            workload[record.pclass_id] = CATS
-            total_workload += CATS
+    for record in f.enrollments:
+        CATS = sum(f.CATS_assignment(record.pclass))
+        workload[record.pclass_id] = CATS
+        total_workload += CATS
 
-        data.append({'name': {'display': render_template_string(_name, f=f),
+    return {'name': {'display': render_template_string(_name, f=f),
                               'sortstring': f.user.last_name + f.user.first_name},
                      'groups': render_template_string(_groups, f=f),
                      'enrollments': {'display': render_template_string(_enrollments, f=f),
                                      'sortvalue': get_count(f.enrollments)},
                      'workload': {'display': render_template_string(_workload, f=f, wkld=workload, tot=total_workload),
-                                  'sortvalue': total_workload}})
+                                  'sortvalue': total_workload}}
+
+
+@listens_for(EnrollmentRecord, 'before_insert')
+def _EnrollemntRecord_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, target.owner_id)
+
+
+@listens_for(EnrollmentRecord, 'before_update')
+def _EnrollemntRecord_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, target.owner_id)
+
+
+@listens_for(EnrollmentRecord, 'before_delete')
+def _EnrollemntRecord_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        cache.delete_memoized(_element, target.owner_id)
+
+
+@listens_for(SubmissionRecord, 'before_insert')
+def _SubmissionRecord_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        if not target.retired:
+            cache.delete_memoized(_element, target.project.owner_id)
+            cache.delete_memoized(_element, target.marker_id)
+
+
+@listens_for(SubmissionRecord, 'before_update')
+def _SubmissionRecord_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        if not target.retired:
+            cache.delete_memoized(_element, target.project.owner_id)
+            cache.delete_memoized(_element, target.marker_id)
+
+
+@listens_for(SubmissionRecord, 'before_delete')
+def _SubmissionRecord_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        if not target.retired:
+            cache.delete_memoized(_element, target.project.owner_id)
+            cache.delete_memoized(_element, target.marker_id)
+
+
+@listens_for(ScheduleSlot.assessors, 'append')
+def _ScheduleSlot_assessors_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if target.owner.deployed:
+            current_year = get_current_year()
+            if target.owner.owner.year == current_year:
+                cache.delete_memoized(_element, value.id)
+
+
+@listens_for(ScheduleSlot.assessors, 'remove')
+def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if target.owner.deployed:
+            current_year = get_current_year()
+            if target.owner.owner.year == current_year:
+                cache.delete_memoized(_element, value.id)
+
+
+def workload_data(faculty_ids):
+    data = [_element(f.id) for f in faculty_ids]
 
     return jsonify(data)
-

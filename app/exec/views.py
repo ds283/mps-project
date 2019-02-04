@@ -52,12 +52,14 @@ def workload_ajax():
     """
     group_filter = request.args.get('group_filter')
 
-    faculty = db.session.query(FacultyData) \
+    fac_query = db.session.query(FacultyData.id) \
         .join(User, User.id == FacultyData.id) \
         .filter(User.active)
 
     flag, group_value = is_integer(group_filter)
     if flag:
-        faculty = faculty.filter(FacultyData.affiliations.any(id=group_value))
+        fac_query = fac_query.filter(FacultyData.affiliations.any(id=group_value))
 
-    return ajax.exec.workload_data(faculty)
+    faculty_ids = [f[0] for f in fac_query.all()]
+
+    return ajax.exec.workload_data(faculty_ids)

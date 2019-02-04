@@ -215,7 +215,15 @@ def register_precompute_tasks(celery):
         if user is None:
             raise Ignore()
 
-        if user.last_active is not None and user.last_precompute is not None:
-            delta = user.last_active - user.last_precompute
-            if delta.seconds > interval_secs:
-                do_precompute(user)
+        go = False
+
+        if user.last_active is not None:
+            if user.last_precompute is not None:
+                delta = user.last_active - user.last_precompute
+                if delta.seconds > interval_secs:
+                    go = True
+            else:
+                go = True
+
+        if go:
+            do_precompute(user)

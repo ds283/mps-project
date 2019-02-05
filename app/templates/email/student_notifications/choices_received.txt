@@ -1,0 +1,25 @@
+Dear {{ user.first_name }}
+
+This email confirms that we have received your project choices for
+"{{ pclass.name }}". Your choices were submitted on
+{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.
+
+The selection that has been recorded is:
+{% for item in sel.selections -%}
+- {{ item.rank }}: {{ item.liveproject.name }} ({{ item.liveproject.owner.user.last_name }})
+{% endfor %}
+You can continue to resubmit selections until the submission deadline.
+The most recently submitted selection will be taken as your preferred
+choice after the deadline as passed.
+
+{% if config.live_deadline -%}
+The deadline is currently {{ config.live_deadline.strftime("%a %d %b %Y") }}.
+{%- endif %}
+
+This is an automated email. Please do not reply to it directly, because
+messages sent to this mailbox are not monitored or answered. If you have
+questions or concerns, please direct these to the project convenor or a
+system administrator, as appropriate.
+
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
+project convenor

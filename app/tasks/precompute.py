@@ -11,13 +11,13 @@
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_, or_
 
-from celery import group
+from celery import group, chain
 from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import User, FacultyData, StudentData, SelectingStudent, LiveProject
 
-from ..shared.precompute import do_precompute
+from ..shared.precompute import precompute_for_user, precompute_for_exec
 
 import app.ajax as ajax
 
@@ -201,7 +201,8 @@ def register_precompute_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        task = group(periodic_precompute_user.si(user.id, interval_secs) for user in data)
+        users = group(periodic_precompute_user.si(user.id, interval_secs) for user in data)
+        task = chain(users, periodic_compute_wrapup.s())
         task.apply_async()
 
 
@@ -225,5 +226,27 @@ def register_precompute_tasks(celery):
             else:
                 go = True
 
+        # return val is a list
+        rval = set()
         if go:
-            do_precompute(user)
+            precompute_for_user(user)
+
+            if user.has_role('exec'):
+                rval.add('exec')
+
+        return list(rval)
+
+
+    @celery.task(bind=True)
+    def periodic_compute_wrapup(self, role_sets):
+        # if role_sets is a list of lists, treat it as a list of sets that should be unionized
+        if all(isinstance(e, list) for e in role_sets):
+            rs = [set(e) for e in role_sets]
+            roles = set.union(*rs)
+        elif all(isinstance(e, str) for e in role_sets):
+            roles = set(role_sets)
+        else:
+            raise Ignore()
+
+        if 'exec' in roles:
+            precompute_for_exec()

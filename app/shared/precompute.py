@@ -17,7 +17,12 @@ from datetime import datetime
 
 def precompute_at_login(user):
     precompute_for_user(user)
-    precompute_for_exec()
+
+    if user.has_role('faculty'):
+        precompute_for_faculty()
+
+    if user.has_role('exec'):
+        precompute_for_exec()
 
 
 def precompute_for_user(user):
@@ -35,7 +40,7 @@ def precompute_for_user(user):
         users = celery.tasks['app.tasks.precompute.administrator']
         users.apply_async(args=(user.id,))
 
-    # don't run eg. exec role precomputes here, because they are independent of the user
+    # don't run eg. 'faculty' or 'exec' role precomputes here, because they are independent of the user
     # if we run them for each user we are doing pointless work
 
     uc = celery.tasks['app.tasks.precompute.user_corrections']
@@ -45,8 +50,15 @@ def precompute_for_user(user):
     db.session.commit()
 
 
+def precompute_for_faculty():
+    celery = current_app.extensions['celery']
+
+    fac = celery.tasks['app.tasks.precompute.faculty']
+    fac.apply_async()
+
+
 def precompute_for_exec():
     celery = current_app.extensions['celery']
 
-    users = celery.tasks['app.tasks.precompute.executive']
-    users.apply_async()
+    exc = celery.tasks['app.tasks.precompute.executive']
+    exc.apply_async()

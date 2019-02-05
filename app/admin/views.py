@@ -3921,7 +3921,12 @@ def notifications_ajax():
     compute_now = False
     if current_user.last_precompute is not None:
         delta = now - current_user.last_precompute
-        if delta.seconds > current_app.config.get('PRECOMPUTE_DELAY', default=600):
+
+        delay = current_app.config.get('PRECOMPUTE_DELAY')
+        if delay is None:
+            delay = 600
+
+        if delta.seconds > delay:
             compute_now = True
     else:
         compute_now = True

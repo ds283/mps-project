@@ -72,8 +72,8 @@ def validate_data(record_ids, url='', text=''):
         s = parse.quote_plus(s)
         return bleach.clean(s)
 
-    url_enc = urlencode(url) if url is not None else None
-    text_enc = urlencode(text) if text is not None else None
+    url_enc = urlencode(url) if url is not None else ''
+    text_enc = urlencode(text) if text is not None else ''
 
     def update(d):
         d.update({'menu': d['menu'].replace('REPURL', url_enc, 2).replace('REPTEXT', text_enc, 2)})

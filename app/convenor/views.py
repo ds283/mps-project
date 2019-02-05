@@ -47,136 +47,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from datetime import date, datetime, timedelta
 
 
-_project_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-                <i class="fa fa-search"></i> Preview web page
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Edit project</li>
-
-        <li>
-            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-cogs"></i> Settings...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-pencil"></i> Descriptions...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=config.pclass_id, url=url_for('convenor.attached', id=config.pclass_id), text='convenor dashboard') }}">
-                <i class="fa fa-cogs"></i> Assessors...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-cogs"></i> Transferable skills...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-cogs"></i> Degree programmes...
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-
-        <li>
-        {% if project.active %}
-            <a href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-wrench"></i> Make inactive
-            </a>
-        {% else %}
-            <a href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=config.pclass_id) }}">
-                <i class="fa fa-wrench"></i> Make active
-            </a>
-        {% endif %}
-        </li>
-    </ul>
-</div>
-"""
-
-
-_unattached_project_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-                <i class="fa fa-search"></i> Preview web page
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Edit project</li>
-
-        <li>
-            <a href="{{ url_for('convenor.edit_project', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Settings...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.edit_descriptions', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-pencil"></i> Descriptions...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_assessors', id=project.id, pclass_id=0, url=url_for('convenor.attached', id=0), text='convenor dashboard') }}">
-                <i class="fa fa-cogs"></i> Assessors...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_skills', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Transferable skills...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('convenor.attach_programmes', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-cogs"></i> Degree programmes...
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-
-        <li>
-        {% if project.active %}
-            <a href="{{ url_for('convenor.deactivate_project', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-wrench"></i> Make inactive
-            </a>
-        {% else %}
-            <a href="{{ url_for('convenor.activate_project', id=project.id, pclass_id=0) }}">
-                <i class="fa fa-wrench"></i> Make active
-            </a>
-        {% endif %}
-        </li>
-    </ul>
-</div>
-"""
-
-
 _marker_menu = \
 """
 {% if proj.is_assessor(f.id) %}
@@ -399,7 +269,6 @@ def attached_ajax(id):
     Ajax data point for attached projects view
     :return:
     """
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -446,9 +315,11 @@ def attached_ajax(id):
 
     plist = zip(ps, es)
     projects = filter_projects(plist, filter_record.group_filters.all(),
-                               filter_record.skill_filters.all(), getter=lambda x: x[0])
+                               filter_record.skill_filters.all(),
+                               getter=lambda x: x[0],
+                               setter=lambda x: (x[0].id, x[1].id))
 
-    return ajax.project.build_data(projects, _project_menu, config=config,
+    return ajax.project.build_data(projects, 'convenor', config=config,
                                    name_labels=True, text='attached projects list',
                                    url=url_for('convenor.attached', id=id))
 
@@ -456,7 +327,6 @@ def attached_ajax(id):
 @convenor.route('/faculty/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def faculty(id):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -1379,14 +1249,6 @@ def attach_liveproject(id):
                            pclass=pclass, config=config, convenor_data=data)
 
 
-_attach_liveproject_action = \
-"""
-<a href="{{ url_for('convenor.manual_attach_project', id=project.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    <i class="fa fa-plus"></i> Manually attach
-</a>
-"""
-
-
 @convenor.route('/attach_liveproject_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def attach_liveproject_ajax(id):
@@ -1428,13 +1290,13 @@ def attach_liveproject_ajax(id):
     jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
 
     # match original tables to these primary keys
-    pq2 = db.session.query(jq.c.pid, Project).join(Project, Project.id == jq.c.pid)
-    eq2 = db.session.query(jq.c.pid, EnrollmentRecord).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
+    pq2 = db.session.query(jq.c.pid, Project.id).join(Project, Project.id == jq.c.pid)
+    eq2 = db.session.query(jq.c.pid, EnrollmentRecord.id).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
 
-    ps = [ x[1] for x in pq2.all() ]
-    es = [ x[1] for x in eq2.all() ]
+    ps = [x[1] for x in pq2.all()]
+    es = [x[1] for x in eq2.all()]
 
-    return ajax.project.build_data(zip(ps, es), _attach_liveproject_action, config=config,
+    return ajax.project.build_data(zip(ps, es), 'attach', config=config,
                                    name_labels=True, text='attach view',
                                    url=url_for('convenor.attach_liveproject', id=id))
 
@@ -1478,14 +1340,6 @@ def manual_attach_project(id, configid):
     add_liveproject(number, project, configid, autocommit=True)
 
     return redirect(request.referrer)
-
-
-_attach_liveproject_other_action = \
-"""
-<a href="{{ url_for('convenor.manual_attach_other_project', id=project.id, configid=config.id) }}" class="btn btn-warning btn-sm">
-    <i class="fa fa-plus"></i> Manually attach
-</a>
-"""
 
 
 @convenor.route('/attach_liveproject_other_ajax/<int:id>')
@@ -1536,13 +1390,13 @@ def attach_liveproject_other_ajax(id):
     eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id).filter_by(pclass_id=id).subquery()
     jq = db.session.query(pq.c.id.label('pid'), eq.c.id.label('eid')).join(eq, eq.c.owner_id == pq.c.owner_id).subquery()
 
-    pq2 = db.session.query(jq.c.pid, Project).join(Project, Project.id == jq.c.pid)
-    eq2 = db.session.query(jq.c.pid, EnrollmentRecord).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
+    pq2 = db.session.query(jq.c.pid, Project.id).join(Project, Project.id == jq.c.pid)
+    eq2 = db.session.query(jq.c.pid, EnrollmentRecord.id).join(EnrollmentRecord, EnrollmentRecord.id == jq.c.eid)
 
-    ps = [ x[1] for x in pq2.all() ]
-    es = [ x[1] for x in eq2.all() ]
+    ps = [x[1] for x in pq2.all()]
+    es = [x[1] for x in eq2.all()]
 
-    return ajax.project.build_data(zip(ps, es), _attach_liveproject_other_action, config=config,
+    return ajax.project.build_data(zip(ps, es), 'attach_other', config=config,
                                    name_labels=True, text='attach view',
                                    url=url_for('convenor.attach_liveproject', id=id))
 
@@ -2779,9 +2633,9 @@ def unofferable_ajax():
     if not validate_is_administrator():
         return jsonify({})
 
-    projects = [(p, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.is_offerable]
+    projects = [(p.id, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.is_offerable]
 
-    return ajax.project.build_data(projects, _unattached_project_menu,
+    return ajax.project.build_data(projects, 'unofferable',
                                    name_labels=True, text='attached projects list',
                                    url=url_for('convenor.show_unofferable'))
 

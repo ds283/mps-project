@@ -9,8 +9,9 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_security import current_user, roles_required, roles_accepted
+from flask_mail import Message
 
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -22,6 +23,7 @@ from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord, \
     User, EmailNotification, add_notification
+from ..task_queue import register_task
 
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count
 
@@ -539,7 +541,7 @@ def submit(sid):
         return redirect(request.referrer)
 
     try:
-        # delete any exising selections
+        # delete any existing selections
         sel.selections = []
 
         # iterate through bookmarks, converting them to a selection set
@@ -558,20 +560,35 @@ def submit(sid):
 
         db.session.commit()
 
+        celery = current_app.extensions['celery']
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+
+        msg = Message(subject='Your project choices have been received',
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=[sel.student.user.email])
+
+        msg.body = render_template('email/student_notifications/choices_received.txt', user=sel.student.user,
+                                   pclass=sel.config.project_class, config=sel.config, sel=sel)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Send project choices confirmation email '
+                                                         'to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        flash('Your project preferences were submitted successfully. '
+              'A confirmation email has been sent to your registered email address.', 'info')
+
     except SQLAlchemyError:
         db.session.rollback()
-
-        flash('An database error occurred during submission. Please contact a system administrator.', 'error')
+        flash('A database error occurred during submission. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
-    flash('Your project preferences were submitted successfully.', 'info')
     return redirect(request.referrer)
 
 
 @student.route('/clear_submission/<int:sid>')
 @roles_required('student')
 def clear_submission(sid):
-
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify logged-in user is the selector
@@ -597,7 +614,6 @@ def clear_submission(sid):
 @student.route('/do_clear_submission/<int:sid>')
 @roles_required('student')
 def do_clear_submission(sid):
-
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify logged-in user is the selector
@@ -613,6 +629,7 @@ def do_clear_submission(sid):
     flash('Your project preferences have been cleared successfully.', 'info')
 
     return home_dashboard()
+
 
 @student.route('/view_selection/<int:sid>')
 @roles_accepted('student', 'admin', 'root')

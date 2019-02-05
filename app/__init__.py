@@ -39,7 +39,7 @@ from .database import db
 from .models import User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
 from .shared.utils import home_dashboard_url, get_assessment_data
-from .shared.precompute import do_precompute
+from .shared.precompute import precompute_at_login
 import app.tasks as tasks
 
 from mdx_smartypants import makeExtension
@@ -328,7 +328,7 @@ def create_app():
         # Notification.query.filter_by(user_id=user.id).delete()
 
         # force precompute of expensive views
-        do_precompute(user)
+        precompute_at_login(user)
 
         user.last_active = datetime.now()
         db.session.commit()

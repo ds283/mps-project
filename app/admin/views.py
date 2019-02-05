@@ -69,6 +69,7 @@ from ..shared.validators import validate_is_convenor, validate_is_admin_or_conve
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count, func
+from ..shared.precompute import precompute_at_login
 
 from ..task_queue import register_task, progress_update
 from ..shared.forms.queries import ScheduleSessionQuery
@@ -3913,7 +3914,22 @@ def notifications_ajax():
 
             n.remove_on_pageload = True
 
-    current_user.last_active = datetime.now()
+    # mark last active time as now
+    now = datetime.now()
+
+    # if time since a precompute is too long, kick off a set of precompute tasks
+    compute_now = False
+    if current_user.last_precompute is not None:
+        delta = now - current_user.last_precompute
+        if delta.seconds > current_app.config.get('PRECOMPUTE_DELAY', default=600):
+            compute_now = True
+    else:
+        compute_now = True
+
+    if compute_now:
+        precompute_at_login(current_user)
+
+    current_user.last_active = now
     db.session.commit()
 
     return ajax.polling.notifications_payload(notifications)

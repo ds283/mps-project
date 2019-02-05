@@ -99,29 +99,30 @@ def get_schedule_message_data(configs=None):
             if period.has_deployed_schedule:
                 schedule = period.deployed_schedule
 
-                if schedule.owner.has_errors:
-                    if schedule.event_name not in error_events:
-                        messages.append(('error', 'Event "{event}" and deployed schedule "{name}" for project class '
-                                         '"{pclass}" contain validation errors. Please attend to these as soon '
-                                         'as possible.'.format(name=schedule.name, event=schedule.event_name,
-                                                               pclass=config.project_class.name)))
-                        error_events.add(schedule.event_name)
+                if schedule.owner.feedback_open:
+                    if schedule.owner.has_errors:
+                        if schedule.event_name not in error_events:
+                            messages.append(('error', 'Event "{event}" and deployed schedule "{name}" for project class '
+                                             '"{pclass}" contain validation errors. Please attend to these as soon '
+                                             'as possible.'.format(name=schedule.name, event=schedule.event_name,
+                                                                   pclass=config.project_class.name)))
+                            error_events.add(schedule.event_name)
 
-                elif schedule.has_errors:
-                    if schedule.name not in error_schedules:
-                        messages.append(('error', 'Deployed schedule "{name}" for event "{event}" and project class "{pclass}" '
-                                         'contains validation errors. Please attend to these as soon as '
-                                         'possible.'.format(name=schedule.name, event=schedule.event_name,
-                                                            pclass=config.project_class.name)))
-                        error_schedules.add(schedule.name)
+                    elif schedule.has_errors:
+                        if schedule.name not in error_schedules:
+                            messages.append(('error', 'Deployed schedule "{name}" for event "{event}" and project class "{pclass}" '
+                                             'contains validation errors. Please attend to these as soon as '
+                                             'possible.'.format(name=schedule.name, event=schedule.event_name,
+                                                                pclass=config.project_class.name)))
+                            error_schedules.add(schedule.name)
 
-                elif schedule.has_warnings:
-                    if schedule.name not in error_schedules:
-                        messages.append(('warning', 'Deployed schedule "{name}" for event "{event}" and project class '
-                                         '"{pclass}" contains validation'
-                                         ' warnings.'.format(name=schedule.name, event=schedule.event_name,
-                                                             pclass=config.project_class.name)))
-                        error_schedules.add(schedule.name)
+                    elif schedule.has_warnings:
+                        if schedule.name not in error_schedules:
+                            messages.append(('warning', 'Deployed schedule "{name}" for event "{event}" and project class '
+                                             '"{pclass}" contains validation'
+                                             ' warnings.'.format(name=schedule.name, event=schedule.event_name,
+                                                                 pclass=config.project_class.name)))
+                            error_schedules.add(schedule.name)
 
     return {'messages': messages}
 

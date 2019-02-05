@@ -46,82 +46,6 @@ _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
 
 
-_project_menu = \
-"""
-<div class="dropdown">
-    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-        Actions
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-right">
-        <li>
-            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}">
-                <i class="fa fa-search"></i> Preview web page
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Edit project</li>
-
-        <li>
-            <a href="{{ url_for('faculty.edit_project', id=project.id) }}">
-                <i class="fa fa-cogs"></i> Settings...
-            </a>
-        </li>
-        
-        <li>
-            <a href="{{ url_for('faculty.edit_descriptions', id=project.id) }}">
-                <i class="fa fa-pencil"></i> Descriptions...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('faculty.attach_assessors', id=project.id) }}">
-                <i class="fa fa-cogs"></i> Assessors...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('faculty.attach_skills', id=project.id) }}">
-                <i class="fa fa-cogs"></i> Transferable skills...
-            </a>
-        </li>
-
-        <li>
-            <a href="{{ url_for('faculty.attach_programmes', id=project.id) }}">
-                <i class="fa fa-cogs"></i> Degree programmes...
-            </a>
-        </li>
-
-        <li role="separator" class="divider"></li>
-
-        <li>
-            {% if project.active %}
-                <a href="{{ url_for('faculty.deactivate_project', id=project.id) }}">
-                    <i class="fa fa-wrench"></i> Make inactive
-                </a>
-            {% else %}
-                <a href="{{ url_for('faculty.activate_project', id=project.id) }}">
-                    <i class="fa fa-wrench"></i> Make active
-                </a>
-            {% endif %}
-        </li>
-        {% if project.is_deletable %}
-            <li>
-                <a href="{{ url_for('faculty.delete_project', id=project.id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled"><a>
-                <i class="fa fa-trash"></i> Delete disabled
-            </a></li>
-        {% endif %}
-    </ul>
-</div>
-"""
-
-
 _marker_menu = \
 """
 {% if proj.is_assessor(f.id) %}
@@ -294,10 +218,10 @@ def projects_ajax():
     :return:
     """
 
-    pq = Project.query.filter_by(owner_id=current_user.id)
-    data = [(p, None) for p in pq.all()]
+    pq = db.session.query(Project.id).filter_by(owner_id=current_user.id).all()
+    data = [(p[0], None) for p in pq]
 
-    return ajax.project.build_data(data, _project_menu, text='projects list', url=url_for('faculty.edit_projects'))
+    return ajax.project.build_data(data, 'faculty', text='projects list', url=url_for('faculty.edit_projects'))
 
 
 @faculty.route('/assessor_for')
@@ -327,7 +251,6 @@ def marking_ajax():
     Ajax data point for Assessor pool view
     :return:
     """
-
     pclass_filter = request.args.get('pclass_filter')
     flag, pclass_value = is_integer(pclass_filter)
 
@@ -335,15 +258,14 @@ def marking_ajax():
     if flag:
         pq = pq.filter(Project.project_classes.any(id=pclass_value))
 
-    data = [(p, None) for p in pq.all()]
+    data = [(p.id, None) for p in pq.all()]
 
-    return ajax.project.build_data(data, "")
+    return ajax.project.build_data(data)
 
 
 @faculty.route('/edit_descriptions/<int:id>')
 @roles_required('faculty')
 def edit_descriptions(id):
-
     project = Project.query.get_or_404(id)
 
     # if project owner is not logged in user, object

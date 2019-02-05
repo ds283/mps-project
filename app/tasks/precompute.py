@@ -15,9 +15,9 @@ from celery import group, chain
 from celery.exceptions import Ignore
 
 from ..database import db
-from ..models import User, FacultyData, StudentData, SelectingStudent, LiveProject
+from ..models import User, FacultyData, StudentData, SelectingStudent, Project, LiveProject
 
-from ..shared.precompute import precompute_for_user, precompute_for_exec
+from ..shared.precompute import precompute_for_user, precompute_for_exec, precompute_for_faculty
 
 import app.ajax as ajax
 
@@ -171,6 +171,25 @@ def register_precompute_tasks(celery):
 
 
     @celery.task(bind=True)
+    def faculty(self):
+        # generate 'assessor' project data for each project belonging to active faculty
+        try:
+            projects = db.session.query(Project) \
+                .join(User, User.id == Project.owner_id) \
+                .filter(User.active == True).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(assessor_project.si(p.id) for p in projects)
+        task.apply_async()
+
+
+    @celery.task(bind=True)
+    def assessor_project(self, project_id):
+        ajax.project.build_data([(project_id, None)])
+
+
+    @celery.task(bind=True)
     def executive(self):
         task = group(workload_data.si(),)
         task.apply_async()
@@ -178,6 +197,7 @@ def register_precompute_tasks(celery):
 
     @celery.task(bind=True)
     def workload_data(self):
+        # generate workload line for each active faculty memmber
         try:
             data = db.session.query(FacultyData) \
                 .join(User, User.id == FacultyData.id) \
@@ -234,6 +254,9 @@ def register_precompute_tasks(celery):
             if user.has_role('exec'):
                 rval.add('exec')
 
+            if user.has_role('faculty'):
+                rval.add('faculty')
+
         return list(rval)
 
 
@@ -250,3 +273,6 @@ def register_precompute_tasks(celery):
 
         if 'exec' in roles:
             precompute_for_exec()
+
+        if 'faculty' in roles:
+            precompute_for_faculty()

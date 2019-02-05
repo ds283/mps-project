@@ -227,7 +227,6 @@ def projects_ajax():
 @faculty.route('/assessor_for')
 @roles_required('faculty')
 def assessor_for():
-
     pclass_filter = request.args.get('pclass_filter')
 
     # if no pclass filter supplied, check if one is stored in session
@@ -239,7 +238,7 @@ def assessor_for():
         session['view_marker_pclass_filter'] = pclass_filter
 
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
-    pclasses = ProjectClass.query.filter_by(active=True).order_by(ProjectClass.name.asc()).all()
+    pclasses = ProjectClass.query.filter_by(active=True, publish=True).order_by(ProjectClass.name.asc()).all()
 
     return render_template('faculty/assessor_for.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
 

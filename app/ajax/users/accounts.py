@@ -21,13 +21,42 @@ from .shared import menu, name
 
 _roles = \
 """
-{% for r in roles %}
-    {% if user.has_role(r.name) %}
-        {{ r.make_label()|safe }}
-    {% endif %}
+{% for r in user.roles %}
+    {{ r.make_label()|safe }}
 {% else %}
     <span class="label label-default">None</span>
 {% endfor %}
+"""
+
+
+_status = \
+"""
+{% if u.login_count is not none %}
+    {% set pl = 's' %}{% if u.login_count == 1 %}{% set pl = '' %}{% endif %}
+    <span class="label label-primary">{{ u.login_count }} login{{ pl }}</span>
+{% else %}
+    <span class="label label-danger">No logins</span>
+{% endif %}
+{% if u.last_active is not none %}
+    <span class="label label-info">Last seen at {{ u.last_active.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+{% else %}
+    <span class="label label-warning">No last seen time</span>
+{% endif %}
+{% if u.last_login_at is not none %}
+    <span class="label label-info">Last login at {{ u.last_login_at.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+{% else %}
+    <span class="label label-warning">No last login time</span>
+{% endif %}
+{% if u.last_login_ip is not none and u.last_login_ip|length > 0 %}
+    <span class="label label-info">Last login IP {{ u.last_login_ip }}</span>
+{% else %}
+    <span class="label label-default">No last login IP</span>
+{% endif %}
+{% if u.last_precompute is not none %}
+    <span class="label label-info">Last precompute at {{ u.last_precompute.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+{% else %}
+    <span class="label label-default">No last precompute time</span>
+{% endif %}
 """
 
 
@@ -35,8 +64,6 @@ _roles = \
 def _element(user_id, current_user_id):
     u = db.session.query(User).filter_by(id=user_id).one()
     cu = db.session.query(User).filter_by(id=current_user_id).one()
-
-    roles = db.session.query(Role).all()
 
     return {'name': {
                 'display': render_template_string(name, u=u),
@@ -49,20 +76,15 @@ def _element(user_id, current_user_id):
                  'timestamp': u.confirmed_at.timestamp()
              } if u.confirmed_at is not None else {
                  'display': '<span class="label label-warning">Not confirmed</span>',
-                 'timestamp': None
+                 'timestamp': 0
              },
              'active': u.active_label,
-             'count': '{c}'.format(c=u.login_count),
-             'last_login': {
-                 'display': u.last_login_at.strftime("%Y-%m-%d %H:%M:%S"),
-                 'timestamp': u.last_login_at.timestamp()
-             } if u.last_login_at is not None else {
-                 'display': '<span class="label label-default">None</a>',
-                 'timestamp': None
+             'details': {
+                 'display': render_template_string(_status, u=u),
+                 'timestamp': u.last_active.timestamp() if u.last_active is not None
+                 else (u.last_login_at.timestamp() if u.last_login_at is not None else 0)
              },
-             'ip': u.last_login_ip if u.last_login_ip is not None and len(u.last_login_ip) > 0
-                 else '<span class="label label-default">None</a>',
-             'role': render_template_string(_roles, user=u, roles=roles),
+             'role': render_template_string(_roles, user=u),
              'menu': render_template_string(menu, user=u, cuser=cu, pane='accounts')}
 
 

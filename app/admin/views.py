@@ -3914,12 +3914,29 @@ def notifications_ajax():
 
             n.remove_on_pageload = True
 
-    # mark last active time as now
+    # record now as the time this user was last seen online
     now = datetime.now()
 
-    # if time since a precompute is too long, kick off a set of precompute tasks
-    compute_now = False
-    if current_user.last_precompute is not None:
+    # determine whether to kick off a background precompute task
+    # currently, precompute tasks are run *here*, and *at login*, and nowhere else,
+    # and the default lifetime for items in the cache is 24 hours
+
+    # the configuration item PRECOMPUTE_DELAY defaults to 10 minutes.
+    # We start a precompute task if either:
+    #  - If there is no recorded last precompute time. This means that the app has restarted since this
+    #    user was last seen online, and therefore the cache has been flushed. It is likely that all
+    #    precomputed items have been purged, so we need to start an urgent precompute
+    #  - The time since the last recorded precompute exceeds PRECOMPUTE_DELAY.
+    #    If a user with a non-expired session comes back to the site after a delay, they do not
+    #    (currently) go through login again. (The session is 'stale' but still treated as current.)
+    #    This means no precompute is kicked off. We won't pick up that the cache likely contains no
+    #    entries until we get here.
+    #    Of course, this means that we *also* perform redundant precomputes for all active users every
+    #    10 minutes or so. This does cover the possibility that the 24 hour cache period expires
+    #    while the user is still active. If it doesn't, at least we are only starting these jobs
+    #    for users actively using the system, which is probably only a handful.
+    compute_now = current_user.last_precompute is None
+    if not compute_now:
         delta = now - current_user.last_precompute
 
         delay = current_app.config.get('PRECOMPUTE_DELAY')
@@ -3928,8 +3945,6 @@ def notifications_ajax():
 
         if delta.seconds > delay:
             compute_now = True
-    else:
-        compute_now = True
 
     if compute_now:
         precompute_at_login(current_user)

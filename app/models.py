@@ -450,7 +450,8 @@ class User(db.Model, UserMixin):
     # ROLES
 
     # assigned roles
-    roles = db.relationship('Role', secondary=roles_to_users, lazy='dynamic', backref=db.backref('users', lazy='dynamic'))
+    roles = db.relationship('Role', secondary=roles_to_users, lazy='dynamic',
+                            backref=db.backref('users', lazy='dynamic'))
 
     # masked roles (currently available only to 'root' users)
     mask_roles = db.relationship('Role', secondary=mask_roles_to_users, lazy='dynamic')

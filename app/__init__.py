@@ -51,6 +51,8 @@ from markupsafe import Markup
 from os import path, makedirs
 from datetime import datetime
 
+from pymongo import MongoClient
+
 
 def create_app():
 
@@ -59,9 +61,12 @@ def create_app():
 
     app = Flask(__name__, instance_relative_config=True)        # load configuration files from 'instance'
     app.config.from_object(app_config[config_name])
-    app.config.from_pyfile('config.py')
+    app.config.from_pyfile('secrets.py')
     app.config.from_pyfile('mail.py')
     app.config.from_pyfile('rollbar.py')
+
+    # create Mongo connection for Flask-Sessionstore
+    app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
     app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
 

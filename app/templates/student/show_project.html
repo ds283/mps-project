@@ -44,8 +44,11 @@
                     </div>
                 </div>
                 <div class="row sm-gap-below">
-                    <div class="col-xs-6 project-owner-name">
-                        {{ project.owner.user.name }}
+                    <div class="col-xs-6">
+                        <div class="project-owner-name">{{ project.owner.user.name }}</div>
+                        {% if project.owner.office %}
+                            <div>{{ project.owner.office }}</div>
+                        {% endif %}
                     </div>
                     <div class="col-xs-6">
                         <div class="pull-right">

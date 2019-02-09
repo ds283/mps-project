@@ -17,7 +17,7 @@ To check your projects, please log in to the project management web app
 at https://mpsprojects.co.uk and select 'My projects/My project library...'
 from the drop-down menu in the menubar. All active projects associated
 with this project type will be published to the students. If you wish
-dockto withdraw a project from this year's selection, please deactivate the
+to withdraw a project from this year's selection, please deactivate the
 project using the 'Actions/Make inactive' menu option.
 
 {% if number_projects == 0 -%}

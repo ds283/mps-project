@@ -39,7 +39,7 @@ RUN unlink /var/log/nginx/access.log \
 # AMPLIFY_IMAGENAME can also be passed to the instance at runtime as
 # described below.
 
-#ENV AMPLIFY_IMAGENAME my-docker-instance-123
+ENV AMPLIFY_IMAGENAME mpsprojects
 
 # The /entrypoint.sh script will launch nginx and the Amplify Agent.
 # The script honors API_KEY and AMPLIFY_IMAGENAME environment

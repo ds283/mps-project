@@ -208,7 +208,7 @@ def create_faculty(role):
                            dont_clash_presentations=form.dont_clash_presentations.data,
                            CATS_supervision=form.CATS_supervision.data,
                            CATS_marking=form.CATS_marking.data,
-                           CATS_presentation=form.CATS_presentation,
+                           CATS_presentation=form.CATS_presentation.data,
                            office=form.office.data,
                            creator_id=current_user.id,
                            creation_timestamp=datetime.now())

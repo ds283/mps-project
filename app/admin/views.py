@@ -239,7 +239,7 @@ def create_faculty(role):
             form.sign_off_students.data = current_app.config['DEFAULT_SIGN_OFF_STUDENTS']
             form.enforce_capacity.data = current_app.config['DEFAULT_ENFORCE_CAPACITY']
             form.show_popularity.data = current_app.config['DEFAULT_SHOW_POPULARITY']
-            form.dont_clash_presentations = current_app.config['DEFAULT_DONT_CLASH_PRESENTATIONS']
+            form.dont_clash_presentations.data = current_app.config['DEFAULT_DONT_CLASH_PRESENTATIONS']
 
             form.use_academic_title.data = current_app.config['DEFAULT_USE_ACADEMIC_TITLE']
 

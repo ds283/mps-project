@@ -32,7 +32,7 @@ _enrollments = \
 """
 {% set ns = namespace(count=0) %}
 {% for e in f.enrollments %}
-    {% if e.pclass.uses_marker or e.pclass.uses_presentations %}
+    {% if e.pclass.publish and (e.pclass.uses_marker or e.pclass.uses_presentations) %}
         {% set ns.count = ns.count + 1 %}
         {% if e.marker_state == e.MARKER_ENROLLED or e.presentations_state == e.PRESENTATIONS_ENROLLED %}
             {{ e.pclass.make_label('<i class="fa fa-check"></i> ' + e.pclass.abbreviation)|safe }}

@@ -44,7 +44,7 @@
                         {% set sub_state = config.submitter_lifecycle %}
                         {% set published = pclass.publish %}
                         {% if not published %}
-                            <span class="label label-default"><i class="fa fa-eye-slash"></i> Not published</span>
+                            <span class="label label-danger"><i class="fa fa-eye-slash"></i> Not published</span>
                         {% else %}
                             {% if sub_state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
                                 <span class="label label-success">{{ config.current_period.display_name|safe }}</span>

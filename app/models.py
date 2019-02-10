@@ -3257,7 +3257,7 @@ def _EnrollmentRecord_update_handler(mapper, connection, target):
             cache.delete_memoized(_MatchingRecord_is_valid, record.id)
             cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
 
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner.id))
+        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
         for slot in schedule_slots:
             cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
             cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
@@ -3276,7 +3276,7 @@ def _EnrollmentRecord_insert_handler(mapper, connection, target):
             cache.delete_memoized(_MatchingRecord_is_valid, record.id)
             cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
 
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner.id))
+        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
         for slot in schedule_slots:
             cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
             cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
@@ -3295,7 +3295,7 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
             cache.delete_memoized(_MatchingRecord_is_valid, record.id)
             cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
 
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner.id))
+        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
         for slot in schedule_slots:
             cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
             cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)

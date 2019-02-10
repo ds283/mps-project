@@ -110,8 +110,8 @@ def DescriptionMixinFactory(query_factory):
         project_classes = CheckboxQuerySelectMultipleField('Project classes', query_factory=query_factory, get_label='name')
 
         capacity = IntegerField('Maximum student capacity',
-                                description='Optional. Used only the option to enforce capacity '
-                                            'in your settings is selected. '
+                                description='Optional. Used only if the option to enforce capacity '
+                                            'is selected in your settings. '
                                             'Note this refers to the maximum number of assigned students, '
                                             'not your CATS assignment.',
                                 validators=[Optional()])

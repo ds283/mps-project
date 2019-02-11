@@ -121,9 +121,14 @@ _availability = \
 _name = \
 """
 <a href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>
-{% if rec.assigned_limit is not none %}
+{% if rec.assigned_limit is not none or (rec.comment is not none and rec.comment|length > 0) %}
     <div>
+    {% if rec.assigned_limit is not none %}
         <span class="label label-primary">Assignment limit {{ rec.assigned_limit }}</span>
+    {% endif %}
+    {% if rec.comment is not none and rec.comment|length > 0 %}
+        <span class="label label-info" data-toggle="tooltip" title="{{ rec.comment }}">Comment</button>
+    {% endif %}
     </div>
 {% endif %}
 """

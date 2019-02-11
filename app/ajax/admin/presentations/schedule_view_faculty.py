@@ -14,12 +14,19 @@ from flask import render_template_string, jsonify
 _name = \
 """
 <a href="mailto:{{ a.faculty.user.email }}">{{ a.faculty.user.name }}</a>
-&emsp;
-{% if a.confirmed %}
-    <span class="label label-success">Confirmed</span>
-{% else %}
-    <span class="label label-danger">Not confirmed</span>
-{% endif %}
+<div>
+    {% if a.confirmed %}
+        <span class="label label-success">Confirmed</span>
+    {% else %}
+        <span class="label label-danger">Not confirmed</span>
+    {% endif %}
+    {% if a.assigned_limit is not none %}
+        <span class="label label-primary">Assignment limit {{ a.assigned_limit }}</span>
+    {% endif %}
+    {% if a.comment is not none and a.comment|length > 0 %}
+        <span class="label label-info" data-toggle="tooltip" title="{{ a.comment }}">Comment</button>
+    {% endif %}
+</div>
 """
 
 

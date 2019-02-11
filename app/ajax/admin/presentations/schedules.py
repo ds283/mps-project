@@ -121,7 +121,7 @@ _name = \
 
 _info = \
 """
-<span class="label label-info">Max assessor assignment {{ s.assessor_assigned_limit }}</span>
+<span class="label label-info">Max assignment {{ s.assessor_assigned_limit }}</span>
 <span class="label label-info">If needed cost {{ s.if_needed_cost }}</span>
 <span class="label label-info">Levelling tension {{ s.levelling_tension }}</span>
 {% if s.all_assessors_in_pool %}

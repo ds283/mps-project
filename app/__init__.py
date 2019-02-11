@@ -109,14 +109,17 @@ def create_app():
         from logging import ERROR, INFO, Formatter
         from logging.handlers import SMTPHandler, RotatingFileHandler
 
-        mail_handler = SMTPHandler(mailhost=(app.config['MAIL_SERVER'], app.config['MAIL_PORT']),
-                                   fromaddr=app.config['MAIL_DEFAULT_SENDER'],
-                                   toaddrs=app.config['ADMIN_EMAIL'],
-                                   subject='MPS Project Manager live exception reported',
-                                   credentials=(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD']),
-                                   secure=())
-        mail_handler.setLevel(ERROR)
-        app.logger.addHandler(mail_handler)
+        # disable email notification of exceptions for now; this seems to be
+        # better handled through rollbar.com
+
+        # mail_handler = SMTPHandler(mailhost=(app.config['MAIL_SERVER'], app.config['MAIL_PORT']),
+        #                            fromaddr=app.config['MAIL_DEFAULT_SENDER'],
+        #                            toaddrs=app.config['ADMIN_EMAIL'],
+        #                            subject='MPS Project Manager live exception reported',
+        #                            credentials=(app.config['MAIL_USERNAME'], app.config['MAIL_PASSWORD']),
+        #                            secure=())
+        # mail_handler.setLevel(ERROR)
+        # app.logger.addHandler(mail_handler)
 
         file_handler = RotatingFileHandler(app.config['LOG_FILE'], 'a', 1 * 1024 * 1024, 10)
         file_handler.setFormatter(Formatter('%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))

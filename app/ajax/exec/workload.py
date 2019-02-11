@@ -148,7 +148,12 @@ def _EnrollemntRecord_delete_handler(mapper, connection, target):
 def _SubmissionRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         if not target.retired:
-            cache.delete_memoized(_element, target.project.owner_id)
+            if target.project is not None:
+                cache.delete_memoized(_element, target.project.owner_id)
+            elif target.project_id is not None:
+                proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
+                if proj is not None:
+                    cache.delete_memoized(_element, proj.owner_id)
             cache.delete_memoized(_element, target.marker_id)
 
 
@@ -156,7 +161,12 @@ def _SubmissionRecord_insert_handler(mapper, connection, target):
 def _SubmissionRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         if not target.retired:
-            cache.delete_memoized(_element, target.project.owner_id)
+            if target.project is not None:
+                cache.delete_memoized(_element, target.project.owner_id)
+            elif target.project_id is not None:
+                proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
+                if proj is not None:
+                    cache.delete_memoized(_element, proj.owner_id)
             cache.delete_memoized(_element, target.marker_id)
 
 
@@ -164,7 +174,12 @@ def _SubmissionRecord_update_handler(mapper, connection, target):
 def _SubmissionRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         if not target.retired:
-            cache.delete_memoized(_element, target.project.owner_id)
+            if target.project is not None:
+                cache.delete_memoized(_element, target.project.owner_id)
+            elif target.project_id is not None:
+                proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
+                if proj is not None:
+                    cache.delete_memoized(_element, proj.owner_id)
             cache.delete_memoized(_element, target.marker_id)
 
 

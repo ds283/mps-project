@@ -2725,15 +2725,13 @@ def assign_roles(id):
     """
     data = User.query.get_or_404(id)
 
-    url = request.args.get('url', None)
-    if url is None:
-        url = request.referrer
+    pane = request.args.get('pane', default=None)
 
     roles = db.session.query(Role) \
         .filter(Role.name != 'root', Role.name != 'admin',
                 Role.name != 'faculty', Role.name != 'student', Role.name != 'office').all()
 
-    return render_template('admin/users_dashboard/assign_roles.html', roles=roles, user=data, url=url)
+    return render_template('admin/users_dashboard/assign_roles.html', roles=roles, user=data, pane=pane)
 
 
 @admin.route('/attach_role/<int:user_id>/<int:role_id>')
@@ -2748,10 +2746,6 @@ def attach_role(user_id, role_id):
     data = User.query.get_or_404(user_id)
     role = Role.query.get_or_404(role_id)
 
-    url = request.args.get('url')
-    if url is None:
-        url = request.referrer      # this will lose original return destination
-
     if role.name == 'root' or role.name == 'admin':
         flash('Admin roles cannot be assigned through the API', 'error')
         return redirect(request.referrer)
@@ -2763,7 +2757,7 @@ def attach_role(user_id, role_id):
     _datastore.add_role_to_user(data, role.name)
     _datastore.commit()
 
-    return redirect(url_for('admin.assign_roles', id=user_id, url=url))
+    return redirect(request.referrer)
 
 
 @admin.route('/remove_role/<int:user_id>/<int:role_id>')
@@ -2778,10 +2772,6 @@ def remove_role(user_id, role_id):
     data = User.query.get_or_404(user_id)
     role = Role.query.get_or_404(role_id)
 
-    url = request.args.get('url')
-    if url is None:
-        url = request.referrer      # this will lose original return destination
-
     if role.name == 'root' or role.name == 'admin':
         flash('Admin roles cannot be assigned through the API', 'error')
         return redirect(request.referrer)
@@ -2793,7 +2783,7 @@ def remove_role(user_id, role_id):
     _datastore.remove_role_from_user(data, role.name)
     _datastore.commit()
 
-    return redirect(url_for('admin.assign_roles', id=user_id, url=url))
+    return redirect(request.referrer)
 
 
 @admin.route('/email_log', methods=['GET', 'POST'])

@@ -2777,7 +2777,7 @@ def enroll(userid, pclassid):
         return redirect(request.referrer)
 
     # reject if project class not published
-    if not validate_project_class(config.project_class):
+    if not validate_project_class(pclass):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)
@@ -2797,7 +2797,7 @@ def unenroll(userid, pclassid):
         return redirect(request.referrer)
 
     # reject if project class not published
-    if not validate_project_class(config.project_class):
+    if not validate_project_class(pclass):
         return redirect(request.referrer)
 
     data = FacultyData.query.get_or_404(userid)

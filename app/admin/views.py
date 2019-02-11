@@ -1845,7 +1845,7 @@ def skill_groups_ajax():
         return jsonify({})
 
     groups = SkillGroup.query.all()
-    return app.ajax.admin.skill_groups.skill_groups_data(groups)
+    return ajax.admin.skill_groups.skill_groups_data(groups)
 
 
 @admin.route('/add_skill_group', methods=['GET', 'POST'])

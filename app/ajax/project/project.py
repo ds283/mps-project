@@ -13,7 +13,8 @@ from flask import render_template_string, jsonify, current_app
 from sqlalchemy.event import listens_for
 
 from ...database import db
-from ...models import Project, EnrollmentRecord
+from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, TransferableSkill, DegreeProgramme, \
+    DegreeType
 from ...cache import cache
 
 from urllib import parse
@@ -561,6 +562,116 @@ def _EnrollmentRecord_delete_handler(mapper, connection, target):
             for t in _menus:
                 for f in _flags:
                     cache.delete_memoized(_element, p_id[0], t, f[0], f[1], f[2])
+
+
+@listens_for(ResearchGroup, 'before_update')
+def _ResearchGroup_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        for project in target.projects:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+
+
+@listens_for(ResearchGroup, 'before_delete')
+def _ResearchGroup_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        for project in target.projects:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+
+
+@listens_for(TransferableSkill, 'before_update')
+def _TransferableSkill_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        for project in target.projects:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+
+
+@listens_for(TransferableSkill, 'before_delete')
+def _TransferableSkill_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        for project in target.projects:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+
+
+@listens_for(SkillGroup, 'before_update')
+def _SkillGroup_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        p_ids = set()
+        for skill in target.skills:
+            for project in skill.projects:
+                p_ids.add(project.id)
+
+        for p_id in p_ids:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+
+
+@listens_for(SkillGroup, 'before_delete')
+def _SkillGroup_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        p_ids = set()
+        for skill in target.skills:
+            for project in skill.projects:
+                p_ids.add(project.id)
+
+        for p_id in p_ids:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+
+
+@listens_for(DegreeProgramme, 'before_update')
+def _DegreeProgramme_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        for project in target.projects:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+
+
+@listens_for(DegreeProgramme, 'before_delete')
+def _DegreeProgramme_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        for project in target.projects:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, project.id, t, f[0], f[1], f[2])
+
+
+@listens_for(DegreeType, 'before_update')
+def _DegreeType_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        p_ids = set()
+        for programme in target.degree_programmes:
+            for project in programme.projects:
+                p_ids.add(project.id)
+
+        for p_id in p_ids:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+
+
+@listens_for(DegreeType, 'before_delete')
+def _DegreeType_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        p_ids = set()
+        for programme in target.degree_programmes:
+            for project in programme.projects:
+                p_ids.add(project.id)
+
+        for p_id in p_ids:
+            for t in _menus:
+                for f in _flags:
+                    cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
 
 
 def build_data(projects, menu_template=None, config=None, text=None, url=None, name_labels=False):

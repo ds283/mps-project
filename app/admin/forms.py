@@ -337,7 +337,7 @@ class ProjectClassMixin():
 
     supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')
 
-    uses_supervisor = BooleanField('Projects are supervisor by a named faculty member',
+    uses_supervisor = BooleanField('Projects are supervised by a named faculty member',
                                    default=True)
 
     uses_marker = BooleanField('Submissions are second-marked')

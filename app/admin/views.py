@@ -57,7 +57,8 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project, GeneratedAsset, UploadedAsset
+    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project, GeneratedAsset, UploadedAsset, \
+    faculty_affiliations
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_rollover_data, get_matching_data, get_ready_to_match_data, get_automatch_pclasses, \
@@ -367,11 +368,22 @@ def edit_users_students():
     if year_filter is not None:
         session['accounts_year_filter'] = year_filter
 
+    valid_filter = request.args.get('valid_filter')
+
+    if valid_filter is None and session.get('accounts_valid_filter'):
+        valid_filter = session['accounts_valid_filter']
+
+    if valid_filter is not None:
+        session['accounts_valid_filter'] = valid_filter
+
+    prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
     programmes = db.session.query(DegreeProgramme) \
+        .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id) \
         .filter(DegreeProgramme.active == True) \
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
         .order_by(DegreeType.name.asc(),
                   DegreeProgramme.name.asc()).all()
+
     cohort_data = db.session.query(StudentData.cohort) \
         .join(User, User.id == StudentData.id) \
         .filter(User.active == True).distinct().all()
@@ -379,7 +391,7 @@ def edit_users_students():
 
     return render_template("admin/users_dashboard/students.html", filter=prog_filter, pane='students',
                            prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter,
-                           programmes=programmes, cohorts=sorted(cohorts))
+                           valid_filter=valid_filter, programmes=programmes, cohorts=sorted(cohorts))
 
 
 @admin.route('/edit_users_faculty')
@@ -406,8 +418,17 @@ def edit_users_faculty():
     if pclass_filter is not None:
         session['accounts_pclass_filter'] = pclass_filter
 
-    groups = db.session.query(ResearchGroup).filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
-    pclasses = db.session.query(ProjectClass).filter_by(active=True).order_by(ProjectClass.name.asc()).all()
+    groups_ids = db.session.query(faculty_affiliations.c.group_id).distinct().subquery()
+    groups = db.session.query(ResearchGroup) \
+        .join(groups_ids, groups_ids.c.group_id == ResearchGroup.id) \
+        .filter(ResearchGroup.active == True) \
+        .order_by(ResearchGroup.name.asc()).all()
+
+    pclass_ids = db.session.query(EnrollmentRecord.pclass_id).distinct().subquery()
+    pclasses = db.session.query(ProjectClass) \
+        .join(pclass_ids, pclass_ids.c.pclass_id == ProjectClass.id) \
+        .filter(ProjectClass.active == True) \
+        .order_by(ProjectClass.name.asc()).all()
 
     return render_template("admin/users_dashboard/faculty.html", pane='faculty',
                            group_filter=group_filter, pclass_filter=pclass_filter,
@@ -456,6 +477,7 @@ def users_students_ajax():
     prog_filter = request.args.get('prog_filter')
     cohort_filter = request.args.get('cohort_filter')
     year_filter = request.args.get('year_filter')
+    valid_filter = request.args.get('valid_filter')
 
     data = db.session.query(StudentData.id, User) \
         .join(User, User.id == StudentData.id)
@@ -468,6 +490,13 @@ def users_students_ajax():
     if flag:
         data = data.filter(StudentData.cohort == cohort_value)
 
+    if valid_filter == 'valid':
+        data = data.filter(StudentData.validation_state == StudentData.VALIDATION_VALIDATED)
+    elif valid_filter == 'not-valid':
+        data = data.filter(StudentData.validation_state == StudentData.VALIDATION_QUEUED)
+    elif valid_filter == 'reject':
+        data = data.filter(StudentData.validation_state == StudentData.VALIDATION_REJECTED)
+
     flag, year_value = is_integer(year_filter)
     if flag:
         current_year = get_current_year()
@@ -477,6 +506,7 @@ def users_students_ajax():
                            current_year - StudentData.cohort - StudentData.repeated_years == year_value)
 
         data = nonf.union(foun)
+
     elif year_filter == 'grad':
         current_year = get_current_year()
         nonf = data.filter(StudentData.foundation_year == False,

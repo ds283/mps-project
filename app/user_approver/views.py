@@ -58,7 +58,9 @@ def validate():
     if year_filter is not None:
         session['user_approver_year_filter'] = year_filter
 
+    prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
     programmes = db.session.query(DegreeProgramme) \
+        .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id) \
         .filter(DegreeProgramme.active == True) \
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
         .order_by(DegreeType.name.asc(),
@@ -172,7 +174,9 @@ def correct():
     if year_filter is not None:
         session['user_approver_year_filter'] = year_filter
 
+    prog_query = db.session.query(StudentData.programme_id).distinct().subquery()
     programmes = db.session.query(DegreeProgramme) \
+        .join(prog_query, prog_query.c.programme_id == DegreeProgramme.id) \
         .filter(DegreeProgramme.active == True) \
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
         .order_by(DegreeType.name.asc(),

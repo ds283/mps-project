@@ -100,7 +100,8 @@ def show_confirmations(outstanding, pclass_id):
                       'sortstring': req.owner.student.user.last_name + req.owner.student.user.first_name},
              'project': render_template_string(_project, req=req, pclass_id=pclass_id),
              'supervisor': render_template_string(_supervisor, req=req),
-             'timestamps': render_template_string(_timestamps, req=req, now=now),
+             'timestamps': {'display': render_template_string(_timestamps, req=req, now=now),
+                            'timestamp': req.request_timestamp.timestamp() if req.request_timestamp is not None else 0},
              'menu': render_template_string(_menu, req=req)} for req in outstanding]
 
     return jsonify(data)

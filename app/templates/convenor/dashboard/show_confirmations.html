@@ -19,7 +19,12 @@
                       } },
                     { data: 'project' },
                     { data: 'supervisor'},
-                    { data: 'timestamps' },
+                    { data: 'timestamps',
+                      render: {
+                        _: 'display',
+                        type: 'timestamp',
+                        sort: 'timestamp'
+                      } },
                     { data: 'menu' }
                 ],
                 deferRender: true

@@ -774,7 +774,7 @@ def selector_grid(id):
         return redirect(request.referrer)
 
     if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash('The selector grid view is availably only after student choices are closed', 'error')
+        flash('The selector grid view is available only after student choices are closed', 'error')
         return redirect(request.referrer)
 
     cohort_filter = request.args.get('cohort_filter')
@@ -842,6 +842,9 @@ def selector_grid_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        return jsonify({})
+
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False)
 
@@ -860,6 +863,71 @@ def selector_grid_ajax(id):
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
     return ajax.convenor.selector_grid_data(selectors.all(), config)
+
+
+@convenor.route('/show_confirmations/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def show_confirmations(id):
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        flash('The outstanding confirmations view is available only after student choices have opened', 'error')
+        return redirect(request.referrer)
+
+    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        flash('The outstanding confirmations view is not available after student choices have closed', 'error')
+        return redirect(request.referrer)
+
+    data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/show_confirmations.html', pane='selectors', subpane='confirm',
+                           pclass=pclass, config=config, convenor_data=data,
+                           current_year=current_year)
+
+
+@convenor.route('/show_confirmations_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def show_confirmations_ajax(id):
+    # get details for project class
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
+
+    if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        return jsonify({})
+
+    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+        return jsonify({})
+
+    outstanding = db.session.query(ConfirmRequest) \
+        .filter(or_(ConfirmRequest.state == ConfirmRequest.REQUESTED,
+                    ConfirmRequest.state == ConfirmRequest.DECLINED)) \
+        .join(LiveProject, LiveProject.id == ConfirmRequest.project_id) \
+        .filter(LiveProject.config_id == config.id).all()
+
+    return ajax.convenor.show_confirmations(outstanding, pclass.id)
 
 
 @convenor.route('/submitters/<int:id>')

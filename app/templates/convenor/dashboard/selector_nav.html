@@ -4,20 +4,26 @@
     {% set lifecycle = config.selector_lifecycle %}
     {% set show_manual_enroll = (lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     {% set show_selector_grid = (lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
+    {% set show_confirmations = (lifecycle >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) and (lifecycle < config.SELECTOR_LIFECYCLE_READY_MATCHING) %}
     <ul class="nav nav-tabs dashboard-nav">
         <li {% if subpane=='list' %}class="active"{% endif %}>
             <a href="{{ url_for('convenor.selectors', id=pclass.id) }}">
                 Show selectors
             </a>
         </li>
-        <li {% if show_selector_grid %}{% if subpane=='grid' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
-            <a {% if show_selector_grid %}href="{{ url_for('convenor.selector_grid', id=pclass.id) }}"{% endif %}>
-                Choices grid
-            </a>
-        </li>
         <li {% if show_manual_enroll %}{% if subpane=='enroll' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
             <a {% if show_manual_enroll %}href="{{ url_for('convenor.enroll_selectors', id=pclass.id) }}"{% endif %}>
                 Manual enrollment
+            </a>
+        </li>
+        <li {% if show_confirmations %}{% if subpane=='confirm' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
+            <a {% if show_confirmations %}href="{{ url_for('convenor.show_confirmations', id=pclass.id) }}"{% endif %}>
+                Outstanding confirmations
+            </a>
+        </li>
+        <li {% if show_selector_grid %}{% if subpane=='grid' %}class="active"{% endif %}{% else %}class="disabled"{% endif %}>
+            <a {% if show_selector_grid %}href="{{ url_for('convenor.selector_grid', id=pclass.id) }}"{% endif %}>
+                Choices grid
             </a>
         </li>
     </ul>

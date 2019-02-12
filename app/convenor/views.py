@@ -3299,7 +3299,7 @@ def selector_confirmations(id):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    return render_template('convenor/selector/student_confirmations.html', sel=sel)
+    return render_template('convenor/selector/student_confirmations.html', sel=sel, now=datetime.now())
 
 
 @convenor.route('/project_confirmations/<int:id>')
@@ -3313,7 +3313,7 @@ def project_confirmations(id):
     if not validate_is_convenor(proj.config.project_class):
         return home_dashboard()
 
-    return render_template('convenor/selector/project_confirmations.html', project=proj)
+    return render_template('convenor/selector/project_confirmations.html', project=proj, now=datetime.now())
 
 
 @convenor.route('/add_group_filter/<int:id>/<int:gid>')

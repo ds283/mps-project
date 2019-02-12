@@ -4622,6 +4622,7 @@ class ConfirmRequest(db.Model):
                 'with the supervisor.'.format(name=self.project.name), 'info')
             add_notification(self.owner.student.user, EmailNotification.CONFIRMATION_TO_PENDING, self)
 
+        self.response_timestamp = None
         self.state = ConfirmRequest.REQUESTED
 
 

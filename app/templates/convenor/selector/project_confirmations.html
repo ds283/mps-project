@@ -19,7 +19,8 @@
                     <div class="container-fluid">
                         <div class="row vertical-align confirmation-table">
                             <div class="col-xs-4"><strong>Student</strong></div>
-                            <div class="col-xs-8"></div>
+                            <div class="col-xs-4"><strong>Timestamps</strong></div>
+                            <div class="col-xs-4"></div>
                         </div>
 
                         <hr class="intro-divider">
@@ -33,7 +34,24 @@
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                     {% endif %}
                                 </div>
-                                <div class="col-xs-8">
+                                <div class="col-xs-4">
+                                    {% if req.request_timestamp is not none %}
+                                        <span class="label label-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    {% endif %}
+                                    {% if req.response_timestamp is not none %}
+                                        <span class="label label-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    {% endif %}
+                                    {% if req.request_timestamp is not none and req.response_timestamp is not none %}
+                                        {% set delta = req.response_timestamp - req.request_timestamp %}
+                                        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+                                        <span class="label label-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                    {% elif req.request_timestamp is not none %}
+                                        {% set delta = now - req.request_timestamp %}
+                                        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+                                        <span class="label label-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-xs-4">
                                     <div class="dropdown">
                                         <a class="btn btn-warning dropdown-toggle " data-toggle="dropdown">
                                             Deconfirm <span class="caret"></span>
@@ -71,7 +89,7 @@
                         {% if project.number_confirmed > 0 and project.number_pending > 0%}<hr class="intro-divider">{% endif %}
 
                         {% for req in project.requests_waiting %}
-                            {% set sel = project.owner %}
+                            {% set sel = req.owner %}
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     {{ sel.student.user.name }}
@@ -79,7 +97,24 @@
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                     {% endif %}
                                 </div>
-                                <div class="col-xs-8">
+                                <div class="col-xs-4">
+                                    {% if req.request_timestamp is not none %}
+                                        <span class="label label-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    {% endif %}
+                                    {% if req.response_timestamp is not none %}
+                                        <span class="label label-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    {% endif %}
+                                    {% if req.request_timestamp is not none and req.response_timestamp is not none %}
+                                        {% set delta = req.response_timestamp - req.request_timestamp %}
+                                        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+                                        <span class="label label-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                    {% elif req.request_timestamp is not none %}
+                                        {% set delta = now - req.request_timestamp %}
+                                        {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+                                        <span class="label label-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-xs-4">
                                     <div class="dropdown">
                                         <a class="btn btn-success dropdown-toggle" data-toggle="dropdown">
                                             Confirm <span class="caret"></span>

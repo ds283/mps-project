@@ -33,6 +33,23 @@
                                     <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
                                         <strong>{{ project.name }}</strong>
                                     </a>
+                                    <div>
+                                        {% if req.request_timestamp is not none %}
+                                            <span class="label label-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        {% endif %}
+                                        {% if req.response_timestamp is not none %}
+                                            <span class="label label-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        {% endif %}
+                                        {% if req.request_timestamp is not none and req.response_timestamp is not none %}
+                                            {% set delta = req.response_timestamp - req.request_timestamp %}
+                                            {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+                                            <span class="label label-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                        {% elif req.request_timestamp is not none %}
+                                            {% set delta = now - req.request_timestamp %}
+                                            {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+                                            <span class="label label-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                                 <div class="col-xs-3">
                                     {{ project.group.make_label(project.group.name)|safe }}
@@ -91,6 +108,23 @@
                                     <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector confirmation list', url=url_for('convenor.selector_confirmations', id=sel.id)) }}">
                                         <strong>{{ project.name }}</strong>
                                     </a>
+                                    <div>
+                                        {% if req.request_timestamp is not none %}
+                                            <span class="label label-default">Request {{ req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        {% endif %}
+                                        {% if req.response_timestamp is not none %}
+                                            <span class="label label-default">Response {{ req.response_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        {% endif %}
+                                        {% if req.request_timestamp is not none and req.response_timestamp is not none %}
+                                            {% set delta = req.response_timestamp - req.request_timestamp %}
+                                            {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+                                            <span class="label label-primary"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                        {% elif req.request_timestamp is not none %}
+                                            {% set delta = now - req.request_timestamp %}
+                                            {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
+                                            <span class="label label-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                                 <div class="col-xs-3">
                                     {{ project.group.make_label(project.group.name)|safe }}

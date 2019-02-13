@@ -43,8 +43,9 @@ An information request box labelled "Selections: Confirmation of projects
 required" should appear highlighted in yellow at the top of the page.
 Please click the red 'Confirm' button to indicate that your projects are
 ready to go.
-{%- if config.request_deadline is defined and config.request_deadline is not none -%}
- It would be very helpful if you could provide your response
+
+{% if config.request_deadline is defined and config.request_deadline is not none -%}
+It would be very helpful if you could provide your response
 by {{ config.request_deadline.strftime("%a %d %b %Y") }} at latest.
 {%- endif %}
 

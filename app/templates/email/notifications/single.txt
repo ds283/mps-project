@@ -2,6 +2,8 @@ Dear {{ user.name }}
 
 This is an automated email from the Sussex Physics & Astronomy
 project management web app at https://mpsprojects.co.uk.
+It is sent from an address that is not monitored or answered;
+please direct any queries to the project convenor.
 
 {% for notify in notifications -%}
 - {{ notify|string|wordwrap(75) }}
@@ -18,11 +20,6 @@ be appreciated if they could be dealt with at your earliest convenience:
 
 {% endfor -%}
 {%- endif -%}
-
-This is an automated email. Please do not reply to it directly, because
-messages sent to this mailbox are not monitored or answered. If you have
-questions or concerns, please direct these to the project convenor or a
-system administrator, as appropriate.
 
 You can adjust your email preferences, including the frequency with which
 you will be mailed notifications, in the 'Settings...' section of your

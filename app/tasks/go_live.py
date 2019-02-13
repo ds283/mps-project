@@ -233,6 +233,7 @@ def register_golive_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='{name}: projects now published to students'.format(name=config.project_class.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[data.user.email])
 
         # get live projects belonging to both this project class and this faculty member
@@ -273,6 +274,7 @@ def register_golive_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='{name}: projects list now available'.format(name=config.project_class.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[data.student.user.email])
 
         msg.body = render_template('email/go_live/selector.txt', user=data.student.user, student=data,

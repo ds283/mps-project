@@ -103,7 +103,9 @@ def register_email_notification_tasks(celery):
                 if time_since_last_email.days < user.summary_frequency:
                     return None
 
-        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'], recipients=[user.email])
+        msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
+                      recipients=[user.email])
 
         if not user.group_summaries:
             if notify_count == 1:

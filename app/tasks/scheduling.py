@@ -1055,6 +1055,7 @@ def register_scheduling_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='Files for offline scheduling of {name} are now ready'.format(name=record.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[user.email])
 
         msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user,
@@ -1332,6 +1333,7 @@ def register_scheduling_tasks(celery):
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[user.email])
 
         if is_draft:
@@ -1408,6 +1410,7 @@ def register_scheduling_tasks(celery):
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[user.email])
 
         if is_draft:

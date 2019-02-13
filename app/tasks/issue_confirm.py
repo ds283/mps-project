@@ -227,6 +227,7 @@ def register_issue_confirm_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='Please check projects for {name}'.format(name=config.project_class.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[data.user.email])
 
         projects = data.projects_offered(config.project_class)
@@ -280,6 +281,7 @@ def register_issue_confirm_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='Reminder: please check projects for {name}'.format(name=config.project_class.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[data.user.email])
 
         projects = data.projects_offered(config.project_class)

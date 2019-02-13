@@ -335,6 +335,7 @@ def register_availability_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='Reminder: availability for event {name}'.format(name=assessor.assessment.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[assessor.faculty.user.email])
 
         msg.body = render_template('email/scheduling/availability_reminder.txt', event=assessor.assessment,

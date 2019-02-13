@@ -565,6 +565,7 @@ def submit(sid):
 
         msg = Message(subject='Your project choices have been received',
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[sel.student.user.email])
 
         msg.body = render_template('email/student_notifications/choices_received.txt', user=sel.student.user,

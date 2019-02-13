@@ -2,6 +2,8 @@ Dear {{ user.first_name }}
 
 This is an automated email from the Sussex Physics & Astronomy
 project management web app at https://mpsprojects.co.uk.
+It is sent from an address that is not monitored or answered;
+please direct any queries to the project convenor.
 
 You are receiving this email because you are enrolled as a supervisor for
 projects of type "{{ pclass.name }}". If you believe this to be
@@ -53,9 +55,6 @@ of any page in the web app, via the link 'Faculty help pages'.
 You will receive one copy of this email for each project type in which you
 are enrolled as a supervisor. Please note that you need to provide confirmation
 for each project type individually.
-
-This email is sent from an address that is not monitored or answered.
-Please direct any queries to the project convenor.
 
 Thank you for your help,
 {{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})

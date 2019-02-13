@@ -936,6 +936,10 @@ def add_notification(user, event, object_1, object_2=None, autocommit=True, noti
         # object_1 = ConfirmRequest, object2 = None
         check_list.append((EmailNotification.CONFIRMATION_DECLINE_DELETED, object_1.project_id, None))
 
+    if event == EmailNotification.CONFIRMATION_TO_PENDING:
+        # object_1 = ConfirmRequest, object2 = None
+        check_list.append((EmailNotification.CONFIRMATION_GRANTED, object_1.project_id, None))
+
     dont_save = False
     for t, obj1_id, obj2_id in check_list:
         q = db.session.query(EmailNotification).filter_by(owner_id=user_id, data_1=obj1_id, data_2=obj2_id,

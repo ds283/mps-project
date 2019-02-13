@@ -2,7 +2,10 @@
     <div class="panel panel-default">
         <div class="panel-heading"><strong>Student selections are now closed</strong></div>
         <div class="panel-body">
-            {% set submitted, missing, total = config.selector_data %}
+            {% set data = config.selector_data %}
+            {% set submitted = data['have_submitted'] %}
+            {% set missing = data['missing'] %}
+            {% set total = data['total'] %}
             <div class="row vertical-top">
                 <div class="col-xs-6"><strong>Have submission data</strong></div>
                 <div class="col-xs-6"><strong>Missing submission data</strong></div>

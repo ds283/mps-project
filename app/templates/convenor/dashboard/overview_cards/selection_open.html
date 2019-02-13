@@ -4,7 +4,12 @@
         <div class="panel-body">
             <div class="row vertical-top">
                 <div class="col-xs-8">
-                    {% set submitted, bookmarks, missing, total = config.selector_data %}
+                    {% set data = config.selector_data %}
+                    {% set submitted = data['have_submitted'] %}
+                    {% set bookmarks = data['have_bookmarks'] %}
+                    {% set missing = data['missing'] %}
+                    {% set total = data['total'] %}
+                    {% set outstanding_confirm = data['outstanding_confirm'] %}
                     <div class="row vertical-top">
                         <div class="col-xs-4"><strong>Submitted</strong></div>
                         <div class="col-xs-4"><strong>Has bookmarks</strong></div>
@@ -29,6 +34,16 @@
                             <strong>{{ missing }}</strong>/{{ total }}
                             <a class="btn btn-link"
                                 href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">
+                                Show ...
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row vertical-top">
+                        <div class="col-xs-12">
+                            {% set pl = 's' %}{% if outstanding_confirm == 1 %}{% set pl = '' %}{% endif %}
+                            <strong>{{ outstanding_confirm }}</strong> outstanding confirmation request{{ pl }}.
+                            <a class="btn btn-link"
+                               href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">
                                 Show ...
                             </a>
                         </div>

@@ -2776,12 +2776,12 @@ class ProjectClassConfig(db.Model):
     @property
     def selector_data(self):
         """
-        Report simple statistics about selectors attached to this ProjectClassConfg instance.
+        Report simple statistics about selectors attached to this ProjectClassConfig instance.
 
         **
         BEFORE SELECTIONS ARE CLOSED,
         we report the total number of selectors, the number who have already made submissions, the number who have
-        bookmarks but have not yet made a submission, and the number who are entirely missing.
+        bookmarks but have not yet made a submission, the number who are entirely missing.
 
         AFTER SELECTIONS ARE CLOSED,
         we report the total number of selectors, the number who made submissions,
@@ -2802,6 +2802,7 @@ class ProjectClassConfig(db.Model):
         submitted = 0
         bookmarks = 0
         missing = 0
+        outstanding_confirm = 0
 
         for student in self.selecting_students:
             total += 1
@@ -2809,13 +2810,19 @@ class ProjectClassConfig(db.Model):
             if student.has_submitted:
                 submitted += 1
 
+            outstanding_confirm += get_count(student.confirmation_requests.filter_by(state=ConfirmRequest.REQUESTED))
+
             if not student.has_submitted and student.has_bookmarks:
                 bookmarks += 1
 
             if not student.has_submitted and not student.has_bookmarks:
                 missing += 1
 
-        return submitted, bookmarks, missing, total
+        return {'have_submitted': submitted,
+                'have_bookmarks': bookmarks,
+                'missing': missing,
+                'total': total,
+                'outstanding_confirm': outstanding_confirm}
 
 
     @property
@@ -2832,7 +2839,9 @@ class ProjectClassConfig(db.Model):
             else:
                 missing += 1
 
-        return submitted, missing, total
+        return {'have_submitted': submitted,
+                'missing': missing,
+                'total': total}
 
 
     @property
@@ -2875,8 +2884,21 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def has_published_schedules(self):
-        return get_count(self.published_schedules) > 0
+    def has_auditable_schedules(self):
+        # auditable schedules are published schedules for a PresentationAssessment that isn't deployed
+        for period in self.periods:
+            if not period.has_presentation:
+                break
+
+            assessment = period.presentation_assessment.first()
+            if assessment is not None:
+                if assessment.is_deployed:
+                    break
+
+                if assessment.has_published_schedules:
+                    return True
+
+        return False
 
 
     def get_period(self, n):
@@ -7149,6 +7171,7 @@ class PresentationAssessment(db.Model):
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True)
 
     # submission sessions to which we are attached
+    # (should only be one PresentationAssessment instance attached per period record)
     submission_periods = db.relationship('SubmissionPeriodRecord', secondary=assessment_to_periods, lazy='dynamic',
                                          backref=db.backref('presentation_assessments', lazy='dynamic'))
 

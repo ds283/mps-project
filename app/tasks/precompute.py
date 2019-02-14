@@ -211,4 +211,6 @@ def register_precompute_tasks(celery):
 
     @celery.task(bind=True)
     def workload_faculty(self, user_id):
-        ajax.exec.workload_data([user_id])
+        # need both simple and non-simple versions
+        ajax.exec.workload_data([user_id], False)
+        ajax.exec.workload_data([user_id], True)

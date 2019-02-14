@@ -3966,6 +3966,7 @@ def notifications_ajax():
         if delta.seconds > delay:
             compute_now = True
 
+    # if we need to re-run a precompute, spawn one
     if compute_now:
         precompute_at_login(current_user)
 

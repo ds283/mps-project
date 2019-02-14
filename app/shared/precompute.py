@@ -11,6 +11,7 @@
 from flask import current_app
 
 from ..database import db
+from ..shared.internal_redis import get_redis
 
 from datetime import datetime
 
@@ -51,14 +52,62 @@ def precompute_for_user(user):
 
 
 def precompute_for_faculty():
+    db = get_redis()
+
+    # check if key giving last precompute time exists
+    compute = not db.exists('PRECOMPUTE_LAST_FACULTY')
+
+    # if no key exists, compute = True
+    # if a key exists, compute = False and we should check when last event occurred
+    if not compute:
+        last_timestamp = db.get('PRECOMPUTE_LAST_FACULTY')
+        last_dt = datetime.fromtimestamp(last_timestamp)
+
+        delta = datetime.now() - last_dt
+
+        delay = current_app.config.get('PRECOMPUTE_DELAY')
+        if delay is None:
+            delay = 600
+
+        compute = delta.seconds > delay
+
+    if not compute:
+        return
+
     celery = current_app.extensions['celery']
 
     fac = celery.tasks['app.tasks.precompute.faculty']
     fac.apply_async()
 
+    db.set('PRECOMPUTE_LAST_FACULTY', datetime.now().timestamp())
+
 
 def precompute_for_exec():
+    db = get_redis()
+
+    # check if key giving last precompute time exists
+    compute = not db.exists('PRECOMPUTE_LAST_EXEC')
+
+    # if no key exists, compute = True
+    # if a key exists, compute = False and we should check when last event occurred
+    if not compute:
+        last_timestamp = db.get('PRECOMPUTE_LAST_EXEC')
+        last_dt = datetime.fromtimestamp(last_timestamp)
+
+        delta = datetime.now() - last_dt
+
+        delay = current_app.config.get('PRECOMPUTE_DELAY')
+        if delay is None:
+            delay = 600
+
+        compute = delta.seconds > delay
+
+    if not compute:
+        return
+
     celery = current_app.extensions['celery']
 
     exc = celery.tasks['app.tasks.precompute.executive']
     exc.apply_async()
+
+    db.set('PRECOMPUTE_LAST_EXEC', datetime.now().timestamp())

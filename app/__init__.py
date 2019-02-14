@@ -243,7 +243,8 @@ def create_app():
         just_dollar = [elem for elem in dollar_inds if elem not in inline_inds and elem not in display_inds]
 
         if len(inline_inds) % 2 != 0:  # Checks for lonely dollar signs
-            latex_string = r"Failed to parse, please check your syntax."
+            latex_string = r'<div class="alert alert-danger">Failed to match LaTeX dollar delimiters. ' \
+                           r'Please check the markup in your project description.</div>' + latex_string
 
         else:  # Only converts inline math delimiters, as latex2markdown seems to convert display math delimiters
             for i in range(0, len(inline_inds)):

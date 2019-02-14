@@ -80,6 +80,31 @@ class Config(object):
 
     # DATABASE_USER, DATABASE_PASSWORD, DATABASE_ROOT_PASSWORD and DATABASE_HOST are set in instance/secrets.py
 
+    # Bleach configuration
+    BLEACH_ALLOWED_TAGS = [
+        'a',
+        'abbr',
+        'acronym',
+        'b',
+        'blockquote',
+        'code',
+        'em',
+        'i',
+        'li',
+        'ol',
+        'strong',
+        'ul',
+        'div',
+        'span'
+    ]
+
+    BLEACH_ALLOWED_ATTRIBUTES = {
+        'a': ['href', 'title'],
+        'abbr': ['title'],
+        'acronym': ['title'],
+        'div': ['class']
+    }
+
 
     # user-facing defaults
 

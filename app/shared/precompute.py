@@ -61,6 +61,11 @@ def precompute_for_faculty():
     # if a key exists, compute = False and we should check when last event occurred
     if not compute:
         last_timestamp = db.get('PRECOMPUTE_LAST_FACULTY')
+
+        # values returned from Redis are often byte strings
+        if not isinstance(last_timestamp, float):
+            last_timestamp = float(last_timestamp)
+
         last_dt = datetime.fromtimestamp(last_timestamp)
 
         delta = datetime.now() - last_dt
@@ -92,6 +97,11 @@ def precompute_for_exec():
     # if a key exists, compute = False and we should check when last event occurred
     if not compute:
         last_timestamp = db.get('PRECOMPUTE_LAST_EXEC')
+
+        # values returned from Redis are often byte strings
+        if not isinstance(last_timestamp, float):
+            last_timestamp = float(last_timestamp)
+
         last_dt = datetime.fromtimestamp(last_timestamp)
 
         delta = datetime.now() - last_dt

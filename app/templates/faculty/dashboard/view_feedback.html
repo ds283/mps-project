@@ -32,12 +32,28 @@
                 {% if record.supervisor_submitted or (record.supervisor_positive or record.supervisor_negative) and preview %}
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            Supervisor feedback
-                            {% if record.supervisor_timestamp %}
-                                <div class="pull-right">
-                                    <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                            <div class="row vertical-align">
+                                <div class="col-xs-6">
+                                    Supervisor feedback
                                 </div>
-                            {% endif %}
+                                <div class="col-xs-6">
+                                    <div class="pull-right">
+                                        {% if record.supervisor_timestamp %}
+                                            <span class="label label-default">Submitted at {{ record.supervisor_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        {% endif %}
+                                        {% if current_user.id == record.supervisor.id %}
+                                            {% if (record.period.feedback_open and not record.period.closed) or (record.period.closed and not record.supervisor_submitted) %}
+                                                <a href="{{ url_for('faculty.supervisor_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                                {% if not record.supervisor_submitted %}
+                                                    <a href="{{ url_for('faculty.supervisor_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
+                                                {% else %}
+                                                    <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="panel-body">
                             <span class="dashboard-subtitle">Positive aspects</span>
@@ -49,7 +65,7 @@
                     </div>
                 {% else %}
                     <div class="well">
-                        No feedback has been recorded from the project supervisor.
+                        Feedback has not yet been recorded from the project supervisor.
                     </div>
                 {% endif %}
             {% endif %}
@@ -58,12 +74,28 @@
                 {% if record.marker_submitted or (record.marker_positive or record.marker_negative) and preview %}
                     <div class="panel panel-default">
                         <div class="panel-heading">
-                            Marker feedback
-                            {% if record.marker_timestamp %}
-                                <div class="pull-right">
-                                    <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                            <div class="row vertical-align">
+                                <div class="col-xs-6">
+                                    Marker feedback
                                 </div>
-                            {% endif %}
+                                <div class="col-xs-6">
+                                    <div class="pull-right">
+                                        {% if record.marker_timestamp %}
+                                            <span class="label label-default">Submitted at {{ record.marker_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                        {% endif %}
+                                        {% if current_user.id == record.marker_id %}
+                                            {% if (record.period.feedback_open and not record.period.closed) or (record.period.closed and not record.marker_submitted) %}
+                                                <a href="{{ url_for('faculty.marker_edit_feedback', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                                {% if not record.marker_submitted %}
+                                                    <a href="{{ url_for('faculty.marker_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
+                                                {% else %}
+                                                    <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="panel-body">
                             <span class="dashboard-subtitle">Positive aspects</span>
@@ -75,24 +107,45 @@
                     </div>
                 {% else %}
                     <div class="well">
-                        No feedback has been recorded from the project marker.
+                        Feedback has not yet been recorded from the project marker.
                     </div>
                 {% endif %}
             {% endif %}
 
             {% if record.period.has_presentation and record.period.collect_presentation_feedback %}
                 {% set ns = namespace(count=0) %}
+                {% set slot = record.schedule_slot %}
                 {% for feedback in record.presentation_feedback %}
                     {% if feedback.submitted or (feedback.positive or feedback.negative) and preview %}
                         {% set ns.count = ns.count + 1 %}
                         <div class="panel panel-default">
                             <div class="panel-heading">
-                                Presentation assessment feedback from <strong>{{ feedback.assessor.user.name }}</strong>
-                                {% if feedback.timestamp %}
-                                    <div class="pull-right">
-                                        <span class="label label-default">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                <div class="row vertical-align">
+                                    <div class="col-xs-7">
+                                        Presentation feedback from <strong>{{ feedback.assessor.user.name }}</strong>
                                     </div>
-                                {% endif %}
+                                    <div class="col-xs-5">
+                                        <div class="pull-right">
+                                            {% if feedback.timestamp %}
+                                                <span class="label label-default">Submitted at {{ feedback.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                            {% endif %}
+                                            {% set valid = record.is_presentation_assessor_valid(feedback.assessor_id) %}
+                                            {% set submitted = record.presentation_assessor_submitted(feedback.assessor_id) %}
+                                            {% if slot.feedback_state(current_user.id) > slot.FEEDBACK_NOT_YET %}
+                                                {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
+                                                    {% if current_user.id == feedback.assessor_id %}
+                                                        <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                                        {% if not submitted %}
+                                                            <a href="{{ url_for('faculty.presentation_submit_feedback', slot_id=slot.id, talk_id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
+                                                        {% else %}
+                                                            <a href="{{ url_for('faculty.presentation_unsubmit_feedback', slot_id=slot.id, talk_id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="panel-body">
                                 <span class="dashboard-subtitle">Positive aspects</span>
@@ -106,22 +159,34 @@
                 {% endfor %}
                 {% if ns.count == 0 %}
                     <div class="well">
-                        No feedback has been recorded from the assessed presentation.
+                        Feedback has not yet been recorded from the assessed presentation.
                     </div>
                 {% endif %}
             {% endif %}
 
-            {% if record.student_feedback %}
+            {% if record.student_feedback_submitted %}
                 <div class="panel panel-success">
                     <div class="panel-heading">
-                        Student feedback to supervisor
+                        <div class="row vertical-align">
+                            <div class="col-xs-6">
+                                Student feedback to supervisor
+                            </div>
+                            <div class="col-xs-6">
+                                <div class="pull-right">
+                                    {% if record.acknowledge_feedback %}
+                                        <span class="label label-success">Acknowledged</span>
+                                    {% endif %}
+                                    <span class="label label-default">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                                    {% if record.acknowledge_feedback and not record.faculty_response_submitted %}
+                                        <a href="{{ url_for('faculty.edit_response', id=record.id, url=url_for('faculty.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
+                                        {% if record.is_response_valid %}
+                                            <a href="{{ url_for('faculty.submit_response', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                         <div class="pull-right">
-                            {% if record.acknowledge_feedback %}
-                                <span class="label label-success">Acknowledged</span>
-                            {% else %}
-                                <span class="label label-default">Not yet acknowledged</span>
-                            {% endif %}
-                            <span class="label label-default">Submitted at {{ record.student_feedback_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                         </div>
                     </div>
                     <div class="panel-body">

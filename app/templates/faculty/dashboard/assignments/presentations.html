@@ -40,7 +40,7 @@
                                             <a href="mailto:{{ talk.project.owner.user.email }}">{{ talk.project.owner.user.name }}</a>
                                         </td>
                                         <td>
-                                            <a href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=home_dashboard_url) }}">
+                                            <a href="{{ url_for('faculty.live_project', pid=talk.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                                 {{ talk.project.name }} (No. {{ talk.project.number }})
                                             </a>
                                             <div>
@@ -55,14 +55,10 @@
                                             <div style="text-align: right;" class="pull-right">
                                                 {% if slot.feedback_state(id) > slot.FEEDBACK_NOT_YET %}
                                                     {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
-                                                        <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
                                                         {% if valid %}
-                                                            <a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
-                                                        {% endif %}
-                                                        {% if not submitted %}
-                                                            <a href="{{ url_for('faculty.presentation_submit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block btn-success">Submit feedback</a>
+                                                            <a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
                                                         {% else %}
-                                                            <a href="{{ url_for('faculty.presentation_unsubmit_feedback', slot_id=slot.id, talk_id=talk.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit feedback</a>
+                                                            <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-primary">Edit feedback</a>
                                                         {% endif %}
                                                     {% endif %}
                                                 {% endif %}

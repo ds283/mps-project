@@ -648,7 +648,6 @@ def view_selection(sid):
 @student.route('/view_feedback/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('student')
 def view_feedback(id):
-
     # id identifies a SubmissionRecord
     record = SubmissionRecord.query.get_or_404(id)
 
@@ -656,6 +655,7 @@ def view_feedback(id):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
+    text = request.args.get('text', None)
     if url is None:
         url = request.referrer
 
@@ -667,14 +667,15 @@ def view_feedback(id):
     config = record.owner.config
     period = config.get_period(record.submission_period)
 
+    preview = request.args.get('preview', None)
+
     return render_template('student/dashboard/view_feedback.html', record=record, period=period,
-                           text='home dashboard', url=url)
+                           text=text, url=url, preview=preview)
 
 
 @student.route('/edit_feedback/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('student')
 def edit_feedback(id):
-
     # id identifies a SubmissionRecord
     record = SubmissionRecord.query.get_or_404(id)
 
@@ -703,13 +704,9 @@ def edit_feedback(id):
         record.student_feedback = form.feedback.data
         db.session.commit()
 
-        if form.save_preview.data:
-            return redirect(url_for('student.view_feedback', id=id, url=url, preview=1))
-        else:
-            return redirect(url)
+        return redirect(url)
 
     else:
-
         if request.method == 'GET':
             form.feedback.data = record.student_feedback
 

@@ -1700,12 +1700,13 @@ def view_feedback(id):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
+    text = request.args.get('text', None)
     if url is None:
         url = request.referrer
 
     preview = request.args.get('preview', None)
 
-    return render_template('faculty/dashboard/view_feedback.html', record=record, text='home dashboard',
+    return render_template('faculty/dashboard/view_feedback.html', record=record, text=text,
                            url=url, preview=preview)
 
 
@@ -1747,7 +1748,7 @@ def edit_response(id):
         db.session.commit()
 
         if form.save_preview.data:
-            return redirect(url_for('faculty.view_feedback', id=id, url=url, preview=1))
+            return redirect(url_for('faculty.view_feedback', id=id, url=url, text=text, preview=1))
         else:
             return redirect(url)
 
@@ -1764,7 +1765,6 @@ def edit_response(id):
 @faculty.route('/submit_response/<int:id>')
 @roles_accepted('faculty')
 def submit_response(id):
-
     # id identifies a SubmissionRecord
     record = SubmissionRecord.query.get_or_404(id)
 

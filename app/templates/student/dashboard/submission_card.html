@@ -62,13 +62,7 @@
                             <div class="col-xs-4">
                                 <div style="text-align: right;" class="pull-right">
                                     {% if record.has_feedback %}
-                                        <a href="{{ url_for('student.view_feedback', id=record.id) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
-                                    {% endif %}
-                                    {% if period.closed and not record.student_feedback_submitted %}
-                                        <a href="{{ url_for('student.edit_feedback', id=record.id) }}" class="btn btn-sm btn-default btn-table-block">Edit my feedback</a>
-                                        {% if record.is_student_valid %}
-                                            <a href="{{ url_for('student.submit_feedback', id=record.id) }}" class="btn btn-sm btn-success btn-table-block">Submit my feedback</a>
-                                        {% endif %}
+                                        <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
                                     {% endif %}
                                 </div>
                             </div>

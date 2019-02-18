@@ -42,7 +42,7 @@
                     </div>
                 {% else %}
                     <div class="well">
-                        No feedback has been recorded from the project supervisor.
+                        Feedback has not yet been recorded from the project supervisor.
                     </div>
                 {% endif %}
             {% endif %}
@@ -61,7 +61,7 @@
                     </div>
                 {% else %}
                     <div class="well">
-                        No feedback has been recorded from the project marker.
+                        Feedback has not yet been recorded from the project marker.
                     </div>
                 {% endif %}
             {% endif %}
@@ -87,7 +87,7 @@
                 {% endfor %}
                 {% if ns.count == 0 %}
                     <div class="well">
-                        No feedback has been recorded from the assessed presentation.
+                        Feedback has not yet been recorded from the assessed presentation.
                     </div>
                 {% endif %}
             {% endif %}
@@ -95,13 +95,25 @@
             {% if record.student_feedback_submitted or (record.student_feedback and preview) %}
                 <div class="panel panel-success">
                     <div class="panel-heading">
-                        My feedback
-                        <div class="pull-right">
-                            {% if record.acknowledge_feedback %}
-                                <span class="label label-success">Acknowledged</span>
-                            {% else %}
-                                <span class="label label-default">Not yet acknowledged</span>
-                            {% endif %}
+                        <div class="row vertical-align">
+                            <div class="col-xs-6">
+                                My feedback
+                            </div>
+                            <div class="col-xs-6">
+                                <div class="pull-right">
+                                    {% if record.acknowledge_feedback %}
+                                        <span class="label label-success">Acknowledged</span>
+                                    {% else %}
+                                        <span class="label label-default">Not yet acknowledged</span>
+                                    {% endif %}
+                                    {% if record.period.closed and not record.student_feedback_submitted %}
+                                        <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
+                                        {% if record.is_student_valid %}
+                                            <a href="{{ url_for('student.submit_feedback', id=record.id) }}" class="btn btn-sm btn-success btn-table-block">Submit</a>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="panel-body">
@@ -116,7 +128,18 @@
             {% else %}
                 <div class="panel panel-success">
                     <div class="panel-heading">
-                        My feedback
+                        <div class="row vertical-align">
+                            <div class="col-xs-6">
+                                My feedback
+                            </div>
+                            <div class="col-xs-6">
+                                <div class="pull-right">
+                                    {% if record.period.closed and not record.student_feedback_submitted %}
+                                        <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-default btn-table-block">Edit my feedback</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="panel-body">
                         <span class="small">You have not yet entered any feedback.</span>

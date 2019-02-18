@@ -28,7 +28,7 @@
                             <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
                         </td>
                         <td>
-                            <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=home_dashboard_url) }}">
+                            <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
                             <div>
@@ -57,22 +57,18 @@
                                         <a href="{{ url_for('faculty.mark_started', id=rec.id) }}" class="btn btn-sm btn-table-block btn-primary">Mark as started</a>
                                     {% endif %}
                                 {% elif (period.feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
-                                    <a href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block {% if valid %}btn-default{% else %}btn-primary{% endif %}">Edit feedback</a>
                                     {% if valid %}
-                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
-                                    {% endif %}
-                                    {% if not rec.supervisor_submitted %}
-                                        <a href="{{ url_for('faculty.supervisor_submit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-success">Submit feedback</a>
+                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
                                     {% else %}
-                                        <a href="{{ url_for('faculty.supervisor_unsubmit_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit feedback</a>
+                                        <a href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-primary">Edit feedback</a>
                                     {% endif %}
                                 {% elif period.closed %}
-                                    <a href="{{ url_for('faculty.view_feedback', id=rec.id) }}" class="btn btn-sm btn-table-block {% if rec.student_feedback_submitted and not rec.acknowledge_feedback %}btn-warning{% else %}btn-default{% endif %}">View feedback</a>
-                                    {% if rec.student_feedback_submitted and not rec.faculty_response_submitted %}
-                                        <a href="{{ url_for('faculty.edit_response', id=rec.id) }}" class="btn btn-sm btn-table-block btn-default">Edit response</a>
-                                        {% if rec.is_response_valid %}
-                                            <a href="{{ url_for('faculty.submit_response', id=rec.id) }}" class="btn btn-sm btn-table-block btn-success">Submit response</a>
-                                        {% endif %}
+                                    {% if rec.student_feedback_submitted and not rec.acknowledge_feedback %}
+                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-warning">Respond to feedback</a>
+                                    {% elif rec.student_feedback_submitted and not rec.faculty_response_submitted %}
+                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-primary">Respond to feedback</a>
+                                    {% else %}
+                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">View feedback</a>
                                     {% endif %}
                                 {% endif %}
                             </div>

@@ -22,8 +22,6 @@ class StudentFeedbackMixin():
 
     save_changes = SubmitField('Save changes')
 
-    save_preview = SubmitField('Save changes and preview')
-
 
 class StudentFeedbackForm(Form, StudentFeedbackMixin):
 

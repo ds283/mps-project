@@ -43,7 +43,7 @@ _projects = \
             <ul class="dropdown-menu">
                 {% set disabled = not pclass.publish %}
                 <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, preview=1, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
+                    <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                 </li>
                 
                 {% set disabled = r.period.feedback_open or r.student_engaged %}
@@ -126,7 +126,7 @@ _marking = \
             <ul class="dropdown-menu">
                 {% set disabled = not pclass.publish %}
                 <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, preview=1, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
+                    <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Show feedback</a>
                 </li>
                 
                 {% set disabled = r.period.feedback_open or r.student_engaged %}
@@ -181,7 +181,7 @@ _presentations = \
                         {% set pclass = rec.owner.config.project_class %}
                         {% set disabled = not pclass.publish %}
                         <li {% if disabled %}class="disabled"{% endif %}>
-                            <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=rec.id, preview=1, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
+                            <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=rec.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>
                                 Show feedback for {{ rec.owner.student.user.name }}
                             </a>
                         </li>

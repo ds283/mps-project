@@ -3890,9 +3890,7 @@ def view_feedback(id):
     if url is None:
         url = request.referrer
 
-    preview = request.args.get('preview', None)
-
-    return render_template('convenor/dashboard/view_feedback.html', record=rec, text=text, url=url, preview=preview)
+    return render_template('convenor/dashboard/view_feedback.html', record=rec, text=text, url=url)
 
 
 @convenor.route('/faculty_workload/<int:id>')

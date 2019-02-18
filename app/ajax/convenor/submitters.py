@@ -214,7 +214,7 @@ _menu = \
         {% for r in recs %}
             {% set disabled = not pclass.publish %}
             <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, preview=1, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
                     <i class="fa fa-comments-o"></i> Period #{{ r.submission_period }}
                 </a>
             </li>

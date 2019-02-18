@@ -82,9 +82,9 @@
                                     {% endif %}
                                     <a href="{{ url_for('convenor.marker_edit_feedback', id=record.id, url=url_for('convenor.view_feedback', id=record.id, url=url, text=text)) }}" class="btn btn-sm btn-table-block btn-default">Edit</a>
                                     {% if not record.marker_submitted %}
-                                        <a href="{{ url_for('faculty.marker_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
+                                        <a href="{{ url_for('convenor.marker_submit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-success">Submit</a>
                                     {% else %}
-                                        <a href="{{ url_for('faculty.marker_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
+                                        <a href="{{ url_for('convenor.marker_unsubmit_feedback', id=record.id) }}" class="btn btn-sm btn-table-block btn-default">Unsubmit</a>
                                     {% endif %}
                                 </div>
                             </div>

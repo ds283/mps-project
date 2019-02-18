@@ -4394,6 +4394,16 @@ def supervisor_submit_feedback(id):
               'project whose feedback is being submitted.', 'error')
         return redirect(request.referrer)
 
+    period = record.period
+
+    if not period.feedback_open:
+        flash('It is not possible to submit before the feedback period has opened.', 'error')
+        return redirect(request.referrer)
+
+    if not record.is_marker_valid:
+        flash('Cannot submit feedback because it is still incomplete.', 'error')
+        return redirect(request.referrer)
+
     if record.supervisor_submitted:
         return redirect(request.referrer)
 
@@ -4418,6 +4428,12 @@ def supervisor_unsubmit_feedback(id):
     if not validate_is_convenor(record.project.config.project_class):
         flash('To use the convenor interface to submit feedback, you must be project convenor for the '
               'project whose feedback is being submitted.', 'error')
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if period.closed:
+        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
         return redirect(request.referrer)
 
     if not record.supervisor_submitted:
@@ -4446,6 +4462,16 @@ def marker_submit_feedback(id):
               'project whose feedback is being submitted.', 'error')
         return redirect(request.referrer)
 
+    period = record.period
+
+    if not period.feedback_open:
+        flash('It is not possible to submit before the feedback period has opened.', 'error')
+        return redirect(request.referrer)
+
+    if not record.is_marker_valid:
+        flash('Cannot submit feedback because it is still incomplete.', 'error')
+        return redirect(request.referrer)
+
     if record.marker_submitted:
         return redirect(request.referrer)
 
@@ -4470,6 +4496,12 @@ def marker_unsubmit_feedback(id):
     if not validate_is_convenor(record.project.config.project_class):
         flash('To use the convenor interface to submit feedback, you must be project convenor for the '
               'project whose feedback is being submitted.', 'error')
+        return redirect(request.referrer)
+
+    period = record.period
+
+    if period.closed:
+        flash('It is not possible to unsubmit after the feedback period has closed.', 'error')
         return redirect(request.referrer)
 
     if not record.marker_submitted:
@@ -4552,6 +4584,10 @@ def presentation_submit_feedback(feedback_id):
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
         return redirect(request.referrer)
 
+    if not talk.is_presentation_assessor_valid(feedback.assessor_id):
+        flash('Cannot submit feedback because it is still incomplete.', 'error')
+        return redirect(request.referrer)
+
     feedback.submitted = True
     feedback.timestamp = datetime.now()
     db.session.commit()
@@ -4576,6 +4612,10 @@ def presentation_unsubmit_feedback(feedback_id):
 
     if not slot.owner.deployed:
         flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
+        return redirect(request.referrer)
+
+    if not slot.owner.owner.feedback_open:
+        flash('Cannot unsubmit feedback after an assessment has closed.', 'error')
         return redirect(request.referrer)
 
     feedback.submitted = False

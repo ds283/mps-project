@@ -4642,7 +4642,7 @@ def edit_response(id):
         return redirect(request.referrer)
 
     if not record.student_feedback_submitted:
-        flash('It is not possible to write a response to feedback from your student before '
+        flash('It is not possible to write a response to feedback from the student before '
               'they have submitted it.', 'info')
         return redirect(request.referrer)
 
@@ -4683,7 +4683,7 @@ def submit_response(id):
         return redirect(request.referrer)
 
     if not record.student_feedback_submitted:
-        flash('It is not possible to write a response to feedback from your student before '
+        flash('It is not possible to write a response to feedback from the student before '
               'they have submitted it.', 'info')
         return redirect(request.referrer)
 

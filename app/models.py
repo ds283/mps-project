@@ -5409,6 +5409,25 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def can_assign_feedback(self):
+        if not self.period.has_presentation or not self.period.collect_presentation_feedback:
+            return False
+
+        slot = self.schedule_slot
+        if slot is None:
+            return True
+
+        space = False
+        for assessor in slot.assessors:
+            if get_count(self.presentation_feedback.filter_by(assessor_id=assessor.id)) == 0:
+                space = True
+                break
+
+        return space
+
+
+
+    @property
     def previous_config(self):
         if self.selection_config:
             return self.selection_config

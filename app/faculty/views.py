@@ -1747,10 +1747,7 @@ def edit_response(id):
         record.faculty_response = form.feedback.data
         db.session.commit()
 
-        if form.save_preview.data:
-            return redirect(url_for('faculty.view_feedback', id=id, url=url, text=text, preview=1))
-        else:
-            return redirect(url)
+        return redirect(url)
 
     else:
 
@@ -1758,8 +1755,7 @@ def edit_response(id):
             form.feedback.data = record.faculty_response
 
     return render_template('faculty/dashboard/edit_response.html', form=form, record=record,
-                           submit_url = url_for('faculty.edit_response', id=id, url=url),
-                           text='home dashboard', url=home_dashboard_url())
+                           submit_url = url_for('faculty.edit_response', id=id, url=url), url=url)
 
 
 @faculty.route('/submit_response/<int:id>')

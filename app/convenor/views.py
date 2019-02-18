@@ -18,13 +18,14 @@ from ..database import db
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
-    SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest
+    SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
+    ScheduleSlot
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
     build_enroll_submitter_candidates, build_submitters_data
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
-    validate_project_open, validate_not_attending, validate_project_class
+    validate_project_open, validate_assign_feedback, validate_project_class
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
@@ -37,7 +38,8 @@ from . import convenor
 
 from ..admin.forms import LevelSelectorForm
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
-    AddDescriptionFormFactory, EditDescriptionFormFactory, PresentationFeedbackForm
+    AddDescriptionFormFactory, EditDescriptionFormFactory, PresentationFeedbackForm, \
+    SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
 from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory, \
     AssignPresentationFeedbackFormFactory
 
@@ -3888,7 +3890,9 @@ def view_feedback(id):
     if url is None:
         url = request.referrer
 
-    return render_template('faculty/dashboard/view_feedback.html', record=rec, text=text, url=url)
+    preview = request.args.get('preview', None)
+
+    return render_template('convenor/dashboard/view_feedback.html', record=rec, text=text, url=url, preview=preview)
 
 
 @convenor.route('/faculty_workload/<int:id>')
@@ -4228,10 +4232,15 @@ def assign_presentation_feedback(id):
     if not validate_is_convenor(talk.owner.config.project_class):
         return redirect(request.referrer)
 
-    if not validate_not_attending(talk):
+    if not validate_assign_feedback(talk):
         return redirect(request.referrer)
 
-    AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(talk.id)
+    slot = talk.schedule_slot
+    if slot is None:
+        AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(talk.id)
+    else:
+        AssignPresentationFeedbackForm = AssignPresentationFeedbackFormFactory(talk.id, slot.id)
+
     form = AssignPresentationFeedbackForm(request.form)
 
     url = request.args.get('url', None)
@@ -4257,40 +4266,6 @@ def assign_presentation_feedback(id):
                            submit_url=url_for('convenor.assign_presentation_feedback', id=talk.id, url=url))
 
 
-@convenor.route('/edit_presentation_feedback/<int:id>/', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
-def edit_presentation_feedback(id):
-    # id labels PresentationFeedback record
-    feedback = PresentationFeedback.query.get_or_404(id)
-
-    talk = feedback.owner
-    if not validate_is_convenor(talk.owner.config.project_class):
-        return redirect(request.referrer)
-
-    if not validate_not_attending(talk):
-        return redirect(request.referrer)
-
-    form = PresentationFeedbackForm(obj=feedback)
-
-    url = request.args.get('url', None)
-    if url is None:
-        url = request.referrer
-
-    if form.validate_on_submit():
-        feedback.positive = form.positive.data
-        feedback.negative = form.negative.data
-        feedback.timestamp = datetime.now()
-
-        db.session.commit()
-
-        return redirect(url)
-
-    return render_template('faculty/dashboard/edit_feedback.html', form=form,
-                           title='Assign presentation feedback',
-                           formtitle='Assign presentation feedback for <strong>{num}</strong>'.format(num=talk.owner.student.user.name),
-                           submit_url=url_for('convenor.edit_presentation_feedback', id=feedback.id, url=url))
-
-
 @convenor.route('/delete_presentation_feedback/<int:id>/', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def delete_presentation_feedback(id):
@@ -4301,10 +4276,388 @@ def delete_presentation_feedback(id):
     if not validate_is_convenor(talk.owner.config.project_class):
         return redirect(request.referrer)
 
-    if not validate_not_attending(talk):
+    db.session.delete(feedback)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/supervisor_edit_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def supervisor_edit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
         return redirect(request.referrer)
 
-    db.session.delete(feedback)
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        flash('To use the convenor interface to edit feedback, you must be project convenor for the '
+              'project whose feedback is being edited.', 'error')
+        return redirect(request.referrer)
+
+    period = record.period
+    form = SupervisorFeedbackForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        record.supervisor_positive = form.positive.data
+        record.supervisor_negative = form.negative.data
+
+        if record.supervisor_submitted:
+            record.supervisor_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url)
+
+    else:
+        if request.method == 'GET':
+            form.positive.data = record.supervisor_positive
+            form.negative.data = record.supervisor_negative
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Edit supervisor feedback from {supervisor}'.format(supervisor=record.project.owner.user.name),
+                           formtitle='Edit supervisor feedback from <i class="fa fa-user"></i> '
+                                     '<strong>{supervisor}</strong> '
+                                     'for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(supervisor=record.project.owner.user.name,
+                                                                                                     name=record.owner.student.user.name),
+                           submit_url=url_for('convenor.supervisor_edit_feedback', id=id, url=url),
+                           period=period, record=record)
+
+
+@convenor.route('/marker_edit_feedback/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def marker_edit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        flash('To use the convenor interface to edit feedback, you must be project convenor for the '
+              'project whose feedback is being edited.', 'error')
+        return redirect(request.referrer)
+
+    period = record.period
+    form = MarkerFeedbackForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        record.marker_positive = form.positive.data
+        record.marker_negative = form.negative.data
+
+        if record.marker_submitted:
+            record.marker_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url)
+
+    else:
+        if request.method == 'GET':
+            form.positive.data = record.marker_positive
+            form.negative.data = record.marker_negative
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Edit marker feedback from {supervisor}'.format(supervisor=record.marker.user.name),
+                           formtitle='Edit marker feedback from <i class="fa fa-user"></i> '
+                                     '<strong>{supervisor}</strong> '
+                                     'for <strong>{num}</strong>'.format(supervisor=record.marker.user.name,
+                                                                         num=record.owner.student.exam_number),
+                           submit_url=url_for('convenor.marker_edit_feedback', id=id, url=url),
+                           period=period, record=record)
+
+
+@convenor.route('/supervisor_submit_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def supervisor_submit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        flash('To use the convenor interface to submit feedback, you must be project convenor for the '
+              'project whose feedback is being submitted.', 'error')
+        return redirect(request.referrer)
+
+    if record.supervisor_submitted:
+        return redirect(request.referrer)
+
+    record.supervisor_submitted = True
+    record.supervisor_timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/supervisor_unsubmit_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def supervisor_unsubmit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        flash('To use the convenor interface to submit feedback, you must be project convenor for the '
+              'project whose feedback is being submitted.', 'error')
+        return redirect(request.referrer)
+
+    if not record.supervisor_submitted:
+        return redirect(request.referrer)
+
+    record.supervisor_submitted = False
+    record.supervisor_timestamp = None
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/marker_submit_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def marker_submit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        flash('To use the convenor interface to submit feedback, you must be project convenor for the '
+              'project whose feedback is being submitted.', 'error')
+        return redirect(request.referrer)
+
+    if record.marker_submitted:
+        return redirect(request.referrer)
+
+    record.marker_submitted = True
+    record.marker_timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/marker_unsubmit_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def marker_unsubmit_feedback(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        flash('To use the convenor interface to submit feedback, you must be project convenor for the '
+              'project whose feedback is being submitted.', 'error')
+        return redirect(request.referrer)
+
+    if not record.marker_submitted:
+        return redirect(request.referrer)
+
+    record.marker_submitted = False
+    record.marker_timestamp = None
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/presentation_edit_feedback/<int:feedback_id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def presentation_edit_feedback(feedback_id):
+    # feedback_id labels a PresentationFeedback instance
+    feedback = PresentationFeedback.query.get_or_404(feedback_id)
+
+    talk = feedback.owner
+    if not validate_is_convenor(talk.owner.config.project_class):
+        return redirect(request.referrer)
+
+    slot = feedback.owner.schedule_slot
+    if slot is None:
+        flash('Could not edit feedback because the scheduled slot is unset.', 'error')
+        return redirect(request.referrer)
+
+    if not slot.owner.deployed:
+        flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
+        return redirect(request.referrer)
+
+    form = PresentationFeedbackForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        feedback.positive = form.positive.data
+        feedback.negative = form.negative.data
+
+        if feedback.submitted:
+            feedback.timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url)
+
+    else:
+        if request.method == 'GET':
+            form.positive.data = feedback.positive
+            form.negative.data = feedback.negative
+
+    return render_template('faculty/dashboard/edit_feedback.html', form=form,
+                           title='Edit presentation feedback from {supervisor}'.format(supervisor=feedback.assessor.user.name),
+                           formtitle='Edit presentation feedback from <i class="fa fa-user"></i> '
+                                     '<strong>{supervisor}</strong> '
+                                     'for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(supervisor=feedback.assessor.user.name,
+                                                                                                     name=talk.owner.student.user.name),
+                           submit_url=url_for('convenor.presentation_edit_feedback', feedback_id=feedback_id, url=url),
+                           assessment=slot.owner.owner)
+
+
+@convenor.route('/presentation_submit_feedback/<int:feedback_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def presentation_submit_feedback(feedback_id):
+    # feedback_id labels a PresentationFeedback instance
+    feedback = PresentationFeedback.query.get_or_404(feedback_id)
+
+    talk = feedback.owner
+    if not validate_is_convenor(talk.owner.config.project_class):
+        return redirect(request.referrer)
+
+    slot = feedback.owner.schedule_slot
+    if slot is None:
+        flash('Could not edit feedback because the scheduled slot is unset.', 'error')
+        return redirect(request.referrer)
+
+    if not slot.owner.deployed:
+        flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
+        return redirect(request.referrer)
+
+    feedback.submitted = True
+    feedback.timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/presentation_unsubmit_feedback/<int:feedback_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def presentation_unsubmit_feedback(feedback_id):
+    # feedback_id labels a PresentationFeedback instance
+    feedback = PresentationFeedback.query.get_or_404(feedback_id)
+
+    talk = feedback.owner
+    if not validate_is_convenor(talk.owner.config.project_class):
+        return redirect(request.referrer)
+
+    slot = feedback.owner.schedule_slot
+    if slot is None:
+        flash('Could not edit feedback because the scheduled slot is unset.', 'error')
+        return redirect(request.referrer)
+
+    if not slot.owner.deployed:
+        flash('Can not edit feedback because the schedule containing this slot has not been deployed.', 'error')
+        return redirect(request.referrer)
+
+    feedback.submitted = False
+    feedback.timestamp = None
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/edit_response/<int:id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_response(id):
+    # id is a SubmissionRecord instance
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        flash('To use the convenor interface to edit feedback, you must be project convenor for the '
+              'project whose feedback is being edited.', 'error')
+        return redirect(request.referrer)
+
+    if not record.student_feedback_submitted:
+        flash('It is not possible to write a response to feedback from your student before '
+              'they have submitted it.', 'info')
+        return redirect(request.referrer)
+
+    form = SupervisorResponseForm(request.form)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if form.validate_on_submit():
+        record.faculty_response = form.feedback.data
+        db.session.commit()
+
+        return redirect(url)
+
+    else:
+        if request.method == 'GET':
+            form.feedback.data = record.faculty_response
+
+    return render_template('faculty/dashboard/edit_response.html', form=form, record=record,
+                           submit_url = url_for('convenor.edit_response', id=id, url=url), url=url)
+
+
+@convenor.route('/submit_response/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def submit_response(id):
+    # id identifies a SubmissionRecord
+    record = SubmissionRecord.query.get_or_404(id)
+
+    if record.retired:
+        flash('It is not possible to edit feedback for submissions that have been retired.', 'error')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        flash('To use the convenor interface to edit feedback, you must be project convenor for the '
+              'project whose feedback is being edited.', 'error')
+        return redirect(request.referrer)
+
+    if not record.student_feedback_submitted:
+        flash('It is not possible to write a response to feedback from your student before '
+              'they have submitted it.', 'info')
+        return redirect(request.referrer)
+
+    if record.faculty_response_submitted:
+        return redirect(request.referrer)
+
+    if not record.is_response_valid:
+        flash('Cannot submit your feedback because it is incomplete.', 'info')
+        return redirect(request.referrer)
+
+    record.faculty_response_submitted = True
+    record.faculty_response_timestamp = datetime.now()
     db.session.commit()
 
     return redirect(request.referrer)

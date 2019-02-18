@@ -261,7 +261,7 @@ def validate_presentation_assessor(record):
     return False
 
 
-def validate_not_attending(talk):
+def validate_assign_feedback(talk):
     """
     Validate that a given talk is marked as 'not attending' for the assessment deployed for its
     SubmissionPeriodRecord
@@ -278,11 +278,8 @@ def validate_not_attending(talk):
               'does not yet have a deployed schedule.', 'info')
         return False
 
-    schedule = talk.period.deployed_schedule
-    assessment = schedule.owner
-    if not assessment.not_attending(talk.id):
-        flash('Cannot assign feedback to this submission record because it is not marked as "not attending" '
-              'for the assessment "{name}".'.format(name=assessment.name), 'info')
+    if not talk.can_assign_feedback:
+        flash('It is not possible to assign further feedback to this record.', 'error')
         return False
 
     return True

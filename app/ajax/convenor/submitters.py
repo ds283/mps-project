@@ -54,11 +54,6 @@ _projects = \
                     ({{r.supervisor.user.last_name}})
                 <span class="caret"></span></a>
                 <ul class="dropdown-menu">
-                    {% set disabled = not pclass.publish %}
-                    <li {% if disabled %}class="disabled"{% endif %}>
-                        <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Show feedback</a>
-                    </li>
-                    
                     {% set disabled = r.period.feedback_open or r.student_engaged %}
                     <li {% if disabled %}class="disabled"{% endif %}>
                         <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
@@ -147,11 +142,6 @@ _markers = \
                     <span class="caret"></span>
                 </a>
                 <ul class="dropdown-menu">
-                    {% set disabled = not pclass.publish %}
-                    <li {% if disabled %}class="disabled"{% endif %}>
-                        <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Show feedback</a>
-                    </li>
-                    
                     {% set disabled = r.period.feedback_open or r.student_engaged %}
                     <li {% if disabled %}class="disabled"{% endif %}>
                         <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
@@ -194,6 +184,7 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+        
         {% if sub.published and pclass.publish %}
             <li>
                 <a href="{{ url_for('convenor.unpublish_assignment', id=sub.id) }}">
@@ -217,14 +208,14 @@ _menu = \
         {% endif %}
 
         {% set recs = sub.ordered_assignments.all() %}
-
+        
         <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Manual reassignment</li>
+        <li class="dropdown-header">View feedback</li>
         {% for r in recs %}
-            {% set disabled = r.period.feedback_open %}
+            {% set disabled = not pclass.publish %}
             <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                    Period #{{ r.submission_period }}
+                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=r.id, preview=1, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                    <i class="fa fa-comments-o"></i> Period #{{ r.submission_period }}
                 </a>
             </li>
         {% else %}
@@ -232,13 +223,14 @@ _menu = \
                 <a>No periods</a>
             </li>
         {% endfor %}
-        
+
         <li role="separator" class="divider"></li>
-        <li class="dropdown-header">View feedback</li>
+        <li class="dropdown-header">Manual reassignment</li>
         {% for r in recs %}
-            <li>
-                <a href="{{ url_for('convenor.view_feedback', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                    Period #{{ r.submission_period }}
+            {% set disabled = r.period.feedback_open %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                    <i class="fa fa-wrench"></i> Period #{{ r.submission_period }}
                 </a>
             </li>
         {% else %}
@@ -275,72 +267,40 @@ _presentations = \
         {% set pclass = rec.owner.config.project_class %}
         {% set ns.count = ns.count + 1 %}
         <div>
-            <span class="label label-primary">#{{ rec.submission_period}}</span>
+            <span class="label label-primary">Pd. {{ rec.submission_period }}</span>
             {% if rec.period.has_deployed_schedule %}
                 {% set slot = rec.schedule_slot %}
-                {% if slot is not none %}
-                    <div class="dropdown assignment-label">
+                <div class="dropdown assignment-label">
+                    {% if slot is not none %}
                         <a class="label label-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
                             {{ slot.short_date_as_string }}
                             {{ slot.session_type_string }}
-                            {{ slot.room_full_name }}
                             <span class="caret"></span>
                         </a>
-                        <ul class="dropdown-menu">
-                            {% set disabled = not pclass.publish %}
-                            <li {% if disabled %}class="disabled"{% endif %}>
-                                <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=rec.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Show feedback</a>
-                            </li>
-                        </ul>
-                    </div>
-                    {% for a in slot.assessors %}
-                        {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
-                    {% endfor %}
-                {% else %}
-                    <div class="dropdown assignment-label">
+                    {% else %}
                         <a class="label label-warning btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
                             Not attending
                             <span class="caret"></span>
                         </a>
-                        <ul class="dropdown-menu">
-                            {% set ns = namespace(count=0) %}
-                            {% for feedback in rec.presentation_feedback %}
-                                {% set ns.count = ns.count + 1 %}
-                                <li>
-                                    <a href="{{ url_for('convenor.edit_presentation_feedback', id=feedback.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
-                                        Edit feedback from {{ feedback.assessor.user.name }}
-                                    </a>
-                                <li>
-                            {% endfor %}
-                            {% if ns.count > 0 %}
-                                <li role="separator" class="divider">
-                            {% endif %}
-                            {% set ns.count = 0 %}
-                            {% for feedback in rec.presentation_feedback %}
-                                {% set ns.count = ns.count + 1 %}
-                                <li>
-                                    <a href="{{ url_for('convenor.delete_presentation_feedback', id=feedback.id) }}">
-                                        Delete feedback from {{ feedback.assessor.user.name }}
-                                    </a>
-                                <li>
-                            {% endfor %}
-                            {% if ns.count > 0 %}
-                                <li role="separator" class="divider">
-                            {% endif %}
-                            <li>
-                                <a href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
-                                    Add new feedback
-                                </a>
-                            </li>
-                            {% if ns.count > 0 %}
-                                {% set disabled = not pclass.publish %}
-                                <li {% if disabled %}class="disabled"{% endif %}>
-                                    <a {% if not disabled %}href="{{ url_for('convenor.view_feedback', id=rec.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Show feedback</a>
-                                </li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                    {% if slot is not none and slot.feedback_state > slot.FEEDBACK_NOT_YET and rec.number_presentation_feedback == 0 %}
+                    {% endif %}
+                    <ul class="dropdown-menu">
+                        {% set disabled = not rec.can_assign_feedback %}
+                        <li {% if disabled %}class="disabled"{% endif %}>
+                            <a {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                                Add new feedback
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                {% if slot is not none %}
+                    {% set fns = namespace(flag=false) %}
+                    {% for a in slot.assessors %}
+                        {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
+                        {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
+                            {% set fns.flag = true %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if fns.flag and rec.number_presentation_feedback == 0 %}
                         <span class="label label-danger">Feedback required</span>
                     {% endif %}
                 {% endif %}

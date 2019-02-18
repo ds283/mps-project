@@ -13,7 +13,8 @@ from wtforms import SubmitField, DateField
 from wtforms.validators import InputRequired
 from wtforms_alchemy import QuerySelectField
 
-from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, BuildActiveFacultyName
+from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
+    GetPresentationAssessorFaculty, BuildActiveFacultyName
 from ..shared.forms.mixins import FeedbackMixin
 from functools import partial
 
@@ -59,12 +60,18 @@ def AssignMarkerFormFactory(live_project, pclass_id):
     return AssignMarkerForm
 
 
-def AssignPresentationFeedbackFormFactory(record_id):
+def AssignPresentationFeedbackFormFactory(record_id, slot_id):
+
+    if slot_id is None:
+        qf = partial(GetPresentationFeedbackFaculty, record_id)
+    else:
+        qf = partial(GetPresentationAssessorFaculty, record_id, slot_id)
 
     class AssignPresentationFeedbackForm(Form, FeedbackMixin):
 
+
         assessor = QuerySelectField('Assign feedback to assessor',
-                                    query_factory=partial(GetPresentationFeedbackFaculty, record_id),
+                                    query_factory=qf,
                                     get_label=BuildActiveFacultyName)
 
     return AssignPresentationFeedbackForm

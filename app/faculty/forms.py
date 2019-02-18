@@ -220,8 +220,6 @@ class SupervisorResponseMixin():
 
     save_changes = SubmitField('Save changes')
 
-    save_preview = SubmitField('Save changes and preview')
-
 
 class SupervisorResponseForm(Form, SupervisorResponseMixin):
 

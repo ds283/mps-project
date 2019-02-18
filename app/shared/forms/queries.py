@@ -16,7 +16,7 @@ from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
     Building, Room, PresentationFeedback, Module, FHEQ_Level, ScheduleSlot, PresentationSession, \
-    ScheduleAttempt
+    ScheduleAttempt, SubmissionRecord
 
 from ..utils import get_current_year
 
@@ -262,6 +262,22 @@ def GetPresentationFeedbackFaculty(record_id):
         .filter(PresentationFeedback.owner_id == record_id).distinct().subquery()
 
     return db.session.query(FacultyData) \
+        .join(User, User.id == FacultyData.id) \
+        .filter(User.active) \
+        .join(used_ids, used_ids.c.assessor_id == FacultyData.id, isouter=True) \
+        .filter(used_ids.c.assessor_id == None) \
+        .order_by(User.last_name, User.first_name)
+
+
+def GetPresentationAssessorFaculty(record_id, slot_id):
+    used_ids = db.session.query(PresentationFeedback.assessor_id) \
+        .filter(PresentationFeedback.owner_id == record_id).distinct().subquery()
+
+    slot = db.session.query(ScheduleSlot).filter_by(id=slot_id).one()
+    available_ids = slot.assessors.subquery()
+
+    return db.session.query(FacultyData) \
+        .join(available_ids, available_ids.c.id == FacultyData.id) \
         .join(User, User.id == FacultyData.id) \
         .filter(User.active) \
         .join(used_ids, used_ids.c.assessor_id == FacultyData.id, isouter=True) \

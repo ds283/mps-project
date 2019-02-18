@@ -75,9 +75,13 @@ theme_choices = [(0, 'Default'), (1, 'Flat'), (2, 'Dark')]
 semester_choices = [(0, 'Autumn Semester'), (1, 'Spring Semester'), (2, 'Autumn & Spring teaching'),
                     (3, 'All-year teaching')]
 
-# frequency of email summaires
+# frequency of email summaries
 email_freq_choices = [(1, '1 day'), (2, '2 days'), (3, '3 days'), (4, '4 days'), (5, '5 days'),
                       (6, '6 days'), (7, '7 days')]
+
+# auto-enroll selectors
+auto_enroll_year_choices = [(0, 'The year before students join the project'),
+                            (1, 'Every year for which students are eligible')]
 
 
 class ColouredLabelMixin():
@@ -2095,6 +2099,11 @@ class ProjectClass(db.Model, ColouredLabelMixin):
 
     # is project selection open to all students?
     selection_open_to_all = db.Column(db.Boolean())
+
+    # in which years should students be auto-enrolled as selectors?
+    AUTO_ENROLL_PREVIOUS_YEAR = 0
+    AUTO_ENROLL_ANY_YEAR = 1
+    auto_enroll_years = db.Column(db.Integer(), default=AUTO_ENROLL_PREVIOUS_YEAR)
 
 
     # OPTIONS
@@ -4698,6 +4707,10 @@ class SelectingStudent(db.Model):
 
     # retired flag
     retired = db.Column(db.Boolean(), index=True)
+
+    # enable conversion to SubmittingStudent at next rollover
+    # (eg. for Research Placement or JRAs we only want to convert is student's application is successful)
+    convert_to_submitter = db.Column(db.Boolean(), default=True)
 
     # key to ProjectClass config record that identifies this year and pclass
     config_id = db.Column(db.Integer(), db.ForeignKey('project_class_config.id'))

@@ -73,7 +73,7 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', meta='Submitter lifecycle state is not ready for rollover')
             return rollover_fail.apply_async(args=(task_id, convenor_id))
 
-        # find MatchingAttempt that contains allocations for this project class, if used
+        # find selected MatchingAttempt that contains allocations for this project class, if used
         match = None
         if config.do_matching:
             match = config.allocated_match
@@ -93,13 +93,16 @@ def register_rollover_tasks(celery):
         # these will attach all new SelectingStudent instances, and mop up any eligible
         # SubmittingStudent instances that weren't automatically created by conversion of
         # SelectingStudent instances
-        attach_group = group(attach_records.s(current_id, s.id, year) for s in StudentData.query.all())
+        students = db.session.query(StudentData) \
+            .join(User, User.id == StudentData.id) \
+            .filter(User.active == True).all()
+        attach_group = group(attach_records.s(current_id, s.id, year) for s in students)
 
         # build group of tasks to perform retirements: these will be done *last*
         retire_selectors = [retire_selector.s(s.id) for s in config.selecting_students]
         retire_submitters = [retire_submitter.s(s.id) for s in config.submitting_students]
 
-        retire_group = group(retire_selectors+retire_submitters)
+        retire_group = group(retire_selectors + retire_submitters)
 
         # build group of tasks to check for faculty re-enrollment after buyout or sabbatical
         reenroll_query = db.session.query(EnrollmentRecord.id) \

@@ -2032,6 +2032,7 @@ def add_pclass():
                             convenor=form.convenor.data,
                             coconvenors=coconvenors,
                             selection_open_to_all=form.selection_open_to_all.data,
+                            auto_enroll_years=form.auto_enroll_years.data,
                             programmes=form.programmes.data,
                             initial_choices=form.initial_choices.data,
                             switch_choices=form.switch_choices.data,
@@ -2142,6 +2143,7 @@ def edit_pclass(id):
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
         data.selection_open_to_all = form.selection_open_to_all.data
+        data.auto_enroll_years = form.auto_enroll_years.data
         data.programmes = form.programmes.data
         data.initial_choices = form.initial_choices.data
         data.switch_choices = form.switch_choices.data

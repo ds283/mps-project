@@ -47,7 +47,7 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules
 from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, \
-    matching_history_choices, solver_choices, session_choices, semester_choices
+    matching_history_choices, solver_choices, session_choices, semester_choices, auto_enroll_year_choices
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
@@ -400,7 +400,12 @@ class ProjectClassMixin():
                                            validators=[Optional()])
 
     selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',
-                                         description='Not normally required, but use for Research Placement projects')
+                                         description='By default, selectors are auto-enrolled based on their degree programme. '
+                                                     'If this option is selected then degree programme will not be considered '
+                                                     'when determining whether to auto-enroll a student.')
+
+    auto_enroll_years = RadioField('Auto enroll students as selectors in which years?',
+                                   choices=auto_enroll_year_choices, coerce=int)
 
     programmes = CheckboxQuerySelectMultipleField('Auto-enroll students from degree programmes',
                                                   query_factory=GetActiveDegreeProgrammes,

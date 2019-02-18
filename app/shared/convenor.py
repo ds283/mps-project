@@ -72,7 +72,6 @@ def add_liveproject(number, project, config_id, autocommit=False):
 
 
 def add_selector(student, config_id, autocommit=False):
-
     # get StudentData instance
     if isinstance(student, StudentData):
         item = student
@@ -84,7 +83,10 @@ def add_selector(student, config_id, autocommit=False):
 
     selector = SelectingStudent(config_id=config_id,
                                 student_id=item.id,
-                                retired=False)
+                                retired=False,
+                                convert_to_submitter=True,
+                                submission_time=None,
+                                submission_IP=None)
     db.session.add(selector)
 
     if autocommit:

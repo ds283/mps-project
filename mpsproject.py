@@ -10,7 +10,8 @@
 
 from app import create_app, db
 from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
-    AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User
+    AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
+    SelectingStudent
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -104,6 +105,21 @@ def populate_schedule_tags():
     db.session.commit()
 
 
+def populate_new_fields():
+    pclasses = db.session.query(ProjectClass).all()
+
+    for pcl in pclasses:
+        if pcl.auto_enroll_years is None:
+            pcl.auto_enroll_years = ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
+
+    selectors = db.session.query(SelectingStudent).all()
+    for sel in selectors:
+        if sel.convert_to_submitter is None:
+            sel.convert_to_submitter = True
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
 with app.app_context():
@@ -145,6 +161,7 @@ with app.app_context():
     # populate_validation_data()
     # populate_email_options()
     # populate_schedule_tags()
+    populate_new_fields()
 
     db.session.commit()
 

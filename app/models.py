@@ -2624,6 +2624,11 @@ class ProjectClassConfig(db.Model):
 
 
     @property
+    def auto_enroll_years(self):
+        return self.project_class.auto_enroll_years
+
+
+    @property
     def supervisor_carryover(self):
         return self.project_class.supervisor_carryover
 

@@ -3172,10 +3172,41 @@ def student_make_all_confirms_pending(sid):
     return redirect(request.referrer)
 
 
+@convenor.route('/enable_conversion/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def enable_conversion(sid):
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not validate_is_convenor(sel.config.project_class):
+        return home_dashboard()
+
+    sel.convert_to_submitter = True
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/disable_conversion/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def disable_conversion(sid):
+    # sid is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not validate_is_convenor(sel.config.project_class):
+        return home_dashboard()
+
+    sel.convert_to_submitter = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @convenor.route('/student_clear_bookmarks/<int:sid>')
 @roles_accepted('faculty', 'admin', 'root')
 def student_clear_bookmarks(sid):
-
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
 

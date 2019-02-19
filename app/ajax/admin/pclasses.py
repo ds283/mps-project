@@ -150,7 +150,7 @@ _submissions = \
 """
 
 
-_configuration = \
+_timing = \
 """
 {% if p.start_level is not none %}
     <span class="label label-primary">Y{{ p.start_level.academic_year }}</span>
@@ -158,6 +158,18 @@ _configuration = \
     <span class="label label-danger">Start level missing</span>
 {% endif %}
 <span class="label label-default">extent: {{ p.extent }} yr</span>
+{% if p.selection_open_to_all %}
+    <span class="label label-default">enroll: open</span>
+{% else %}
+    <span class="label label-default">enroll: degree</span>
+{% endif %}
+{% if p.auto_enroll_years == p.AUTO_ENROLL_PREVIOUS_YEAR %}
+    <span class="label label-default">enroll: prev</span>
+{% elif p.auto_enroll_years == p.AUTO_ENROLL_ANY_YEAR %}
+    <span class="label label-default">enroll: any</span>
+{% else %}
+    <span class="label label-danger">enroll: unknown</span>
+{% endif %}
 """
 
 
@@ -180,10 +192,9 @@ _name = \
 
 
 def pclasses_data(classes):
-
     data = [{'name': render_template_string(_name, p=p),
              'options': render_template_string(_options, p=p),
-             'config': render_template_string(_configuration, p=p),
+             'timing': render_template_string(_timing, p=p),
              'cats': render_template_string(_workload, p=p),
              'submissions': render_template_string(_submissions, p=p),
              'popularity': render_template_string(_popularity, p=p),

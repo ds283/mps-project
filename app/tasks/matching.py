@@ -10,7 +10,7 @@
 
 from ..database import db
 from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
-    User, EnrollmentRecord, MatchingRecord, SelectionRecord
+    User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass
 
 from ..shared.sqlalchemy import get_count
 from ..task_queue import progress_update
@@ -79,11 +79,12 @@ def _enumerate_selectors(configs):
             .filter_by(retired=False, config_id=config.id).all()
 
         for item in selectors:
-
+            # decide what to do with this selector
             attach = False
             if item.has_submitted:
                 # always count selectors who have submitted choices
                 attach = True
+
             else:
                 if open_to_all and item.academic_year == config.start_year - 1:
                     # interpret failure to submit as lack of interest

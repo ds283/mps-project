@@ -2009,7 +2009,6 @@ def add_pclass():
     form = AddProjectClassForm(request.form)
 
     if form.validate_on_submit():
-
         # make sure convenor and coconvenors don't have overlap
         coconvenors = form.coconvenors.data
         if form.convenor.data in coconvenors:
@@ -2097,9 +2096,10 @@ def add_pclass():
         return redirect(url_for('admin.edit_project_classes'))
 
     else:
-
         if request.method == 'GET':
             form.number_assessors.data = current_app.config['DEFAULT_ASSESSORS']
+            form.require_confirm.data = True
+            form.uses_supervisor.data = True
             form.uses_marker.data = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')

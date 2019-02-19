@@ -16,7 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
-    SubmissionRecord, SubmissionPeriodRecord, add_notification, EmailNotification
+    SubmissionRecord, SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass
 
 from ..task_queue import progress_update
 
@@ -409,6 +409,9 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', meta='Could not load SelectingStudent record while converting selector records')
             return
 
+        if not selector.convert_to_submitter:
+            return
+
         if match_id is not None and match is None:
             self.update_state('FAILURE', meta='Could not load MatchingAttempt record while converting selector records')
             return
@@ -489,7 +492,6 @@ def register_rollover_tasks(celery):
 
                 elif selector.academic_year >= config.start_year:
                     if config.supervisor_carryover:
-
                         # if possible, we should carry over supervisor allocations from the previous year
                         prev_record = db.session.query(SubmittingStudent) \
                             .filter(SubmittingStudent.config_id == selector.config_id,
@@ -577,19 +579,20 @@ def register_rollover_tasks(celery):
 
         try:
             # generate selector records for students:
-            #  - if selection is open to all and this is the academic year before the project starts, or
-            #  - the student is on an appropriate programme and in a suitable academic year
-            if (config.selection_open_to_all and academic_year == config.start_year - 1) or \
-                    (config.start_year - 1 <= academic_year < config.start_year + config.extent - 1
-                     and student.programme in config.programmes):
+            #  - if student is an an appropriate academic year, either the year before the project first runs
+            #    or any year for the extent of the project, depending what auto-enroll settings are in force
+            #  - the student is on an appropirate programme or selection is open to all
+            if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
+                    and academic_year == config.start_year - 1) \
+                or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
+                        and config.start_year - 1 <= academic_year < config.start_year + config.extent - 1):
 
-                # check whether a SelectingStudent has already been generated for this student
-                # (eg. could happen if the task is accidentally run twice)
-
-                # check whether a SubmittingStudent has already been generated for this student
-                count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
-                if count == 0:
-                    add_selector(student, new_config_id, autocommit=False)
+                if config.selection_open_to_all or (student.programme in config.programmes):
+                    # check whether a SelectingStudent has already been generated for this student
+                    # (eg. could happen if the task is accidentally run twice)
+                    count = get_count(student.selecting.filter_by(retired=False, config_id=new_config_id))
+                    if count == 0:
+                        add_selector(student, new_config_id, autocommit=False)
 
 
             # generate submitter records for students, only if no existing submitter record exists
@@ -598,8 +601,11 @@ def register_rollover_tasks(celery):
                     and student.programme in config.programmes:
 
                 # check whether a SubmittingStudent has already been generated for this student
-                count = get_count(student.submitting.filter_by(retired=False, config_id=new_config_id))
-                if count == 0:
+                count_sub = get_count(student.submitting.filter_by(retired=False, config_id=new_config_id))
+                # check whether there is a SelectingStudent that has been marked to disable
+                count_disable = get_count(student.selecting.filter_by(retired=False, config_id=old_config_id,
+                                                                      convert_to_submitter=False))
+                if count_sub == 0 and count_disable == 0:
                     add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
 
             db.session.commit()

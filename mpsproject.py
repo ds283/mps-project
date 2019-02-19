@@ -161,7 +161,7 @@ with app.app_context():
     # populate_validation_data()
     # populate_email_options()
     # populate_schedule_tags()
-    populate_new_fields()
+    # populate_new_fields()
 
     db.session.commit()
 

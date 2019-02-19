@@ -74,11 +74,8 @@ def validate_project_open(config):
     :param config:
     :return:
     """
-
     if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-
         flash('{name} is not open for student selections.'.format(name=config.name), 'error')
-
         return False
 
     return True

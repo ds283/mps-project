@@ -28,6 +28,21 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+        
+        {% if student.convert_to_submitter %}
+            <li>
+                <a href="{{ url_for('convenor.disable_conversion', sid=student.id) }}">
+                    <i class="fa fa-times"></i> Disable conversion
+                </a>
+            </li>
+        {% else %}
+            <li>
+                <a href="{{ url_for('convenor.enable_conversion', sid=student.id) }}">
+                    <i class="fa fa-check"></i> Enable conversion
+                </a>
+            </li>
+        {% endif %}
+
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.has_bookmarks %}
             <li>
                 <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
@@ -194,10 +209,22 @@ _confirmations = \
 """
 
 
-def selectors_data(students, config):
+_name = \
+"""
+<a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+<div>
+{% if sel.convert_to_submitter %}
+    <span class="label label-success"><i class="fa fa-check"></i> Convert</span>
+{% else %}
+    <span class="label label-danger"><i class="fa fa-times"></i> Disable convert</span>
+{% endif %}
+</div>
+"""
 
+
+def selectors_data(students, config):
     data = [{'name': {
-                'display': s.student.user.name,
+                'display': render_template_string(_name, sel=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
              },
              'cohort': {

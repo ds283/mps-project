@@ -42,7 +42,7 @@
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <hr class="intro-divider">
                 Submission periods:
-                {% for p in pclass.periods %}
+                {% for p in config.periods %}
                     <span class="label label-primary">{{ p.display_name|safe }}</span>
                 {% else %}
                     <span class="label label-default">None</span>

@@ -43,37 +43,49 @@ def _element(user_id, current_user_id):
 @listens_for(User, 'before_insert')
 def _User_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
+        ids = db.session.query(User.id).filter_by(active=True).all()
+        for id in ids:
+            cache.delete_memoized(_element, target.id, id[0])
 
 
 @listens_for(User, 'before_update')
 def _User_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
+        ids = db.session.query(User.id).filter_by(active=True).all()
+        for id in ids:
+            cache.delete_memoized(_element, target.id, id[0])
 
 
 @listens_for(User, 'before_delete')
 def _User_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
+        ids = db.session.query(User.id).filter_by(active=True).all()
+        for id in ids:
+            cache.delete_memoized(_element, target.id, id[0])
 
 
 @listens_for(StudentData, 'before_insert')
 def _StudentData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
+        ids = db.session.query(User.id).filter_by(active=True).all()
+        for id in ids:
+            cache.delete_memoized(_element, target.id, id[0])
 
 
 @listens_for(StudentData, 'before_update')
 def _StudentData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
+        ids = db.session.query(User.id).filter_by(active=True).all()
+        for id in ids:
+            cache.delete_memoized(_element, target.id, id[0])
 
 
 @listens_for(StudentData, 'before_delete')
 def _StudentData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.id)
+        ids = db.session.query(User.id).filter_by(active=True).all()
+        for id in ids:
+            cache.delete_memoized(_element, target.id, id[0])
 
 
 def build_student_data(student_ids, current_user_id):

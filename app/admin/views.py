@@ -2101,6 +2101,8 @@ def add_pclass():
             form.require_confirm.data = True
             form.uses_supervisor.data = True
             form.uses_marker.data = True
+            form.auto_enroll_years.data = ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
+            form.do_matching.data = True
 
     return render_template('admin/edit_project_class.html', pclass_form=form, title='Add new project class')
 

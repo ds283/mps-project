@@ -409,9 +409,15 @@ class ProjectClassMixin():
 
     programmes = CheckboxQuerySelectMultipleField('Auto-enroll students from degree programmes',
                                                   query_factory=GetActiveDegreeProgrammes,
-                                                  get_label=BuildDegreeProgrammeName,
-                                                  validators=[InputRequired(
-                                                      message='At least one degree programme should be selected')])
+                                                  get_label=BuildDegreeProgrammeName)
+
+    @staticmethod
+    def validate_programmes(form, field):
+        if form.selection_open_to_all.data:
+            return
+
+        if field.data is None or (isinstance(field.data, list) and len(field.data) == 0):
+            raise ValidationError('At least one degree programme should be selected')
 
 
 class AddProjectClassForm(Form, ProjectClassMixin):

@@ -43,7 +43,7 @@
                 <hr class="intro-divider">
                 Submission periods:
                 {% for p in pclass.periods %}
-                    <span class="label label-primary">{{ p.display_name() }}</span>
+                    <span class="label label-primary">{{ p.display_name|safe }}</span>
                 {% else %}
                     <span class="label label-default">None</span>
                 {% endfor %}
@@ -112,7 +112,7 @@
                     {% set state = config.submitter_lifecycle %}
                     {% if state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
 
-                        {{ project_activity(config, feedback_form) }}
+                        {{ project_activity(config, feedback_form, today) }}
 
                     {% elif state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
 

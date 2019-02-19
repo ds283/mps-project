@@ -1,7 +1,7 @@
 {% from "faculty/dashboard/selector_card.html" import selector_card %}
 {% from "faculty/dashboard/submitter_card.html" import submitter_card %}
 
-{% macro pclass_card(config, live_projects) %}
+{% macro pclass_card(config, live_projects, today) %}
 
     {% set pclass = config.project_class %}
     {% set sel_state = config.selector_lifecycle %}
@@ -53,7 +53,7 @@
         {% endif %}
 
         {% for n in range(config.submissions) %}
-            {{ submitter_card(config, sub_state, n, current_user) }}
+            {{ submitter_card(config, sub_state, n, current_user, today) }}
         {% endfor %}
     </div>
 

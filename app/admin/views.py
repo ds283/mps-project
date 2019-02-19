@@ -2068,19 +2068,20 @@ def add_pclass():
         # generate submission period records, if any
         # if this is a brand new project then we won't create anything -- that will have to be done
         # later, when the submission periods are defined
-        for template in config.template_periods.all():
+        for t in config.template_periods.all():
             period = SubmissionPeriodRecord(config_id=config.id,
-                                            name=template.name,
-                                            has_presentation=template.has_presentation,
-                                            lecture_capture=template.lecture_capture,
-                                            collect_presentation_feedback=template.collect_presentation_feedback,
-                                            number_assessors=template.number_assessors,
-                                            max_group_size=template.max_group_size,
-                                            morning_session=template.morning_session,
-                                            afternoon_session=template.afternoon_session,
-                                            talk_format=template.talk_format,
+                                            name=t.name,
+                                            start_date=t.start_date,
+                                            has_presentation=t.has_presentation,
+                                            lecture_capture=t.lecture_capture,
+                                            collect_presentation_feedback=t.collect_presentation_feedback,
+                                            number_assessors=t.number_assessors,
+                                            max_group_size=t.max_group_size,
+                                            morning_session=t.morning_session,
+                                            afternoon_session=t.afternoon_session,
+                                            talk_format=t.talk_format,
                                             retired=False,
-                                            submission_period=template.period,
+                                            submission_period=t.period,
                                             feedback_open=False,
                                             feedback_id=None,
                                             feedback_timestamp=None,
@@ -2291,15 +2292,16 @@ def regenerate_period_records(id):
     config = db.session.query(ProjectClassConfig) \
         .filter(ProjectClassConfig.pclass_id == data.id, ProjectClassConfig.year == current_year).first()
 
-    templates = config.template_periods.all()
+    ts = config.template_periods.all()
     current = config.periods.order_by(SubmissionPeriodRecord.submission_period.asc()).all()
 
-    while len(templates) > 0 and len(current) > 0:
-        t = templates.pop(0)
+    while len(ts) > 0 and len(current) > 0:
+        t = ts.pop(0)
         c = current.pop(0)
 
         c.submission_period = t.period
         c.name = t.name
+        c.start_date = t.start_date
         c.has_presentation = t.has_presentation
         c.lecture_capture = t.lecture_capture
         c.collect_presentation_feedback = t.collect_presentation_feedback
@@ -2310,11 +2312,12 @@ def regenerate_period_records(id):
         c.talk_format = t.talk_format
 
     # do we need to generate new records?
-    while len(templates) > 0:
-        t = templates.pop(0)
+    while len(ts) > 0:
+        t = ts.pop(0)
 
         period = SubmissionPeriodRecord(config_id=config.id,
                                         name=t.name,
+                                        start_date=t.start_date,
                                         has_presentation=t.has_presentation,
                                         lecture_capture=t.lecture_capture,
                                         collect_presentation_feedback=t.collect_presentation_feedback,
@@ -2392,6 +2395,7 @@ def add_period(id):
             data = SubmissionPeriodDefinition(owner_id=pclass.id,
                                               period=pclass.submissions+1,
                                               name=form.name.data,
+                                              start_date=form.start_date.data,
                                               has_presentation=True,
                                               lecture_capture=form.lecture_capture.data,
                                               number_assessors=form.number_assessors.data,
@@ -2407,6 +2411,7 @@ def add_period(id):
             data = SubmissionPeriodDefinition(owner_id=pclass.id,
                                               period=pclass.submissions+1,
                                               name=form.name.data,
+                                              start_date=form.start_date.data,
                                               has_presentation=False,
                                               lecture_capture=False,
                                               number_assessors=None,
@@ -2443,6 +2448,7 @@ def edit_period(id):
 
     if form.validate_on_submit():
         data.name = form.name.data
+        data.start_date = form.start_date.data
         data.has_presentation = form.has_presentation.data
 
         if data.has_presentation:

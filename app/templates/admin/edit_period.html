@@ -1,7 +1,30 @@
 {% import "bootstrap/wtf.html" as wtf %}
-{% from "macros.html" import edit_data %}
+{% from "macros.html" import edit_data, date_field %}
 
 {% extends "security/index.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssmin", output="gen/bootstrap-datepicker3-min.css", "css/bootstrap-datepicker3.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-datepicker-min.js", "js/bootstrap-datepicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        $(document).ready(function () {
+            $('.date').datepicker({
+                format: 'dd/mm/yyyy',
+                todayHighlight: true
+            });
+        });
+    </script>
+{% endblock %}
 
 {% block title %}
     {{ title }}
@@ -30,7 +53,10 @@
 
 {#        {{ wtf.form_errors(form) }}#}
 
-        {{ wtf.form_field(form.name) }}
+        <div class="well">
+            {{ wtf.form_field(form.name) }}
+            {{ date_field(form.start_date) }}
+        </div>
 
         <div class="well">
             {{ wtf.form_field(form.has_presentation) }}

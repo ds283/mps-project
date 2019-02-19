@@ -30,7 +30,7 @@ from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, 
 import app.ajax as ajax
 
 import re
-from datetime import datetime
+from datetime import datetime, date
 import parse
 
 
@@ -159,7 +159,7 @@ def dashboard():
             messages.append(message)
 
     return render_template('student/dashboard.html', enrolled_classes=pcs, enrollments=enrollments, pclasses=pclasses,
-                           messages=messages)
+                           messages=messages, today=date.today())
 
 
 @student.route('/browse_projects/<int:id>')

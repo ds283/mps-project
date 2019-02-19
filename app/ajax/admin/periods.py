@@ -60,10 +60,25 @@ _menu = \
 """
 
 
+_name = \
+"""
+{% if p.name %}
+    {{ p.name }}
+{% else %}
+    <span class="label label-default">None</span>
+{% endif %}
+{% if p.start_date %}
+    <div>
+        <span class="label label-info">Start: {{ p.start_date.strftime("%a %d %b %Y") }}</span>
+    </div>
+{% endif %}
+"""
+
+
 def periods_data(periods):
 
     data = [{'number': p.period,
-             'name': '<span class="label label-default">None</span>' if p.name is None else p.name,
+             'name': render_template_string(_name, p=p),
              'presentation': render_template_string(_presentation, p=p),
              'menu': render_template_string(_menu, period=p)} for p in periods]
 

@@ -93,7 +93,7 @@
 
                     {% for config, live_projects in enrollments %}
                         {% if pane == config.id|string %}
-                            {{ pclass_card(config, live_projects) }}
+                            {{ pclass_card(config, live_projects, today) }}
                         {% endif %}
                     {% endfor %}
 

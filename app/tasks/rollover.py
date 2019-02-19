@@ -27,6 +27,7 @@ from ..shared.sqlalchemy import get_count
 from celery import chain, group
 
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 
 def register_rollover_tasks(celery):
@@ -334,6 +335,12 @@ def register_rollover_tasks(celery):
 
         # generate a new ProjectClassConfig for this year
         try:
+            # update any start dates in SubmissionPeriodDefinitions
+            for t in old_config.template_periods.all():
+                if t.start_date is not None:
+                    t.start_date = t.start_date + relativedelta(years=1)
+            db.session.flush()
+
             new_config = ProjectClassConfig(year=new_year,
                                             pclass_id=pclass_id,
                                             convenor_id=convenor_id,
@@ -352,19 +359,20 @@ def register_rollover_tasks(celery):
             db.session.flush()
 
             # generate new submission periods
-            for template in old_config.template_periods.all():
+            for t in old_config.template_periods.all():
                 period = SubmissionPeriodRecord(config_id=new_config.id,
-                                                name=template.name,
-                                                has_presentation=template.has_presentation,
-                                                lecture_capture=template.lecture_capture,
-                                                collect_presentation_feedback=template.collect_presentation_feedback,
-                                                number_assessors=template.number_assessors,
-                                                max_group_size=template.max_group_size,
-                                                morning_session=template.morning_session,
-                                                afternoon_session=template.afternoon_session,
-                                                talk_format=template.talk_format,
+                                                name=t.name,
+                                                start_date=t.start_date,
+                                                has_presentation=t.has_presentation,
+                                                lecture_capture=t.lecture_capture,
+                                                collect_presentation_feedback=t.collect_presentation_feedback,
+                                                number_assessors=t.number_assessors,
+                                                max_group_size=t.max_group_size,
+                                                morning_session=t.morning_session,
+                                                afternoon_session=t.afternoon_session,
+                                                talk_format=t.talk_format,
                                                 retired=False,
-                                                submission_period=template.period,
+                                                submission_period=t.period,
                                                 feedback_open=False,
                                                 feedback_id=None,
                                                 feedback_timestamp=None,

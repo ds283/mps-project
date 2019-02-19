@@ -2311,6 +2311,7 @@ class ProjectClass(db.Model, ColouredLabelMixin):
                 data = SubmissionPeriodDefinition(owner_id=self.id,
                                                   period=1,
                                                   name=None,
+                                                  start_date=None,
                                                   has_presentation=self.uses_presentations,
                                                   collect_presentation_feedback=True,
                                                   creator_id=current_user.id,
@@ -2405,6 +2406,9 @@ class SubmissionPeriodDefinition(db.Model):
     # numerical submission period
     period = db.Column(db.Integer())
 
+    # optional start date - purely for UI purposes
+    start_date = db.Column(db.Date)
+
     # alternative textual name; can be left null if not used
     name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
@@ -2450,7 +2454,7 @@ class SubmissionPeriodDefinition(db.Model):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
-    # @property
+    @property
     def display_name(self):
         if self.name is not None and len(self.name) > 0:
             return self.name
@@ -2718,6 +2722,7 @@ class ProjectClassConfig(db.Model):
             # allow period record to be auto-generated
             period = SubmissionPeriodRecord(config_id=self.id,
                                             name=template.name,
+                                            start_date=template.start_date,
                                             has_presentation=template.has_presentation,
                                             lecture_capture=template.lecture_capture,
                                             collect_presentation_feedback=template.collect_presentation_feedback,
@@ -2954,6 +2959,9 @@ class SubmissionPeriodRecord(db.Model):
     # submission period
     submission_period = db.Column(db.Integer(), index=True)
 
+    # optional start date - purely for UI purposes
+    start_date = db.Column(db.Date)
+
     # alternative textual name for this period (eg. "Autumn Term", "Spring Term");
     # can be null if not used
     name = db.Column(db.String(DEFAULT_STRING_LENGTH))
@@ -3017,9 +3025,9 @@ class SubmissionPeriodRecord(db.Model):
     @property
     def display_name(self):
         if self.name is not None and len(self.name) > 0:
-            return self.name
+            return str(self.name).format(year1=self.config.year, year2=self.config.year+1)
 
-        return 'Submission Period #{n}'.format(n=self.submission_period)
+        return 'Submission Period #{n} '.format(n=self.submission_period)
 
 
     @property

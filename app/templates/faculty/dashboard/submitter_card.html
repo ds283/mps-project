@@ -2,7 +2,7 @@
 {% from "faculty/dashboard/assignments/marker.html" import marker_assignments %}
 {% from "faculty/dashboard/assignments/presentations.html" import presentation_assignments %}
 
-{% macro submitter_card(config, sub_state, n, current_user) %}
+{% macro submitter_card(config, sub_state, n, current_user, today) %}
     {% set period = config.get_period(n+1) %}
     {% if period %}
         <div class="panel
@@ -11,6 +11,8 @@
                     panel-default
                 {% elif period.feedback_open %}
                     panel-danger
+                {% elif period.start_date and period.start_date > today %}
+                    panel-default
                 {% else %}
                     panel-success
                 {% endif %}
@@ -44,7 +46,11 @@
                         {% if period.submission_period > config.submission_period %}
                             <p>Activity for this period has not yet commenced.</p>
                         {% elif period.submission_period == config.submission_period %}
-                            <p>Normal project activity is underway.</p>
+                            {% if period.start_date and period.start_date > today %}
+                                <p>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</p>
+                            {% else %}
+                                <p>Normal project activity is underway.</p>
+                            {% endif %}
                         {% else %}
                             <span class="label label-danger">Error: Submission period lifecycle inconsistent</span>
                         {% endif %}

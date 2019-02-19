@@ -446,6 +446,9 @@ class SubmissionPeriodMixin():
                                            'period, such as "Autumn Term"',
                        validators=[Optional()])
 
+    start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
+                           description='The year will increment when a rollover takes place')
+
     has_presentation = BooleanField('This submission period includes a presentation assessment')
 
     number_assessors = IntegerField('Number of assessors per group', default=2,

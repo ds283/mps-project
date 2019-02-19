@@ -225,7 +225,7 @@ def overview(id):
     return render_template('convenor/dashboard/overview.html', pane='overview',
                            golive_form=golive_form, issue_form=issue_form, feedback_form=feedback_form,
                            pclass=pclass, config=config, current_year=current_year, convenor_data=data,
-                           capacity_data=capacity_data)
+                           capacity_data=capacity_data, today=date.today())
 
 
 @convenor.route('/attached/<int:id>')

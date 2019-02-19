@@ -39,7 +39,7 @@ from ..shared.conversions import is_integer
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
-from datetime import datetime
+from datetime import datetime, date
 
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
@@ -1139,7 +1139,8 @@ def dashboard():
     approvals_data = get_approvals_data()
 
     return render_template('faculty/dashboard/dashboard.html', enrollments=enrollments, messages=messages,
-                           root_dash_data=root_dash_data, approvals_data=approvals_data, pane=pane)
+                           root_dash_data=root_dash_data, approvals_data=approvals_data, pane=pane,
+                           today=date.today())
 
 
 @faculty.route('/confirm_pclass/<int:id>')

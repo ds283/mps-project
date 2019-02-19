@@ -11,7 +11,7 @@
 from app import create_app, db
 from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
-    SelectingStudent
+    SelectingStudent, ProjectDescription, Project
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -120,6 +120,27 @@ def populate_new_fields():
     db.session.commit()
 
 
+def attach_JRA_projects():
+    rp_pclass = db.session.query(ProjectClass).filter_by(id=2).one()
+    JRA_pclass = db.session.query(ProjectClass).filter_by(id=6).one()
+
+    projects = db.session.query(Project).all()
+    for p in projects:
+        if rp_pclass in p.project_classes:
+            if JRA_pclass not in p.project_classes:
+                p.project_classes.append(JRA_pclass)
+
+    db.session.flush()
+
+    descriptions = db.session.query(ProjectDescription).all()
+    for d in descriptions:
+        if rp_pclass in d.project_classes:
+            if JRA_pclass not in d.project_classes:
+                d.project_classes.append(JRA_pclass)
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
 with app.app_context():
@@ -162,6 +183,7 @@ with app.app_context():
     # populate_email_options()
     # populate_schedule_tags()
     # populate_new_fields()
+    # attach_JRA_projects()
 
     db.session.commit()
 

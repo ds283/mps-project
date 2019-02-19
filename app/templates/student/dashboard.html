@@ -159,7 +159,7 @@
 
                         {% if sub %}
                             {% for n in range(config.submissions) %}
-                                {{ submission_card(config, sub, n) }}
+                                {{ submission_card(config, sub, n, today) }}
                             {% else %}
                                 <p>You are enrolled on this project class, but it does not have marked assessments.</p>
                             {% endfor %}

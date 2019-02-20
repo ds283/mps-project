@@ -33,7 +33,11 @@ You currently have {{ number_projects }} project{{ pl }} eligible for this proje
 {% for p in projects -%}
 - {{ p.name }}
 {% endfor -%}
+{% if number_projects == 1 -%}
+If you make no changes, this project will be made available to students
+{%- else -%}
 If you make no changes, these projects will be made available to students
+{%- endif %}
 in this cycle.
 {%- endif %}
 

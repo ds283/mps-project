@@ -553,7 +553,6 @@ def make_admin(id):
     :param id:
     :return:
     """
-
     user = User.query.get_or_404(id)
 
     if not user.is_active:
@@ -574,7 +573,6 @@ def remove_admin(id):
     :param id:
     :return:
     """
-
     user = User.query.get_or_404(id)
 
     if user.has_role('root'):
@@ -595,7 +593,6 @@ def make_root(id):
     :param id:
     :return:
     """
-
     user = User.query.get_or_404(id)
 
     if not user.is_active:
@@ -617,7 +614,6 @@ def remove_root(id):
     :param id:
     :return:
     """
-
     user = User.query.get_or_404(id)
 
     _datastore.remove_role_from_user(user, 'root')
@@ -1726,26 +1722,26 @@ def unretire_module(id):
 
 
 @admin.route('/edit_skills')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def edit_skills():
     """
     View for edit skills
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     return render_template('admin/transferable_skills/edit_skills.html', subpane='skills')
 
 
 @admin.route('/skills_ajax', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def skills_ajax():
     """
     Ajax data point for transferable skills table
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return jsonify({})
 
     skills = TransferableSkill.query.all()
@@ -1753,13 +1749,13 @@ def skills_ajax():
 
 
 @admin.route('/add_skill', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def add_skill():
     """
     View to create a new transferable skill
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     # check whether any skill groups exist, and raise an error if not
@@ -1786,14 +1782,14 @@ def add_skill():
 
 
 @admin.route('/edit_skill/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def edit_skill(id):
     """
     View to edit a transferable skill
     :param id:
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
@@ -1816,14 +1812,14 @@ def edit_skill(id):
 
 
 @admin.route('/activate_skill/<int:id>')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def activate_skill(id):
     """
     Make a transferable skill active
     :param id:
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
@@ -1834,14 +1830,14 @@ def activate_skill(id):
 
 
 @admin.route('/deactivate_skill/<int:id>')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def deactivate_skill(id):
     """
     Make a transferable skill inactive
     :param id:
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     skill = TransferableSkill.query.get_or_404(id)
@@ -1852,26 +1848,26 @@ def deactivate_skill(id):
 
 
 @admin.route('/edit_skill_groups')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def edit_skill_groups():
     """
     View for editing skill groups
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     return render_template('admin/transferable_skills/edit_skill_groups.html', subpane='groups')
 
 
 @admin.route('/skill_groups_ajax', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def skill_groups_ajax():
     """
     Ajax data point for skill groups table
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return jsonify({})
 
     groups = SkillGroup.query.all()
@@ -1879,13 +1875,13 @@ def skill_groups_ajax():
 
 
 @admin.route('/add_skill_group', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def add_skill_group():
     """
     Add a new skill group
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     form = AddSkillGroupForm(request.form)
@@ -1907,13 +1903,13 @@ def add_skill_group():
 
 
 @admin.route('/edit_skill_group/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def edit_skill_group(id):
     """
     Edit an existing skill group
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     group = SkillGroup.query.get_or_404(id)
@@ -1937,15 +1933,14 @@ def edit_skill_group(id):
 
 
 @admin.route('/activate_skill_group/<int:id>')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def activate_skill_group(id):
     """
     Make a transferable skill group active
     :param id:
     :return:
     """
-
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     group = SkillGroup.query.get_or_404(id)
@@ -1956,14 +1951,14 @@ def activate_skill_group(id):
 
 
 @admin.route('/deactivate_skill_group/<int:id>')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def deactivate_skill_group(id):
     """
     Make a transferable skill group inactive
     :param id:
     :return:
     """
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     group = SkillGroup.query.get_or_404(id)
@@ -2501,37 +2496,40 @@ def delete_period(id):
 
 
 @admin.route('/edit_supervisors')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def edit_supervisors():
     """
     View to list and edit supervisory roles
     :return:
     """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
 
     return render_template('admin/edit_supervisors.html')
 
 
 @admin.route('/supervisors_ajax', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def supervisors_ajax():
     """
     Ajax datapoint for supervisors table
     :return:
     """
+    if not validate_is_admin_or_convenor('edit_tags'):
+        return home_dashboard()
 
     roles = Supervisor.query.all()
     return ajax.admin.supervisors_data(roles)
 
 
 @admin.route('/add_supervisor', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def add_supervisor():
     """
     Create a new supervisory role
     :return:
     """
-
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     form = AddSupervisorForm(request.form)
@@ -2552,15 +2550,14 @@ def add_supervisor():
 
 
 @admin.route('/edit_supervisor/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def edit_supervisor(id):
     """
     Edit a supervisory role
     :param id:
     :return:
     """
-
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
@@ -2584,15 +2581,14 @@ def edit_supervisor(id):
 
 
 @admin.route('/activate_supervisor/<int:id>')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def activate_supervisor(id):
     """
     Make a supervisor active
     :param id:
     :return:
     """
-
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
@@ -2603,7 +2599,7 @@ def activate_supervisor(id):
 
 
 @admin.route('/deactivate_supervisor/<int:id>')
-@roles_accepted('admin', 'root', 'faculty')
+@roles_accepted('admin', 'root', 'faculty', 'edit_tags')
 def deactivate_supervisor(id):
     """
     Make a supervisor inactive
@@ -2611,7 +2607,7 @@ def deactivate_supervisor(id):
     :return:
     """
 
-    if not validate_is_admin_or_convenor():
+    if not validate_is_admin_or_convenor('edit_tags'):
         return home_dashboard()
 
     data = Supervisor.query.get_or_404(id)
@@ -2827,17 +2823,18 @@ def remove_role(user_id, role_id):
 
 
 @admin.route('/email_log', methods=['GET', 'POST'])
-@roles_required('root')
+@roles_accepted('root', 'view_email')
 def email_log():
     """
     Display a log of sent emails
     :return: 
     """
+    if current_user.has_role('root'):
+        form = EmailLogForm(request.form)
+    else:
+        form = None
 
-    form = EmailLogForm(request.form)
-
-    if form.validate_on_submit():
-
+    if form is not None and form.validate_on_submit():
         if form.delete_age.data is True:
             return redirect(url_for('admin.confirm_delete_email_cutoff', cutoff=(form.weeks.data)))
 
@@ -2845,19 +2842,18 @@ def email_log():
 
 
 @admin.route('/email_log_ajax', methods=['GET', 'POST'])
-@roles_required('root')
+@roles_accepted('root', 'view_email')
 def email_log_ajax():
     """
     Ajax data point for email log
     :return:
     """
-
     emails = db.session.query(EmailLog)
     return ajax.site.email_log_data(emails)
 
 
 @admin.route('/display_email/<int:id>')
-@roles_required('root')
+@roles_accepted('root', 'view_email')
 def display_email(id):
     """
     Display a specific email
@@ -2866,7 +2862,6 @@ def display_email(id):
     """
 
     email = EmailLog.query.get_or_404(id)
-
     return render_template('admin/display_email.html', email=email)
 
 
@@ -2878,7 +2873,6 @@ def delete_email(id):
     :param id:
     :return:
     """
-
     email = EmailLog.query.get_or_404(id)
     db.session.delete(email)
     db.session.commit()

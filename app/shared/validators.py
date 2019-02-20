@@ -95,12 +95,11 @@ def validate_project_class(pclass):
     return True
 
 
-def validate_is_admin_or_convenor():
+def validate_is_admin_or_convenor(*roles):
     """
     Validate that the logged-in user is an administrator or is a convenor for any project class
     :return:
     """
-
     # any user with an admin role is ok
     if current_user.has_role('admin') or current_user.has_role('root'):
         return True
@@ -108,6 +107,11 @@ def validate_is_admin_or_convenor():
     # faculty users who are also convenors are ok
     if current_user.has_role('faculty') and current_user.faculty_data.is_convenor:
         return True
+
+    # otherwise, check whether this user has any role in the supplied list of roles
+    for role in roles:
+        if current_user.has_role(role):
+            return True
 
     flash('This operation is available only to administrative users and project convenors.', 'error')
     return False

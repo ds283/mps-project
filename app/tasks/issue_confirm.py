@@ -70,6 +70,7 @@ def register_issue_confirm_tasks(celery):
             return None
 
         # select faculty that are enrolled on this particular project class
+        # (will exclude faculty that are eg. on sabbatical)
         eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id) \
             .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED).subquery()
 

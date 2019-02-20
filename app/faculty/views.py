@@ -394,10 +394,26 @@ def edit_project(id):
     return render_template('faculty/edit_project.html', project_form=form, project=proj, title='Edit project settings')
 
 
+@faculty.route('/remove_project_pclass/<int:proj_id>/<int:pclass_id>')
+@roles_required('faculty')
+def remove_project_pclass(proj_id, pclass_id):
+    # get project details
+    proj = Project.query.get_or_404(proj_id)
+    pclass = ProjectClass.query.get_or_404(pclass_id)
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(proj):
+        return redirect(request.referrer)
+
+    proj.remove_project_class(pclass)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @faculty.route('/activate_project/<int:id>')
 @roles_required('faculty')
 def activate_project(id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
@@ -414,7 +430,6 @@ def activate_project(id):
 @faculty.route('/deactivate_project/<int:id>')
 @roles_required('faculty')
 def deactivate_project(id):
-
     # get project details
     data = Project.query.get_or_404(id)
 
@@ -1055,12 +1070,8 @@ def dashboard():
     # check for unofferable projects and warn if any are present
     unofferable = current_user.faculty_data.projects_unofferable
     if unofferable > 0:
-        plural='s'
-        isare='are'
-
-        if unofferable == 1:
-            plural=''
-            isare='is'
+        plural = '' if unofferable == 1 else 's'
+        isare = '' if unofferable == 1 else 'are'
 
         flash('You have {n} project{plural} that {isare} active but cannot be offered to students. '
               'Please check your project list.'.format(n=unofferable, plural=plural, isare=isare),

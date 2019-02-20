@@ -3604,7 +3604,7 @@ class Project(db.Model):
 
     def remove_project_class(self, pclass):
         """
-        Remove ourselves from a given pclass
+        Remove ourselves from a given pclass, and cascade to our attached descriptions
         :param pclass:
         :return:
         """

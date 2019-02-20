@@ -3,7 +3,8 @@
 {% macro selector_card(config, sel_state, live_projects, current_user) %}
     {% set pclass = config.project_class %}
 
-    {% set nproj = current_user.faculty_data.number_projects_offered(pclass) %}
+    {% set offered_projects = current_user.faculty_data.projects_offered(pclass) %}
+    {% set nproj = offered_projects|length %}
     {% if nproj == 1 %}
         {% set nproj_plural = '' %}
     {% else %}
@@ -71,15 +72,15 @@
             <div class="row vertical-align">
                 <div class="col-xs-9">
                     {% if nproj == 0 %}
-                    <div class="has-error">
-                    <div class="help-block">
-                    <strong>
+                        <div class="has-error">
+                            <div class="help-block">
+                                <strong>
                     {% endif %}
-                    {{ nproj }} active project{{ nproj_plural }} attached to this project class.
+                    <p>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</p>
                     {% if nproj == 0 %}
-                    </strong>
-                    </div>
-                    </div>
+                                </strong>
+                            </div>
+                        </div>
                     {% endif %}
                 </div>
                 <div class="col-xs-3">
@@ -88,6 +89,34 @@
                     </span>
                 </div>
             </div>
+            {% if nproj > 0 %}
+                <hr class="intro-divider">
+                {% for project in offered_projects %}
+                    <div class="row vertical-align fac-project-table">
+                        <div class="col-xs-1">
+                            <strong>{{ loop.index }}</strong>
+                        </div>
+                        <div class="col-xs-8">
+                            {{ project.name }}
+                            {% if project.meeting_reqd == project.MEETING_REQUIRED %}
+                                <span class="label label-danger">Meeting required</span>
+                            {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
+                                <span class="label label-warning">Meeting optional</span>
+                            {% elif project.meeting_reqd == project.MEETING_NONE %}
+                                <span class="label label-success">Meeting not required</span>
+                            {% endif %}
+                            {{ project.group.make_label()|safe }}
+                            <span class="label label-info">{{ project.num_assessors(pclass) }} assessors</span>
+                        </div>
+                        <div class="col-xs-3">
+                            <div class="pull-right">
+                                <a href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-danger">Remove</a>
+                                <a href="{{ url_for('faculty.edit_project', id=project.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
 
             {# show details about projects on the live system #}
             {% set number_live_projects = live_projects.count() %}

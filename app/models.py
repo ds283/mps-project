@@ -3019,7 +3019,7 @@ class SubmissionPeriodRecord(db.Model):
         if self.name is not None and len(self.name) > 0:
             return str(self.name).format(year1=self.config.year, year2=self.config.year+1)
 
-        return 'Submission Period #{n} '.format(n=self.submission_period)
+        return 'Submission Period #{n}'.format(n=self.submission_period)
 
 
     @property

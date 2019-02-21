@@ -37,7 +37,8 @@
             </li>
         {% endif %}
         {% if enrollments %}
-            {% for config, live_projects in enrollments %}
+            {% for item in enrollments %}
+                {% set config = item['config'] %}
                 <li {% if pane == config.id|string %}class="active"{% endif %}>
                     <a href="{{ url_for('faculty.dashboard', pane=config.id) }}">
                         {% set selector_state = config.selector_lifecycle %}
@@ -91,9 +92,12 @@
             {% else %}
                 {% if enrollments and enrollments|length > 0 %}
 
-                    {% for config, live_projects in enrollments %}
+                    {% for item in enrollments %}
+                        {% set config = item['config'] %}
                         {% if pane == config.id|string %}
-                            {{ pclass_card(config, live_projects, today) }}
+                            {% set live_projects = item['projects'] %}
+                            {% set record = item['record'] %}
+                            {{ pclass_card(config, live_projects, record, today) }}
                         {% endif %}
                     {% endfor %}
 

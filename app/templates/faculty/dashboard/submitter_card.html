@@ -2,22 +2,35 @@
 {% from "faculty/dashboard/assignments/marker.html" import marker_assignments %}
 {% from "faculty/dashboard/assignments/presentations.html" import presentation_assignments %}
 
-{% macro submitter_card(config, sub_state, n, current_user, today) %}
+{% macro submitter_card(config, sub_state, record, n, current_user, today) %}
     {% set period = config.get_period(n+1) %}
+    {% set supv_sabbatical = record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+    {% set supv_exempt = record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+    {% set mark_sabbatical = record.marker_state == record.MARKER_SABBATICAL %}
+    {% set mark_exempt = record.marker_state == record.MARKER_EXEMPT %}
+    {% set pres_sabbatical = record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
+    {% set pres_exempt = record.presentations_state == record.PRESENTATIONS_EXEMPT %}
+
+    {% set is_sabbatical = supv_sabbatical and mark_sabbatical and pres_sabbatical %}
+    {% set is_exempt = supv_exempt and mark_exempt and pres_exempt %}
     {% if period %}
         <div class="panel
-            {% if n+1 == config.submission_period %}
-                {% if period.closed %}
-                    panel-default
-                {% elif period.feedback_open %}
-                    panel-danger
-                {% elif period.start_date and period.start_date > today %}
-                    panel-default
-                {% else %}
-                    panel-success
-                {% endif %}
-            {% else %}
+            {% if is_sabbatical or is_exempt %}
                 panel-default
+            {% else %}
+                {% if n+1 == config.submission_period %}
+                    {% if period.closed %}
+                        panel-default
+                    {% elif period.feedback_open %}
+                        panel-danger
+                    {% elif period.start_date and period.start_date > today %}
+                        panel-default
+                    {% else %}
+                        panel-success
+                    {% endif %}
+                {% else %}
+                    panel-default
+                {% endif %}
             {% endif %}
         ">
             <div class="panel-heading">
@@ -32,15 +45,17 @@
                     <p>Activity for this submission period is now closed.</p>
                 {% else %}
                     {% if period.feedback_open %}
-                        <div class="alert alert-warning">
-                            Marking and feedback for this submission period is now underway.
-                            Please enter feedback for each project you supervise or 2nd mark.
-                        </div>
-                        {% if period.feedback_deadline %}
-                            <p>The project convenor has set a deadline of
-                                <strong>{{ period.feedback_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
-                                <strong>{{ period.time_to_feedback_deadline }}</strong> from now.
-                            </p>
+                        {% if not is_sabbatical or not is_exempt %}
+                            <div class="alert alert-warning">
+                                Marking and feedback for this submission period is now underway.
+                                Please enter feedback for each project you supervise or 2nd mark.
+                            </div>
+                            {% if period.feedback_deadline %}
+                                <p>The project convenor has set a deadline of
+                                    <strong>{{ period.feedback_deadline.strftime("%a %d %b (%Y)") }}</strong>, which is
+                                    <strong>{{ period.time_to_feedback_deadline }}</strong> from now.
+                                </p>
+                            {% endif %}
                         {% endif %}
                     {% else %}
                         {% if period.submission_period > config.submission_period %}
@@ -61,17 +76,17 @@
                 {# show supervisor assignments #}
                 {% if config.uses_supervisor %}
                     <span class="dashboard-subtitle">Supervising</span>
-                    {{ supervisor_assignments(period, current_user.faculty_data.id) }}
+                    {{ supervisor_assignments(period, current_user.faculty_data.id, supv_sabbatical, supv_exempt, record.supervisor_reenroll) }}
                 {% endif %}
 
                 {# show marker assignments #}
                 {% if config.uses_marker %}
                     <span class="dashboard-subtitle">2nd marking</span>
-                    {{ marker_assignments(period, current_user.faculty_data.id) }}
+                    {{ marker_assignments(period, current_user.faculty_data.id, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
                 {% endif %}
 
                 {% if period.has_presentation %}
-                    {{ presentation_assignments(period, current_user.faculty_data.id) }}
+                    {{ presentation_assignments(period, current_user.faculty_data.id, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
                 {% endif %}
             </div>
         </div>

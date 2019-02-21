@@ -1,7 +1,7 @@
 {% from "faculty/dashboard/selector_card.html" import selector_card %}
 {% from "faculty/dashboard/submitter_card.html" import submitter_card %}
 
-{% macro pclass_card(config, live_projects, today) %}
+{% macro pclass_card(config, live_projects, record, today) %}
 
     {% set pclass = config.project_class %}
     {% set sel_state = config.selector_lifecycle %}
@@ -21,16 +21,33 @@
                 </a></span>
             </div>
             <div class="col-xs-6">
-                {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    <div class="pull-right">
-                        <span class="label label-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
-                        {% if config.live_deadline %}
-                            <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
-                        {% endif %}
-                    </div>
+                {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
+                    {% if sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                        <div class="pull-right">
+                            <span class="label label-success">Student selection open for {{ config.year+1 }}&ndash;{{ config.year+2 }}</span>
+                            {% if config.live_deadline %}
+                                <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="pull-right">
+                            <span class="label label-default">Student selection closed</span>
+                        </div>
+                    {% endif %}
                 {% else %}
                     <div class="pull-right">
-                        <span class="label label-default">Student selection closed</span>
+                        {% if record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                            <span class="label label-default">On sabbatical</span>
+                            {% if record.supervisor_reenroll is not none %}
+                                {% if pclass.reenroll_supervisors_early %}
+                                    <span class="label label-default">Re-enroll {{ record.supervisor_reenroll-1 }}</span>
+                                {% else %}
+                                    <span class="label label-default">Re-enroll {{ record.supervisor_reenroll }}</span>
+                                {% endif %}
+                            {% endif %}
+                        {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                            <span class="label label-default">Exempt from supervision</span>
+                        {% endif %}
                     </div>
                 {% endif %}
             </div>
@@ -49,11 +66,11 @@
         {% endif %}
 
         {% if pclass.uses_supervisor %}
-            {{ selector_card(config, sel_state, live_projects, current_user) }}
+            {{ selector_card(config, sel_state, live_projects, record, current_user) }}
         {% endif %}
 
         {% for n in range(config.submissions) %}
-            {{ submitter_card(config, sub_state, n, current_user, today) }}
+            {{ submitter_card(config, sub_state, record, n, current_user, today) }}
         {% endfor %}
     </div>
 

@@ -61,29 +61,33 @@ def format_time(seconds):
 
 
 def format_readable_time(seconds):
-
     if isinstance(seconds, timedelta):
         seconds = seconds.days*_day + seconds.seconds
+
+    negative = False
+    if seconds < 0:
+        negative = True
+        seconds = abs(seconds)
 
     if seconds > _week:
         weeks, seconds = divmod(seconds, _week)
         pl = '' if weeks == 1 else 's'
-        return '{weeks} week{pl}'.format(weeks=weeks, pl=pl)
+        return '{neg}{weeks} week{pl}'.format(weeks=weeks, pl=pl, neg='-' if negative else '')
 
     if seconds > _day:
         days, seconds = divmod(seconds, _day)
         pl = '' if days == 1 else 's'
-        return '{days} day{pl}'.format(days=days, pl=pl)
+        return '{neg}{days} day{pl}'.format(days=days, pl=pl, neg='-' if negative else '')
 
     if seconds > _hour:
         hours, seconds = divmod(seconds, _hour)
         pl = '' if hours == 1 else 's'
-        return '{hours} hour{pl}'.format(hours=hours, pl=pl)
+        return '{neg}{hours} hour{pl}'.format(hours=hours, pl=pl, neg='-' if negative else '')
 
     if seconds > _minute:
-        minutes, seconds = divmod(seconds, _minutes)
+        minutes, seconds = divmod(seconds, _minute)
         pl = '' if minutes == 1 else 's'
-        return '{minutes} minute{pl}'.format(minutes=minutes, pl=pl)
+        return '{neg}{minutes} minute{pl}'.format(minutes=minutes, pl=pl, neg='-' if negative else '')
 
     pl = '' if seconds == 1 else 's'
-    return '{seconds} second{pl}'.format(seconds=seconds, pl=pl)
+    return '{neg}{seconds} second{pl}'.format(seconds=seconds, pl=pl, neg='-' if negative else '')

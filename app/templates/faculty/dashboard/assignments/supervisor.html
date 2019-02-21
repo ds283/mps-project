@@ -1,4 +1,6 @@
-{% macro supervisor_assignments(period, id) %}
+{% from "faculty/dashboard/assignments/status.html" import no_assignment %}
+
+{% macro supervisor_assignments(period, id, is_sabbatical, is_exempt, reenroll_date) %}
     {% set records = period.get_supervisor_records(id) %}
     {% if records|length > 0 %}
         <table class="table table-striped">
@@ -78,6 +80,6 @@
             </tbody>
         </table>
     {% else %}
-        <p>No assignments</p>
+        {{ no_assignment(is_sabbatical, is_exempt, reenroll_date) }}
     {% endif %}
 {% endmacro %}

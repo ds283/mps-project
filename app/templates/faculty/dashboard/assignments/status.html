@@ -1,0 +1,14 @@
+{% macro no_assignment(is_sabbatical, is_exempt, reenroll_date) %}
+    {% if is_sabbatical %}
+        <div>
+            <span class="label label-default">On sabbatical</span>
+            {% if reenroll_date is not none %}
+                <span class="label label-default">Re-enroll {{ reenroll_date }}</span>
+            {% endif %}
+        </div>
+    {% elif is_exempt %}
+        <div><span class="label label-default">Exempt</span></div>
+    {% else %}
+        <p>No assignments</p>
+    {% endif %}
+{% endmacro %}

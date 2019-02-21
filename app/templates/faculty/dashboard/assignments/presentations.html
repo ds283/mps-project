@@ -1,4 +1,6 @@
-{% macro presentation_assignments(period, id) %}
+{% from "faculty/dashboard/assignments/status.html" import no_assignment %}
+
+{% macro presentation_assignments(period, id, is_sabbatical, is_exempt, reenroll_date) %}
     {% if period.has_deployed_schedule %}
         {% set schedule = period.deployed_schedule %}
         <div>
@@ -72,10 +74,10 @@
                 {% endif %}
             {% endfor %}
             {% if ns.count == 0 %}
-                <p>No assignments</p>
+                {{ no_assignment(is_sabbatical, is_exempt, reenroll_date) }}
             {% endif %}
         {% else %}
-            <p>No assignments</p>
+            {{ no_assignment(is_sabbatical, is_exempt, reenroll_date) }}
         {% endif %}
     {% else %}
         <div class="dashboard-subtitle">Presentation assessments</div>

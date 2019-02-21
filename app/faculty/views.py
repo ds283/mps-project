@@ -1090,7 +1090,7 @@ def dashboard():
             # get live projects belonging to both this config item and the active user
             live_projects = config.live_projects.filter_by(owner_id=current_user.id)
 
-            enrollments.append((config, live_projects))
+            enrollments.append({'config': config, 'projects': live_projects, 'record': record})
             valid_panes.append(str(config.id))
 
     # build list of system messages to consider displaying

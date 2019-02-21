@@ -1,7 +1,9 @@
 {% from "faculty/macros.html" import project_metadata %}
 
-{% macro selector_card(config, sel_state, live_projects, current_user) %}
+{% macro selector_card(config, sel_state, live_projects, record, current_user) %}
     {% set pclass = config.project_class %}
+    {% set is_sabbatical = record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+    {% set is_exempt = record.supervisor_state == record.SUPERVISOR_EXEMPT %}
 
     {% set offered_projects = current_user.faculty_data.projects_offered(pclass) %}
     {% set nproj = offered_projects|length %}
@@ -11,37 +13,46 @@
         {% set nproj_plural = 's' %}
     {% endif %}
     <div class="panel
-        {% if nproj == 0 %}
-            panel-danger
-        {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-            panel-success
-        {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+        {% if is_sabbatical or is_exempt %}
             panel-default
-        {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.confirmation_required %}
-            panel-warning
         {% else %}
-            panel-info
+            {% if nproj == 0 %}
+                panel-danger
+            {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                panel-success
+            {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
+                panel-default
+            {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.confirmation_required %}
+                panel-warning
+            {% else %}
+                panel-info
+            {% endif %}
         {% endif %}
         ">
 
         <div class="panel-heading">
-            <strong>
-                {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-                    Selections: Waiting to begin lifecycle for this year
-                {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                    Selections: Confirmation of projects required
-                {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-                    Selections: Status
-                {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                    Student selections are open
-                {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %}
-                    Student selections are now closed
-                {% endif %}
-            </strong>
+            {% if is_sabbatical %}
+                Student selections: on sabbatical
+            {% elif is_exempt %}
+                Student selections: exempt
+            {% else %}
+                <strong>
+                    {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
+                        Selections: Waiting to begin lifecycle for this year
+                    {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
+                        Selections: Confirmation of projects required
+                    {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
+                        Selections: Status
+                    {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                        Student selections are open
+                    {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %}
+                        Student selections are now closed
+                    {% endif %}
+                </strong>
+            {% endif %}
         </div>
 
         <div class="panel-body">
-
             {# show confirmation request if one is active #}
             {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and current_user.faculty_data in config.confirmation_required %}
                 <p>Please review your projects to ensure the descriptions are up-to-date,
@@ -71,13 +82,13 @@
             {# show basic details about this project class #}
             <div class="row vertical-align">
                 <div class="col-xs-9">
-                    {% if nproj == 0 %}
+                    {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
                         <div class="has-error">
                             <div class="help-block">
                                 <strong>
                     {% endif %}
                     <p>{{ nproj }} active project{{ nproj_plural }} attached to this project class.</p>
-                    {% if nproj == 0 %}
+                    {% if nproj == 0 and not (is_sabbatical or is_exempt) %}
                                 </strong>
                             </div>
                         </div>

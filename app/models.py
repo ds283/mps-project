@@ -1261,7 +1261,6 @@ class FacultyData(db.Model):
         :param pclass:
         :return:
         """
-
         # find enrollment record for this project class
         record = self.get_enrollment_record(pclass)
         if record is not None:
@@ -1276,9 +1275,13 @@ class FacultyData(db.Model):
         db.session.commit()
 
         celery = current_app.extensions['celery']
-        adjust_task = celery.tasks['app.tasks.availability.adjust']
 
-        adjust_task.apply_async(args=(record.id, _get_current_year()))
+        adjust_task = celery.tasks['app.tasks.availability.adjust']
+        delete_task = celery.tasks['app.tasks.issue_confirm.enrollment_deleted']
+
+        current_year = _get_current_year()
+        adjust_task.apply_async(args=(record.id, current_year))
+        delete_task.apply_async(args=(pclass.id, self.id, current_year))
 
 
     def add_enrollment(self, pclass):

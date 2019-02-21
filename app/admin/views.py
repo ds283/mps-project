@@ -939,6 +939,8 @@ def edit_enrollment(id):
         url = home_dashboard_url()
 
     if form.validate_on_submit():
+        old_supervisor_state = record.supervisor_state
+        old_presentations_state = record.presentations_state
 
         record.supervisor_state = form.supervisor_state.data
         record.supervisor_reenroll = None if record.supervisor_state != EnrollmentRecord.SUPERVISOR_SABBATICAL \
@@ -950,7 +952,6 @@ def edit_enrollment(id):
             else form.marker_reenroll.data
         record.marker_comment = form.marker_comment.data
 
-        old_presentations_state = record.presentations_state
         record.presentations_state = form.presentations_state.data
         record.presentations_reenroll = None if record.presentations_state != EnrollmentRecord.PRESENTATIONS_SABBATICAL \
             else form.presentations_reenroll.data
@@ -961,13 +962,19 @@ def edit_enrollment(id):
 
         db.session.commit()
 
-        # if enrollment state has changed for presentations, check whether we need to adjust our
+        celery = current_app.extensions['celery']
+
+        # if supervisor enrollment state has changed, check whether we need to adjust our
+        # project confirmation state
+        if old_supervisor_state != record.supervisor_state:
+            adjust_task = celery.tasks['app.tasks.issue_confirm.enroll_adjust']
+            adjust_task.apply_async(args=(record.id, old_supervisor_state, get_current_year()))
+
+        # if presentation enrollment state has changed, check whether we need to adjust our
         # availability status for any presentation assessment events.
         # To do that we kick off a background task via celery.
         if old_presentations_state != record.presentations_state:
-            celery = current_app.extensions['celery']
             adjust_task = celery.tasks['app.tasks.availability.adjust']
-
             adjust_task.apply_async(args=(record.id, get_current_year()))
 
         return redirect(url)

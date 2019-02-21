@@ -18,6 +18,8 @@ from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, Faculty
 
 from ..task_queue import progress_update, register_task
 
+from ..shared.sqlalchemy import get_count
+
 from celery import chain, group
 from celery.exceptions import Ignore
 
@@ -296,3 +298,73 @@ def register_issue_confirm_tasks(celery):
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def enroll_adjust(self, enroll_id, old_supervisor_state, current_year):
+        try:
+            record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        # load current configuration record for this project
+        config = db.session.query(ProjectClassConfig) \
+            .filter(ProjectClassConfig.pclass_id == record.pclass_id, ProjectClassConfig.year == current_year).first()
+
+        if record is None or config is None:
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        # if confirmations not required, nothing to do
+        if not config.require_confirm:
+            return None
+
+        # if confirmation requests not yet issued, nothing to do
+        if not config.requests_issued:
+            return None
+
+        # if project has gone live, confirmation requests are no longer needed
+        if config.live:
+            return None
+
+        # remove supervisors from confirmation list if no longer normally enrolled
+        if record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            if get_count(config.confirmation_required.filter_by(id=record.owner_id)) > 0:
+                config.confirmation_required.remove(record.owner)
+
+        if record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED \
+                and old_supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+            if get_count(config.confirmation_required.filter_by(id=record.owner_id)) == 0:
+                config.confirmation_required.append(record.owner)
+
+        db.session.commit()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def enrollment_deleted(self, pclass_id, faculty_id, current_year):
+        try:
+            faculty = db.session.query(FacultyData).filter_by(id=faculty_id).first()
+            config = db.session.query(ProjectClassConfig) \
+                .filter(ProjectClassConfig.pclass_id == pclass_id, ProjectClassConfig.year == current_year).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if faculty is None or config is None:
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+            # if confirmations not required, nothing to do
+        if not config.require_confirm:
+            return None
+
+            # if confirmation requests not yet issued, nothing to do
+        if not config.requests_issued:
+            return None
+
+            # if project has gone live, confirmation requests are no longer needed
+        if config.live:
+            return None
+
+        if get_count(config.confirmation_required.filter_by(id=faculty_id)) > 0:
+            config.confirmation_required.remove(faculty)
+            db.session.commit()

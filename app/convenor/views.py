@@ -3971,7 +3971,6 @@ def faculty_workload(id):
 @convenor.route('faculty_workload_ajax/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def faculty_workload_ajax(id):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -4068,7 +4067,6 @@ def faculty_workload_ajax(id):
 @convenor.route('/manual_assign/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def manual_assign(id):
-
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 

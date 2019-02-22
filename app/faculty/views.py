@@ -1116,7 +1116,7 @@ def dashboard():
         if current_user.has_role('root'):
             pane = 'system'
         elif len(enrollments) > 0:
-            c, lp = enrollments[0]
+            c = enrollments[0]['config']
             pane = c.id
 
     if pane == 'system':

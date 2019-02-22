@@ -3846,6 +3846,9 @@ class Project(db.Model):
         :param pclass:
         :return:
         """
+        if pclass is None:
+            return None
+
         desc = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
         if desc is not None:
             return desc

@@ -231,6 +231,10 @@ def create_app():
 
     @app.template_filter('dealingwithdollars')
     def dealingwithdollars(latex_string):
+        if latex_string is None:
+            return r'<div class="alert alert-danger">An empty string was supplied. ' \
+                   r'Please check your project description.</div>'
+
         splat = list(latex_string)  # Splits string into list of characters
         dollar_inds = [i for i in range(0, len(splat)) if splat[i] == "$"]  # Finds indices of all dollar signs
         display_inds = []  # Less pythonic than list comprehension, but now inline_inds can exclude double dollar signs

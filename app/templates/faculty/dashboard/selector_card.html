@@ -40,7 +40,11 @@
                     {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
                         Selections: Waiting to begin lifecycle for this year
                     {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                        Selections: Confirmation of projects required
+                        {% if current_user.faculty_data in config.confirmation_required %}
+                            Selections: Confirmation of projects required
+                        {% else %}
+                            Selections: Project confirmations underway &mdash; thanks for your response
+                        {% endif %}
                     {% elif sel_state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
                         Selections: Status
                     {% elif sel_state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}

@@ -1066,7 +1066,6 @@ def dashboard():
     Render the dashboard for a faculty user
     :return:
     """
-
     # check for unofferable projects and warn if any are present
     unofferable = current_user.faculty_data.projects_unofferable
     if unofferable > 0:
@@ -1081,17 +1080,40 @@ def dashboard():
     enrollments = []
     valid_panes = []
     for record in current_user.faculty_data.ordered_enrollments:
-        if ((record.pclass.uses_supervisor and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
-            or (record.pclass.uses_marker and record.marker_state == EnrollmentRecord.MARKER_ENROLLED)
-            or (record.pclass.uses_presentations and record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)) \
-                and record.pclass.active and record.pclass.publish:
-            config = record.pclass.configs.order_by(ProjectClassConfig.year.desc()).first()
+        pclass = record.pclass
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=pclass.id) \
+            .order_by(ProjectClassConfig.year.desc()).first()
 
-            # get live projects belonging to both this config item and the active user
-            live_projects = config.live_projects.filter_by(owner_id=current_user.id)
+        if pclass.active and pclass.publish and config is not None:
+            include = False
 
-            enrollments.append({'config': config, 'projects': live_projects, 'record': record})
-            valid_panes.append(str(config.id))
+            if (pclass.uses_supervisor and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
+                    or (pclass.uses_marker and record.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
+                    or (pclass.uses_presentations and record.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED):
+                include = True
+
+            else:
+                for n in range(config.submissions):
+                    period = config.get_period(n+1)
+
+                    supv_records = period.get_supervisor_records(current_user.id)
+                    mark_records = period.get_marker_records(current_user.id)
+                    pres_slots = period.get_faculty_presentation_slots(current_user.id) \
+                        if (period.has_presentation and period.has_deployed_schedule) else []
+
+                    if (pclass.uses_supervisor and len(supv_records) > 0) \
+                            or (pclass.uses_marker and len(mark_records) > 0) \
+                            or (pclass.uses_presentations and len(pres_slots) > 0):
+                        include = True
+                        break
+
+            if include:
+                # get live projects belonging to both this config item and the active user
+                live_projects = config.live_projects.filter_by(owner_id=current_user.id)
+
+                enrollments.append({'config': config, 'projects': live_projects, 'record': record})
+                valid_panes.append(str(config.id))
 
     # build list of system messages to consider displaying
     messages = []

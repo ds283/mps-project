@@ -2,8 +2,12 @@
 {% from "faculty/dashboard/assignments/marker.html" import marker_assignments %}
 {% from "faculty/dashboard/assignments/presentations.html" import presentation_assignments %}
 
-{% macro submitter_card(config, sub_state, record, n, current_user, today) %}
+{% macro submitter_card(data, sub_state, n, current_user, today) %}
+    {% set config = data['config'] %}
+    {% set record = data['record'] %}
+    {% set live_projects = data['projects'] %}
     {% set period = config.get_period(n+1) %}
+
     {% set supv_sabbatical = record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
     {% set supv_exempt = record.supervisor_state == record.SUPERVISOR_EXEMPT %}
     {% set mark_sabbatical = record.marker_state == record.MARKER_SABBATICAL %}

@@ -1,6 +1,10 @@
 {% from "faculty/macros.html" import project_metadata %}
 
-{% macro selector_card(config, sel_state, live_projects, record, current_user) %}
+{% macro selector_card(data, sel_state, current_user) %}
+    {% set config = data['config'] %}
+    {% set record = data['record'] %}
+    {% set live_projects = data['projects'] %}
+
     {% set pclass = config.project_class %}
     {% set is_sabbatical = record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
     {% set is_exempt = record.supervisor_state == record.SUPERVISOR_EXEMPT %}

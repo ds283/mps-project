@@ -97,7 +97,7 @@
                         {% if pane == config.id|string %}
                             {% set live_projects = item['projects'] %}
                             {% set record = item['record'] %}
-                            {{ pclass_card(config, live_projects, record, today) }}
+                            {{ pclass_card(item, today) }}
                         {% endif %}
                     {% endfor %}
 

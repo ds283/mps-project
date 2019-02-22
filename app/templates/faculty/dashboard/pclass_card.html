@@ -1,11 +1,13 @@
 {% from "faculty/dashboard/selector_card.html" import selector_card %}
 {% from "faculty/dashboard/submitter_card.html" import submitter_card %}
 
-{% macro pclass_card(config, live_projects, record, today) %}
+{% macro pclass_card(data, today) %}
 
+    {% set config = data['config'] %}
     {% set pclass = config.project_class %}
     {% set sel_state = config.selector_lifecycle %}
     {% set sub_state = config.submitter_lifecycle %}
+    {% set record = data['record'] %}
 
     <div class="well">
         <div class="row vertical-align">
@@ -66,11 +68,11 @@
         {% endif %}
 
         {% if pclass.uses_supervisor %}
-            {{ selector_card(config, sel_state, live_projects, record, current_user) }}
+            {{ selector_card(data, sel_state, current_user) }}
         {% endif %}
 
         {% for n in range(config.submissions) %}
-            {{ submitter_card(config, sub_state, record, n, current_user, today) }}
+            {{ submitter_card(data, sub_state, n, current_user, today) }}
         {% endfor %}
     </div>
 

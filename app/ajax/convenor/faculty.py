@@ -49,7 +49,16 @@ _golive = \
             <span class="label label-warning"><i class="fa fa-times"></i> Outstanding</span>
         {% else %}
             {% if userdata.is_enrolled(pclass) %}
-                <span class="label label-success"><i class="fa fa-check"></i> Confirmed</span>
+                {% set record = userdata.get_enrollment_record(pclass.id) %}
+                {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
+                    <span class="label label-success"><i class="fa fa-check"></i> Confirmed</span>
+                {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
+                    <span class="label label-default"><i class="fa fa-check"></i> Sabbatical</span>
+                {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
+                    <span class="label label-default"><i class="fa fa-check"></i> Exempt</span>
+                {% else %}
+                    <span class="label label-danger">Unknown</span>
+                {% endif %}
             {% else %}
                 <span class="label label-default">Not enrolled</span>
             {% endif %}

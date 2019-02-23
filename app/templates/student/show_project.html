@@ -192,7 +192,7 @@
                                         {% set modules = desc.ordered_modules.all() if desc is not none else none%}
                                         {% if modules and modules|length > 0 %}
                                             <div class="row sm-gap-below vertical-top">
-                                                <div class="col-xs-3">Pre-requisites</div>
+                                                <div class="col-xs-3">Recommended modules</div>
                                                 <div class="col-xs-9">
                                                     {% for module in modules %}
                                                         {% if module.active %}
@@ -200,8 +200,8 @@
                                                         {% endif %}
                                                     {% endfor %}
                                                     {% if sel and desc %}
-                                                        {% if not sel.satisfies_prerequisites(desc) %}
-                                                            <p>This project has pre-requisites that are not available
+                                                        {% if not sel.satisfies_recommended(desc) %}
+                                                            <p>This project has recommended modules that are not available
                                                             on your programme. This does not prevent you from applying for
                                                             the project, but you will need to discuss its suitability
                                                             with the supervisor.</p>

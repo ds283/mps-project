@@ -64,7 +64,7 @@
                                         <a class="btn btn-warning dropdown-toggle"
                                                 type="button" data-toggle="dropdown">
                                             Deconfirm
-                                            {% if not sel.satisfies_prerequisites(project) %}
+                                            {% if not sel.satisfies_recommended(project) %}
                                                 <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                             {% endif %}
                                             <span class="caret"></span>
@@ -139,7 +139,7 @@
                                         <a class="btn btn-success dropdown-toggle"
                                                 type="button" data-toggle="dropdown">
                                             Confirm
-                                            {% if not sel.satisfies_prerequisites(project) %}
+                                            {% if not sel.satisfies_recommended(project) %}
                                                 <i class="fa fa-exclamation-triangle" style="color:white;"></i>
                                             {% endif %}
                                             <span class="caret"></span>

@@ -30,7 +30,7 @@
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     {{ sel.student.user.name }}
-                                    {% if not sel.satisfies_prerequisites(project) %}
+                                    {% if not sel.satisfies_recommended(project) %}
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                     {% endif %}
                                 </div>
@@ -93,7 +93,7 @@
                             <div class="row vertical-align confirmation-table">
                                 <div class="col-xs-4">
                                     {{ sel.student.user.name }}
-                                    {% if not sel.satisfies_prerequisites(project) %}
+                                    {% if not sel.satisfies_recommended(project) %}
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                     {% endif %}
                                 </div>

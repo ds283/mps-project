@@ -30,14 +30,14 @@ search box in the top-right, or by applying filters for keywords
 and research groups in the box labelled "Filters".
 
 Each project has a description, and a number of key facts that detail
-pre-requisite modules, supervision arrangements and subject information.
-If you do meet the pre-requisites then you can still apply for the project,
-but you should make arrangements to discuss with the supervisor beforehand.
-Some project descriptions may include popularity indicators. You can use
-these to get some sense of how many other students are interested in
-a project, and therefore whether it is likely to be oversubscribed.
-The popularity indicators may not be available until enough data has been
-collected.
+recommended modules, supervision arrangements and subject information.
+If you have not taken the recommended modules then you can still apply
+for the project, but you should make arrangements to discuss with the
+supervisor beforehand. Some project descriptions may include popularity
+indicators. You can use these to get some sense of how many other students
+are interested in a project, and therefore whether it is likely to be
+oversubscribed. The popularity indicators may not be available until enough
+data has been collected.
 
 Use the "bookmark" function to keep track of projects in which you
 are interested. Bookmarked projects appear on your dashboard for quick

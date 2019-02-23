@@ -171,11 +171,11 @@
                                     {# TODO: understand why 'display: inline-block;' in .faculty-confirm-button is not respected #}
                                     {#  for some reason, we need the explicit stlye attribute #}
                                     <div class="dropdown faculty-confirm-button" style="display: inline-block;">
-                                        {% set prerequisites = sel.satisfies_prerequisites(project) %}
-                                        <a class="label {% if prerequisites %}label-success{% else %}label-warning{% endif %} dropdown-toggle"
+                                        {% set has_recommended = sel.satisfies_recommended(project) %}
+                                        <a class="label {% if has_recommended %}label-success{% else %}label-warning{% endif %} dropdown-toggle"
                                                 type="button" data-toggle="dropdown">
                                             {{ sel.student.user.name }}
-                                            {% if not prerequisites %}
+                                            {% if not has_recommended %}
                                                 <i class="fa fa-exclamation-triangle" style="color:red;"></i>
                                             {% endif %}
                                             <span class="caret"></span>

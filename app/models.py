@@ -3962,10 +3962,10 @@ def _ProjectDescription_is_valid(id):
             errors['capacity'] = 'Capacity is zero or unset, but enforcement is enabled for ' \
                                  'parent project'
 
-    # CONSTRAINT 3 - All tagged pre-requisite modules should be valid
+    # CONSTRAINT 3 - All tagged recommended modules should be valid
     for module in obj.modules:
         if not obj.module_available(module.id):
-            errors[('module', module.id)] = 'Tagged pre-requisite module "{name}" is not available for this ' \
+            errors[('module', module.id)] = 'Tagged recommended module "{name}" is not available for this ' \
                                             'description'.format(name=module.name)
 
     if len(errors) > 0 or len(warnings) > 0:
@@ -4010,7 +4010,7 @@ class ProjectDescription(db.Model):
     # maximum number of students
     capacity = db.Column(db.Integer())
 
-    # tagged pre-requisite modules
+    # tagged recommended modules
     modules = db.relationship('Module', secondary=description_to_modules, lazy='dynamic',
                               backref=db.backref('tagged_descriptions', lazy='dynamic'))
 
@@ -4215,7 +4215,7 @@ class LiveProject(db.Model):
     programmes = db.relationship('DegreeProgramme', secondary=live_project_programmes, lazy='dynamic',
                                  backref=db.backref('live_projects', lazy='dynamic'))
 
-    # tagged pre-requisite modules
+    # tagged recommended modules
     modules = db.relationship('Module', secondary=live_project_to_modules, lazy='dynamic',
                               backref=db.backref('tagged_live_projects', lazy='dynamic'))
 
@@ -4288,9 +4288,9 @@ class LiveProject(db.Model):
         :param sel:
         :return:
         """
-        # if student doesn't satisfy pre-requisites, sign-off is required by default whether or not
+        # if student doesn't satisfy recommended modules, sign-off is required by default whether or not
         # the project/owner settings require sign-off
-        if not sel.satisfies_prerequisites(self) and not self.is_confirmed(sel):
+        if not sel.satisfies_recommended(self) and not self.is_confirmed(sel):
             return False
 
         # if project doesn't require sign off, it is always available
@@ -4927,7 +4927,7 @@ class SelectingStudent(db.Model):
         return None
 
 
-    def satisfies_prerequisites(self, desc):
+    def satisfies_recommended(self, desc):
         if get_count(desc.modules) == 0:
             return True
 

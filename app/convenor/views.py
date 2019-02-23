@@ -132,7 +132,7 @@ _desc_menu = \
             </li>
             <li>
                 <a href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-cogs"></i> Module pre-requisites...
+                    <i class="fa fa-cogs"></i> Recommended modules...
                 </a>
             </li>
             <li>
@@ -1900,7 +1900,7 @@ def description_modules(did, pclass_id, level_id=None):
     levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
 
     return render_template('convenor/description_modules.html', project=desc.parent, desc=desc, form=form,
-                           pclass_id=pclass_id, title='Attach pre-requisite modules', levels=levels, create=create,
+                           pclass_id=pclass_id, title='Attach recommended modules', levels=levels, create=create,
                            modules=modules, level_id=level_id)
 
 

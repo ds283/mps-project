@@ -30,7 +30,7 @@ _pclasses = \
 {% endif %}
 {% if d.has_modules %}
     <p></p>
-    <span class="label label-primary"><i class="fa fa-exclamation-circle"></i> Has pre-requisites</span>
+    <span class="label label-primary"><i class="fa fa-exclamation-circle"></i> Has recommended modules</span>
 {% endif %}
 """
 

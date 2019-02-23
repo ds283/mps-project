@@ -129,7 +129,7 @@ _desc_menu = \
         </li>
             <li>
                 <a href="{{ url_for('faculty.description_modules', did=d.id, create=create) }}">
-                    <i class="fa fa-cogs"></i> Module pre-requisites...
+                    <i class="fa fa-cogs"></i> Recommended modules...
                 </a>
             </li>
         <li>
@@ -606,7 +606,7 @@ def description_modules(did, level_id=None):
     levels = FHEQ_Level.query.filter_by(active=True).order_by(FHEQ_Level.academic_year.asc()).all()
 
     return render_template('faculty/description_modules.html', project=desc.parent, desc=desc, form=form,
-                           title='Attach pre-requisite modules', levels=levels, create=create,
+                           title='Attach recommended modules', levels=levels, create=create,
                            modules=modules, level_id=level_id)
 
 
@@ -1033,7 +1033,6 @@ def remove_all_assessors(proj_id):
 @faculty.route('/preview/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def project_preview(id):
-
     # get project details
     data = Project.query.get_or_404(id)
 
@@ -1050,8 +1049,19 @@ def project_preview(id):
     else:
         if request.method == 'GET':
 
-            # attach first available project class
-            form.selector.data = data.project_classes.first()
+            # check whether pclass was passed in as an argument
+            pclass_id = request.args.get('pclass', None)
+
+            if pclass_id is None:
+                # attach first available project class
+                form.selector.data = data.project_classes.first()
+
+            else:
+                pclass = data.project_classes.filter_by(id=pclass_id).first()
+                if pclass is not None:
+                    form.selector.data = pclass
+                else:
+                    form.selector.data = data.project_classes.first()
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)

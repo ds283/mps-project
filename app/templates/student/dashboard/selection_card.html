@@ -131,9 +131,9 @@
                     <a href="{{ url_for('student.view_project', sid=sel.id, pid=project.id) }}">
                         <strong>{{ project.name }}</strong>
                     </a>
-                    {% if not sel.satisfies_prerequisites(project) %}
+                    {% if not sel.satisfies_recommended(project) %}
                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
-                        <p>This project has pre-requisites that are not available on your programme</p>
+                        <p>This project has recommended modules that are not available on your programme</p>
                     {% endif %}
                 </div>
                 <div class="col-xs-2">

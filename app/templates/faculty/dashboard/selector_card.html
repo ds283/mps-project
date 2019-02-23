@@ -116,16 +116,18 @@
                             <strong>{{ loop.index }}</strong>
                         </div>
                         <div class="col-xs-8">
-                            {{ project.name }}
-                            {% if project.meeting_reqd == project.MEETING_REQUIRED %}
-                                <span class="label label-danger">Meeting required</span>
-                            {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
-                                <span class="label label-warning">Meeting optional</span>
-                            {% elif project.meeting_reqd == project.MEETING_NONE %}
-                                <span class="label label-success">Meeting not required</span>
-                            {% endif %}
-                            {{ project.group.make_label()|safe }}
-                            <span class="label label-info">{{ project.num_assessors(pclass) }} assessors</span>
+                            <a href="{{ url_for('faculty.project_preview', id=project.id, url=url_for('faculty.dashboard', id=pclass.id), text='dashboard', pclass=pclass.id) }}">{{ project.name }}</a>
+                            <div>
+                                {% if project.meeting_reqd == project.MEETING_REQUIRED %}
+                                    <span class="label label-danger">Meeting required</span>
+                                {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
+                                    <span class="label label-warning">Meeting optional</span>
+                                {% elif project.meeting_reqd == project.MEETING_NONE %}
+                                    <span class="label label-success">Meeting not required</span>
+                                {% endif %}
+                                {{ project.group.make_label()|safe }}
+                                <span class="label label-info">{{ project.num_assessors(pclass) }} assessors</span>
+                            </div>
                         </div>
                         <div class="col-xs-3">
                             <div class="pull-right">

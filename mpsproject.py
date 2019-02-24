@@ -92,13 +92,13 @@ def populate_project_validation_data():
     Populate validation state in Projects table
     :return:
     """
-    projects = db.session.query(Project).all()
+    descriptions = db.session.query(ProjectDescription).all()
 
-    for project in projects:
-        if project.workflow_state is None:
-            project.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            project.validator_id = None
-            project.validated_timestamp = None
+    for desc in descriptions:
+        if desc.workflow_state is None:
+            desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            desc.validator_id = None
+            desc.validated_timestamp = None
 
     db.session.commit()
 

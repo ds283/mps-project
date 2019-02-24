@@ -3502,22 +3502,6 @@ class Project(db.Model):
     owner = db.relationship('FacultyData', foreign_keys=[owner_id], backref=db.backref('projects', lazy='dynamic'))
 
 
-    # WORKFLOW
-
-    # workflow status
-    WORKFLOW_APPROVAL_QUEUED = 2
-    WORKFLOW_APPROVAL_REJECTED = 1
-    WORKFLOW_APPROVAL_VALIDATED = 0
-    workflow_state = db.Column(db.Integer(), default=WORKFLOW_APPROVAL_QUEUED)
-
-    # who validated this record, if it is validated?
-    validator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    validated_by = db.relationship('User', foreign_keys=[validator_id], uselist=False)
-
-    # validator timestamp
-    validated_timestamp = db.Column(db.DateTime())
-
-
     # TAGS AND METADATA
 
     # free keywords describing scientific area
@@ -3985,91 +3969,111 @@ def _Project_insert_handler(mapper, connection, target):
 @listens_for(Project, 'before_insert')
 def _Project_workflow_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
+        # send any descriptions into the validation queue
+        descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+        for desc in descs:
+            desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            desc.validator_id = None
+            desc.validated_timestamp = None
 
 
 @listens_for(Project, 'before_update')
 def _Project_workflow_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
+        # send any descriptions into the validation queue
+        descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+        for desc in descs:
+            desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            desc.validator_id = None
+            desc.validated_timestamp = None
 
 
 @listens_for(Project.assessors, 'append')
 def _Project_workflow_assessors_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
+        # send any descriptions into the validation queue
+        descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+        for desc in descs:
+            desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            desc.validator_id = None
+            desc.validated_timestamp = None
 
 
 @listens_for(Project.assessors, 'remove')
 def _Project_workflow_assessors_delete_handler(target, value, initiator):
     with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
+        # send any descriptions into the validation queue
+        descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+        for desc in descs:
+            desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            desc.validator_id = None
+            desc.validated_timestamp = None
 
 
-@listens_for(Project.project_classes, 'append')
-def _Project_workflow_project_classes_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
-
-
-@listens_for(Project.project_classes, 'remove')
-def _Project_workflow_project_classes_delete_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
+# @listens_for(Project.project_classes, 'append')
+# def _Project_workflow_project_classes_append_handler(target, value, initiator):
+#     with db.session.no_autoflush:
+#         # send any descriptions into the validation queue
+#         descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+#         for desc in descs:
+#             desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+#             desc.validator_id = None
+#             desc.validated_timestamp = None
+#
+#
+# @listens_for(Project.project_classes, 'remove')
+# def _Project_workflow_project_classes_delete_handler(target, value, initiator):
+#     with db.session.no_autoflush:
+#         # send any descriptions into the validation queue
+#         descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+#         for desc in descs:
+#             desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+#             desc.validator_id = None
+#             desc.validated_timestamp = None
 
 
 @listens_for(Project.skills, 'append')
 def _Project_workflow_skills_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
+        # send any descriptions into the validation queue
+        descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+        for desc in descs:
+            desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            desc.validator_id = None
+            desc.validated_timestamp = None
 
 
 @listens_for(Project.skills, 'remove')
 def _Project_workflow_skills_delete_handler(target, value, initiator):
     with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
+        # send any descriptions into the validation queue
+        descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+        for desc in descs:
+            desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            desc.validator_id = None
+            desc.validated_timestamp = None
 
 
-@listens_for(Project.programmes, 'append')
-def _Project_workflow_programmes_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
-
-
-@listens_for(Project.programmes, 'remove')
-def _Project_workflow_programmes_delete_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        # send into the validation queue
-        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-        target.validator_id = None
-        target.validated_timestamp = None
+# @listens_for(Project.programmes, 'append')
+# def _Project_workflow_programmes_append_handler(target, value, initiator):
+#     with db.session.no_autoflush:
+#         # send any descriptions into the validation queue
+#         descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+#         for desc in descs:
+#             desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+#             desc.validator_id = None
+#             desc.validated_timestamp = None
+#
+#
+# @listens_for(Project.programmes, 'remove')
+# def _Project_workflow_programmes_delete_handler(target, value, initiator):
+#     with db.session.no_autoflush:
+#         # send any descriptions into the validation queue
+#         descs = db.session.query(ProjectDescription).filter_by(parent_id=target.id).all()
+#         for desc in descs:
+#             desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+#             desc.validator_id = None
+#             desc.validated_timestamp = None
 
 
 @cache.memoize()
@@ -4112,6 +4116,25 @@ class ProjectDescription(db.Model):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
+
+    # WORKFLOW
+
+    # workflow status
+    WORKFLOW_APPROVAL_QUEUED = 2
+    WORKFLOW_APPROVAL_REJECTED = 1
+    WORKFLOW_APPROVAL_VALIDATED = 0
+    workflow_state = db.Column(db.Integer(), default=WORKFLOW_APPROVAL_QUEUED)
+
+    # who validated this record, if it is validated?
+    validator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    validated_by = db.relationship('User', foreign_keys=[validator_id], uselist=False)
+
+    # validator timestamp
+    validated_timestamp = db.Column(db.DateTime())
+
+
+    # CONFIGURATION
+
     # owning project
     parent_id = db.Column(db.Integer(), db.ForeignKey('projects.id'))
     parent = db.relationship('Project', foreign_keys=[parent_id], uselist=False,
@@ -4123,6 +4146,9 @@ class ProjectDescription(db.Model):
 
     # label
     label = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+
+    # DESCRIPTION
 
     # description
     description = db.Column(db.Text())
@@ -4295,136 +4321,73 @@ def _ProjectDescription_delete_handler(mapper, connection, target):
 @listens_for(ProjectDescription, 'before_insert')
 def _ProjectDescription_workflow_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-            
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
+        # send into the validation queue
+        target.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
 
 
 @listens_for(ProjectDescription, 'before_update')
 def _ProjectDescription_workflow_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
+        # send into the validation queue
+        target.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
 
 
-@listens_for(ProjectDescription, 'before_delete')
-def _ProjectDescription_workflow_delete_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
-
-
-@listens_for(ProjectDescription.project_classes, 'append')
-def _ProjectDescription_workflow_project_classes_append_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
-
-
-@listens_for(ProjectDescription.project_classes, 'remove')
-def _ProjectDescription_workflow_project_classes_delete_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
+# @listens_for(ProjectDescription.project_classes, 'append')
+# def _ProjectDescription_workflow_project_classes_append_handler(target, value, initiator):
+#     with db.session.no_autoflush:
+#         # send into the validation queue
+#         target.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+#         target.validator_id = None
+#         target.validated_timestamp = None
+#
+#
+# @listens_for(ProjectDescription.project_classes, 'remove')
+# def _ProjectDescription_workflow_project_classes_delete_handler(target, value, initiator):
+#     with db.session.no_autoflush:
+#         # send into the validation queue
+#         target.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+#         target.validator_id = None
+#         target.validated_timestamp = None
 
 
 @listens_for(ProjectDescription.team, 'append')
 def _ProjectDescription_workflow_team_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
+        # send into the validation queue
+        target.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
 
 
 @listens_for(ProjectDescription.team, 'remove')
 def _ProjectDescription_workflow_team_delete_handler(target, value, initiator):
     with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
+        # send into the validation queue
+        target.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
 
 
 @listens_for(ProjectDescription.modules, 'append')
 def _ProjectDescription_workflow_modules_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
+        # send into the validation queue
+        target.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
 
 
 @listens_for(ProjectDescription.modules, 'remove')
 def _ProjectDescription_workflow_modules_delete_handler(target, value, initiator):
     with db.session.no_autoflush:
-        if target.parent is not None:
-            proj = target.parent
-        else:
-            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
-
-        if proj is not None:
-            # send into the validation queue
-            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
-            proj.validator_id = None
-            proj.validated_timestamp = None
+        # send into the validation queue
+        target.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
 
 
 class LiveProject(db.Model):

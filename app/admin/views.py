@@ -818,7 +818,6 @@ def edit_student(id):
     url = request.args.get('url', default=None)
 
     if form.validate_on_submit():
-
         resend_confirmation = False
         if form.email.data != user.email and form.ask_confirm.data is True:
             user.confirmed_at = None
@@ -841,10 +840,8 @@ def edit_student(id):
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 
-        # send into the validation queue
-        data.validation_state = StudentData.VALIDATION_QUEUED
-        data.validator_id = None
-        data.validated_timestamp = None
+        # validation workflow fields are handled by SQLAlchemy listeners
+        # see models.py
 
         _datastore.commit()
 

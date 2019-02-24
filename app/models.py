@@ -1312,8 +1312,11 @@ class FacultyData(db.Model):
 
         celery = current_app.extensions['celery']
         adjust_task = celery.tasks['app.tasks.availability.adjust']
+        create_task = celery.tasks['app.tasks.issue_confirm.enrollment_created']
 
-        adjust_task.apply_async(args=(record.id, _get_current_year()))
+        current_year = _get_current_year()
+        adjust_task.apply_async(args=(record.id, current_year))
+        create_task.apply_async(args=(record.id, current_year))
 
 
     def enrolled_labels(self, pclass):
@@ -1632,7 +1635,7 @@ class StudentData(db.Model):
     VALIDATION_VALIDATED = 0
     validation_state = db.Column(db.Integer(), default=VALIDATION_QUEUED)
 
-    # who validated this record?
+    # who validated this record, if it is validated?
     validator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     validated_by = db.relationship('User', foreign_keys=[validator_id], uselist=False)
 
@@ -1680,6 +1683,24 @@ class StudentData(db.Model):
                 text += ' +{n}'.format(n=self.repeated_years)
 
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+
+
+@listens_for(StudentData, 'before_insert')
+def _StudentData_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.validation_state = StudentData.VALIDATION_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(StudentData, 'before_update')
+def _StudentData_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.validation_state = StudentData.VALIDATION_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
 
 
 
@@ -3481,6 +3502,22 @@ class Project(db.Model):
     owner = db.relationship('FacultyData', foreign_keys=[owner_id], backref=db.backref('projects', lazy='dynamic'))
 
 
+    # WORKFLOW
+
+    # workflow status
+    WORKFLOW_APPROVAL_QUEUED = 2
+    WORKFLOW_APPROVAL_REJECTED = 1
+    WORKFLOW_APPROVAL_VALIDATED = 0
+    workflow_state = db.Column(db.Integer(), default=WORKFLOW_APPROVAL_QUEUED)
+
+    # who validated this record, if it is validated?
+    validator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    validated_by = db.relationship('User', foreign_keys=[validator_id], uselist=False)
+
+    # validator timestamp
+    validated_timestamp = db.Column(db.DateTime())
+
+
     # TAGS AND METADATA
 
     # free keywords describing scientific area
@@ -3945,6 +3982,96 @@ def _Project_insert_handler(mapper, connection, target):
             cache.delete_memoized(_Project_num_assessors, target.id, pclass.id)
 
 
+@listens_for(Project, 'before_insert')
+def _Project_workflow_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project, 'before_update')
+def _Project_workflow_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project.assessors, 'append')
+def _Project_workflow_assessors_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project.assessors, 'remove')
+def _Project_workflow_assessors_delete_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project.project_classes, 'append')
+def _Project_workflow_project_classes_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project.project_classes, 'remove')
+def _Project_workflow_project_classes_delete_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project.skills, 'append')
+def _Project_workflow_skills_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project.skills, 'remove')
+def _Project_workflow_skills_delete_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project.programmes, 'append')
+def _Project_workflow_programmes_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
+@listens_for(Project.programmes, 'remove')
+def _Project_workflow_programmes_delete_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        # send into the validation queue
+        target.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+        target.validator_id = None
+        target.validated_timestamp = None
+
+
 @cache.memoize()
 def _ProjectDescription_is_valid(id):
     obj = ProjectDescription.query.filter_by(id=id).one()
@@ -4163,6 +4290,141 @@ def _ProjectDescription_delete_handler(mapper, connection, target):
         if target is not None and target.parent is not None:
             for pclass in target.parent.project_classes:
                 cache.delete_memoized(_Project_num_assessors, target.parent_id, pclass.id)
+
+
+@listens_for(ProjectDescription, 'before_insert')
+def _ProjectDescription_workflow_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+            
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
+
+
+@listens_for(ProjectDescription, 'before_update')
+def _ProjectDescription_workflow_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
+
+
+@listens_for(ProjectDescription, 'before_delete')
+def _ProjectDescription_workflow_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
+
+
+@listens_for(ProjectDescription.project_classes, 'append')
+def _ProjectDescription_workflow_project_classes_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
+
+
+@listens_for(ProjectDescription.project_classes, 'remove')
+def _ProjectDescription_workflow_project_classes_delete_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
+
+
+@listens_for(ProjectDescription.team, 'append')
+def _ProjectDescription_workflow_team_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
+
+
+@listens_for(ProjectDescription.team, 'remove')
+def _ProjectDescription_workflow_team_delete_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
+
+
+@listens_for(ProjectDescription.modules, 'append')
+def _ProjectDescription_workflow_modules_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
+
+
+@listens_for(ProjectDescription.modules, 'remove')
+def _ProjectDescription_workflow_modules_delete_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        if target.parent is not None:
+            proj = target.parent
+        else:
+            proj = db.session.query(Project).filter_by(id=target.parent_id).first()
+
+        if proj is not None:
+            # send into the validation queue
+            proj.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            proj.validator_id = None
+            proj.validated_timestamp = None
 
 
 class LiveProject(db.Model):

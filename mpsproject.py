@@ -71,7 +71,7 @@ def migrate_confirmation_data():
     db.session.commit()
 
 
-def populate_validation_data():
+def populate_student_validation_data():
     """
     Populate validation state in StudentData table
     :return:
@@ -81,6 +81,24 @@ def populate_validation_data():
     for student in students:
         if student.validation_state is None:
             student.validation_state = StudentData.VALIDATION_QUEUED
+            student.validator_id = None
+            student.validated_timestamp = None
+
+    db.session.commit()
+
+
+def populate_project_validation_data():
+    """
+    Populate validation state in Projects table
+    :return:
+    """
+    projects = db.session.query(Project).all()
+
+    for project in projects:
+        if project.workflow_state is None:
+            project.workflow_state = Project.WORKFLOW_APPROVAL_QUEUED
+            project.validator_id = None
+            project.validated_timestamp = None
 
     db.session.commit()
 
@@ -179,11 +197,12 @@ with app.app_context():
 
     # migrate_availability_data()
     # migrate_confirmation_data()
-    # populate_validation_data()
+    # populate_student_validation_data()
     # populate_email_options()
     # populate_schedule_tags()
     # populate_new_fields()
     # attach_JRA_projects()
+    populate_project_validation_data()
 
     db.session.commit()
 

@@ -341,6 +341,41 @@ def register_issue_confirm_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
+    def enrollment_created(self, enroll_id, current_year):
+        try:
+            record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        # load current configuration record for this project
+        config = db.session.query(ProjectClassConfig) \
+            .filter(ProjectClassConfig.pclass_id == record.pclass_id, ProjectClassConfig.year == current_year).first()
+
+        if record is None or config is None:
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        # if confirmations not required, nothing to do
+        if not config.require_confirm:
+            return None
+
+        # if confirmation requests not yet issued, nothing to do
+        if not config.requests_issued:
+            return None
+
+        # if project has gone live, confirmation requests are no longer needed
+        if config.live:
+            return None
+
+        # add supervisor to confirmation list if normally enrolled
+        if record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+            if get_count(config.confirmation_required.filter_by(id=record.owner_id)) == 0:
+                config.confirmation_required.append(record.owner)
+
+        db.session.commit()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
     def enrollment_deleted(self, pclass_id, faculty_id, current_year):
         try:
             faculty = db.session.query(FacultyData).filter_by(id=faculty_id).first()

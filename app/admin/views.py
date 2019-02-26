@@ -58,7 +58,7 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project, GeneratedAsset, UploadedAsset, \
-    faculty_affiliations
+    WorkflowMixin, faculty_affiliations
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_root_dashboard_data, get_rollover_data, get_matching_data, get_ready_to_match_data, get_automatch_pclasses, \
@@ -284,8 +284,7 @@ def create_student(role):
                            foundation_year=form.foundation_year.data,
                            repeated_years=ry,
                            creator_id=current_user.id,
-                           creation_timestamp=datetime.now(),
-                           validation_state=StudentData.VALIDATION_QUEUED)
+                           creation_timestamp=datetime.now())
 
         db.session.add(data)
         db.session.commit()
@@ -491,11 +490,11 @@ def users_students_ajax():
         data = data.filter(StudentData.cohort == cohort_value)
 
     if valid_filter == 'valid':
-        data = data.filter(StudentData.validation_state == StudentData.VALIDATION_VALIDATED)
+        data = data.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED)
     elif valid_filter == 'not-valid':
-        data = data.filter(StudentData.validation_state == StudentData.VALIDATION_QUEUED)
+        data = data.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED)
     elif valid_filter == 'reject':
-        data = data.filter(StudentData.validation_state == StudentData.VALIDATION_REJECTED)
+        data = data.filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED)
 
     flag, year_value = is_integer(year_filter)
     if flag:

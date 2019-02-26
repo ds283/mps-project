@@ -376,5 +376,8 @@ def create_app():
     from .user_approver import user_approver as user_approver_blueprint
     app.register_blueprint(user_approver_blueprint, url_prefix='/user_approver')
 
+    from .project_approver import project_approver as project_approver_blueprint
+    app.register_blueprint(project_approver_blueprint, url_prefix='/project_approver')
+
     return app, celery
 

@@ -26,7 +26,7 @@
 {% block content %}
     <div class="container-fluid bg-project">
         <br/>
-        {% if form %}
+        {% if form and show_selector %}
             <div class="well">
                 <form action="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}" method="POST"
                       name="selector_form">
@@ -246,10 +246,24 @@
                     </div>
                 </div>
 
-                {% if text and url %}
-                    <a href="{{ url }}">
-                        <i class="fa fa-backward"></i> Return to {{ text }}
-                    </a>
+                {% if allow_approval %}
+                    <hr class="intro-divider">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <a href="{{ url_for('project_approver.approve', id=desc.id, url=url, text=text) }}" class="btn btn-success">
+                                <i class="fa fa-check"></i> Approve
+                            </a>
+                            <a href="{{ url_for('project_approver.reject', id=desc.id, url=url, text=text) }}" class="btn btn-danger">
+                                <i class="fa fa-times"></i> Reject
+                            </a>
+                        </div>
+                    </div>
+                {% else %}
+                    {% if text and url %}
+                        <a href="{{ url }}">
+                            <i class="fa fa-backward"></i> Return to {{ text }}
+                        </a>
+                    {% endif %}
                 {% endif %}
             </div>
 

@@ -18,7 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from . import user_approver
 
 from ..database import db
-from ..models import StudentData, DegreeProgramme, DegreeType
+from ..models import StudentData, DegreeProgramme, DegreeType, WorkflowMixin
 
 from ..shared.utils import get_current_year
 from ..shared.conversions import is_integer
@@ -80,7 +80,7 @@ def validate_ajax():
     year_filter = request.args.get('year_filter')
 
     records = db.session.query(StudentData.id). \
-        filter(StudentData.validation_state == StudentData.VALIDATION_QUEUED,
+        filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
                or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
                    and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id)))
 
@@ -120,7 +120,7 @@ def approve(id):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    record.validation_state = StudentData.VALIDATION_VALIDATED
+    record.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED
     record.validator_id = current_user.id
     record.validated_timestamp = datetime.now()
     db.session.commit()
@@ -136,7 +136,7 @@ def reject(id):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    record.validation_state = StudentData.VALIDATION_REJECTED
+    record.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_REJECTED
     record.validator_id = current_user.id
     record.validated_timestamp = datetime.now()
     db.session.commit()
@@ -196,7 +196,7 @@ def correct_ajax():
     year_filter = request.args.get('year_filter')
 
     records = db.session.query(StudentData.id). \
-        filter(StudentData.validation_state == StudentData.VALIDATION_REJECTED,
+        filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
                or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
                    and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id)))
 

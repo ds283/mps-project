@@ -29,7 +29,7 @@ from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorF
 from ..admin.forms import LevelSelectorForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
-    get_current_year, get_count, get_approvals_data
+    get_current_year, get_count, get_approvals_data, allow_approvals
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor
@@ -1031,7 +1031,7 @@ def remove_all_assessors(proj_id):
 
 
 @faculty.route('/preview/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
+@roles_accepted('faculty', 'admin', 'root', 'project_approver')
 def project_preview(id):
     # get project details
     data = Project.query.get_or_404(id)
@@ -1040,6 +1040,8 @@ def project_preview(id):
     if not validate_edit_project(data):
         return redirect(request.referrer)
 
+    show_selector = bool(int(request.args.get('show_selector', True)))
+
     DescriptionSelectorForm = DescriptionSelectorFormFactory(id)
     form = DescriptionSelectorForm(request.form)
 
@@ -1047,6 +1049,7 @@ def project_preview(id):
         pass
 
     else:
+        # populate form if this is the first time we're loaded
         if request.method == 'GET':
 
             # check whether pclass was passed in as an argument
@@ -1066,7 +1069,11 @@ def project_preview(id):
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
-    return render_project(data, data.get_description(form.selector.data), form=form, text=text, url=url)
+    desc = data.get_description(form.selector.data)
+    allow_approval = current_user.has_role('project_approver') and allow_approvals(desc)
+
+    return render_project(data, desc, form=form, text=text, url=url,
+                          show_selector=show_selector, allow_approval=allow_approval)
 
 
 @faculty.route('/dashboard')
@@ -1206,7 +1213,7 @@ def confirm_pclass(id):
         config.confirmation_required.remove(current_user.faculty_data)
         db.session.commit()
 
-        flash('Thank-you. You confirmation has been recorded.')
+        flash('Thank you. You confirmation has been recorded.')
         return home_dashboard()
 
     flash('You have no outstanding confirmation requests for {project} {yeara}-{yearb}'.format(

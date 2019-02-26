@@ -11,7 +11,7 @@
 from app import create_app, db
 from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
-    SelectingStudent, ProjectDescription, Project
+    SelectingStudent, ProjectDescription, Project, WorkflowMixin
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -79,8 +79,8 @@ def populate_student_validation_data():
     students = db.session.query(StudentData).all()
 
     for student in students:
-        if student.validation_state is None:
-            student.validation_state = StudentData.VALIDATION_QUEUED
+        if student.workflow_state is None:
+            student.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
             student.validator_id = None
             student.validated_timestamp = None
 
@@ -96,7 +96,7 @@ def populate_project_validation_data():
 
     for desc in descriptions:
         if desc.workflow_state is None:
-            desc.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
             desc.validator_id = None
             desc.validated_timestamp = None
 

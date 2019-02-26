@@ -14,7 +14,7 @@ name = \
 {{ u.name }}
 <div>
     {% if u.student_data and u.student_data is not none %}
-        {% set state = u.student_data.validation_state %}
+        {% set state = u.student_data.workflow_state %}
         {% if state == u.student_data.VALIDATION_QUEUED %}
             <span class="label label-warning">NOT VALIDATED</span>
         {% elif state == u.student_data.VALIDATION_REJECTED %}

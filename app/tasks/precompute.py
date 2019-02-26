@@ -15,7 +15,7 @@ from celery import group, chain
 from celery.exceptions import Ignore
 
 from ..database import db
-from ..models import User, FacultyData, StudentData, SelectingStudent, Project, LiveProject
+from ..models import User, FacultyData, StudentData, SelectingStudent, Project, LiveProject, WorkflowMixin
 
 from ..shared.precompute import precompute_for_user, precompute_for_exec, precompute_for_faculty
 
@@ -72,7 +72,7 @@ def register_precompute_tasks(celery):
     def user_approvals(self, user_id):
         try:
             data = db.session.query(StudentData) \
-                .filter(StudentData.validation_state == StudentData.VALIDATION_QUEUED,
+                .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
                         or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != user_id),
                             and_(StudentData.last_edit_id != None, StudentData.last_edit_id != user_id))) \
                 .all()
@@ -93,7 +93,7 @@ def register_precompute_tasks(celery):
     def user_corrections(self, user_id):
         try:
             data = db.session.query(StudentData) \
-                .filter(StudentData.validation_state == StudentData.VALIDATION_REJECTED,
+                .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
                          or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == user_id),
                              and_(StudentData.last_edit_id != None, StudentData.last_edit_id == user_id))) \
                     .all()

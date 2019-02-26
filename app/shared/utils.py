@@ -16,7 +16,7 @@ from sqlalchemy import and_, or_
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
-    MatchingAttempt, MatchingRecord
+    MatchingAttempt, MatchingRecord, ProjectDescription, WorkflowMixin
 from ..models import project_assessors
 
 from .conversions import is_integer
@@ -180,18 +180,124 @@ def get_pclass_config_data(configs=None):
 
 
 def get_approvals_data():
+    data = {}
+
+    if current_user.has_role('user_approver'):
+        data.update(_get_user_approvals_data())
+
+    if current_user.has_role('project_approver'):
+        data.update(_get_project_approvals_data())
+
+    total = 0
+    for v in data.values():
+        total += v
+
+    data['total'] = total
+
+    return data
+
+
+def _get_user_approvals_data():
     to_approve = get_count(db.session.query(StudentData). \
-                           filter(StudentData.validation_state == StudentData.VALIDATION_QUEUED,
+                           filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
                                   or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
                                       and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id))))
 
     to_correct = get_count(db.session.query(StudentData). \
-                           filter(StudentData.validation_state == StudentData.VALIDATION_REJECTED,
+                           filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
                                   or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
                                       and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id))))
 
     return {'approval_user_outstanding': to_approve,
             'approval_user_rejected': to_correct}
+
+
+def build_project_approval_queues():
+    # cache configuration data for project classes
+    config_cache = {}
+    pclasses = db.session.query(ProjectClass).filter_by(active=True, publish=True).all()
+    for pcl in pclasses:
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=pcl.id) \
+            .order_by(ProjectClassConfig.year.desc()).first()
+        if config is not None:
+            config_cache[pcl.id] = config
+
+    # want to count number of ProjectDescriptions that are associated with project classes that are in the
+    # confirmation phase, for faculty that have signed-off on their projects
+    descriptions = db.session.query(ProjectDescription).all()
+
+    queued = []
+    rejected = []
+
+    for desc in descriptions:
+        if allow_approvals(desc):
+            if desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
+                queued.append(desc.id)
+            elif desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
+                rejected.append(desc.id)
+
+    return {'queued': queued,
+            'rejected': rejected}
+
+
+def allow_approvals(desc, config_cache=None):
+    faculty = desc.parent.owner
+
+    # no-one should approve their own projects
+    if faculty.id == current_user.id:
+        return False
+
+    # don't include inactive faculty
+    if not faculty.user.active:
+        return False
+
+    # don't include inactive projects
+    if not desc.parent.active:
+        return False
+
+    for pcl in desc.project_classes:
+        if config_cache is not None:
+            allow = (pcl.id in config_cache)
+            config = config_cache[pcl.id] if allow else None
+        else:
+            config = db.session.query(ProjectClassConfig) \
+                .filter_by(pclass_id=pcl.id) \
+                .order_by(ProjectClassConfig.year.desc()).first()
+            allow = (config is not None)
+
+        if pcl.active and pcl.publish and allow:
+            # don't include projects for project classes that have already gone live
+            if config.live:
+                continue
+
+            # don't include projects if confirmation is required and requests haven't been issued.
+            # don't include projects if requests have been issued, but project owner hasn't yet confirmed
+            if config.require_confirm:
+                if not config.requests_issued:
+                    continue
+
+                if get_count(config.confirmation_required.filter_by(id=faculty.id)) > 0:
+                    continue
+
+            # don't include projects if user is not enrolled normally as a supervisor
+            record = faculty.get_enrollment_record(pcl.id)
+            if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+                continue
+
+            return True
+
+    return False
+
+
+def _get_project_approvals_data():
+    data = build_project_approval_queues()
+
+    queued = data.get('queued')
+    rejected = data.get('rejected')
+
+    return {'approval_project_queued': len(queued) if isinstance(queued, list) else 0,
+            'approval_project_rejected': len(rejected) if isinstance(rejected, list) else 0}
 
 
 def _get_pclass_list():

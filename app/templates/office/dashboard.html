@@ -2,6 +2,12 @@
 
 {% from "admin/admin_dashboard/admin_card.html" import admin_dashboard_card %}
 {% from "user_approver/dashboard_panel.html" import user_approver_panel %}
+{% from "project_approver/dashboard_panel.html" import project_approver_panel %}
+
+{% set is_root = current_user.has_role('root') %}
+{% set is_admin = current_user.has_role('admin') %}
+{% set is_user_approver = current_user.has_role('user_approver') %}
+{% set is_project_approver = current_user.has_role('project_approver') %}
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
@@ -15,17 +21,20 @@
                 Administration
             </a>
         </li>
-        {% set warning = approvals_data['approval_user_rejected'] > 0 %}
-        {% set to_approve = approvals_data['approval_user_outstanding'] %}
-        {% if current_user.has_role('user_approver') or (warning and (current_user.has_role('admin') or current_user.has_role('root'))) %}
+        {% set approve_total = approvals_data['total'] %}
+        {% set user_num_rejected = approvals_data.get('approval_user_rejected') %}
+        {% set project_num_rejected = approvals_data.get('approval_project_rejected') %}
+        {% set user_warning = (user_num_rejected > 0) if user_num_rejected is not none else false %}
+        {% set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false %}
+        {% if is_user_approver or is_project_approver or (user_warning and (is_admin or is_root)) %}
             <li {% if pane == 'approve' %}class="active"{% endif %}>
-                <a href="{{ url_for('office.dashboard', pane='approve') }}">
-                    {% if warning %}
+                <a href="{{ url_for('faculty.dashboard', pane='approve') }}">
+                    {% if user_warning or project_warning %}
                         <i class="fa fa-exclamation-triangle"></i>
                     {% endif %}
                     Approvals
-                    {% if to_approve > 0 %}
-                        <span class="badge badge-info">{{ to_approve }}</span>
+                    {% if approve_total > 0 %}
+                        <span class="badge badge-info">{{ approve_total }}</span>
                     {% endif %}
                 </a>
             </li>
@@ -41,15 +50,20 @@
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
-            <div class="well">
-                {% if pane == 'overview' %}
+            {% if pane == 'overview' %}
+                <div class="well">
                     {{ admin_dashboard_card(root_data) }}
-                {% endif %}
+                </div>
+            {% endif %}
 
-                {% if (current_user.has_role('user_approver') or (approvals_data['approval_user_rejected'] > 0 and (current_user.has_role('admin') or current_user.has_role('root')))) and pane == 'approve' %}
+            {% if pane == 'approve' %}
+                {% if is_user_approver or (approvals_data['approval_user_rejected'] > 0 and (is_admin or is_root)) %}
                     {{ user_approver_panel(approvals_data, current_user) }}
                 {% endif %}
-            </div>
+                {% if is_project_approver %}
+                    {{ project_approver_panel(approvals_data) }}
+                {% endif %}
+            {% endif %}
         </div>
         <div class="col-xs-1"></div>
     </div>

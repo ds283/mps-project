@@ -18,3 +18,4 @@ from . import polling
 from . import faculty
 from . import exec
 from . import user_approver
+from . import project_approver

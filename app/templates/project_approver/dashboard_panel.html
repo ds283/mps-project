@@ -1,0 +1,28 @@
+{% macro project_approver_panel(data) %}
+    {% set queued = data['approval_project_queued'] %}
+    {% set rejected = data['approval_project_rejected'] %}
+
+    <div class="panel {% if queued > 0 %}panel-danger{% else %}panel-default{% endif %}">
+        {% set pl = 's' %}{% if queued == 1 %}{% set pl = '' %}{% endif  %}
+        {% set anti_pl = '' %}{% if queued == 1 %}{% set anti_pl = 's' %}{% endif %}
+        <div class="panel-heading">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
+        <div class="panel-body">
+            {% if queued == 0 %}
+                <p>No project descriptions currently require validation.</p>
+            {% else %}
+                <div class="row vertical-top">
+                    <div class="col-xs-8">
+                        You have validation tasks to perform.
+                    </div>
+                    <div class="col-xs-4">
+                        <div class="pull-right">
+                            <a href="{{ url_for('project_approver.validate') }}" class="btn btn-default">
+                                Approve records
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endmacro %}

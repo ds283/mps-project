@@ -16,8 +16,7 @@ from ..database import db
 import re
 
 
-def render_project(data, desc, form=None, text=None, url=None):
-
+def render_project(data, desc, form=None, text=None, url=None, show_selector=True, allow_approval=False):
     # build list of keywords, if present
     if data.keywords is not None:
         keywords = [kw.strip() for kw in re.split("[;,]", data.keywords)]
@@ -27,7 +26,7 @@ def render_project(data, desc, form=None, text=None, url=None):
 
     # without the sel variable, won't render any of the student-specific items
     return render_template('student/show_project.html', title=data.name, project=data, desc=desc, keywords=keywords,
-                           form=form, text=text, url=url)
+                           form=form, text=text, url=url, show_selector=show_selector, allow_approval=allow_approval)
 
 
 

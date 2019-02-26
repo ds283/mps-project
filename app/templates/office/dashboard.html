@@ -28,7 +28,7 @@
         {% set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false %}
         {% if is_user_approver or is_project_approver or (user_warning and (is_admin or is_root)) %}
             <li {% if pane == 'approve' %}class="active"{% endif %}>
-                <a href="{{ url_for('faculty.dashboard', pane='approve') }}">
+                <a href="{{ url_for('office.dashboard', pane='approve') }}">
                     {% if user_warning or project_warning %}
                         <i class="fa fa-exclamation-triangle"></i>
                     {% endif %}

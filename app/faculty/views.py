@@ -1037,7 +1037,7 @@ def project_preview(id):
     data = Project.query.get_or_404(id)
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if not validate_edit_project(data):
+    if not validate_edit_project(data, 'project_approver'):
         return redirect(request.referrer)
 
     show_selector = bool(int(request.args.get('show_selector', True)))

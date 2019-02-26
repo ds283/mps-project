@@ -32,7 +32,7 @@ _title = \
 """
 {% set pclass = r.parent.project_classes.first() %}
 {% set disabled = (pclass is none) %}
-<a {% if not disabled %}href="{{ url_for('faculty.project_preview', id=r.id, pclass=pclass.id, show_selector=0, url=url, text=text) }}"{% endif %}>
+<a {% if not disabled %}href="{{ url_for('faculty.project_preview', id=r.parent.id, pclass=pclass.id, show_selector=0, url=url, text=text) }}"{% endif %}>
     {%- if r.parent -%}{{ r.parent.name }}{%- else -%}<unnamed project>{%- endif -%}/{%- if r.label -%}{{ r.label }}{%- else -%}<unnamed description>{%- endif -%}
 </a> 
 """

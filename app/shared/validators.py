@@ -49,7 +49,7 @@ def validate_is_convenor(pclass):
     return True
 
 
-def validate_edit_project(project):
+def validate_edit_project(project, *roles):
     """
     Validate that the logged-in user is privileged to edit a particular project
     :param project: Project model instance
@@ -57,15 +57,21 @@ def validate_edit_project(project):
     """
 
     # if project owner is not logged in user or a suitable convenor, or an administrator, object
-    if project.owner_id != current_user.id \
-            and not current_user.has_role('admin') \
-            and not current_user.has_role('root') \
-            and not any([item.is_convenor(current_user.id) for item in project.project_classes]):
+    if project.owner_id == current_user.id:
+        return True
 
-        flash('This project belongs to another user. To edit it, you must be a suitable convenor or an administrator.')
-        return False
+    if current_user.has_role('admin') or current_user.has_role('root'):
+        return True
 
-    return True
+    for role in roles:
+        if current_user.has_role(role):
+            return True
+
+    if any([item.is_convenor(current_user.id) for item in project.project_classes]):
+        return True
+
+    flash('This project belongs to another user. To edit it, you must be a suitable convenor or an administrator.')
+    return False
 
 
 def validate_project_open(config):

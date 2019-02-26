@@ -16,14 +16,14 @@ from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
-    PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level
+    PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level, DescriptionComment
 
 import app.ajax as ajax
 
 from . import faculty
 
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
-    AddDescriptionFormFactory, EditDescriptionFormFactory, DescriptionSelectorFormFactory, SupervisorFeedbackForm, \
+    AddDescriptionFormFactory, EditDescriptionFormFactory, FacultyPreviewFormFactory, SupervisorFeedbackForm, \
     MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsFormFactory, \
     AvailabilityFormFactory
 from ..admin.forms import LevelSelectorForm
@@ -1041,39 +1041,80 @@ def project_preview(id):
         return redirect(request.referrer)
 
     show_selector = bool(int(request.args.get('show_selector', True)))
+    all_comments = bool(int(request.args.get('all_comments', False)))
 
-    DescriptionSelectorForm = DescriptionSelectorFormFactory(id)
-    form = DescriptionSelectorForm(request.form)
+    FacultyPreviewForm = FacultyPreviewFormFactory(id, show_selector)
+    form = FacultyPreviewForm(request.form)
+
+    current_year = get_current_year()
 
     if form.validate_on_submit():
-        pass
+        if form.submit.data:
+            vis = DescriptionComment.VISIBILITY_EVERYONE
+            if current_user.has_role('project_approver'):
+                if form.limit_visibility.data:
+                    vis = DescriptionComment.VISIBILITY_APPROVALS_TEAM
 
-    else:
-        # populate form if this is the first time we're loaded
-        if request.method == 'GET':
+            comment = DescriptionComment(year=current_year,
+                                         owner_id=current_user.id,
+                                         parent_id=data.id,
+                                         comment=form.comment.data,
+                                         visibility=vis,
+                                         deleted=False,
+                                         creation_timestamp=datetime.now())
+            db.session.add(comment)
+            db.session.commit()
 
+            form.comment.data = None
+
+    pclass_id = request.args.get('pclass', None)
+
+    if hasattr(form, 'selector'):
+        if form.selector.data is None:
             # check whether pclass was passed in as an argument
-            pclass_id = request.args.get('pclass', None)
-
             if pclass_id is None:
                 # attach first available project class
                 form.selector.data = data.project_classes.first()
 
             else:
-                pclass = data.project_classes.filter_by(id=pclass_id).first()
-                if pclass is not None:
-                    form.selector.data = pclass
+                if pclass_id is not None:
+                    pclass = data.project_classes.filter_by(id=pclass_id).first()
+                    if pclass is not None:
+                        form.selector.data = pclass
+                    else:
+                        form.selector.data = data.project_classes.first()
                 else:
-                    form.selector.data = data.project_classes.first()
+                    form.selector.data = None
+
+        desc = data.get_description(form.selector.data)
+
+    else:
+        if pclass_id is not None:
+            pclass = data.project_classes.filter_by(id=pclass_id).first()
+            desc = data.get_description(pclass)
+        else:
+            desc = data.get_description(data.project_classes.first())
+
+    # defaults for comments pane
+    form.limit_visibility.data = True if current_user.has_role('project_approver') else False
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
-    desc = data.get_description(form.selector.data)
     allow_approval = current_user.has_role('project_approver') and allow_approvals(desc)
 
+    if desc is not None:
+        if all_comments:
+            comments = desc.comments.order_by(DescriptionComment.creation_timestamp.asc()).all()
+        else:
+            comments = desc.comments.filter_by(year=current_year) \
+                .order_by(DescriptionComment.creation_timestamp.asc()).all()
+    else:
+        comments = []
+
     return render_project(data, desc, form=form, text=text, url=url,
-                          show_selector=show_selector, allow_approval=allow_approval)
+                          show_selector=show_selector, allow_approval=allow_approval,
+                          show_comments=True, comments=comments, all_comments=all_comments, pclass_id=pclass_id)
 
 
 @faculty.route('/dashboard')

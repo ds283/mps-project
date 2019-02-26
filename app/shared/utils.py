@@ -242,6 +242,9 @@ def build_project_approval_queues():
 
 
 def allow_approvals(desc, config_cache=None):
+    if desc is None:
+        return False
+
     faculty = desc.parent.owner
 
     # no-one should approve their own projects

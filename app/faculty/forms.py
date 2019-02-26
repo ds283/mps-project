@@ -176,20 +176,31 @@ class SkillSelectorForm(Form, SkillSelectorMixin):
     pass
 
 
-def DescriptionSelectorMixinFactory(query_factory):
+def DescriptionSelectorMixinFactory(show_selector, query_factory):
 
     class DescriptionSelectorMixin():
 
-        selector = QuerySelectField('Show project preview for', query_factory=query_factory, get_label='name')
+        if show_selector:
+            selector = QuerySelectField('Show project preview for', query_factory=query_factory, get_label='name')
 
     return DescriptionSelectorMixin
 
 
-def DescriptionSelectorFormFactory(project_id):
+class CommentMixin():
 
-    Mixin = DescriptionSelectorMixinFactory(partial(ProjectDescriptionClasses, project_id))
+    comment = TextAreaField('Post a new comment', render_kw={"rows": 5},
+                            validators=[InputRequired(message='You cannot post an empty comment')])
 
-    class DescriptionSelectorForm(Form, Mixin):
+    limit_visibility = BooleanField('Limit visibility to approvals team')
+
+    submit = SubmitField('Post new comment')
+
+
+def FacultyPreviewFormFactory(project_id, show_selector):
+
+    SelectorMixin = DescriptionSelectorMixinFactory(show_selector, partial(ProjectDescriptionClasses, project_id))
+
+    class DescriptionSelectorForm(Form, SelectorMixin, CommentMixin):
 
         pass
 

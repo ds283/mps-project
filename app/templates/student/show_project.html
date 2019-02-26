@@ -26,14 +26,15 @@
 {% block content %}
     <div class="container-fluid bg-project">
         <br/>
-        {% if form and show_selector %}
-            <div class="well">
-                <form action="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url) }}" method="POST"
-                      name="selector_form">
-                    {{ form.hidden_tag() }}
-                    {{ on_click_selector_field(form.selector, true) }}
-                </form>
-            </div>
+        {% if form %}
+            <form action="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int) }}" method="POST"
+                  name="selector_form">
+                {{ form.hidden_tag() }}
+                {% if show_selector %}
+                    <div class="well">
+                        {{ on_click_selector_field(form.selector, true) }}
+                    </div>
+                {% endif %}
         {% endif %}
         <div class="row">
             <div class="col-xs-2"></div>
@@ -234,7 +235,7 @@
 
                             {% if desc.reading and desc.reading is not none %}
                                 <hr class="intro-divider">
-                                <p><strong>Recommended reading</strong></p>
+                                <p><strong>Recommended resources</strong></p>
                                 {{ desc.reading|dealingwithdollars|markdown|bclean|blinkify|safe }}
                             {% endif %}
                         {% else %}
@@ -250,25 +251,101 @@
                     <hr class="intro-divider">
                     <div class="row">
                         <div class="col-xs-12">
-                            <a href="{{ url_for('project_approver.approve', id=desc.id, url=url, text=text) }}" class="btn btn-success">
-                                <i class="fa fa-check"></i> Approve
-                            </a>
-                            <a href="{{ url_for('project_approver.reject', id=desc.id, url=url, text=text) }}" class="btn btn-danger">
-                                <i class="fa fa-times"></i> Reject
-                            </a>
+                            <div class="pull-right">
+                                <a href="{{ url_for('project_approver.approve', id=desc.id, url=url, text=text) }}" class="btn btn-success">
+                                    <i class="fa fa-check"></i> Approve
+                                </a>
+                                <a href="{{ url_for('project_approver.reject', id=desc.id, url=url, text=text) }}" class="btn btn-danger">
+                                    <i class="fa fa-times"></i> Reject
+                                </a>
+                            </div>
                         </div>
                     </div>
-                {% else %}
-                    {% if text and url %}
-                        <a href="{{ url }}">
-                            <i class="fa fa-backward"></i> Return to {{ text }}
-                        </a>
-                    {% endif %}
+                {% endif %}
+                {% if show_comments %}
+                    <div class="well" style="margin-top: 15px;">
+                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=0) }}"
+                           class="btn btn-sm {% if all_comments %}btn-default{% else %}btn-primary{% endif %}">
+                            Show only comments from this cycle
+                       </a>
+                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=1) }}"
+                           class="btn btn-sm {% if all_comments %}btn-primary{% else %}btn-default{% endif %}">
+                            Show all comments
+                       </a>
+                    </div>
+                    {% for comment in comments %}
+                        {% if comment.is_visible(current_user) %}
+                            <div class="panel panel-default" style="margin-top: 15px;">
+                                <div class="panel-heading">
+                                    <div class="row vertical-align">
+                                        {% if current_user.id == comment.owner_id %}
+                                            <div class="col-xs-7">
+                                                <i class="fa fa-comment-o"></i> {{ comment.owner.name }}
+                                                at {{ comment.creation_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                            </div>
+                                            <div class="col-xs-5">
+                                                <div class="pull-right">
+                                                    <a href="#" class="btn btn-sm btn-default">Edit</a>
+                                                    <a href="#" class="btn btn-sm btn-danger">Delete</a>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="col-xs-12">
+                                                <i class="fa fa-comment-o"></i> {{ comment.owner.name }}
+                                                at {{ comment.creation_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="panel-body">
+                                    {% if comment.deleted %} %}
+                                        <emph>{{ comment.owner.name }} deleted their comment.</emph>
+                                    {% else %}
+                                        <p>
+                                            {% if comment.visibility == comment.VISIBILITY_EVERYONE %}
+                                                <span class="text-muted">Visible to everyone</span>
+                                            {% elif comment.visibility == comment.VISIBILITY_APPROVALS_TEAM %}
+                                                <span class="text-muted">Visible only to approvals team</span>
+                                            {% else %}
+                                                <span class="label label-danger">Unknown visibility setting</span>
+                                            {% endif %}
+                                        </p>
+                                        {{ comment.comment|dealingwithdollars|markdown|bclean|blinkify|safe }}
+                                    {% endif %}
+                                </div>
+                                {% if comment.last_edit_timestamp %}
+                                    <div class="panel-footer">
+                                        Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    <div class="well" style="margin-top: 15px;">
+                        {{ wtf.form_field(form.comment) }}
+                        {% if current_user.has_role('project_approver') %}
+                            {{ wtf.form_field(form.limit_visibility) }}
+                        {% endif %}
+                        <div class="row vertical-align">
+                            <div class="col-xs-12">
+                                <div class="pull-right">
+                                    {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if text and url %}
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
                 {% endif %}
             </div>
-
+            <div class="col-xs-2"></div>
         </div>
-        <div class="col-xs-2"></div>
+        {% if form %}
+            </form>
+        {% endif %}
     </div>
 
     <nav class="navbar navbar-default navbar-fixed-bottom" role="navigation">

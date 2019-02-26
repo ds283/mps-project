@@ -4260,18 +4260,31 @@ class DescriptionComment(db.Model):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
+    # which approvals cycle does this comment belong to?
+    year = db.Column(db.Integer(), db.ForeignKey('main_config.year'))
+
     # comment owner
     owner_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     owner = db.relationship('User', uselist=False,
                             backref=db.backref('comments', lazy='dynamic'))
 
     # project description
-    parent_id = db.Column(db.Integer(), db.ForeignKey('projects.id'))
-    parent = db.relationship('Project', uselist=False,
+    parent_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
+    parent = db.relationship('ProjectDescription', uselist=False,
                              backref=db.backref('comments', lazy='dynamic'))
 
     # comment
     comment = db.Column(db.Text())
+
+
+    # VISIBILITY
+
+    VISIBILITY_EVERYONE = 0
+    VISIBILITY_APPROVALS_TEAM = 1
+    visibility = db.Column(db.Integer(), default=VISIBILITY_EVERYONE)
+
+    # deleted flag
+    deleted = db.Column(db.Boolean(), default=False)
 
 
     # EDITING METADATA
@@ -4281,6 +4294,20 @@ class DescriptionComment(db.Model):
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def is_visible(self, user):
+        if self.visibility == DescriptionComment.VISIBILITY_EVERYONE:
+            return True
+
+        if self.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM:
+            if user.has_role('project_approver'):
+                return True
+
+            return False
+
+        # default to safe value
+        return False
 
 
 class LiveProject(db.Model):

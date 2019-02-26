@@ -197,12 +197,12 @@ with app.app_context():
 
     # migrate_availability_data()
     # migrate_confirmation_data()
-    # populate_student_validation_data()
     # populate_email_options()
     # populate_schedule_tags()
     # populate_new_fields()
     # attach_JRA_projects()
-    populate_project_validation_data()
+    # populate_student_validation_data()
+    # populate_project_validation_data()
 
     db.session.commit()
 

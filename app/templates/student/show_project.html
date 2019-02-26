@@ -302,12 +302,8 @@
                                         <emph>{{ comment.owner.name }} deleted their comment.</emph>
                                     {% else %}
                                         <p>
-                                            {% if comment.visibility == comment.VISIBILITY_EVERYONE %}
-                                                <span class="text-muted">Visible to everyone</span>
-                                            {% elif comment.visibility == comment.VISIBILITY_APPROVALS_TEAM %}
+                                            {% if comment.visibility == comment.VISIBILITY_APPROVALS_TEAM %}
                                                 <span class="text-muted">Visible only to approvals team</span>
-                                            {% else %}
-                                                <span class="label label-danger">Unknown visibility setting</span>
                                             {% endif %}
                                         </p>
                                         {{ comment.comment|dealingwithdollars|markdown|bclean|blinkify|safe }}

@@ -54,7 +54,8 @@ def validate_ajax():
     queues = build_project_approval_queues()
     queued = queues['queued']
 
-    return ajax.project_approver.validate_data(queued, url=url, text=text)
+    return ajax.project_approver.validate_data(queued, url=url_for('project_approver.validate', url=url, text=text),
+                                               text='project approval list')
 
 
 @project_approver.route('/approve/<int:id>')

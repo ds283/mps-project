@@ -72,6 +72,14 @@ def format_readable_time(seconds):
     if seconds > _week:
         weeks, seconds = divmod(seconds, _week)
         pl = '' if weeks == 1 else 's'
+
+        if seconds > _day:
+            days, seconds = divmod(seconds, _day)
+
+            if days > 1:
+                return '{neg}{weeks} week{pl}, {days} days'.format(weeks=weeks, pl=pl, days=days,
+                                                                   neg='-' if negative else '')
+
         return '{neg}{weeks} week{pl}'.format(weeks=weeks, pl=pl, neg='-' if negative else '')
 
     if seconds > _day:

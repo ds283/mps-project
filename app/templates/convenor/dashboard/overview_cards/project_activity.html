@@ -1,28 +1,22 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% from "macros.html" import date_field %}
 
-{% macro project_activity(config, feedback_form, today) %}
-    {% set period = config.current_period %}
-    <div class="panel {% if period.start_date and period.start_date > today %}panel-default{% else %}panel-success{% endif %}">
-        <div class="panel-heading"><strong>Project activity underway: {{ period.display_name|safe }}</strong></div>
-        <div class="panel-body">
-            <form action="{{ url_for('convenor.open_feedback', id=config.id) }}"
-                  method="POST" name="feedback-form">
-                {% if period.start_date and period.start_date > today %}
-                    <p>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</p>
-                {% else %}
-                    Normal project activity is underway.
-                {% endif %}
-                <hr class="intro-divider">
-                {{ date_field(feedback_form.feedback_deadline) }}
-                <div class="row">
-                    <div class="col-xs-12">
-                        <div class="pull-right">
-                            {{ wtf.form_field(feedback_form.open_feedback, button_map={'open_feedback': 'danger'}) }}
-                        </div>
-                    </div>
+{% macro project_activity(config, period, feedback_form, today) %}
+    <form action="{{ url_for('convenor.open_feedback', id=config.id) }}"
+          method="POST" name="feedback-form">
+        {% if period.start_date and period.start_date > today %}
+            <p>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</p>
+        {% else %}
+            Normal project activity is underway.
+        {% endif %}
+        <hr class="intro-divider">
+        {{ date_field(feedback_form.feedback_deadline) }}
+        <div class="row">
+            <div class="col-xs-12">
+                <div class="pull-right">
+                    {{ wtf.form_field(feedback_form.open_feedback, button_map={'open_feedback': 'danger'}) }}
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+    </form>
 {% endmacro %}

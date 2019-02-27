@@ -1,0 +1,54 @@
+{% from "convenor/dashboard/overview_cards/period_closed.html" import period_closed %}
+{% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity %}
+{% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking %}
+
+{% macro submitter_card(config, n, today, feedback_form) %}
+    {% set period = config.get_period(n+1) %}
+
+    {% if period %}
+        <div class="panel
+            {% if n+1 == config.submission_period %}
+                {% if period.closed %}
+                    panel-default
+                {% elif period.feedback_open %}
+                    panel-danger
+                {% elif period.start_date and period.start_date > today %}
+                    panel-default
+                {% else %}
+                    panel-success
+                {% endif %}
+            {% else %}
+                panel-default
+            {% endif %}
+        ">
+            <div class="panel-heading">
+                {% if period.submission_period == config.submission_period %}
+                    <strong>{{ period.display_name|safe }}</strong>
+                {% else %}
+                    {{ period.display_name|safe }}
+                {% endif %}
+            </div>
+            <div class="panel-body">
+                {% if period.submission_period < config.submission_period or period.closed %}
+                    {{ period_closed(config) }}
+                {% elif period.submission_period > config.submission_period %}
+                    <p>Activity for this period has not yet commenced.</p>
+                {% else %}
+                    {% set state = config.submitter_lifecycle %}
+                    {% if not period.feedback_open %}
+                        {{ project_activity(config, period, feedback_form, today) }}
+                    {% elif period.feedback_open %}
+                        {{ feedback_marking(config, period, feedback_form) }}
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="panel panel-default">
+            <div class="panel-heading"><strong>Submission period #{{ n+1 }}</strong></div>
+            <div class="panel-body">
+                <span class="label label-danger">Error: Could not read period record</span>
+            </div>
+        </div>
+    {% endif %}
+{% endmacro %}

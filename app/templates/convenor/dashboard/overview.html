@@ -6,9 +6,7 @@
 {% from "convenor/dashboard/overview_cards/golive.html" import golive %}
 {% from "convenor/dashboard/overview_cards/selection_open.html" import selection_open %}
 {% from "convenor/dashboard/overview_cards/selection_closed.html" import selection_closed %}
-{% from "convenor/dashboard/overview_cards/project_activity.html" import project_activity %}
-{% from "convenor/dashboard/overview_cards/feedback_marking.html" import feedback_marking %}
-{% from "convenor/dashboard/overview_cards/submitter_rollover.html" import submitter_rollover %}
+{% from "convenor/dashboard/overview_cards/submitter_card.html" import submitter_card %}
 
 
 {% block scripts %}
@@ -107,32 +105,9 @@
 
                 {# SUBMITTING #}
                 <div class="well">
-                    {# provide summary #}
-
-                    {% set state = config.submitter_lifecycle %}
-                    {% if state == config.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY %}
-
-                        {{ project_activity(config, feedback_form, today) }}
-
-                    {% elif state == config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY %}
-
-                        {{ feedback_marking(config, feedback_form) }}
-
-                    {% elif state == config.SUBMITTER_LIFECYCLE_READY_ROLLOVER %}
-
-                        {{ submitter_rollover(config) }}
-
-                    {% else %}
-
-                        <div class="panel panel-danger">
-                            <div class="panel-heading">Error</div>
-                            <div class="panel-body">
-                                <strong>Error:</strong>
-                                Unknown project lifecycle state {{ state }}
-                            </div>
-                        </div>
-
-                    {% endif %}
+                    {% for n in range(config.submissions) %}
+                        {{ submitter_card(config, n, today, feedback_form)  }}
+                    {% endfor %}
                 </div>
             {% else %}
                 <div class="well">

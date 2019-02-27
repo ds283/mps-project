@@ -4271,7 +4271,7 @@ class DescriptionComment(db.Model):
     # project description
     parent_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
     parent = db.relationship('ProjectDescription', uselist=False,
-                             backref=db.backref('comments', lazy='dynamic'))
+                             backref=db.backref('comments', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
     # comment
     comment = db.Column(db.Text())

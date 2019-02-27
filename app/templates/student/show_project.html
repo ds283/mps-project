@@ -277,29 +277,16 @@
                         {% if comment.is_visible(current_user) %}
                             <div class="panel panel-default" style="margin-top: 15px;">
                                 <div class="panel-heading">
-                                    <div class="row vertical-align">
-                                        {% if current_user.id == comment.owner_id %}
-                                            <div class="col-xs-7">
-                                                <i class="fa fa-comment-o"></i> {{ comment.owner.name }}
-                                                at {{ comment.creation_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
-                                            </div>
-                                            <div class="col-xs-5">
-                                                <div class="pull-right">
-                                                    <a href="#" class="btn btn-sm btn-default">Edit</a>
-                                                    <a href="#" class="btn btn-sm btn-danger">Delete</a>
-                                                </div>
-                                            </div>
-                                        {% else %}
-                                            <div class="col-xs-12">
-                                                <i class="fa fa-comment-o"></i> {{ comment.owner.name }}
-                                                at {{ comment.creation_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
+                                    <i class="fa fa-comment-o"></i> {{ comment.owner.name }}
+                                    at {{ comment.creation_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                 </div>
                                 <div class="panel-body">
-                                    {% if comment.deleted %} %}
-                                        <emph>{{ comment.owner.name }} deleted their comment.</emph>
+                                    {% if comment.deleted %}
+                                        {% if comment.last_edit_timestamp %}
+                                            <span class="text-muted"><emph>{{ comment.owner.name }} deleted their comment at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</emph></span>
+                                        {% else %}
+                                            <span class="text-muted"><emph>{{ comment.owner.name }} deleted their comment</emph></span>
+                                        {% endif %}
                                     {% else %}
                                         <p>
                                             {% if comment.visibility == comment.VISIBILITY_APPROVALS_TEAM %}
@@ -309,9 +296,25 @@
                                         {{ comment.comment|dealingwithdollars|markdown|bclean|blinkify|safe }}
                                     {% endif %}
                                 </div>
-                                {% if comment.last_edit_timestamp %}
+                                {% if not comment.deleted and (comment.last_edit_timestamp or current_user.id == comment.owner_id) %}
                                     <div class="panel-footer">
-                                        Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                        <div class="row vertical-align">
+                                            {% if current_user.id == comment.owner_id %}
+                                                <div class="col-xs-7">
+                                                    Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                                </div>
+                                                <div class="col-xs-5">
+                                                    <div class="pull-right">
+                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-default">Edit</a>
+                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger">Delete</a>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <div class="col-xs-12">
+                                                    Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 {% endif %}
                             </div>
@@ -325,6 +328,9 @@
                         <div class="row vertical-align">
                             <div class="col-xs-12">
                                 <div class="pull-right">
+                                    {% if current_user.has_role('admin') or current_user.has_role('root') %}
+                                        <a href="{{ url_for('project_approver.clean_comments', id=desc.id) }}" class="btn btn-warning">Remove deleted comments</a>
+                                    {% endif %}
                                     {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
                                 </div>
                             </div>

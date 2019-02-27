@@ -10,17 +10,19 @@
 
 
 from flask import render_template, redirect, url_for, flash, request, jsonify, session
-from flask_security import current_user, roles_required, roles_accepted
+from flask_security import current_user, roles_required, roles_accepted, login_required
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from . import project_approver
 
-from ..database import db
-from ..models import ProjectDescription
+from .forms import EditCommentForm
 
-from ..shared.utils import get_current_year, build_project_approval_queues
+from ..database import db
+from ..models import ProjectDescription, DescriptionComment
+
+from ..shared.utils import get_current_year, build_project_approval_queues, home_dashboard_url
 from ..shared.conversions import is_integer
 
 import app.ajax as ajax
@@ -88,3 +90,109 @@ def reject(id):
     db.session.commit()
 
     return redirect(url_for('project_approver.validate', url=url, text=text))
+
+
+@project_approver.route('/edit_comment/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_comment(id):
+    # id is a DescriptionComment
+    comment = DescriptionComment.query.get_or_404(id)
+
+    if current_user.id != comment.owner_id:
+        flash('This comment belongs to another user. It is only possible to edit comments that you own.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    form = EditCommentForm(request.form)
+
+    if form.validate_on_submit():
+        comment.comment = form.comment.data
+
+        vis = DescriptionComment.VISIBILITY_EVERYONE
+        if current_user.has_role('project_approver'):
+            if form.limit_visibility.data:
+                vis = DescriptionComment.VISIBILITY_APPROVALS_TEAM
+        comment.visibility = vis
+
+        comment.last_edit_timestamp = datetime.now()
+
+        db.session.commit()
+
+        return redirect(url)
+
+    else:
+        if request.method == 'GET':
+            form.comment.data = comment.comment
+            form.limit_visibility.data = (comment.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM)
+
+    return render_template('project_approver/edit_comment.html', comment=comment, form=form, url=url)
+
+
+@project_approver.route('/delete_comment/<int:id>')
+@login_required
+def delete_comment(id):
+    # id is a DescriptionComment
+    comment = DescriptionComment.query.get_or_404(id)
+
+    if current_user.id != comment.owner_id:
+        flash('This comment belongs to another user. It is only possible to edit comments that you own.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
+    if comment.deleted:
+        return redirect(url)
+
+    title = 'Delete comment'
+    panel_title = 'Delete comment'
+
+    action_url = url_for('project_approver.perform_delete_comment', id=id, url=url)
+    message = '<p>Are you sure that you wish to delete this comment?</p>' \
+              '<p>This action cannot be undone.</p>'
+    submit_label = 'Delete comment'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@project_approver.route('/perform_delete_comment/<int:id>')
+@login_required
+def perform_delete_comment(id):
+    # id is a DescriptionComment
+    comment = DescriptionComment.query.get_or_404(id)
+
+    if current_user.id != comment.owner_id:
+        flash('This comment belongs to another user. It is only possible to edit comments that you own.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = home_dashboard_url()
+
+    if comment.deleted:
+        return redirect(url)
+
+    comment.comment = None
+    comment.deleted = True
+    comment.last_edit_timestamp = datetime.now()
+    db.session.commit()
+
+    return redirect(url)
+
+
+@project_approver.route('/clean_comments/<int:id>')
+@roles_accepted('admin', 'root')
+def clean_comments(id):
+    # id is a ProjectDescription
+    desc = ProjectDescription.query.get_or_404(id)
+
+    desc.comments.filter_by(deleted=True).delete()
+    db.session.commit()
+
+    flash('All deleted comments have been removed from the thread.', 'success')
+    return redirect(request.referrer)

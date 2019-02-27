@@ -25,7 +25,20 @@ from urllib import parse
 _actions = \
 """
 <a href="{{ url_for('project_approver.approve', id=r.id, url=url) }}" class="btn btn-sm btn-success">Approve</a>
-<a href="{{ url_for('project_approver.reject', id=r.id, url=url) }}" class="btn btn-sm btn-danger">Reject</a>
+<a href="{{ url_for('project_approver.requeue', id=r.id, url=url) }}" class="btn btn-sm btn-default">Re-queue</a>
+"""
+
+
+_rejected = \
+"""
+{% if r.validated_by %}
+    <a href="mailto:{{ r.validated_by.email }}">{{ r.validated_by.name }}</a>
+    {% if r.validated_timestamp %}
+        at {{ r.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+    {% endif %}
+{% else %}
+    <span class="label label-default">Unknown</span>
+{% endif %}
 """
 
 
@@ -36,6 +49,7 @@ def _element(r_id):
     return {'name': render_template_string(title, r=record, url='REPURL', text='REPTEXT'),
             'owner': render_template_string(owner, f=record.parent.owner),
             'pclasses': render_template_string(pclasses, r=record),
+            'rejected_by': render_template_string(_rejected, r=record),
             'menu': render_template_string(_actions, r=record, url='REPURL', text='REPTEXT')}
 
 
@@ -93,7 +107,7 @@ def _ProjectDescription_modules_delete_handler(target, value, initiator):
         cache.delete_memoized(_element, target.id)
 
 
-def validate_data(record_ids, url='', text=''):
+def rejected_data(record_ids, url='', text=''):
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):

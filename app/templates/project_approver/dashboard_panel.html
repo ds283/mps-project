@@ -2,7 +2,7 @@
     {% set queued = data['approval_project_queued'] %}
     {% set rejected = data['approval_project_rejected'] %}
 
-    <div class="panel {% if queued > 0 %}panel-danger{% else %}panel-default{% endif %}">
+    <div class="panel {% if queued > 0 %}panel-warning{% else %}panel-default{% endif %}">
         {% set pl = 's' %}{% if queued == 1 %}{% set pl = '' %}{% endif  %}
         {% set anti_pl = '' %}{% if queued == 1 %}{% set anti_pl = 's' %}{% endif %}
         <div class="panel-heading">{{ queued }} project description{{ pl }} require{{ anti_pl }} validation</div>
@@ -17,7 +17,7 @@
                     <div class="col-xs-4">
                         <div class="pull-right">
                             <a href="{{ url_for('project_approver.validate') }}" class="btn btn-default">
-                                Approve records
+                                Approve projects
                             </a>
                         </div>
                     </div>
@@ -25,4 +25,30 @@
             {% endif %}
         </div>
     </div>
+
+    {% if rejected > 0 %}
+        <div class="panel panel-danger">
+            {% set pl = 's' %}{% if rejected == 1 %}{% set pl = '' %}{% endif  %}
+            {% set have_has = 'have' %}{% if rejected == 1 %}{% set have_has = 'has' %}{% endif %}
+            <div class="panel-heading">{{ rejected }} project description{{ pl }} {{ have_has }} been rejected</div>
+            <div class="panel-body">
+                {% if rejected == 0 %}
+                    <p>No project descriptions have been rejected.</p>
+                {% else %}
+                    <div class="row vertical-top">
+                        <div class="col-xs-8">
+                            You have rejected projects to review.
+                        </div>
+                        <div class="col-xs-4">
+                            <div class="pull-right">
+                                <a href="{{ url_for('project_approver.rejected') }}" class="btn btn-default">
+                                    Review projects
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
 {% endmacro %}

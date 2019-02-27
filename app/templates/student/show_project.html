@@ -248,19 +248,21 @@
                 </div>
 
                 {% if allow_approval %}
-                    <hr class="intro-divider">
-                    <div class="row">
-                        <div class="col-xs-12">
-                            <div class="pull-right">
-                                <a href="{{ url_for('project_approver.approve', id=desc.id, url=url, text=text) }}" class="btn btn-success">
-                                    <i class="fa fa-check"></i> Approve
-                                </a>
-                                <a href="{{ url_for('project_approver.reject', id=desc.id, url=url, text=text) }}" class="btn btn-danger">
-                                    <i class="fa fa-times"></i> Reject
-                                </a>
+                    {% if desc.workflow_state == desc.WORKFLOW_APPROVAL_QUEUED %}
+                        <hr class="intro-divider">
+                        <div class="row">
+                            <div class="col-xs-12">
+                                <div class="pull-right">
+                                    <a href="{{ url_for('project_approver.approve', id=desc.id, url=url, text=text) }}" class="btn btn-success">
+                                        <i class="fa fa-check"></i> Approve
+                                    </a>
+                                    <a href="{{ url_for('project_approver.reject', id=desc.id, url=url, text=text) }}" class="btn btn-danger">
+                                        <i class="fa fa-times"></i> Reject
+                                    </a>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    {% endif %}
                 {% endif %}
                 {% if show_comments %}
                     <div class="well" style="margin-top: 15px;">

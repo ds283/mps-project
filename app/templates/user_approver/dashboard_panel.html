@@ -4,7 +4,7 @@
 
     {# user_approver role needed to perform approval #}
     {% if current_user.has_role('user_approver') %}
-        <div class="panel {% if to_approve > 0 %}panel-danger{% else %}panel-default{% endif %}">
+        <div class="panel {% if to_approve > 0 %}panel-warning{% else %}panel-default{% endif %}">
             <div class="panel-heading">{{ to_approve }} student {% if to_approve != 1 %}records require{% else %}record requires{% endif %} validation</div>
             <div class="panel-body">
                 {% if to_approve == 0 %}
@@ -29,7 +29,7 @@
 
     {# admin or root role needed to edit users #}
     {% if current_user.has_role('admin') or current_user.has_role('root') %}
-        <div class="panel {% if to_correct > 0 %}panel-danger{% else %}panel-default{% endif %}">
+        <div class="panel {% if to_correct > 0 %}panel-warning{% else %}panel-default{% endif %}">
             <div class="panel-heading">{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction</div>
             <div class="panel-body">
                 {% if to_correct == 0 %}

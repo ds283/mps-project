@@ -66,14 +66,15 @@ def approve(id):
     record = ProjectDescription.query.get_or_404(id)
 
     url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    if url is None:
+        url = home_dashboard_url()
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_VALIDATED
     record.validator_id = current_user.id
     record.validated_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(url_for('project_approver.validate', url=url, text=text))
+    return redirect(url)
 
 
 @project_approver.route('/reject/<int:id>')
@@ -82,14 +83,32 @@ def reject(id):
     record = ProjectDescription.query.get_or_404(id)
 
     url = request.args.get('url', None)
-    text = request.args.get('text', None)
+    if url is None:
+        url = home_dashboard_url()
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_REJECTED
     record.validator_id = current_user.id
     record.validated_timestamp = datetime.now()
     db.session.commit()
 
-    return redirect(url_for('project_approver.validate', url=url, text=text))
+    return redirect(url)
+
+
+@project_approver.route('/requeue/<int:id>')
+@roles_required('project_approver')
+def requeue(id):
+    record = ProjectDescription.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = home_dashboard_url()
+
+    record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+    record.validator_id = None
+    record.validated_timestamp = None
+    db.session.commit()
+
+    return redirect(url)
 
 
 @project_approver.route('/edit_comment/<int:id>', methods=['GET', 'POST'])
@@ -196,3 +215,33 @@ def clean_comments(id):
 
     flash('All deleted comments have been removed from the thread.', 'success')
     return redirect(request.referrer)
+
+
+@project_approver.route('/rejected')
+@roles_required('project_approver')
+def rejected():
+    """
+    Review rejected project descriptions
+    :return:
+    """
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    if url is None or text is None:
+        url = request.referrer
+        text = 'approvals dashboard'
+
+    return render_template('project_approver/review.html', url=url, text=text)
+
+
+@project_approver.route('/rejected_ajax')
+@roles_required('project_approver')
+def rejected_ajax():
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    queues = build_project_approval_queues()
+    queued = queues['rejected']
+
+    return ajax.project_approver.rejected_data(queued, url=url_for('project_approver.rejected', url=url, text=text),
+                                               text='rejected projects review')

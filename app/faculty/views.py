@@ -1112,6 +1112,8 @@ def project_preview(id):
     else:
         comments = []
 
+    data.update_last_viewed_time(current_user, commit=True)
+
     return render_project(data, desc, form=form, text=text, url=url,
                           show_selector=show_selector, allow_approval=allow_approval,
                           show_comments=True, comments=comments, all_comments=all_comments, pclass_id=pclass_id)

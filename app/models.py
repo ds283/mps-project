@@ -3961,6 +3961,21 @@ class Project(db.Model):
         return project
 
 
+    def update_last_viewed_time(self, user, commit=False):
+        # get last view record for this
+        record = self.last_viewing_times.filter_by(user_id=user.id).first()
+
+        if record is None:
+            record = LastViewingTime(user_id=user.id,
+                                     project_id=self.id,
+                                     last_viewed=None)
+            db.session.add(record)
+
+        record.last_viewed = datetime.now()
+        if commit:
+            db.session.commit()
+
+
     def maintenance(self):
         """
         Perform regular basic maintenance, to ensure validity of the database
@@ -4290,7 +4305,7 @@ class DescriptionComment(db.Model):
     # EDITING METADATA
 
     # creation timestamp
-    creation_timestamp = db.Column(db.DateTime())
+    creation_timestamp = db.Column(db.DateTime(), index=True)
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
@@ -4308,6 +4323,32 @@ class DescriptionComment(db.Model):
 
         # default to safe value
         return False
+
+
+class LastViewingTime(db.Model):
+    """
+    Capture the last time a given user viewed a project
+    """
+
+    __tablename__ = 'last_view_projects'
+
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # link to user to whom this record applies
+    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    user = db.relationship('User', foreign_keys=[user_id], uselist=False,
+                           backref=db.backref('last_viewing_times', lazy='dynamic'))
+
+    # link to project to which this record applies
+    project_id = db.Column(db.Integer(), db.ForeignKey('projects.id'))
+    project = db.relationship('Project', foreign_keys=[project_id], uselist=False,
+                              backref=db.backref('last_viewing_times', lazy='dynamic',
+                                                 cascade='all, delete, delete-orphan'))
+
+    # last viewing time
+    last_viewed = db.Column(db.DateTime(), index=True)
 
 
 class LiveProject(db.Model):
@@ -5325,6 +5366,19 @@ class SubmissionRecord(db.Model):
     # PRESENTATIONS
 
     # 'presentation_feedback' member created by back-reference from PresentationFeedback
+
+
+    # FEEDBACK PUSH
+
+    # has feedback been pushed out for this period?
+    feedback_sent = db.Column(db.Boolean(), default=False)
+
+    # who pushed the feedback?
+    feedback_push_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    feedback_push_by = db.relationship('User', foreign_keys=[feedback_push_id], uselist=False)
+
+    # timestamp when feedback was sent
+    feedback_push_timestamp = db.Column(db.DateTime())
 
 
     @property

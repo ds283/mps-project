@@ -552,14 +552,20 @@ def make_admin(id):
     :param id:
     :return:
     """
+    current_app.logger.info('Arrived in make_admin(); request.referrer = {req}'.format(req=request.referrer))
+
     user = User.query.get_or_404(id)
 
     if not user.is_active:
         flash('Inactive users cannot be given admin privileges.')
         return redirect(request.referrer)
 
+    current_app.logger.info('Preparing to add admin role in make_admin(); request.referrer = {req}'.format(req=request.referrer))
+
     _datastore.add_role_to_user(user, 'admin')
     _datastore.commit()
+
+    current_app.logger.info('Preparing to redirect in make_admin(); request.referrer = {req}'.format(req=request.referrer))
 
     return redirect(request.referrer)
 
@@ -572,14 +578,20 @@ def remove_admin(id):
     :param id:
     :return:
     """
+    current_app.logger.info('Arrived in remove_admin(); request.referrer = {req}'.format(req=request.referrer))
+
     user = User.query.get_or_404(id)
 
     if user.has_role('root'):
         flash('Administration privileges cannot be removed from a system administrator.')
         return redirect(request.referrer)
 
+    current_app.logger.info('Preparing to remove admin role in remove_admin(); request.referrer = {req}'.format(req=request.referrer))
+
     _datastore.remove_role_from_user(user, 'admin')
     _datastore.commit()
+
+    current_app.logger.info('Preparing to redirect in remove_admin(); request.referrer = {req}'.format(req=request.referrer))
 
     return redirect(request.referrer)
 
@@ -592,15 +604,21 @@ def make_root(id):
     :param id:
     :return:
     """
+    current_app.logger.info('Arrived in make_root(); request.referrer = {req}'.format(req=request.referrer))
+
     user = User.query.get_or_404(id)
 
     if not user.is_active:
         flash('Inactive users cannot be given sysadmin privileges.')
         return redirect(request.referrer)
 
+    current_app.logger.info('Preparing to add root role in make_root(); request.referrer = {req}'.format(req=request.referrer))
+
     _datastore.add_role_to_user(user, 'admin')
     _datastore.add_role_to_user(user, 'root')
     _datastore.commit()
+
+    current_app.logger.info('Preparing to redirect in make_root(); request.referrer = {req}'.format(req=request.referrer))
 
     return redirect(request.referrer)
 
@@ -613,10 +631,16 @@ def remove_root(id):
     :param id:
     :return:
     """
+    current_app.logger.info('Arrived in remove_root(); request.referrer = {req}'.format(req=request.referrer))
+
     user = User.query.get_or_404(id)
+
+    current_app.logger.info('Preparing to remove root role in make_root(); request.referrer = {req}'.format(req=request.referrer))
 
     _datastore.remove_role_from_user(user, 'root')
     _datastore.commit()
+
+    current_app.logger.info('Preparing to redirect in remove_root(); request.referrer = {req}'.format(req=request.referrer))
 
     return redirect(request.referrer)
 

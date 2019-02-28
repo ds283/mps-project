@@ -2,6 +2,10 @@
 
 {% from "macros.html" import skill_groups_key, filter_block %}
 
+{% if not valid_filter or valid_filter is none %}
+    {% set valid_filter = 'all' %}
+{% endif %}
+
 {% block scripts %}
     {{ super() }}
 
@@ -26,7 +30,7 @@
             $('#attached-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/attached_ajax/{{ pclass.id }}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/convenor/attached_ajax/{{ pclass.id }}?valid_filter={{ valid_filter }}', dataSrc: '' },
                 columns: [
                     { data: 'name' },
                     { data: 'owner',
@@ -78,6 +82,25 @@
         <div class="panel-body">
             {{ filter_block(filter_record, groups, skills, 'convenor.clear_group_filters', 'convenor.add_group_filter', 'convenor.remove_group_filter', 'convenor.clear_skill_filters', 'convenor.add_skill_filter', 'convenor.remove_skill_filter') }}
 
+            <div class="well">
+                <p>Filter by approval status</p>
+                    <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='all') }}"
+                       class="btn btn-sm filter-btn {% if valid_filter is none or valid_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                        All
+                    </a>
+                    <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='valid') }}"
+                       class="btn btn-sm filter-btn {% if valid_filter == 'valid' %}btn-primary{% else %}btn-default{% endif %}">
+                        Approved
+                    </a>
+                    <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='not-valid') }}"
+                       class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-default{% endif %}">
+                        Queued
+                    </a>
+                    <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='reject') }}"
+                       class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-default{% endif %}">
+                        Rejected
+                    </a>
+            </div>
             <table id="attached-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>

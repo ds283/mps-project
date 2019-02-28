@@ -19,7 +19,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    ScheduleSlot, SubmissionPeriodRecord
+    ScheduleSlot, SubmissionPeriodRecord, WorkflowMixin
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -250,6 +250,14 @@ def attached(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
+    valid_filter = request.args.get('valid_filter')
+
+    if valid_filter is None and session.get('convenor_attached_valid_filter'):
+        valid_filter = session['convenor_attached_valid_filter']
+
+    if valid_filter is not None:
+        session['convenor_attached_valid_filter'] = valid_filter
+
     data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
@@ -261,7 +269,8 @@ def attached(id):
 
     return render_template('convenor/dashboard/attached.html', pane='attached',
                            pclass=pclass, config=config, current_year=current_year, convenor_data=data,
-                           groups=groups, skills=skills, filter_record=filter_record)
+                           groups=groups, skills=skills, filter_record=filter_record,
+                           valid_filter=valid_filter)
 
 
 @convenor.route('/attached_ajax/<int:id>', methods=['GET', 'POST'])
@@ -284,9 +293,21 @@ def attached_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
+    valid_filter = request.args.get('valid_filter')
+
     # build list of active projects attached to this project class
     pq = db.session.query(Project.id, Project.owner_id) \
-        .filter(Project.project_classes.any(id=id)) \
+        .filter(Project.project_classes.any(id=id))
+
+    if valid_filter == 'valid':
+        pq = pq.filter(~Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED),
+                       ~Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
+    elif valid_filter == 'not-valid':
+        pq = pq.filter(Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED))
+    elif valid_filter == 'reject':
+        pq = pq.filter(Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
+
+    pq = pq \
         .join(User, User.id == Project.owner_id) \
         .filter(User.active == True).subquery()
 

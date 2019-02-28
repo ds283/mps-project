@@ -29,22 +29,27 @@ _project_name = \
 {% if not offerable %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
-{% if is_live %}
-    <span class="label label-success">LIVE</span>
-{% endif %}
-{% if is_running %}
-    <span class="label label-danger">RUNNING</span>
+{% if is_live or is_running %}
+    <div>
+        {% if is_live %}
+            <span class="label label-success">LIVE</span>
+        {% endif %}
+        {% if is_running %}
+            <span class="label label-danger">RUNNING</span>
+        {% endif %}
+    </div>
 {% endif %}
 {% if name_labels %}
-    <p></p>
-    {% for pclass in project.project_classes %}
-        {% if pclass.active %}
-            {% set style = pclass.make_CSS_style() %}
-            <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
-        {% endif %}
-    {% else %}
-        <span class="label label-danger">No project classes</span>
-    {% endfor %}
+    <div>
+        {% for pclass in project.project_classes %}
+            {% if pclass.active %}
+                {% set style = pclass.make_CSS_style() %}
+                <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ pclass.convenor_email }}">{{ pclass.abbreviation }}</a>
+            {% endif %}
+        {% else %}
+            <span class="label label-danger">No project classes</span>
+        {% endfor %}
+    </div>
 {% endif %}
 {% if not offerable %}
     <p></p>

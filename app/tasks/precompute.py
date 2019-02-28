@@ -15,9 +15,8 @@ from celery import group, chain
 from celery.exceptions import Ignore
 
 from ..database import db
-from ..models import User, FacultyData, StudentData, SelectingStudent, Project, LiveProject, WorkflowMixin
-
-from ..shared.precompute import precompute_for_user, precompute_for_exec, precompute_for_faculty
+from ..models import User, FacultyData, StudentData, SelectingStudent, Project, LiveProject, WorkflowMixin, \
+    ProjectDescription
 
 import app.ajax as ajax
 
@@ -69,13 +68,10 @@ def register_precompute_tasks(celery):
 
 
     @celery.task(bind=True)
-    def user_approvals(self, user_id):
+    def user_approvals(self):
         try:
             data = db.session.query(StudentData) \
-                .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
-                        or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != user_id),
-                            and_(StudentData.last_edit_id != None, StudentData.last_edit_id != user_id))) \
-                .all()
+                .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED).all()
         except SQLAlchemyError:
             raise self.retry()
 
@@ -90,13 +86,10 @@ def register_precompute_tasks(celery):
 
 
     @celery.task(bind=True)
-    def user_corrections(self, user_id):
+    def user_corrections(self):
         try:
             data = db.session.query(StudentData) \
-                .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
-                         or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == user_id),
-                             and_(StudentData.last_edit_id != None, StudentData.last_edit_id == user_id))) \
-                    .all()
+                .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED).all()
         except SQLAlchemyError:
             raise self.retry()
 
@@ -108,6 +101,40 @@ def register_precompute_tasks(celery):
     def cache_user_correct(self, user_id):
         # request generation of table data for this validation line
         ajax.user_approver.correction_data([user_id])
+
+
+    @celery.task(bind=True)
+    def project_approval(self):
+        try:
+            data = db.session.query(ProjectDescription) \
+                .filter(ProjectDescription.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(cache_project_approval.si(desc.id) for desc in data)
+        task.apply_async()
+
+
+    @celery.task(bind=True)
+    def cache_project_approval(self, project_id):
+        ajax.project_approver.validate_data([project_id])
+
+
+    @celery.task(bind=True)
+    def project_rejected(self):
+        try:
+            data = db.session.query(ProjectDescription) \
+                .filter(ProjectDescription.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(cache_project_rejected.si(desc.id) for desc in data)
+        task.apply_async()
+
+
+    @celery.task(bind=True)
+    def cache_project_rejected(self, project_id):
+        ajax.project_approver.rejected_data([project_id])
 
 
     @celery.task(bind=True)

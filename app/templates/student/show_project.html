@@ -285,9 +285,9 @@
                                 <div class="panel-body">
                                     {% if comment.deleted %}
                                         {% if comment.last_edit_timestamp %}
-                                            <span class="text-muted"><emph>{{ comment.owner.name }} deleted their comment at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</emph></span>
+                                            <span class="text-muted"><em>{{ comment.owner.name }} deleted their comment at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</em></span>
                                         {% else %}
-                                            <span class="text-muted"><emph>{{ comment.owner.name }} deleted their comment</emph></span>
+                                            <span class="text-muted"><em>{{ comment.owner.name }} deleted their comment</em></span>
                                         {% endif %}
                                     {% else %}
                                         <p>
@@ -301,7 +301,7 @@
                                 {% if not comment.deleted and (comment.last_edit_timestamp or current_user.id == comment.owner_id) %}
                                     <div class="panel-footer">
                                         <div class="row vertical-align">
-                                            {% if current_user.id == comment.owner_id %}
+                                            {% if comment.last_edit_timestamp and current_user.id == comment.owner_id %}
                                                 <div class="col-xs-7">
                                                     Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
@@ -311,9 +311,16 @@
                                                         <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger">Delete</a>
                                                     </div>
                                                 </div>
-                                            {% else %}
+                                            {% elif comment.last_edit_timestamp %}
                                                 <div class="col-xs-12">
                                                     Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                                </div>
+                                            {% elif current_user.id == comment.owner_id %}
+                                                <div class="col-xs-12">
+                                                    <div class="pull-right">
+                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-default">Edit</a>
+                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger">Delete</a>
+                                                    </div>
                                                 </div>
                                             {% endif %}
                                         </div>

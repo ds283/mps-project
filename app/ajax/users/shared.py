@@ -16,11 +16,11 @@ name = \
     {% if u.student_data and u.student_data is not none %}
         {% set state = u.student_data.workflow_state %}
         {% if state == u.student_data.WORKFLOW_APPROVAL_QUEUED %}
-            <span class="label label-warning">NOT VALIDATED</span>
+            <span class="label label-warning">Approval: Queued</span>
         {% elif state == u.student_data.WORKFLOW_APPROVAL_REJECTED %}
-            <span class="label label-danger">REJECTED</span>
+            <span class="label label-danger">Approval: Rejected</span>
         {% elif state == u.student_data.WORKFLOW_APPROVAL_VALIDATED %}
-            <span class="label label-success"><i class="fa fa-check"></i> VALIDATED</span>
+            <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
         {% else %}
             <span class="label label-danger">Unknown validation</span>
         {% endif %}

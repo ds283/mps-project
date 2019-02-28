@@ -4006,6 +4006,28 @@ class Project(db.Model):
             db.session.commit()
 
 
+    DESCRIPTIONS_APPROVED = 0
+    SOME_DESCRIPTIONS_QUEUED = 1
+    SOME_DESCRIPTIONS_REJECTED = 2
+    APPROVALS_UNKNOWN = 100
+
+    def get_approval_state(self):
+        num_rejected = get_count(self.descriptions.filter_by(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
+        if num_rejected > 0:
+            return Project.SOME_DESCRIPTIONS_REJECTED
+
+        num_queued = get_count(self.descriptions.filter_by(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED))
+        if num_queued > 0:
+            return Project.SOME_DESCRIPTIONS_QUEUED
+
+        num_descriptions = get_count(self.descriptions)
+        num_approved = get_count(self.descriptions.filter_by(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED))
+        if num_descriptions == num_approved:
+            return Project.DESCRIPTIONS_APPROVED
+
+        return Project.APPROVALS_UNKNOWN
+
+
     def maintenance(self):
         """
         Perform regular basic maintenance, to ensure validity of the database

@@ -29,9 +29,28 @@ _pclasses = \
     <span class="label label-default">None</span>
 {% endif %}
 {% if d.has_modules %}
-    <p></p>
-    <span class="label label-primary"><i class="fa fa-exclamation-circle"></i> Has recommended modules</span>
+    <div>
+        <span class="label label-primary"><i class="fa fa-exclamation-circle"></i> Has recommended modules</span>
+    </div>
 {% endif %}
+{% set state = d.workflow_state %}
+<div>
+    {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
+        <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
+    {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
+        <span class="label label-warning">Approval: Queued</span>
+    {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
+        <span class="label label-danger">Approval: Rejected</span>
+    {% else %}
+        <span class="label label-danger">Unknown approval state</span>
+    {% endif %}
+    {% if d.validated_by %}
+        <span class="label label-default">Approved by {{ d.validated_by.name }}</span>
+        {% if d.validated_timestamp %}
+            <span class="label label-default">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+    {% endif %}
+</div>
 """
 
 

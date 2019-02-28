@@ -102,6 +102,16 @@ _project_status = \
 {% else %}
     <span class="label label-danger">Not available</span>
 {% endif %}
+{% set state = project.get_approval_state() %}
+{% if state == project.DESCRIPTIONS_APPROVED %}
+    <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
+{% elif state == project.SOME_DESCRIPTIONS_QUEUED %}
+    <span class="label label-warning">Approval: Queued</span>
+{% elif state == project.SOME_DESCRIPTIONS_REJECTED %}
+    <span class="label label-danger">Approval: Rejected</span>
+{% else %}
+    <span class="label label-danger">Unknown approval state</span>
+{% endif %}
 """
 
 

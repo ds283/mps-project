@@ -253,12 +253,28 @@
                         <div class="row">
                             <div class="col-xs-12">
                                 <div class="pull-right">
-                                    <a href="{{ url_for('project_approver.approve', id=desc.id, url=url, text=text) }}" class="btn btn-success">
+                                    <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
                                         <i class="fa fa-check"></i> Approve
                                     </a>
-                                    <a href="{{ url_for('project_approver.reject', id=desc.id, url=url, text=text) }}" class="btn btn-danger">
+                                    <a href="{{ url_for('project_approver.reject', id=desc.id, url=url) }}" class="btn btn-danger">
                                         <i class="fa fa-times"></i> Reject
                                     </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% elif desc.workflow_state == desc.WORKFLOW_APPROVAL_REJECTED %}
+                        <hr class="intro-divider">
+                        <div class="row">
+                            <div class="col-xs-12">
+                                <div class="pull-right">
+                                    <a href="{{ url_for('project_approver.approve', id=desc.id, url=url) }}" class="btn btn-success">
+                                        <i class="fa fa-check"></i> Approve
+                                    </a>
+                                    <a href="{{ url_for('project_approver.requeue', id=desc.id, url=url) }}" class="btn btn-default">
+                                        <i class="fa fa-undo"></i> Re-queue
+                                    </a>
+                                    <a href="{{ url_for('project_approver.return_to_owner', id=desc.id, url=url) }}" class="btn btn-danger">
+                                        <i class="fa fa-exclamation-circle"></i> Return to owner</a>
                                 </div>
                             </div>
                         </div>

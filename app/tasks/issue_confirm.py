@@ -14,7 +14,8 @@ from flask_mail import Message
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, FacultyData, EnrollmentRecord
+from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, FacultyData, EnrollmentRecord, \
+    ProjectDescription
 
 from ..task_queue import progress_update, register_task
 
@@ -403,3 +404,35 @@ def register_issue_confirm_tasks(celery):
         if get_count(config.confirmation_required.filter_by(id=faculty_id)) > 0:
             config.confirmation_required.remove(faculty)
             db.session.commit()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def revise_notify(self, record_id, pcl_names):
+        try:
+            record = db.session.query(ProjectDescription).filter_by(id=record_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        project = record.parent
+        owner = project.owner
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        msg = Message(subject='Projects: please consider revising {name}/{desc}'.format(name=project.name,
+                                                                                        desc=record.label),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
+                      recipients=[owner.user.email])
+
+        msg.body = render_template('email/project_confirmation/revise_request.txt', user=owner.user,
+                                   pclasses=record.project_classes, project=project, record=record,
+                                   pcl_names=pcl_names)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Send description revision request to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        return 1

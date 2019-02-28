@@ -24,8 +24,9 @@ from urllib import parse
 
 _actions = \
 """
-<a href="{{ url_for('project_approver.approve', id=r.id, url=url) }}" class="btn btn-sm btn-success">Approve</a>
-<a href="{{ url_for('project_approver.requeue', id=r.id, url=url) }}" class="btn btn-sm btn-default">Re-queue</a>
+<a href="{{ url_for('project_approver.approve', id=r.id, url=url) }}" class="btn btn-sm btn-success btn-table-block">Approve</a>
+<a href="{{ url_for('project_approver.requeue', id=r.id, url=url) }}" class="btn btn-sm btn-default btn-table-block">Re-queue</a>
+<a href="{{ url_for('project_approver.return_to_owner', id=r.id, url=url) }}" class="btn btn-sm btn-danger btn-table-block">Return to owner</a>
 """
 
 
@@ -120,7 +121,7 @@ def rejected_data(record_ids, url='', text=''):
 
     def update(d):
         d.update({'name': d['name'].replace('REPURL', url_enc, 1).replace('REPTEXT', text_enc, 1)})
-        d.update({'menu': d['menu'].replace('REPURL', url_enc, 2)})
+        d.update({'menu': d['menu'].replace('REPURL', url_enc, 3)})
         return d
 
     data = [update(_element(r_id)) for r_id in record_ids]

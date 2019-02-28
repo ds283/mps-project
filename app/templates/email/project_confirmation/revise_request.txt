@@ -1,0 +1,37 @@
+Dear {{ user.first_name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+It is sent from an address that is not monitored or answered;
+please direct any queries to the project convenor.
+
+Thank you for responding to the recent request to update your project
+descriptions (if required) for the next selection cycle. We have received
+your instruction that your project descriptions are ready for publication
+in at least one project class.
+
+Having reviewed the corresponding projects we would like to ask whether
+you would consider looking again at the description:
+
+{{ project.name }}/{{ record.label }}
+
+You can access this from your project library, available here:
+
+https://mpsprojects.co.uk/faculty/edit_projects
+
+This description had been confirmed for publication for the following
+project types:
+{% for pcl in pcl_names -%}
+- {{ pcl }}
+{%- endfor %}
+
+Please check the comments attached to your project by opening the live
+preview, either by clicking on the project name in the library list or by
+choosing 'Preview web page' from the Actions menu. When you are satisfied
+that no further changes are needed, please simply re-confirm that your
+projects are ready for publication using the 'Confirm' button on the dashboard
+panel for each project type.
+
+Thank you for your help,
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
+project convenor

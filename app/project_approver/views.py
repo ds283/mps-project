@@ -9,21 +9,17 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, jsonify, session
+from flask import render_template, redirect, url_for, flash, request, current_app
 from flask_security import current_user, roles_required, roles_accepted, login_required
-
-from sqlalchemy import and_, or_
-from sqlalchemy.exc import SQLAlchemyError
 
 from . import project_approver
 
 from .forms import EditCommentForm
 
 from ..database import db
-from ..models import ProjectDescription, DescriptionComment
+from ..models import ProjectDescription, DescriptionComment, ProjectClassConfig, EnrollmentRecord
 
-from ..shared.utils import get_current_year, build_project_approval_queues, home_dashboard_url
-from ..shared.conversions import is_integer
+from ..shared.utils import build_project_approval_queues, home_dashboard_url
 
 import app.ajax as ajax
 
@@ -107,6 +103,50 @@ def requeue(id):
     record.validator_id = None
     record.validated_timestamp = None
     db.session.commit()
+
+    return redirect(url)
+
+
+@project_approver.route('/return_to_owner/<int:id>')
+@roles_required('project_approver')
+def return_to_owner(id):
+    record = ProjectDescription.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = home_dashboard_url()
+
+    record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+    record.validator_id = None
+    record.validated_timestamp = None
+
+    owner = record.parent.owner
+    if owner is None:
+        return redirect(url)
+
+    names = []
+
+    # find project classes associated with this description
+    for pcl in record.project_classes:
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=pcl.id) \
+            .order_by(ProjectClassConfig.year.desc()).first()
+
+        if config is not None:
+            if config.requests_issued and not config.live:
+
+                enrollment = owner.get_enrollment_record(pcl.id)
+                if enrollment is not None and enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+                    if owner not in config.confirmation_required:
+                        config.confirmation_required.append(owner)
+                        names.append(pcl.name)
+
+    db.session.commit()
+
+    celery = current_app.extensions['celery']
+    revise_notify = celery.tasks['app.tasks.issue_confirm.revise_notify']
+
+    revise_notify.apply_async(args=(record.id, names))
 
     return redirect(url)
 

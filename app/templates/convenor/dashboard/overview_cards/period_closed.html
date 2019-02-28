@@ -1,3 +1,49 @@
 {% macro period_closed(config, period) %}
     <p>Project activity for this period is now complete.</p>
+    {% set total = period.number_submitters %}
+    {% set pushed = period.number_submitters_pushed_feedback %}
+    {% set not_pushed = period.number_submitters_not_pushed %}
+    {% set supv = period.number_submitters_supervisor_feedback %}
+    {% set mark = period.number_submitters_marker_feedback %}
+    <div class="row vertical-align">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-5">
+            <div class="list-group">
+                <div class="list-group-item">
+                    <span class="{% if pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback pushed</span>
+                    <span class="badge">{{ pushed }}/{{ total }}</span>
+                </div>
+                <div class="list-group-item">
+                    <span class="{% if not_pushed > 0 %}text-success{% else %}text-muted{% endif %}">Feedback available to push</span>
+                    <span class="badge">{{ not_pushed }}/{{ total }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-5">
+            <div class="list-group">
+                <div class="list-group-item">
+                    Supervisor feedback <span class="badge">{{ supv }}/{{ total }}</span>
+                </div>
+                <div class="list-group-item">
+                    Marker feedback <span class="badge">{{ mark }}/{{ total }}</span>
+                </div>
+                {% if period.has_presentation and period.collect_presentation_feedback %}
+                    {% set pres = period.number_submitters_presentation_feedback %}
+                    <div class="list-group-item">
+                        Presentation feedback <span class="badge">{{ pres }}/{{ total }}</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+    {% if not_pushed > 0 %}
+        <div class="row vertical-align">
+            <div class="col-xs-12">
+                <div class="pull-right">
+                    <a href="{{ url_for('convenor.push_feedback', id=period.id) }}" class="btn btn-success">Push feedback</a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 {% endmacro %}

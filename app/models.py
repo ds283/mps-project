@@ -3098,6 +3098,11 @@ class SubmissionPeriodRecord(db.Model):
 
 
     @property
+    def number_submitters(self):
+        return get_count(self.submissions)
+
+
+    @property
     def projects_list(self):
         records = self.submissions.subquery()
 
@@ -3158,6 +3163,31 @@ class SubmissionPeriodRecord(db.Model):
 
         assessment = self.presentation_assessments.one()
         return assessment.deployed_schedule
+
+
+    @property
+    def number_submitters_pushed_feedback(self):
+        return get_count(self.submissions.filter_by(feedback_sent=True))
+
+
+    @property
+    def number_submitters_not_pushed(self):
+        return sum([1 if x.has_feedback and not x.feedback_sent else 0 for x in self.submissions.all()])
+
+
+    @property
+    def number_submitters_supervisor_feedback(self):
+        return get_count(self.submissions.filter_by(supervisor_submitted=True))
+
+
+    @property
+    def number_submitters_marker_feedback(self):
+        return get_count(self.submissions.filter_by(marker_submitted=True))
+
+
+    @property
+    def number_submitters_presentation_feedback(self):
+        return get_count(self.submissions.filter(SubmissionRecord.presentation_feedback.any(submitted=True)))
 
 
 class EnrollmentRecord(db.Model):
@@ -5483,7 +5513,7 @@ class SubmissionRecord(db.Model):
     FEEDBACK_SUBMITTED = 5
 
 
-    def _feedback_state(self, valid):
+    def _feedback_state(self, valid, submitted):
         period = self.period
 
         if not period.config.project_class.publish:
@@ -5492,7 +5522,7 @@ class SubmissionRecord(db.Model):
         if not period.feedback_open:
             return SubmissionRecord.FEEDBACK_NOT_YET
 
-        if self.supervisor_submitted:
+        if submitted:
             return SubmissionRecord.FEEDBACK_SUBMITTED
 
         if valid:
@@ -5509,7 +5539,7 @@ class SubmissionRecord(db.Model):
         if not self.period.config.uses_supervisor:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        return self._feedback_state(self.is_supervisor_valid)
+        return self._feedback_state(self.is_supervisor_valid, self.supervisor_submitted)
 
 
     @property
@@ -5517,7 +5547,7 @@ class SubmissionRecord(db.Model):
         if not self.period.config.uses_marker:
             return SubmissionRecord.FEEDBACK_NOT_REQUIRED
 
-        return self._feedback_state(self.is_marker_valid)
+        return self._feedback_state(self.is_marker_valid, self.marker_submitted)
 
 
     @property
@@ -5629,6 +5659,11 @@ class SubmissionRecord(db.Model):
     @property
     def number_presentation_feedback(self):
         return get_count(self.presentation_feedback)
+
+
+    @property
+    def number_submitted_presentation_feedback(self):
+        return get_count(self.presentation_feedback.filter_by(submitted=True))
 
 
     @property

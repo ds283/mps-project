@@ -26,5 +26,6 @@ from .assessors import register_assessor_tasks
 from .utilities import register_utility_tasks
 from .email_notifications import register_email_notification_tasks
 from .precompute import register_precompute_tasks
+from .push_feedback import register_push_feedback_tasks
 
 from .test import register_test_tasks

@@ -19,7 +19,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    ScheduleSlot
+    ScheduleSlot, SubmissionPeriodRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -4321,8 +4321,6 @@ def supervisor_edit_feedback(id):
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        flash('To use the convenor interface to edit feedback, you must be project convenor for the '
-              'project whose feedback is being edited.', 'error')
         return redirect(request.referrer)
 
     period = record.period
@@ -4355,7 +4353,7 @@ def supervisor_edit_feedback(id):
                                      'for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(supervisor=record.project.owner.user.name,
                                                                                                      name=record.owner.student.user.name),
                            submit_url=url_for('convenor.supervisor_edit_feedback', id=id, url=url),
-                           period=period, record=record)
+                           period=period, record=record, dont_show_warnings=True)
 
 
 @convenor.route('/marker_edit_feedback/<int:id>', methods=['GET', 'POST'])
@@ -4370,8 +4368,6 @@ def marker_edit_feedback(id):
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        flash('To use the convenor interface to edit feedback, you must be project convenor for the '
-              'project whose feedback is being edited.', 'error')
         return redirect(request.referrer)
 
     period = record.period
@@ -4404,7 +4400,7 @@ def marker_edit_feedback(id):
                                      'for <strong>{num}</strong>'.format(supervisor=record.marker.user.name,
                                                                          num=record.owner.student.exam_number),
                            submit_url=url_for('convenor.marker_edit_feedback', id=id, url=url),
-                           period=period, record=record)
+                           period=period, record=record, dont_show_warnings=True)
 
 
 @convenor.route('/supervisor_submit_feedback/<int:id>')
@@ -4419,8 +4415,6 @@ def supervisor_submit_feedback(id):
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        flash('To use the convenor interface to submit feedback, you must be project convenor for the '
-              'project whose feedback is being submitted.', 'error')
         return redirect(request.referrer)
 
     period = record.period
@@ -4455,8 +4449,6 @@ def supervisor_unsubmit_feedback(id):
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        flash('To use the convenor interface to submit feedback, you must be project convenor for the '
-              'project whose feedback is being submitted.', 'error')
         return redirect(request.referrer)
 
     period = record.period
@@ -4487,8 +4479,6 @@ def marker_submit_feedback(id):
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        flash('To use the convenor interface to submit feedback, you must be project convenor for the '
-              'project whose feedback is being submitted.', 'error')
         return redirect(request.referrer)
 
     period = record.period
@@ -4523,8 +4513,6 @@ def marker_unsubmit_feedback(id):
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        flash('To use the convenor interface to submit feedback, you must be project convenor for the '
-              'project whose feedback is being submitted.', 'error')
         return redirect(request.referrer)
 
     period = record.period
@@ -4591,7 +4579,7 @@ def presentation_edit_feedback(feedback_id):
                                      'for <i class="fa fa-user"></i> <strong>{name}</strong>'.format(supervisor=feedback.assessor.user.name,
                                                                                                      name=talk.owner.student.user.name),
                            submit_url=url_for('convenor.presentation_edit_feedback', feedback_id=feedback_id, url=url),
-                           assessment=slot.owner.owner)
+                           assessment=slot.owner.owner, dont_show_warnings=True)
 
 
 @convenor.route('/presentation_submit_feedback/<int:feedback_id>')
@@ -4666,8 +4654,6 @@ def edit_response(id):
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        flash('To use the convenor interface to edit feedback, you must be project convenor for the '
-              'project whose feedback is being edited.', 'error')
         return redirect(request.referrer)
 
     if not record.student_feedback_submitted:
@@ -4707,8 +4693,6 @@ def submit_response(id):
 
     # check is convenor for the project's class
     if not validate_is_convenor(record.project.config.project_class):
-        flash('To use the convenor interface to edit feedback, you must be project convenor for the '
-              'project whose feedback is being edited.', 'error')
         return redirect(request.referrer)
 
     if not record.student_feedback_submitted:
@@ -4726,5 +4710,27 @@ def submit_response(id):
     record.faculty_response_submitted = True
     record.faculty_response_timestamp = datetime.now()
     db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/push_feedback/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def push_feedback(id):
+    # id identifies a SubmissionPeriodRecord
+    period = SubmissionPeriodRecord.query.get_or_404(id)
+
+    config = period.config
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if not period.closed:
+        flash('It is only possible to push feedback once the submission period is closed.', 'info')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    email_task = celery.tasks['app.tasks.push_feedback.push_period']
+
+    email_task.apply_async((id, current_user.id))
 
     return redirect(request.referrer)

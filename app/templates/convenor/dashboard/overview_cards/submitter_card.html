@@ -30,7 +30,7 @@
             </div>
             <div class="panel-body">
                 {% if period.submission_period < config.submission_period or period.closed %}
-                    {{ period_closed(config) }}
+                    {{ period_closed(config, period) }}
                 {% elif period.submission_period > config.submission_period %}
                     <p>Activity for this period has not yet commenced.</p>
                 {% else %}

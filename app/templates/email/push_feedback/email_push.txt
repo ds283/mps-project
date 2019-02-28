@@ -1,0 +1,74 @@
+Dear {{ student.user.first_name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+It is sent from an address that is not monitored or answered;
+please direct any queries to the project convenor.
+
+You are receiving this mail because you are participating
+in the project "{{ pclass.name }}" and feedback is now available
+for the period "{{ period.display_name }}". Your numerical mark
+should also be available to check, either on Canvas or Sussex Direct.
+
+You can access your feedback at any time using the projects web interface
+at https://mpsprojects.co.uk. You can also, optionally, leave your own
+feedback about the project. If you have not used the web interface
+before you will need to reset your password before you can log in.
+Your login identifier is your Sussex email address.
+
+{% if record.supervisor_submitted -%}
+Feedback from your supervisor ({{ record.project.owner.user.name }}):
+
+{% if record.supervisor_positive -%}
+** Best aspects:
+{{ record.supervisor_positive|wordwrap(75) }}
+{%- endif %}
+
+{% if record.marker_negative -%}
+** Areas for improvement:
+{{ record.supervisor_negative|wordwrap(75) }}
+{%- endif %}
+
+{% endif -%}
+
+{% if record.marker_submitted -%}
+Feedback from your examiner. Note that projects are examined anonymously:
+
+{% if record.marker_positive -%}
+** Best aspects:
+{{ record.marker_positive|wordwrap(75) }}
+{%- endif %}
+
+{% if record.marker_negative -%}
+** Areas for improvement:
+{{ record.marker_negative|wordwrap(75) }}
+{%- endif %}
+
+{% endif -%}
+
+{% if period.has_presentation and period.collect_presentation_feedback -%}
+Feedback from presentation assessment:
+
+{% for feedback in record.presentation_feedback -%}
+{%- if feedback.submitted -%}
+Feedback from {{ feedback.assessor.user.name }}
+
+{% if feedback.positive -%}
+** Best aspects:
+{{ feedback.positive|wordwrap(75) }}
+{%- endif %}
+
+{% if feedback.negative -%}
+** Areas for improvement:
+{{ feedback.negative|wordwrap(75) }}
+{%- endif %}
+
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
+
+If you have questions, please contact the project convenor in the
+first instance.
+
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
+project convenor

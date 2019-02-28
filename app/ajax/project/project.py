@@ -14,7 +14,7 @@ from sqlalchemy.event import listens_for
 
 from ...database import db
 from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, TransferableSkill, DegreeProgramme, \
-    DegreeType
+    DegreeType, ProjectDescription
 from ...cache import cache
 
 from urllib import parse
@@ -547,6 +547,33 @@ def _Project_assessors_remove_handler(target, value, initiator):
         for t in _menus:
             for f in _flags:
                 cache.delete_memoized(_element, target.id, t, f[0], f[1], f[2])
+
+
+@listens_for(ProjectDescription, 'before_insert')
+def _ProjectDescription_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        p_id = target.parent_id
+        for t in _menus:
+            for f in _flags:
+                cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+
+
+@listens_for(ProjectDescription, 'before_update')
+def _ProjectDescription_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        p_id = target.parent_id
+        for t in _menus:
+            for f in _flags:
+                cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
+
+
+@listens_for(ProjectDescription, 'before_delete')
+def _ProjectDescription_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        p_id = target.parent_id
+        for t in _menus:
+            for f in _flags:
+                cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
 
 
 @listens_for(EnrollmentRecord, 'before_update')

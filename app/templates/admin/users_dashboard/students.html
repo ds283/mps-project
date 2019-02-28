@@ -121,7 +121,7 @@
                             </a>
                             <a href="{{  url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter='not-valid') }}"
                                class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-default{% endif %}">
-                                Not validated
+                                Queued
                             </a>
                             <a href="{{  url_for('admin.edit_users_students', prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter, valid_filter='reject') }}"
                                class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-default{% endif %}">

@@ -3992,7 +3992,7 @@ class Project(db.Model):
 
 
     def update_last_viewed_time(self, user, commit=False):
-        # get last view record for this
+        # get last view record for this user
         record = self.last_viewing_times.filter_by(user_id=user.id).first()
 
         if record is None:
@@ -4004,6 +4004,36 @@ class Project(db.Model):
         record.last_viewed = datetime.now()
         if commit:
             db.session.commit()
+
+
+    def has_new_comments(self, user):
+        # build query to determine most recent comment, ignoring our own
+        # (they don't count as new, unread comments)
+        query = db.session.query(DescriptionComment.creation_timestamp) \
+            .filter_by(DescriptionComment.owner_id != user.id)
+
+        # if user not in approvals team, ignore any comments that are only visible to the approvals team
+        if not user.has_role('project_approver'):
+            query = query.filter_by(DescriptionComment.visibility == DescriptionComment.VISIBILITY_EVERYONE)
+            
+        query = query \
+            .join(ProjectDescription, ProjectDescription.id == DescriptionComment.parent_id) \
+            .filter(ProjectDescription.parent_id == self.id) \
+            .order_by(DescriptionComment.creation_timestamp.desc())
+
+        # get timestamp of most recent comment
+        most_recent = query.first()
+
+        if most_recent is None:
+            return False
+
+        # get last view record for the specified user
+        record = self.last_viewing_times.filter_by(user_id=user.id).first()
+
+        if record is None:
+            return True
+
+        return most_recent[0] > record.last_viewed
 
 
     DESCRIPTIONS_APPROVED = 0

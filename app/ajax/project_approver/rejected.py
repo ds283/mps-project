@@ -73,7 +73,7 @@ def _process(r_id, current_user_id, text_enc, url_enc):
     else:
         name = name.replace('REPNEWCOMMENTS', '', 1)
 
-    menu = menu.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
+    menu = menu.replace('REPTEXT', text_enc, 3).replace('REPURL', url_enc, 3)
 
     record.update({'name': name, 'menu': menu})
     return record

@@ -407,13 +407,14 @@ def register_issue_confirm_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def revise_notify(self, record_id, pcl_names):
+    def revise_notify(self, record_id, pcl_names, user_id):
         try:
             record = db.session.query(ProjectDescription).filter_by(id=record_id).first()
+            current_user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        if record is None:
+        if record is None or current_user is None:
             self.update('FAILURE', meta='Could not load database records')
             raise Ignore()
 
@@ -429,7 +430,7 @@ def register_issue_confirm_tasks(celery):
 
         msg.body = render_template('email/project_confirmation/revise_request.txt', user=owner.user,
                                    pclasses=record.project_classes, project=project, record=record,
-                                   pcl_names=pcl_names)
+                                   pcl_names=pcl_names, current_user=current_user)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send description revision request to {r}'.format(r=', '.join(msg.recipients)))

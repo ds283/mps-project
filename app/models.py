@@ -1644,9 +1644,10 @@ class StudentData(db.Model, WorkflowMixin):
 
     @validates('exam_number', 'cohort', 'programme_id', 'foundation_year', 'repeated_years')
     def _queue_for_validation(self, key, value):
-        self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-        self.validator_id = None
-        self.validated_timestamp = None
+        with db.session.no_autoflush:
+            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+            self.validator_id = None
+            self.validated_timestamp = None
 
         return value
 
@@ -3563,10 +3564,14 @@ class Project(db.Model):
     
     @validates('keywords', 'group_id', 'skills', include_removes=True)
     def _tags_validate(self, key, value, is_remove):
-        for desc in self.descriptions:
-            desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-            desc.validator_id = None
-            desc.validated_timestamp = None
+        with db.session.no_autoflush:
+            for desc in self.descriptions:
+                desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+                desc.validator_id = None
+                desc.validated_timestamp = None
+
+        return value
+
 
 
     # SELECTION
@@ -3579,10 +3584,13 @@ class Project(db.Model):
 
     @validates('meeting_reqd')
     def _selection_validate(self, key, value):
-        for desc in self.descriptions:
-            desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-            desc.validator_id = None
-            desc.validated_timestamp = None
+        with db.session.no_autoflush:
+            for desc in self.descriptions:
+                desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+                desc.validator_id = None
+                desc.validated_timestamp = None
+
+        return value
 
 
     # MATCHING
@@ -3597,10 +3605,13 @@ class Project(db.Model):
 
     @validates('enforce_capacity', 'assessors', include_removes=True)
     def _matching_validate(self, key, value, is_remove):
-        for desc in self.descriptions:
-            desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-            desc.validator_id = None
-            desc.validated_timestamp = None
+        with db.session.no_autoflush:
+            for desc in self.descriptions:
+                desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+                desc.validator_id = None
+                desc.validated_timestamp = None
+
+        return value
 
 
     # PRESENTATION SETTINGS
@@ -3611,10 +3622,13 @@ class Project(db.Model):
 
     @validates('dont_clash_presentations')
     def _settings_validate(self, key, value):
-        for desc in self.descriptions:
-            desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-            desc.validator_id = None
-            desc.validated_timestamp = None
+        with db.session.no_autoflush:
+            for desc in self.descriptions:
+                desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+                desc.validator_id = None
+                desc.validated_timestamp = None
+
+        return value
 
 
     # PROJECT DESCRIPTION
@@ -4160,9 +4174,10 @@ class ProjectDescription(db.Model, WorkflowMixin):
     # probably don't need to include project classes
     @validates('parent_id', 'label', include_removes=True)
     def _config_enqueue(self, key, value, is_remove):
-        self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-        self.validator_id = None
-        self.validated_timestamp = None
+        with db.session.no_autoflush:
+            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+            self.validator_id = None
+            self.validated_timestamp = None
 
         return value
 
@@ -4188,10 +4203,11 @@ class ProjectDescription(db.Model, WorkflowMixin):
 
 
     @validates('description', 'reading', 'team', 'capacity', 'modules', include_removes=True)
-    def _description_enqueue(self, key, value):
-        self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-        self.validator_id = None
-        self.validated_timestamp = None
+    def _description_enqueue(self, key, value, is_remove):
+        with db.session.no_autoflush:
+            self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+            self.validator_id = None
+            self.validated_timestamp = None
 
         return value
 

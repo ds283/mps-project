@@ -33,5 +33,4 @@ projects are ready for publication using the 'Confirm' button on the dashboard
 panel for each project type.
 
 Thank you for your help,
-{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} ({{ pclass.convenor.user.email }})
-project convenor
+{{ current_user.first_name }} {{ current_user.last_name }}

@@ -342,9 +342,8 @@ def attached_ajax(id):
                                getter=lambda x: x[0],
                                setter=lambda x: (x[0].id, x[1].id))
 
-    return ajax.project.build_data(projects, 'convenor', config=config,
-                                   name_labels=True, text='attached projects list',
-                                   url=url_for('convenor.attached', id=id))
+    return ajax.project.build_data(projects, current_user.id, 'convenor', config=config, text='attached projects list',
+                                   url=url_for('convenor.attached', id=id), name_labels=True)
 
 
 @convenor.route('/faculty/<int:id>')
@@ -1387,9 +1386,8 @@ def attach_liveproject_ajax(id):
     ps = [x[1] for x in pq2.all()]
     es = [x[1] for x in eq2.all()]
 
-    return ajax.project.build_data(zip(ps, es), 'attach', config=config,
-                                   name_labels=True, text='attach view',
-                                   url=url_for('convenor.attach_liveproject', id=id))
+    return ajax.project.build_data(zip(ps, es), current_user.id, 'attach', config=config, text='attach view',
+                                   url=url_for('convenor.attach_liveproject', id=id), name_labels=True)
 
 
 @convenor.route('/manual_attach_project/<int:id>/<int:configid>')
@@ -1487,9 +1485,8 @@ def attach_liveproject_other_ajax(id):
     ps = [x[1] for x in pq2.all()]
     es = [x[1] for x in eq2.all()]
 
-    return ajax.project.build_data(zip(ps, es), 'attach_other', config=config,
-                                   name_labels=True, text='attach view',
-                                   url=url_for('convenor.attach_liveproject', id=id))
+    return ajax.project.build_data(zip(ps, es), current_user.id, 'attach_other', config=config, text='attach view',
+                                   url=url_for('convenor.attach_liveproject', id=id), name_labels=True)
 
 
 @convenor.route('/manual_attach_other_project/<int:id>/<int:configid>')
@@ -2726,9 +2723,8 @@ def unofferable_ajax():
 
     projects = [(p.id, None) for p in db.session.query(Project).filter_by(active=True).all() if not p.is_offerable]
 
-    return ajax.project.build_data(projects, 'unofferable',
-                                   name_labels=True, text='attached projects list',
-                                   url=url_for('convenor.show_unofferable'))
+    return ajax.project.build_data(projects, current_user.id, 'unofferable', text='attached projects list',
+                                   url=url_for('convenor.show_unofferable'), name_labels=True)
 
 
 @convenor.route('/force_confirm_all/<int:id>')

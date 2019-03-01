@@ -13,6 +13,8 @@ from flask import current_app
 from ..database import db
 from ..shared.internal_redis import get_redis
 
+from celery import group
+
 from datetime import datetime
 
 
@@ -20,28 +22,51 @@ def precompute_at_login(user):
     celery = current_app.extensions['celery']
 
     if user.has_role('student'):
+        # students need to cache the list of available LiveProjects
         lp = celery.tasks['app.tasks.precompute.student_liveprojects']
         lp.apply_async(args=(user.id,))
 
-    if user.has_role('admin'):
-        users = celery.tasks['app.tasks.precompute.administrator']
-        users.apply_async(args=(user.id,))
+    if user.has_role('admin') or user.has_role('root'):
+        # admin or root users are able to manage users, so we need to cache
+        user_accounts = celery.tasks['app.tasks.precompute.user_account_data']
+        faculty_accounts = celery.tasks['app.tasks.precompute.user_faculty_data']
+        student_accounts = celery.tasks['app.tasks.precompute.user_student_data']
+
+        # these users can also have edits made to user accounts bounced back to them
+        user_corrections = celery.tasks['app.tasks.precompute.user_corrections']
+
+        task = group(user_accounts.si(user.id), faculty_accounts.si(user.id), student_accounts.si(user.id),
+                     user_corrections.si(user.id))
+        task.apply_async()
 
     if user.has_role('faculty'):
-        precompute_for_faculty()
-
-    if user.has_role('exec'):
-        precompute_for_exec()
+        # Faculty need to precompute the list of projects for which they are in the assessor pool.
+        # These can be tagged with 'New comments' labels on a user-by-user basis.
+        # TODO: compute faculty project libraries? they tend to be quite small ...
+        fac = celery.tasks['app.tasks.precompute.assessor_data']
+        fac.apply_async(args=(user.id,))
 
     if user.has_role('project_approver'):
-        precompute_for_project_approver()
+        # users on the project approvals team need to generate table lines for projects in the
+        # approvals queue, and projects in the rejected set.
+        # Both of these can be tagged with 'New comments' labels on a user-by-user basis.
+        approvals = celery.tasks['app.tasks.precompute.project_approval']
+        rejections = celery.tasks['app.tasks.precompute.project_rejected']
+
+        task = group(approvals.si(user.id), rejections.si(user.id))
+        task.apply_async()
+
+    if user.has_role('exec'):
+        # 'exec' roles can access workload reports, which do not depend on who is viewing them.
+        # we don't cache these on a per-user basis, but rather globally for everyone
+        precompute_for_exec()
 
     if user.has_role('user_approver'):
+        # likewise, 'user_approver' roles need tables for all the students to approve, but these are
+        # shared between everyone on the user approvals team. So we cache them globally for everyone
         precompute_for_user_approver()
 
-    if user.has_role('admin') or user.has_role('root'):
-        precompute_user_corrections()
-
+    # reset last precompute time for this user
     user.last_precompute = datetime.now()
     db.session.commit()
 
@@ -70,20 +95,6 @@ def _check_if_compute(db, key):
     return delta.seconds > delay
 
 
-def precompute_for_faculty():
-    db = get_redis()
-
-    if not _check_if_compute(db, 'PRECOMPUTE_LAST_FACULTY'):
-        return
-
-    celery = current_app.extensions['celery']
-
-    fac = celery.tasks['app.tasks.precompute.faculty']
-    fac.apply_async()
-
-    db.set('PRECOMPUTE_LAST_FACULTY', datetime.now().timestamp())
-
-
 def precompute_for_exec():
     db = get_redis()
 
@@ -98,22 +109,6 @@ def precompute_for_exec():
     db.set('PRECOMPUTE_LAST_EXEC', datetime.now().timestamp())
 
 
-def precompute_for_project_approver():
-    db = get_redis()
-
-    if not _check_if_compute(db, 'PRECOMPUTE_LAST_PROJECT_APPROVER'):
-        return
-
-    celery = current_app.extensions['celery']
-
-    pa = celery.tasks['app.tasks.precompute.project_approval']
-    pc = celery.tasks['app.tasks.precompute.project_rejected']
-    pa.apply_async()
-    pc.apply_async()
-
-    db.set('PRECOMPUTE_LAST_PROJECT_APPROVER', datetime.now().timestamp())
-
-
 def precompute_for_user_approver():
     db = get_redis()
 
@@ -126,17 +121,3 @@ def precompute_for_user_approver():
     ua.apply_async()
 
     db.set('PRECOMPUTE_LAST_USER_APPROVER', datetime.now().timestamp())
-
-
-def precompute_user_corrections():
-    db = get_redis()
-
-    if not _check_if_compute(db, 'PRECOMPUTE_LAST_USER_CORRECTIONS'):
-        return
-
-    celery = current_app.extensions['celery']
-
-    uc = celery.tasks['app.tasks.precompute.user_corrections']
-    uc.apply_async()
-
-    db.set('PRECOMPUTE_LAST_USER_CORRECTIONS', datetime.now().timestamp())

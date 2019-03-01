@@ -716,7 +716,7 @@ def _DegreeType_delete_handler(mapper, connection, target):
                     cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
 
 
-def build_data(projects, menu_template=None, config=None, text=None, url=None, name_labels=False):
+def build_data(projects, current_user_id, menu_template=None, config=None, text=None, url=None, name_labels=False):
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):

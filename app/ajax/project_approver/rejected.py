@@ -108,7 +108,7 @@ def _ProjectDescription_modules_delete_handler(target, value, initiator):
         cache.delete_memoized(_element, target.id)
 
 
-def rejected_data(record_ids, url='', text=''):
+def rejected_data(record_ids, current_user_id, url='', text=''):
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):

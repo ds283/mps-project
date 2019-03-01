@@ -12,7 +12,7 @@ from flask import render_template_string, jsonify, current_app
 from .common import title, owner, pclasses
 
 from ...database import db
-from ...models import ProjectDescription
+from ...models import ProjectDescription, User
 from ...cache import cache
 
 from sqlalchemy.event import listens_for
@@ -52,6 +52,31 @@ def _element(r_id):
             'pclasses': render_template_string(pclasses, r=record),
             'rejected_by': render_template_string(_rejected, r=record),
             'menu': render_template_string(_actions, r=record, url='REPURL', text='REPTEXT')}
+
+
+def _process(r_id, current_user_id, text_enc, url_enc):
+    d = db.session.query(ProjectDescription).filter_by(id=r_id).one()
+    u = db.session.query(User).filter_by(id=current_user_id).one()
+
+    project = d.parent
+
+    # _element is cached
+    record = _element(r_id)
+
+    name = record['name']
+    menu = record['menu']
+
+    name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
+
+    if project.has_new_comments(u):
+        name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+    else:
+        name = name.replace('REPNEWCOMMENTS', '', 1)
+
+    menu = menu.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
+
+    record.update({'name': name, 'menu': menu})
+    return record
 
 
 @listens_for(ProjectDescription, 'before_insert')
@@ -119,11 +144,6 @@ def rejected_data(record_ids, current_user_id, url='', text=''):
     url_enc = urlencode(url) if url is not None else ''
     text_enc = urlencode(text) if text is not None else ''
 
-    def update(d):
-        d.update({'name': d['name'].replace('REPURL', url_enc, 1).replace('REPTEXT', text_enc, 1)})
-        d.update({'menu': d['menu'].replace('REPURL', url_enc, 3)})
-        return d
-
-    data = [update(_element(r_id)) for r_id in record_ids]
+    data = [_process(r_id, current_user_id, text_enc, url_enc) for r_id in record_ids]
 
     return jsonify(data)

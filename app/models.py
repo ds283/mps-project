@@ -4010,11 +4010,11 @@ class Project(db.Model):
         # build query to determine most recent comment, ignoring our own
         # (they don't count as new, unread comments)
         query = db.session.query(DescriptionComment.creation_timestamp) \
-            .filter_by(DescriptionComment.owner_id != user.id)
+            .filter(DescriptionComment.owner_id != user.id)
 
         # if user not in approvals team, ignore any comments that are only visible to the approvals team
         if not user.has_role('project_approver'):
-            query = query.filter_by(DescriptionComment.visibility == DescriptionComment.VISIBILITY_EVERYONE)
+            query = query.filter(DescriptionComment.visibility == DescriptionComment.VISIBILITY_EVERYONE)
             
         query = query \
             .join(ProjectDescription, ProjectDescription.id == DescriptionComment.parent_id) \
@@ -4311,6 +4311,34 @@ class ProjectDescription(db.Model, WorkflowMixin):
 
     def validate_modules(self):
         self.modules = [m for m in self.modules if self.module_available(m.id)]
+
+
+    def has_new_comments(self, user):
+        # build query to determine most recent comment, ignoring our own
+        # (they don't count as new, unread comments)
+        query = db.session.query(DescriptionComment.creation_timestamp) \
+            .filter(DescriptionComment.owner_id != user.id,
+                    DescriptionComment.parent_id == self.id)
+
+        # if user not in approvals team, ignore any comments that are only visible to the approvals team
+        if not user.has_role('project_approver'):
+            query = query.filter(DescriptionComment.visibility == DescriptionComment.VISIBILITY_EVERYONE)
+
+        query = query.order_by(DescriptionComment.creation_timestamp.desc())
+
+        # get timestamp of most recent comment
+        most_recent = query.first()
+
+        if most_recent is None:
+            return False
+
+        # get last view record for the specified user
+        record = self.parent.last_viewing_times.filter_by(user_id=user.id).first()
+
+        if record is None:
+            return True
+
+        return most_recent[0] > record.last_viewed
 
 
 @listens_for(ProjectDescription, 'before_update')

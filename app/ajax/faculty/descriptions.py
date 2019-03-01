@@ -50,6 +50,9 @@ _pclasses = \
             <span class="label label-default">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
         {% endif %}
     {% endif %}
+    {% if d.has_new_comments(current_user) %}
+        <span class="label label-warning">New comments</span>
+    {% endif %}
 </div>
 """
 

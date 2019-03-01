@@ -14,7 +14,10 @@ title = \
 {% set disabled = (pclass is none) %}
 <a {% if not disabled %}href="{{ url_for('faculty.project_preview', id=r.parent.id, pclass=pclass.id, show_selector=0, url=url, text=text) }}"{% endif %}>
     {%- if r.parent -%}{{ r.parent.name }}{%- else -%}<unnamed project>{%- endif -%}/{%- if r.label -%}{{ r.label }}{%- else -%}<unnamed description>{%- endif -%}
-</a> 
+</a>
+<div>
+    {{ 'REPNEWCOMMENTS'|safe }}
+</div>
 """
 
 

@@ -14,7 +14,7 @@ from sqlalchemy.event import listens_for
 
 from ...database import db
 from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, TransferableSkill, DegreeProgramme, \
-    DegreeType, ProjectDescription
+    DegreeType, ProjectDescription, User
 from ...cache import cache
 
 from urllib import parse
@@ -29,16 +29,15 @@ _project_name = \
 {% if not offerable %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
-{% if is_live or is_running %}
-    <div>
-        {% if is_live %}
-            <span class="label label-success">LIVE</span>
-        {% endif %}
-        {% if is_running %}
-            <span class="label label-danger">RUNNING</span>
-        {% endif %}
-    </div>
-{% endif %}
+<div>
+    {{ 'REPNEWCOMMENTS'|safe }}
+    {% if is_live %}
+        <span class="label label-success">LIVE</span>
+    {% endif %}
+    {% if is_running %}
+        <span class="label label-danger">RUNNING</span>
+    {% endif %}
+</div>
 {% if name_labels %}
     <div>
         {% for pclass in project.project_classes %}
@@ -427,8 +426,10 @@ def _element(project_id, menu_template, is_running, is_live, name_labels):
                                             text='REPTEXT', url='REPURL')}
 
 
-def _process(project_id, enrollment_id, menu_template, config, text_enc, url_enc, name_labels):
+def _process(project_id, enrollment_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels):
     p = db.session.query(Project).filter_by(id=project_id).one()
+    u = db.session.query(User).filter_by(id=current_user_id).one()
+
     if enrollment_id is not None:
         e = db.session.query(EnrollmentRecord).filter_by(id=enrollment_id).first()
     else:
@@ -437,11 +438,13 @@ def _process(project_id, enrollment_id, menu_template, config, text_enc, url_enc
     is_running = (p.running_counterpart(config.id) is not None) if config is not None else False
     is_live = (p.live_counterpart(config.id) is not None) if config is not None else False
 
+    # _element is cached
     record = _element(project_id, menu_template, is_running, is_live, name_labels)
 
     # need to replace text and url in 'name' field
     # need to replace text, url, config_id and pclass_id in 'menu' field
     # need to replace supervisor status in 'status' field
+    # need to replace new comment notification in 'name' field
     name = record['name']
     status = record['status']
     menu = record['menu']
@@ -452,6 +455,11 @@ def _process(project_id, enrollment_id, menu_template, config, text_enc, url_enc
         status = status.replace('REPENROLLMENT', '', 1)
 
     name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
+
+    if p.has_new_comments(u):
+        name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+    else:
+        name = name.replace('REPNEWCOMMENTS', '', 1)
 
     menu = menu.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
     if config is not None:
@@ -727,6 +735,7 @@ def build_data(projects, current_user_id, menu_template=None, config=None, text=
     url_enc = urlencode(url) if url is not None else ''
     text_enc = urlencode(text) if text is not None else ''
 
-    data = [_process(p_id, e_id, menu_template, config, text_enc, url_enc, name_labels) for p_id, e_id in projects]
+    data = [_process(p_id, e_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels)
+            for p_id, e_id in projects]
 
     return jsonify(data)

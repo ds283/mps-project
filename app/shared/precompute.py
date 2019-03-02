@@ -42,19 +42,18 @@ def precompute_at_login(user):
     if user.has_role('faculty'):
         # Faculty need to precompute the list of projects for which they are in the assessor pool.
         # These can be tagged with 'New comments' labels on a user-by-user basis.
+        # However, the 'new comments' labels are injected by substitution *after* caching,
+        # so we don't need to run these precompute jobs on a per-user basis
         # TODO: compute faculty project libraries? they tend to be quite small ...
-        fac = celery.tasks['app.tasks.precompute.assessor_data']
-        fac.apply_async(args=(user.id,))
+        precompute_faculty_projects()
 
     if user.has_role('project_approver'):
         # users on the project approvals team need to generate table lines for projects in the
         # approvals queue, and projects in the rejected set.
         # Both of these can be tagged with 'New comments' labels on a user-by-user basis.
-        approvals = celery.tasks['app.tasks.precompute.project_approval']
-        rejections = celery.tasks['app.tasks.precompute.project_rejected']
-
-        task = group(approvals.si(user.id), rejections.si(user.id))
-        task.apply_async()
+        # However, the 'new comments' labels are injected by substitution *after* caching,
+        # so we don't need to run these precompute jobs on a per-user basis
+        precompute_for_project_approver()
 
     if user.has_role('exec'):
         # 'exec' roles can access workload reports, which do not depend on who is viewing them.
@@ -121,3 +120,34 @@ def precompute_for_user_approver():
     ua.apply_async()
 
     db.set('PRECOMPUTE_LAST_USER_APPROVER', datetime.now().timestamp())
+
+
+def precompute_faculty_projects():
+    db = get_redis()
+
+    if not _check_if_compute(db, 'PRECOMPUTE_LAST_FACULTY_PROJECTS'):
+        return
+
+    celery = current_app.extensions['celery']
+
+    fac = celery.tasks['app.tasks.precompute.assessor_data']
+    fac.apply_async(args=(None,))
+
+    db.set('PRECOMPUTE_LAST_FACULTY_PROJECTS', datetime.now().timestamp())
+
+
+def precompute_for_project_approver():
+    db = get_redis()
+
+    if not _check_if_compute(db, 'PRECOMPUTE_LAST_PROJECT_APPROVER'):
+        return
+
+    celery = current_app.extensions['celery']
+
+    approvals = celery.tasks['app.tasks.precompute.project_approval']
+    rejections = celery.tasks['app.tasks.precompute.project_rejected']
+
+    task = group(approvals.si(None), rejections.si(None))
+    task.apply_async()
+
+    db.set('PRECOMPUTE_LAST_PROJECT_APPROVER', datetime.now().timestamp())

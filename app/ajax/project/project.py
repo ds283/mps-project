@@ -428,7 +428,6 @@ def _element(project_id, menu_template, is_running, is_live, name_labels):
 
 def _process(project_id, enrollment_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels):
     p = db.session.query(Project).filter_by(id=project_id).one()
-    u = db.session.query(User).filter_by(id=current_user_id).one()
 
     if enrollment_id is not None:
         e = db.session.query(EnrollmentRecord).filter_by(id=enrollment_id).first()
@@ -456,8 +455,12 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
 
     name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
 
-    if p.has_new_comments(u):
-        name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+    if current_user_id is not None:
+        u = db.session.query(User).filter_by(id=current_user_id).one()
+        if p.has_new_comments(u):
+            name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+        else:
+            name = name.replace('REPNEWCOMMENTS', '', 1)
     else:
         name = name.replace('REPNEWCOMMENTS', '', 1)
 
@@ -724,7 +727,7 @@ def _DegreeType_delete_handler(mapper, connection, target):
                     cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
 
 
-def build_data(projects, current_user_id, menu_template=None, config=None, text=None, url=None, name_labels=False):
+def build_data(projects, current_user_id=None, menu_template=None, config=None, text=None, url=None, name_labels=False):
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):

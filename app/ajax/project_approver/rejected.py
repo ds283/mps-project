@@ -56,7 +56,6 @@ def _element(r_id):
 
 def _process(r_id, current_user_id, text_enc, url_enc):
     d = db.session.query(ProjectDescription).filter_by(id=r_id).one()
-    u = db.session.query(User).filter_by(id=current_user_id).one()
 
     project = d.parent
 
@@ -68,8 +67,12 @@ def _process(r_id, current_user_id, text_enc, url_enc):
 
     name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
 
-    if project.has_new_comments(u):
-        name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+    if current_user_id is not None:
+        u = db.session.query(User).filter_by(id=current_user_id).one()
+        if project.has_new_comments(u):
+            name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+        else:
+            name = name.replace('REPNEWCOMMENTS', '', 1)
     else:
         name = name.replace('REPNEWCOMMENTS', '', 1)
 
@@ -133,7 +136,7 @@ def _ProjectDescription_modules_delete_handler(target, value, initiator):
         cache.delete_memoized(_element, target.id)
 
 
-def rejected_data(record_ids, current_user_id, url='', text=''):
+def rejected_data(record_ids, current_user_id=None, url='', text=''):
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):

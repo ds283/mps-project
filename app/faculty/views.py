@@ -1080,24 +1080,23 @@ def project_preview(id):
         else:
             desc = data.get_description(data.project_classes.first())
 
-    if form.validate_on_submit():
-        if form.submit.data:
-            vis = DescriptionComment.VISIBILITY_EVERYONE
-            if current_user.has_role('project_approver'):
-                if form.limit_visibility.data:
-                    vis = DescriptionComment.VISIBILITY_APPROVALS_TEAM
+    if form.post_comment.data and form.validate():
+        vis = DescriptionComment.VISIBILITY_EVERYONE
+        if current_user.has_role('project_approver'):
+            if form.limit_visibility.data:
+                vis = DescriptionComment.VISIBILITY_APPROVALS_TEAM
 
-            comment = DescriptionComment(year=current_year,
-                                         owner_id=current_user.id,
-                                         parent_id=desc.id,
-                                         comment=form.comment.data,
-                                         visibility=vis,
-                                         deleted=False,
-                                         creation_timestamp=datetime.now())
-            db.session.add(comment)
-            db.session.commit()
+        comment = DescriptionComment(year=current_year,
+                                     owner_id=current_user.id,
+                                     parent_id=desc.id,
+                                     comment=form.comment.data,
+                                     visibility=vis,
+                                     deleted=False,
+                                     creation_timestamp=datetime.now())
+        db.session.add(comment)
+        db.session.commit()
 
-            form.comment.data = None
+        form.comment.data = None
 
     # defaults for comments pane
     form.limit_visibility.data = True if current_user.has_role('project_approver') else False

@@ -193,7 +193,7 @@ class CommentMixin():
 
     limit_visibility = BooleanField('Limit visibility to approvals team')
 
-    submit = SubmitField('Post new comment')
+    post_comment = SubmitField('Post new comment')
 
 
 def FacultyPreviewFormFactory(project_id, show_selector):

@@ -1648,7 +1648,7 @@ def add_project(pclass_id):
             # This solution is arbitrary, but no less arbitrary than any other choice
             owner = current_user.faculty_data
 
-            if owner.show_popularity:
+            if owner is not None and owner.show_popularity:
                 form.show_popularity.data = True
                 form.show_bookmarks.data = True
                 form.show_selections.data = True

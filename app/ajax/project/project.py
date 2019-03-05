@@ -106,16 +106,7 @@ _project_status = \
 {% else %}
     <span class="label label-danger">Not available</span>
 {% endif %}
-{% set state = project.get_approval_state() %}
-{% if state == project.DESCRIPTIONS_APPROVED %}
-    <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
-{% elif state == project.SOME_DESCRIPTIONS_QUEUED %}
-    <span class="label label-warning">Approval: Queued</span>
-{% elif state == project.SOME_DESCRIPTIONS_REJECTED %}
-    <span class="label label-danger">Approval: Rejected</span>
-{% else %}
-    <span class="label label-danger">Unknown approval state</span>
-{% endif %}
+{{ 'REPAPPROVAL'|safe }}
 """
 
 
@@ -426,7 +417,8 @@ def _element(project_id, menu_template, is_running, is_live, name_labels):
                                             text='REPTEXT', url='REPURL')}
 
 
-def _process(project_id, enrollment_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels):
+def _process(project_id, enrollment_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels,
+             show_approvals):
     p = db.session.query(Project).filter_by(id=project_id).one()
 
     if enrollment_id is not None:
@@ -448,21 +440,33 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
     status = record['status']
     menu = record['menu']
 
+    repenroll = ''
     if e is not None:
-        status = status.replace('REPENROLLMENT', e.supervisor_label, 1)
-    else:
-        status = status.replace('REPENROLLMENT', '', 1)
+        repenroll = e.supervisor_label
+    status = status.replace('REPENROLLMENT', repenroll, 1)
 
     name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
 
+    repcomments = ''
     if current_user_id is not None:
         u = db.session.query(User).filter_by(id=current_user_id).one()
         if p.has_new_comments(u):
-            name = name.replace('REPNEWCOMMENTS', '<span class="label label-warning">New comments</span>', 1)
+            repcomments = '<span class="label label-warning">New comments</span>'
+    name = name.replace('REPNEWCOMMENTS', repcomments, 1)
+
+    repapprove = ''
+    if show_approvals:
+        state = p.get_approval_state()
+
+        if state == Project.DESCRIPTIONS_APPROVED:
+            repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approved</span>'
+        elif state == Project.SOME_DESCRIPTIONS_QUEUED:
+            repapprove = '<span class="label label-warning">Approval: Queued</span>'
+        elif state == Project.SOME_DESCRIPTIONS_REJECTED:
+            repapprove = '<span class="label label-info">Approval: In progress</span>'
         else:
-            name = name.replace('REPNEWCOMMENTS', '', 1)
-    else:
-        name = name.replace('REPNEWCOMMENTS', '', 1)
+            repapprove = '<span class="label label-danger">Unknown approval state</span>'
+    status = status.replace('REPAPPROVAL', repapprove, 1)
 
     menu = menu.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
     if config is not None:
@@ -727,7 +731,8 @@ def _DegreeType_delete_handler(mapper, connection, target):
                     cache.delete_memoized(_element, p_id, t, f[0], f[1], f[2])
 
 
-def build_data(projects, current_user_id=None, menu_template=None, config=None, text=None, url=None, name_labels=False):
+def build_data(projects, current_user_id=None, menu_template=None, config=None, text=None, url=None, name_labels=False,
+               show_approvals=True):
     bleach = current_app.extensions['bleach']
 
     def urlencode(s):
@@ -738,7 +743,7 @@ def build_data(projects, current_user_id=None, menu_template=None, config=None, 
     url_enc = urlencode(url) if url is not None else ''
     text_enc = urlencode(text) if text is not None else ''
 
-    data = [_process(p_id, e_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels)
+    data = [_process(p_id, e_id, current_user_id, menu_template, config, text_enc, url_enc, name_labels, show_approvals)
             for p_id, e_id in projects]
 
     return jsonify(data)

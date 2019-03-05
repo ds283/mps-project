@@ -40,18 +40,22 @@ _pclasses = \
     {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
         <span class="label label-warning">Approval: Queued</span>
     {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
-        <span class="label label-danger">Approval: Rejected</span>
+        <span class="label label-info">Approval: In progress</span>
     {% else %}
         <span class="label label-danger">Unknown approval state</span>
     {% endif %}
-    {% if d.validated_by %}
-        <span class="label label-default">Approved by {{ d.validated_by.name }}</span>
-        {% if d.validated_timestamp %}
-            <span class="label label-default">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-        {% endif %}
+    {% if current_user.has_role('project_approver') and d.validated_by %}
+        <div>
+            <span class="label label-info">Signed-off by {{ d.validated_by.name }}</span>
+            {% if d.validated_timestamp %}
+                <span class="label label-info">Signed-off at {{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            {% endif %}
+        </div>
     {% endif %}
     {% if d.has_new_comments(current_user) %}
-        <span class="label label-warning">New comments</span>
+        <div>
+            <span class="label label-warning">New comments</span>
+        </div>
     {% endif %}
 </div>
 """

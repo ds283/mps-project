@@ -260,7 +260,7 @@ def marking_ajax():
 
     data = [(p.id, None) for p in pq.all()]
 
-    return ajax.project.build_data(data, current_user.id)
+    return ajax.project.build_data(data, current_user.id, show_approvals=False)
 
 
 @faculty.route('/edit_descriptions/<int:id>')

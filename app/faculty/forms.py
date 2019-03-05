@@ -10,7 +10,7 @@
 
 from flask_security.forms import Form
 from wtforms import StringField, IntegerField, SelectField, SubmitField, TextAreaField, BooleanField
-from wtforms.validators import InputRequired, Optional
+from wtforms.validators import InputRequired, Optional, Length
 from wtforms_alchemy.fields import QuerySelectField
 
 from ..models import Project
@@ -26,6 +26,8 @@ from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, Cur
 
 from functools import partial
 
+from ..models import DEFAULT_STRING_LENGTH
+
 
 def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
 
@@ -34,7 +36,8 @@ def ProjectMixinFactory(convenor_editing, project_classes_qf, group_qf):
         if convenor_editing:
             owner = QuerySelectField('Project owner', query_factory=GetActiveFaculty, get_label=BuildActiveFacultyName)
 
-        keywords = StringField('Keywords', description='Optional. Separate with commas or semicolons.')
+        keywords = StringField('Keywords', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+                               description='Optional. Separate with commas or semicolons.')
 
         group = QuerySelectField('Research group', query_factory=group_qf, get_label='name')
 
@@ -75,6 +78,7 @@ def AddProjectFormFactory(convenor_editing=False):
     class AddProjectForm(Form, Mixin):
 
         name = StringField('Title', validators=[InputRequired(message='Project title is required'),
+                                                Length(max=DEFAULT_STRING_LENGTH),
                                                 globally_unique_project])
 
         submit = SubmitField('Next: Project descriptions')
@@ -95,6 +99,7 @@ def EditProjectFormFactory(convenor_editing=False):
     class EditProjectForm(Form, Mixin, SaveChangesMixin):
 
         name = StringField('Title', validators=[InputRequired(message='Project title is required'),
+                                                Length(max=DEFAULT_STRING_LENGTH),
                                                 unique_or_original_project])
 
         save_and_preview = SubmitField('Save changes and preview')
@@ -142,7 +147,9 @@ def AddDescriptionFormFactory(project_id):
 
     class AddDescriptionForm(Form, Mixin):
 
-        label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
+        label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this '
+                                                                       'description'),
+                                                 Length(max=DEFAULT_STRING_LENGTH),
                                                  project_unique_label],
                             description='Enter a short label to identify this description in the list. '
                                         'The label will not be visible to students.')
@@ -158,7 +165,9 @@ def EditDescriptionFormFactory(project_id, desc_id):
 
     class EditDescriptionForm(Form, Mixin, SaveChangesMixin):
 
-        label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this description'),
+        label = StringField('Label', validators=[InputRequired(message='Please enter a label to identify this '
+                                                                       'description'),
+                                                 Length(max=DEFAULT_STRING_LENGTH),
                                                  project_unique_or_original_label],
                             description='Enter a short label to identify this description in the list. '
                                         'The label will not be visible to students.')

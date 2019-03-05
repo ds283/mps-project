@@ -13,7 +13,7 @@ from flask_security.forms import Form, RegisterFormMixin, UniqueEmailFormMixin, 
 from flask_security.forms import password_length, email_required, email_validator, EqualTo
 from wtforms import StringField, IntegerField, SelectField, PasswordField, BooleanField, SubmitField, \
     TextAreaField, DateField, DateTimeField, FloatField, RadioField, ValidationError
-from wtforms.validators import InputRequired, Optional
+from wtforms.validators import InputRequired, Optional, Length
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
 from ..shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, \
@@ -47,7 +47,8 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules
 from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, \
-    matching_history_choices, solver_choices, session_choices, semester_choices, auto_enroll_year_choices
+    matching_history_choices, solver_choices, session_choices, semester_choices, auto_enroll_year_choices, \
+    DEFAULT_STRING_LENGTH
 
 from ..shared.forms.fields import CheckboxQuerySelectMultipleField
 from ..shared.forms.mixins import SaveChangesMixin, EditUserNameMixin, FirstLastNameMixin, ThemeMixin, \
@@ -61,6 +62,7 @@ import re
 class UniqueUserNameMixin():
 
     username = StringField('Username', validators=[InputRequired(message='Username is required'),
+                                                   Length(max=DEFAULT_STRING_LENGTH),
                                                    valid_username, globally_unique_username])
 
 
@@ -68,7 +70,7 @@ class EditEmailFormMixin():
 
     email = StringField(
         get_form_field_label('email'),
-        validators=[email_required, email_validator, unique_or_original_email])
+        validators=[Length(max=DEFAULT_STRING_LENGTH), email_required, email_validator, unique_or_original_email])
 
 
 class AskConfirmAddFormMixin():
@@ -194,17 +196,20 @@ class EditStudentForm(EditOfficeForm, StudentDataMixin):
 
 class ResearchGroupMixin():
 
-    website = StringField('Website', description='Optional.')
+    website = StringField('Website', description='Optional.', validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
-    colour = StringField('Colour', description='Assign a colour to help students identify this research group.')
+    colour = StringField('Colour', description='Assign a colour to help students identify this research group.',
+                         validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
 
 class AddResearchGroupForm(Form, ResearchGroupMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            globally_unique_group_name])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            globally_unique_group_abbreviation])
 
     submit = SubmitField('Add new group')
@@ -213,23 +218,28 @@ class AddResearchGroupForm(Form, ResearchGroupMixin):
 class EditResearchGroupForm(Form, ResearchGroupMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_group_name])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            unique_or_original_group_abbreviation])
 
 
 class DegreeTypeMixin():
 
-    colour = StringField('Colour', description='Assign a colour to help identify this degree type.')
+    colour = StringField('Colour', description='Assign a colour to help identify this degree type.',
+                         validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
 
 class AddDegreeTypeForm(Form, DegreeTypeMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree type name is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            globally_unique_degree_type])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            globally_unique_degree_abbreviation])
 
     submit = SubmitField('Add new degree type')
@@ -238,9 +248,11 @@ class AddDegreeTypeForm(Form, DegreeTypeMixin):
 class EditDegreeTypeForm(Form, DegreeTypeMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree type name is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_degree_type])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            unique_or_original_degree_abbreviation])
 
 
@@ -254,9 +266,11 @@ class DegreeProgrammeMixin():
 class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree programme name is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            globally_unique_degree_programme])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            globally_unique_programme_abbreviation])
 
     submit = SubmitField('Add new degree programme')
@@ -265,15 +279,18 @@ class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):
 class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Degree programme name is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_degree_programme])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            unique_or_original_programme_abbreviation])
 
 
 class ModuleMixin():
 
-    name = StringField('Module name', validators=[InputRequired(message='Module name is required')])
+    name = StringField('Module name', validators=[InputRequired(message='Module name is required'),
+                                                  Length(max=DEFAULT_STRING_LENGTH)])
 
     level = QuerySelectField('Level', query_factory=GetFHEQLevels, get_label='name')
 
@@ -283,6 +300,7 @@ class ModuleMixin():
 class AddModuleForm(Form, ModuleMixin):
 
     code = StringField('Module code', validators=[InputRequired(message='Module code is required'),
+                                                  Length(max=DEFAULT_STRING_LENGTH),
                                                   globally_unique_module_code])
 
     submit = SubmitField('Add new module')
@@ -291,6 +309,7 @@ class AddModuleForm(Form, ModuleMixin):
 class EditModuleForm(Form, ModuleMixin, SaveChangesMixin):
 
     code = StringField('Module code', validators=[InputRequired(message='Module code is required'),
+                                                  Length(max=DEFAULT_STRING_LENGTH),
                                                   unique_or_original_module_code])
 
 
@@ -302,6 +321,7 @@ class TransferableSkillMixin():
 class AddTransferableSkillForm(Form, TransferableSkillMixin):
 
     name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
+                                            Length(max=DEFAULT_STRING_LENGTH),
                                             globally_unique_transferable_skill])
 
     submit = SubmitField('Add new transferable skill')
@@ -310,12 +330,14 @@ class AddTransferableSkillForm(Form, TransferableSkillMixin):
 class EditTransferableSkillForm(Form, TransferableSkillMixin, SaveChangesMixin):
 
     name = StringField('Skill', validators=[InputRequired(message='Name of transferable skill is required'),
+                                            Length(max=DEFAULT_STRING_LENGTH),
                                             unique_or_original_transferable_skill])
 
 
 class ProjectClassMixin():
 
-    colour = StringField('Colour', description='Assign a colour to help students identify this project class.')
+    colour = StringField('Colour', description='Assign a colour to help students identify this project class.',
+                         validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
     do_matching = BooleanField('Participate in automated global matching of faculty to projects',
                                default=True)
@@ -423,9 +445,11 @@ class ProjectClassMixin():
 class AddProjectClassForm(Form, ProjectClassMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name of project class is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            globally_unique_project_class])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            globally_unique_project_class_abbrev])
 
     submit = SubmitField('Add new project class')
@@ -434,9 +458,11 @@ class AddProjectClassForm(Form, ProjectClassMixin):
 class EditProjectClassForm(Form, ProjectClassMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name of project class is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_project_class])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            unique_or_original_project_class_abbrev])
 
 
@@ -444,7 +470,7 @@ class SubmissionPeriodMixin():
 
     name = StringField('Name', description='Optional. Enter an alternative text name for this submission '
                                            'period, such as "Autumn Term"',
-                       validators=[Optional()])
+                       validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
     start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                            description='The year will increment when a rollover takes place')
@@ -464,14 +490,17 @@ class SubmissionPeriodMixin():
                                   validators=[NotOptionalIf('has_presentation')])
 
     morning_session = StringField('Times for morning session',
-                                  description='e.g. 10am-12pm', validators=[NotOptionalIf('has_presentation')])
+                                  description='e.g. 10am-12pm', validators=[NotOptionalIf('has_presentation'),
+                                                                            Length(max=DEFAULT_STRING_LENGTH)])
 
     afternoon_session = StringField('Times for afternoon session',
-                                    description='e.g. 2pm-4pm', validators=[NotOptionalIf('has_presentation')])
+                                    description='e.g. 2pm-4pm', validators=[NotOptionalIf('has_presentation'),
+                                                                            Length(max=DEFAULT_STRING_LENGTH)])
 
     talk_format = StringField('Specify talk format',
                               description='e.g. 15 mins + 3 mins for questions',
-                              validators=[NotOptionalIf('has_presentation')])
+                              validators=[NotOptionalIf('has_presentation'),
+                                          Length(max=DEFAULT_STRING_LENGTH)])
 
     collect_presentation_feedback = BooleanField('Collect presentation feedback online')
 
@@ -488,16 +517,18 @@ class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, SaveChangesMixin):
 
 class SupervisorMixin():
 
-    colour = StringField('Colour',
+    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
                          description='Assign a colour to help students identify the roles of team members')
 
 
 class AddSupervisorForm(Form, SupervisorMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name of supervisory role is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            globally_unique_supervisor])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            globally_unique_supervisor_abbrev])
     submit = SubmitField('Add new supervisory role')
 
@@ -505,9 +536,11 @@ class AddSupervisorForm(Form, SupervisorMixin):
 class EditSupervisorForm(Form, SupervisorMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Name of supervisory role is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_supervisor])
 
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='An abbreviation is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH),
                                                            unique_or_original_supervisor_abbrev])
 
 
@@ -540,7 +573,8 @@ def MessageMixinFactory(query_factory, convenor_editing):
 
         dismissible = BooleanField('Allow message to be dismissed')
 
-        title = StringField('Title', validators=[Optional()], description='Optional. Briefly summarize your message.')
+        title = StringField('Title', validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)],
+                            description='Optional. Briefly summarize your message.')
 
         body = TextAreaField('Message', render_kw={"rows": 5},
                              validators=[InputRequired(message='You must enter a message, however short')])
@@ -601,7 +635,8 @@ class ScheduleTypeForm(Form, ScheduleTypeMixin):
 
 class ScheduledTaskMixin():
 
-    name = StringField('Name', validators=[InputRequired(message='A task name is required')])
+    name = StringField('Name', validators=[InputRequired(message='A task name is required'),
+                                           Length(max=DEFAULT_STRING_LENGTH)])
 
     owner = QuerySelectField('Owner', query_factory=GetSysadminUsers, get_label=BuildSysadminUserName)
 
@@ -619,10 +654,10 @@ class ScheduledTaskMixin():
 
     task = SelectField('Task', choices=tasks_available)
 
-    arguments = StringField('Arguments', validators=[valid_json],
+    arguments = StringField('Arguments', validators=[valid_json, Length(max=DEFAULT_STRING_LENGTH)],
                             description='Format as a JSON list.')
 
-    keyword_arguments = StringField('Keyword arguments', validators=[valid_json],
+    keyword_arguments = StringField('Keyword arguments', validators=[valid_json, Length(max=DEFAULT_STRING_LENGTH)],
                                     description='Format as a JSON dictionary.')
 
     expires = DateTimeField('Expires at', validators=[Optional()],
@@ -639,15 +674,20 @@ class IntervalMixin():
 
 class CrontabMixin():
 
-    minute = StringField('Minute pattern', validators=[InputRequired(message='You must enter a pattern')])
+    minute = StringField('Minute pattern', validators=[InputRequired(message='You must enter a pattern'),
+                                                       Length(max=DEFAULT_STRING_LENGTH)])
 
-    hour = StringField('Hour pattern', validators=[InputRequired(message='You must enter a pattern')])
+    hour = StringField('Hour pattern', validators=[InputRequired(message='You must enter a pattern'),
+                                                   Length(max=DEFAULT_STRING_LENGTH)])
 
-    day_of_week = StringField('Day-of-week pattern', validators=[InputRequired(message='You must enter a pattern')])
+    day_of_week = StringField('Day-of-week pattern', validators=[InputRequired(message='You must enter a pattern'),
+                                                                 Length(max=DEFAULT_STRING_LENGTH)])
 
-    day_of_month = StringField('Day-of-month pattern', validators=[InputRequired(message='You must enter a pattern')])
+    day_of_month = StringField('Day-of-month pattern', validators=[InputRequired(message='You must enter a pattern'),
+                                                                   Length(max=DEFAULT_STRING_LENGTH)])
 
-    month_of_year = StringField('Month-of-year pattern', validators=[InputRequired(message='You must enter a pattern')])
+    month_of_year = StringField('Month-of-year pattern', validators=[InputRequired(message='You must enter a pattern'),
+                                                                     Length(max=DEFAULT_STRING_LENGTH)])
 
 
 class AddIntervalScheduledTask(Form, ScheduledTaskMixin, IntervalMixin):
@@ -768,7 +808,7 @@ class EnrollmentRecordForm(Form, EnrollmentRecordMixin, SaveChangesMixin):
 
 class SkillGroupMixin():
 
-    colour = StringField('Colour',
+    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
                          description='Assign a colour to help students identify skills belonging to this group')
 
     add_group = BooleanField('Add group name to skill labels',
@@ -778,6 +818,7 @@ class SkillGroupMixin():
 class AddSkillGroupForm(Form, SkillGroupMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            globally_unique_skill_group])
 
     submit = SubmitField('Add new skill')
@@ -786,19 +827,22 @@ class AddSkillGroupForm(Form, SkillGroupMixin):
 class EditSkillGroupForm(Form, SkillGroupMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_skill_group])
 
 
 class RoleMixin():
 
-    description = StringField('Description')
+    description = StringField('Description', validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
-    colour = StringField('Colour', description='Specify a colour to help distinguish different roles')
+    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+                         description='Specify a colour to help distinguish different roles')
 
 
 class AddRoleForm(Form, RoleMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            globally_unique_role])
 
     submit = SubmitField('Add new role')
@@ -807,6 +851,7 @@ class AddRoleForm(Form, RoleMixin):
 class EditRoleForm(Form, RoleMixin, SaveChangesMixin):
 
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_role])
 
 
@@ -824,7 +869,8 @@ def MatchingMixinFactory(query_factory):
 
         name = StringField('Name',
                            description='Enter a short tag to identify this match',
-                           validators=[InputRequired(message='Please supply a unique name')])
+                           validators=[InputRequired(message='Please supply a unique name'),
+                                       Length(max=DEFAULT_STRING_LENGTH)])
 
         pclasses_to_include = CheckboxQuerySelectMultipleField('Include which project classes',
                                                                query_factory=GetAutomatedMatchPClasses,
@@ -923,7 +969,8 @@ def RenameMatchFormFactory(year):
     class RenameMatchForm(Form):
 
         name = StringField('New name', description='Enter a short tag to identify this match',
-                           validators=[InputRequired(message='Please supply a unique name')])
+                           validators=[InputRequired(message='Please supply a unique name'),
+                                       Length(max=DEFAULT_STRING_LENGTH)])
 
         submit = SubmitField('Rename match')
 
@@ -952,7 +999,8 @@ def PresentationAssessmentMixinFactory(query_factory):
     class PresentationAssessmentMixin():
 
         name = StringField('Name', description='Enter a short name to identify this assessment event',
-                           validators=[InputRequired(message='Please supply a unique name')])
+                           validators=[InputRequired(message='Please supply a unique name'),
+                                       Length(max=DEFAULT_STRING_LENGTH)])
 
         submission_periods = CheckboxQuerySelectMultipleField('Select the submission periods for which project '
                                                               'presentations will be given',
@@ -1012,9 +1060,11 @@ class EditSessionForm(Form, SessionMixin, SaveChangesMixin):
 class BuildingMixin():
 
     name = StringField('Name', description='Enter a short name or identifier for the building',
-                       validators=[InputRequired('A unique name is required')])
+                       validators=[InputRequired('A unique name is required'),
+                                   Length(max=DEFAULT_STRING_LENGTH)])
 
-    colour = StringField('Colour', description='Specify a colour to help identify rooms located in this building')
+    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+                         description='Specify a colour to help identify rooms located in this building')
 
 
 class AddBuildingForm(Form, BuildingMixin):
@@ -1036,7 +1086,8 @@ class EditBuildingForm(Form, BuildingMixin, SaveChangesMixin):
 class RoomMixin():
 
     name = StringField('Name', description='Enter a number or label for the venue',
-                       validators=[InputRequired('A unique name is required')])
+                       validators=[InputRequired('A unique name is required'),
+                                   Length(max=DEFAULT_STRING_LENGTH)])
 
     building = QuerySelectField('Building', query_factory=GetAllBuildings, get_label='name')
 
@@ -1075,11 +1126,13 @@ class ScheduleNameMixin():
 
     name = StringField('Name',
                        description='Enter a short name to identify this schedule',
-                       validators=[InputRequired(message='Please supply a unique name')])
+                       validators=[InputRequired(message='Please supply a unique name'),
+                                   Length(max=DEFAULT_STRING_LENGTH)])
 
     tag = StringField('Tag',
                       description='Enter a unique tag (containing no white space) for use as part of a URL',
-                      validators=[InputRequired(message='Please supply a unique tag')])
+                      validators=[InputRequired(message='Please supply a unique tag'),
+                                  Length(max=DEFAULT_STRING_LENGTH)])
 
 
 def ScheduleNameCreateValidatorFactory(assessment):
@@ -1204,17 +1257,20 @@ class LevelSelectorForm(Form, LevelSelectorMixin):
 
 class FHEQLevelMixin():
 
-    colour = StringField('Colour', description='Assign a colour to help distinguish modules belonging to this level')
+    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+                         description='Assign a colour to help distinguish modules belonging to this level')
 
 
 class AddFHEQLevelForm(Form, FHEQLevelMixin):
 
     name = StringField('Name', description='Provide a name for this level',
                        validators=[InputRequired(message='Please specify a name for this level'),
+                                   Length(max=DEFAULT_STRING_LENGTH),
                                    globally_unique_FHEQ_level_name])
 
-    short_name = StringField('Short name', description='A shortened name is used to save space on some dispays',
+    short_name = StringField('Short name', description='A shortened name is used to save space on some displays',
                              validators=[InputRequired(message='Please specify a short name for this level'),
+                                         Length(max=DEFAULT_STRING_LENGTH),
                                          globally_unique_FHEQ_short_name])
 
     academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),
@@ -1227,10 +1283,12 @@ class EditFHEQLevelForm(Form, FHEQLevelMixin, SaveChangesMixin):
 
     name = StringField('Name', description='Provide a name for this level',
                        validators=[InputRequired(message='Please specify a name for this level'),
+                                   Length(max=DEFAULT_STRING_LENGTH),
                                    unique_or_original_FHEQ_level_name])
 
-    short_name = StringField('Short name', description='A shortened name is used to save space on some dispays',
+    short_name = StringField('Short name', description='A shortened name is used to save space on some displays',
                              validators=[InputRequired(message='Please specify a short name for this level'),
+                                         Length(max=DEFAULT_STRING_LENGTH),
                                          unique_or_original_FHEQ_short_name])
 
     academic_year = IntegerField('Academic year', validators=[InputRequired(message='Please specify a year'),

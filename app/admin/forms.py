@@ -769,7 +769,7 @@ class EnrollmentRecordMixin():
 
     supervisor_comment = TextAreaField('Comment', render_kw={"rows": 3},
                                        description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
-                                       validators=[Optional()])
+                                       validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
 
     # MARKER
@@ -783,7 +783,7 @@ class EnrollmentRecordMixin():
 
     marker_comment = TextAreaField('Comment', render_kw={"rows": 3},
                                    description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
-                                   validators=[Optional()])
+                                   validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
 
     # PRESENTATIONS
@@ -797,7 +797,7 @@ class EnrollmentRecordMixin():
 
     presentations_comment = TextAreaField('Comment', render_kw={"rows": 3},
                                          description='Optional. Use to document sabbaticals, buy-outs and exemptions.',
-                                         validators=[Optional()])
+                                         validators=[Optional(), Length(max=DEFAULT_STRING_LENGTH)])
 
 
 

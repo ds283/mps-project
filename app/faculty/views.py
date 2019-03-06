@@ -2131,7 +2131,7 @@ def show_enrollments():
         url = request.referrer
 
         # avoid circular references
-        if 'show_enrollments' in url:
+        if url is not None and 'show_enrollments' in url:
             url = None
 
     pclasses = ProjectClass.query.filter_by(active=True)

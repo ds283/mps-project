@@ -410,7 +410,8 @@ def _element(project_id, menu_template, is_running, is_live, name_labels):
              'status': render_template_string(_project_status, project=p),
              'pclasses': render_template_string(_project_pclasses, project=p),
              'meeting': render_template_string(_project_meetingreqd, project=p),
-             'group': p.group.make_label(),
+             'group': p.group.make_label() if p.group is not None else '<span class="label label-warning">Missing '
+                                                                       'group</span>',
              'prefer': render_template_string(_project_prefer, project=p),
              'skills': render_template_string(_project_skills, skills=p.ordered_skills),
              'menu': render_template_string(menu_string, project=p, config_id=_config_proxy, pclass_id=_pclass_proxy,

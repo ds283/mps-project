@@ -1648,17 +1648,22 @@ def add_project(pclass_id):
             # This solution is arbitrary, but no less arbitrary than any other choice
             owner = current_user.faculty_data
 
-            if owner is not None and owner.show_popularity:
+            if owner is not None:
+                if owner.show_popularity:
+                    form.show_popularity.data = True
+                    form.show_bookmarks.data = True
+                    form.show_selections.data = True
+
+                form.enforce_capacity.data = owner.enforce_capacity
+                form.dont_clash_presentations.data = owner.dont_clash_presentations
+
+            else:
                 form.show_popularity.data = True
                 form.show_bookmarks.data = True
-                form.show_selections.data = True
-            else:
-                form.show_popularity.data = False
-                form.show_bookmarks.data = False
                 form.show_selections.data = False
 
-            form.enforce_capacity.data = owner.enforce_capacity
-            form.dont_clash_presentations.data = owner.dont_clash_presentations
+                form.enforce_capacity.data = True
+                form.dont_clash_presentations.data = True
 
     return render_template('faculty/edit_project.html', project_form=form, pclass_id=pclass_id, title='Add new project')
 

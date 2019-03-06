@@ -125,7 +125,11 @@
                                 {% elif project.meeting_reqd == project.MEETING_NONE %}
                                     <span class="label label-success">Meeting not required</span>
                                 {% endif %}
-                                {{ project.group.make_label()|safe }}
+                                {% if project.group  %}
+                                    {{ project.group.make_label()|safe }}
+                                {% else %}
+                                    <span class="label label-warning">Missing group</span>
+                                {% endif %}
                                 <span class="label label-info">{{ project.num_assessors(pclass) }} assessors</span>
                             </div>
                         </div>

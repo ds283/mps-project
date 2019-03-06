@@ -10,8 +10,10 @@ descriptions (if required) for the next selection cycle. We have received
 your instruction that your project descriptions are ready for publication
 in at least one project class.
 
-Having reviewed the corresponding projects we would like to ask whether
-you would consider looking again at the description:
+We appreciate that you are very busy and have limited time for each
+task the department asks you to carry out. However, having reviewed the
+corresponding projects we would like to ask whether you would consider
+looking again at the description:
 
 {{ project.name }}/{{ record.label }}
 
@@ -19,13 +21,14 @@ You can access this from your project library, available here:
 
 https://mpsprojects.co.uk/faculty/edit_projects
 
-This description had been confirmed for publication for the following
+This description was confirmed for publication for the following
 project types:
 {% for pcl in pcl_names -%}
 - {{ pcl }}
 {%- endfor %}
 
-Please check the comments attached to your project by opening the live
+In most cases the project convenor will have provided a comment with more
+detailed information. You can view these comments by opening the live
 preview, either by clicking on the project name in the library list or by
 choosing 'Preview web page' from the Actions menu. When you are satisfied
 that no further changes are needed, please simply re-confirm that your

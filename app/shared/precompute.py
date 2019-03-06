@@ -55,8 +55,8 @@ def precompute_at_login(user):
         # so we don't need to run these precompute jobs on a per-user basis
         precompute_for_project_approver()
 
-    if user.has_role('exec'):
-        # 'exec' roles can access workload reports, which do not depend on who is viewing them.
+    if user.has_role('reports'):
+        # 'reports' roles can access workload reports, which do not depend on who is viewing them.
         # we don't cache these on a per-user basis, but rather globally for everyone
         precompute_for_exec()
 
@@ -102,7 +102,7 @@ def precompute_for_exec():
 
     celery = current_app.extensions['celery']
 
-    exc = celery.tasks['app.tasks.precompute.executive']
+    exc = celery.tasks['app.tasks.precompute.reporting']
     exc.apply_async()
 
     db.set('PRECOMPUTE_LAST_EXEC', datetime.now().timestamp())

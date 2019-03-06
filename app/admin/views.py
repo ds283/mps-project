@@ -454,8 +454,8 @@ def users_ajax():
         users = db.session.query(User.id).filter(User.roles.any(Role.name == 'faculty')).all()
     elif filter == 'office':
         users = db.session.query(User.id).filter(User.roles.any(Role.name == 'office')).all()
-    elif filter == 'exec':
-        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'exec')).all()
+    elif filter == 'reports':
+        users = db.session.query(User.id).filter(User.roles.any(Role.name == 'reports')).all()
     elif filter == 'admin':
         users = db.session.query(User.id).filter(User.roles.any(Role.name == 'admin')).all()
     elif filter == 'root':

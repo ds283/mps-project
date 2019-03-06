@@ -19,11 +19,11 @@ from ..shared.sqlalchemy import get_count
 
 import app.ajax as ajax
 
-from . import exec
+from . import reports
 
 
-@exec.route('/workload')
-@roles_required('exec')
+@reports.route('/workload')
+@roles_required('reports')
 def workload():
     """
     Basic workload report
@@ -33,28 +33,28 @@ def workload():
     detail = request.args.get('detail')
 
     # if no group filter supplied, check if one is stored in session
-    if group_filter is None and session.get('exec_workload_group_filter'):
-        group_filter = session['exec_workload_group_filter']
+    if group_filter is None and session.get('reports_workload_group_filter'):
+        group_filter = session['reports_workload_group_filter']
 
     # write group filter into session if it is not empty
     if group_filter is not None:
-        session['exec_workload_group_filter'] = group_filter
+        session['reports_workload_group_filter'] = group_filter
 
     # if no detail level supplied, check if one is stored in session
-    if detail is None and session.get('exec_workload_detail'):
-        detail = session['exec_workload_detail']
+    if detail is None and session.get('reports_workload_detail'):
+        detail = session['reports_workload_detail']
 
     # write detail level into session if it is not empty
     if detail is not None:
-        session['exec_workload_detail'] = detail
+        session['reports_workload_detail'] = detail
 
     groups = db.session.query(ResearchGroup).filter_by(active=True).all()
 
-    return render_template('exec/workload.html', groups=groups, group_filter=group_filter, detail=detail)
+    return render_template('reports/workload.html', groups=groups, group_filter=group_filter, detail=detail)
 
 
-@exec.route('/workload_ajax')
-@roles_required('exec')
+@reports.route('/workload_ajax')
+@roles_required('reports')
 def workload_ajax():
     """
     AJAX data point for workload report
@@ -73,4 +73,4 @@ def workload_ajax():
 
     faculty_ids = [f[0] for f in fac_query.all()]
 
-    return ajax.exec.workload_data(faculty_ids, detail == 'simple')
+    return ajax.reports.workload_data(faculty_ids, detail == 'simple')

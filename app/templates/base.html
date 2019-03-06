@@ -305,7 +305,7 @@
             {%- set is_faculty = current_user.has_role('faculty') -%}
             {%- set is_office = current_user.has_role('office') -%}
             {%- set is_student = current_user.has_role('student') -%}
-            {%- set is_exec = current_user.has_role('exec') -%}
+            {%- set is_reports = current_user.has_role('reports') -%}
             {%- set is_convenor = is_faculty and current_user.faculty_data is not none and current_user.faculty_data.is_convenor -%}
             {%- set is_root = current_user.has_role('root') -%}
             {%- set is_admin = current_user.has_role('admin') -%}
@@ -340,15 +340,15 @@
                         </li>
                     {% endif %}
 
-                    {% if is_exec %}
+                    {% if is_reports %}
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
-                                Exec reports
+                                Reports
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a href="{{ url_for('exec.workload') }}">
-                                    <i class="fa fa-line-chart"></i> Workload...
+                                <li><a href="{{ url_for('reports.workload') }}">
+                                    <i class="fa fa-binoculars"></i> Workload...
                                 </a></li>
                             </ul>
                         </li>
@@ -466,7 +466,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a href="{{ url_for('home.homepage') }}">
-                                    <i class="fa fa-line-chart"></i> Dashboard...
+                                    <i class="fa fa-area-chart"></i> Dashboard...
                                 </a></li>
                                 {% if current_user.faculty_data.has_editable_availability_requests %}
                                     <li role="separator" class="divider"></li>

@@ -371,8 +371,8 @@ def create_app():
     from .office import office as office_blueprint
     app.register_blueprint(office_blueprint, url_prefix='/office')
 
-    from .exec import exec as exec_blueprint
-    app.register_blueprint(exec_blueprint, url_prefix='/exec')
+    from .reports import reports as reports_blueprint
+    app.register_blueprint(reports_blueprint, url_prefix='/reports')
 
     from .user_approver import user_approver as user_approver_blueprint
     app.register_blueprint(user_approver_blueprint, url_prefix='/user_approver')

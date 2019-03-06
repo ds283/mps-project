@@ -16,6 +16,6 @@ from . import student
 from . import users
 from . import polling
 from . import faculty
-from . import exec
+from . import reports
 from . import user_approver
 from . import project_approver

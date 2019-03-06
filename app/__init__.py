@@ -55,7 +55,6 @@ from pymongo import MongoClient
 
 
 def create_app():
-
     # get current configuration, or default to 'production' for safety
     config_name = os.environ.get('FLASK_ENV') or 'production'
 

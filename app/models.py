@@ -4187,7 +4187,7 @@ class ProjectDescription(db.Model, WorkflowMixin):
     # description
     description = db.Column(db.Text())
 
-    # recommended reading
+    # recommended reading/resources
     reading = db.Column(db.Text())
 
     # supervisory roles
@@ -4565,7 +4565,7 @@ class LiveProject(db.Model):
     # project description
     description = db.Column(db.Text())
 
-    # recommended reading
+    # recommended reading/resources
     reading = db.Column(db.Text())
 
     # supervisor roles

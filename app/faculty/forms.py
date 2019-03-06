@@ -134,7 +134,7 @@ def DescriptionMixinFactory(query_factory):
                                                 r'<strong>Please preview your project to check it renders correctly.</strong>',
                                     validators=[InputRequired(message='A project description is required')])
 
-        reading = TextAreaField('Recommended reading', render_kw={"rows": 7},
+        reading = TextAreaField('Recommended resources', render_kw={"rows": 7},
                                 description='Optional. The same styling and LaTeX options are available. '
                                             'To embed internet links, use the Markdown syntax [link text](URL).')
 

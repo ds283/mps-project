@@ -111,7 +111,8 @@
             {% if nproj > 0 %}
                 <hr class="intro-divider">
                 {% for project in offered_projects %}
-                    <div class="row vertical-align fac-project-table">
+                    {% set available = project.is_offerable %}
+                    <div class="row vertical-top fac-project-table">
                         <div class="col-xs-1">
                             <strong>{{ loop.index }}</strong>
                         </div>
@@ -128,10 +129,18 @@
                                 {% if project.group  %}
                                     {{ project.group.make_label()|safe }}
                                 {% else %}
-                                    <span class="label label-warning">Missing group</span>
+                                    <span class="label label-warning">Missing research group</span>
                                 {% endif %}
                                 <span class="label label-info">{{ project.num_assessors(pclass) }} assessors</span>
                             </div>
+                            {% if not available %}
+                                <div class="has-error">
+                                    <p class="help-block">
+                                        <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+                                        This project has validation errors that will prevent it being published.
+                                    </p>
+                                </div>
+                            {% endif %}
                         </div>
                         <div class="col-xs-3">
                             <div class="pull-right">

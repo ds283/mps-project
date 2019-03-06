@@ -103,76 +103,76 @@ def _element(user_id, current_user_id):
              'menu': render_template_string(menu, user=u, cuser=cu, pane='faculty')}
 
 
+def _delete_cache_entry(user_id):
+    ids = db.session.query(User.id).filter_by(active=True).all()
+    for id in ids:
+        cache.delete_memoized(_element, user_id, id[0])
+
+
 @listens_for(User, 'before_insert')
 def _User_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(User, 'before_update')
 def _User_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(User, 'before_delete')
 def _User_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(FacultyData, 'before_insert')
 def _FacultyData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(FacultyData, 'before_update')
 def _FacultyData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
+
+
+@listens_for(FacultyData.affiliations, 'append')
+def _FacultyData_affiliations_insert_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _delete_cache_entry(target.id)
+
+
+@listens_for(FacultyData.affiliations, 'remove')
+def _FacultyData_affiliations_remove_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _delete_cache_entry(target.id)
 
 
 @listens_for(FacultyData, 'before_delete')
 def _FacultyData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
 def _EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.owner_id, id[0])
+        _delete_cache_entry(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_update')
 def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.owner_id, id[0])
+        _delete_cache_entry(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_delete')
 def _EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.owner_id, id[0])
+        _delete_cache_entry(target.owner_id)
 
 
 def build_faculty_data(faculty_ids, current_user_id):

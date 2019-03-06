@@ -132,8 +132,7 @@ _simple_workload = \
 """
 
 
-@cache.memoize()
-def _element_full(faculty_id):
+def _element_base(faculty_id, enrollment_template, workload_template):
     f = db.session.query(FacultyData).filter_by(id=faculty_id).one()
 
     workload = {}
@@ -147,129 +146,106 @@ def _element_full(faculty_id):
     return {'name': {'display': render_template_string(_name, f=f),
                               'sortstring': f.user.last_name + f.user.first_name},
                      'groups': render_template_string(_groups, f=f),
-                     'enrollments': {'display': render_template_string(_full_enrollments, f=f),
+                     'enrollments': {'display': render_template_string(enrollment_template, f=f),
                                      'sortvalue': get_count(f.enrollments)},
-                     'workload': {'display': render_template_string(_full_workload, f=f, wkld=workload, tot=total_workload),
+                     'workload': {'display': render_template_string(workload_template, f=f, wkld=workload, tot=total_workload),
                                   'sortvalue': total_workload}}
+
+
+@cache.memoize()
+def _element_full(faculty_id):
+    return _element_base(faculty_id, _full_enrollments, _full_workload)
 
 
 @cache.memoize()
 def _element_simple(faculty_id):
-    f = db.session.query(FacultyData).filter_by(id=faculty_id).one()
+    return _element_base(faculty_id, _simple_enrollments, _simple_workload)
 
-    workload = {}
-    total_workload = 0
 
-    for record in f.enrollments:
-        CATS = sum(f.CATS_assignment(record.pclass))
-        workload[record.pclass_id] = CATS
-        total_workload += CATS
+def _delete_cache_entry(fac_id):
+    cache.delete_memoized(_element_full, fac_id)
+    cache.delete_memoized(_element_simple, fac_id)
 
-    return {'name': {'display': render_template_string(_name, f=f),
-                              'sortstring': f.user.last_name + f.user.first_name},
-                     'groups': render_template_string(_groups, f=f),
-                     'enrollments': {'display': render_template_string(_simple_enrollments, f=f),
-                                     'sortvalue': get_count(f.enrollments)},
-                     'workload': {'display': render_template_string(_simple_workload, f=f, wkld=workload, tot=total_workload),
-                                  'sortvalue': total_workload}}
+
+@listens_for(FacultyData.affiliations, 'append')
+def _FacultyData_affiliations_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _delete_cache_entry(target.id)
+
+
+@listens_for(FacultyData.affiliations, 'remove')
+def _FacultyData_affiliations_remove_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _delete_cache_entry(target.id)
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
 def _EnrollemntRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element_full, target.owner_id)
-        cache.delete_memoized(_element_simple, target.owner_id)
+        _delete_cache_entry(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_update')
 def _EnrollemntRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element_full, target.owner_id)
-        cache.delete_memoized(_element_simple, target.owner_id)
+        _delete_cache_entry(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_delete')
 def _EnrollemntRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element_full, target.owner_id)
-        cache.delete_memoized(_element_simple, target.owner_id)
+        _delete_cache_entry(target.owner_id)
+
+
+def _SubmissionRecord_delete_cache(target):
+    if not target.retired:
+
+        if target.project is not None:
+            _delete_cache_entry(target.project.owner_id)
+
+        elif target.project_id is not None:
+            proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
+            if proj is not None:
+                _delete_cache_entry(proj.owner_id)
+
+        _delete_cache_entry(target.marker_id)
 
 
 @listens_for(SubmissionRecord, 'before_insert')
 def _SubmissionRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        if not target.retired:
-
-            if target.project is not None:
-                cache.delete_memoized(_element_full, target.project.owner_id)
-                cache.delete_memoized(_element_simple, target.project.owner_id)
-
-            elif target.project_id is not None:
-                proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
-                if proj is not None:
-                    cache.delete_memoized(_element_full, proj.owner_id)
-                    cache.delete_memoized(_element_simple, proj.owner_id)
-
-            cache.delete_memoized(_element_full, target.marker_id)
-            cache.delete_memoized(_element_simple, target.marker_id)
+        _SubmissionRecord_delete_cache(target)
 
 
 @listens_for(SubmissionRecord, 'before_update')
 def _SubmissionRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        if not target.retired:
-
-            if target.project is not None:
-                cache.delete_memoized(_element_full, target.project.owner_id)
-                cache.delete_memoized(_element_simple, target.project.owner_id)
-
-            elif target.project_id is not None:
-                proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
-                if proj is not None:
-                    cache.delete_memoized(_element_full, proj.owner_id)
-                    cache.delete_memoized(_element_simple, proj.owner_id)
-
-            cache.delete_memoized(_element_full, target.marker_id)
-            cache.delete_memoized(_element_simple, target.marker_id)
+        _SubmissionRecord_delete_cache(target)
 
 
 @listens_for(SubmissionRecord, 'before_delete')
 def _SubmissionRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        if not target.retired:
+        _SubmissionRecord_delete_cache(target)
 
-            if target.project is not None:
-                cache.delete_memoized(_element_full, target.project.owner_id)
-                cache.delete_memoized(_element_simple, target.project.owner_id)
 
-            elif target.project_id is not None:
-                proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
-                if proj is not None:
-                    cache.delete_memoized(_element_full, proj.owner_id)
-                    cache.delete_memoized(_element_simple, proj.owner_id)
-
-            cache.delete_memoized(_element_full, target.marker_id)
-            cache.delete_memoized(_element_simple, target.marker_id)
+def _ScheduleSlot_assessors_delete_cache(target, value):
+    if target.owner.deployed:
+        current_year = get_current_year()
+        if target.owner.owner.year == current_year:
+            _delete_cache_entry(value.id)
 
 
 @listens_for(ScheduleSlot.assessors, 'append')
 def _ScheduleSlot_assessors_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        if target.owner.deployed:
-            current_year = get_current_year()
-            if target.owner.owner.year == current_year:
-                cache.delete_memoized(_element_full, value.id)
-                cache.delete_memoized(_element_simple, value.id)
+        _ScheduleSlot_assessors_delete_cache(target, value)
 
 
 @listens_for(ScheduleSlot.assessors, 'remove')
 def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
-        if target.owner.deployed:
-            current_year = get_current_year()
-            if target.owner.owner.year == current_year:
-                cache.delete_memoized(_element_full, value.id)
-                cache.delete_memoized(_element_simple, value.id)
+        _ScheduleSlot_assessors_delete_cache(target, value)
 
 
 def workload_data(faculty_ids, simple_display):

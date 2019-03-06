@@ -88,44 +88,57 @@ def _element(user_id, current_user_id):
              'menu': render_template_string(menu, user=u, cuser=cu, pane='accounts')}
 
 
+def _delete_cache_entry(user_id):
+    ids = db.session.query(User.id).filter_by(active=True).all()
+    for id in ids:
+        cache.delete_memoized(_element, user_id, id[0])
+
+
 @listens_for(User, 'before_insert')
 def _User_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(User, 'before_update')
 def _User_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(User, 'before_delete')
 def _User_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(User.roles, 'append')
 def _User_role_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
 
 
 @listens_for(User.roles, 'remove')
 def _User_role_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        _delete_cache_entry(target.id)
+
+
+def _delete_cache_entry_role_change(role):
+    for user in role.users:
+        _delete_cache_entry(user.id)
+
+
+@listens_for(Role, 'before_update')
+def _Role_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _delete_cache_entry_role_change(target)
+
+
+@listens_for(Role, 'before_delete')
+def _Role_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _delete_cache_entry_role_change(target)
 
 
 def build_accounts_data(user_ids, current_user_id):

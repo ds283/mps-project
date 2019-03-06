@@ -16,7 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import SubmissionPeriodRecord, SubmissionRecord
 
-from ..task_queue import progress_update, register_task
+from ..task_queue import register_task
 
 from ..shared.sqlalchemy import get_count
 

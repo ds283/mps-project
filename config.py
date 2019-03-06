@@ -136,6 +136,9 @@ class DevelopmentConfig(Config):
     PROFILE_TO_DISK = False                     # determine whether to use Werkzeug profiler to write a .prof to disc
     PROFILE_DIRECTORY = "./profiling"           # location of profiling data
 
+    # use Dozer to perform memory profiling?
+    PROFILE_MEMORY = True
+
 
 class ProductionConfig(Config):
     """
@@ -153,6 +156,9 @@ class ProductionConfig(Config):
     # (from where we can use eg. SnakeViz as a GUI tool)
     PROFILE_TO_DISK = False
     PROFILE_DIRECTORY = os.environ.get('PROFILE_DIRECTORY') or "./profiling"
+
+    # use Dozer to perform memory profiling?
+    PROFILE_MEMORY = True
 
     # get SQLAlchemy to record metadata about query performance, so we can identify very slow queries
     SQLALCHEMY_RECORD_QUERIES = True

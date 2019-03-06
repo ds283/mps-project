@@ -33,6 +33,7 @@ from flask_profiler import Profiler
 from flask_rollbar import Rollbar
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
+from dozer import Dozer
 
 from config import app_config, site_revision, site_copyright_dates
 from .database import db
@@ -68,6 +69,9 @@ def create_app():
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
     app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
+
+    if app.config.get('PROFILE_MEMORY', False):
+        app.wsgi_app = Dozer(app.wsgi_app)
 
     db.init_app(app)
     migrate = Migrate(app, db)
@@ -193,6 +197,7 @@ def create_app():
     tasks.register_email_notification_tasks(celery)
     tasks.register_precompute_tasks(celery)
     tasks.register_push_feedback_tasks(celery)
+    tasks.register_system_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

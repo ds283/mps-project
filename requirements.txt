@@ -20,6 +20,7 @@ cryptography==2.6.1
 cssmin==0.2.0
 decorator==4.3.2
 dominate==2.3.5
+Dozer==0.6
 Flask==1.0.2
 Flask-Assets==0.12
 Flask-BabelEx==0.9.3
@@ -101,6 +102,7 @@ waitress==1.2.1
 wcwidth==0.1.7
 webassets==0.12.1
 webencodings==0.5.1
+WebOb==1.8.5
 Werkzeug==0.14.1
 WTForms==2.2.1
 WTForms-Alchemy==0.16.8

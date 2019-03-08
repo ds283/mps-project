@@ -249,7 +249,7 @@ def assessor_for():
     return render_template('faculty/assessor_for.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter)
 
 
-@faculty.route('/marking_ajax', methods=['GET', 'POST'])
+@faculty.route('/marking_ajax')
 @roles_required('faculty')
 def marking_ajax():
     """

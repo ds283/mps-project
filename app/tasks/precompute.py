@@ -203,18 +203,18 @@ def register_precompute_tasks(celery):
 
     @celery.task(bind=True)
     def cache_assessor_data(self, project_id, current_user_id):
-        ajax.project.build_data([(project_id, None)], current_user_id)
+        ajax.project.build_data([(project_id, None)])
 
 
     @celery.task(bind=True)
     def reporting(self):
-        task = group(workload_data.si(),)
+        task = group(workload_data.si(), projects_data.si())
         task.apply_async()
 
 
     @celery.task(bind=True)
     def workload_data(self):
-        # generate workload line for each active faculty memmber
+        # generate workload line for each active faculty member
         try:
             data = db.session.query(FacultyData) \
                 .join(User, User.id == FacultyData.id) \
@@ -231,3 +231,20 @@ def register_precompute_tasks(celery):
         # need both simple and non-simple versions
         ajax.reports.workload_data([user_id], False)
         ajax.reports.workload_data([user_id], True)
+
+
+    @celery.task(bind=True)
+    def projects_data(self):
+        # generate project line for each project
+        try:
+            data = db.session.query(Project).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(cache_project.si(p.id) for p in data)
+        task.apply_async()
+
+
+    @celery.task(bind=True)
+    def cache_project(self, project_id):
+        ajax.project.build_data([(project_id, None)])

@@ -58,7 +58,7 @@ def precompute_at_login(user):
     if user.has_role('reports'):
         # 'reports' roles can access workload reports, which do not depend on who is viewing them.
         # we don't cache these on a per-user basis, but rather globally for everyone
-        precompute_for_exec()
+        precompute_for_reports()
 
     if user.has_role('user_approver'):
         # likewise, 'user_approver' roles need tables for all the students to approve, but these are
@@ -94,10 +94,10 @@ def _check_if_compute(db, key):
     return delta.seconds > delay
 
 
-def precompute_for_exec():
+def precompute_for_reports():
     db = get_redis()
 
-    if not _check_if_compute(db, 'PRECOMPUTE_LAST_EXEC'):
+    if not _check_if_compute(db, 'PRECOMPUTE_LAST_REPORTS'):
         return
 
     celery = current_app.extensions['celery']
@@ -105,7 +105,7 @@ def precompute_for_exec():
     exc = celery.tasks['app.tasks.precompute.reporting']
     exc.apply_async()
 
-    db.set('PRECOMPUTE_LAST_EXEC', datetime.now().timestamp())
+    db.set('PRECOMPUTE_LAST_REPORTS', datetime.now().timestamp())
 
 
 def precompute_for_user_approver():
@@ -130,8 +130,10 @@ def precompute_faculty_projects():
 
     celery = current_app.extensions['celery']
 
-    fac = celery.tasks['app.tasks.precompute.assessor_data']
-    fac.apply_async(args=(None,))
+    # only precompute assessor data if we haven't recently computed the same data for reporting purposes
+    if _check_if_compute(db, 'PRECOMPUTE_LAST_REPORTS'):
+        fac = celery.tasks['app.tasks.precompute.assessor_data']
+        fac.apply_async(args=(None,))
 
     db.set('PRECOMPUTE_LAST_FACULTY_PROJECTS', datetime.now().timestamp())
 

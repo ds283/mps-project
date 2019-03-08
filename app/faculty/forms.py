@@ -22,7 +22,8 @@ from ..shared.forms.wtf_validators import globally_unique_project, unique_or_ori
     project_unique_or_original_label
 from ..shared.forms.queries import GetActiveFaculty, BuildActiveFacultyName, CurrentUserResearchGroups, \
     AllResearchGroups, CurrentUserProjectClasses, AllProjectClasses, GetSupervisorRoles, GetSkillGroups, \
-    AvailableProjectDescriptionClasses, ProjectDescriptionClasses, GetMaskableRoles
+    AvailableProjectDescriptionClasses, ProjectDescriptionClasses, GetMaskableRoles, GetDestinationProjects, \
+    GetDestinationProjectsPClass
 
 from functools import partial
 
@@ -173,6 +174,20 @@ def EditDescriptionFormFactory(project_id, desc_id):
                                         'The label will not be visible to students.')
 
     return EditDescriptionForm
+
+
+def MoveDescriptionFormFactory(user_id, project_id, pclass_id=None):
+
+    if pclass_id is not None:
+        qf = partial(GetDestinationProjectsPClass, user_id, project_id, pclass_id)
+    else:
+        qf = partial(GetDestinationProjects, user_id, project_id)
+
+    class MoveDescriptionForm(Form, SaveChangesMixin):
+
+        destination = QuerySelectField('Move this description to project', query_factory=qf, get_label='name')
+
+    return MoveDescriptionForm
 
 
 class SkillSelectorMixin():

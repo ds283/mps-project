@@ -1,0 +1,32 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if desc %}
+        Move description <strong>{{ desc.label }}</strong> to a new project
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if pclass_id is defined %}
+        <form action="{{ url_for('convenor.move_description', did=desc.id, pclass_id=pclass_id, create=create) }}" method="POST" name="form">
+    {% else %}
+        <form action="{{ url_for('faculty.move_description', did=desc.id, create=create) }}" method="POST" name="form">
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.form_field(form.destination) }}
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

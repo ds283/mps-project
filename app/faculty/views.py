@@ -23,9 +23,9 @@ import app.ajax as ajax
 from . import faculty
 
 from .forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
-    AddDescriptionFormFactory, EditDescriptionFormFactory, FacultyPreviewFormFactory, SupervisorFeedbackForm, \
-    MarkerFeedbackForm, PresentationFeedbackForm, SupervisorResponseForm, FacultySettingsFormFactory, \
-    AvailabilityFormFactory
+    AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
+    FacultyPreviewFormFactory, SupervisorFeedbackForm, MarkerFeedbackForm, PresentationFeedbackForm, \
+    SupervisorResponseForm, FacultySettingsFormFactory, AvailabilityFormFactory
 from ..admin.forms import LevelSelectorForm
 
 from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboard_data, filter_assessors, \
@@ -133,6 +133,16 @@ _desc_menu = \
                 </a>
             </li>
         <li>
+            <a href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
+                <i class="fa fa-clone"></i> Duplicate
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('faculty.move_description', did=d.id, create=create) }}">
+                <i class="fa fa-arrows"></i> Move project...
+            </a>
+        </li>
+        <li>
             <a href="{{ url_for('faculty.delete_description', did=d.id) }}">
                 <i class="fa fa-trash"></i> Delete
             </a>
@@ -140,11 +150,6 @@ _desc_menu = \
         
         <li role="separator" class="divider"></li>
         
-        <li>
-            <a href="{{ url_for('faculty.duplicate_description', did=d.id) }}">
-                <i class="fa fa-clone"></i> Duplicate
-            </a>
-        </li>
         <li>
             {% if d.default is none %}
                 <a href="{{ url_for('faculty.make_default_description', pid=d.parent_id, did=d.id) }}">
@@ -280,7 +285,6 @@ def edit_descriptions(id):
 @faculty.route('/descriptions_ajax/<int:id>')
 @roles_required('faculty')
 def descriptions_ajax(id):
-
     project = Project.query.get_or_404(id)
 
     # if project owner is not logged in user, object
@@ -297,7 +301,6 @@ def descriptions_ajax(id):
 @faculty.route('/add_project', methods=['GET', 'POST'])
 @roles_required('faculty')
 def add_project():
-
     # set up form
     AddProjectForm = AddProjectFormFactory(convenor_editing=False)
     form = AddProjectForm(request.form)
@@ -356,7 +359,6 @@ def add_project():
 @faculty.route('/edit_project/<int:id>', methods=['GET', 'POST'])
 @roles_required('faculty')
 def edit_project(id):
-
     # set up form
     proj = Project.query.get_or_404(id)
 
@@ -447,7 +449,6 @@ def deactivate_project(id):
 @faculty.route('/delete_project/<int:id>')
 @roles_required('faculty')
 def delete_project(id):
-
     # get project details
     data = Project.query.get_or_404(id)
 
@@ -499,7 +500,6 @@ def perform_delete_project(id):
 @faculty.route('/add_description/<int:pid>', methods=['GET', 'POST'])
 @roles_required('faculty')
 def add_description(pid):
-
     # get parent project details
     proj = Project.query.get_or_404(pid)
 
@@ -654,7 +654,6 @@ def description_detach_module(did, mod_id, level_id):
 @faculty.route('/delete_description/<int:did>')
 @roles_required('faculty')
 def delete_description(did):
-
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
@@ -670,7 +669,6 @@ def delete_description(did):
 @faculty.route('/duplicate_description/<int:did>')
 @roles_required('faculty')
 def duplicate_description(did):
-
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
@@ -706,11 +704,74 @@ def duplicate_description(did):
     return redirect(request.referrer)
 
 
+@faculty.route('/move_description/<int:did>', methods=['GET', 'POST'])
+@roles_required('faculty')
+def move_description(did):
+    desc = ProjectDescription.query.get_or_404(did)
+    old_project = desc.parent
+
+    # if project owner is not logged-in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    create = request.args.get('create', default=None)
+
+    MoveDescriptionForm = MoveDescriptionFormFactory(old_project.owner_id, old_project.id)
+    form = MoveDescriptionForm(request.form)
+
+    if form.validate_on_submit():
+        new_project = form.destination.data
+
+        if new_project is not None:
+            # relabel project if needed
+            labels = get_count(new_project.descriptions.filter_by(label=desc.label))
+            if labels > 0:
+                desc.label = '{old} #{n}'.format(old=desc.label, n=labels+1)
+
+            # remove subscription to any project classes that are already subscribed
+            remove = set()
+
+            for pclass in desc.project_classes:
+                if get_count(new_project.project_classes.filter_by(id=pclass.id)) == 0:
+                    remove.add(pclass)
+
+                elif get_count(new_project.descriptions \
+                                     .filter(ProjectDescription.project_classes.any(id=pclass.id))) > 0:
+                    remove.add(pclass)
+
+            for pclass in remove:
+                desc.project_classes.remove(pclass)
+
+            if old_project.default_id is not None and old_project.default_id == desc.id:
+                old_project.default_id = None
+
+            desc.parent_id = new_project.id
+
+            try:
+                db.session.commit()
+                flash('Description "{name}" successfully moved to project '
+                      '"{pname}"'.format(name=desc.label, pname=new_project.name), 'info')
+            except SQLAlchemyError:
+                db.rollback()
+                flash('Description "{name}" could not be moved due to a database error'.format(name=desc.label),
+                      'error')
+        else:
+            flash('Description "{name}" could not be moved because its parent project is '
+                  'missing'.format(name=desc.label), 'error')
+
+        if create:
+            return redirect(url_for('faculty.edit_descriptions', id=old_project.id, create=True))
+        else:
+            return redirect(url_for('faculty.edit_descriptions', id=new_project.id))
+
+    return render_template('faculty/move_description.html', form=form, desc=desc, create=create,
+                           title='Move "{name}" to a new project'.format(name=desc.label))
+
+
 @faculty.route('/make_default_description/<int:pid>/<int:did>')
 @faculty.route('/make_default_description/<int:pid>')
 @roles_required('faculty')
 def make_default_description(pid, did=None):
-
     proj = Project.query.get_or_404(pid)
 
     # if project owner is not logged-in user, object
@@ -735,7 +796,6 @@ def make_default_description(pid, did=None):
 @faculty.route('/attach_skills/<int:id>', methods=['GET', 'POST'])
 @roles_required('faculty')
 def attach_skills(id, sel_id=None):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
@@ -774,7 +834,6 @@ def attach_skills(id, sel_id=None):
 @faculty.route('/add_skill/<int:projectid>/<int:skillid>/<int:sel_id>')
 @roles_required('faculty')
 def add_skill(projectid, skillid, sel_id):
-
     # get project details
     proj = Project.query.get_or_404(projectid)
 
@@ -796,7 +855,6 @@ def add_skill(projectid, skillid, sel_id):
 @faculty.route('/remove_skill/<int:projectid>/<int:skillid>/<int:sel_id>')
 @roles_required('faculty')
 def remove_skill(projectid, skillid, sel_id):
-
     # get project details
     proj = Project.query.get_or_404(projectid)
 
@@ -818,7 +876,6 @@ def remove_skill(projectid, skillid, sel_id):
 @faculty.route('/attach_programmes/<int:id>')
 @roles_required('faculty')
 def attach_programmes(id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
@@ -836,7 +893,6 @@ def attach_programmes(id):
 @faculty.route('/add_programme/<int:id>/<int:prog_id>')
 @roles_required('faculty')
 def add_programme(id, prog_id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
@@ -856,7 +912,6 @@ def add_programme(id, prog_id):
 @faculty.route('/remove_programme/<int:id>/<int:prog_id>')
 @roles_required('faculty')
 def remove_programme(id, prog_id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
@@ -876,7 +931,6 @@ def remove_programme(id, prog_id):
 @faculty.route('/attach_assessors/<int:id>')
 @roles_required('faculty')
 def attach_assessors(id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
@@ -931,7 +985,6 @@ def attach_assessors(id):
 @faculty.route('/attach_assessors_ajax/<int:id>')
 @roles_required('faculty')
 def attach_assessors_ajax(id):
-
     # get project details
     proj = Project.query.get_or_404(id)
 
@@ -952,7 +1005,6 @@ def attach_assessors_ajax(id):
 @faculty.route('/add_assessor/<int:proj_id>/<int:mid>')
 @roles_required('faculty')
 def add_assessor(proj_id, mid):
-
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
@@ -970,7 +1022,6 @@ def add_assessor(proj_id, mid):
 @faculty.route('/remove_assessor/<int:proj_id>/<int:mid>')
 @roles_required('faculty')
 def remove_assessor(proj_id, mid):
-
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
@@ -988,7 +1039,6 @@ def remove_assessor(proj_id, mid):
 @faculty.route('/attach_all_assessors/<int:proj_id>')
 @roles_required('faculty')
 def attach_all_assessors(proj_id):
-
     # get project details
     proj = Project.query.get_or_404(proj_id)
 
@@ -1011,7 +1061,6 @@ def attach_all_assessors(proj_id):
 @faculty.route('/remove_all_assessors/<int:proj_id>')
 @roles_required('faculty')
 def remove_all_assessors(proj_id):
-
     # get project details
     proj = Project.query.get_or_404(proj_id)
 

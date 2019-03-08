@@ -312,3 +312,16 @@ def GetMaskableRoles(user_id):
     user = db.session.query(User).filter_by(id=user_id).one()
 
     return user.roles.filter(Role.name != 'faculty', Role.name != 'student', Role.name != 'office')
+
+
+def GetDestinationProjects(user_id, project_id):
+    return db.session.query(Project).filter(Project.owner_id == user_id,
+                                            Project.id != project_id) \
+        .order_by(Project.name.asc())
+
+
+def GetDestinationProjectsPClass(user_id, project_id, pclass_id):
+    return db.session.query(Project).filter(Project.owner_id == user_id,
+                                            Project.id != project_id,
+                                            Project.project_classes.any(id=pclass_id)) \
+        .order_by(Project.name.asc())

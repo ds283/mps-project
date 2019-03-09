@@ -71,6 +71,33 @@ _desc_label = \
 <a href="{{ url_for('faculty.edit_description', did=d.id) }}">{{ d.label }}</a>
 {% if not d.is_valid %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
+{% endif %}
+{% set state = d.workflow_state %}
+<div>
+    {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
+        <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
+    {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
+        <span class="label label-warning">Approval: Queued</span>
+    {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
+        <span class="label label-info">Approval: In progress</span>
+    {% else %}
+        <span class="label label-danger">Unknown approval state</span>
+    {% endif %}
+    {% if current_user.has_role('project_approver') and d.validated_by %}
+        <div>
+            <span class="label label-info">Signed-off by {{ d.validated_by.name }}</span>
+            {% if d.validated_timestamp %}
+                <span class="label label-info">Signed-off at {{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            {% endif %}
+        </div>
+    {% endif %}
+    {% if d.has_new_comments(current_user) %}
+        <div>
+            <span class="label label-warning">New comments</span>
+        </div>
+    {% endif %}
+</div>
+{% if not d.is_valid %}
     <p></p>
     {% set errors = d.errors %}
     {% set warnings = d.warnings %}

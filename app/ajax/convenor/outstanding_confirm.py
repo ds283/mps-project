@@ -46,6 +46,6 @@ def outstanding_confirm_data(config):
                       'sortstring': f.user.last_name + f.user.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
              'projects': render_template_string(_projects, f=f, pclass=config.project_class),
-             'menu': render_template_string(_menu, config=config, f=f)} for f in config.confirmation_required]
+             'menu': render_template_string(_menu, config=config, f=f)} for f in config.faculty_waiting_confirmation]
 
     return jsonify(data)

@@ -304,6 +304,12 @@ def attached_ajax(id):
     pq = db.session.query(Project.id, Project.owner_id) \
         .filter(Project.project_classes.any(id=id))
 
+    if pclass.require_confirm:
+        if valid_filter == 'valid' or valid_filter == 'not-valid' or valid_filter == 'reject':
+            pq = pq.filter(~Project.descriptions.any(confirmed=False))
+        elif valid_filter == 'pending':
+            pq = pq.filter(Project.descriptions.any(confirmed=False))
+
     if valid_filter == 'valid':
         pq = pq.filter(~Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED),
                        ~Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
@@ -1819,6 +1825,7 @@ def add_description(pid, pclass_id):
                                   reading=form.reading.data,
                                   team=form.team.data,
                                   capacity=form.capacity.data,
+                                  confirmed=False,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
 
@@ -2041,7 +2048,10 @@ def duplicate_description(did, pclass_id):
                               capacity=desc.capacity,
                               description=desc.description,
                               reading=desc.reading,
-                              team=desc.team)
+                              team=desc.team,
+                              confirmed=False,
+                              creator_id=current_user.id,
+                              creation_timestamp=datetime.now())
 
     db.session.add(data)
     db.session.commit()
@@ -2804,9 +2814,16 @@ def force_confirm_all(id):
     if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
-    config.confirmation_required = []
-    db.session.commit()
+    # because we filter on supervisor state, this won't confirm projects from any bought-out or
+    # on sabbatical
+    records = db.session.query(EnrollmentRecord) \
+        .filter_by(pclass_id=config.pclass_id,
+                   supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED)
+    for rec in records:
+        if config.is_confirmation_required(rec.owner_id):
+            config.mark_confirmed(rec.owner_id, commit=False)
 
+    db.session.commit()
     flash('All outstanding confirmation requests have been removed.', 'success')
 
     return redirect(request.referrer)
@@ -2826,10 +2843,8 @@ def force_confirm(id, uid):
     if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
-    faculty = FacultyData.query.get_or_404(uid)
-
-    if faculty in config.confirmation_required:
-        config.confirmation_required.remove(faculty)
+    if config.is_confirmation_required(uid):
+        config.mark_confirmed(uid, commit=False)
         db.session.commit()
 
     return redirect(request.referrer)

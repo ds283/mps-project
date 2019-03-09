@@ -521,6 +521,7 @@ def add_description(pid):
                                   description=form.description.data,
                                   reading=form.reading.data,
                                   team=form.team.data,
+                                  confirmed=False,
                                   capacity=form.capacity.data,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
@@ -696,7 +697,10 @@ def duplicate_description(did):
                               capacity=desc.capacity,
                               description=desc.description,
                               reading=desc.reading,
-                              team=desc.team)
+                              team=desc.team,
+                              confirmed=False,
+                              creator_id=current_user.id,
+                              creation_timestamp=datetime.now())
 
     db.session.add(data)
     db.session.commit()
@@ -1297,27 +1301,75 @@ def confirm_pclass(id):
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
 
     if not config.requests_issued:
+        flash('Confirmation requests have not yet been issued for {project} '
+              '{yeara}-{yearb}'.format(project=config.name, yeara=config.year, yearb=config.year+1))
+        return redirect(request.referrer)
+
+    if config.live:
+        flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
+              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year+1))
+        return redirect(request.referrer)
+
+    if not config.is_confirmation_required(current_user.faculty_data):
+        flash('You have no outstanding confirmation requests for {project} {yeara}-{yearb}'.format(
+            project=config.name, yeara=config.year, yearb=config.year+1))
+        return redirect(request.referrer)
+
+    config.mark_confirmed(current_user.faculty_data, message=True)
+    db.session.commit()
+
+    # kick off a background task to check whether any other project classes in which this user is enrolled
+    # have been reduced to zero confirmations left.
+    # If so, treat this 'Confirm' click as accounting for them also
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+    task.apply_async(args=(current_user.id, id))
+
+    return redirect(request.referrer)
+
+
+@faculty.route('/confirm_description/<int:did>/<int:pclass_id>')
+@roles_required('faculty')
+def confirm_description(did, pclass_id):
+    desc = ProjectDescription.query.get_or_404(did)
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
+
+    if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
             project=config.name, yeara=config.year, yearb=config.year+1))
-        return home_dashboard()
+        return redirect(request.referrer)
 
-    if current_user.faculty_data in config.confirmation_required:
-        config.confirmation_required.remove(current_user.faculty_data)
+    if config.live:
+        flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
+              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+        return redirect(request.referrer)
+
+    # if project owner is not logged in user, object
+    if not validate_is_project_owner(desc.parent):
+        return redirect(request.referrer)
+
+    desc.confirmed = True
+    db.session.commit()
+
+    if config.number_confirmations_outstanding(current_user.faculty_data) == 0:
+        config.mark_confirmed(current_user.faculty_data, message=True)
         db.session.commit()
 
-        flash('Thank you. You confirmation has been recorded.')
-        return home_dashboard()
+    # kick off a background task to check whether any other project classes in which this user is enrolled
+    # have been reduced to zero confirmations left.
+    # If so, treat this 'Confirm' click as accounting for them also
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+    task.apply_async(args=(current_user.id, pclass_id))
 
-    flash('You have no outstanding confirmation requests for {project} {yeara}-{yearb}'.format(
-        project=config.name, yeara=config.year, yearb=config.year+1))
-
-    return home_dashboard()
+    return redirect(request.referrer)
 
 
 @faculty.route('/confirm/<int:sid>/<int:pid>')
 @roles_required('faculty')
 def confirm(sid, pid):
-
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
 
@@ -1341,7 +1393,6 @@ def confirm(sid, pid):
 @faculty.route('/deconfirm/<int:sid>/<int:pid>')
 @roles_required('faculty')
 def deconfirm(sid, pid):
-
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
 

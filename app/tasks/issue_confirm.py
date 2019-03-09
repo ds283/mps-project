@@ -203,7 +203,7 @@ def register_issue_confirm_tasks(celery):
             self.update_state('FAILURE', meta='Could not load database records')
             raise Ignore()
 
-        if data in config.confirmation_required:
+        if not config.is_confirmation_required(data):
             return None
 
         try:
@@ -260,7 +260,7 @@ def register_issue_confirm_tasks(celery):
 
         recipients = set()
 
-        for faculty in config.confirmation_required:
+        for faculty in config.faculty_waiting_confirmation:
             recipients.add(faculty.id)
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
@@ -425,7 +425,7 @@ def register_issue_confirm_tasks(celery):
         msg = Message(subject='Projects: please consider revising {name}/{desc}'.format(name=project.name,
                                                                                         desc=record.label),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
+                      reply_to=current_user.email,
                       recipients=[owner.user.email])
 
         msg.body = render_template('email/project_confirmation/revise_request.txt', user=owner.user,
@@ -437,3 +437,35 @@ def register_issue_confirm_tasks(celery):
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
         return 1
+
+
+    @celery.task(bind=True)
+    def propagate_confirm(self, user_id, exclude_pclass_id):
+        try:
+            records = db.session.query(EnrollmentRecord) \
+                .filter(EnrollmentRecord.owner_id == user_id,
+                        EnrollmentRecord.pclass_id != exclude_pclass_id).all()
+            user = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if user is None:
+            self.update('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        for record in records:
+            config = db.session.query(ProjectClassConfig) \
+                .filter_by(pclass_id=record.pclass_id) \
+                .order_by(ProjectClassConfig.year.desc()).first()
+
+            if config is not None:
+                # if no confirmations outstanding, mark this project class as confirmed automatically
+                if config.is_confirmation_required(user_id) and config.number_confirmations_outstanding(user_id) == 0:
+                    config.mark_confirmed(user_id, commit=False, message=False)
+
+                    user.post_message('No further project descriptions attached to project class '
+                                      '"{name}" require confirmation, so it has been marked as '
+                                      'ready to publish.'.format(name=config.project_class.name), 'info',
+                                      autocommit=False)
+
+        db.session.commit()

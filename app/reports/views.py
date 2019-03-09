@@ -120,14 +120,17 @@ def all_projects_ajax():
     if flag:
         pq = pq.filter(Project.project_classes.any(id=pclass_value))
 
-    if valid_filter == 'valid':
-        pq = pq.filter(~Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED),
-                       ~Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
-    elif valid_filter == 'not-valid':
-        pq = pq.filter(Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED))
-    elif valid_filter == 'reject':
-        pq = pq.filter(Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
+    data = pq.all()
 
-    data = [(p.id, None) for p in pq.all()]
+    if valid_filter == 'valid':
+        data = [(x.id, None) for x in data if x.approval_state == Project.DESCRIPTIONS_APPROVED]
+    elif valid_filter == 'not-valid':
+        data = [(x.id, None) for x in data if x.approval_state == Project.SOME_DESCRIPTIONS_QUEUED]
+    elif valid_filter == 'reject':
+        data = [(x.id, None) for x in data if x.approval_state == Project.SOME_DESCRIPTIONS_REJECTED]
+    elif valid_filter == 'pending':
+        data = [(x.id, None) for x in data if x.approval_state == Project.SOME_DESCRIPTIONS_UNCONFIRMED]
+    else:
+        data = [(x.id, None) for x in data]
 
     return ajax.project.build_data(data, current_user.id)

@@ -274,19 +274,22 @@ def allow_approvals(desc, config_cache=None):
             if config.live:
                 continue
 
+            # don't include projects if user is not enrolled normally as a supervisor
+            record = faculty.get_enrollment_record(pcl.id)
+            if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+                continue
+
             # don't include projects if confirmation is required and requests haven't been issued.
             # don't include projects if requests have been issued, but project owner hasn't yet confirmed
             if config.require_confirm:
                 if not config.requests_issued:
                     continue
 
-                if get_count(config.confirmation_required.filter_by(id=faculty.id)) > 0:
+                if not desc.confirmed:
                     continue
 
-            # don't include projects if user is not enrolled normally as a supervisor
-            record = faculty.get_enrollment_record(pcl.id)
-            if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-                continue
+                if get_count(config.confirmation_required.filter_by(id=faculty.id)) > 0:
+                    continue
 
             return True
 

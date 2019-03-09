@@ -60,12 +60,12 @@
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="well">
                     <p>Filter by project type</p>
-                    <a href="{{ url_for('faculty.assessor_for', pclass_filter='all', valid_filter=valid_filter) }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter='all', valid_filter=valid_filter) }}"
                        class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for pclass in pclasses %}
-                        <a href="{{ url_for('faculty.assessor_for', pclass_filter=pclass.id, valid_filter=valid_filter) }}"
+                        <a href="{{ url_for('reports.all_projects', pclass_filter=pclass.id, valid_filter=valid_filter) }}"
                            class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ pclass.name }}
                         </a>
@@ -73,19 +73,23 @@
 
                     <hr class="intro-divider">
                     <p>Filter by approval status</p>
-                    <a href="{{ url_for('faculty.assessor_for', pclass_filter=pclass_filter, valid_filter='all') }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='all') }}"
                        class="btn btn-sm filter-btn {% if valid_filter is none or valid_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
-                    <a href="{{ url_for('faculty.assessor_for', pclass_filter=pclass_filter, valid_filter='valid') }}"
+                    <a href="{{  url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='pending') }}"
+                       class="btn btn-sm filter-btn {% if valid_filter == 'pending' %}btn-primary{% else %}btn-default{% endif %}">
+                        Pending
+                    </a>
+                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='valid') }}"
                        class="btn btn-sm filter-btn {% if valid_filter == 'valid' %}btn-primary{% else %}btn-default{% endif %}">
                         Approved
                     </a>
-                    <a href="{{ url_for('faculty.assessor_for', pclass_filter=pclass_filter, valid_filter='not-valid') }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='not-valid') }}"
                        class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-default{% endif %}">
                         Queued
                     </a>
-                    <a href="{{ url_for('faculty.assessor_for', pclass_filter=pclass_filter, valid_filter='reject') }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='reject') }}"
                        class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-default{% endif %}">
                         Rejected
                     </a>

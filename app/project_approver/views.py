@@ -125,7 +125,7 @@ def return_to_owner(id):
     if owner is None:
         return redirect(url)
 
-    names = []
+    names = set()
 
     # find project classes associated with this description
     for pcl in record.project_classes:
@@ -138,16 +138,15 @@ def return_to_owner(id):
 
                 enrollment = owner.get_enrollment_record(pcl.id)
                 if enrollment is not None and enrollment.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
-                    if owner not in config.confirmation_required:
-                        config.confirmation_required.append(owner)
-                        names.append(pcl.name)
+                    record.confirmed = False
+                    names.add(pcl.name)
 
     db.session.commit()
 
     celery = current_app.extensions['celery']
     revise_notify = celery.tasks['app.tasks.issue_confirm.revise_notify']
 
-    revise_notify.apply_async(args=(record.id, names))
+    revise_notify.apply_async(args=(record.id, list(names), current_user.id))
 
     return redirect(url)
 

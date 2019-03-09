@@ -88,6 +88,12 @@
                        class="btn btn-sm filter-btn {% if valid_filter is none or valid_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
+                    {% if pclass.require_confirm %}
+                        <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='pending') }}"
+                           class="btn btn-sm filter-btn {% if valid_filter == 'pending' %}btn-primary{% else %}btn-default{% endif %}">
+                            Pending
+                        </a>
+                    {% endif %}
                     <a href="{{  url_for('convenor.attached', id=pclass.id, valid_filter='valid') }}"
                        class="btn btn-sm filter-btn {% if valid_filter == 'valid' %}btn-primary{% else %}btn-default{% endif %}">
                         Approved

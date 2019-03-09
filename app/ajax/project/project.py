@@ -37,6 +37,11 @@ _project_name = \
     {% if is_running %}
         <span class="label label-danger">RUNNING</span>
     {% endif %}
+    {% set num = project.num_descriptions %}
+    {% if num > 0 %}
+        {% set pl = 's' %}{% if num == 1 %}{% set pl = '' %}{% endif %}
+        <span class="label label-info">{{ num }} description{{ pl }}</span>
+    {% endif %}
 </div>
 {% if name_labels %}
     <div>
@@ -457,7 +462,7 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
 
     repapprove = ''
     if show_approvals:
-        state = p.get_approval_state()
+        state = p.approval_state
 
         if state == Project.DESCRIPTIONS_APPROVED:
             repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approved</span>'
@@ -465,6 +470,10 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
             repapprove = '<span class="label label-warning">Approval: Queued</span>'
         elif state == Project.SOME_DESCRIPTIONS_REJECTED:
             repapprove = '<span class="label label-info">Approval: In progress</span>'
+        elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
+            repapprove = '<span class="label label-default">Approval: Pending</span>'
+        elif state == Project.APPROVALS_NOT_ACTIVE:
+            repapprove = ''
         else:
             repapprove = '<span class="label label-danger">Unknown approval state</span>'
     status = status.replace('REPAPPROVAL', repapprove, 1)

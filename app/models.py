@@ -1188,8 +1188,10 @@ class FacultyData(db.Model):
     def _projects_offered_query(self, pclass):
         if isinstance(pclass, ProjectClass):
             pclass_id = pclass.id
-        else:
+        elif isinstance(pclass, int):
             pclass_id = pclass
+        else:
+            raise RuntimeError('Could not interpret pclass parameter')
 
         return Project.query.filter(Project.active,
                                     Project.owner_id == self.id,
@@ -1354,11 +1356,13 @@ class FacultyData(db.Model):
         return record.enrolled_labels
 
 
-    def get_enrollment_record(self, pclass_id):
-        if isinstance(pclass_id, ProjectClass):
-            pcl_id = pclass_id.id
+    def get_enrollment_record(self, pclass):
+        if isinstance(pclass, ProjectClass):
+            pcl_id = pclass.id
+        elif isinstance(pclass, int):
+            pcl_id = pclass
         else:
-            pcl_id = pclass_id
+            raise RuntimeError('Cannot interpret pclass argument')
 
         return self.enrollments.filter_by(pclass_id=pcl_id).first()
 
@@ -2556,9 +2560,9 @@ class ProjectClassConfig(db.Model):
     # closed timestamp
     closed_timestamp = db.Column(db.DateTime())
 
-    # capture which faculty have still to sign-off on this configuration
+    # list the faculty members who we are still requiring to sign-off on their projects for this configuration
     confirmation_required = db.relationship('FacultyData', secondary=golive_confirmation, lazy='dynamic',
-                                            backref=db.backref('live', lazy='dynamic'))
+                                            backref=db.backref('confirmation_outstanding', lazy='dynamic'))
 
 
     # SUBMISSION LIFECYCLE MANAGEMENT
@@ -2583,8 +2587,98 @@ class ProjectClassConfig(db.Model):
     # CATS awarded for 2nd marking in this year
     CATS_marking = db.Column(db.Integer())
 
-    # CATS awarded for presentation assssment in this year
+    # CATS awarded for presentation assessment in this year
     CATS_presentation = db.Column(db.Integer())
+
+
+    def confirmations_outstanding(self, faculty):
+        if isinstance(faculty, User):
+            fac_data = faculty.faculty_data
+        elif isinstance(faculty, int):
+            fac_data = db.session.query(FacultyData).filter_by(id=faculty).first()
+        else:
+            fac_data = faculty
+
+        if not isinstance(fac_data, FacultyData) or fac_data is None:
+            raise RuntimeError('FacultyData object could not be loaded or interpreted')
+
+        # have to use list of projects offered for the pclass and then the
+        # get_description() method of Project in order to account for possible defaults
+        outstanding = set()
+
+        # projects_offered accounts for active/inactive
+        projects = fac_data.projects_offered(self.pclass_id)
+        for p in projects:
+            desc = p.get_description(self.pclass_id)
+
+            if not desc.confirmed:
+                outstanding.add(desc.id)
+
+        return outstanding
+
+
+    def number_confirmations_outstanding(self, faculty):
+        return len(self.confirmations_outstanding(faculty))
+
+
+    def is_confirmation_required(self, faculty):
+        if isinstance(faculty, User):
+            fac_data = faculty.faculty_data
+        elif isinstance(faculty, int):
+            fac_data = db.session.query(FacultyData).filter_by(id=faculty).first()
+        else:
+            fac_data = faculty
+
+        if not isinstance(fac_data, FacultyData) or fac_data is None:
+            raise RuntimeError('FacultyData object could not be loaded or interpreted')
+
+        # confirmation not required if project class doesn't use it
+        if not self.project_class.require_confirm:
+            return False
+
+        # confirmation required if there are outstanding project descriptions needing confirmation,
+        # or if this user hasn't yet given confirmation for ths configuration
+        return self.number_confirmations_outstanding(fac_data.id) > 0 or fac_data in self.confirmation_required
+
+
+    def mark_confirmed(self, faculty, commit=False, message=False):
+        if isinstance(faculty, User):
+            fac_data = faculty.faculty_data
+        elif isinstance(faculty, int):
+            fac_data = db.session.query(FacultyData).filter_by(id=faculty).first()
+        else:
+            fac_data = faculty
+
+        if not isinstance(fac_data, FacultyData) or fac_data is None:
+            raise RuntimeError('FacultyData object could not be loaded or interpreted')
+
+        projects = fac_data.projects_offered(self.pclass_id)
+        for p in projects:
+            p.mark_confirmed(self.pclass_id, commit=False)
+
+        if fac_data in self.confirmation_required:
+            self.confirmation_required.remove(fac_data)
+
+            if message:
+                flash('Thank you. Your confirmation that projects belonging to '
+                      'class "{name}" are ready to publish has been recorded.'.format(name=self.project_class.name), 'info')
+
+        if commit:
+            db.session.commit()
+
+
+    @property
+    def faculty_waiting_confirmation(self):
+        faculty = db.session.query(EnrollmentRecord) \
+            .filter_by(pclass_id=self.pclass_id,
+                       supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED).all()
+
+        return [f.owner for f in faculty if f.owner is not None and self.is_confirmation_required(f.owner)]
+
+
+    @property
+    def confirm_outstanding_count(self):
+        return len(self.faculty_waiting_confirmation)
 
 
     @property
@@ -2688,7 +2782,6 @@ class ProjectClassConfig(db.Model):
     SELECTOR_LIFECYCLE_READY_MATCHING = 5
     SELECTOR_LIFECYCLE_READY_ROLLOVER = 6
 
-
     @property
     def selector_lifecycle(self):
         # if gone live and closed, then either we are ready to match or we are read to rollover
@@ -2710,18 +2803,16 @@ class ProjectClassConfig(db.Model):
         if self._selection_open:
             return ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN
 
-        # if we get here, project is not open
-
+        # if we get here, project is not open for selection
         if self.require_confirm:
             if self.requests_issued:
 
-                if self.confirmation_required.count() > 0:
+                if self.confirm_outstanding_count > 0:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
                 else:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
 
             else:
-
                 return ProjectClassConfig.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED
 
         return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
@@ -2730,7 +2821,6 @@ class ProjectClassConfig(db.Model):
     SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY = 0
     SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY = 1
     SUBMITTER_LIFECYCLE_READY_ROLLOVER = 2
-
 
     @property
     def submitter_lifecycle(self):
@@ -2959,11 +3049,6 @@ class ProjectClassConfig(db.Model):
     @property
     def current_period(self):
         return self.get_period(self.submission_period)
-
-
-    @property
-    def confirm_outstanding_count(self):
-        return get_count(self.confirmation_required)
 
 
 class SubmissionPeriodRecord(db.Model):
@@ -3746,6 +3831,17 @@ class Project(db.Model):
         return self._warnings.values()
 
 
+    def mark_confirmed(self, pclass, commit=False):
+        desc = self.get_description(pclass)
+
+        if desc is None:
+            return
+
+        desc.confirmed = True
+        if commit:
+            db.session.commit()
+
+
     @property
     def is_deletable(self):
         return get_count(self.live_projects) == 0
@@ -3952,11 +4048,23 @@ class Project(db.Model):
         if pclass is None:
             return None
 
-        desc = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass.id)).first()
+        if isinstance(pclass, ProjectClass):
+            pclass_id = pclass.id
+        elif isinstance(pclass, int):
+            pclass_id = pclass
+        else:
+            raise RuntimeError('Could not interpret pclass argument')
+
+        desc = self.descriptions.filter(ProjectDescription.project_classes.any(id=pclass_id)).first()
         if desc is not None:
             return desc
 
         return self.default
+
+
+    @property
+    def num_descriptions(self):
+        return get_count(self.descriptions)
 
 
     def get_capacity(self, pclass):
@@ -4053,19 +4161,32 @@ class Project(db.Model):
     DESCRIPTIONS_APPROVED = 0
     SOME_DESCRIPTIONS_QUEUED = 1
     SOME_DESCRIPTIONS_REJECTED = 2
+    SOME_DESCRIPTIONS_UNCONFIRMED = 3
+    APPROVALS_NOT_ACTIVE = 10
     APPROVALS_UNKNOWN = 100
 
-    def get_approval_state(self):
-        num_rejected = get_count(self.descriptions.filter_by(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
-        if num_rejected > 0:
-            return Project.SOME_DESCRIPTIONS_REJECTED
+    @property
+    def approval_state(self):
+        if not self.active:
+            return Project.APPROVALS_NOT_ACTIVE
 
-        num_queued = get_count(self.descriptions.filter_by(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED))
-        if num_queued > 0:
-            return Project.SOME_DESCRIPTIONS_QUEUED
+        num_descriptions = 0
+        num_approved = 0
 
-        num_descriptions = get_count(self.descriptions)
-        num_approved = get_count(self.descriptions.filter_by(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED))
+        for d in self.descriptions:
+            if d.requires_confirmation and not d.confirmed:
+                return Project.SOME_DESCRIPTIONS_UNCONFIRMED
+
+            if d.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED:
+                return Project.SOME_DESCRIPTIONS_REJECTED
+
+            if d.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED:
+                return Project.SOME_DESCRIPTIONS_QUEUED
+
+            num_descriptions += 1
+            if d.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED:
+                num_approved += 1
+
         if num_descriptions == num_approved:
             return Project.DESCRIPTIONS_APPROVED
 
@@ -4179,6 +4300,8 @@ class ProjectDescription(db.Model, WorkflowMixin):
             self.validator_id = None
             self.validated_timestamp = None
 
+            self.confirmed = False
+
         return value
 
 
@@ -4202,12 +4325,20 @@ class ProjectDescription(db.Model, WorkflowMixin):
                               backref=db.backref('tagged_descriptions', lazy='dynamic'))
 
 
+    # APPROVALS WORKFLOW
+
+    # has this description been confirmed by the project owner?
+    confirmed = db.Column(db.Boolean(), default=False)
+
+
     @validates('description', 'reading', 'team', 'capacity', 'modules', include_removes=True)
     def _description_enqueue(self, key, value, is_remove):
         with db.session.no_autoflush:
             self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
             self.validator_id = None
             self.validated_timestamp = None
+
+            self.confirmed = False
 
         return value
 
@@ -4355,6 +4486,15 @@ class ProjectDescription(db.Model, WorkflowMixin):
             return True
 
         return most_recent[0] > record.last_viewed
+
+
+    @property
+    def requires_confirmation(self):
+        for p in self.project_classes:
+            if p.active and p.require_confirm:
+                return True
+
+        return False
 
 
 @listens_for(ProjectDescription, 'before_update')

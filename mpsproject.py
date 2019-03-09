@@ -11,7 +11,7 @@
 from app import create_app, db
 from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
-    SelectingStudent, ProjectDescription, Project, WorkflowMixin
+    SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, ProjectClassConfig
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -159,6 +159,52 @@ def attach_JRA_projects():
     db.session.commit()
 
 
+def migrate_description_confirmations():
+    descriptions = db.session.query(ProjectDescription).all()
+
+    for d in descriptions:
+        project = d.parent
+        owner = project.owner
+
+        # assume not confirmed unless evidence to contrary
+        d.confirmed = False
+
+        # if project is not active, this description is not confirmed
+        if not project.active:
+            continue
+
+        for p in d.project_classes:
+            # if project class doesn't use confirmations, move on
+            if not p.require_confirm:
+                continue
+
+            record = owner.get_enrollment_record(p)
+
+            # if supervisor not normally enrolled, this pclass changes nothing
+            if record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
+                continue
+
+            # any description with a nontrivial workflow state is automatically assumed to be confirmed
+            if d.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED or \
+                d.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED:
+                d.confirmed = True
+                break
+
+            # otherwise, check whether user is in confirmations_required list
+            config = db.session.query(ProjectClassConfig) \
+                .filter_by(pclass_id=p.id) \
+                .order_by(ProjectClassConfig.year.desc()).first()
+
+            if config is None:
+                continue
+
+            if owner not in config.confirmation_required:
+                d.confirmed = True
+                break
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
 with app.app_context():
@@ -203,6 +249,7 @@ with app.app_context():
     # attach_JRA_projects()
     # populate_student_validation_data()
     # populate_project_validation_data()
+    # migrate_description_confirmations()
 
     db.session.commit()
 

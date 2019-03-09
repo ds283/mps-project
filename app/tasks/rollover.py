@@ -16,7 +16,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
-    SubmissionRecord, SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass
+    SubmissionRecord, SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
+    ProjectDescription
 
 from ..task_queue import progress_update
 
@@ -25,6 +26,7 @@ from ..shared.convenor import add_selector, add_blank_submitter
 from ..shared.sqlalchemy import get_count
 
 from celery import chain, group
+from celery.exceptions import Ignore
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -112,6 +114,18 @@ def register_rollover_tasks(celery):
                         EnrollmentRecord.marker_state != EnrollmentRecord.MARKER_ENROLLED))
         reenroll_group = group(reenroll_faculty.s(rec.id, year) for rec in reenroll_query.all())
 
+        project_descs = set()
+        # build group of project descriptions attached to this project class
+        projects = db.session.query(Project) \
+            .filter(Project.project_classes.any(id=config.pclass_id)).all()
+
+        # want to use get_description() to get ProjectDescription, to account for logic
+        # asociated with having a default
+        for p in projects:
+            desc = p.get_description(config.pclass_id)
+            project_descs.add(desc.id)
+        descs_group = group(reset_project_description.s(desc.id))
+
         # get backup task from Celery instance
         celery = current_app.extensions['celery']
         backup = celery.tasks['app.tasks.backup.backup']
@@ -137,6 +151,9 @@ def register_rollover_tasks(celery):
 
         if len(reenroll_group) > 0:
             seq = seq | rollover_reenroll_msg.s(task_id) | reenroll_group
+
+        if len(project_descs) > 0:
+            seq = seq | reset_descriptions_msg.s(task_id) | descs_group
 
         seq = (seq | rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
         seq.apply_async()
@@ -179,7 +196,7 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 55, 'Attaching new student records...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 50, 'Attaching new student records...', autocommit=True)
         return new_config_id
 
 
@@ -193,7 +210,7 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 75, 'Retiring current student records...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 65, 'Retiring current student records...', autocommit=True)
         return new_config_id
 
 
@@ -207,7 +224,21 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 95, 'Checking for faculty re-enrollments...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 80, 'Checking for faculty re-enrollments...', autocommit=True)
+        return new_config_id
+
+
+    @celery.task(bind=True)
+    def reset_descriptions_msg(self, results, task_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
+
+        progress_update(task_id, TaskRecord.RUNNING, 95, 'Reset project description lifecycles...', autocommit=True)
         return new_config_id
 
 
@@ -627,16 +658,15 @@ def register_rollover_tasks(celery):
 
     @celery.task(bind=True)
     def reenroll_faculty(self, new_config_id, rec_id, current_year):
-
         # get faculty enrollment record
         try:
-            record = EnrollmentRecord.query.filter_by(id=rec_id).first()
+            record = db.session.query(EnrollmentRecord).filter_by(id=rec_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
         if record is None:
             self.update_state('FAILURE', meta='Could not load EnrollmentRecord')
-            return
+            raise Ignore()
 
         # supervisors re-enroll in the year *before* they come off sabbatical, so they can offer
         # projects during the selection cycle
@@ -662,6 +692,30 @@ def register_rollover_tasks(celery):
                 record.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
                 record.presentations_comment = 'Automatically re-enrolled during academic year rollover'
                 add_notification(record.owner, EmailNotification.FACULTY_REENROLL_PRESENTATIONS, record)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        self.update_state(state='SUCCESS')
+        return new_config_id
+
+
+    @celery.task(bind=True)
+    def reset_project_description(self, new_config_id, desc_id):
+        # get ProjectDescription
+        try:
+            record = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', 'Could not load ProjectDescription')
+            raise Ignore()
+
+        record.confirmed = False
 
         try:
             db.session.commit()

@@ -74,14 +74,19 @@ _desc_label = \
 {% endif %}
 {% set state = d.workflow_state %}
 <div>
-    {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
-        <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
-    {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
-        <span class="label label-warning">Approval: Queued</span>
-    {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
-        <span class="label label-info">Approval: In progress</span>
+    {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
+    {% if not_confirmed %}
+        <span class="label label-default">Approval: Not confirmed</span>
     {% else %}
-        <span class="label label-danger">Unknown approval state</span>
+        {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
+            <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
+        {% elif state == d.WORKFLOW_APPROVAL_QUEUED %}
+            <span class="label label-warning">Approval: Queued</span>
+        {% elif state == d.WORKFLOW_APPROVAL_REJECTED %}
+            <span class="label label-info">Approval: In progress</span>
+        {% else %}
+            <span class="label label-danger">Unknown approval state</span>
+        {% endif %}
     {% endif %}
     {% if current_user.has_role('project_approver') and d.validated_by %}
         <div>

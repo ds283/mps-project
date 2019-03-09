@@ -151,6 +151,18 @@ def return_to_owner(id):
     return redirect(url)
 
 
+@project_approver.route('/publish_comment/<int:id>')
+@roles_required('project_approver')
+def publish_comment(id):
+    # id is a DescriptionComment
+    comment = DescriptionComment.query.get_or_404(id)
+
+    comment.visibility = DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @project_approver.route('/edit_comment/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit_comment(id):

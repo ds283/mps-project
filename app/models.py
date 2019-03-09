@@ -4562,6 +4562,9 @@ class DescriptionComment(db.Model):
 
     VISIBILITY_EVERYONE = 0
     VISIBILITY_APPROVALS_TEAM = 1
+    VISIBILITY_PUBLISHED_BY_APPROVALS = 2
+
+    # indicate the visbility status of this comment
     visibility = db.Column(db.Integer(), default=VISIBILITY_EVERYONE)
 
     # deleted flag
@@ -4578,7 +4581,8 @@ class DescriptionComment(db.Model):
 
 
     def is_visible(self, user):
-        if self.visibility == DescriptionComment.VISIBILITY_EVERYONE:
+        if self.visibility == DescriptionComment.VISIBILITY_EVERYONE \
+                or self.visibility == DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS:
             return True
 
         if self.visibility == DescriptionComment.VISIBILITY_APPROVALS_TEAM:
@@ -4589,6 +4593,14 @@ class DescriptionComment(db.Model):
 
         # default to safe value
         return False
+
+
+    @property
+    def format_name(self):
+        if self.visibility == DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS:
+            return 'Approvals team'
+
+        return self.owner.name
 
 
 class LastViewingTime(db.Model):

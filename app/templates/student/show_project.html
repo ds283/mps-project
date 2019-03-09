@@ -281,6 +281,7 @@
                     {% endif %}
                 {% endif %}
                 {% if show_comments %}
+                    {% set is_approver = current_user.has_role('project_approver') %}
                     <div class="well" style="margin-top: 15px;">
                         <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=0) }}"
                            class="btn btn-sm {% if all_comments %}btn-default{% else %}btn-primary{% endif %}">
@@ -293,28 +294,30 @@
                     </div>
                     {% for comment in comments %}
                         {% if comment.is_visible(current_user) %}
+                            {% set owner_name = comment.format_name %}
+                            {% set approvals_team_only = comment.visibility == comment.VISIBILITY_APPROVALS_TEAM %}
                             <div class="panel panel-default" style="margin-top: 15px;">
                                 <div class="panel-heading">
-                                    <i class="fa fa-comment-o"></i> {{ comment.owner.name }}
+                                    <i class="fa fa-comment-o"></i> {{ owner_name|safe }}
                                     at {{ comment.creation_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                 </div>
                                 <div class="panel-body">
                                     {% if comment.deleted %}
                                         {% if comment.last_edit_timestamp %}
-                                            <span class="text-muted"><em>{{ comment.owner.name }} deleted their comment at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</em></span>
+                                            <span class="text-muted"><em>{{ owner_name|safe }} deleted their comment at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}</em></span>
                                         {% else %}
-                                            <span class="text-muted"><em>{{ comment.owner.name }} deleted their comment</em></span>
+                                            <span class="text-muted"><em>{{ owner_name|safe }} deleted their comment</em></span>
                                         {% endif %}
                                     {% else %}
                                         <p>
-                                            {% if comment.visibility == comment.VISIBILITY_APPROVALS_TEAM %}
+                                            {% if approvals_team_only %}
                                                 <span class="text-muted">Visible only to approvals team</span>
                                             {% endif %}
                                         </p>
                                         {{ comment.comment|dealingwithdollars|markdown|bclean|blinkify|safe }}
                                     {% endif %}
                                 </div>
-                                {% if not comment.deleted and (comment.last_edit_timestamp or current_user.id == comment.owner_id) %}
+                                {% if not comment.deleted and (comment.last_edit_timestamp or current_user.id == comment.owner_id or (is_approver and approvals_team_only)) %}
                                     <div class="panel-footer">
                                         <div class="row vertical-align">
                                             {% if comment.last_edit_timestamp and current_user.id == comment.owner_id %}
@@ -323,9 +326,19 @@
                                                 </div>
                                                 <div class="col-xs-5">
                                                     <div class="pull-right">
-                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-default">Edit</a>
-                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger">Delete</a>
+                                                        {% if is_approver and approvals_team_only %}
+                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                        {% endif %}
+                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
+                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger btn-table-block">Delete</a>
                                                     </div>
+                                                </div>
+                                            {% elif comment.last_edit_timestamp and (is_approver and approvals_team_only) %}
+                                                <div class="col-xs-7">
+                                                    Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
+                                                </div>
+                                                <div class="col-xs-5">
+                                                    <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
                                                 </div>
                                             {% elif comment.last_edit_timestamp %}
                                                 <div class="col-xs-12">
@@ -334,9 +347,22 @@
                                             {% elif current_user.id == comment.owner_id %}
                                                 <div class="col-xs-12">
                                                     <div class="pull-right">
-                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-default">Edit</a>
-                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger">Delete</a>
+                                                        {% if is_approver and approvals_team_only %}
+                                                            <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                        {% endif %}
+                                                        <a href="{{ url_for('project_approver.edit_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
+                                                        <a href="{{ url_for('project_approver.delete_comment', id=comment.id) }}" class="btn btn-sm btn-danger btn-table-block">Delete</a>
                                                     </div>
+                                                </div>
+                                            {% elif is_approver and approvals_team_only %}
+                                                <div class="col-xs-12">
+                                                    <div class="pull-right">
+                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <div class="col-xs-12">
+                                                    <span class="label label-danger">Unknown comment configuration</span>
                                                 </div>
                                             {% endif %}
                                         </div>
@@ -347,7 +373,7 @@
                     {% endfor %}
                     <div class="well" style="margin-top: 15px;">
                         {{ wtf.form_field(form.comment) }}
-                        {% if current_user.has_role('project_approver') %}
+                        {% if is_approver %}
                             {{ wtf.form_field(form.limit_visibility) }}
                         {% endif %}
                         <div class="row vertical-align">

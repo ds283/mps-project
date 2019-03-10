@@ -2591,7 +2591,7 @@ class ProjectClassConfig(db.Model):
     CATS_presentation = db.Column(db.Integer())
 
 
-    def confirmations_outstanding(self, faculty):
+    def _confirmations_outstanding_generator(self, faculty):
         if isinstance(faculty, User):
             fac_data = faculty.faculty_data
         elif isinstance(faculty, int):
@@ -2604,21 +2604,31 @@ class ProjectClassConfig(db.Model):
 
         # have to use list of projects offered for the pclass and then the
         # get_description() method of Project in order to account for possible defaults
-        outstanding = set()
-
-        # projects_offered accounts for active/inactive
         projects = fac_data.projects_offered(self.pclass_id)
-        for p in projects:
-            desc = p.get_description(self.pclass_id)
 
-            if not desc.confirmed:
-                outstanding.add(desc.id)
+        # express as generators so that the elements are not computed unless they are used
+        descs = (p.get_description(self.pclass_id) for p in projects)
+        outstanding = (d.id for d in descs if not d.confirmed)
 
         return outstanding
 
 
+    def confirmations_outstanding(self, faculty):
+        return set(self._confirmations_outstanding_generator(faculty))
+
+
     def number_confirmations_outstanding(self, faculty):
         return len(self.confirmations_outstanding(faculty))
+
+
+    def has_confirmations_outstanding(self, faculty):
+        gen = self._confirmations_outstanding_generator(faculty)
+        try:
+            item = next(gen)
+        except StopIteration:
+            return False
+
+        return True
 
 
     def is_confirmation_required(self, faculty):
@@ -2638,7 +2648,8 @@ class ProjectClassConfig(db.Model):
 
         # confirmation required if there are outstanding project descriptions needing confirmation,
         # or if this user hasn't yet given confirmation for ths configuration
-        return self.number_confirmations_outstanding(fac_data.id) > 0 or fac_data in self.confirmation_required
+        return self.has_confirmations_outstanding(fac_data.id) \
+               or get_count(self.confirmation_required.filter_by(id=fac_data.id)) > 0
 
 
     def mark_confirmed(self, faculty, commit=False, message=False):
@@ -2668,17 +2679,34 @@ class ProjectClassConfig(db.Model):
 
 
     @property
-    def faculty_waiting_confirmation(self):
+    def _faculty_waiting_confirmation_generator(self):
         faculty = db.session.query(EnrollmentRecord) \
             .filter_by(pclass_id=self.pclass_id,
                        supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED).all()
 
-        return [f.owner for f in faculty if f.owner is not None and self.is_confirmation_required(f.owner)]
+        return (f.owner for f in faculty if f.owner is not None and self.is_confirmation_required(f.owner))
+
+
+    @property
+    def faculty_waiting_confirmation(self):
+        return list(self._faculty_waiting_confirmation_generator)
 
 
     @property
     def confirm_outstanding_count(self):
         return len(self.faculty_waiting_confirmation)
+
+
+    @property
+    def has_pending_confirmations(self):
+        gen = self._faculty_waiting_confirmation_generator
+
+        try:
+            item = next(gen)
+        except StopIteration:
+            return False
+
+        return True
 
 
     @property
@@ -2807,7 +2835,7 @@ class ProjectClassConfig(db.Model):
         if self.require_confirm:
             if self.requests_issued:
 
-                if self.confirm_outstanding_count > 0:
+                if self.has_pending_confirmations:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS
                 else:
                     return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE

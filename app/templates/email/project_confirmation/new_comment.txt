@@ -1,0 +1,17 @@
+You are receiving this email because you have posted a comment on, or are
+watching the comments thread for,
+
+{{ project.name }}/{{ desc.label }}
+
+A new comment has been posted by {{ comment.owner.name }}:
+
+{{ comment.comment|wordwrap(75) }}
+
+{% set pclass = desc.project_classes.first() -%}
+{%- if pclass is not none -%}
+{%- set pclass_id = pclass.id -%}
+You can view this comment on the project preview page by following
+this link:
+
+https://mpsprojects.co.uk/faculty/preview/{{ project.id }}?pclass={{ pclass_id }}&show_selector=0
+{% endif -%}

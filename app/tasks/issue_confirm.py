@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, FacultyData, EnrollmentRecord, \
-    ProjectDescription
+    ProjectDescription, DescriptionComment, Role
 
 from ..task_queue import progress_update, register_task
 
@@ -469,3 +469,52 @@ def register_issue_confirm_tasks(celery):
                                       autocommit=False)
 
         db.session.commit()
+
+
+    @celery.task(bind=True)
+    def notify_comment(self, comment_id):
+        try:
+            comment = db.session.query(DescriptionComment).filter_by(id=comment_id).first()
+            project_approver = db.session.query(Role).filter_by(name='project_approver').first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if comment is None or project_approver is None:
+            self.update('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        approvals_team = set()
+        for m in project_approver.users:
+            approvals_team.add(m.email)
+
+        recipients = set()
+
+        for c in comment.parent.comments.filter_by(year=comment.year):
+            if c.owner_id != comment.owner_id:
+                if c.visibility != DescriptionComment.VISIBILITY_PUBLISHED_BY_APPROVALS:
+                    recipients.add(c.owner.email)
+                else:
+                    recipients = recipients.union(approvals_team)
+
+        if len(recipients) == 0 and comment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM:
+            recipients = recipients.union(approvals_team)
+
+        if len(recipients) == 0:
+            return
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        msg = Message(subject='[mpsprojects] A comment was posted on '
+                              '"{proj}/{desc}"'.format(proj=comment.parent.parent.name, desc=comment.parent.label),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
+                      recipients=list(recipients))
+
+        msg.body = render_template('email/project_confirmation/new_comment.txt', comment=comment,
+                                   project=comment.parent.parent, desc=comment.parent)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Notify watchers of new '
+                                                         'comment'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        return 1

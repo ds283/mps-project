@@ -1181,6 +1181,11 @@ def project_preview(id):
         db.session.add(comment)
         db.session.commit()
 
+        # notify watchers on this thread that a new comment has been posted
+        celery = current_app.extensions['celery']
+        notify = celery.tasks['app.tasks.issue_confirm.notify_comment']
+        notify.apply_async(args=(comment.id,))
+
         form.comment.data = None
 
     # defaults for comments pane

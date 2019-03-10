@@ -31,7 +31,7 @@ def register_system_tasks(celery):
         data = get_stats(memory_pressure=True)
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='[mpsproject] garbage collection statistics',
+        msg = Message(subject='[mpsprojects] garbage collection statistics',
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=current_app.config['ADMIN_EMAIL'])

@@ -353,6 +353,19 @@ def create_app():
         db.session.commit()
 
 
+    from flask import Request
+    class CustomRequest(Request):
+        @property
+        def rollbar_person(self):
+            # 'id' is required, 'username' and 'email' are indexed but optional.
+            # all values are strings.
+            return {'id': str(current_user.id),
+                    'username': current_user.username,
+                    'email': current_user.email}
+
+    app.request_class = CustomRequest
+
+
     # IMPORT BLUEPRINTS
 
     from .home import home as home_blueprint

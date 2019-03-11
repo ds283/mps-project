@@ -97,11 +97,19 @@ def all_projects():
     if valid_filter is not None:
         session['reports_projects_valid_filter'] = valid_filter
 
+    state_filter = request.args.get('state_filter')
+
+    if state_filter is None and session.get('reports_projects_state_filter'):
+        state_filter = session['reports_projects_state_filter']
+
+    if state_filter is not None:
+        session['reports_projects_state_filter'] = state_filter
+
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
-    pclasses = ProjectClass.query.filter_by(active=True, publish=True).order_by(ProjectClass.name.asc()).all()
+    pclasses = ProjectClass.query.order_by(ProjectClass.name.asc()).all()
 
     return render_template('reports/all_projects.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter,
-                           valid_filter=valid_filter)
+                           valid_filter=valid_filter, state_filter=state_filter)
 
 
 @reports.route('/all_projects_ajax', methods=['GET', 'POST'])
@@ -113,12 +121,25 @@ def all_projects_ajax():
     """
     pclass_filter = request.args.get('pclass_filter')
     valid_filter = request.args.get('valid_filter')
+    state_filter = request.args.get('state_filter')
 
     flag, pclass_value = is_integer(pclass_filter)
 
-    pq = db.session.query(Project)
+    pq = db.session.query(Project) \
+        .join(FacultyData, FacultyData.id == Project.owner_id) \
+        .join(User, User.id == FacultyData.id) \
+        .filter(User.active == True)
     if flag:
         pq = pq.filter(Project.project_classes.any(id=pclass_value))
+
+    if state_filter == 'active':
+        pq = pq.filter(Project.project_classes.any(active=True))
+    elif state_filter == 'inactive':
+        pq = pq.filter(~Project.project_classes.any(active=True))
+    elif state_filter == 'published':
+        pq = pq.filter(Project.project_classes.any(active=True, publish=True))
+    elif state_filter == 'unpublished':
+        pq = pq.filter(~Project.project_classes.any(active=True, publish=True))
 
     data = pq.all()
 

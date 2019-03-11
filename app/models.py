@@ -4525,6 +4525,40 @@ class ProjectDescription(db.Model, WorkflowMixin):
         return False
 
 
+    def maintenance(self):
+        """
+        Perform regular basic maintenance, to ensure validity of the database
+        :return:
+        """
+        modified = False
+
+        # ensure that project class list does not contain any class that is not attached to the parent project
+        removed = [pcl for pcl in self.project_classes if pcl not in self.parent.project_classes]
+        self.assessors = [pcl for pcl in self.project_classes if pcl in self.parent.project_classes]
+
+        for pcl in removed:
+            current_app.logger.info('Regular maintenance: pruned project class "{name}" from project description '
+                                    '"{proj}/{desc}" since this class is not attached to the parent '
+                                    'project'.format(name=pcl.name, proj=self.parent.name,
+                                                     desc=self.label))
+
+        if len(removed) > 0:
+            modified = True
+
+        if self.confirmed:
+            if not self.is_valid:
+                self.confirmed = False
+                self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
+
+                current_app.logger.info('Regular maintenance: reset confirmation state for project description '
+                                        '"{proj}/{desc}" since this description has validation '
+                                        'errors.'.format(proj=self.parent.name, desc=self.label))
+
+                modified = True
+
+        return modified
+
+
 @listens_for(ProjectDescription, 'before_update')
 def _ProjectDescription_update_handler(mapper, connection, target):
     with db.session.no_autoflush:

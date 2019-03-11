@@ -15,7 +15,7 @@ from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, PresentationSession, \
-    PresentationAssessment, GeneratedAsset, UploadedAsset, ScheduleEnumeration
+    PresentationAssessment, GeneratedAsset, UploadedAsset, ScheduleEnumeration, ProjectDescription
 from ..shared.utils import get_current_year, canonical_generated_asset_filename, canonical_uploaded_asset_filename
 
 from datetime import datetime
@@ -27,6 +27,7 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def maintenance(self):
         projects_maintenance(self)
+        project_descriptions_maintenance(self)
         assessor_attendance_maintenance(self)
         submitter_attendance_maintenance(self)
         schedule_enumeration_maintenance(self)
@@ -93,6 +94,36 @@ def register_maintenance_tasks(celery):
             raise Ignore
 
         if project.maintenance():
+            try:
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                raise self.retry()
+
+        self.update_state(state='SUCCESS')
+
+
+    def project_descriptions_maintenance(self):
+        try:
+            records = db.session.query(ProjectDescription).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(project_description_record_maintenance.s(pd.id) for pd in records)
+        task.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def project_description_record_maintenance(self, pd_id):
+        try:
+            desc = db.session.query(ProjectDescription).filter_by(id=pd_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if desc is None:
+            raise Ignore
+
+        if desc.maintenance():
             try:
                 db.session.commit()
             except SQLAlchemyError:

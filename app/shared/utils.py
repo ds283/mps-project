@@ -11,13 +11,16 @@
 
 from flask import redirect, url_for, flash, current_app
 from flask_security import current_user
+
 from sqlalchemy import and_, or_
+from sqlalchemy.event import listens_for
 
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
     MatchingAttempt, MatchingRecord, ProjectDescription, WorkflowMixin
 from ..models import project_assessors
+from ..cache import cache
 
 from .conversions import is_integer
 from .sqlalchemy import get_count
@@ -213,16 +216,6 @@ def _get_user_approvals_data():
 
 
 def build_project_approval_queues():
-    # cache configuration data for project classes
-    config_cache = {}
-    pclasses = db.session.query(ProjectClass).filter_by(active=True, publish=True).all()
-    for pcl in pclasses:
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pcl.id) \
-            .order_by(ProjectClassConfig.year.desc()).first()
-        if config is not None:
-            config_cache[pcl.id] = config
-
     # want to count number of ProjectDescriptions that are associated with project classes that are in the
     # confirmation phase, for faculty that have signed-off on their projects
     descriptions = db.session.query(ProjectDescription).all()
@@ -231,7 +224,7 @@ def build_project_approval_queues():
     rejected = []
 
     for desc in descriptions:
-        if allow_approvals(desc):
+        if allow_approvals(desc.id):
             if desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
                 queued.append(desc.id)
             elif desc.workflow_state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
@@ -241,7 +234,10 @@ def build_project_approval_queues():
             'rejected': rejected}
 
 
-def allow_approvals(desc, config_cache=None):
+@cache.memoize()
+def allow_approvals(desc_id):
+    desc = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
+
     if desc is None:
         return False
 
@@ -260,16 +256,11 @@ def allow_approvals(desc, config_cache=None):
         return False
 
     for pcl in desc.project_classes:
-        if config_cache is not None:
-            allow = (pcl.id in config_cache)
-            config = config_cache[pcl.id] if allow else None
-        else:
-            config = db.session.query(ProjectClassConfig) \
-                .filter_by(pclass_id=pcl.id) \
-                .order_by(ProjectClassConfig.year.desc()).first()
-            allow = (config is not None)
+        config = db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=pcl.id) \
+            .order_by(ProjectClassConfig.year.desc()).first()
 
-        if pcl.active and pcl.publish and allow:
+        if config is not None and pcl.active and pcl.publish:
             # don't include projects for project classes that have already gone live
             if config.live:
                 continue
@@ -294,6 +285,121 @@ def allow_approvals(desc, config_cache=None):
             return True
 
     return False
+
+
+
+def _approvals_ProjectDescription_delete_cache(desc):
+    cache.delete_memoized(allow_approvals, desc.id)
+
+
+@listens_for(ProjectDescription, 'before_insert')
+def _approvals_ProjectDescription_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_ProjectDescription_delete_cache(target)
+
+
+@listens_for(ProjectDescription, 'before_update')
+def _approvals_ProjectDescription_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_ProjectDescription_delete_cache(target)
+
+
+@listens_for(ProjectDescription, 'before_update')
+def _approvals_ProjectDescription_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_ProjectDescription_delete_cache(target)
+
+
+@listens_for(ProjectDescription.project_classes, 'append')
+def _approvals_ProjectDescription_project_classes_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _approvals_ProjectDescription_delete_cache(target)
+
+
+@listens_for(ProjectDescription.project_classes, 'remove')
+def _approvals_ProjectDescription_project_classes_remove_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _approvals_ProjectDescription_delete_cache(target)
+
+
+def _approvals_delete_ProjectClass_cache(project):
+    for d in project.descriptions:
+        cache.delete_memoized(allow_approvals, d.id)
+
+
+@listens_for(ProjectClass, 'before_insert')
+def _approvals_ProjectClass_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_ProjectClass_cache(target)
+
+
+@listens_for(ProjectClass, 'before_update')
+def _approvals_ProjectClass_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_ProjectClass_cache(target)
+
+
+@listens_for(ProjectClass, 'before_delete')
+def _approvals_ProjectClass_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_ProjectClass_cache(target)
+
+
+@listens_for(ProjectClassConfig, 'before_insert')
+def _approvals_ProjectClassConfig_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_ProjectClass_cache(target.project_class)
+
+
+@listens_for(ProjectClassConfig, 'before_update')
+def _approvals_ProjectClassConfig_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_ProjectClass_cache(target.project_class)
+
+
+@listens_for(ProjectClassConfig, 'before_delete')
+def _approvals_ProjectClassConfig_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_ProjectClass_cache(target.project_class)
+
+
+@listens_for(ProjectClassConfig.confirmation_required, 'append')
+def _approvals_ProjectClassConfig_confirmation_required_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _approvals_delete_ProjectClass_cache(target.project_class)
+
+
+@listens_for(ProjectClassConfig.confirmation_required, 'remove')
+def _approvals_ProjectClassConfig_confirmation_required_remove_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _approvals_delete_ProjectClass_cache(target.project_class)
+
+
+def _approvals_delete_EnrollmentRecord_cache(record):
+    descriptions = db.session.query(ProjectDescription) \
+        .filter(ProjectDescription.owner_id == record.owner_id,
+                ProjectDescription.project_classes.any(id=record.pclass_id)).all()
+
+    for d in descriptions:
+        cache.delete_memoized(allow_approvals, d.id)
+
+
+@listens_for(EnrollmentRecord, 'before_insert')
+def _approvals_EnrollmentRecord_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_EnrollmentRecord_cache(target)
+
+
+@listens_for(EnrollmentRecord, 'before_update')
+def _approvals_EnrollmentRecord_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_EnrollmentRecord_cache(target)
+
+
+@listens_for(EnrollmentRecord, 'before_delete')
+def _approvals_EnrollmentRecord_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _approvals_delete_EnrollmentRecord_cache(target)
 
 
 def _get_project_approvals_data():
@@ -397,12 +503,12 @@ def get_convenor_dashboard_data(pclass, config):
             'submitters': sub_count}
 
 
-def _compute_group_capacity_data(pclass, group):
-
+@cache.memoize()
+def _compute_group_capacity_data(pclass_id, group_id):
     # filter all 'attached' projects that are tagged with this research group
     projects = db.session.query(Project) \
-        .filter(Project.active == True, Project.project_classes.any(id=pclass.id),
-                Project.group_id == group.id)
+        .filter(Project.active == True, Project.project_classes.any(id=pclass_id),
+                Project.group_id == group_id)
 
     # set of faculty members offering projects
     faculty = set()
@@ -416,37 +522,153 @@ def _compute_group_capacity_data(pclass, group):
     capacity = 0
     capacity_bounded = True
 
-    for project in projects:
-
-        if project.is_offerable:
-
+    for p in projects:
+        if p.is_offerable:
             project_count += 1
 
             # add owner to list of faculty offering projects
-            if project.owner.id not in faculty:
-                faculty.add(project.owner.id)
+            if p.owner.id not in faculty:
+                faculty.add(p.owner.id)
 
-            cap = project.get_capacity(pclass)
+            cap = p.get_capacity(pclass_id)
             if cap is not None and cap > 0:
                 capacity += cap
-            if not project.enforce_capacity:
+            if not p.enforce_capacity:
                 capacity_bounded = False
 
     # get number of enrolled faculty belonging to this research group
     enrolled = get_count(db.session.query(EnrollmentRecord.id) \
-                         .filter(EnrollmentRecord.pclass_id == pclass.id) \
+                         .filter(EnrollmentRecord.pclass_id == pclass_id) \
                          .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
                          .join(User, User.id == EnrollmentRecord.owner_id) \
-                         .filter(FacultyData.affiliations.any(id=group.id),
+                         .filter(FacultyData.affiliations.any(id=group_id),
                                  User.active == True))
 
     # get total number of faculty belonging to this research group
     total = get_count(db.session.query(FacultyData.id) \
                       .join(User, User.id == FacultyData.id) \
-                      .filter(FacultyData.affiliations.any(id=group.id),
+                      .filter(FacultyData.affiliations.any(id=group_id),
                               User.active == True))
 
     return project_count, len(faculty), enrolled, total, capacity, capacity_bounded
+
+
+def _capacity_delete_ProjectDescription_cache(desc):
+    for pcl in desc.project_classes:
+        cache.delete_memoized(_compute_group_capacity_data, pcl.id, desc.parent.group_id)
+
+
+@listens_for(ProjectDescription, 'before_insert')
+def _capacity_ProjectDescription_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_ProjectDescription_cache(target)
+
+
+@listens_for(ProjectDescription, 'before_update')
+def _capacity_ProjectDescription_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_ProjectDescription_cache(target)
+
+
+@listens_for(ProjectDescription, 'before_delete')
+def _capacity_ProjectDescription_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_ProjectDescription_cache(target)
+
+
+def _capacity_delete_Project_cache(project):
+    for pcl in project.project_classes:
+        cache.delete_memoized(_compute_group_capacity_data, pcl.id, project.group_id)
+
+
+@listens_for(Project, 'before_insert')
+def _capacity_Project_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_Project_cache(target)
+
+
+@listens_for(Project, 'before_update')
+def _capacity_Project_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_Project_cache(target)
+
+
+@listens_for(Project, 'before_delete')
+def _capacity_Project_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_Project_cache(target)
+
+
+def _capacity_delete_EnrollmentRecord_cache(record):
+    for gp in record.owner.affiliations:
+        cache.delete_memoized(_compute_group_capacity_data, record.pclass_id, gp.id)
+
+
+@listens_for(EnrollmentRecord, 'before_insert')
+def _capacity_EnrollmentRecord_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_EnrollmentRecord_cache(target)
+
+
+@listens_for(EnrollmentRecord, 'before_update')
+def _capacity_EnrollmentRecord_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_EnrollmentRecord_cache(target)
+
+
+@listens_for(EnrollmentRecord, 'before_delete')
+def _capacity_EnrollmentRecord_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_EnrollmentRecord_cache(target)
+
+
+def _capacity_delete_FacultyData_cache(target, value):
+    # value is the group that has been added or removed to FacultyData.affiliations
+    pclasses = db.session.query(ProjectClass).filter_by(active=True).all()
+
+    for pcl in pclasses:
+        cache.delete_memoized(_compute_group_capacity_data, pcl.id, value.id)
+
+
+@listens_for(FacultyData.affiliations, 'append')
+def _capacity_FacultyData_affiliations_append_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _capacity_delete_FacultyData_cache(target, value)
+
+
+@listens_for(FacultyData.affiliations, 'remove')
+def _capacity_FacultyData_affiliations_remove_handler(target, value, initiator):
+    with db.session.no_autoflush:
+        _capacity_delete_FacultyData_cache(target, value)
+
+
+def _capacity_delete_User_cache(user):
+    if not user.has_role('faculty'):
+        return
+
+    pclasses = db.session.query(ProjectClass).filter_by(active=True).all()
+
+    for pcl in pclasses:
+        for gp in user.faculty_data.affiliations:
+            cache.delete_memoized(_compute_group_capacity_data, pcl.id, gp.id)
+
+
+@listens_for(User, 'before_insert')
+def _capacity_User_insert_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_User_cache(target)
+
+
+@listens_for(User, 'before_update')
+def _capacity_User_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_User_cache(target)
+
+
+@listens_for(User, 'before_delete')
+def _capacity_User_delete_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _capacity_delete_User_cache(target)
 
 
 def get_capacity_data(pclass):
@@ -466,7 +688,7 @@ def get_capacity_data(pclass):
     for group in groups:
 
         proj_count, fac_count, enrolled, total, capacity, capacity_bounded = \
-            _compute_group_capacity_data(pclass, group)
+            _compute_group_capacity_data(pclass.id, group.id)
 
         # update totals
         total_projects += proj_count

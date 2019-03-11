@@ -100,6 +100,7 @@ def create_app():
 
         panels = list(app.config['DEBUG_TB_PANELS'])
         panels.append('flask_debug_api.BrowseAPIPanel')
+        # panels.append('flask_debugtoolbar_lineprofilerpanel.panels.LineProfilerPanel')
         app.config['DEBUG_TB_PANELS'] = panels
 
     app.config['BLEACH_ALLOWED_TAGS'] = markdown_tags

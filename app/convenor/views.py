@@ -1858,6 +1858,9 @@ def add_description(pid, pclass_id):
                                   team=form.team.data,
                                   capacity=form.capacity.data,
                                   confirmed=False,
+                                  workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
+                                  validator_id=None,
+                                  validated_timestamp=None,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
 
@@ -2082,6 +2085,9 @@ def duplicate_description(did, pclass_id):
                               reading=desc.reading,
                               team=desc.team,
                               confirmed=False,
+                              workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
+                              validator_id=None,
+                              validated_timestamp=None,
                               creator_id=current_user.id,
                               creation_timestamp=datetime.now())
 

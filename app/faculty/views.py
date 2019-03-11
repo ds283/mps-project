@@ -16,7 +16,8 @@ from ..database import db
 from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
-    PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level, DescriptionComment
+    PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level, DescriptionComment, \
+    WorkflowMixin
 
 import app.ajax as ajax
 
@@ -554,6 +555,9 @@ def add_description(pid):
                                   reading=form.reading.data,
                                   team=form.team.data,
                                   confirmed=False,
+                                  workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
+                                  validator_id=None,
+                                  validated_timestamp=None,
                                   capacity=form.capacity.data,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
@@ -731,6 +735,9 @@ def duplicate_description(did):
                               reading=desc.reading,
                               team=desc.team,
                               confirmed=False,
+                              workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
+                              validator_id=None,
+                              validated_timestamp=None,
                               creator_id=current_user.id,
                               creation_timestamp=datetime.now())
 

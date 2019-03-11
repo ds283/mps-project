@@ -256,33 +256,36 @@ def allow_approvals(desc_id):
         return False
 
     for pcl in desc.project_classes:
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pcl.id) \
-            .order_by(ProjectClassConfig.year.desc()).first()
 
-        if config is not None and pcl.active and pcl.publish:
-            # don't include projects for project classes that have already gone live
-            if config.live:
-                continue
+        # ensure pcl is also in list of project classes for parent project
+        if pcl in desc.parent.project_classes:
+            config = db.session.query(ProjectClassConfig) \
+                .filter_by(pclass_id=pcl.id) \
+                .order_by(ProjectClassConfig.year.desc()).first()
 
-            # don't include projects if user is not enrolled normally as a supervisor
-            record = faculty.get_enrollment_record(pcl.id)
-            if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
-                continue
-
-            # don't include projects if confirmation is required and requests haven't been issued.
-            # don't include projects if requests have been issued, but project owner hasn't yet confirmed
-            if config.require_confirm:
-                if not config.requests_issued:
+            if config is not None and pcl.active and pcl.publish:
+                # don't include projects for project classes that have already gone live
+                if config.live:
                     continue
 
-                if not desc.confirmed:
+                # don't include projects if user is not enrolled normally as a supervisor
+                record = faculty.get_enrollment_record(pcl.id)
+                if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                     continue
 
-                if get_count(config.confirmation_required.filter_by(id=faculty.id)) > 0:
-                    continue
+                # don't include projects if confirmation is required and requests haven't been issued.
+                # don't include projects if requests have been issued, but project owner hasn't yet confirmed
+                if config.require_confirm:
+                    if not config.requests_issued:
+                        continue
 
-            return True
+                    if not desc.confirmed:
+                        continue
+
+                    if get_count(config.confirmation_required.filter_by(id=faculty.id)) > 0:
+                        continue
+
+                return True
 
     return False
 

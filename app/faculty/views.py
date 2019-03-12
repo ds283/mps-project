@@ -1198,7 +1198,7 @@ def project_preview(id):
     # defaults for comments pane
     form.limit_visibility.data = True if current_user.has_role('project_approver') else False
 
-    allow_approval = current_user.has_role('project_approver') and allow_approvals(desc.id)
+    allow_approval = current_user.has_role('project_approver') and desc is not None and allow_approvals(desc.id)
 
     if desc is not None:
         if all_comments:

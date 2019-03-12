@@ -108,10 +108,10 @@ _project_status = \
         <span class="label label-warning"><i class="fa fa-times"></i> Project inactive</span>
     {% endif %}
     {{ 'REPENROLLMENT'|safe }}
+    {{ 'REPAPPROVAL'|safe }}
 {% else %}
     <span class="label label-danger">Not available</span>
 {% endif %}
-{{ 'REPAPPROVAL'|safe }}
 """
 
 

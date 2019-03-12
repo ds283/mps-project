@@ -360,8 +360,8 @@ def create_app():
             # 'id' is required, 'username' and 'email' are indexed but optional.
             # all values are strings.
             return {'id': str(current_user.id),
-                    'username': current_user.username,
-                    'email': current_user.email}
+                    'username': str(current_user.username),
+                    'email': str(current_user.email)}
 
     app.request_class = CustomRequest
 

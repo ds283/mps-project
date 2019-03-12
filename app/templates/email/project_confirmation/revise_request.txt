@@ -6,13 +6,18 @@ your instruction that one or more of your project descriptions are ready
 for publication.
 
 We appreciate that you are very busy and have limited time for each
-task the department asks you to carry out. However, having reviewed the
-corresponding projects we would like to ask whether you would consider
-looking again at the description:
+task the department asks you to carry out. We would like to ask,
+however, whether you would consider looking again at the description for:
 
 {{ project.name }}/{{ record.label }}
 
-You can access this from your project library, available here:
+Please note that this has nothing to do with the scientific or educational
+value of the project. We are only asking for modifications to the project
+description, because these may become externally visible at some point in
+the future, and we hope that any changes required will take only a few moments
+of your time.
+
+You can access the description from your project library, available here:
 
 https://mpsprojects.co.uk/faculty/edit_projects
 

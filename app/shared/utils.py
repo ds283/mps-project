@@ -558,7 +558,10 @@ def _compute_group_capacity_data(pclass_id, group_id):
 
 def _capacity_delete_ProjectDescription_cache(desc):
     for pcl in desc.project_classes:
-        cache.delete_memoized(_compute_group_capacity_data, pcl.id, desc.parent.group_id)
+        if desc.parent is not None:
+            cache.delete_memoized(_compute_group_capacity_data, pcl.id, desc.parent.group_id)
+        else:
+            cache.delete_memoized(_compute_group_capacity_data)
 
 
 @listens_for(ProjectDescription, 'before_insert')

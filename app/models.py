@@ -2614,11 +2614,15 @@ class ProjectClassConfig(db.Model):
 
 
     def confirmations_outstanding(self, faculty):
-        return set(self._confirmations_outstanding_generator(faculty))
+        p_ids = set(self._confirmations_outstanding_generator(faculty))
+        projects = [db.session.query(Project).filter_by(id=p).first() for p in p_ids]
+        strip_projects = [p for p in projects if p is not None]
+
+        return strip_projects
 
 
     def number_confirmations_outstanding(self, faculty):
-        return len(self.confirmations_outstanding(faculty))
+        return len(set(self._confirmations_outstanding_generator(faculty)))
 
 
     def has_confirmations_outstanding(self, faculty):

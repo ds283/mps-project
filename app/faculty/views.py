@@ -1397,7 +1397,8 @@ def confirm_description(did, pclass_id):
     desc.confirmed = True
     db.session.commit()
 
-    if config.number_confirmations_outstanding(current_user.faculty_data) == 0:
+    # if no further confirmations outstanding, mark whole configuration as confirmed
+    if not config.has_confirmations_outstanding(current_user.faculty_data):
         config.mark_confirmed(current_user.faculty_data, message=True)
         db.session.commit()
 

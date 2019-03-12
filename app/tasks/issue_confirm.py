@@ -461,7 +461,7 @@ def register_issue_confirm_tasks(celery):
 
             if config is not None:
                 # if no confirmations outstanding, mark this project class as confirmed automatically
-                if config.is_confirmation_required(user_id) and config.number_confirmations_outstanding(user_id) == 0:
+                if config.is_confirmation_required(user_id) and not config.has_confirmations_outstanding(user_id):
                     config.mark_confirmed(user_id, commit=False, message=False)
 
                     user.post_message('No further project descriptions attached to project class '

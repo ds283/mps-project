@@ -21,25 +21,7 @@ from ..task_queue import register_task
 
 from datetime import datetime
 
-from gc import get_stats
-
 
 def register_system_tasks(celery):
 
-    @celery.task(bind=True, default_retry_delay=30)
-    def email_garbage_collection_stats(self):
-        data = get_stats(memory_pressure=True)
-
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='[mpsprojects] garbage collection statistics',
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=current_app.config['ADMIN_EMAIL'])
-
-        msg.body = render_template('email/system/garbage_collection.txt', data=data, now=datetime.now())
-
-        # register a new task in the database
-        task_id = register_task(msg.subject, description='Send periodic garbage collection statistics')
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
-
-        return 1
+    pass

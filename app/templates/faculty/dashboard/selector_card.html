@@ -144,10 +144,14 @@
                         </div>
                         <div class="col-xs-4">
                             <div class="pull-right">
-                                {% if desc.confirmed %}
-                                    <a class="btn btn-sm btn-success btn-table-block disabled">Confirmed</a>
+                                {% if desc %}
+                                    {% if desc.confirmed %}
+                                        <a class="btn btn-sm btn-success btn-table-block disabled">Confirmed</a>
+                                    {% else %}
+                                        <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-primary btn-table-block">Confirm</a>
+                                    {% endif %}
                                 {% else %}
-                                    <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-primary btn-table-block">Confirm</a>
+                                    <span class="label label-danger">Unknown description</span>
                                 {% endif %}
                                 <a href="{{ url_for('faculty.remove_project_pclass', proj_id=project.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-danger btn-table-block">Remove</a>
                                 <a href="{{ url_for('faculty.edit_project', id=project.id) }}" class="btn btn-sm btn-default btn-table-block">Edit</a>

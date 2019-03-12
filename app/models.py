@@ -2608,7 +2608,7 @@ class ProjectClassConfig(db.Model):
 
         # express as generators so that the elements are not computed unless they are used
         descs = (p.get_description(self.pclass_id) for p in projects)
-        outstanding = (d.id for d in descs if not d.confirmed)
+        outstanding = (d.id for d in descs if d is not None and not d.confirmed)
 
         return outstanding
 

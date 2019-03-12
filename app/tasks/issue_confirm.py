@@ -504,16 +504,15 @@ def register_issue_confirm_tasks(celery):
         rgx = re.compile("([\w|@][\w']*\w|\w)")
         words = re.findall(rgx, comment.comment)
 
-        for word in words:
-            if word[0] == '@':
-                tag = word[1:]
+        tags = [w[1:] for w in words if w[0] == '@']
 
-                if tag == 'team' and comment.owner.has_role('project_approver'):
-                    recipients = recipients.union(approvals_team)
-                else:
-                    user = db.session.query(User).filter_by(username=tag).first()
-                    if user is not None:
-                        recipients.add(user.email)
+        for tag in tags:
+            if tag == 'team' and comment.owner.has_role('project_approver'):
+                recipients = recipients.union(approvals_team)
+            else:
+                user = db.session.query(User).filter_by(username=tag).first()
+                if user is not None:
+                    recipients.add(user.email)
 
         if len(recipients) == 0:
             return

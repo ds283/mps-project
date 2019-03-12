@@ -1,11 +1,19 @@
-You are receiving this email because you have posted a comment on, or are
-watching the comments thread for,
+A new comment has been posted by {{ comment.owner.name }} for the project
 
-{{ project.name }}/{{ desc.label }}
+{% set text = project.name + ' / ' + desc.label -%}
+{{ text|wordwrap(75) }}
 
-A new comment has been posted by {{ comment.owner.name }}:
+You are receiving this notification because you have previously posted a
+comment on this thread (or because you have been subscribed to it for
+some other reason), or because you have been tagged in the message.
+
+{{ comment.owner.name }} wrote:
+
+-----
 
 {{ comment.comment|wordwrap(75) }}
+
+-----
 
 {% set pclass = desc.project_classes.first() -%}
 {%- if pclass is not none -%}

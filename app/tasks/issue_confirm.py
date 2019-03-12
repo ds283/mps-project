@@ -25,6 +25,7 @@ from celery import chain, group
 from celery.exceptions import Ignore
 
 from datetime import datetime
+import re
 
 
 def register_issue_confirm_tasks(celery):
@@ -498,6 +499,21 @@ def register_issue_confirm_tasks(celery):
 
         if len(recipients) == 0 and comment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM:
             recipients = recipients.union(approvals_team)
+
+        # split comment string into words and search for @-style tags
+        rgx = re.compile("([\w|@][\w']*\w|\w)")
+        words = re.findall(rgx, comment.comment)
+
+        for word in words:
+            if word[0] == '@':
+                tag = word[1:]
+
+                if tag == 'team' and comment.owner.has_role('project_approver'):
+                    recipients = recipients.union(approvals_team)
+                else:
+                    user = db.session.query(User).filter_by(username=tag).first()
+                    if user is not None:
+                        recipients.add(user.email)
 
         if len(recipients) == 0:
             return

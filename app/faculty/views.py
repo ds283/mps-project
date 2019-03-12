@@ -88,14 +88,14 @@ _desc_label = \
         {% else %}
             <span class="label label-danger">Unknown approval state</span>
         {% endif %}
-    {% endif %}
-    {% if current_user.has_role('project_approver') and d.validated_by %}
-        <div>
-            <span class="label label-info">Signed-off by {{ d.validated_by.name }}</span>
-            {% if d.validated_timestamp %}
-                <span class="label label-info">Signed-off at {{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-            {% endif %}
-        </div>
+        {% if current_user.has_role('project_approver') and d.validated_by %}
+            <div>
+                <span class="label label-info">Signed-off by {{ d.validated_by.name }}</span>
+                {% if d.validated_timestamp %}
+                    <span class="label label-info">Signed-off at {{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
     {% endif %}
     {% if d.has_new_comments(current_user) %}
         <div>

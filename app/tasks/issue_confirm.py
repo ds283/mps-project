@@ -450,9 +450,11 @@ def register_issue_confirm_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        if user is None:
+        if user is None or user.faculty_data is None:
             self.update('FAILURE', meta='Could not load database records')
             raise Ignore()
+
+        fac_data = user.faculty_data
 
         for record in records:
             config = db.session.query(ProjectClassConfig) \
@@ -460,14 +462,16 @@ def register_issue_confirm_tasks(celery):
                 .order_by(ProjectClassConfig.year.desc()).first()
 
             if config is not None:
-                # if no confirmations outstanding, mark this project class as confirmed automatically
-                if config.is_confirmation_required(user_id) and not config.has_confirmations_outstanding(user_id):
-                    config.mark_confirmed(user_id, commit=False, message=False)
+                if fac_data.number_projects_offered(config.pclass_id) > 0:
 
-                    user.post_message('No further project descriptions attached to project class '
-                                      '"{name}" require confirmation, so it has been marked as '
-                                      'ready to publish.'.format(name=config.project_class.name), 'info',
-                                      autocommit=False)
+                    # if no confirmations outstanding, mark this project class as confirmed automatically
+                    if config.is_confirmation_required(user_id) and not config.has_confirmations_outstanding(user_id):
+                        config.mark_confirmed(user_id, commit=False, message=False)
+
+                        user.post_message('No further project descriptions attached to project class '
+                                          '"{name}" require confirmation, so it has been marked as '
+                                          'ready to publish.'.format(name=config.project_class.name), 'info',
+                                          autocommit=False)
 
         db.session.commit()
 

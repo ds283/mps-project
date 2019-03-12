@@ -90,14 +90,14 @@ _desc_label = \
         {% else %}
             <span class="label label-danger">Unknown approval state</span>
         {% endif %}
-    {% endif %}
-    {% if current_user.has_role('project_approver') and d.validated_by %}
-        <div>
-            <span class="label label-info">Signed-off by {{ d.validated_by.name }}</span>
-            {% if d.validated_timestamp %}
-                <span class="label label-info">Signed-off at {{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-            {% endif %}
-        </div>
+        {% if current_user.has_role('project_approver') and d.validated_by %}
+            <div>
+                <span class="label label-info">Signed-off by {{ d.validated_by.name }}</span>
+                {% if d.validated_timestamp %}
+                    <span class="label label-info">Signed-off at {{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
     {% endif %}
     {% if d.has_new_comments(current_user) %}
         <div>
@@ -2742,7 +2742,8 @@ def outstanding_confirm_ajax(id):
     if not validate_project_class(config.project_class):
         return jsonify({})
 
-    return ajax.convenor.outstanding_confirm_data(config)
+    return ajax.convenor.outstanding_confirm_data(config, text='list of outstanding confirmations',
+                                                  url=url_for('convenor.outstanding_confirm', id=id))
 
 
 @convenor.route('/confirmation_reminder/<int:id>')
@@ -2852,7 +2853,20 @@ def force_confirm_all(id):
     if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
-    # because we filter on supervisor state, this won't confirm projects from any bought-out or
+    if not config.requests_issued:
+        flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
+            project=config.name, yeara=config.year, yearb=config.year+1))
+        return redirect(request.referrer)
+
+    if config.live:
+        flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
+              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+
+    # because we filter on supervisor state, this won't confirm projects from any faculty who are bought-out or
     # on sabbatical
     records = db.session.query(EnrollmentRecord) \
         .filter_by(pclass_id=config.pclass_id,
@@ -2860,6 +2874,11 @@ def force_confirm_all(id):
     for rec in records:
         if config.is_confirmation_required(rec.owner_id):
             config.mark_confirmed(rec.owner_id, commit=False)
+
+            # kick off a background task to check whether any other project classes in which this user is enrolled
+            # have been reduced to zero confirmations left.
+            # If so, treat this 'Confirm' click as accounting for them also
+            task.apply_async(args=(rec.owner_id, config.pclass_id))
 
     db.session.commit()
     flash('All outstanding confirmation requests have been removed.', 'success')
@@ -2881,11 +2900,74 @@ def force_confirm(id, uid):
     if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
+    if not config.requests_issued:
+        flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
+            project=config.name, yeara=config.year, yearb=config.year+1))
+        return redirect(request.referrer)
+
+    if config.live:
+        flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
+              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+        return redirect(request.referrer)
+
     if config.is_confirmation_required(uid):
         config.mark_confirmed(uid, commit=False)
         db.session.commit()
 
+    # kick off a background task to check whether any other project classes in which this user is enrolled
+    # have been reduced to zero confirmations left.
+    # If so, treat this 'Confirm' click as accounting for them also
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+    task.apply_async(args=(uid, config.pclass_id))
+
     return redirect(request.referrer)
+
+
+@convenor.route('/confirm_description/<int:config_id>/<int:did>')
+@roles_accepted('faculty', 'admin', 'route')
+def confirm_description(config_id, did):
+    # get details for project class
+    config = ProjectClassConfig.query.get_or_404(config_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    if not config.requests_issued:
+        flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(
+            project=config.name, yeara=config.year, yearb=config.year+1))
+        return redirect(request.referrer)
+
+    if config.live:
+        flash('Confirmation is no longer required for {project} {yeara}-{yearb} because this project '
+              'has already gone live'.format(project=config.name, yeara=config.year, yearb=config.year + 1))
+        return redirect(request.referrer)
+
+    desc = ProjectDescription.query.get_or_404(did)
+
+    desc.confirmed = True
+    db.session.commit()
+
+    # if no further confirmations outstanding, mark whole configuration as confirmed
+    if desc.parent is not None and desc.parent.owner is not None:
+        if not config.has_confirmations_outstanding(desc.parent.owner):
+            config.mark_confirmed(desc.parent.owner, message=False)
+            db.session.commit()
+
+        # kick off a background task to check whether any other project classes in which this user is enrolled
+        # have been reduced to zero confirmations left.
+        # If so, treat this 'Confirm' click as accounting for them also
+        celery = current_app.extensions['celery']
+        task = celery.tasks['app.tasks.issue_confirm.propagate_confirm']
+        task.apply_async(args=(desc.parent.owner.id, config.pclass_id))
+
+    return redirect(request.referrer)
+
 
 
 @convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])

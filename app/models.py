@@ -2591,7 +2591,7 @@ class ProjectClassConfig(db.Model):
     CATS_presentation = db.Column(db.Integer())
 
 
-    def _confirmations_outstanding_generator(self, faculty):
+    def _outstanding_descriptions_generator(self, faculty):
         if isinstance(faculty, User):
             fac_data = faculty.faculty_data
         elif isinstance(faculty, int):
@@ -2613,20 +2613,46 @@ class ProjectClassConfig(db.Model):
         return outstanding
 
 
-    def confirmations_outstanding(self, faculty):
-        p_ids = set(self._confirmations_outstanding_generator(faculty))
-        projects = [db.session.query(Project).filter_by(id=p).first() for p in p_ids]
-        strip_projects = [p for p in projects if p is not None]
+    def project_confirmations_outstanding(self, faculty):
+        # confirmation not required if project class doesn't use it
+        if not self.project_class.require_confirm:
+            return []
 
-        return strip_projects
+        if isinstance(faculty, User):
+            fac_data = faculty.faculty_data
+        elif isinstance(faculty, int):
+            fac_data = db.session.query(FacultyData).filter_by(id=faculty).first()
+        else:
+            fac_data = faculty
+
+        if not isinstance(fac_data, FacultyData) or fac_data is None:
+            raise RuntimeError('FacultyData object could not be loaded or interpreted')
+
+        # have to use list of projects offered for the pclass and then the
+        # get_description() method of Project in order to account for possible defaults
+        projects = fac_data.projects_offered(self.pclass_id)
+
+        # express as generators so that the elements are not computed unless they are used
+        descs = [p.get_description(self.pclass_id) for p in projects]
+        outstanding = [d.parent for d in descs if d is not None and not d.confirmed]
+
+        return outstanding
 
 
     def number_confirmations_outstanding(self, faculty):
-        return len(set(self._confirmations_outstanding_generator(faculty)))
+        # confirmation not required if project class doesn't use it
+        if not self.project_class.require_confirm:
+            return 0
+
+        return len(set(self._outstanding_descriptions_generator(faculty)))
 
 
     def has_confirmations_outstanding(self, faculty):
-        gen = self._confirmations_outstanding_generator(faculty)
+        # confirmation not required if project class doesn't use it
+        if not self.project_class.require_confirm:
+            return False
+
+        gen = self._outstanding_descriptions_generator(faculty)
         try:
             item = next(gen)
         except StopIteration:

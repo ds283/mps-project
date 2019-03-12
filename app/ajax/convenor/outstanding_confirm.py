@@ -101,9 +101,23 @@ _menu = \
 </div>
 """
 
+
+_name = \
+"""
+<a href="mailto:{{ u.email }}">{{ u.name }}</a>
+<div>
+    {% if u.last_active is not none %}
+        <span class="label label-info">Last seen at {{ u.last_active.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+    {% else %}
+        <span class="label label-warning">No last seen time</span>
+    {% endif %}
+</div>
+"""
+
+
 def outstanding_confirm_data(config, url=None, text=None):
 
-    data = [{'name': {'display': f.user.name,
+    data = [{'name': {'display': render_template_string(_name, u=f.user),
                       'sortstring': f.user.last_name + f.user.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
              'projects': render_template_string(_projects, f=f, config=config, pclass=config.project_class,

@@ -357,6 +357,9 @@ def create_app():
     class CustomRequest(Request):
         @property
         def rollbar_person(self):
+            if current_user is None:
+                return None
+
             # 'id' is required, 'username' and 'email' are indexed but optional.
             # all values are strings.
             return {'id': str(current_user.id),

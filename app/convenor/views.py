@@ -71,7 +71,11 @@ _marker_menu = \
 
 _desc_label = \
 """
-<a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id) }}">{{ d.label }}</a>
+<a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
+                    url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
+                    text='description list view') }}">
+    {{ d.label }}
+</a>
 {% if not d.is_valid %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
@@ -158,8 +162,19 @@ _desc_menu = \
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
             <li>
+                <a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
+                                    url=url_for('convenor.edit_descriptions', id=d.parent.id, pclass_id=pclass_id, create=create),
+                                    text='description list view') }}">
+                    <i class="fa fa-search"></i> Preview web page
+                </a>
+            </li>
+
+            <li role="separator" class="divider"></li>
+            <li class="dropdown-header">Edit description</li>
+
+            <li>
                 <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-pencil"></i> Edit description...
+                    <i class="fa fa-pencil"></i> Edit content...
                 </a>
             </li>
             <li>

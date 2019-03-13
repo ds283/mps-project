@@ -48,7 +48,7 @@ _team = \
 
 def descriptions_data(descs, label, menu, pclass_id=None, create=None):
 
-    data = [{'label': render_template_string(label, d=d, pclass_id=pclass_id),
+    data = [{'label': render_template_string(label, d=d, pclass_id=pclass_id, create=create),
              'pclasses': render_template_string(_pclasses, d=d),
              'team': render_template_string(_team, d=d),
              'capacity': d.capacity,

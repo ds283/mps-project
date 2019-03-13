@@ -32,9 +32,6 @@ from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 from flask_rollbar import Rollbar
 
-from werkzeug.contrib.profiler import ProfilerMiddleware
-from dozer import Dozer
-
 from config import app_config, site_revision, site_copyright_dates
 from .database import db
 from .models import User, EmailLog, MessageOfTheDay, Notification
@@ -47,12 +44,16 @@ from mdx_smartypants import makeExtension
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 import latex2markdown
 from urllib import parse
-from markupsafe import Markup
 
 from os import path, makedirs
 from datetime import datetime
 
 from pymongo import MongoClient
+
+from werkzeug.contrib.profiler import ProfilerMiddleware
+from dozer import Dozer
+from scout_apm.flask import ScoutApm
+from scout_apm.sqlalchemy import instrument_sqlalchemy
 
 
 def create_app():
@@ -64,6 +65,10 @@ def create_app():
     app.config.from_pyfile('secrets.py')
     app.config.from_pyfile('mail.py')
     app.config.from_pyfile('rollbar.py')
+    app.config.from_pyfile('scout.py')
+
+    # initialize Scout monitoring
+    scout = ScoutApm(app)
 
     # create Mongo connection for Flask-Sessionstore
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
@@ -74,6 +79,8 @@ def create_app():
         app.wsgi_app = Dozer(app.wsgi_app)
 
     db.init_app(app)
+    instrument_sqlalchemy(db.get_engine(app=app))
+
     migrate = Migrate(app, db)
     bootstrap = Bootstrap(app)
     mail = Mail(app)

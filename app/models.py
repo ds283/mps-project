@@ -4221,12 +4221,16 @@ class Project(db.Model):
     SOME_DESCRIPTIONS_REJECTED = 2
     SOME_DESCRIPTIONS_UNCONFIRMED = 3
     APPROVALS_NOT_ACTIVE = 10
+    APPROVALS_NOT_OFFERABLE = 11
     APPROVALS_UNKNOWN = 100
 
     @property
     def approval_state(self):
         if not self.active:
             return Project.APPROVALS_NOT_ACTIVE
+
+        if not self.is_offerable:
+            return Project.APPROVALS_NOT_OFFERABLE
 
         num_descriptions = 0
         num_approved = 0

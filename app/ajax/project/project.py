@@ -474,6 +474,8 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
             repapprove = '<span class="label label-default">Approval: Pending</span>'
         elif state == Project.APPROVALS_NOT_ACTIVE:
             repapprove = ''
+        elif state == Project.APPROVALS_NOT_OFFERABLE:
+            repapprove = '<span class="label label-danger">Approval: not offerable/span>'
         else:
             repapprove = '<span class="label label-danger">Unknown approval state</span>'
     status = status.replace('REPAPPROVAL', repapprove, 1)

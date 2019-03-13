@@ -255,6 +255,12 @@ def allow_approvals(desc_id):
     if not desc.parent.active:
         return False
 
+    # don't include descriptions or projects that have validation errors
+    # no need to check descriptions separately since they are validated as part
+    # of the parent project
+    if not desc.parent.is_offerable:
+        return False
+
     for pcl in desc.project_classes:
 
         # ensure pcl is also in list of project classes for parent project

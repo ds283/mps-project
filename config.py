@@ -158,7 +158,7 @@ class ProductionConfig(Config):
     PROFILE_DIRECTORY = os.environ.get('PROFILE_DIRECTORY') or "./profiling"
 
     # use Dozer to perform memory profiling?
-    PROFILE_MEMORY = True
+    PROFILE_MEMORY = False
 
     # get SQLAlchemy to record metadata about query performance, so we can identify very slow queries
     SQLALCHEMY_RECORD_QUERIES = True

@@ -15,6 +15,10 @@
     {% set state_filter = 'all' %}
 {% endif %}
 
+{% if not active_filter or active_filter is none %}
+    {% set active_filter = 'all' %}
+{% endif %}
+
 {% block scripts %}
     {{ super() }}
     {# jQuery is already loaded by flask-bootstrap, so we only need the datatables files #}
@@ -31,7 +35,7 @@
             $('#all-projects-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/reports/all_projects_ajax?pclass_filter={{ pclass_filter }}&valid_filter={{ valid_filter }}&state_filter={{ state_filter }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/reports/all_projects_ajax?pclass_filter={{ pclass_filter }}&valid_filter={{ valid_filter }}&state_filter={{ state_filter }}&active_filter={{ active_filter }}', dataSrc: '' },
                 columns: [
                     { data: 'name' },
                     { data: 'owner',
@@ -64,59 +68,78 @@
             {% if pclasses is not none and pclasses|length > 0 %}
                 <div class="well">
                     <p>Filter by project type</p>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter='all', valid_filter=valid_filter, state_filter=state_filter) }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter='all', valid_filter=valid_filter, state_filter=state_filter, active_filter=active_filter) }}"
                        class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
                     {% for pclass in pclasses %}
-                        <a href="{{ url_for('reports.all_projects', pclass_filter=pclass.id, valid_filter=valid_filter, state_filter=state_filter) }}"
+                        <a href="{{ url_for('reports.all_projects', pclass_filter=pclass.id, valid_filter=valid_filter, state_filter=state_filter, active_filter=active_filter) }}"
                            class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}">
                             {{ pclass.name }}
                         </a>
                     {% endfor %}
 
                     <hr class="intro-divider">
-                    <p>Filter by status of project type</p>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='all') }}"
-                       class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
-                        All
-                    </a>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='active') }}"
-                       class="btn btn-sm filter-btn {% if state_filter == 'active' %}btn-primary{% else %}btn-default{% endif %}">
-                        Active
-                    </a>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='inactive') }}"
-                       class="btn btn-sm filter-btn {% if state_filter == 'inactive' %}btn-primary{% else %}btn-default{% endif %}">
-                        Inactive
-                    </a>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='published') }}"
-                       class="btn btn-sm filter-btn {% if state_filter == 'published' %}btn-primary{% else %}btn-default{% endif %}">
-                        Published
-                    </a>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='unpublished') }}"
-                       class="btn btn-sm filter-btn {% if state_filter == 'unpublished' %}btn-primary{% else %}btn-default{% endif %}">
-                        Unpublished
-                    </a>
+                    <div class="row vertical-align">
+                        <div class="col-xs-6">
+                            <p>Filter by status of project type</p>
+                            <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='all', active_filter=active_filter) }}"
+                               class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                                All
+                            </a>
+                            <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='active', active_filter=active_filter) }}"
+                               class="btn btn-sm filter-btn {% if state_filter == 'active' %}btn-primary{% else %}btn-default{% endif %}">
+                                Active
+                            </a>
+                            <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='inactive', active_filter=active_filter) }}"
+                               class="btn btn-sm filter-btn {% if state_filter == 'inactive' %}btn-primary{% else %}btn-default{% endif %}">
+                                Inactive
+                            </a>
+                            <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='published', active_filter=active_filter) }}"
+                               class="btn btn-sm filter-btn {% if state_filter == 'published' %}btn-primary{% else %}btn-default{% endif %}">
+                                Published
+                            </a>
+                            <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter='unpublished', active_filter=active_filter) }}"
+                               class="btn btn-sm filter-btn {% if state_filter == 'unpublished' %}btn-primary{% else %}btn-default{% endif %}">
+                                Unpublished
+                            </a>
+                        </div>
+                        <div class="col-xs-6">
+                            <p>Filter by project status</p>
+                            <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter=state_filter, active_filter='all') }}"
+                               class="btn btn-sm filter-btn {% if active_filter is none or active_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
+                                All
+                            </a>
+                            <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter=state_filter, active_filter='active') }}"
+                               class="btn btn-sm filter-btn {% if active_filter == 'active' %}btn-primary{% else %}btn-default{% endif %}">
+                                Active
+                            </a>
+                            <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter=valid_filter, state_filter=state_filter, active_filter='inactive') }}"
+                               class="btn btn-sm filter-btn {% if active_filter == 'inactive' %}btn-primary{% else %}btn-default{% endif %}">
+                                Inactive
+                            </a>
+                        </div>
+                    </div>
 
                     <hr class="intro-divider">
                     <p>Filter by approval status</p>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='all', state_filter=state_filter) }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='all', state_filter=state_filter, active_filter=active_filter) }}"
                        class="btn btn-sm filter-btn {% if valid_filter is none or valid_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                         All
                     </a>
-                    <a href="{{  url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='pending', state_filter=state_filter) }}"
+                    <a href="{{  url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='pending', state_filter=state_filter, active_filter=active_filter) }}"
                        class="btn btn-sm filter-btn {% if valid_filter == 'pending' %}btn-primary{% else %}btn-default{% endif %}">
                         Pending
                     </a>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='valid', state_filter=state_filter) }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='valid', state_filter=state_filter, active_filter=active_filter) }}"
                        class="btn btn-sm filter-btn {% if valid_filter == 'valid' %}btn-primary{% else %}btn-default{% endif %}">
                         Approved
                     </a>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='not-valid', state_filter=state_filter) }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='not-valid', state_filter=state_filter, active_filter=active_filter) }}"
                        class="btn btn-sm filter-btn {% if valid_filter == 'not-valid' %}btn-primary{% else %}btn-default{% endif %}">
                         Queued
                     </a>
-                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='reject', state_filter=state_filter) }}"
+                    <a href="{{ url_for('reports.all_projects', pclass_filter=pclass_filter, valid_filter='reject', state_filter=state_filter, active_filter=active_filter) }}"
                        class="btn btn-sm filter-btn {% if valid_filter == 'reject' %}btn-primary{% else %}btn-default{% endif %}">
                         Rejected
                     </a>

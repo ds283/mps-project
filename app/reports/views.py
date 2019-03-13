@@ -105,11 +105,19 @@ def all_projects():
     if state_filter is not None:
         session['reports_projects_state_filter'] = state_filter
 
+    active_filter = request.args.get('active_filter')
+
+    if active_filter is None and session.get('reports_projects_active_filter'):
+        active_filter = session['reports_projects_active_filter']
+
+    if active_filter is not None:
+        session['reports_projects_active_filter'] = active_filter
+
     groups = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
     pclasses = ProjectClass.query.order_by(ProjectClass.name.asc()).all()
 
     return render_template('reports/all_projects.html', groups=groups, pclasses=pclasses, pclass_filter=pclass_filter,
-                           valid_filter=valid_filter, state_filter=state_filter)
+                           valid_filter=valid_filter, state_filter=state_filter, active_filter=active_filter)
 
 
 @reports.route('/all_projects_ajax', methods=['GET', 'POST'])
@@ -122,6 +130,7 @@ def all_projects_ajax():
     pclass_filter = request.args.get('pclass_filter')
     valid_filter = request.args.get('valid_filter')
     state_filter = request.args.get('state_filter')
+    active_filter = request.args.get('active_filter')
 
     flag, pclass_value = is_integer(pclass_filter)
 
@@ -140,6 +149,11 @@ def all_projects_ajax():
         pq = pq.filter(Project.project_classes.any(active=True, publish=True))
     elif state_filter == 'unpublished':
         pq = pq.filter(~Project.project_classes.any(active=True, publish=True))
+
+    if active_filter == 'active':
+        pq = pq.filter(Project.active == True)
+    elif active_filter == 'inactive':
+        pq = pq.filter(Project.active == False)
 
     data = pq.all()
 

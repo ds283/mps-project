@@ -338,7 +338,9 @@
                                                     Last edited at {{ comment.last_edit_timestamp.strftime("%Y-%m-%d %H:%M:%S") }}
                                                 </div>
                                                 <div class="col-xs-5">
-                                                    <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                    <div class="pull-right">
+                                                        <a href="{{ url_for('project_approver.publish_comment', id=comment.id) }}" class="btn btn-sm btn-default btn-table-block">Publish</a>
+                                                    </div>
                                                 </div>
                                             {% elif comment.last_edit_timestamp %}
                                                 <div class="col-xs-12">

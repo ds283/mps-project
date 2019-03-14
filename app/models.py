@@ -4194,7 +4194,7 @@ class Project(db.Model):
 
         # if user not in approvals team, ignore any comments that are only visible to the approvals team
         if not user.has_role('project_approver'):
-            query = query.filter(DescriptionComment.visibility == DescriptionComment.VISIBILITY_EVERYONE)
+            query = query.filter(DescriptionComment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM)
             
         query = query \
             .join(ProjectDescription, ProjectDescription.id == DescriptionComment.parent_id) \
@@ -4531,7 +4531,7 @@ class ProjectDescription(db.Model, WorkflowMixin):
 
         # if user not in approvals team, ignore any comments that are only visible to the approvals team
         if not user.has_role('project_approver'):
-            query = query.filter(DescriptionComment.visibility == DescriptionComment.VISIBILITY_EVERYONE)
+            query = query.filter(DescriptionComment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM)
 
         query = query.order_by(DescriptionComment.creation_timestamp.desc())
 

@@ -28,7 +28,7 @@
     <div class="container-fluid bg-project">
         <br/>
         {% if form %}
-            <form action="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int) }}" method="POST"
+            <form action="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int) }}" method="POST"
                   name="selector_form">
                 {{ form.hidden_tag() }}
                 {% if show_selector %}

@@ -22,7 +22,7 @@ _projects = \
     <div style="margin-bottom: 18px;">
         <div style="margin-bottom: 8px;">
             {{ loop.index }} &ndash;
-            <a href="{{ url_for('faculty.project_preview', id=p.id, text=text, url=url) }}">
+            <a href="{{ url_for('faculty.project_preview', id=p.id, pclass=pclass.id, show_selector=0, text=text, url=url) }}">
                 {{ p.name }}
             </a>
             {% if not offerable %}

@@ -50,7 +50,12 @@ def _get_pclass(desc):
     if desc is None:
         return None
 
-    return desc.project_classes.first().id
+    first = desc.project_classes.first()
+
+    if first is None:
+        return None
+
+    return first.id
 
 
 def descriptions_data(descs, label, menu, pclass_id=None, create=None):

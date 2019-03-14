@@ -189,7 +189,7 @@ _desc_menu = \
             </li>
             <li>
                 <a href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-arrows"></i> Move project...
+                    <i class="fa fa-arrows"></i> Move to project...
                 </a>
             </li>
             <li>
@@ -2138,8 +2138,27 @@ def move_description(did, pclass_id):
 
     if form.validate_on_submit():
         new_project = form.destination.data
+        leave_copy = form.copy.data
 
         if new_project is not None:
+            if leave_copy:
+                copy_desc = ProjectDescription(parent_id=desc.parent.id,
+                                               label=desc.label,
+                                               description=desc.description,
+                                               reading=desc.reading,
+                                               team=desc.team,
+                                               project_classes=desc.project_classes,
+                                               modules=desc.modules,
+                                               capacity=desc.capacity,
+                                               confirmed=False,
+                                               workflow_state=desc.workflow_state,
+                                               validator_id=desc.validator_id,
+                                               validated_timestamp=desc.validated_timestamp,
+                                               creator_id=current_user.id,
+                                               creation_timestamp=datetime.now())
+            else:
+                copy_desc = None
+
             # relabel project if needed
             labels = get_count(new_project.descriptions.filter_by(label=desc.label))
             if labels > 0:
@@ -2163,6 +2182,8 @@ def move_description(did, pclass_id):
                 old_project.default_id = None
 
             desc.parent_id = new_project.id
+            if copy_desc is not None:
+                db.session.add(copy_desc)
 
             try:
                 db.session.commit()

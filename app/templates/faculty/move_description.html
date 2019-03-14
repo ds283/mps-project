@@ -26,6 +26,7 @@
 {#        {{ wtf.form_errors(form) }}#}
 
         {{ wtf.form_field(form.destination) }}
+        {{ wtf.form_field(form.copy) }}
         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

@@ -185,7 +185,11 @@ def MoveDescriptionFormFactory(user_id, project_id, pclass_id=None):
 
     class MoveDescriptionForm(Form, SaveChangesMixin):
 
+        # field for destination project
         destination = QuerySelectField('Move this description to project', query_factory=qf, get_label='name')
+
+        # optionally leave a copy of the description attached to this project
+        copy = BooleanField('Leave a copy of the description attached to its current project', default=False)
 
     return MoveDescriptionForm
 

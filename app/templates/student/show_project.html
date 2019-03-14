@@ -24,6 +24,7 @@
 {% endblock %}
 
 {% block content %}
+    {% set is_approver = current_user.has_role('project_approver') %}
     <div class="container-fluid bg-project">
         <br/>
         {% if form %}
@@ -34,6 +35,27 @@
                     <div class="well">
                         {{ on_click_selector_field(form.selector, true) }}
                     </div>
+                {% else %}
+                    {% if is_approver %}
+                        {% if desc %}
+                            <div class="alert alert-warning">
+                                <div>
+                                    This description applies to the following project types:
+                                </div>
+                                <div>
+                                    <ul class="list-inline">
+                                        {% for pcl in desc.project_classes %}
+                                            <li>{{ pcl.make_label()|safe }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-danger">
+                                No description provided.
+                            </div>
+                        {% endif %}
+                    {% endif %}
                 {% endif %}
         {% endif %}
         <div class="row">
@@ -281,7 +303,6 @@
                     {% endif %}
                 {% endif %}
                 {% if show_comments %}
-                    {% set is_approver = current_user.has_role('project_approver') %}
                     <div class="well" style="margin-top: 15px;">
                         <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=0) }}"
                            class="btn btn-sm {% if all_comments %}btn-default{% else %}btn-primary{% endif %}">

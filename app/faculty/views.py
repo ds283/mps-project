@@ -69,7 +69,7 @@ _marker_menu = \
 
 _desc_label = \
 """
-<a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=pclass_id,
+<a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=desc_pclass_id,
                     url=url_for('faculty.edit_descriptions', id=d.parent.id, create=create),
                     text='description list view') }}">
     {{ d.label }}

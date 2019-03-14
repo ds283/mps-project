@@ -46,9 +46,16 @@ _team = \
 """
 
 
-def descriptions_data(descs, label, menu, pclass_id=None, create=None):
+def _get_pclass(desc):
+    if desc is None:
+        return None
 
-    data = [{'label': render_template_string(label, d=d, pclass_id=pclass_id, create=create),
+    return desc.project_classes.first().id
+
+
+def descriptions_data(descs, label, menu, pclass_id=None, create=None):
+    data = [{'label': render_template_string(label, d=d, desc_pclass_id=_get_pclass(d),
+                                             pclass_id=pclass_id, create=create),
              'pclasses': render_template_string(_pclasses, d=d),
              'team': render_template_string(_team, d=d),
              'capacity': d.capacity,

@@ -2697,26 +2697,37 @@ def issue_confirm_requests(id):
     form = IssueFacultyConfirmRequestForm(request.form)
 
     if form.is_submitted() and form.issue_requests.data is True:
-        # schedule an asynchronous issue task
+        now = date.today()
 
-        # get issue task instance
-        celery = current_app.extensions['celery']
-        issue = celery.tasks['app.tasks.issue_confirm.pclass_issue']
-        issue_fail = celery.tasks['app.tasks.issue_confirm.issue_fail']
+        if config.requests_issued:
+            deadline = form.request_deadline.data
+            if deadline < now:
+                deadline = now + timedelta(days=1)
 
-        # register as a new background task and push it to the scheduler
-        task_id = register_task('Issue project confirmations for "{proj}" {yra}-{yrb}'.format(proj=config.name,
-                                                                                              yra=year, yrb=year+1),
-                                owner=current_user,
-                                description='Issue project confirmations for "{proj}"'.format(proj=config.name))
+            config.request_deadline = deadline
+            db.session.commit()
 
-        deadline = form.request_deadline.data
-        if deadline < date.today():
-            deadline = date.today() + timedelta(weeks=2)
+        else:
+            # schedule an asynchronous task to issue the requests by email
 
-        issue.apply_async(args=(task_id, id, current_user.id, deadline),
-                          task_id=task_id,
-                          link_error=issue_fail.si(task_id, current_user.id))
+            # get issue task instance
+            celery = current_app.extensions['celery']
+            issue = celery.tasks['app.tasks.issue_confirm.pclass_issue']
+            issue_fail = celery.tasks['app.tasks.issue_confirm.issue_fail']
+
+            # register as a new background task and push it to the scheduler
+            task_id = register_task('Issue project confirmations for "{proj}" {yra}-{yrb}'.format(proj=config.name,
+                                                                                                  yra=year, yrb=year+1),
+                                    owner=current_user,
+                                    description='Issue project confirmations for "{proj}"'.format(proj=config.name))
+
+            deadline = form.request_deadline.data
+            if deadline < now:
+                deadline = now + timedelta(weeks=2)
+
+            issue.apply_async(args=(task_id, id, current_user.id, deadline),
+                              task_id=task_id,
+                              link_error=issue_fail.si(task_id, current_user.id))
 
     return redirect(request.referrer)
 

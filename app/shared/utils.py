@@ -386,7 +386,8 @@ def _approvals_ProjectClassConfig_confirmation_required_remove_handler(target, v
 
 def _approvals_delete_EnrollmentRecord_cache(record):
     descriptions = db.session.query(ProjectDescription) \
-        .filter(ProjectDescription.owner_id == record.owner_id,
+        .join(Project, Project.id == ProjectDescription.parent_id) \
+        .filter(Project.owner_id == record.owner_id,
                 ProjectDescription.project_classes.any(id=record.pclass_id)).all()
 
     for d in descriptions:

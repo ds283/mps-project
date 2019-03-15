@@ -66,6 +66,9 @@ _name = \
 """
 {{ u.name }}
 <div>
+    {% if u.currently_active %}
+        <span class="label label-success">ACTIVE</span>
+    {% endif %}
     {% if u.theme == u.THEME_DEFAULT %}
         <span class="label label-primary">Default</span>
     {% elif u.theme == u.THEME_FLAT %}

@@ -661,6 +661,18 @@ class User(db.Model, UserMixin):
             db.session.commit()
 
 
+    @property
+    def currently_active(self):
+        now = datetime.now()
+        delta = now - self.last_active
+
+        # define 'active' to mean that we have received a ping within the last 2 minutes
+        if delta.total_seconds() < 120:
+            return True
+
+        return False
+
+
 @listens_for(User.roles, 'remove')
 def _User_role_remove_handler(target, value, initiator):
     with db.session.no_autoflush:

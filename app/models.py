@@ -3713,6 +3713,8 @@ class Project(db.Model):
                 desc.validator_id = None
                 desc.validated_timestamp = None
 
+                desc.confirmed = False
+
         return value
 
 
@@ -3732,6 +3734,8 @@ class Project(db.Model):
                 desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
                 desc.validator_id = None
                 desc.validated_timestamp = None
+
+                desc.confirmed = False
 
         return value
 
@@ -3754,6 +3758,8 @@ class Project(db.Model):
                 desc.validator_id = None
                 desc.validated_timestamp = None
 
+                desc.confirmed = False
+
         return value
 
 
@@ -3770,6 +3776,8 @@ class Project(db.Model):
                 desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
                 desc.validator_id = None
                 desc.validated_timestamp = None
+
+                desc.confirmed = False
 
         return value
 

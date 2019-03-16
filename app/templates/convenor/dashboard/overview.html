@@ -39,12 +39,61 @@
             <div class="well well-lg">
                 <p><span class="dashboard-project-title">{{ pclass.name }} {{ config.year }}&ndash;{{ config.year+1 }}</span></p>
                 <hr class="intro-divider">
-                Submission periods:
-                {% for p in config.periods %}
-                    <span class="label label-primary">{{ p.display_name|safe }}</span>
-                {% else %}
-                    <span class="label label-default">None</span>
-                {% endfor %}
+                <div class="list-group">
+                    <div class="list-group-item">
+                        Submission periods:
+                        {% for p in config.periods %}
+                            <span class="label label-primary">{{ p.display_name|safe }}</span>
+                        {% else %}
+                            <span class="label label-default">None</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div>
+                    <div class="row vertical-align">
+                        <div class="col-xs-4">
+                            <div class="list-group">
+                                <div class="list-group-item">
+                                    Current supervision CATS <span class="badge">{{ config.CATS_supervision }}</span>
+                                </div>
+                                <div class="list-group-item">
+                                    Project value <span class="badge">{{ pclass.CATS_supervision }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xs-4">
+                            <div class="list-group">
+                                <div class="list-group-item">
+                                    Current 2nd-marking CATS <span class="badge">{{ config.CATS_marking }}</span>
+                                </div>
+                                <div class="list-group-item">
+                                    Project value <span class="badge">{{ pclass.CATS_marking }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xs-4">
+                            <div class="list-group">
+                                <div class="list-group-item">
+                                    Current presentation CATS <span class="badge">{{ config.CATS_presentation }}</span>
+                                </div>
+                                <div class="list-group-item">
+                                    Project value <span class="badge">{{ pclass.CATS_presentation }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if config.CATS_supervision != pclass.CATS_supervision or config.CATS_marking != pclass.CATS_marking or config.CATS_presentation != pclass.CATS_presentation %}
+                        <div class="row vertical-top">
+                            <div class="col-xs-12">
+                                <div class="pull-right">
+                                    <a href="{{ url_for('convenor.update_CATS', config_id=config.id) }}" class="btn btn-default">
+                                        Update CATS values
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
 
             {# offer rollover of academic year if available #}

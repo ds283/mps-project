@@ -4996,3 +4996,25 @@ def push_feedback(id):
     email_task.apply_async((id, current_user.id))
 
     return redirect(request.referrer)
+
+
+@convenor.route('/update_CATS/<int:config_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def update_CATS(config_id):
+    # id identifies a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(config_id)
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    config.CATS_supervision = config.project_class.CATS_supervision
+    config.CATS_marking = config.project_class.CATS_marking
+    config.CATS_presentation = config.project_class.CATS_presentation
+
+    db.session.commit()
+
+    return redirect(request.referrer)

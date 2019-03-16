@@ -367,6 +367,8 @@ def create_app():
     class CustomRequest(Request):
         @property
         def rollbar_person(self):
+            db.session.rollback()
+
             if current_user is None:
                 return None
 

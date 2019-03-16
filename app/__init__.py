@@ -282,6 +282,9 @@ def create_app():
 
     @app.template_filter('urlencode')
     def urlencode_filter(s):
+        if s is None:
+            return None
+
         s = s.encode('utf8')
         s = parse.quote_plus(s)
         return bleach.clean(s)

@@ -67,8 +67,7 @@ def approve(id):
         url = home_dashboard_url()
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_VALIDATED
-    record.validator_id = current_user.id
-    record.validated_timestamp = datetime.now()
+    # validator_id and validated_timestamp are set by validator for workflow_state
     db.session.commit()
 
     return redirect(url)
@@ -84,8 +83,7 @@ def reject(id):
         url = home_dashboard_url()
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_REJECTED
-    record.validator_id = current_user.id
-    record.validated_timestamp = datetime.now()
+    # validator_id and validated_timestamp are set by validator for workflow_state
     db.session.commit()
 
     return redirect(url)
@@ -101,8 +99,7 @@ def requeue(id):
         url = home_dashboard_url()
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
-    record.validator_id = None
-    record.validated_timestamp = None
+    # validator_id and validated_timestamp are set by validator for workflow_state
     db.session.commit()
 
     return redirect(url)
@@ -118,8 +115,7 @@ def return_to_owner(id):
         url = home_dashboard_url()
 
     record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
-    record.validator_id = None
-    record.validated_timestamp = None
+    # validator_id and validated_timestamp are set by validator for workflow_state
 
     owner = record.parent.owner
     if owner is None:

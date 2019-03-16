@@ -139,6 +139,81 @@ class WorkflowMixin():
     validated_timestamp = db.Column(db.DateTime())
 
 
+    @validates('workflow_state')
+    def _workflow_state_validator(self, key, value):
+        with db.session.no_autoflush:
+            if value == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED:
+                self.validated_by = None
+                self.validated_timestamp = None
+
+            else:
+                now = datetime.now()
+
+                self.validator_id = current_user.id
+                self.validated_timestamp = now
+
+                history = self.__history_model__(owner_id=self.id,
+                                                 user_id=current_user.id,
+                                                 timestamp=now,
+                                                 event=WorkflowHistoryMixin.map[value])
+                db.session.add(history)
+
+            return value
+
+
+class WorkflowHistoryMixin():
+
+    WORKFLOW_CONFIRMED = 10
+    WORKFLOW_APPROVAL_QUEUED = 2
+    WORKFLOW_APPROVAL_REJECTED = 1
+    WORKFLOW_APPROVAL_VALIDATED = 0
+
+    map = {WorkflowMixin.WORKFLOW_APPROVAL_QUEUED: WORKFLOW_APPROVAL_QUEUED,
+           WorkflowMixin.WORKFLOW_APPROVAL_REJECTED: WORKFLOW_APPROVAL_REJECTED,
+           WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED: WORKFLOW_APPROVAL_VALIDATED}
+
+    # workflow event
+    event = db.Column(db.Integer())
+
+    # workflow user id
+    @declared_attr
+    def user_id(cls):
+        return db.Column(db.Integer(), db.ForeignKey('users.id'), index=True)
+
+    @declared_attr
+    def user(cls):
+        return db.relationship('User', primaryjoin=lambda: User.id == cls.user_id, uselist=False)
+
+    # workflow timestamp
+    timestamp = db.Column(db.DateTime(), index=True)
+
+
+class StudentDataWorkflowHistory(db.Model, WorkflowHistoryMixin):
+
+    __tablename__ = 'workflow_studentdata'
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning studentdata instance
+    owner_id = db.Column(db.Integer(), db.ForeignKey('student_data.id'))
+    owner = db.relationship('StudentData', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('workflow_history', lazy='dynamic'))
+
+
+class ProjectDescriptionWorkflowHistory(db.Model, WorkflowHistoryMixin):
+
+    __tablename__ = 'workflow_project'
+
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # owning studentdata instance
+    owner_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
+    owner = db.relationship('ProjectDescription', foreign_keys=[owner_id], uselist=False,
+                            backref=db.backref('workflow_history', lazy='dynamic'))
+
+
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
 def _get_main_config():
     return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
@@ -1639,6 +1714,10 @@ class StudentData(db.Model, WorkflowMixin):
 
     __tablename__ = 'student_data'
 
+    # which model should we use to generate history records
+    __history_model__ = StudentDataWorkflowHistory
+
+
     # primary key is same as users.id for this student member
     id = db.Column(db.Integer(), db.ForeignKey('users.id'), primary_key=True)
     user = db.relationship('User', foreign_keys=[id], backref=db.backref('student_data', uselist=False))
@@ -1665,8 +1744,6 @@ class StudentData(db.Model, WorkflowMixin):
     def _queue_for_validation(self, key, value):
         with db.session.no_autoflush:
             self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-            self.validator_id = None
-            self.validated_timestamp = None
 
         return value
 
@@ -3725,9 +3802,6 @@ class Project(db.Model):
         with db.session.no_autoflush:
             for desc in self.descriptions:
                 desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-                desc.validator_id = None
-                desc.validated_timestamp = None
-
                 desc.confirmed = False
 
         return value
@@ -3747,9 +3821,6 @@ class Project(db.Model):
         with db.session.no_autoflush:
             for desc in self.descriptions:
                 desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-                desc.validator_id = None
-                desc.validated_timestamp = None
-
                 desc.confirmed = False
 
         return value
@@ -3770,9 +3841,6 @@ class Project(db.Model):
         with db.session.no_autoflush:
             for desc in self.descriptions:
                 desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-                desc.validator_id = None
-                desc.validated_timestamp = None
-
                 desc.confirmed = False
 
         return value
@@ -3789,9 +3857,6 @@ class Project(db.Model):
         with db.session.no_autoflush:
             for desc in self.descriptions:
                 desc.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-                desc.validator_id = None
-                desc.validated_timestamp = None
-
                 desc.confirmed = False
 
         return value
@@ -4358,6 +4423,9 @@ class ProjectDescription(db.Model, WorkflowMixin):
 
     __tablename__ = "descriptions"
 
+    # which model should we use to generate history records
+    __history_model__ = ProjectDescriptionWorkflowHistory
+
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
@@ -4382,9 +4450,6 @@ class ProjectDescription(db.Model, WorkflowMixin):
     def _config_enqueue(self, key, value, is_remove):
         with db.session.no_autoflush:
             self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-            self.validator_id = None
-            self.validated_timestamp = None
-
             self.confirmed = False
 
         return value
@@ -4415,14 +4480,41 @@ class ProjectDescription(db.Model, WorkflowMixin):
     # has this description been confirmed by the project owner?
     confirmed = db.Column(db.Boolean(), default=False)
 
+    # add 'confirmed by' tag
+    confirmed_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    confirmed_by = db.relationship('User', foreign_keys=[confirmed_id], uselist=False,
+                                   backref=db.backref('confirmed_descriptions', lazy='dynamic'))
+
+    # add confirmation timestamp
+    confirmed_timestamp = db.Column(db.DateTime())
+
+
+    @validates('confirmed')
+    def _confirmed_validator(self, key, value):
+        with db.session.no_autoflush:
+            if value:
+                now = datetime.now()
+
+                self.confirmed_id = current_user.id
+                self.confirmed_timestamp = now
+
+                history = ProjectDescriptionWorkflowHistory(owner_id=self.id,
+                                                            event=WorkflowHistoryMixin.WORKFLOW_CONFIRMED,
+                                                            user_id=current_user.id,
+                                                            timestamp=now)
+                db.session.add(history)
+
+            else:
+                self.confirmed_id = None
+                self.confirmed_timestamp = None
+
+            return value
+
 
     @validates('description', 'reading', 'team', 'capacity', 'modules', include_removes=True)
     def _description_enqueue(self, key, value, is_remove):
         with db.session.no_autoflush:
             self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
-            self.validator_id = None
-            self.validated_timestamp = None
-
             self.confirmed = False
 
         return value

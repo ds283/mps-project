@@ -17,7 +17,7 @@ from ..models import DegreeProgramme, FacultyData, ResearchGroup, \
     TransferableSkill, ProjectClassConfig, LiveProject, SelectingStudent, Project, MessageOfTheDay, \
     EnrollmentRecord, SkillGroup, ProjectClass, ProjectDescription, SubmissionRecord, PresentationAssessment, \
     PresentationSession, ScheduleSlot, User, PresentationFeedback, Module, FHEQ_Level, DescriptionComment, \
-    WorkflowMixin
+    WorkflowMixin, ProjectDescriptionWorkflowHistory
 
 import app.ajax as ajax
 
@@ -1171,6 +1171,7 @@ def project_preview(id):
 
     show_selector = bool(int(request.args.get('show_selector', True)))
     all_comments = bool(int(request.args.get('all_comments', False)))
+    all_workflow = bool(int(request.args.get('all_workflow', False)))
 
     FacultyPreviewForm = FacultyPreviewFormFactory(id, show_selector)
     form = FacultyPreviewForm(request.form)
@@ -1236,6 +1237,15 @@ def project_preview(id):
 
     allow_approval = current_user.has_role('project_approver') and desc is not None and allow_approvals(desc.id)
 
+    if allow_approval and desc.has_workflow_history:
+        if all_workflow:
+            workflow_history = desc.workflow_history.order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
+        else:
+            workflow_history = desc.workflow_history.filter_by(year=current_year) \
+                .order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
+    else:
+        workflow_history = []
+
     if desc is not None:
         if all_comments:
             comments = desc.comments.order_by(DescriptionComment.creation_timestamp.asc()).all()
@@ -1249,7 +1259,8 @@ def project_preview(id):
 
     return render_project(data, desc, form=form, text=text, url=url,
                           show_selector=show_selector, allow_approval=allow_approval,
-                          show_comments=True, comments=comments, all_comments=all_comments, pclass_id=pclass_id)
+                          show_comments=True, comments=comments, all_comments=all_comments,
+                          all_workflow=all_workflow, pclass_id=pclass_id, workflow_history=workflow_history)
 
 
 @faculty.route('/dashboard')

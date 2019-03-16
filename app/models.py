@@ -153,6 +153,7 @@ class WorkflowMixin():
                 self.validated_timestamp = now
 
                 history = self.__history_model__(owner_id=self.id,
+                                                 year=_get_current_year(),
                                                  user_id=current_user.id,
                                                  timestamp=now,
                                                  event=WorkflowHistoryMixin.map[value])
@@ -172,8 +173,18 @@ class WorkflowHistoryMixin():
            WorkflowMixin.WORKFLOW_APPROVAL_REJECTED: WORKFLOW_APPROVAL_REJECTED,
            WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED: WORKFLOW_APPROVAL_VALIDATED}
 
+    _labels = {WORKFLOW_CONFIRMED: 'Confirmed',
+               WORKFLOW_APPROVAL_QUEUED: 'Queued for approval',
+               WORKFLOW_APPROVAL_REJECTED: 'Rejected',
+               WORKFLOW_APPROVAL_VALIDATED: 'Approved'}
+
     # workflow event
     event = db.Column(db.Integer())
+    
+    # year tag
+    @declared_attr
+    def year(cls):
+        return db.Column(db.Integer(), db.ForeignKey('main_config.year'))
 
     # workflow user id
     @declared_attr
@@ -186,6 +197,22 @@ class WorkflowHistoryMixin():
 
     # workflow timestamp
     timestamp = db.Column(db.DateTime(), index=True)
+
+
+    @property
+    def _text_event(self):
+        if self.event not in WorkflowHistoryMixin._labels:
+            return 'Unknown workflow event'
+
+        return WorkflowHistoryMixin._labels[self.event]
+
+
+    @property
+    def text_description(self):
+        return '{event} by {name} at {time}'.format(event=self._text_event,
+                                                    name='unknown user' if self.user is None else self.user.name,
+                                                    time='unknown time' if self.timestamp is None else
+                                                        self.timestamp.strftime("%a %d %b %Y %H:%M:%S"))
 
 
 class StudentDataWorkflowHistory(db.Model, WorkflowHistoryMixin):
@@ -4499,6 +4526,7 @@ class ProjectDescription(db.Model, WorkflowMixin):
                 self.confirmed_timestamp = now
 
                 history = ProjectDescriptionWorkflowHistory(owner_id=self.id,
+                                                            year=_get_current_year(),
                                                             event=WorkflowHistoryMixin.WORKFLOW_CONFIRMED,
                                                             user_id=current_user.id,
                                                             timestamp=now)
@@ -4672,6 +4700,11 @@ class ProjectDescription(db.Model, WorkflowMixin):
                 return True
 
         return False
+
+
+    @property
+    def has_workflow_history(self):
+        return get_count(self.workflow_history) > 0
 
 
     def maintenance(self):

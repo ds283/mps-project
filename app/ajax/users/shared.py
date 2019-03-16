@@ -13,6 +13,9 @@ name = \
 """
 {{ u.name }}
 <div>
+    {% if u.currently_active %}
+        <span class="label label-success">ACTIVE</span>
+    {% endif %}
     {% if u.student_data and u.student_data is not none %}
         {% set state = u.student_data.workflow_state %}
         {% if state == u.student_data.WORKFLOW_APPROVAL_QUEUED %}
@@ -24,6 +27,15 @@ name = \
         {% else %}
             <span class="label label-danger">Unknown validation</span>
         {% endif %}
+    {% endif %}
+    {% if f %}
+        <div>
+            {% if f.is_convenor %}
+                {% for item in f.convenor_list %}
+                    {{ item.make_label('Convenor ' + item.abbreviation)|safe }}
+                {% endfor %}
+            {% endif %}
+        </div>
     {% endif %}
     {% if u.theme == u.THEME_DEFAULT %}
         <span class="label label-primary">Default</span>

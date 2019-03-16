@@ -663,6 +663,9 @@ class User(db.Model, UserMixin):
 
     @property
     def currently_active(self):
+        if self.last_active is None:
+            return False
+
         now = datetime.now()
         delta = now - self.last_active
 

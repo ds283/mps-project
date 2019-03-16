@@ -16,7 +16,7 @@ from ...cache import cache
 
 from sqlalchemy.event import listens_for
 
-from .shared import menu
+from .shared import menu, name
 
 
 _affiliation = \
@@ -62,33 +62,6 @@ _settings = \
 """
 
 
-_name = \
-"""
-{{ u.name }}
-<div>
-    {% if u.currently_active %}
-        <span class="label label-success">ACTIVE</span>
-    {% endif %}
-    {% if u.theme == u.THEME_DEFAULT %}
-        <span class="label label-primary">Default</span>
-    {% elif u.theme == u.THEME_FLAT %}
-        <span class="label label-primary">Flat</span>
-    {% elif u.theme == u.THEME_DARK %}
-        <span class="label label-primary">Dark</span>
-    {% else %}
-        <span class="label label-danger">Unknown theme</span>
-    {% endif %}
-</div>
-<div>
-    {% if f.is_convenor %}
-        {% for item in f.convenor_list %}
-            {{ item.make_label('Convenor ' + item.abbreviation)|safe }}
-        {% endfor %}
-    {% endif %}
-</div>
-"""
-
-
 @cache.memoize()
 def _element(user_id, current_user_id):
     f = db.session.query(FacultyData).filter_by(id=user_id).one()
@@ -96,7 +69,7 @@ def _element(user_id, current_user_id):
     cu = db.session.query(User).filter_by(id=current_user_id).one()
 
     return {'name': {
-                'display': render_template_string(_name, u=u, f=f),
+                'display': render_template_string(name, u=u, f=f),
                 'sortstring': u.last_name + u.first_name},
              'active': u.active_label,
              'office': f.office,

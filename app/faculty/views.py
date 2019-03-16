@@ -1237,22 +1237,21 @@ def project_preview(id):
 
     allow_approval = current_user.has_role('project_approver') and desc is not None and allow_approvals(desc.id)
 
-    if allow_approval and desc.has_workflow_history:
+    if desc is not None:
         if all_workflow:
-            workflow_history = desc.workflow_history.order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
+            workflow_history = desc.workflow_history \
+                .order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
         else:
             workflow_history = desc.workflow_history.filter_by(year=current_year) \
                 .order_by(ProjectDescriptionWorkflowHistory.timestamp.asc()).all()
-    else:
-        workflow_history = []
 
-    if desc is not None:
         if all_comments:
             comments = desc.comments.order_by(DescriptionComment.creation_timestamp.asc()).all()
         else:
             comments = desc.comments.filter_by(year=current_year) \
                 .order_by(DescriptionComment.creation_timestamp.asc()).all()
     else:
+        workflow_history = []
         comments = []
 
     data.update_last_viewed_time(current_user, commit=True)

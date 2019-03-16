@@ -271,29 +271,27 @@
 
                 {% if allow_approval %}
                     <hr class="intro-divider">
-                    {% if workflow_history|length > 0 %}
-                        <div class="well" style="margin-top: 15px;">
-                            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=0) }}"
-                               class="btn btn-sm {% if all_comments %}btn-default{% else %}btn-primary{% endif %}">
-                                Show workflow events only from this year
-                           </a>
-                            <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=1) }}"
-                               class="btn btn-sm {% if all_comments %}btn-primary{% else %}btn-default{% endif %}">
-                                Show workflow events from all years
-                           </a>
-                        </div>
+                    <div class="well" style="margin-top: 15px;">
+                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=0) }}"
+                           class="btn btn-sm {% if all_workflow %}btn-default{% else %}btn-primary{% endif %}">
+                            Show workflow events only from this year
+                       </a>
+                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int, all_workflow=1) }}"
+                           class="btn btn-sm {% if all_workflow %}btn-primary{% else %}btn-default{% endif %}">
+                            Show workflow events from all years
+                       </a>
+                    </div>
                         <div class="list-group">
                             {% for item in workflow_history %}
-                                <div class="list-item">
+                                <div class="list-group-item">
                                     {{ item.text_description|safe }}
+                                </div>
+                            {% else %}
+                                <div class="list-group-item">
+                                    No workflow events
                                 </div>
                             {% endfor %}
                         </div>
-                    {% else %}
-                        <div class="well" style="margin-top: 15px;">
-                            No workflow events
-                        </div>
-                    {% endif %}
                     {% if desc.workflow_state == desc.WORKFLOW_APPROVAL_QUEUED %}
                         <div class="row">
                             <div class="col-xs-12">
@@ -326,11 +324,11 @@
                 {% endif %}
                 {% if show_comments %}
                     <div class="well" style="margin-top: 15px;">
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
+                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=0, all_workflow=all_workflow|int) }}"
                            class="btn btn-sm {% if all_comments %}btn-default{% else %}btn-primary{% endif %}">
                             Show comments only from this year
                        </a>
-                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass_id=pclass_id, show_selector=show_selector|int, all_comments=1, all_workflow=all_workflow|int) }}"
+                        <a href="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=1, all_workflow=all_workflow|int) }}"
                            class="btn btn-sm {% if all_comments %}btn-primary{% else %}btn-default{% endif %}">
                             Show comments from all years
                        </a>

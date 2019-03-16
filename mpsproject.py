@@ -11,7 +11,8 @@
 from app import create_app, db
 from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
-    SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, ProjectClassConfig
+    SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, ProjectClassConfig, \
+    StudentDataWorkflowHistory, ProjectDescriptionWorkflowHistory, MainConfig
 from sqlalchemy.exc import SQLAlchemyError
 
 
@@ -207,6 +208,26 @@ def migrate_description_confirmations():
 
 app, celery = create_app()
 
+
+def populate_workflow_history():
+    rec = db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
+    current_year = rec.year
+
+    shistory = db.session.query(StudentDataWorkflowHistory).all()
+
+    for item in shistory:
+        if item.year is None:
+            item.year = current_year
+
+    phistory = db.session.query(ProjectDescriptionWorkflowHistory).all()
+
+    for item in phistory:
+        if item.year is None:
+            item.year = current_year
+
+    db.session.commit()
+
+
 with app.app_context():
     # on restart, drop all transient task records and notifications, which will no longer have any meaning
     TaskRecord.query.delete()
@@ -250,6 +271,7 @@ with app.app_context():
     # populate_student_validation_data()
     # populate_project_validation_data()
     # migrate_description_confirmations()
+    # populate_workflow_history()
 
     db.session.commit()
 

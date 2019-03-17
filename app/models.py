@@ -4248,9 +4248,11 @@ class Project(db.Model):
         query = faculty.enrollments \
             .join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id) \
             .filter(or_(and_(pclasses.c.uses_marker == True,
-                             EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED),
+                             or_(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
+                                 EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)),
                         and_(pclasses.c.uses_presentations == True,
-                             EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED)))
+                             or_(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                                 EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL))))
 
         return get_count(query) > 0
 
@@ -4463,6 +4465,9 @@ class Project(db.Model):
         :return:
         """
         # ensure that assessor list does not contain anyone who is no longer enrolled for those tasks
+        # note that _is_assessor_for_at_least_one_pclass() allows faculty who are on sabbatical; we don't
+        # want to strip these assessors off, because then they would have to be pointlessly re-added by hand
+        # when they come back from sabbatical
         removed = [f for f in self.assessors if not self._is_assessor_for_at_least_one_pclass(f)]
         self.assessors = [f for f in self.assessors if self._is_assessor_for_at_least_one_pclass(f)]
 

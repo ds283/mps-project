@@ -4809,13 +4809,13 @@ class ProjectDescription(db.Model, WorkflowMixin):
 
         # ensure that project class list does not contain any class that is not attached to the parent project
         removed = [pcl for pcl in self.project_classes if pcl not in self.parent.project_classes]
-        self.assessors = [pcl for pcl in self.project_classes if pcl in self.parent.project_classes]
 
         for pcl in removed:
             current_app.logger.info('Regular maintenance: pruned project class "{name}" from project description '
                                     '"{proj}/{desc}" since this class is not attached to the parent '
                                     'project'.format(name=pcl.name, proj=self.parent.name,
                                                      desc=self.label))
+            self.project_classes.remove(pcl)
 
         if len(removed) > 0:
             modified = True

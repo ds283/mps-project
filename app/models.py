@@ -2890,11 +2890,14 @@ class ProjectClassConfig(db.Model):
 
     @property
     def _faculty_waiting_confirmation_generator(self):
-        faculty = db.session.query(EnrollmentRecord) \
-            .filter_by(pclass_id=self.pclass_id,
-                       supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED).all()
+        faculty = db.session.query(FacultyData) \
+            .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
+            .filter(EnrollmentRecord.pclass_id == self.pclass_id,
+                    EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active).all()
 
-        return (f.owner for f in faculty if f.owner is not None and self.is_confirmation_required(f.owner))
+        return (f for f in faculty if f is not None and self.is_confirmation_required(f))
 
 
     @property
@@ -2917,6 +2920,23 @@ class ProjectClassConfig(db.Model):
             return False
 
         return True
+
+
+    def no_explicit_confirm(self, faculty):
+        if isinstance(faculty, User):
+            fac_data = faculty.faculty_data
+        elif isinstance(faculty, int):
+            fac_data = db.session.query(FacultyData).filter_by(id=faculty).first()
+        else:
+            fac_data = faculty
+
+        if not isinstance(fac_data, FacultyData) or fac_data is None:
+            raise RuntimeError('FacultyData object could not be loaded or interpreted')
+
+        if fac_data in self.confirmation_required:
+            return True
+
+        return False
 
 
     @property

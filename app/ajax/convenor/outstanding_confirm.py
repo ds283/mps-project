@@ -106,6 +106,9 @@ _name = \
 """
 <a href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
+    {% if config.no_explicit_confirm(f) %}
+        <span class="label label-danger">NO RESPONSE</span>
+    {% endif %}
     {% if u.last_active is not none %}
         <span class="label label-info">Last seen at {{ u.last_active.strftime("%Y-%m-%d %H:%M:%S") }}</span>
     {% else %}
@@ -117,7 +120,7 @@ _name = \
 
 def outstanding_confirm_data(config, url=None, text=None):
 
-    data = [{'name': {'display': render_template_string(_name, u=f.user),
+    data = [{'name': {'display': render_template_string(_name, u=f.user, f=f, config=config),
                       'sortstring': f.user.last_name + f.user.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=f.user.email),
              'projects': render_template_string(_projects, f=f, config=config, pclass=config.project_class,

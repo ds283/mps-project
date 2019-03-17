@@ -132,6 +132,16 @@ _simple_workload = \
 """
 
 
+_availability = \
+"""
+{% if u %}
+    <span class="label label-info">Unbounded</span>
+{% else %}
+    {{ t|round(2) }}
+{% endif %}
+"""
+
+
 def _element_base(faculty_id, enrollment_template, workload_template):
     f = db.session.query(FacultyData).filter_by(id=faculty_id).one()
 
@@ -143,11 +153,15 @@ def _element_base(faculty_id, enrollment_template, workload_template):
         workload[record.pclass_id] = CATS
         total_workload += CATS
 
+    total, unbounded = f.student_availability
+
     return {'name': {'display': render_template_string(_name, f=f),
                               'sortstring': f.user.last_name + f.user.first_name},
                      'groups': render_template_string(_groups, f=f),
                      'enrollments': {'display': render_template_string(enrollment_template, f=f),
                                      'sortvalue': get_count(f.enrollments)},
+                     'availability': {'display': render_template_string(_availability, t=total, u=unbounded),
+                                      'sortvalue': 999999 if unbounded else total},
                      'workload': {'display': render_template_string(workload_template, f=f, wkld=workload, tot=total_workload),
                                   'sortvalue': total_workload}}
 

@@ -2046,6 +2046,7 @@ def add_pclass():
                             extent=form.extent.data,
                             require_confirm=form.require_confirm.data,
                             supervisor_carryover=form.supervisor_carryover.data,
+                            include_available=form.include_available.data,
                             uses_supervisor=form.uses_supervisor.data,
                             uses_marker=form.uses_marker.data,
                             uses_presentations=form.uses_presentations.data,
@@ -2161,6 +2162,7 @@ def edit_pclass(id):
         data.extent = form.extent.data
         data.require_confirm = form.require_confirm.data
         data.supervisor_carryover = form.supervisor_carryover.data
+        data.include_available = form.include_available.data
         data.uses_supervisor = form.uses_supervisor.data
         data.uses_marker = form.uses_marker.data
         data.uses_presentations = form.uses_presentations.data

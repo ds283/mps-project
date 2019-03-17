@@ -359,6 +359,8 @@ class ProjectClassMixin():
 
     supervisor_carryover = BooleanField('For multi-year projects, automatically carry over supervisor year-to-year')
 
+    include_available = BooleanField('Include this project class in supervisor availability calculations')
+
     uses_supervisor = BooleanField('Projects are supervised by a named faculty member',
                                    default=True)
 

@@ -91,7 +91,10 @@ _options = \
     <span class="label label-default">Confirm</span>
 {% endif %}
 {% if p.supervisor_carryover %}
-     <span class="label label-default">Carryover</span>
+    <span class="label label-default">Carryover</span>
+{% endif %}
+{% if p.include_available %}
+    <span class="label label-default">Availability</span>
 {% endif %}
 {% if p.reenroll_supervisors_early %}
     <span class="label label-default">Re-enroll early</span>

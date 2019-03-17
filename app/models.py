@@ -12,6 +12,7 @@ from flask import flash, current_app
 from flask_security import current_user, UserMixin, RoleMixin
 
 from sqlalchemy import orm, or_, and_
+from sqlalchemy.sql import functions
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import validates
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -1734,6 +1735,62 @@ class FacultyData(db.Model):
         return get_count(self.editable_availability_requests) > 0
 
 
+    @property
+    def student_availability(self):
+        """
+        Compute how many students this supervisor is 'accessible' for (which may be unbounded)
+        :return:
+        """
+
+        total = 0.0
+        unbounded = False
+
+        max_CATS = None
+
+        config_cache = {}
+
+        pclasses =  db.session.query(ProjectClass) \
+            .filter(ProjectClass.active, ProjectClass.publish, ProjectClass.include_available).all()
+        for pcl in pclasses:
+            if pcl.id in config_cache:
+                config = config_cache[pcl.id]
+            else:
+                config = db.session.query(ProjectClassConfig).filter_by(pclass_id=pcl.id) \
+                            .order_by(ProjectClassConfig.year.desc()).first()
+                config_cache[pcl.id] = config
+
+            if config is not None:
+                if config.CATS_supervision > 0:
+                    if max_CATS is None or config.CATS_supervision > max_CATS:
+                        max_CATS = float(config.CATS_supervision)
+
+        for record in self.enrollments:
+            if record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+                if record.pclass.active and record.pclass.publish and record.pclass.include_available:
+                    if record.pclass_id in config_cache:
+                        config = config_cache[record.pclass_id]
+                    else:
+                        config = db.session.query(ProjectClassConfig).filter_by(pclass_id=record.pclass_id) \
+                            .order_by(ProjectClassConfig.year.desc()).first()
+                        config_cache[record.pclass_id] = config
+
+                    if config is not None:
+                        projects = self.projects.filter(Project.project_classes.any(id=record.pclass_id)).all()
+
+                        for p in projects:
+                            if p.enforce_capacity:
+                                desc = p.get_description(record.pclass_id)
+                                if desc is not None and desc.capacity > 0:
+                                    if max_CATS is not None:
+                                        total += (float(config.CATS_supervision) / max_CATS) * float(desc.capacity)
+                                    else:
+                                        total += float(desc.capacity)
+                            else:
+                                unbounded = True
+
+        return total, unbounded
+
+
 class StudentData(db.Model, WorkflowMixin):
     """
     Models extra data held on students
@@ -2268,6 +2325,9 @@ class ProjectClass(db.Model, ColouredLabelMixin):
 
     # carry over supervisor in subsequent years?
     supervisor_carryover = db.Column(db.Boolean())
+
+    # include in 'availability' calculations -- how many students a given supervisor is 'available' for
+    include_available = db.Column(db.Boolean())
 
 
     # POPULARITY DISPLAY
@@ -2930,6 +2990,11 @@ class ProjectClassConfig(db.Model):
     @property
     def supervisor_carryover(self):
         return self.project_class.supervisor_carryover
+
+
+    @property
+    def include_available(self):
+        return self.project_class.include_available
 
 
     @property

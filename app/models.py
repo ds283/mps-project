@@ -153,12 +153,13 @@ class WorkflowMixin():
                 self.validator_id = current_user.id
                 self.validated_timestamp = now
 
-                history = self.__history_model__(owner_id=self.id,
-                                                 year=_get_current_year(),
-                                                 user_id=current_user.id,
-                                                 timestamp=now,
-                                                 event=WorkflowHistoryMixin.map[value])
-                db.session.add(history)
+                if self.workflow_state != value:
+                    history = self.__history_model__(owner_id=self.id,
+                                                     year=_get_current_year(),
+                                                     user_id=current_user.id,
+                                                     timestamp=now,
+                                                     event=WorkflowHistoryMixin.map[value])
+                    db.session.add(history)
 
             return value
 
@@ -4075,7 +4076,8 @@ class Project(db.Model):
         if desc is None:
             return
 
-        desc.confirmed = True
+        if not desc.confirmed:
+            desc.confirmed = True
         if commit:
             db.session.commit()
 
@@ -4590,12 +4592,13 @@ class ProjectDescription(db.Model, WorkflowMixin):
                 self.confirmed_id = current_user.id
                 self.confirmed_timestamp = now
 
-                history = ProjectDescriptionWorkflowHistory(owner_id=self.id,
-                                                            year=_get_current_year(),
-                                                            event=WorkflowHistoryMixin.WORKFLOW_CONFIRMED,
-                                                            user_id=current_user.id,
-                                                            timestamp=now)
-                db.session.add(history)
+                if not self.confirmed:
+                    history = ProjectDescriptionWorkflowHistory(owner_id=self.id,
+                                                                year=_get_current_year(),
+                                                                event=WorkflowHistoryMixin.WORKFLOW_CONFIRMED,
+                                                                user_id=current_user.id,
+                                                                timestamp=now)
+                    db.session.add(history)
 
             else:
                 self.confirmed_id = None

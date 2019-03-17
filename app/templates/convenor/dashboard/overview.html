@@ -56,9 +56,11 @@
                                 <div class="list-group-item">
                                     Current supervision CATS <span class="badge">{{ config.CATS_supervision }}</span>
                                 </div>
-                                <div class="list-group-item">
-                                    Master value <span class="badge">{{ pclass.CATS_supervision }}</span>
-                                </div>
+                                {% if pclass.CATS_supervision != config.CATS_supervision %}
+                                    <div class="list-group-item">
+                                        Updated value <span class="badge">{{ pclass.CATS_supervision }}</span>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-xs-4">
@@ -66,9 +68,11 @@
                                 <div class="list-group-item">
                                     Current 2nd-marking CATS <span class="badge">{{ config.CATS_marking }}</span>
                                 </div>
-                                <div class="list-group-item">
-                                    Master value <span class="badge">{{ pclass.CATS_marking }}</span>
-                                </div>
+                                {% if pclass.CATS_marking != config.CATS_marking %}
+                                    <div class="list-group-item">
+                                        Updated value <span class="badge">{{ pclass.CATS_marking }}</span>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="col-xs-4">
@@ -76,9 +80,11 @@
                                 <div class="list-group-item">
                                     Current presentation CATS <span class="badge">{{ config.CATS_presentation }}</span>
                                 </div>
-                                <div class="list-group-item">
-                                    Master value <span class="badge">{{ pclass.CATS_presentation }}</span>
-                                </div>
+                                {% if pclass.CATS_presentation != config.CATS_presentation %}
+                                    <div class="list-group-item">
+                                        Updated value <span class="badge">{{ pclass.CATS_presentation }}</span>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>

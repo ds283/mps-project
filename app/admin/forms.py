@@ -22,6 +22,7 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_degree_type, unique_or_original_degree_type,\
     globally_unique_degree_abbreviation, unique_or_original_degree_abbreviation,\
     globally_unique_degree_programme, unique_or_original_degree_programme, \
+    globally_unique_course_code, unique_or_original_course_code, \
     globally_unique_programme_abbreviation, unique_or_original_programme_abbreviation, \
     globally_unique_transferable_skill, unique_or_original_transferable_skill, \
     globally_unique_skill_group, unique_or_original_skill_group, globally_unique_project_class, \
@@ -273,6 +274,10 @@ class AddDegreeProgrammeForm(Form, DegreeProgrammeMixin):
                                                            Length(max=DEFAULT_STRING_LENGTH),
                                                            globally_unique_programme_abbreviation])
 
+    course_code = StringField('Course code', validators=[InputRequired(message='Course code is required'),
+                                                         Length(max=DEFAULT_STRING_LENGTH),
+                                                         globally_unique_course_code])
+
     submit = SubmitField('Add new degree programme')
 
 
@@ -285,6 +290,10 @@ class EditDegreeProgrammeForm(Form, DegreeProgrammeMixin, SaveChangesMixin):
     abbreviation = StringField('Abbreviation', validators=[InputRequired(message='Abbreviation is required'),
                                                            Length(max=DEFAULT_STRING_LENGTH),
                                                            unique_or_original_programme_abbreviation])
+
+    course_code = StringField('Course code', validators=[InputRequired(message='Course code is required'),
+                                                         Length(max=DEFAULT_STRING_LENGTH),
+                                                         unique_or_original_course_code])
 
 
 class ModuleMixin():
@@ -1319,3 +1328,8 @@ def CompareScheduleFormFactory(assessment_id, self_id, is_root):
         compare = SubmitField('Compare')
 
     return CompareScheduleForm
+
+
+class UploadBatchCreateForm(Form):
+
+    submit = SubmitField('Upload user list')

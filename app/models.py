@@ -1984,6 +1984,9 @@ class DegreeProgramme(db.Model):
     modules = db.relationship('Module', secondary=programmes_to_modules, lazy='dynamic',
                               backref=db.backref('programmes', lazy='dynamic'))
 
+    # course code, used to uniquely identify this degree programme
+    course_code = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
+
 
     # EDITING METADATA
 

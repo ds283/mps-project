@@ -23,7 +23,7 @@ from collections import deque
 from celery import chain, group
 
 from ..limiter import limiter
-from ..uploads import solution_files
+from ..uploads import solution_files, batch_user_files
 from .actions import register_user, estimate_CATS_load, availability_CSV_generator, pair_slots
 from .forms import RoleSelectForm, \
     ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, ConfirmRegisterStudentForm, \
@@ -48,7 +48,8 @@ from .forms import RoleSelectForm, \
     NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm,\
     ImposeConstraintsScheduleFormFactory, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
-    PublicScheduleFormFactory, CompareScheduleFormFactory
+    PublicScheduleFormFactory, CompareScheduleFormFactory, \
+    UploadBatchCreateForm
 
 from ..database import db
 from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -524,7 +525,6 @@ def users_students_ajax():
 @roles_accepted('admin', 'root')
 @limiter.limit('1000/day')
 def users_faculty_ajax():
-
     group_filter = request.args.get('group_filter')
     pclass_filter = request.args.get('pclass_filter')
 
@@ -542,6 +542,48 @@ def users_faculty_ajax():
     faculty_ids = [f[0] for f in data.all()]
 
     return ajax.users.build_faculty_data(faculty_ids, current_user.id)
+
+
+@admin.route('/batch_create_users')
+@roles_accepted('admin', 'root')
+def batch_create_users():
+    form = UploadBatchCreateForm(request.form)
+
+    if form.validate_on_submit():
+        if 'batch_list' in request.files:
+            batch_file = request.files['batch_list']
+
+            # generate new filename for upload
+            incoming_filename = Path(batch_file.filename)
+            extension = incoming_filename.suffix.lower()
+
+            if extension in ('.csv'):
+                filename, abs_path = make_uploaded_asset_filename(extension[1:])
+                batch_user_files.save(batch_file, name=filename)
+
+                asset = UploadedAsset(timestamp=datetime.now(),
+                                      lifetime=24 * 60 * 60,
+                                      filename=filename)
+                asset.access_control_list.append(current_user)
+
+                db.session.add(asset)
+                db.session.commit()
+
+                uuid = register_task('Process batch create user list "{name}"'.format(name=incoming_filename),
+                                     owner=current_user,
+                                     description='Batch create students from a CSV file')
+
+                celery = current_app.extensions['celery']
+                batch_task = celery.tasks['app.tasks.batch_create.students']
+
+                batch_task.apply_async(args=(asset.id, current_user.id, uuid), task_id=uuid)
+
+                return redirect(url_for('admin.edit_users'))
+
+            else:
+                flash('Expected batch list to have extension .csv', 'error')
+
+    return render_template("admin/users_dashboard/batch_create.html", form=form, pane='batch')
 
 
 @admin.route('/make_admin/<int:id>')
@@ -1416,6 +1458,7 @@ def add_degree_programme():
         programme = DegreeProgramme(name=form.name.data,
                                     abbreviation=form.abbreviation.data,
                                     show_type=form.show_type.data,
+                                    course_code=form.course_code.data,
                                     active=True,
                                     type_id=degree_type.id,
                                     creator_id=current_user.id,
@@ -1446,6 +1489,7 @@ def edit_degree_programme(id):
         programme.name = form.name.data
         programme.abbreviation = form.abbreviation.data
         programme.show_type = form.show_type.data
+        programme.course_code = form.course_code.data
         programme.type_id = form.degree_type.data.id
         programme.last_edit_id = current_user.id
         programme.last_edit_timestamp = datetime.now()

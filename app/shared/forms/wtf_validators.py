@@ -123,6 +123,18 @@ def unique_or_original_degree_programme(form, field):
     return globally_unique_degree_programme(form, field)
 
 
+def globally_unique_course_code(form, field):
+    if DegreeProgramme.query.filter_by(course_code=field.data).first():
+        raise ValidationError('{code} is already associated with a degree programme'.format(code=field.data))
+
+
+def unique_or_original_course_code(form, field):
+    if field.data == form.programme.course_code:
+        return
+
+    return globally_unique_course_code(form, field)
+
+
 def globally_unique_programme_abbreviation(form, field):
     degree_type = form.degree_type.data
     if DegreeProgramme.query.filter_by(abbreviation=field.data, type_id=degree_type.id).first():

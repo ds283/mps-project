@@ -206,6 +206,7 @@ def create_app():
     tasks.register_precompute_tasks(celery)
     tasks.register_push_feedback_tasks(celery)
     tasks.register_system_tasks(celery)
+    tasks.register_batch_create_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

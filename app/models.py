@@ -156,7 +156,7 @@ class WorkflowMixin():
                 if self.workflow_state != value:
                     history = self.__history_model__(owner_id=self.id,
                                                      year=_get_current_year(),
-                                                     user_id=current_user.id,
+                                                     user_id=current_user.id if current_user is not None else None,
                                                      timestamp=now,
                                                      event=WorkflowHistoryMixin.map[value])
                     db.session.add(history)
@@ -4621,7 +4621,7 @@ class ProjectDescription(db.Model, WorkflowMixin):
                     history = ProjectDescriptionWorkflowHistory(owner_id=self.id,
                                                                 year=_get_current_year(),
                                                                 event=WorkflowHistoryMixin.WORKFLOW_CONFIRMED,
-                                                                user_id=current_user.id,
+                                                                user_id=current_user.id if current_user is not None else None,
                                                                 timestamp=now)
                     db.session.add(history)
 

@@ -37,7 +37,6 @@ _datastore = LocalProxy(lambda: _security.datastore)
 
 
 def _randompassword():
-
   chars = string.ascii_uppercase + string.ascii_lowercase + string.digits
   size = random.randint(8, 12)
 
@@ -45,15 +44,18 @@ def _randompassword():
 
 
 def register_user(**kwargs):
-
-    confirmation_link, token = None, None
-
-    if ('random_password' in kwargs and kwargs['random_password']) or len(kwargs['password']) == 0:
-
+    if kwargs.pop('random_password', False) or len(kwargs['password']) == 0:
         kwargs['password'] = _randompassword()
 
     # hash password so that we never store the original
+    start_time = datetime.now()
     kwargs['password'] = hash_password(kwargs['password'])
+    end_time = datetime.now()
+    delta = end_time - start_time
+    print('## Password hashing took {total} secs'.format(total=delta.total_seconds()))
+
+    # pop ask_confirm value before kwargs is presented to create_user()
+    ask_confirm = kwargs.pop('ask_confirm', False)
 
     # generate a User record and commit it
     user = _datastore.create_user(**kwargs)
@@ -61,9 +63,7 @@ def register_user(**kwargs):
 
     # send confirmation email if we have been asked to
     if _security.confirmable:
-
-        if 'ask_confirm' in kwargs and kwargs['ask_confirm']:
-
+        if ask_confirm:
             confirmation_link, token = generate_confirmation_link(user)
             do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
 
@@ -75,7 +75,6 @@ def register_user(**kwargs):
                           'welcome', user=user, confirmation_link=confirmation_link)
 
         else:
-
             user.confirmed_at = datetime.now()
             _datastore.commit()
 

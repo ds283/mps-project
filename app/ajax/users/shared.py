@@ -17,6 +17,9 @@ name = \
         <span class="label label-success">ACTIVE</span>
     {% endif %}
     {% if u.student_data and u.student_data is not none %}
+        {% if u.student_data.intermitting %}
+            <span class="label label-warning">INTERMITTING</span>
+        {% endif %}
         {% set state = u.student_data.workflow_state %}
         {% if state == u.student_data.WORKFLOW_APPROVAL_QUEUED %}
             <span class="label label-warning">Approval: Queued</span>

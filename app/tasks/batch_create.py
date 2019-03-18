@@ -20,9 +20,85 @@ from ..task_queue import progress_update, register_task
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import make_generated_asset_filename, canonical_uploaded_asset_filename
 
+from ..admin.actions import register_user
+
 import csv
 from datetime import datetime
 from dateutil.parser import parse
+
+
+OUTCOME_CREATED = 0
+OUTCOME_MERGED = 1
+OUTCOME_FAILED = 3
+OUTCOME_IGNORED = 4
+
+BATCH_IMPORT_LIFETIME_SECONDS = 24*60*60
+
+
+def _overwrite_record(item):
+    if item.existing_record.user.first_name != item.first_name:
+        item.existing_record.user.first_name = item.first_name
+
+    if item.existing_record.user.last_name != item.last_name:
+        item.existing_record.user.last_name = item.last_name
+
+    if item.existing_record.user.username != item.user_id:
+        item.existing_record.user.username = item.user_id
+
+    if item.existing_record.user.email != item.email:
+        item.existing_record.user.email = item.email
+
+    if item.existing_record.exam_number != item.exam_number:
+        item.existing_record.exam_number = item.exam_number
+
+    if item.existing_record.cohort != item.cohort:
+        item.existing_record.cohort = item.cohort
+
+    if item.existing_record.foundation_year != item.foundation_year:
+        item.existing_record.foundation_year = item.foundation_year
+
+    if item.existing_record.repeated_years != item.repeated_years:
+        item.existing_record.repeated_years = item.repeated_years
+
+    if item.existing_record.repeated_years != item.repeated_years:
+        item.existing_record.repeated_years = item.repeated_years
+
+    return OUTCOME_MERGED
+
+
+def _create_record(item, user_id):
+    print('## Create new user "{userid}" = {first} {last}'.format(userid=item.user_id,
+                                                                  first=item.first_name, last=item.last_name))
+
+    print('## Create user {userid}: register new user @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
+    user = register_user(first_name=item.first_name,
+                         last_name=item.last_name,
+                         username=item.user_id,
+                         email=item.email,
+                         roles=['student'],
+                         random_password=True,
+                         ask_confirm=False)
+    print('## Create user {userid}: register complete @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
+
+    data = StudentData(id=user.id,
+                       exam_number=item.exam_number,
+                       intermitting=item.intermitting,
+                       cohort=item.cohort,
+                       programme_id=item.programme_id,
+                       foundation_year=item.foundation_year,
+                       repeated_years=item.repeated_years,
+                       creator_id=user_id,
+                       creation_timestamp=datetime.now())
+    print('## Create user {userid}: StudentData instance constructed @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
+
+    db.session.add(data)
+    print('## Create user {userid}: add StudentData instance to session @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
+
+    # exceptions will be caught in parent
+    db.session.commit()
+    print('## Create user {userid}: commit session @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
+
+    return OUTCOME_CREATED
 
 
 def register_batch_create_tasks(celery):
@@ -225,3 +301,122 @@ def register_batch_create_tasks(celery):
         record.celery_finished = True
         record.success = (interpreted_lines <= lines)
         db.session.commit()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def import_students(self, record_id, current_user_id):
+        try:
+            record = db.session.query(StudentBatch).filter_by(id=record_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load database records')
+            raise RuntimeError('Could not load database records')
+
+        work = group(import_batch_item.si(item.id, current_user_id)
+                     for item in record.items) | import_finalize.s(current_user_id)
+        work.on_error(import_error.si(current_user_id)).apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def import_batch_item(self, item_id, user_id):
+        try:
+            item = db.session.query(StudentBatchItem).filter_by(id=item_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if item is None:
+            self.update_state(state='FAILURE', meta='Could not load database records')
+            return OUTCOME_FAILED
+
+        if item.dont_convert:
+            return OUTCOME_IGNORED
+
+        try:
+            if item.existing_record is not None:
+                result = _overwrite_record(item)
+            else:
+                result = _create_record(item, user_id)
+
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        return result
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def import_finalize(self, result_data, user_id):
+        try:
+            user = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        num_created = sum([1 for x in result_data if x == OUTCOME_CREATED])
+        num_merged = sum([1 for x in result_data if x == OUTCOME_MERGED])
+        num_failed = sum([1 for x in result_data if x == OUTCOME_FAILED])
+        num_ignored = sum([1 for x in result_data if x == OUTCOME_IGNORED])
+
+        user.post_message('Batch import is complete: {created} created, {merged} merged, {failed} '
+                          'failed, {ignored} ignored'.format(created=num_created, merged=num_merged,
+                                                             failed=num_failed, ignored=num_ignored),
+                          'info' if num_failed == 0 else 'error', autocommit=True)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def import_error(self, user_id):
+        try:
+            user = db.session.query(User).filter_by(id=user_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if user is None:
+            self.update_state(state='FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        user.post_message('Errors occurred during batch import', 'error', autocommit=True)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def garbage_collection(self):
+        try:
+            records = db.session.query(StudentBatch).filter_by(celery_finished=True).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        expiry = group(check_expiry.si(r.id) for r in records)
+        expiry.apply_async()
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def check_expiry(self, record_id):
+        try:
+            record = db.session.query(StudentBatch).filter_by(id=record_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state(state='FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        # if imported successfully and not yet converted, don't expire
+        if record.success and not record.converted:
+            return
+
+        now = datetime.now()
+        age = now - record.timestamp
+
+        if age.total_seconds() > BATCH_IMPORT_LIFETIME_SECONDS:
+            try:
+                # cascade is set to delete all items, but do it by hand anwyay
+                db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
+                db.session.delete(record)
+                db.session.commit()
+            except SQLAlchemyError:
+                raise self.retry()

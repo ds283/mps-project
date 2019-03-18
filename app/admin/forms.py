@@ -665,7 +665,8 @@ class ScheduledTaskMixin():
                        ('app.tasks.popularity.thin', 'Thin LiveProject popularity data'),
                        ('app.tasks.maintenance.maintenance', 'Perform regular database maintenance'),
                        ('app.tasks.maintenance.asset_garbage_collection', 'Garbage collection for temporary assets'),
-                       ('app.tasks.email_notifications.send_daily_notifications', 'Send daily email notifications')]
+                       ('app.tasks.email_notifications.send_daily_notifications', 'Send daily email notifications'),
+                       ('app.tasks.batch_create.garbage_collection', 'Garbage collection for batch student import')]
 
     task = SelectField('Task', choices=tasks_available)
 

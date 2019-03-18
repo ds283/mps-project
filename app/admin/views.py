@@ -257,7 +257,6 @@ def create_faculty(role):
 @roles_accepted('admin', 'root')
 @limiter.limit('1000/day')
 def create_student(role):
-
     # check whether role is ok
     if not (role == 'student'):
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
@@ -268,7 +267,6 @@ def create_student(role):
     pane = request.args.get('pane', None)
 
     if form.validate_on_submit():
-
         # convert field values to a dictionary
         field_data = form.to_dict()
         field_data['roles'] = [role]
@@ -284,7 +282,7 @@ def create_student(role):
                            exam_number=form.exam_number.data,
                            intermitting=form.intermitting.data,
                            cohort=form.cohort.data,
-                           programme=form.programme.data,
+                           programme_id=form.programme.data.id,
                            foundation_year=form.foundation_year.data,
                            repeated_years=ry,
                            creator_id=current_user.id,
@@ -808,6 +806,32 @@ def mark_batch_item_dont_convert(item_id):
 
     item.dont_convert = True
     db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/import_batch/<int:batch_id>')
+@roles_accepted('admin', 'root')
+def import_batch(batch_id):
+    record = StudentBatch.query.get_or_404(batch_id)
+
+    tk_name = 'Import batch user list "{name}"'.format(name=record.name)
+    tk_description = 'Batch create students from a CSV file'
+    uuid = register_task(tk_name, owner=current_user, description=tk_description)
+
+    celery = current_app.extensions['celery']
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    batch_task = celery.tasks['app.tasks.batch_create.import_students']
+
+    work = batch_task.si(record.id, current_user.id)
+
+    seq = chain(init.si(uuid, tk_name), work,
+                final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
+    seq.apply_async(task_id=uuid)
 
     return redirect(request.referrer)
 

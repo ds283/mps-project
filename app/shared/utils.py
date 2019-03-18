@@ -635,7 +635,7 @@ def _capacity_EnrollmentRecord_delete_handler(mapper, connection, target):
         _capacity_delete_EnrollmentRecord_cache(target)
 
 
-def _capacity_delete_FacultyData_cache(target, value):
+def _capacity_delete_FacultyData_affiliation_cache(target, value):
     # value is the group that has been added or removed to FacultyData.affiliations
     pclasses = db.session.query(ProjectClass).filter_by(active=True).all()
 
@@ -646,46 +646,42 @@ def _capacity_delete_FacultyData_cache(target, value):
 @listens_for(FacultyData.affiliations, 'append')
 def _capacity_FacultyData_affiliations_append_handler(target, value, initiator):
     with db.session.no_autoflush:
-        _capacity_delete_FacultyData_cache(target, value)
+        _capacity_delete_FacultyData_affiliation_cache(target, value)
 
 
 @listens_for(FacultyData.affiliations, 'remove')
 def _capacity_FacultyData_affiliations_remove_handler(target, value, initiator):
     with db.session.no_autoflush:
-        _capacity_delete_FacultyData_cache(target, value)
+        _capacity_delete_FacultyData_affiliation_cache(target, value)
 
 
-def _capacity_delete_User_cache(user):
-    if not user.has_role('faculty'):
-        return
-
+def _capacity_delete_FacultyData_cache(fac_data):
     pclasses = db.session.query(ProjectClass).filter_by(active=True).all()
 
     for pcl in pclasses:
-        for gp in user.faculty_data.affiliations:
+        for gp in fac_data.affiliations:
             cache.delete_memoized(_compute_group_capacity_data, pcl.id, gp.id)
 
 
-@listens_for(User, 'before_insert')
-def _capacity_User_insert_handler(mapper, connection, target):
+@listens_for(FacultyData, 'before_insert')
+def _capacity_FacultyData_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        _capacity_delete_User_cache(target)
+        _capacity_delete_FacultyData_cache(target)
 
 
-@listens_for(User, 'before_update')
-def _capacity_User_update_handler(mapper, connection, target):
+@listens_for(FacultyData, 'before_update')
+def _capacity_FacultyData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        _capacity_delete_User_cache(target)
+        _capacity_delete_FacultyData_cache(target)
 
 
-@listens_for(User, 'before_delete')
-def _capacity_User_delete_handler(mapper, connection, target):
+@listens_for(FacultyData, 'before_delete')
+def _capacity_FacultyData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        _capacity_delete_User_cache(target)
+        _capacity_delete_FacultyData_cache(target)
 
 
 def get_capacity_data(pclass):
-
     # get list of research groups
     groups = db.session.query(ResearchGroup) \
         .filter_by(active=True)\

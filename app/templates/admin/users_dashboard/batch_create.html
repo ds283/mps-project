@@ -64,7 +64,7 @@
                                         <a href="{{ url_for('admin.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-default btn-table-block">
                                             View records
                                         </a>
-                                        <a href="#" class="btn btn-sm btn-primary btn-table-block">
+                                        <a href="{{ url_for('admin.import_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary btn-table-block">
                                             Import
                                         </a>
                                         <a href="{{ url_for('admin.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">

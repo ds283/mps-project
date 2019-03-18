@@ -40,6 +40,8 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     globally_unique_FHEQ_level_name, unique_or_original_FHEQ_level_name, \
     globally_unique_FHEQ_short_name, unique_or_original_FHEQ_short_name, \
     globally_unique_FHEQ_year, unique_or_original_FHEQ_year, \
+    unique_or_original_batch_item_userid, unique_or_original_batch_item_email,\
+    unique_or_original_batch_item_exam_number, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
@@ -129,6 +131,8 @@ class StudentDataMixin():
 
     programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes,
                                  get_label=BuildDegreeProgrammeName)
+
+    intermitting = BooleanField('Currently intermitting')
 
 
 class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin, ThemeMixin,
@@ -1333,3 +1337,40 @@ def CompareScheduleFormFactory(assessment_id, self_id, is_root):
 class UploadBatchCreateForm(Form):
 
     submit = SubmitField('Upload user list')
+
+
+def EditStudentBatchItemFormFactory(batch):
+
+    class EditStudentBatchItemForm(Form, SaveChangesMixin):
+
+        user_id = StringField('User id', validators=[InputRequired('User id is required'),
+                                                     Length(max=DEFAULT_STRING_LENGTH),
+                                                     partial(unique_or_original_batch_item_userid, batch.id)])
+
+        email = StringField('Email address', validators=[InputRequired('Email address is required'),
+                                                         Length(max=DEFAULT_STRING_LENGTH), email_validator,
+                                                         partial(unique_or_original_batch_item_email, batch.id)])
+
+        last_name = StringField('Last name', validators=[InputRequired('Last name is required'),
+                                                         Length(max=DEFAULT_STRING_LENGTH)])
+
+        first_name = StringField('First name', validators=[InputRequired('First name is required'),
+                                                           Length(max=DEFAULT_STRING_LENGTH)])
+
+        exam_number = IntegerField('Exam number', validators=[InputRequired('Exam number is required'),
+                                                              partial(unique_or_original_batch_item_exam_number, batch.id)])
+
+        cohort = IntegerField('Cohort', validators=[InputRequired('Cohort is required')])
+
+        programme = QuerySelectField('Degree programme', query_factory=GetActiveDegreeProgrammes,
+                                     get_label=BuildDegreeProgrammeName)
+
+        foundation_year = BooleanField('Foundation year')
+
+        repeated_years = IntegerField('Number of repeat years', default=0,
+                                      validators=[InputRequired(message="Number of repeat years is required"),
+                                                  value_is_nonnegative])
+
+        intermitting = BooleanField('Currently intermitting')
+
+    return EditStudentBatchItemForm

@@ -17,7 +17,7 @@ from zxcvbn import zxcvbn
 
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
     Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment, Building, Room, \
-    ScheduleAttempt, Module, Project, ProjectDescription, FHEQ_Level
+    ScheduleAttempt, Module, Project, ProjectDescription, FHEQ_Level, StudentBatchItem
 
 from flask import current_app
 from werkzeug.local import LocalProxy
@@ -396,6 +396,44 @@ def unique_or_original_FHEQ_year(form, field):
         return
 
     return globally_unique_FHEQ_year(form, field)
+
+
+def globally_unique_batch_item_userid(batch_id, form, field):
+    if StudentBatchItem.query.filter_by(parent_id=batch_id, user_id=field.data).first():
+        raise ValidationError('{name} is already in use as a user id for this batch import'.format(name=field.data))
+
+
+def unique_or_original_batch_item_userid(batch_id, form, field):
+    if field.data == form.batch_item.user_id:
+        return
+
+    return globally_unique_batch_item_userid(batch_id, form, field)
+
+
+def globally_unique_batch_item_email(batch_id, form, field):
+    if StudentBatchItem.query.filter_by(parent_id=batch_id, email=field.data).first():
+        raise ValidationError('{name} is already in use as an email address for this batch '
+                              'import'.format(name=field.data))
+
+
+def unique_or_original_batch_item_email(batch_id, form, field):
+    if field.data == form.batch_item.email:
+        return
+
+    return globally_unique_batch_item_email(batch_id, form, field)
+
+
+def globally_unique_batch_item_exam_number(batch_id, form, field):
+    if StudentBatchItem.query.filter_by(parent_id=batch_id, exam_number=field.data).first():
+        raise ValidationError('{name} is already in use as an exam nynbmer for this batch '
+                              'import'.format(name=field.data))
+
+
+def unique_or_original_batch_item_exam_number(batch_id, form, field):
+    if field.data == form.batch_item.exam_number:
+        return
+
+    return globally_unique_batch_item_exam_number(batch_id, form, field)
 
 
 def valid_json(form, field):

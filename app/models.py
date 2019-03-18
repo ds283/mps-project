@@ -1815,7 +1815,8 @@ class StudentData(db.Model, WorkflowMixin):
 
     # degree programme
     programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
-    programme = db.relationship('DegreeProgramme', backref=db.backref('students', lazy='dynamic'))
+    programme = db.relationship('DegreeProgramme', foreign_keys=[programme_id], uselist=False,
+                                backref=db.backref('students', lazy='dynamic'))
 
     # did this student do a foundation year? if so, their admission cohort
     # needs to be treated differently when calculating academic years
@@ -1823,6 +1824,9 @@ class StudentData(db.Model, WorkflowMixin):
 
     # has this student had repeat years? If so, they also upset the academic year calculation
     repeated_years = db.Column(db.Integer())
+
+    # is this student currently intermitting?
+    intermitting = db.Column(db.Boolean(), default=None)
 
 
     @validates('exam_number', 'cohort', 'programme_id', 'foundation_year', 'repeated_years')
@@ -1891,6 +1895,143 @@ class StudentData(db.Model, WorkflowMixin):
 
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
 
+
+class StudentBatch(db.Model):
+    """
+    Model a batch import of student accounts
+    """
+
+    __tablename__ = 'batch_student'
+    
+    
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # original filename
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
+
+    # celery task UUID
+    celery_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # is the celery read-in task finished?
+    celery_finished = db.Column(db.Boolean(), default=False)
+
+    # did we succeed in interpreting the uploaded file?
+    success = db.Column(db.Boolean(), default=False)
+
+    # has this batch been converted to user accounts?
+    converted = db.Column(db.Boolean(), default=False)
+    
+    # generation timestamp
+    timestamp = db.Column(db.DateTime())
+
+    # total lines read from the file
+    total_lines = db.Column(db.Integer())
+
+    # total lines that could be correctly interpreted
+    interpreted_lines = db.Column(db.Integer())
+
+
+    @property
+    def number_items(self):
+        return get_count(self.items)
+
+
+class StudentBatchItem(db.Model):
+    """
+    Model an individual element in the batch import of student accounts
+    """
+
+    __tablename__ = 'batch_student_items'
+    
+    
+    # primary key
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent StudentBatch instance
+    parent_id = db.Column(db.Integer(), db.ForeignKey('batch_student.id'))
+    parent = db.relationship('StudentBatch', foreign_keys=[parent_id], uselist=False,
+                             backref=db.backref('items', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # optional link to an existing StudentData instance
+    existing_id = db.Column(db.Integer(), db.ForeignKey('student_data.id'))
+    existing_record = db.relationship('StudentData', foreign_keys=[existing_id], uselist=False,
+                                      backref=db.backref('counterparts', lazy='dynamic'))
+
+    # user_id
+    user_id = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # first name
+    first_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # last or family name
+    last_name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # email address
+    email = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+    # exam number
+    exam_number = db.Column(db.Integer(), unique=True)
+
+    # cohort
+    cohort = db.Column(db.Integer())
+
+    # degree programme
+    programme_id = db.Column(db.Integer, db.ForeignKey('degree_programmes.id'))
+    programme = db.relationship('DegreeProgramme', foreign_keys=[programme_id], uselist=False)
+
+    # did this student do a foundation year? if so, their admission cohort
+    # needs to be treated differently when calculating academic years
+    foundation_year = db.Column(db.Boolean(), default=False)
+
+    # has this student had repeat years? If so, they also upset the academic year calculation
+    repeated_years = db.Column(db.Integer(), default=0)
+
+    # is this student intermitting?
+    intermitting = db.Column(db.Boolean(), default=False)
+
+    
+    # METADATA
+    
+    # flag as "don't convert to user"
+    dont_convert = db.Column(db.Boolean(), default=False)
+
+
+    @property
+    def warnings(self):
+        w = []
+
+        if self.existing_record is None:
+            return w
+
+        if self.existing_record.user.first_name != self.first_name:
+            w.append('Mismatching first name')
+
+        if self.existing_record.user.last_name != self.last_name:
+            w.append('Mismatching last name')
+
+        if self.existing_record.user.username != self.user_id:
+            w.append('Mismatching user id')
+
+        if self.existing_record.user.email != self.email:
+            w.append('Mismatching email')
+
+        if self.existing_record.exam_number != self.exam_number:
+            w.append('Mismatching exam number')
+
+        if self.existing_record.cohort != self.cohort:
+            w.append('Mismatching cohort')
+
+        if self.existing_record.foundation_year != self.foundation_year:
+            w.append('Mismatching foundation year flag')
+
+        if self.existing_record.repeated_years != self.repeated_years:
+            w.append('Mismatching repeated years')
+
+        if self.existing_record.programme_id != self.programme_id:
+            w.append('Mismatching degree programme')
+
+        return w
 
 
 class DegreeType(db.Model, ColouredLabelMixin):

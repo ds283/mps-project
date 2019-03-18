@@ -1,0 +1,45 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if record %}
+        Edit batch import record for <i class="fa fa-user"></i> <strong>{{ record.first_name }} {{ record.last_name }}</strong>
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.edit_batch_item', item_id=record.id) }}" method="POST" name="batch_item_form">
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(record) }}#}
+
+        <div class="well">
+            {{ wtf.form_field(form.email) }}
+            {{ wtf.form_field(form.user_id) }}
+        </div>
+
+        <div class="well">
+            {{ wtf.form_field(form.first_name) }}
+            {{ wtf.form_field(form.last_name) }}
+        </div>
+
+        <div class="well">
+            {{ wtf.form_field(form.exam_number) }}
+            {{ wtf.form_field(form.cohort) }}
+            {{ wtf.form_field(form.repeated_years) }}
+            {{ wtf.form_field(form.foundation_year) }}
+            {{ wtf.form_field(form.intermitting) }}
+            {{ wtf.form_field(form.programme) }}
+        </div>
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}

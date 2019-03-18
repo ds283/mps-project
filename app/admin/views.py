@@ -49,7 +49,7 @@ from .forms import RoleSelectForm, \
     ImposeConstraintsScheduleFormFactory, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory, \
-    UploadBatchCreateForm
+    UploadBatchCreateForm, EditStudentBatchItemFormFactory
 
 from ..database import db
 from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
@@ -58,12 +58,12 @@ from ..models import MainConfig, User, FacultyData, StudentData, ResearchGroup,\
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, SubmitterAttendanceData, Project, GeneratedAsset, UploadedAsset, \
+    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset, StudentBatch, StudentBatchItem, \
     WorkflowMixin, faculty_affiliations
 
 from ..shared.utils import get_main_config, get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_root_dashboard_data, get_rollover_data, get_matching_data, get_ready_to_match_data, get_automatch_pclasses, \
-    canonical_generated_asset_filename, make_uploaded_asset_filename, canonical_uploaded_asset_filename, \
+    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, \
+    canonical_generated_asset_filename, make_uploaded_asset_filename, \
     home_dashboard_url
 from ..shared.formatters import format_size
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -77,6 +77,8 @@ from ..task_queue import register_task, progress_update
 from ..shared.forms.queries import ScheduleSessionQuery
 
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import or_
+
 import app.ajax as ajax
 
 from . import admin
@@ -280,6 +282,7 @@ def create_student(role):
         ry = rep_years if rep_years is not None and rep_years >= 0 else 0
         data = StudentData(id=user.id,
                            exam_number=form.exam_number.data,
+                           intermitting=form.intermitting.data,
                            cohort=form.cohort.data,
                            programme=form.programme.data,
                            foundation_year=form.foundation_year.data,
@@ -544,7 +547,7 @@ def users_faculty_ajax():
     return ajax.users.build_faculty_data(faculty_ids, current_user.id)
 
 
-@admin.route('/batch_create_users')
+@admin.route('/batch_create_users', methods=['GET', 'POST'])
 @roles_accepted('admin', 'root')
 def batch_create_users():
     form = UploadBatchCreateForm(request.form)
@@ -562,28 +565,242 @@ def batch_create_users():
                 batch_user_files.save(batch_file, name=filename)
 
                 asset = UploadedAsset(timestamp=datetime.now(),
-                                      lifetime=24 * 60 * 60,
+                                      lifetime=24*60*60,
                                       filename=filename)
                 asset.access_control_list.append(current_user)
 
-                db.session.add(asset)
-                db.session.commit()
-
-                uuid = register_task('Process batch create user list "{name}"'.format(name=incoming_filename),
+                uuid = register_task('Process batch user list "{name}"'.format(name=incoming_filename),
                                      owner=current_user,
                                      description='Batch create students from a CSV file')
+
+                record = StudentBatch(name=batch_file.filename,
+                                      celery_id=uuid,
+                                      celery_finished=False,
+                                      success=False,
+                                      converted=False,
+                                      timestamp=datetime.now(),
+                                      total_lines=None,
+                                      interpreted_lines=None)
+
+                db.session.add(asset)
+                db.session.add(record)
+                db.session.commit()
 
                 celery = current_app.extensions['celery']
                 batch_task = celery.tasks['app.tasks.batch_create.students']
 
-                batch_task.apply_async(args=(asset.id, current_user.id, uuid), task_id=uuid)
+                batch_task.apply_async(args=(record.id, asset.id, current_user.id, get_current_year()), task_id=uuid)
 
-                return redirect(url_for('admin.edit_users'))
+                return redirect(url_for('admin.batch_create_users'))
 
             else:
                 flash('Expected batch list to have extension .csv', 'error')
 
-    return render_template("admin/users_dashboard/batch_create.html", form=form, pane='batch')
+    batches = db.session.query(StudentBatch).filter_by(converted=False).all()
+
+    return render_template("admin/users_dashboard/batch_create.html", form=form, pane='batch', batches=batches)
+
+
+@admin.route('/terminate_batch/<int:batch_id>')
+@roles_accepted('admin', 'root')
+def terminate_batch(batch_id):
+    """
+    Terminate read-in of a batch student file
+    :param batch_id:
+    :return:
+    """
+    record = StudentBatch.query.get_or_404(batch_id)
+
+    if record.celery_finished:
+        flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    title = 'Terminate batch user creation'
+    panel_title = 'Terminate batch user creation for <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_terminate_batch', batch_id=batch_id, url=request.referrer)
+    message = '<p>Please confirm that you wish to terminate the batch user creation task ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Terminate batch create'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_terminate_batch/<int:batch_id>')
+@roles_accepted('admin', 'root')
+def perform_terminate_batch(batch_id):
+    record = StudentBatch.query.get_or_404(batch_id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.batch_create_users')
+
+    if record.celery_finished:
+        flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    celery.control.revoke(record.celery_id, terminate=True, signal='SIGUSR1')
+
+    try:
+        if not record.celery_finished:
+            progress_update(record.celery_id, TaskRecord.TERMINATED, 100, "Task terminated by user", autocommit=False)
+
+        db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
+
+        db.session.delete(record)
+        db.session.commit()
+
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Can not terminate batch user creation task "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(url)
+
+
+@admin.route('/delete_batch/<int:batch_id>')
+@roles_accepted('admin', 'root')
+def delete_batch(batch_id):
+    """
+    Delete a batch student create job
+    :param batch_id:
+    :return:
+    """
+    record = StudentBatch.query.get_or_404(batch_id)
+
+    if not record.celery_finished:
+        flash('Can not delete batch creation task for "{name}" because it has not yet '
+              'finished'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    title = 'Delete batch user creation task'
+    panel_title = 'Delete batch user creation for <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_delete_batch', batch_id=batch_id, url=request.referrer)
+    message = '<p>Please confirm that you wish to delete the batch user creation task ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Delete batch data'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_delete_batch/<int:batch_id>')
+@roles_accepted('admin', 'root')
+def perform_delete_batch(batch_id):
+    record = StudentBatch.query.get_or_404(batch_id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.batch_create_users')
+
+    if not record.celery_finished:
+        flash('Can not delete batch creation task for "{name}" because it has not yet '
+              'finished'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    try:
+        db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
+
+        db.session.delete(record)
+        db.session.commit()
+
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Can not delete batch user creation task "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(url)
+
+
+@admin.route('/view_batch_data/<int:batch_id>')
+@roles_accepted('admin', 'root')
+def view_batch_data(batch_id):
+    record = StudentBatch.query.get_or_404(batch_id)
+
+    return render_template('admin/users_dashboard/view_batch.html', record=record, batch_id=batch_id)
+
+
+@admin.route('/view_batch_data_ajax/<int:batch_id>')
+@roles_accepted('admin', 'root')
+def view_batch_data_ajax(batch_id):
+    record = StudentBatch.query.get_or_404(batch_id)
+
+    items = db.session.query(StudentBatchItem.id).filter_by(parent_id=record.id).all()
+
+    return ajax.users.build_view_batch_data(items)
+
+
+@admin.route('/edit_batch_item/<int:item_id>', methods=['GET', 'POST'])
+@roles_accepted('admin', 'root')
+def edit_batch_item(item_id):
+    record = StudentBatchItem.query.get_or_404(item_id)
+
+    EditStudentBatchItemForm = EditStudentBatchItemFormFactory(record)
+    form = EditStudentBatchItemForm(obj=record)
+    form.batch_item = record
+
+    if form.validate_on_submit():
+        record.user_id = form.user_id.data
+        record.email = form.email.data
+        record.last_name = form.last_name.data
+        record.first_name = form.first_name.data
+        record.exam_number = form.exam_number.data
+        record.cohort = form.cohort.data
+        record.programme_id = form.programme.data.id
+        record.foundation_year = form.foundation_year.data
+        record.repeated_years = form.repeated_years.data
+        record.intermitting = form.intermitting.data
+
+        existing_record = db.session.query(User) \
+            .join(StudentData, StudentData.id == User.id) \
+            .filter(or_(func.lower(User.email) == func.lower(record.email),
+                        func.lower(User.username) == func.lower(record.user_id),
+                        StudentData.exam_number == record.exam_number)).first()
+
+        record.existing_id = existing_record.id if existing_record is not None else None
+
+        if existing_record.email.lower() != record.email.lower():
+            record.dont_convert = True
+
+        db.session.commit()
+
+        return redirect(url_for('admin.view_batch_data', batch_id=record.parent.id))
+
+    return render_template('admin/users_dashboard/edit_batch_item.html', form=form, record=record,
+                           title='Edit batch item')
+
+
+@admin.route('/mark_batch_item_convert/<int:item_id>')
+@roles_accepted('admin', 'root')
+def mark_batch_item_convert(item_id):
+    item = StudentBatchItem.query.get_or_404(item_id)
+
+    item.dont_convert = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/mark_batch_item_dont_convert/<int:item_id>')
+@roles_accepted('admin', 'root')
+def mark_batch_item_dont_convert(item_id):
+    item = StudentBatchItem.query.get_or_404(item_id)
+
+    item.dont_convert = True
+    db.session.commit()
+
+    return redirect(request.referrer)
 
 
 @admin.route('/make_admin/<int:id>')
@@ -898,6 +1115,7 @@ def edit_student(id):
         ry = rep_years if rep_years is not None and rep_years >= 0 else 0
 
         data.foundation_year = form.foundation_year.data
+        data.intermitting = form.intermitting.data
         data.exam_number = form.exam_number.data
         data.cohort = form.cohort.data
         data.repeated_years = ry
@@ -6560,7 +6778,7 @@ def perform_terminate_schedule(id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('admin.assessment_schedules', record.owner_id)
+        url = url_for('admin.assessment_schedules', id=record.owner_id)
 
     if record.finished:
         flash('Can not terminate scheduling task "{name}" because it has finished.'.format(name=record.name),

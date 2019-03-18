@@ -27,7 +27,7 @@ from flask import Flask
 from werkzeug.contrib.fixers import ProxyFix
 from .cache import cache
 from .limiter import limiter
-from .uploads import solution_files
+from .uploads import solution_files, batch_user_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 from flask_rollbar import Rollbar
@@ -153,7 +153,8 @@ def create_app():
     makedirs(abs_uploaded_path, exist_ok=True)
 
     app.config['UPLOADED_SOLUTIONS_DEST'] = abs_uploaded_path
-    configure_uploads(app, solution_files)
+    app.config['UPLOADED_BATCHUSERLIST_DEST'] = abs_uploaded_path
+    configure_uploads(app, [solution_files, batch_user_files])
 
     # set max upload size = 64 Mb, optimizer solution files shouldn't be larger than this
     # (though MPS files can be quite large if those are being used)

@@ -8,6 +8,89 @@
     <div class="row">
         <div class="col-xs-2"></div>
         <div class="col-xs-8">
+            <div class="well">
+                {% for batch in batches %}
+                    <div class="row vertical-align" style="margin-bottom: 10px;">
+                        <div class="col-xs-4">
+                            <div>
+                                <strong>{{ batch.name }}</strong>
+                            </div>
+                            <div>
+                                {% if not batch.celery_finished %}
+                                    <span class="label label-info">In progress</span>
+                                {% else %}
+                                    {% if batch.success %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Read succeeded</span>
+                                    {% else %}
+                                        <span class="label label-danger"><i class="fa fa-times"></i> Read failed</span>
+                                    {% endif %}
+                                    {% if batch.converted %}
+                                        <span class="label label-success"><i class="fa fa-check"></i> Converted</span>
+                                    {% else %}
+                                        <span class="label label-default">Not converted</span>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-xs-4">
+                            {% if batch.timestamp %}
+                                <span class="label label-info">Timestamp {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                            {% endif %}
+                            {% if batch.success %}
+                                <span class="label label-info">Total lines: {{ batch.total_lines }}</span>
+                                {% if batch.interpreted_lines < batch.total_lines %}
+                                    <span class="label label-warning">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
+                                {% else %}
+                                    <span class="label label-default">No ignored lines</span>
+                                {% endif %}
+                            {% endif %}
+                            <span class="label label-info">{{ batch.number_items }} items</span>
+                        </div>
+                        <div class="col-xs-4">
+                            <div class="pull-right">
+                                {% if not batch.celery_finished %}
+                                    <a href="{{ url_for('admin.terminate_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger btn-table-block">
+                                        Terminate
+                                    </a>
+                                {% else %}
+                                    {% if batch.converted %}
+                                        <a class="disabled btn btn-sm btn-success btn-table-block">
+                                            Workflow complete
+                                        </a>
+                                        <a href="{{ url_for('admin.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                            Delete
+                                        </a>
+                                    {% elif batch.success %}
+                                        <a href="{{ url_for('admin.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-default btn-table-block">
+                                            View records
+                                        </a>
+                                        <a href="#" class="btn btn-sm btn-primary btn-table-block">
+                                            Import
+                                        </a>
+                                        <a href="{{ url_for('admin.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                            Delete
+                                        </a>
+                                    {% else %}
+                                        <a class="disabled btn btn-sm btn-danger">
+                                            Not usable
+                                        </a>
+                                        <a href="{{ url_for('admin.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                            Delete
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="row vertical-top">
+                        <div class="col-xs-12">
+                            No batches currently being processed.
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
             <div class="panel panel-primary panel-primary-bg">
                 <div class="panel-heading">
                     Upload student list for batch user creation

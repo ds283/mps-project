@@ -1,6 +1,6 @@
-{% import "bootstrap/wtf.html" as wtf %}
-
 {% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
 
 {% block title %}
     {{ title }}
@@ -80,6 +80,9 @@
                 {% endif %}
                 {% if user_form.foundation_year %}
                     {{ wtf.form_field(user_form.foundation_year) }}
+                {% endif %}
+                {% if user_form.intermitting %}
+                    {{ wtf.form_field(user_form.intermitting) }}
                 {% endif %}
                 {% if user_form.programme %}
                     {{ wtf.form_field(user_form.programme) }}

@@ -569,9 +569,9 @@ def batch_create_users():
                                       filename=filename)
                 asset.access_control_list.append(current_user)
 
-                uuid = register_task('Process batch user list "{name}"'.format(name=incoming_filename),
-                                     owner=current_user,
-                                     description='Batch create students from a CSV file')
+                tk_name = 'Process batch user list "{name}"'.format(name=incoming_filename)
+                tk_description = 'Batch create students from a CSV file'
+                uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
                 record = StudentBatch(name=batch_file.filename,
                                       celery_id=uuid,
@@ -587,9 +587,18 @@ def batch_create_users():
                 db.session.commit()
 
                 celery = current_app.extensions['celery']
+
+                init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+                final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+                error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
                 batch_task = celery.tasks['app.tasks.batch_create.students']
 
-                batch_task.apply_async(args=(record.id, asset.id, current_user.id, get_current_year()), task_id=uuid)
+                work = batch_task.si(record.id, asset.id, current_user.id, get_current_year())
+
+                seq = chain(init.si(uuid, tk_name), work,
+                            final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
+                seq.apply_async(task_id=uuid)
 
                 return redirect(url_for('admin.batch_create_users'))
 

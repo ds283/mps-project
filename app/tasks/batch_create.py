@@ -38,7 +38,6 @@ def register_batch_create_tasks(celery):
 
         if record is None or asset is None or user is None:
             self.update_state(state='FAILURE', meta='Could not load database records')
-            progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Database error", autocommit=True)
 
             record.celery_finished = True
             record.success = False
@@ -48,7 +47,7 @@ def register_batch_create_tasks(celery):
             except SQLAlchemyError:
                 raise self.retry()
 
-            raise Ignore()
+            raise RuntimeError('Could not load database records')
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 10, "Inspecting uploaded user list...", autocommit=True)
 
@@ -78,7 +77,7 @@ def register_batch_create_tasks(celery):
                 except SQLAlchemyError:
                     raise self.retry()
 
-                return
+                raise RuntimeError('Missing fields in input CSV')
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Reading uploaded user list...", autocommit=True)
 
@@ -226,5 +225,3 @@ def register_batch_create_tasks(celery):
         record.celery_finished = True
         record.success = (interpreted_lines <= lines)
         db.session.commit()
-
-        progress_update(record.celery_id, TaskRecord.SUCCESS, 100, "Import complete", autocommit=True)

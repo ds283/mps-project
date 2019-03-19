@@ -613,7 +613,15 @@ def _capacity_Project_delete_handler(mapper, connection, target):
 
 
 def _capacity_delete_EnrollmentRecord_cache(record):
-    for gp in record.owner.affiliations:
+    if record.owner_id is None:
+        return
+
+    if record.owner is None:
+        owner = db.session.query(FacultyData).filter_by(id=record.owner_id)
+    else:
+        owner = record.owner
+
+    for gp in owner.affiliations.all():
         cache.delete_memoized(_compute_group_capacity_data, record.pclass_id, gp.id)
 
 
@@ -695,7 +703,6 @@ def get_capacity_data(pclass):
     total_capacity_bounded = True
 
     for group in groups:
-
         proj_count, fac_count, enrolled, total, capacity, capacity_bounded = \
             _compute_group_capacity_data(pclass.id, group.id)
 

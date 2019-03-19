@@ -603,7 +603,7 @@ def batch_create_users():
             else:
                 flash('Expected batch list to have extension .csv', 'error')
 
-    batches = db.session.query(StudentBatch).filter_by(converted=False).all()
+    batches = db.session.query(StudentBatch).all()
 
     return render_template("admin/users_dashboard/batch_create.html", form=form, pane='batch', batches=batches)
 
@@ -825,9 +825,17 @@ def import_batch(batch_id):
     final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
     error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
 
-    batch_task = celery.tasks['app.tasks.batch_create.import_students']
+    import_batch_item = celery.tasks['app.tasks.batch_create.import_batch_item']
+    import_finalize = celery.tasks['app.tasks.batch_create.import_finalize']
+    import_error = celery.tasks['app.tasks.batch_create.import_error']
+    backup = celery.tasks['app.tasks.backup.backup']
 
-    work = batch_task.si(record.id, current_user.id)
+    work_group = group(import_batch_item.si(item.id, current_user.id) for item in record.items)
+    work = chain(backup.si(current_user.id, type=BackupRecord.BATCH_IMPORT_FALLBACK, tag='batch_import',
+                           description='Rollback snapshot for batch import '
+                                       '"{name}"'.format(name=record.name)),
+                 work_group,
+                 import_finalize.s(record.id, current_user.id)).on_error(import_error.si(current_user.id))
 
     seq = chain(init.si(uuid, tk_name), work,
                 final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))

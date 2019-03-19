@@ -6845,12 +6845,14 @@ class BackupRecord(db.Model):
     PROJECT_GOLIVE_FALLBACK = 3
     PROJECT_CLOSE_FALLBACK = 4
     PROJECT_ISSUE_CONFIRM_FALLBACK = 5
+    BATCH_IMPORT_FALLBACK = 6
 
     _type_index = {SCHEDULED_BACKUP: 'Scheduled backup',
                    PROJECT_ROLLOVER_FALLBACK: 'Rollover restore point',
                    PROJECT_GOLIVE_FALLBACK: 'Go Live restore point',
                    PROJECT_CLOSE_FALLBACK: 'Close selection restore point',
-                   PROJECT_ISSUE_CONFIRM_FALLBACK: 'Issue confirmation requests restore point'}
+                   PROJECT_ISSUE_CONFIRM_FALLBACK: 'Issue confirmation requests restore point',
+                   BATCH_IMPORT_FALLBACK: 'Batch user creation restore point'}
 
     type = db.Column(db.Integer())
 

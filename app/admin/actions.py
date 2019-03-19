@@ -10,13 +10,12 @@
 
 
 from flask import current_app
-from werkzeug.local import LocalProxy
 from flask_security.utils import hash_password, do_flash, config_value, send_mail, get_message
 from flask_security.signals import user_registered
 from flask_security.confirmable import generate_confirmation_link
 
 from ..database import db
-from ..models import ProjectClass, ProjectClassConfig, EnrollmentRecord, FacultyData, SelectingStudent, User, \
+from ..models import ProjectClass, ProjectClassConfig, EnrollmentRecord, SelectingStudent, User, Role, \
     AssessorAttendanceData
 from ..shared.utils import get_current_year
 from ..shared.sqlalchemy import get_count
@@ -24,16 +23,10 @@ from ..shared.sqlalchemy import get_count
 import csv
 from io import StringIO
 
-from sqlalchemy import func
-
 from datetime import datetime
 import string
 import random
 from collections import deque
-
-
-_security = LocalProxy(lambda: current_app.extensions['security'])
-_datastore = LocalProxy(lambda: _security.datastore)
 
 
 def _randompassword():
@@ -48,35 +41,38 @@ def register_user(**kwargs):
         kwargs['password'] = _randompassword()
 
     # hash password so that we never store the original
-    start_time = datetime.now()
     kwargs['password'] = hash_password(kwargs['password'])
-    end_time = datetime.now()
-    delta = end_time - start_time
-    print('## Password hashing took {total} secs'.format(total=delta.total_seconds()))
 
     # pop ask_confirm value before kwargs is presented to create_user()
     ask_confirm = kwargs.pop('ask_confirm', False)
 
     # generate a User record and commit it
-    user = _datastore.create_user(**kwargs)
-    _datastore.commit()
+    kwargs['active'] = True
+    roles = kwargs.get('roles', [])
+    roles_step1 = [db.session.query(Role).filter_by(name=r).first() for r in roles]
+    roles_step2 = [x for x in roles_step1 if x is not None]
+    kwargs['roles'] = roles_step2
+
+    user = User(**kwargs)
+    db.session.add(user)
+
+    db.session.commit()
 
     # send confirmation email if we have been asked to
-    if _security.confirmable:
-        if ask_confirm:
-            confirmation_link, token = generate_confirmation_link(user)
-            do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
+    if ask_confirm:
+        confirmation_link, token = generate_confirmation_link(user)
+        do_flash(*get_message('CONFIRM_REGISTRATION', email=user.email))
 
-            user_registered.send(current_app._get_current_object(),
-                                 user=user, confirm_token=token)
+        user_registered.send(current_app._get_current_object(),
+                             user=user, confirm_token=token)
 
-            if config_value('SEND_REGISTER_EMAIL'):
-                send_mail(config_value('EMAIL_SUBJECT_REGISTER'), user.email,
-                          'welcome', user=user, confirmation_link=confirmation_link)
+        if config_value('SEND_REGISTER_EMAIL'):
+            send_mail(config_value('EMAIL_SUBJECT_REGISTER'), user.email,
+                      'welcome', user=user, confirmation_link=confirmation_link)
 
-        else:
-            user.confirmed_at = datetime.now()
-            _datastore.commit()
+    else:
+        user.confirmed_at = datetime.now()
+        db.session.commit()
 
     return user
 

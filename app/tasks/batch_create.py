@@ -15,10 +15,10 @@ from sqlalchemy import or_
 from sqlalchemy.sql.functions import func
 
 from ..database import db
-from ..models import UploadedAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData
-from ..task_queue import progress_update, register_task
-from ..shared.sqlalchemy import get_count
-from ..shared.utils import make_generated_asset_filename, canonical_uploaded_asset_filename
+from ..models import UploadedAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData, \
+    BackupRecord
+from ..task_queue import progress_update
+from ..shared.utils import canonical_uploaded_asset_filename
 
 from ..admin.actions import register_user
 
@@ -67,10 +67,6 @@ def _overwrite_record(item):
 
 
 def _create_record(item, user_id):
-    print('## Create new user "{userid}" = {first} {last}'.format(userid=item.user_id,
-                                                                  first=item.first_name, last=item.last_name))
-
-    print('## Create user {userid}: register new user @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
     user = register_user(first_name=item.first_name,
                          last_name=item.last_name,
                          username=item.user_id,
@@ -78,7 +74,6 @@ def _create_record(item, user_id):
                          roles=['student'],
                          random_password=True,
                          ask_confirm=False)
-    print('## Create user {userid}: register complete @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
 
     data = StudentData(id=user.id,
                        exam_number=item.exam_number,
@@ -89,14 +84,9 @@ def _create_record(item, user_id):
                        repeated_years=item.repeated_years,
                        creator_id=user_id,
                        creation_timestamp=datetime.now())
-    print('## Create user {userid}: StudentData instance constructed @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
-
-    db.session.add(data)
-    print('## Create user {userid}: add StudentData instance to session @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
 
     # exceptions will be caught in parent
-    db.session.commit()
-    print('## Create user {userid}: commit session @{time}'.format(userid=item.user_id, time=datetime.now().ctime()))
+    db.session.add(data)
 
     return OUTCOME_CREATED
 
@@ -215,9 +205,9 @@ def register_batch_create_tasks(celery):
 
                 email = row['Email Address']
 
-                # ignore cases where the email address is 'INTERMITTING'
-                if email.lower() == 'intermitting':
-                    print('## skipping row "{user}" because email is "INTERMITTING"'.format(user=username))
+                # ignore cases where the email address is 'INTERMITTING' or 'RESITTING'
+                if email.lower() == 'intermitting' or email.lower() == 'resitting':
+                    print('## skipping row "{user}" because email is "{email}"'.format(user=username, email=email))
                     ignored_lines.append(username)
                     continue
 
@@ -304,22 +294,6 @@ def register_batch_create_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def import_students(self, record_id, current_user_id):
-        try:
-            record = db.session.query(StudentBatch).filter_by(id=record_id).first()
-        except SQLAlchemyError:
-            raise self.retry()
-
-        if record is None:
-            self.update_state(state='FAILURE', meta='Could not load database records')
-            raise RuntimeError('Could not load database records')
-
-        work = group(import_batch_item.si(item.id, current_user_id)
-                     for item in record.items) | import_finalize.s(current_user_id)
-        work.on_error(import_error.si(current_user_id)).apply_async()
-
-
-    @celery.task(bind=True, default_retry_delay=30)
     def import_batch_item(self, item_id, user_id):
         try:
             item = db.session.query(StudentBatchItem).filter_by(id=item_id).first()
@@ -348,13 +322,14 @@ def register_batch_create_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def import_finalize(self, result_data, user_id):
+    def import_finalize(self, result_data, record_id, user_id):
         try:
+            record = db.session.query(StudentBatch).filter_by(id=record_id).first()
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        if user is None:
+        if record is None or user is None:
             self.update_state(state='FAILURE', meta='Could not load database records')
             raise Ignore()
 
@@ -366,7 +341,14 @@ def register_batch_create_tasks(celery):
         user.post_message('Batch import is complete: {created} created, {merged} merged, {failed} '
                           'failed, {ignored} ignored'.format(created=num_created, merged=num_merged,
                                                              failed=num_failed, ignored=num_ignored),
-                          'info' if num_failed == 0 else 'error', autocommit=True)
+                          'info' if num_failed == 0 else 'error', autocommit=False)
+
+        record.converted = True
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -381,6 +363,9 @@ def register_batch_create_tasks(celery):
             raise Ignore()
 
         user.post_message('Errors occurred during batch import', 'error', autocommit=True)
+        
+        # raise new exception; will be caught by error handler on mark_user_task_failed()
+        raise RuntimeError('Import process failed with an error')
 
 
     @celery.task(bind=True, default_retry_delay=30)

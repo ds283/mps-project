@@ -65,12 +65,13 @@ def _prune_empty_folders(path):
 
 def register_backup_tasks(celery):
 
-    @celery.task(default_retry_delay=30)
-    def backup(owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag='backup', description=None):
+    @celery.task(bind=True, default_retry_delay=30)
+    def backup(self, owner_id=None, type=BackupRecord.SCHEDULED_BACKUP, tag='backup', description=None):
 
         seq = chain(build_backup_paths.s(tag), backup_database.s(), make_backup_archive.s(),
                     insert_backup_record.s(owner_id, type, description), clean_up.si())
-        seq.apply_async()
+
+        raise self.replace(seq)
 
 
     @celery.task(bind=True, default_retry_delay=30)

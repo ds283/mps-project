@@ -2,6 +2,7 @@
 {% from "macros.html" import date_field %}
 
 {% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
+{% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 
 {% macro golive(config, golive_form, capacity_data, sel_count) %}
     <div class="panel panel-danger">
@@ -9,10 +10,24 @@
         <div class="panel-body">
             <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST"
                   name="golive-form">
-                {% set group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = capacity_data %}
+                {% set total_projects = capacity_data['projects'] %}
                 <strong>{{ total_projects }}</strong> projects are
                 currently
                 available to go live.
+                {% set pending = capacity_data['pending'] %}
+                {% set queued = capacity_data['queued'] %}
+                {% set approved = capacity_data['approved'] %}
+                {% set rejected = capacity_data['rejected'] %}
+                {% if rejected > 0 %}
+                    <p><strong>{{ rejected }} projects have been rejected and still require revision.</strong></p>
+                {% elif pending > 0 %}
+                    <p>{{ pending }} projects are still waiting for resubmission to approvals.</p>
+                {% elif queued > 0 %}
+                    <p>{{ queued }} projects are still waiting for approval.</p>
+                {% else %}
+                    <p><strong>All projects have passed approvals.</strong></p>
+                {% endif %}
+                {{ approvals_state(capacity_data) }}
                 <hr class="intro-divider">
                 {{ date_field(golive_form.live_deadline) }}
                 <div class="row">

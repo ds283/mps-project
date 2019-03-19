@@ -2,6 +2,7 @@
 {% from "macros.html" import date_field %}
 
 {% from "convenor/dashboard/overview_cards/prelive_capacity.html" import prelive_capacity %}
+{% from "convenor/dashboard/overview_cards/approvals_state.html" import approvals_state %}
 
 {% macro waiting_confirmations(config, issue_form, capacity_data, sel_count) %}
     <div class="panel panel-info">
@@ -25,6 +26,7 @@
                     </div>
                 </div>
             </div>
+            {{ approvals_state(capacity_data) }}
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}"
                   method="POST" name="issue-form">

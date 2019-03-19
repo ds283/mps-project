@@ -13,9 +13,7 @@ name = \
 """
 {{ u.name }}
 <div>
-    {% if u.currently_active %}
-        <span class="label label-success">ACTIVE</span>
-    {% endif %}
+    {{ 'REPACTIVE'|safe }}
     {% if u.student_data and u.student_data is not none %}
         {% if u.student_data.intermitting %}
             <span class="label label-warning">INTERMITTING</span>

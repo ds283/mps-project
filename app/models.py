@@ -4477,20 +4477,6 @@ class Project(db.Model):
         return get_count(self.descriptions)
 
 
-    def get_capacity(self, pclass):
-        """
-        Get the available capacity for a given pclass, or return None if unset
-        :param pclass:
-        :return:
-        """
-        desc = self.get_description(pclass)
-
-        if desc is None:
-            return None
-
-        return desc.capacity
-
-
     def live_counterpart(self, config_id):
         """
         :param config_id: current ProjectClassConfig instance

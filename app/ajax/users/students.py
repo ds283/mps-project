@@ -40,6 +40,24 @@ def _element(user_id, current_user_id):
              'menu': render_template_string(menu, user=u, cuser=cu, pane='students')}
 
 
+def _process(user_id, current_user_id):
+    u = db.session.query(User).filter_by(id=user_id).one()
+
+    record = _element(user_id, current_user_id)
+
+    name = record['name']
+    display = name['display']
+    if u.currently_active:
+        display.replace('REPACTIVE', '<span class="label label-success">ACTIVE</span>', 1)
+    else:
+        display.replace('REPACTIVE', '', 1)
+
+    name.update({'display': display})
+    record.update({'name': name})
+
+    return record
+
+
 @listens_for(User, 'before_insert')
 def _User_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
@@ -51,9 +69,10 @@ def _User_insert_handler(mapper, connection, target):
 @listens_for(User, 'before_update')
 def _User_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        if db.object_session(target).is_modified(target, include_collections=False):
+            ids = db.session.query(User.id).filter_by(active=True).all()
+            for id in ids:
+                cache.delete_memoized(_element, target.id, id[0])
 
 
 @listens_for(User, 'before_delete')
@@ -75,9 +94,10 @@ def _StudentData_insert_handler(mapper, connection, target):
 @listens_for(StudentData, 'before_update')
 def _StudentData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        ids = db.session.query(User.id).filter_by(active=True).all()
-        for id in ids:
-            cache.delete_memoized(_element, target.id, id[0])
+        if db.object_session(target).is_modified(target, include_collections=False):
+            ids = db.session.query(User.id).filter_by(active=True).all()
+            for id in ids:
+                cache.delete_memoized(_element, target.id, id[0])
 
 
 @listens_for(StudentData, 'before_delete')
@@ -89,6 +109,6 @@ def _StudentData_delete_handler(mapper, connection, target):
 
 
 def build_student_data(student_ids, current_user_id):
-    data = [_element(s_id, current_user_id) for s_id in student_ids]
+    data = [_process(s_id, current_user_id) for s_id in student_ids]
 
     return jsonify(data)

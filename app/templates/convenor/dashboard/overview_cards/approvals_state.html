@@ -1,0 +1,28 @@
+{% macro approvals_state(capacity_data) %}
+    {% set pending = capacity_data['pending'] %}
+    {% set queued = capacity_data['queued'] %}
+    {% set approved = capacity_data['approved'] %}
+    {% set rejected = capacity_data['rejected'] %}
+    <div class="row">
+        <div class="col-xs-6">
+            <div class="list-group">
+                <div class="list-group-item">
+                    Pending <span class="badge">{{ pending }}</span>
+                </div>
+                <div class="list-group-item">
+                    Queued <span class="badge">{{ queued }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-xs-6">
+            <div class="list-group">
+                <div class="list-group-item list-group-item-success">
+                    Approved <span class="badge">{{ approved }}</span>
+                </div>
+                <div class="list-group-item list-group-item-warning">
+                    Rejected <span class="badge">{{ rejected }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endmacro %}

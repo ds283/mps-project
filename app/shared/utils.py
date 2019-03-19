@@ -168,15 +168,17 @@ def get_pclass_config_data(configs=None):
     # loop through all active project classes
     for config in configs:
         # compute capacity data for this project class
-        group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = \
-            get_capacity_data(config.project_class)
+        data = get_capacity_data(config.project_class)
 
-        if total_capacity < 1.15*config.number_selectors:
+        capacity = data['capacity']
+        capacity_bounded = data['capacity_bounded']
+
+        if capacity < 1.15*config.number_selectors:
             config_warning = True
 
         config_list.append({'config': config,
-                            'capacity': total_capacity,
-                            'is_bounded': total_capacity_bounded})
+                            'capacity': capacity,
+                            'is_bounded': capacity_bounded})
 
     return {'config_list': config_list,
             'config_warning': config_warning}
@@ -516,15 +518,19 @@ def get_convenor_dashboard_data(pclass, config):
 @cache.memoize()
 def _compute_group_capacity_data(pclass_id, group_id):
     # filter all 'attached' projects that are tagged with this research group
-    projects = db.session.query(Project) \
+    ps = db.session.query(Project) \
         .filter(Project.active == True, Project.project_classes.any(id=pclass_id),
                 Project.group_id == group_id)
 
     # set of faculty members offering projects
-    faculty = set()
+    faculty_offering = set()
 
-    # number of is_offerable projects
-    project_count = 0
+    # number of offerable projects
+    projects = 0
+    pending = 0
+    approved = 0
+    rejected = 0
+    queued = 0
 
     # total capacity of projects
     # the flag 'capacity_bounded' is used to track whether any projects have quota enforcement turned off,
@@ -532,35 +538,55 @@ def _compute_group_capacity_data(pclass_id, group_id):
     capacity = 0
     capacity_bounded = True
 
-    for p in projects:
+    for p in ps:
         if p.is_offerable:
-            project_count += 1
+            projects += 1
 
             # add owner to list of faculty offering projects
-            if p.owner.id not in faculty:
-                faculty.add(p.owner.id)
+            faculty_offering.add(p.owner.id)
 
-            cap = p.get_capacity(pclass_id)
-            if cap is not None and cap > 0:
-                capacity += cap
-            if not p.enforce_capacity:
-                capacity_bounded = False
+            desc = p.get_description(pclass_id)
+            if desc is not None:
+                cap = desc.capacity
+                if cap is not None and cap > 0:
+                    capacity += cap
+
+                if not p.enforce_capacity:
+                    capacity_bounded = False
+
+                if not desc.confirmed:
+                    pending += 1
+                elif desc.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED:
+                    queued += 1
+                elif desc.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED:
+                    rejected += 1
+                elif desc.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED:
+                    approved += 1
 
     # get number of enrolled faculty belonging to this research group
-    enrolled = get_count(db.session.query(EnrollmentRecord.id) \
-                         .filter(EnrollmentRecord.pclass_id == pclass_id) \
-                         .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
-                         .join(User, User.id == EnrollmentRecord.owner_id) \
-                         .filter(FacultyData.affiliations.any(id=group_id),
-                                 User.active == True))
+    faculty_enrolled = get_count(db.session.query(EnrollmentRecord.id) \
+                                 .filter(EnrollmentRecord.pclass_id == pclass_id) \
+                                 .join(FacultyData, FacultyData.id == EnrollmentRecord.owner_id) \
+                                 .join(User, User.id == EnrollmentRecord.owner_id) \
+                                 .filter(FacultyData.affiliations.any(id=group_id),
+                                         User.active == True))
 
     # get total number of faculty belonging to this research group
-    total = get_count(db.session.query(FacultyData.id) \
-                      .join(User, User.id == FacultyData.id) \
-                      .filter(FacultyData.affiliations.any(id=group_id),
-                              User.active == True))
+    faculty_in_group = get_count(db.session.query(FacultyData.id) \
+                                 .join(User, User.id == FacultyData.id) \
+                                 .filter(FacultyData.affiliations.any(id=group_id),
+                                         User.active == True))
 
-    return project_count, len(faculty), enrolled, total, capacity, capacity_bounded
+    return {'projects': projects,
+            'pending': pending,
+            'queued': queued,
+            'rejected': rejected,
+            'approved': approved,
+            'faculty_offering': len(faculty_offering),
+            'faculty_enrolled': faculty_enrolled,
+            'faculty_in_group': faculty_in_group,
+            'capacity': capacity,
+            'capacity_bounded': capacity_bounded}
 
 
 def _capacity_delete_ProjectDescription_cache(desc):
@@ -697,25 +723,43 @@ def get_capacity_data(pclass):
         .all()
 
     data = []
-    total_projects = 0
-    total_faculty = 0
-    total_capacity = 0
-    total_capacity_bounded = True
+
+    projects = 0
+    pending = 0
+    queued = 0
+    rejected = 0
+    approved = 0
+
+    faculty_offering = 0
+    capacity = 0
+    capacity_bounded = True
 
     for group in groups:
-        proj_count, fac_count, enrolled, total, capacity, capacity_bounded = \
-            _compute_group_capacity_data(pclass.id, group.id)
+        group_data = _compute_group_capacity_data(pclass.id, group.id)
 
         # update totals
-        total_projects += proj_count
-        total_faculty += fac_count
-        total_capacity += capacity
-        total_capacity_bounded = total_capacity_bounded and capacity_bounded
+        projects += group_data['projects']
+        pending += group_data['pending']
+        queued += group_data['queued']
+        rejected += group_data['rejected']
+        approved += group_data['approved']
+
+        faculty_offering += group_data['faculty_offering']
+        capacity += group_data['capacity']
+        capacity_bounded = capacity_bounded and group_data['capacity_bounded']
 
         # store data for this research group
-        data.append( (group.make_label(group.name), proj_count, fac_count, enrolled, total, capacity, capacity_bounded) )
+        data.append({'label': group.make_label(group.name), 'data': group_data})
 
-    return data, total_projects, total_faculty, total_capacity, total_capacity_bounded
+    return {'data': data,
+            'projects': projects,
+            'pending': pending,
+            'queued': queued,
+            'rejected': rejected,
+            'approved': approved,
+            'faculty_offering': faculty_offering,
+            'capacity': capacity,
+            'capacity_bounded': capacity_bounded}
 
 
 def get_matching_dashboard_data():

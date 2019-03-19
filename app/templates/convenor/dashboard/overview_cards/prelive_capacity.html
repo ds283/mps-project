@@ -1,15 +1,26 @@
 {% macro prelive_capacity(data, sel_count) %}
-    {% set group_data, total_projects, total_faculty, total_capacity, total_capacity_bounded = data %}
+    {% set groups = data['data'] %}
+    {% set total_projects = data['projects'] %}
+    {% set total_faculty = data['faculty_offering'] %}
+    {% set total_capacity = data['capacity'] %}
+    {% set total_capacity_bounded = data['capacity_bounded'] %}
     <div class="row vertical-align capacity-table">
         <div class="col-xs-4"><strong>Research group</strong></div>
         <div class="col-xs-2"><strong>Projects offered</strong></div>
         <div class="col-xs-2"><strong>Student capacity</strong></div>
-        <div class="col-xs-2"><strong>Number of unique faculty</strong></div>
+        <div class="col-xs-2"><strong>Faculty offering projects</strong></div>
         <div class="col-xs-2"><strong>Enrollment</strong></div>
     </div>
     <hr class="intro-divider">
-    {% for group in group_data %}
-        {% set label, proj_count, fac_count, enrolled, total, capacity, bounded = group %}
+    {% for group in groups %}
+        {% set label = group['label'] %}
+        {% set group_data = group['data'] %}
+        {% set proj_count = group_data['projects'] %}
+        {% set fac_count = group_data['faculty_offering'] %}
+        {% set enrolled = group_data['faculty_enrolled'] %}
+        {% set total = group_data['faculty_in_group'] %}
+        {% set capacity = group_data['capacity'] %}
+        {% set bounded = group_data['bounded'] %}
         <div class="row vertical-align capacity-table">
             <div class="col-xs-4">{{ label|safe }}</div>
             <div class="col-xs-2">

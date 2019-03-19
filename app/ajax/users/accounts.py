@@ -88,6 +88,24 @@ def _element(user_id, current_user_id):
              'menu': render_template_string(menu, user=u, cuser=cu, pane='accounts')}
 
 
+def _process(user_id, current_user_id):
+    u = db.session.query(User).filter_by(id=user_id).one()
+
+    record = _element(user_id, current_user_id)
+
+    name = record['name']
+    display = name['display']
+    if u.currently_active:
+        display.replace('REPACTIVE', '<span class="label label-success">ACTIVE</span>', 1)
+    else:
+        display.replace('REPACTIVE', '', 1)
+
+    name.update({'display': display})
+    record.update({'name': name})
+
+    return record
+
+
 def _delete_cache_entry(user_id):
     ids = db.session.query(User.id).filter_by(active=True).all()
     for id in ids:
@@ -146,6 +164,6 @@ def _Role_delete_handler(mapper, connection, target):
 
 
 def build_accounts_data(user_ids, current_user_id):
-    data = [_element(u_id, current_user_id) for u_id in user_ids]
+    data = [_process(u_id, current_user_id) for u_id in user_ids]
 
     return jsonify(data)

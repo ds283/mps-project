@@ -103,14 +103,18 @@ def _User_delete_handler(mapper, connection, target):
         _delete_cache_entry(target.id)
 
 
-@listens_for(FacultyData, 'before_insert')
-def _FacultyData_insert_handler(mapper, connection, target):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
 @listens_for(FacultyData, 'before_update')
 def _FacultyData_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        # this turns out to be an extremely expensive flush, so we want to avoid it
+        # unless the contents of FacultyData are really changed. We instrument the affiliatons
+        # collection separately, and we don't care about other collections such as 'assessor_for'
+        if db.object_session(target).is_modified(target, include_collections=False):
+            _delete_cache_entry(target.id)
+
+
+@listens_for(FacultyData, 'before_delete')
+def _FacultyData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
 
@@ -123,12 +127,6 @@ def _FacultyData_affiliations_insert_handler(target, value, initiator):
 
 @listens_for(FacultyData.affiliations, 'remove')
 def _FacultyData_affiliations_remove_handler(target, value, initiator):
-    with db.session.no_autoflush:
-        _delete_cache_entry(target.id)
-
-
-@listens_for(FacultyData, 'before_delete')
-def _FacultyData_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.id)
 

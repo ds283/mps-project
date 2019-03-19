@@ -142,11 +142,7 @@ def _Role_update_handler(mapper, connection, target):
 @listens_for(Role, 'before_delete')
 def _Role_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        # this turns out to be an extremely expensive flush, so we want to avoid it
-        # if all that is happening is that we're creating a new user that modified Role's backref
-        # collection 'users'
-        if db.object_session(target).is_modified(target, include_collections=False):
-            _delete_cache_entry_role_change(target)
+        _delete_cache_entry_role_change(target)
 
 
 def build_accounts_data(user_ids, current_user_id):

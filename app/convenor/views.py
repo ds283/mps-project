@@ -2566,7 +2566,7 @@ def add_assessor(proj_id, pclass_id, mid):
 
     assessor = FacultyData.query.get_or_404(mid)
 
-    proj.add_assessor(assessor)
+    proj.add_assessor(assessor, autocommit=True)
 
     return redirect(request.referrer)
 
@@ -2592,7 +2592,7 @@ def remove_assessor(proj_id, pclass_id, mid):
 
     assessor = FacultyData.query.get_or_404(mid)
 
-    proj.remove_assessor(assessor)
+    proj.remove_assessor(assessor, autocommit=True)
 
     return redirect(request.referrer)
 
@@ -2620,10 +2620,12 @@ def attach_all_assessors(proj_id, pclass_id):
     pclass_filter = request.args.get('pclass_filter')
     group_filter = request.args.get('group_filter')
 
-    assessoes = filter_assessors(proj, state_filter, pclass_filter, group_filter)
+    assessors = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
-    for assessor in assessoes:
-        proj.add_assessor(assessor)
+    for assessor in assessors:
+        proj.add_assessor(assessor, autocommit=False)
+
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -2654,7 +2656,9 @@ def remove_all_assessors(proj_id, pclass_id):
     assessors = filter_assessors(proj, state_filter, pclass_filter, group_filter)
 
     for assessor in assessors:
-        proj.remove_assessor(assessor)
+        proj.remove_assessor(assessor, autocommit=False)
+
+    db.session.commit()
 
     return redirect(request.referrer)
 

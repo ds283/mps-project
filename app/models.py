@@ -4418,7 +4418,7 @@ class Project(db.Model):
         return self._is_assessor_for_at_least_one_pclass(faculty)
 
 
-    def add_assessor(self, faculty):
+    def add_assessor(self, faculty, autocommit=False):
         """
         Add a FacultyData instance as a 2nd marker
         :param faculty:
@@ -4428,10 +4428,12 @@ class Project(db.Model):
             return
 
         self.assessors.append(faculty)
-        db.session.commit()
+
+        if autocommit:
+            db.session.commit()
 
 
-    def remove_assessor(self, faculty):
+    def remove_assessor(self, faculty, autocommit=False):
         """
         Remove a FacultyData instance as a 2nd marker
         :param faculty:
@@ -4441,7 +4443,9 @@ class Project(db.Model):
             return
 
         self.assessors.remove(faculty)
-        db.session.commit()
+
+        if autocommit:
+            db.session.commit()
 
 
     def get_description(self, pclass):

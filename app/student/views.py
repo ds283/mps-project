@@ -20,8 +20,8 @@ from . import student
 from .forms import StudentFeedbackForm, StudentSettingsForm
 
 from ..database import db
-from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, SubmittingStudent, LiveProject, \
-    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, SubmissionPeriodRecord, \
+from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LiveProject, \
+    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, TransferableSkill, \
     User, EmailNotification, add_notification
 from ..task_queue import register_task
 
@@ -179,11 +179,22 @@ def browse_projects(id):
         return redirect(url_for('student.dashboard'))
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
-    skills = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    groups = db.session.query(ResearchGroup) \
+        .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+
+    skills = db.session.query(TransferableSkill) \
+        .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
+        .filter(TransferableSkill.active == True, SkillGroup.active == True) \
+        .order_by(SkillGroup.name.asc(), TransferableSkill.name.asc()).all()
+
+    skill_list = {}
+    for skill in skills:
+        if skill_list.get(skill.group.name, None) is None:
+            skill_list[skill.group.name] = []
+        skill_list[skill.group.name].append(skill)
 
     return render_template('student/browse_projects.html', sel=sel, config=sel.config,
-                           groups=groups, skills=skills)
+                           groups=groups, skill_groups=sorted(skill_list.keys()), skill_list=skill_list)
 
 
 @student.route('/projects_ajax/<int:id>')
@@ -246,11 +257,10 @@ def clear_group_filters(id):
     return redirect(request.referrer)
 
 
-@student.route('/add_skill_filter/<id>/<gid>')
+@student.route('/add_skill_filter/<id>/<skill_id>')
 @roles_accepted('student')
-def add_skill_filter(id, gid):
-
-    skill = SkillGroup.query.get_or_404(gid)
+def add_skill_filter(id, skill_id):
+    skill = TransferableSkill.query.get_or_404(skill_id)
     sel = SelectingStudent.query.get_or_404(id)
 
     if skill not in sel.skill_filters:
@@ -260,11 +270,10 @@ def add_skill_filter(id, gid):
     return redirect(request.referrer)
 
 
-@student.route('/remove_skill_filter/<id>/<gid>')
+@student.route('/remove_skill_filter/<id>/<skill_id>')
 @roles_accepted('student')
-def remove_skill_filter(id, gid):
-
-    skill = SkillGroup.query.get_or_404(gid)
+def remove_skill_filter(id, skill_id):
+    skill = TransferableSkill.query.get_or_404(skill_id)
     sel = SelectingStudent.query.get_or_404(id)
 
     if skill in sel.skill_filters:
@@ -277,7 +286,6 @@ def remove_skill_filter(id, gid):
 @student.route('/clear_skill_filters/<id>')
 @roles_accepted('student')
 def clear_skill_filters(id):
-
     sel = SelectingStudent.query.get_or_404(id)
 
     sel.skill_filters = []
@@ -331,7 +339,6 @@ def view_project(sid, pid):
 @student.route('/add_bookmark/<int:sid>/<int:pid>')
 @roles_accepted('student', 'admin', 'root')
 def add_bookmark(sid, pid):
-
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
 

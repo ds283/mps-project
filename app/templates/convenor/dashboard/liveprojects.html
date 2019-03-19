@@ -96,7 +96,7 @@
             Live projects for selection: <strong>{{ pclass.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
         </div>
         <div class="panel-body">
-            {{ filter_block(filter_record, groups, skills, 'convenor.clear_group_filters', 'convenor.add_group_filter', 'convenor.remove_group_filter', 'convenor.clear_skill_filters', 'convenor.add_skill_filter', 'convenor.remove_skill_filter') }}
+            {{ filter_block(filter_record, groups, skill_groups, skill_list, 'convenor.clear_group_filters', 'convenor.add_group_filter', 'convenor.remove_group_filter', 'convenor.clear_skill_filters', 'convenor.add_skill_filter', 'convenor.remove_skill_filter') }}
 
             <div class="well">
                 <p>Filter by status</p>

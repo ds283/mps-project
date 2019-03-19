@@ -393,9 +393,9 @@ convenor_group_filter_table = db.Table('convenor_group_filters',
                                        db.Column('research_group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True))
 
 # assocation table: active skill group filters
-convenor_skill_filter_table = db.Table('convenor_skill_filters',
+convenor_skill_filter_table = db.Table('convenor_tskill_filters',
                                        db.Column('owner_id', db.Integer(), db.ForeignKey('filters.id'), primary_key=True),
-                                       db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True))
+                                       db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True))
 
 
 # STUDENT FILTERS
@@ -406,9 +406,9 @@ sel_group_filter_table = db.Table('sel_group_filters',
                                   db.Column('research_group_id', db.Integer(), db.ForeignKey('research_groups.id'), primary_key=True))
 
 # association table: active skill group filters for selectors
-sel_skill_filter_table = db.Table('sel_skill_filters',
+sel_skill_filter_table = db.Table('sel_tskill_filters',
                                   db.Column('selector_id', db.Integer(), db.ForeignKey('selecting_students.id'), primary_key=True),
-                                  db.Column('skill_group_id', db.Integer(), db.ForeignKey('skill_groups.id'), primary_key=True))
+                                  db.Column('skill_id', db.Integer(), db.ForeignKey('transferable_skills.id'), primary_key=True))
 
 
 # MATCHING
@@ -5683,7 +5683,7 @@ class SelectingStudent(db.Model):
                                     backref=db.backref('filtering_students', lazy='dynamic'))
 
     # transferable skill group filters applied
-    skill_filters = db.relationship('SkillGroup', secondary=sel_skill_filter_table, lazy='dynamic',
+    skill_filters = db.relationship('TransferableSkill', secondary=sel_skill_filter_table, lazy='dynamic',
                                     backref=db.backref('filtering_students', lazy='dynamic'))
 
 
@@ -7070,7 +7070,7 @@ class FilterRecord(db.Model):
     group_filters = db.relationship('ResearchGroup', secondary=convenor_group_filter_table, lazy='dynamic')
 
     # active transferable skill group filters
-    skill_filters = db.relationship('SkillGroup', secondary=convenor_skill_filter_table, lazy='dynamic')
+    skill_filters = db.relationship('TransferableSkill', secondary=convenor_skill_filter_table, lazy='dynamic')
 
 
 @cache.memoize()

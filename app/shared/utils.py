@@ -757,7 +757,7 @@ def filter_projects(plist, groups, skills, getter=None, setter=None):
                 inner_match = False
 
                 for sk in proj.skills:
-                    if sk.group_id == skill.id:
+                    if sk.id == skill.id:
                         inner_match = True
                         break
 

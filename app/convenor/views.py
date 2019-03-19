@@ -313,16 +313,27 @@ def attached(id):
     data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
-    skills = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    groups = db.session.query(ResearchGroup) \
+        .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+
+    skills = db.session.query(TransferableSkill) \
+        .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
+        .filter(TransferableSkill.active == True, SkillGroup.active == True) \
+        .order_by(SkillGroup.name.asc(), TransferableSkill.name.asc()).all()
+
+    skill_list = {}
+    for skill in skills:
+        if skill_list.get(skill.group.name, None) is None:
+            skill_list[skill.group.name] = []
+        skill_list[skill.group.name].append(skill)
 
     # get filter record
     filter_record = get_convenor_filter_record(config)
 
     return render_template('convenor/dashboard/attached.html', pane='attached',
                            pclass=pclass, config=config, current_year=current_year, convenor_data=data,
-                           groups=groups, skills=skills, filter_record=filter_record,
-                           valid_filter=valid_filter)
+                           groups=groups, skill_groups=sorted(skill_list.keys()), skill_list=skill_list,
+                           filter_record=filter_record, valid_filter=valid_filter)
 
 
 @convenor.route('/attached_ajax/<int:id>', methods=['GET', 'POST'])
@@ -1302,16 +1313,27 @@ def liveprojects(id):
     data = get_convenor_dashboard_data(pclass, config)
 
     # supply list of transferable skill groups and research groups that can be filtered against
-    groups = ResearchGroup.query.filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
-    skills = SkillGroup.query.filter_by(active=True).order_by(SkillGroup.name.asc()).all()
+    groups = db.session.query(ResearchGroup) \
+        .filter_by(active=True).order_by(ResearchGroup.name.asc()).all()
+
+    skills = db.session.query(TransferableSkill) \
+        .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
+        .filter(TransferableSkill.active == True, SkillGroup.active == True) \
+        .order_by(SkillGroup.name.asc(), TransferableSkill.name.asc()).all()
+
+    skill_list = {}
+    for skill in skills:
+        if skill_list.get(skill.group.name, None) is None:
+            skill_list[skill.group.name] = []
+        skill_list[skill.group.name].append(skill)
 
     # get filter record
     filter_record = get_convenor_filter_record(config)
 
     return render_template('convenor/dashboard/liveprojects.html', pane='live', subpane='list',
                            pclass=pclass, config=config, convenor_data=data, current_year=current_year,
-                           groups=groups, skills=skills, filter_record=filter_record,
-                           state_filter=state_filter)
+                           groups=groups, skill_groups=sorted(skill_list.keys()), skill_list=skill_list,
+                           filter_record=filter_record, state_filter=state_filter)
 
 
 @convenor.route('/liveprojects_ajax/<int:id>', methods=['GET', 'POST'])
@@ -3736,10 +3758,10 @@ def clear_group_filters(id):
     return redirect(request.referrer)
 
 
-@convenor.route('/add_skill_filter/<int:id>/<int:gid>')
+@convenor.route('/add_skill_filter/<int:id>/<int:skill_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def add_skill_filter(id, gid):
-    skill = SkillGroup.query.get_or_404(gid)
+def add_skill_filter(id, skill_id):
+    skill = TransferableSkill.query.get_or_404(skill_id)
 
     # id is a FilterRecord
     record = FilterRecord.query.get_or_404(id)
@@ -3755,10 +3777,10 @@ def add_skill_filter(id, gid):
     return redirect(request.referrer)
 
 
-@convenor.route('/remove_skill_filter/<int:id>/<int:gid>')
+@convenor.route('/remove_skill_filter/<int:id>/<int:skill_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def remove_skill_filter(id, gid):
-    skill = SkillGroup.query.get_or_404(gid)
+def remove_skill_filter(id, skill_id):
+    skill = TransferableSkill.query.get_or_404(skill_id)
 
     # id is a FilterRecord
     record = FilterRecord.query.get_or_404(id)

@@ -177,7 +177,7 @@
     </div>
 {% endmacro %}
 
-{% macro filter_block(config, groups, skills, clear_group, add_group, remove_group, clear_skill, add_skill, remove_skill) %}
+{% macro filter_block(config, groups, skill_groups, skill_list, clear_group, add_group, remove_group, clear_skill, add_skill, remove_skill) %}
     <div class="panel-group" id="accordion">
         <div class="panel panel-default">
             <div class="panel-heading">
@@ -250,27 +250,45 @@
                                 </div>
                             </div>
                             <h4>
-                                {% for skill in skills %}
-                                    {% if skill in config.skill_filters %}
-                                        <a href="{{ url_for(remove_skill, id=config.id, gid=skill.id) }}"
-                                           class="label label-default selection-label" style="{{ skill.make_CSS_style()|safe }}">
-                                            <i class="fa fa-times"></i>
-                                            {{ skill.name }}
-                                        </a>
+                                {% for sgroup in skill_groups %}
+                                    {% if loop.index > 1 %}
+                                        <hr class="intro-divider">
                                     {% endif %}
+                                    <div class="skill-group-heading">
+                                        {{ sgroup }}
+                                    </div>
+                                    {% set skills = skill_list[sgroup] %}
+                                    {% for skill in skills  %}
+                                        {% if skill in config.skill_filters %}
+                                            <a href="{{ url_for(remove_skill, id=config.id, skill_id=skill.id) }}"
+                                               class="label label-default selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                                <i class="fa fa-times"></i>
+                                                {{ skill.name }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
                                 {% endfor %}
                             </h4>
                         </div>
                         <div class="panel-footer">
                             <h4>
-                                {% for skill in skills %}
-                                    {% if skill not in config.skill_filters %}
-                                        <a href="{{ url_for(add_skill, id=config.id, gid=skill.id) }}"
-                                           class="label label-default selection-label" style="{{ skill.make_CSS_style()|safe }}">
-                                            <i class="fa fa-plus"></i>
-                                            {{ skill.name }}
-                                        </a>
+                                {% for sgroup in skill_groups %}
+                                    {% if loop.index > 1 %}
+                                        <hr class="intro-divider">
                                     {% endif %}
+                                    <div class="skill-group-heading">
+                                        {{ sgroup }}
+                                    </div>
+                                    {% set skills = skill_list[sgroup] %}
+                                    {% for skill in skills %}
+                                        {% if skill not in config.skill_filters %}
+                                            <a href="{{ url_for(add_skill, id=config.id, skill_id=skill.id) }}"
+                                               class="label label-default selection-label" style="{{ skill.group.make_CSS_style()|safe }}">
+                                                <i class="fa fa-plus"></i>
+                                                {{ skill.name }}
+                                            </a>
+                                        {% endif %}
+                                    {% endfor %}
                                 {% endfor %}
                             </h4>
                         </div>

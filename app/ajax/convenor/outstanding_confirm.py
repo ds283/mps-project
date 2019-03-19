@@ -13,14 +13,14 @@ from flask import jsonify, render_template_string
 
 _projects = \
 """
-<div style="margin-bottom: 10px;">
+<div class="outstanding-confirm-group">
     {{ f.projects_offered_label(pclass)|safe }}
     {{ f.projects_unofferable_label|safe }}
 </div>
 {% for p in config.project_confirmations_outstanding(f) %}
     {% set offerable = p.is_offerable %}
-    <div style="margin-bottom: 18px;">
-        <div style="margin-bottom: 8px;">
+    <div class="outstanding-confirm-group">
+        <div class="outstanding-confirm-row">
             {{ loop.index }} &ndash;
             <a href="{{ url_for('faculty.project_preview', id=p.id, pclass=pclass.id, show_selector=0, text=text, url=url) }}">
                 {{ p.name }}
@@ -29,7 +29,7 @@ _projects = \
                 <i class="fa fa-exclamation-triangle" style="color:red;"></i>
             {% endif %}
         </div>
-        <div>
+        <div class="outstanding-confirm-row">
             {% if offerable %}
                 {% if p.active %}
                     <span class="label label-success"><i class="fa fa-check"></i> Project active</span>
@@ -70,8 +70,8 @@ _projects = \
                         {% endif %}
                     {% endif %}
                 {% endif %}
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 {% else %}
     <span class="label label-danger">No projects</span>

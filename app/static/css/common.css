@@ -86,6 +86,20 @@ p.copyright {
     margin-top: 12px;
 }
 
+.outstanding-confirm-group {
+}
+
+.outstanding-confirm-group + .outstanding-confirm-group {
+    margin-top: 12px;
+}
+
+.outstanding-confirm-row {
+}
+
+.outstanding-confirm-row + .outstanding-confirm-row {
+    margin-top: 4px;
+}
+
 .filter-btn {
     margin-bottom: 5px;
 }

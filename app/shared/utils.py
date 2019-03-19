@@ -492,7 +492,7 @@ def get_convenor_dashboard_data(pclass, config):
     fac_count = get_count(fac_query.filter(FacultyData.enrollments.any(pclass_id=pclass.id)))
 
     attached_projects = db.session.query(Project) \
-        .filter(Project.active,
+        .filter(Project.active == True,
                 Project.project_classes.any(id=pclass.id)) \
         .join(User, User.id == Project.owner_id) \
         .join(FacultyData, FacultyData.id == Project.owner_id) \
@@ -517,10 +517,18 @@ def get_convenor_dashboard_data(pclass, config):
 
 @cache.memoize()
 def _compute_group_capacity_data(pclass_id, group_id):
-    # filter all 'attached' projects that are tagged with this research group
+    # filter all 'attached' projects that are tagged with this research group, belonging to active faculty
+    # who are normally enrolled
     ps = db.session.query(Project) \
-        .filter(Project.active == True, Project.project_classes.any(id=pclass_id),
-                Project.group_id == group_id)
+        .filter(Project.active == True,
+                Project.project_classes.any(id=pclass_id),
+                Project.group_id == group_id) \
+        .join(User, User.id == Project.owner_id) \
+        .join(FacultyData, FacultyData.id == Project.owner_id) \
+        .join(EnrollmentRecord,
+              and_(EnrollmentRecord.pclass_id == pclass_id, EnrollmentRecord.owner_id == Project.owner_id)) \
+        .filter(User.active) \
+        .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED)
 
     # set of faculty members offering projects
     faculty_offering = set()

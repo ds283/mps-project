@@ -27,7 +27,13 @@
                 {% else %}
                     <p><strong>All projects have passed approvals.</strong></p>
                 {% endif %}
-                {{ approvals_state(capacity_data) }}
+                <div class="row">
+                    <div class="col-xs-1"></div>
+                    <div class="col-xs-10">
+                        {{ approvals_state(capacity_data) }}
+                    </div>
+                    <div class="col-xs-1"></div>
+                </div>
                 <hr class="intro-divider">
                 {{ date_field(golive_form.live_deadline) }}
                 <div class="row">

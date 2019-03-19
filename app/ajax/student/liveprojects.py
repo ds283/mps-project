@@ -125,11 +125,7 @@ _project_skills = \
         {% if skill.group is none %}
             {{ skill.make_label()|safe }}
         {% else %}
-            <a href="{{ url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) }}"
-               class="label label-default" style="{{ skill.group.make_CSS_style() }}">
-               {% if skill.group.add_group %}{{ skill.group.name }}:{% endif %}
-               {{ skill.name }}
-            </a>
+            <a href="{{ url_for('student.add_skill_filter', id=sel.id, skill_id=skill.id) }}" class="label label-default" style="{{ skill.group.make_CSS_style() }}">{%- if skill.group.add_group -%}{{ skill.group.name }}:{% endif %} {{ skill.name }}</a>
         {% endif %}
     {% endif %}
 {% endfor %}

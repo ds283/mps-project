@@ -72,6 +72,20 @@ p.copyright {
     font-weight: lighter;
 }
 
+.skill-group-heading {
+    font-size: 15px;
+    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: lighter;
+    margin-bottom: 6px;
+}
+
+.skills-filter-container {
+}
+
+.skills-filter-container + .skills-filter-container {
+    margin-top: 12px;
+}
+
 .filter-btn {
     margin-bottom: 5px;
 }

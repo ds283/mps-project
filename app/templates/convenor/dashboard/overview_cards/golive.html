@@ -11,9 +11,7 @@
             <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST"
                   name="golive-form">
                 {% set total_projects = capacity_data['projects'] %}
-                <strong>{{ total_projects }}</strong> projects are
-                currently
-                available to go live.
+                <strong>{{ total_projects }}</strong> projects are currently available to go live.
                 {% set pending = capacity_data['pending'] %}
                 {% set queued = capacity_data['queued'] %}
                 {% set approved = capacity_data['approved'] %}
@@ -27,7 +25,7 @@
                 {% else %}
                     <p><strong>All projects have passed approvals.</strong></p>
                 {% endif %}
-                <div class="row" style="margin-top: 10px;">
+                <div class="row" style="margin-top: 20px;">
                     <div class="col-xs-2"></div>
                     <div class="col-xs-8">
                         {{ approvals_state(capacity_data) }}

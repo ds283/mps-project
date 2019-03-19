@@ -9,10 +9,10 @@
 #
 
 from app import create_app, db
-from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, PresentationSession, \
+from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
     SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, ProjectClassConfig, \
-    StudentDataWorkflowHistory, ProjectDescriptionWorkflowHistory, MainConfig
+    StudentDataWorkflowHistory, ProjectDescriptionWorkflowHistory, MainConfig, StudentBatch
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime
@@ -259,6 +259,16 @@ with app.app_context():
         pass
 
     print('## Reset ScheduleAttempt instances at {now}'.format(now=datetime.now().ctime()))
+
+    try:
+        in_progress_batches = db.session.query(StudentBatch).filter_by(celery_finished=False).all()
+        for item in in_progress_batches:
+            item.celery_finished = True
+            item.success = False
+    except SQLAlchemyError:
+        pass
+
+    print('## Reset StudentBatch instances at {now}'.format(now=datetime.now().ctime()))
 
     # reset last precompute time for all users; this will ensure that expensive views
     # are precomputed for all users when they first make contact with the web app after

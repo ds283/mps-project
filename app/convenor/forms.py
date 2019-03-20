@@ -28,7 +28,7 @@ class GoLiveForm(Form):
     live_and_close = SubmitField('Go live and immediately close')
 
     # deadline field
-    live_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+    live_deadline = DateField('Deadline for student submissions', format='%d/%m/%Y', validators=[InputRequired()])
 
 
 class IssueFacultyConfirmRequestForm(Form):

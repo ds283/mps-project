@@ -36,7 +36,6 @@
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.issue_confirm_requests', id=config.id) }}"
                   method="POST" name="issue-form">
-                <p>The current deadline is</p>
                 {{ date_field(issue_form.request_deadline) }}
                 <div class="row">
                     <div class="col-xs-12">

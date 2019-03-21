@@ -26,18 +26,21 @@ def register_send_log_email(celery, mail):
 
     # set up deferred email sender for Flask-Email; note that Flask-Email's Message object is not
     # JSON-serializable so we have to pickle instead
-    @celery.task(serializer='pickle', default_retry_delay=10)
-    def send_email(task_id, msg):
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=10)
+    def send_email(self, task_id, msg):
         if not current_app.config.get('EMAIL_IS_LIVE', False):
             raise Ignore()
 
-        progress_update(task_id, TaskRecord.RUNNING, 40, "Sending email", autocommit=True)
-        mail.send(msg)
+        progress_update(task_id, TaskRecord.RUNNING, 40, "Sending email...", autocommit=True)
+        try:
+            mail.send(msg)
+        except TimeoutError:
+            raise self.retry()
 
 
     @celery.task(bind=True, serializer='pickle', default_retry_delay=10)
     def log_email(self, task_id, msg):
-        progress_update(task_id, TaskRecord.RUNNING, 80, "Logging email in database", autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 80, "Logging email in database...", autocommit=True)
 
         if not current_app.config.get('EMAIL_IS_LIVE', False):
             raise Ignore()
@@ -81,15 +84,15 @@ def register_send_log_email(celery, mail):
         progress_update(task_id, TaskRecord.FAILURE, 0, "Task failed", autocommit=True)
 
 
-    @celery.task(serializer='pickle')
-    def send_log_email(task_id, msg):
-        progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to send email", autocommit=True)
+    @celery.task(bind=True, serializer='pickle')
+    def send_log_email(self, task_id, msg):
+        progress_update(task_id, TaskRecord.RUNNING, 0, "Preparing to send email...", autocommit=True)
 
         # only send email if the EMAIL_IS_LIVE key is set in app configuration
         if current_app.config.get('EMAIL_IS_LIVE', False):
             seq = chain(send_email.si(task_id, msg), log_email.si(task_id, msg),
                         email_success.si(task_id)).on_error(email_failure.si(task_id))
-            seq.apply_async()
+            self.replace(seq)
 
         else:
             print(msg)

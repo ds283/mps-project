@@ -43,7 +43,7 @@ _menu = \
             </li>
         {% endif %}
 
-        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.has_bookmarks %}
+        {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.has_bookmarks %}
             <li>
                 <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
                     <i class="fa fa-trash"></i> Delete bookmarks
@@ -83,7 +83,7 @@ _menu = \
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Meeting requests</li>
-        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_pending > 0 %}
+        {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_pending > 0 %}
             <li>
                 <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
                     <i class="fa fa-check"></i> Confirm all requests
@@ -109,7 +109,7 @@ _menu = \
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Meeting confirmations</li>
-        {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_confirmed > 0 %}
+        {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_confirmed > 0 %}
             <li>
                 <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
                     <i class="fa fa-trash"></i> Delete confirmations
@@ -223,6 +223,9 @@ _name = \
 
 
 def selectors_data(students, config):
+    # cache selector lifecycle information
+    state = config.selector_lifecycle
+
     data = [{'name': {
                 'display': render_template_string(_name, sel=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
@@ -240,7 +243,7 @@ def selectors_data(students, config):
                  'value': s.number_pending + s.number_confirmed
              },
              'submitted': render_template_string(_submitted, sel=s),
-             'menu': render_template_string(_menu, student=s, config=config)} for s in students]
+             'menu': render_template_string(_menu, student=s, config=config, state=state)} for s in students]
 
     return jsonify(data)
 

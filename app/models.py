@@ -2986,6 +2986,10 @@ class ProjectClassConfig(db.Model):
 
 
     def is_confirmation_required(self, faculty):
+        # confirmation not required if project class doesn't use it
+        if not self.project_class.require_confirm:
+            return False
+
         if isinstance(faculty, User):
             fac_data = faculty.faculty_data
         elif isinstance(faculty, int):
@@ -2995,10 +2999,6 @@ class ProjectClassConfig(db.Model):
 
         if not isinstance(fac_data, FacultyData) or fac_data is None:
             raise RuntimeError('FacultyData object could not be loaded or interpreted')
-
-        # confirmation not required if project class doesn't use it
-        if not self.project_class.require_confirm:
-            return False
 
         # confirmation required if there are outstanding project descriptions needing confirmation,
         # or if this user hasn't yet given confirmation for ths configuration
@@ -3026,7 +3026,8 @@ class ProjectClassConfig(db.Model):
 
             if message:
                 flash('Thank you. Your confirmation that projects belonging to '
-                      'class "{name}" are ready to publish has been recorded.'.format(name=self.project_class.name), 'info')
+                      'class "{name}" are ready to publish has been recorded.'.format(name=self.project_class.name),
+                      'info')
 
         if commit:
             db.session.commit()

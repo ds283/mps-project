@@ -126,7 +126,7 @@ def _User_delete_handler(mapper, connection, target):
 def _FacultyData_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         # this turns out to be an extremely expensive flush, so we want to avoid it
-        # unless the contents of FacultyData are really changed. We instrument the affiliatons
+        # unless the contents of FacultyData are really changed. We instrument the affiliations
         # collection separately, and we don't care about other collections such as 'assessor_for'
         if db.object_session(target).is_modified(target, include_collections=False):
             _delete_cache_entry(target.id)

@@ -108,7 +108,7 @@
                     </span>
                 </div>
             </div>
-            {% if nproj > 0 %}
+            {% if nproj > 0 and sel_state < config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
                 {% for project in offered_projects %}
                     {% set available = project.is_offerable %}
                     {% set desc = project.get_description(pclass.id) %}

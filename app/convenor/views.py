@@ -459,7 +459,7 @@ def faculty(id):
                            faculty=faculty, convenor_data=data, enroll_filter=enroll_filter, state_filter=state_filter)
 
 
-@convenor.route('faculty_ajax/<int:id>', methods=['GET', 'POST'])
+@convenor.route('faculty_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def faculty_ajax(id):
 
@@ -614,7 +614,7 @@ def selectors(id):
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
         .order_by(DegreeType.name.asc(),
                   DegreeProgramme.name.asc()).all()
-    progs = [ rec for rec in all_progs if rec.id in programmes ]
+    progs = [rec for rec in all_progs if rec.id in programmes]
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -624,7 +624,7 @@ def selectors(id):
                            cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter)
 
 
-@convenor.route('/selectors_ajax/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/selectors_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def selectors_ajax(id):
     """
@@ -632,7 +632,6 @@ def selectors_ajax(id):
     :param id:
     :return:
     """
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
@@ -668,13 +667,13 @@ def selectors_ajax(id):
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
     if state_filter == 'submitted':
-        data = [ rec for rec in selectors.all() if rec.has_submitted ]
+        data = [rec for rec in selectors.all() if rec.has_submitted]
     elif state_filter == 'bookmarks':
-        data = [ rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks ]
+        data = [rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks]
     elif state_filter == 'none':
-        data = [ rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks ]
+        data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
     elif state_filter == 'confirmations':
-        data = [ rec for rec in selectors.all() if rec.number_pending > 0 ]
+        data = [rec for rec in selectors.all() if rec.number_pending > 0]
     else:
         data = selectors.all()
 
@@ -684,16 +683,12 @@ def selectors_ajax(id):
 @convenor.route('/enroll_selectors/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def enroll_selectors(id):
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
-
-    # get current academic year
-    current_year = get_current_year()
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
@@ -744,7 +739,7 @@ def enroll_selectors(id):
                            cohort_filter=cohort_filter, prog_filter=prog_filter)
 
 
-@convenor.route('/enroll_selectors_ajax/<int:id>', methods=['GET', 'POST'])
+@convenor.route('/enroll_selectors_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def enroll_selectors_ajax(id):
     """
@@ -752,7 +747,6 @@ def enroll_selectors_ajax(id):
     :param id:
     :return:
     """
-
     # get details for project class
     pclass = ProjectClass.query.get_or_404(id)
 

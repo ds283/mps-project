@@ -640,7 +640,7 @@ def selectors_ajax(id):
     if not validate_is_convenor(pclass):
         return jsonify({})
 
-    cohort_filter = request.args.get('c        ohort_filter')
+    cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
 

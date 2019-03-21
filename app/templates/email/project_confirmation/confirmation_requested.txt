@@ -53,10 +53,6 @@ It would be very helpful if you could provide your response
 by {{ config.request_deadline.strftime("%a %d %b %Y") }} at latest.
 {%- endif %}
 
-Online help is available at https://mpsprojects.co.uk/faculty-help/.
-You can also find a link to these help pages in the bottom right
-of any page in the web app, via the link 'Faculty help pages'.
-
 You will receive one copy of this email for each project type in which you
 are enrolled as a supervisor. Please note that you need to provide confirmation
 for each project type individually.

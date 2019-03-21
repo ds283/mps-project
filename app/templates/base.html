@@ -591,10 +591,6 @@
                     <span class="navbar-text small" style="float: right;">You
                         are viewing as <i class="fa fa-user"></i>
                         {{ current_user.name }} | <a href="{{ url_for('auth.logout') }}" {% if current_user.theme == current_user.THEME_FLAT or current_user.theme == current_user.THEME_DARK %}style="color: antiquewhite;"{% endif %}>Return to my normal role</a></span>
-                {% else %}
-                    {% if current_user.has_role('faculty') %}
-                        <span class="navbar-text small" style="float: right;"><a href="https://mpsprojects.co.uk/faculty-help/">Faculty help pages</a></span>
-                    {% endif %}
                 {% endif %}
             </div>
         </div>

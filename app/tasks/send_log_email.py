@@ -92,7 +92,7 @@ def register_send_log_email(celery, mail):
         if current_app.config.get('EMAIL_IS_LIVE', False):
             seq = chain(send_email.si(task_id, msg), log_email.si(task_id, msg),
                         email_success.si(task_id)).on_error(email_failure.si(task_id))
-            self.replace(seq)
+            raise self.replace(seq)
 
         else:
             print(msg)

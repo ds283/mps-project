@@ -47,6 +47,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import date, datetime, timedelta
+from dateutil import parser
 
 
 _marker_menu = \
@@ -3051,38 +3052,119 @@ def go_live(id):
     if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
-    year = get_current_year()
+    if config.live:
+        flash('A request to Go Live was ignored, because project "{name}" is already '
+              'live.'.format(name=config.project_class.name), 'error')
+        return request.referrer
+
     form = GoLiveForm(request.form)
 
     if form.is_submitted():
         # schedule an asynchronous go-live task
+        deadline = form.live_deadline.data
 
-        # get golive task instance
-        celery = current_app.extensions['celery']
-        golive = celery.tasks['app.tasks.go_live.pclass_golive']
-        golive_fail = celery.tasks['app.tasks.go_live.golive_fail']
-        golive_close = celery.tasks['app.tasks.go_live.golive_close']
-
-        # register Go Live as a new background task and push it to the celery scheduler
-        task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=config.name,
-                                                                          yra=year, yrb=year+1),
-                                owner=current_user,
-                                description='Perform Go Live of "{proj}"'.format(proj=config.name))
-
-        if form.live.data:
-            golive.apply_async(args=(task_id, id, current_user.id, form.live_deadline.data, False),
-                               task_id=task_id,
-                               link_error=golive_fail.si(task_id, current_user.id))
-
-        elif form.live_and_close.data:
-            seq = chain(golive.si(task_id, id, current_user.id, form.live_deadline.data, True),
-                        golive_close.si(id, current_user.id)).on_error(golive_fail.si(task_id, current_user.id))
-            seq.apply_async()
+        if deadline is None:
+            flash('A request to Go Live was ignored because no deadline was entered.', 'error')
 
         else:
-            raise RuntimeError('Unknown GoLive submission button')
+            return redirect(url_for('convenor.confirm_go_live', id=id, close=int(bool(form.live_and_close.data)),
+                                    deadline=deadline.isoformat()))
 
     return redirect(request.referrer)
+
+
+@convenor.route('/confirm_go_live/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def confirm_go_live(id):
+    # get details for current pclass configuration
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    if config.live:
+        flash('A request to Go Live was ignored, because project "{name}" is already '
+              'live.'.format(name=config.project_class.name), 'error')
+        return request.referrer
+
+    close = bool(int(request.args.get('close', 0)))
+    deadline = request.args.get('deadline', None)
+
+    if deadline is None:
+        flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
+
+    deadline = parser.parse(deadline).date()
+
+    year = get_current_year()
+
+    title = 'Go Live for "{name}" {yeara}&ndash;{yearb}'.format(name=config.project_class.name,
+                                                                yeara=year, yearb=year + 1)
+    action_url = url_for('convenor.perform_go_live', id=id, close=int(close),
+                         deadline=deadline.isoformat())
+    message = '<p>Please confirm that you wish to Go Live for project class "{name}" {yeara}&ndash;{yearb}, ' \
+              'with deadline {deadline}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=config.project_class.name,
+                                                            yeara=year, yearb=year + 1,
+                                                            deadline=deadline.strftime("%a %d %b %Y"))
+    submit_label = 'Go Live'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/perform_go_live/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_go_live(id):
+    # get details for current pclass configuration
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    if config.live:
+        flash('A request to Go Live was ignored, because project "{name}" is already '
+              'live.'.format(name=config.project_class.name))
+        return request.referrer
+
+    close = bool(int(request.args.get('close', 0)))
+    deadline = request.args.get('deadline', None)
+
+    if deadline is None:
+        flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
+
+    deadline = parser.parse(deadline).date()
+
+    year = get_current_year()
+
+    celery = current_app.extensions['celery']
+    golive = celery.tasks['app.tasks.go_live.pclass_golive']
+    golive_fail = celery.tasks['app.tasks.go_live.golive_fail']
+    golive_close = celery.tasks['app.tasks.go_live.golive_close']
+
+    # register Go Live as a new background task and push it to the celery scheduler
+    task_id = register_task('Go Live for "{proj}" {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year + 1),
+                            owner=current_user, description='Perform Go Live of "{proj}"'.format(proj=config.name))
+
+    if close:
+        seq = chain(golive.si(task_id, id, current_user.id, deadline, True),
+                    golive_close.si(id, current_user.id)).on_error(golive_fail.si(task_id, current_user.id))
+        seq.apply_async()
+
+    else:
+        golive.apply_async(args=(task_id, id, current_user.id, deadline, False),
+                           task_id=task_id, link_error=golive_fail.si(task_id, current_user.id))
+
+    return redirect(url_for('convenor.overview', id=config.pclass_id))
 
 
 @convenor.route('/close_selections/<int:id>', methods=['GET', 'POST'])

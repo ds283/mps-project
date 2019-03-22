@@ -25,7 +25,8 @@ from ..shared.convenor import add_liveproject
 from celery import chain, group
 from celery.exceptions import Ignore
 
-from datetime import datetime
+from datetime import datetime, date
+from dateutil import parser
 
 
 def register_golive_tasks(celery):
@@ -33,6 +34,12 @@ def register_golive_tasks(celery):
     @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
     def pclass_golive(self, task_id, config_id, convenor_id, deadline, auto_close):
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to Go Live...', autocommit=True)
+
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
 
         # get database records for this project class
         try:
@@ -120,8 +127,8 @@ def register_golive_tasks(celery):
         # if this is a go-live-then-close job, don't bother sending email notifications
         if not auto_close:
             front_chain = chain(front_chain,
-                                golive_notify_faculty.si(task_id, config_id, convenor_id),
-                                golive_notify_selectors.si(task_id, config_id, convenor_id))
+                                golive_notify_faculty.si(task_id, config_id, convenor_id, deadline),
+                                golive_notify_selectors.si(task_id, config_id, convenor_id, deadline))
 
         seq = chain(front_chain,
                     golive_finalize.si(task_id, config_id, convenor_id, deadline)).on_error(golive_fail.si(task_id, convenor_id))
@@ -140,28 +147,14 @@ def register_golive_tasks(celery):
 
 
     @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
-    def golive_update_db(self, task_id, config_id, convenor_id, deadline):
-        progress_update(task_id, TaskRecord.RUNNING, 50, 'Updating database records...', autocommit=False)
+    def golive_notify_faculty(self, task_id, config_id, convenor_id, deadline):
+        progress_update(task_id, TaskRecord.RUNNING, 60, 'Sending email notifications to faculty supervisors...', autocommit=True)
 
-        try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
-            raise self.retry()
-
-        if config is None:
-            self.update_state('FAILURE', meta='Could not load database records')
-            raise Ignore()
-
-        try:
-            db.session.commit()
-        except SQLAlchemyError:
-            db.session.rollback()
-            raise self.retry()
-
-
-    @celery.task(bind=True, default_retry_delay=30)
-    def golive_notify_faculty(self, task_id, config_id, convenor_id):
-        progress_update(task_id, TaskRecord.RUNNING, 70, 'Sending email notifications to faculty supervisors...', autocommit=True)
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
@@ -190,15 +183,21 @@ def register_golive_tasks(celery):
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
 
-        task = chain(group(faculty_notification_email.si(d, config_id) for d in faculty if d is not None),
+        task = chain(group(faculty_notification_email.si(d, config_id, deadline) for d in faculty if d is not None),
                      notify.s(convenor_id, '{n} notification{pl} issued to faculty supervisors', 'info'))
 
         raise self.replace(task)
 
 
-    @celery.task(bind=True, default_retry_delay=30)
-    def golive_notify_selectors(self, task_id, config_id, convenor_id):
-        progress_update(task_id, TaskRecord.RUNNING, 80, 'Sending email notifications to student selectors...', autocommit=True)
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
+    def golive_notify_selectors(self, task_id, config_id, convenor_id, deadline):
+        progress_update(task_id, TaskRecord.RUNNING, 70, 'Sending email notifications to student selectors...', autocommit=True)
+
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
@@ -218,14 +217,20 @@ def register_golive_tasks(celery):
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
 
-        task = chain(group(student_notification_email.si(d, config_id) for d in selectors if d is not None),
+        task = chain(group(student_notification_email.si(d, config_id, deadline) for d in selectors if d is not None),
                      notify.s(convenor_id, '{n} notification{pl} issued to student selectors', 'info'))
 
         raise self.replace(task)
 
 
-    @celery.task(bind=True, default_retry_delay=30)
-    def faculty_notification_email(self, faculty_id, config_id):
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
+    def faculty_notification_email(self, faculty_id, config_id, deadline):
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
+
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
@@ -253,7 +258,7 @@ def register_golive_tasks(celery):
                     projects_use_signoff = True
                     break
 
-        msg.body = render_template('email/go_live/faculty.txt', user=data.user,
+        msg.body = render_template('email/go_live/faculty.txt', deadline=deadline, user=data.user,
                                    pclass=config.project_class, config=config,
                                    number_projects=len(projects), projects=projects,
                                    expect_requests=(expect_requests and projects_use_signoff))
@@ -265,8 +270,14 @@ def register_golive_tasks(celery):
         return 1
 
 
-    @celery.task(bind=True, default_retry_delay=30)
-    def student_notification_email(self, selector_id, config_id):
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
+    def student_notification_email(self, selector_id, config_id, deadline):
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
+
         try:
             data = SelectingStudent.query.filter_by(id=selector_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
@@ -284,7 +295,7 @@ def register_golive_tasks(celery):
                       recipients=[data.student.user.email])
 
         msg.body = render_template('email/go_live/selector.txt', user=data.student.user, student=data,
-                                   pclass=config.project_class, config=config)
+                                   pclass=config.project_class, config=config, deadline=deadline)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))
@@ -293,9 +304,15 @@ def register_golive_tasks(celery):
         return 1
 
 
-    @celery.task(bind=True, default_retry_delay=30)
+    @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
     def golive_finalize(self, task_id, config_id, convenor_id, deadline):
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Go Live complete', autocommit=False)
+
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()

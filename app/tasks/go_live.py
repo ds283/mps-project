@@ -52,7 +52,7 @@ def register_golive_tasks(celery):
             if convenor is None:
                 self.update_state('FAILURE', meta='Could not load convenor User record from database')
 
-            return golive_fail.apply_async(args=(task_id, convenor_id))
+            raise self.replace(golive_fail.si(task_id, convenor_id))
 
         if not config.project_class.publish:
             return None
@@ -65,7 +65,7 @@ def register_golive_tasks(celery):
                                   'issued.'.format(name=config.name, yra=year, yrb=year + 1),
                                   'warning', autocommit=True)
             self.update_state('FAILURE', meta='Confirmation requests have not been issued')
-            return golive_fail.apply_async(args=(task_id, convenor_id))
+            raise self.replace(golive_fail.si(task_id, convenor_id))
 
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
             convenor.post_message('Cannot yet Go Live for {name} {yra}-{yrb} '
@@ -74,7 +74,7 @@ def register_golive_tasks(celery):
                                   'responses.'.format(name=config.name, yra=year, yrb=year + 1),
                                   'warning', autocommit=True)
             self.update_state('FAILURE', meta='Some Go Live confirmations are still outstanding')
-            return golive_fail.apply_async(args=(task_id, convenor_id))
+            raise self.replace(golive_fail.si(task_id, convenor_id))
 
         pclass_id = config.pclass_id
 
@@ -114,8 +114,8 @@ def register_golive_tasks(celery):
                             backup.si(convenor_id, type=BackupRecord.PROJECT_GOLIVE_FALLBACK, tag='golive',
                                       description='Rollback snapshot for '
                                                   '{proj} Go Live {yr}'.format(proj=config.name, yr=year)),
-                            projects_group,
-                            golive_update_db.si(task_id, config_id, convenor_id, deadline))
+                            golive_preprojects.si(task_id),
+                            projects_group)
 
         # if this is a go-live-then-close job, don't bother sending email notifications
         if not auto_close:
@@ -124,9 +124,9 @@ def register_golive_tasks(celery):
                                 golive_notify_selectors.si(task_id, config_id, convenor_id))
 
         seq = chain(front_chain,
-                    golive_finalize.si(task_id, config_id, convenor_id)).on_error(golive_fail.si(task_id, convenor_id))
+                    golive_finalize.si(task_id, config_id, convenor_id, deadline)).on_error(golive_fail.si(task_id, convenor_id))
 
-        seq.apply_async()
+        raise self.replace(seq)
 
 
     @celery.task()
@@ -134,9 +134,14 @@ def register_golive_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 5, 'Building rollback Go Live snapshot...', autocommit=True)
 
 
+    @celery.task()
+    def golive_preprojects(task_id):
+        progress_update(task_id, TaskRecord.RUNNING, 30, 'Moving attached projects onto the live system...', autocommit=True)
+
+
     @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
     def golive_update_db(self, task_id, config_id, convenor_id, deadline):
-        progress_update(task_id, TaskRecord.RUNNING, 70, 'Updating database records...', autocommit=False)
+        progress_update(task_id, TaskRecord.RUNNING, 50, 'Updating database records...', autocommit=False)
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
@@ -147,17 +152,16 @@ def register_golive_tasks(celery):
             self.update_state('FAILURE', meta='Could not load database records')
             raise Ignore()
 
-        config.live = True
-        config.live_deadline = deadline
-        config.golive_id = convenor_id
-        config.golive_timestamp = datetime.now()
-
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
 
     @celery.task(bind=True, default_retry_delay=30)
     def golive_notify_faculty(self, task_id, config_id, convenor_id):
-        progress_update(task_id, TaskRecord.RUNNING, 80, 'Sending email notifications to faculty supervisors...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 70, 'Sending email notifications to faculty supervisors...', autocommit=True)
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
@@ -188,7 +192,8 @@ def register_golive_tasks(celery):
 
         task = chain(group(faculty_notification_email.si(d, config_id) for d in faculty if d is not None),
                      notify.s(convenor_id, '{n} notification{pl} issued to faculty supervisors', 'info'))
-        task.apply_async()
+
+        raise self.replace(task)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -215,7 +220,8 @@ def register_golive_tasks(celery):
 
         task = chain(group(student_notification_email.si(d, config_id) for d in selectors if d is not None),
                      notify.s(convenor_id, '{n} notification{pl} issued to student selectors', 'info'))
-        task.apply_async()
+
+        raise self.replace(task)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -288,7 +294,7 @@ def register_golive_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def golive_finalize(self, task_id, config_id, convenor_id):
+    def golive_finalize(self, task_id, config_id, convenor_id, deadline):
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Go Live complete', autocommit=False)
 
         try:
@@ -307,7 +313,16 @@ def register_golive_tasks(celery):
 
             convenor.send_replacetext('live-project-count', '{c}'.format(c=config.live_projects.count()), autocommit=False)
 
-        db.session.commit()
+        config.live = True
+        config.live_deadline = deadline
+        config.golive_id = convenor_id
+        config.golive_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -323,19 +338,26 @@ def register_golive_tasks(celery):
             convenor.post_message('Go Live failed. Please contact a system administrator', 'error',
                                   autocommit=False)
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
 
     @celery.task(bind=True, default_retry_delay=30)
     def project_golive(self, number, pid, config_id):
         try:
             add_liveproject(number, pid, config_id, autocommit=True)
+
         except SQLAlchemyError:
             db.session.rollback()
             raise self.retry()
+
         except KeyError as e:
             db.session.rollback()
             self.update_state(state='FAILURE', meta='Database error: {msg}'.format(msg=str(e)))
+            raise Ignore()
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -356,4 +378,8 @@ def register_golive_tasks(celery):
                                   ' closed'.format(name=config.name, yeara=config.year,
                                                    yearb=config.year+1), 'success')
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()

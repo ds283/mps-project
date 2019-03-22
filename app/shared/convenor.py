@@ -18,16 +18,17 @@ from ..models import Project, LiveProject, StudentData, SelectingStudent, Submit
 
 
 def add_liveproject(number, project, config_id, autocommit=False):
-
     # extract this project; input 'project' is allowed to be a Project instance, or else
     # the database id of an instance
     if isinstance(project, Project):
         item = project
-    else:
+    elif isinstance(project, int):
         item = Project.query.filter_by(id=project).first()
+    else:
+        raise RuntimeError('Cannot interpret project id parameter')
 
-        if item is None:
-            raise KeyError('Missing database record for Project id={id}'.format(id=project))
+    if item is None:
+        raise KeyError('Missing database record for Project id={id}'.format(id=project))
 
     config = ProjectClassConfig.query.filter_by(id=config_id).first()
     if config is None:
@@ -35,8 +36,14 @@ def add_liveproject(number, project, config_id, autocommit=False):
 
     description = item.get_description(config.project_class)
     if description is None:
-        raise KeyError('Missing description for Project id={id}, ProjectClass id={pid}'.format(id=item.id,
-                                                                                               pid=config.pclass_id))
+        raise KeyError('Missing description for Project id={id}, '
+                       'ProjectClass id={pid}'.format(id=item.id, pid=config.pclass_id))
+
+    # check whether an existing LiveProject for this config_id already exists
+    existing_record = db.session.query(LiveProject).filter_by(config_id=config_id, parent_id=item.id).first()
+    if existing_record:
+        # nothing to do
+        return
 
     # notice that this generates a LiveProject record ONLY FOR THIS PROJECT CLASS;
     # all project classes need their own LiveProject record
@@ -65,6 +72,8 @@ def add_liveproject(number, project, config_id, autocommit=False):
                             page_views=0,
                             last_view=None)
 
+    # no need to wrap these in a try ... except block
+    # the client code is supposed to do this, so it can be informed about what kind of errors occurred
     db.session.add(live_item)
 
     if autocommit:

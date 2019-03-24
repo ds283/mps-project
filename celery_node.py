@@ -9,13 +9,6 @@
 #
 
 from app import create_app
-from scout_apm.api import Config
-from scout_apm.celery import install
 
 app, celery = create_app()
 app.app_context().push()
-
-Config.set(key=app.config['SCOUT_KEY'],
-           name=app.config['SCOUT_NAME'],
-           monitor=app.config['SCOUT_MONITOR'])
-install()

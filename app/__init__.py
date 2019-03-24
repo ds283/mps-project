@@ -66,6 +66,7 @@ def create_app():
     app.config.from_pyfile('mail.py')
     app.config.from_pyfile('rollbar.py')
     app.config.from_pyfile('scout.py')
+    app.config.from_pyfile('local.py')
 
     # initialize Scout monitoring
     scout = ScoutApm(app)

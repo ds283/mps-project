@@ -45,6 +45,7 @@ from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm,
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import StaleDataError
 
 from datetime import date, datetime, timedelta
 from dateutil import parser
@@ -3795,8 +3796,13 @@ def add_group_filter(id, gid):
         return redirect(request.referrer)
 
     if group not in record.group_filters:
-        record.group_filters.append(group)
-        db.session.commit()
+        try:
+            record.group_filters.append(group)
+            db.session.commit()
+        except StaleDataError:
+            # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+            # to the same endpoint?
+            db.rollback()
 
     return redirect(request.referrer)
 
@@ -3804,7 +3810,6 @@ def add_group_filter(id, gid):
 @convenor.route('/remove_group_filter/<int:id>/<int:gid>')
 @roles_accepted('faculty', 'admin', 'root')
 def remove_group_filter(id, gid):
-
     group = ResearchGroup.query.get_or_404(gid)
 
     # id is a FilterRecord
@@ -3815,8 +3820,13 @@ def remove_group_filter(id, gid):
         return redirect(request.referrer)
 
     if group in record.group_filters:
-        record.group_filters.remove(group)
-        db.session.commit()
+        try:
+            record.group_filters.remove(group)
+            db.session.commit()
+        except StaleDataError:
+            # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+            # to the same endpoint?
+            db.rollback()
 
     return redirect(request.referrer)
 
@@ -3832,8 +3842,13 @@ def clear_group_filters(id):
     if not validate_is_convenor(record.config.project_class):
         return redirect(request.referrer)
 
-    record.group_filters = []
-    db.session.commit()
+    try:
+        record.group_filters = []
+        db.session.commit()
+    except StaleDataError:
+        # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+        # to the same endpoint?
+        db.rollback()
 
     return redirect(request.referrer)
 
@@ -3851,8 +3866,13 @@ def add_skill_filter(id, skill_id):
         return redirect(request.referrer)
 
     if skill not in record.skill_filters:
-        record.skill_filters.append(skill)
-        db.session.commit()
+        try:
+            record.skill_filters.append(skill)
+            db.session.commit()
+        except StaleDataError:
+            # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+            # to the same endpoint?
+            db.rollback()
 
     return redirect(request.referrer)
 
@@ -3870,8 +3890,13 @@ def remove_skill_filter(id, skill_id):
         return redirect(request.referrer)
 
     if skill in record.skill_filters:
-        record.skill_filters.remove(skill)
-        db.session.commit()
+        try:
+            record.skill_filters.remove(skill)
+            db.session.commit()
+        except StaleDataError:
+            # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+            # to the same endpoint?
+            db.rollback()
 
     return redirect(request.referrer)
 
@@ -3886,8 +3911,13 @@ def clear_skill_filters(id):
     if not validate_is_convenor(record.config.project_class):
         return redirect(request.referrer)
 
-    record.skill_filters = []
-    db.session.commit()
+    try:
+        record.skill_filters = []
+        db.session.commit()
+    except StaleDataError:
+        # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+        # to the same endpoint?
+        db.rollback()
 
     return redirect(request.referrer)
 

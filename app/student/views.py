@@ -14,6 +14,7 @@ from flask_security import current_user, roles_required, roles_accepted
 from flask_mail import Message
 
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import StaleDataError
 
 from . import student
 
@@ -225,8 +226,13 @@ def add_group_filter(id, gid):
     sel = SelectingStudent.query.get_or_404(id)
 
     if group not in sel.group_filters:
-        sel.group_filters.append(group)
-        db.session.commit()
+        try:
+            sel.group_filters.append(group)
+            db.session.commit()
+        except StaleDataError:
+            # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+            # to the same endpoint?
+            db.rollback()
 
     return redirect(request.referrer)
 
@@ -234,13 +240,17 @@ def add_group_filter(id, gid):
 @student.route('/remove_group_filter/<id>/<gid>')
 @roles_accepted('student')
 def remove_group_filter(id, gid):
-
     group = ResearchGroup.query.get_or_404(gid)
     sel = SelectingStudent.query.get_or_404(id)
 
     if group in sel.group_filters:
-        sel.group_filters.remove(group)
-        db.session.commit()
+        try:
+            sel.group_filters.remove(group)
+            db.session.commit()
+        except StaleDataError:
+            # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+            # to the same endpoint?
+            db.rollback()
 
     return redirect(request.referrer)
 
@@ -248,11 +258,15 @@ def remove_group_filter(id, gid):
 @student.route('/clear_group_filters/<id>')
 @roles_accepted('student')
 def clear_group_filters(id):
-
     sel = SelectingStudent.query.get_or_404(id)
 
-    sel.group_filters = []
-    db.session.commit()
+    try:
+        sel.group_filters = []
+        db.session.commit()
+    except StaleDataError:
+        # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+        # to the same endpoint?
+        db.rollback()
 
     return redirect(request.referrer)
 
@@ -264,8 +278,13 @@ def add_skill_filter(id, skill_id):
     sel = SelectingStudent.query.get_or_404(id)
 
     if skill not in sel.skill_filters:
-        sel.skill_filters.append(skill)
-        db.session.commit()
+        try:
+            sel.skill_filters.append(skill)
+            db.session.commit()
+        except StaleDataError:
+            # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+            # to the same endpoint?
+            db.rollback()
 
     return redirect(request.referrer)
 
@@ -277,8 +296,13 @@ def remove_skill_filter(id, skill_id):
     sel = SelectingStudent.query.get_or_404(id)
 
     if skill in sel.skill_filters:
-        sel.skill_filters.remove(skill)
-        db.session.commit()
+        try:
+            sel.skill_filters.remove(skill)
+            db.session.commit()
+        except StaleDataError:
+            # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+            # to the same endpoint?
+            db.rollback()
 
     return redirect(request.referrer)
 
@@ -288,8 +312,13 @@ def remove_skill_filter(id, skill_id):
 def clear_skill_filters(id):
     sel = SelectingStudent.query.get_or_404(id)
 
-    sel.skill_filters = []
-    db.session.commit()
+    try:
+        sel.skill_filters = []
+        db.session.commit()
+    except StaleDataError:
+        # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
+        # to the same endpoint?
+        db.rollback()
 
     return redirect(request.referrer)
 

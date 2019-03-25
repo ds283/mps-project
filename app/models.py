@@ -55,7 +55,7 @@ DESCRIPTION_STRING_LENGTH = 8000
 year_choices = [(2, 'Year 2'), (3, 'Year 3'), (4, 'Year 4')]
 
 # labels and keys for 'extent' field
-extent_choices = [(1, '1 year'), (2, '2 years')]
+extent_choices = [(1, '1 year'), (2, '2 years'), (3, '3 years')]
 
 # labels and keys for 'academic titles' field
 academic_titles = [(1, 'Dr'), (2, 'Professor'), (3, 'Mr'), (4, 'Ms'), (5, 'Mrs'), (6, 'Miss'), (7, 'Mx')]

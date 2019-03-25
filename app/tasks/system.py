@@ -294,15 +294,12 @@ def register_system_tasks(celery):
             delay = current_app.config.get('PRECOMPUTE_DELAY')
             if delay is None:
                 delay = 600
-                
-            print('Seconds since last precompute = {secs}'.format(secs=delta.seconds))
 
             if delta.seconds > delay:
                 compute_now = True
 
         # if we need to re-run a precompute, spawn one
         if compute_now:
-            print('Running precompute@login, current user = {name}'.format(name=current_user.name if current_user is not None else 'None'))
             celery = current_app.extensions['celery']
             precompute_at_login(current_user, celery, now=now, autocommit=False)
 

@@ -5424,8 +5424,15 @@ class LiveProject(db.Model):
         # don't report popularity data if there isn't enough differentiation between projects for it to be
         # meaningful. Remember the lowest rank is actually numerically the highest number.
         # We report scores only if there is enoug differentiation to push this rank above the 50th percentile
-        frac = float(rank)/float(total)
-        lowest_frac = float(lowest_rank)/float(total)
+        if rank is not None:
+            frac = float(rank)/float(total)
+        else:
+            frac = 1.0
+
+        if lowest_rank is not None:
+            lowest_frac = float(lowest_rank)/float(total)
+        else:
+            lowest_frac = 1.0
 
         if lowest_frac < 0.5:
             return '<span class="label label-default {cls}">Insufficient data for popularity score</span>'.format(cls=cls)

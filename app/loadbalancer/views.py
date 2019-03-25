@@ -10,9 +10,12 @@
 
 from flask import jsonify
 
+from ..limiter import limiter
+
 from . import alb
 
 @alb.route('/health_check')
+@limiter.exempt
 def health_check():
     response = jsonify(success=True)
     response.status_code = 200

@@ -18,9 +18,7 @@ from celery import group
 from datetime import datetime
 
 
-def precompute_at_login(user):
-    celery = current_app.extensions['celery']
-
+def precompute_at_login(user, celery, now=None, autocommit=False):
     if user.has_role('student'):
         # students need to cache the list of available LiveProjects
         lp = celery.tasks['app.tasks.precompute.student_liveprojects']
@@ -45,7 +43,7 @@ def precompute_at_login(user):
         # However, the 'new comments' labels are injected by substitution *after* caching,
         # so we don't need to run these precompute jobs on a per-user basis
         # TODO: compute faculty project libraries? they tend to be quite small ...
-        precompute_faculty_projects()
+        precompute_faculty_projects(celery)
 
     if user.has_role('project_approver'):
         # users on the project approvals team need to generate table lines for projects in the
@@ -53,21 +51,26 @@ def precompute_at_login(user):
         # Both of these can be tagged with 'New comments' labels on a user-by-user basis.
         # However, the 'new comments' labels are injected by substitution *after* caching,
         # so we don't need to run these precompute jobs on a per-user basis
-        precompute_for_project_approver()
+        precompute_for_project_approver(celery)
 
     if user.has_role('reports'):
         # 'reports' roles can access workload reports, which do not depend on who is viewing them.
         # we don't cache these on a per-user basis, but rather globally for everyone
-        precompute_for_reports()
+        precompute_for_reports(celery)
 
     if user.has_role('user_approver'):
         # likewise, 'user_approver' roles need tables for all the students to approve, but these are
         # shared between everyone on the user approvals team. So we cache them globally for everyone
-        precompute_for_user_approver()
+        precompute_for_user_approver(celery)
 
     # reset last precompute time for this user
-    user.last_precompute = datetime.now()
-    db.session.commit()
+    if now is None:
+        now = datetime.now()
+
+    user.last_precompute = now
+
+    if autocommit:
+        db.session.commit()
 
 
 def _check_if_compute(db, key):
@@ -94,13 +97,11 @@ def _check_if_compute(db, key):
     return delta.seconds > delay
 
 
-def precompute_for_reports():
+def precompute_for_reports(celery):
     db = get_redis()
 
     if not _check_if_compute(db, 'PRECOMPUTE_LAST_REPORTS'):
         return
-
-    celery = current_app.extensions['celery']
 
     exc = celery.tasks['app.tasks.precompute.reporting']
     exc.apply_async()
@@ -108,13 +109,11 @@ def precompute_for_reports():
     db.set('PRECOMPUTE_LAST_REPORTS', datetime.now().timestamp())
 
 
-def precompute_for_user_approver():
+def precompute_for_user_approver(celery):
     db = get_redis()
 
     if not _check_if_compute(db, 'PRECOMPUTE_LAST_USER_APPROVER'):
         return
-
-    celery = current_app.extensions['celery']
 
     ua = celery.tasks['app.tasks.precompute.user_approvals']
     ua.apply_async()
@@ -122,13 +121,11 @@ def precompute_for_user_approver():
     db.set('PRECOMPUTE_LAST_USER_APPROVER', datetime.now().timestamp())
 
 
-def precompute_faculty_projects():
+def precompute_faculty_projects(celery):
     db = get_redis()
 
     if not _check_if_compute(db, 'PRECOMPUTE_LAST_FACULTY_PROJECTS'):
         return
-
-    celery = current_app.extensions['celery']
 
     # only precompute assessor data if we haven't recently computed the same data for reporting purposes
     if _check_if_compute(db, 'PRECOMPUTE_LAST_REPORTS'):
@@ -138,13 +135,11 @@ def precompute_faculty_projects():
     db.set('PRECOMPUTE_LAST_FACULTY_PROJECTS', datetime.now().timestamp())
 
 
-def precompute_for_project_approver():
+def precompute_for_project_approver(celery):
     db = get_redis()
 
     if not _check_if_compute(db, 'PRECOMPUTE_LAST_PROJECT_APPROVER'):
         return
-
-    celery = current_app.extensions['celery']
 
     approvals = celery.tasks['app.tasks.precompute.project_approval']
     rejections = celery.tasks['app.tasks.precompute.project_rejected']

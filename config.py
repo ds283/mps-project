@@ -37,6 +37,10 @@ class Config(object):
     # CELERY_RESULT_BACKEND and CELERY_BROKER_URL are set in instance/secrets.py
     CELERY_ACCEPT_CONTENT = ['json', 'pickle']
 
+    CELERY_CREATE_MISSING_QUEUES = True
+    CELERY_DEFAULT_QUEUE = 'default'
+    CELERY_ROUTES = {'app.task.ping.ping': {'queue': 'priority'}}
+
 
     # Flask-Security features
     SECURITY_CONFIRMABLE = True

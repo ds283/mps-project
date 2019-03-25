@@ -360,7 +360,8 @@ def create_app():
         # Notification.query.filter_by(user_id=user.id).delete()
 
         # force precompute of expensive views
-        precompute_at_login(user)
+        celery = current_app.extensions['celery']
+        precompute_at_login(user, celery, autocommit=False)
 
         user.last_active = datetime.now()
         db.session.commit()

@@ -14,7 +14,6 @@ from . import project
 from . import site
 from . import student
 from . import users
-from . import polling
 from . import faculty
 from . import reports
 from . import user_approver

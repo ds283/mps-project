@@ -71,7 +71,6 @@ from ..shared.validators import validate_is_convenor, validate_is_admin_or_conve
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count, func
-from ..shared.precompute import precompute_at_login
 
 from ..task_queue import register_task, progress_update
 from ..shared.forms.queries import ScheduleSessionQuery
@@ -4220,7 +4219,6 @@ def terminate_background_task(id):
 @admin.route('/delete_background_task/<string:id>')
 @roles_required('root')
 def delete_background_task(id):
-
     record = TaskRecord.query.get_or_404(id)
 
     if record.status == TaskRecord.PENDING or record.status == TaskRecord.RUNNING:
@@ -4262,54 +4260,17 @@ def notifications_ajax():
         .filter(Notification.timestamp >= since) \
         .order_by(Notification.timestamp.asc()).all()
 
-    # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
-    for n in notifications:
-        if n.type == Notification.USER_MESSAGE \
-                or n.type == Notification.SHOW_HIDE_REQUEST \
-                or n.type == Notification.REPLACE_TEXT_REQUEST:
+    celery = current_app.extensions['celery']
+    ping = celery.tasks['app.tasks.system.ping']
 
-            n.remove_on_pageload = True
+    ping.si(since, current_user.id, datetime.now().isoformat()).apply_async(queue='priority')
 
-    # record now as the time this user was last seen online
-    now = datetime.now()
+    data = [{'uuid': n.uuid,
+             'type': n.type,
+             'payload': n.payload,
+             'timestamp': n.timestamp} for n in notifications]
 
-    # determine whether to kick off a background precompute task
-    # currently, precompute tasks are run *here*, and *at login*, and nowhere else,
-    # and the default lifetime for items in the cache is 24 hours
-
-    # the configuration item PRECOMPUTE_DELAY defaults to 10 minutes.
-    # We start a precompute task if either:
-    #  - If there is no recorded last precompute time. This means that the app has restarted since this
-    #    user was last seen online, and therefore the cache has been flushed. It is likely that all
-    #    precomputed items have been purged, so we need to start an urgent precompute
-    #  - The time since the last recorded precompute exceeds PRECOMPUTE_DELAY.
-    #    If a user with a non-expired session comes back to the site after a delay, they do not
-    #    (currently) go through login again. (The session is 'stale' but still treated as current.)
-    #    This means no precompute is kicked off. We won't pick up that the cache likely contains no
-    #    entries until we get here.
-    #    Of course, this means that we *also* perform redundant precomputes for all active users every
-    #    10 minutes or so. This does cover the possibility that the 24 hour cache period expires
-    #    while the user is still active. If it doesn't, at least we are only starting these jobs
-    #    for users actively using the system, which is probably only a handful.
-    compute_now = current_user.last_precompute is None
-    if not compute_now:
-        delta = now - current_user.last_precompute
-
-        delay = current_app.config.get('PRECOMPUTE_DELAY')
-        if delay is None:
-            delay = 600
-
-        if delta.seconds > delay:
-            compute_now = True
-
-    # if we need to re-run a precompute, spawn one
-    if compute_now:
-        precompute_at_login(current_user)
-
-    current_user.last_active = now
-    db.session.commit()
-
-    return ajax.polling.notifications_payload(notifications)
+    return jsonify(data)
 
 
 @admin.route('/manage_matching')

@@ -44,7 +44,7 @@ from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm,
     AssignPresentationFeedbackFormFactory
 
 from sqlalchemy import and_, or_
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 
 from datetime import date, datetime, timedelta
@@ -3771,7 +3771,6 @@ def selector_confirmations(id):
 @convenor.route('/project_confirmations/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def project_confirmations(id):
-
     # id is a LiveProject
     proj = LiveProject.query.get_or_404(id)
 
@@ -3785,7 +3784,6 @@ def project_confirmations(id):
 @convenor.route('/add_group_filter/<int:id>/<int:gid>')
 @roles_accepted('faculty', 'admin', 'root')
 def add_group_filter(id, gid):
-
     group = ResearchGroup.query.get_or_404(gid)
 
     # id is a FilterRecord
@@ -3799,7 +3797,7 @@ def add_group_filter(id, gid):
         try:
             record.group_filters.append(group)
             db.session.commit()
-        except StaleDataError:
+        except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
             db.rollback()
@@ -3869,7 +3867,7 @@ def add_skill_filter(id, skill_id):
         try:
             record.skill_filters.append(skill)
             db.session.commit()
-        except StaleDataError:
+        except StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
             db.rollback()

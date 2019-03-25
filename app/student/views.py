@@ -13,7 +13,7 @@ from flask import render_template, redirect, url_for, flash, request, jsonify, c
 from flask_security import current_user, roles_required, roles_accepted
 from flask_mail import Message
 
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 
 from . import student
@@ -229,7 +229,7 @@ def add_group_filter(id, gid):
         try:
             sel.group_filters.append(group)
             db.session.commit()
-        except StaleDataError:
+        except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
             db.rollback()
@@ -281,10 +281,11 @@ def add_skill_filter(id, skill_id):
         try:
             sel.skill_filters.append(skill)
             db.session.commit()
-        except StaleDataError:
+        except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
             db.rollback()
+
 
     return redirect(request.referrer)
 

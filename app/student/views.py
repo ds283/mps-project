@@ -102,15 +102,16 @@ def dashboard():
     # build list of all project classes for which this student has roles
     pcs = set()
 
-    for item in current_user.student_data.selecting.filter_by(retired=False).all():
-        pclass = item.config.project_class
-        if pclass.active and pclass.publish:
-            pcs.add(pclass)
+    if current_user.student_data is not None:
+        for item in current_user.student_data.selecting.filter_by(retired=False).all():
+            pclass = item.config.project_class
+            if pclass.active and pclass.publish:
+                pcs.add(pclass)
 
-    for item in current_user.student_data.submitting.filter_by(retired=False).all():
-        pclass = item.config.project_class
-        if pclass.active and pclass.publish:
-            pcs.add(pclass)
+        for item in current_user.student_data.submitting.filter_by(retired=False).all():
+            pclass = item.config.project_class
+            if pclass.active and pclass.publish:
+                pcs.add(pclass)
 
     # map list of project classes into ProjectClassConfig instance, and selector/submitter cards
     enrollments = []

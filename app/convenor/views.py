@@ -3867,7 +3867,7 @@ def add_skill_filter(id, skill_id):
         try:
             record.skill_filters.append(skill)
             db.session.commit()
-        except StaleDataError, IntegrityError):
+        except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
             db.rollback()

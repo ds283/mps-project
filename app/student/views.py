@@ -358,12 +358,25 @@ def view_project(sid, pid):
     db.session.commit()
 
     # build list of keywords
-    keywords = [kw.strip() for kw in re.split("[;,]", project.keywords)]
-    keywords = [w for w in keywords if len(w) > 0]
+    if isinstance(project.keywords, str):
+        keywords = _extract_keywords(project.keywords)
+    elif project.keywords is None:
+        keywords = []
+    else:
+        try:
+            keywords = _extract_keywords(project.keywords.decode('utf-8'))
+        except AttributeError:
+            keywords = []
 
     return render_template('student/show_project.html', title=project.name, sel=sel, project=project, desc=project,
                            keywords=keywords, text='project list',
                            url=url_for('student.browse_projects', id=sel.id))
+
+
+def _extract_keywords(field):
+    keywords = [kw.strip() for kw in re.split("[;,]", field)]
+    keywords = [w for w in keywords if len(w) > 0]
+    return keywords
 
 
 @student.route('/add_bookmark/<int:sid>/<int:pid>')

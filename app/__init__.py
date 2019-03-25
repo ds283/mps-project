@@ -416,5 +416,8 @@ def create_app():
     from .project_approver import project_approver as project_approver_blueprint
     app.register_blueprint(project_approver_blueprint, url_prefix='/project_approver')
 
+    from .loadbalancer import alb as alb_blueprint
+    app.register_blueprint(alb_blueprint, url_prefix='/alb')
+
     return app, celery
 

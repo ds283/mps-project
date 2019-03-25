@@ -45,13 +45,16 @@
 {% endblock %}
 
 {% block bodyblock %}
+    <div class="row vertical-bottom">
+        <div class="col-xs-12">
+            <div class="pull-right grouped-button-pad">
+                <a href="{{ url_for('admin.reset_tasks') }}" class="btn btn-warning">Reset background tasks</a>
+            </div>
+        </div>
+    </div>
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Background tasks</div>
         <div class="panel-body">
-            <div class="well">
-                This task list is reset when the website is restarted.
-            </div>
-
             <table id="background" class="table table-striped table-bordered">
                 <thead>
                 <tr>

@@ -8952,3 +8952,23 @@ def view_schedule(tag):
 
     return render_template('admin/presentations/public/schedule.html', form=form, event=event, schedule=schedule,
                            slots=slots)
+
+
+@admin.route('/reset_tasks')
+@roles_accepted('admin', 'root')
+def reset_tasks():
+    celery = current_app.extensions['celery']
+    reset = celery.tasks['app.tasks.system.reset_tasks']
+    reset.si(current_user.id).apply_async()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/reset_precompute')
+@roles_accepted('admin', 'root')
+def reset_precompute():
+    celery = current_app.extensions['celery']
+    reset = celery.tasks['app.tasks.system.reset_precompute_times']
+    reset.si(current_user.id).apply_async()
+
+    return redirect(request.referrer)

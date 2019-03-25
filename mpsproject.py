@@ -229,76 +229,19 @@ def populate_workflow_history():
 
 app, celery = create_app()
 
-with app.app_context():
-    # on restart, drop all transient task records and notifications, which will no longer have any meaning
-
-    TaskRecord.query.delete()
-    Notification.query.delete()
-
-    print('## Deleted TaskRecord and Notification instances at {now}'.format(now=datetime.now().ctime()))
-
-    # any in-progress matching attempts or scheduling attempts will have been aborted when the app crashed or exited
-    try:
-        in_progress_matching = db.session.query(MatchingAttempt).filter_by(celery_finished=False).all()
-        for item in in_progress_matching:
-            item.finished = True
-            item.celery_finished = True
-            item.outcome = MatchingAttempt.OUTCOME_NOT_SOLVED
-    except SQLAlchemyError:
-        pass
-
-    print('## Reset MatchingAttempt instances at {now}'.format(now=datetime.now().ctime()))
-
-    try:
-        in_progress_scheduling = db.session.query(ScheduleAttempt).filter_by(celery_finished=False).all()
-        for item in in_progress_scheduling:
-            item.finished = True
-            item.celery_finished = True
-            item.outcome = ScheduleAttempt.OUTCOME_NOT_SOLVED
-    except SQLAlchemyError:
-        pass
-
-    print('## Reset ScheduleAttempt instances at {now}'.format(now=datetime.now().ctime()))
-
-    try:
-        in_progress_batches = db.session.query(StudentBatch).filter_by(celery_finished=False).all()
-        for item in in_progress_batches:
-            item.celery_finished = True
-            item.success = False
-    except SQLAlchemyError:
-        pass
-
-    print('## Reset StudentBatch instances at {now}'.format(now=datetime.now().ctime()))
-
-    # reset last precompute time for all users; this will ensure that expensive views
-    # are precomputed for all users when they first make contact with the web app after
-    # a reset
-    try:
-        users = db.session.query(User).filter_by(active=True).all()
-        for user in users:
-            user.last_precompute = None
-    except SQLAlchemyError:
-        pass
-
-    print('## Reset User precompute times at {now}'.format(now=datetime.now().ctime()))
-
-    # migrate_availability_data()
-    # migrate_confirmation_data()
-    # populate_email_options()
-    # populate_schedule_tags()
-    # populate_new_fields()
-    # attach_JRA_projects()
-    # populate_student_validation_data()
-    # populate_project_validation_data()
-    # migrate_description_confirmations()
-    # populate_workflow_history()
-
-    print('## Pre-commit at {now}'.format(now=datetime.now().ctime()))
-
-    db.session.commit()
-
-    print('## Post-commit at {now}'.format(now=datetime.now().ctime()))
-
+# with app.app_context():
+#     migrate_availability_data()
+#     migrate_confirmation_data()
+#     populate_email_options()
+#     populate_schedule_tags()
+#     populate_new_fields()
+#     attach_JRA_projects()
+#     populate_student_validation_data()
+#     populate_project_validation_data()
+#     migrate_description_confirmations()
+#     populate_workflow_history()
+#
+#     db.session.commit()
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

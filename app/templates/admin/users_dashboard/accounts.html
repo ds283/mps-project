@@ -52,6 +52,13 @@
 {% endblock %}
 
 {% block bodyblock %}
+    <div class="row vertical-bottom">
+        <div class="col-xs-12">
+            <div class="pull-right grouped-button-pad">
+                <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-warning">Reset precompute times</a>
+            </div>
+        </div>
+    </div>
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Edit users</div>
         <div class="panel-body">

@@ -39,6 +39,7 @@ from ..shared.conversions import is_integer
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import StaleDataError
 
 from datetime import datetime, date
 
@@ -456,8 +457,12 @@ def remove_project_pclass(proj_id, pclass_id):
     if not validate_is_project_owner(proj):
         return redirect(request.referrer)
 
-    proj.remove_project_class(pclass)
-    db.session.commit()
+    try:
+        proj.remove_project_class(pclass)
+        db.session.commit()
+    except StaleDataError:
+        # presumably caused by a race condition?
+        db.session.rollback()
 
     return redirect(request.referrer)
 

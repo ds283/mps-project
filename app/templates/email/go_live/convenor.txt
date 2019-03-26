@@ -1,0 +1,14 @@
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+
+This email is advisory only, and does not require any action.
+
+The project list has now been published to students selecting for
+"{{ pclass.name }}".
+
+Go Live initiated by: {{ config.golive_by.name }} at {{ config.golive_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+Total number of projects published: {{ config.live_projects.count() }}
+Student selection deadline: {{ config.live_deadline.strftime("%a %d %b %Y") }}
+
+The deadline can be changed at any time using the convenor dashboard in
+the web app.

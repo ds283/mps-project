@@ -2355,6 +2355,7 @@ def add_pclass():
                             reenroll_supervisors_early=form.reenroll_supervisors_early.data,
                             convenor=form.convenor.data,
                             coconvenors=coconvenors,
+                            office_contacts=form.office_contacts.data,
                             selection_open_to_all=form.selection_open_to_all.data,
                             auto_enroll_years=form.auto_enroll_years.data,
                             programmes=form.programmes.data,
@@ -2471,6 +2472,7 @@ def edit_pclass(id):
         data.reenroll_supervisors_early = form.reenroll_supervisors_early.data
         data.convenor = form.convenor.data
         data.coconvenors = coconvenors
+        data.office_contacts = form.office_contacts.data
         data.selection_open_to_all = form.selection_open_to_all.data
         data.auto_enroll_years = form.auto_enroll_years.data
         data.programmes = form.programmes.data

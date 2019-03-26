@@ -10,9 +10,10 @@ projects of type "{{ pclass.name }}". If you believe this to be
 incorrect, please contact the project convenor to have your enrollment
 status changed.
 
-Thank you for preparing your project library for {{ pclass.name }}.
-The projects for this cycle have now been published to students, so any
-further changes made to your library will not be visible to selectors.
+Thank you for preparing your project library for projects of type
+"{{ pclass.name }}". The project list for this cycle has now been
+published to students, so any further changes made to your library will not
+be visible to this year's selectors.
 
 {% if number_projects == 0 -%}
 This year, no projects belonging to you were published. If this is not the

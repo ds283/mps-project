@@ -43,12 +43,15 @@ from ..shared.forms.wtf_validators import valid_username, globally_unique_userna
     unique_or_original_batch_item_userid, unique_or_original_batch_item_email,\
     unique_or_original_batch_item_exam_number, \
     valid_json, password_strength, OptionalIf, NotOptionalIf
+
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
     BuildDegreeProgrammeName, GetPossibleConvenors, BuildSysadminUserName, BuildConvenorRealName, \
     GetAllProjectClasses, GetConvenorProjectClasses, GetSysadminUsers, GetAutomatedMatchPClasses, \
     GetMatchingAttempts, GetComparatorMatches, GetUnattachedSubmissionPeriods, BuildSubmissionPeriodName, \
     GetAllBuildings, GetAllRooms, BuildRoomLabel, GetFHEQLevels, BuildFHEQYearLabel, \
-    ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules
+    ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
+    BuildPossibleOfficeContacts, BuildOfficeContactName
+
 from ..models import BackupConfiguration, EnrollmentRecord, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enroll_year_choices, \
     DEFAULT_STRING_LENGTH
@@ -435,6 +438,14 @@ class ProjectClassMixin():
                                                        'For example, they might be previous convenors who are '
                                                        'helping with administration during a transition period.',
                                            validators=[Optional()])
+
+    office_contacts = QuerySelectMultipleField('School Office contacts', query_factory=BuildPossibleOfficeContacts,
+                                               get_label=BuildOfficeContactName,
+                                               description='Specify one or more members of the office team '
+                                                           'who act as contacts for this project type. Office contacts '
+                                                           'receive email updates to keep them appraised of the '
+                                                           'project lifecycle.',
+                                               validators=[Optional()])
 
     selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',
                                          description='By default, selectors are auto-enrolled based on their degree programme. '

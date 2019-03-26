@@ -291,6 +291,18 @@ pclass_coconvenors = db.Table('project_class_coconvenors',
                               db.Column('faculty_id', db.Integer(), db.ForeignKey('faculty_data.id'), primary_key=True))
 
 
+# association table giving School Office contacts for a project class
+office_contacts = db.Table('office_contacts',
+                           db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True),
+                           db.Column('office_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
+
+
+# track who has received a Go Live email notification so that we don't double-post
+golive_emails = db.Table('golive_emails',
+                         db.Column('config_id', db.Integer(), db.ForeignKey('project_class_config.id'), primary_key=True),
+                         db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
+
+
 # SYSTEM MESSAGES
 
 
@@ -2521,6 +2533,10 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     coconvenors = db.relationship('FacultyData', secondary=pclass_coconvenors, lazy='dynamic',
                                   backref=db.backref('coconvenor_for', lazy='dynamic'))
 
+    # School Office contacts
+    office_contacts = db.relationship('User', secondary=office_contacts, lazy='dynamic',
+                                      backref=db.backref('contact_for', lazy='dynamic'))
+
     # associate this project class with a set of degree programmes
     programmes = db.relationship('DegreeProgramme', secondary=pclass_programme_associations, lazy='dynamic',
                                  backref=db.backref('project_classes', lazy='dynamic'))
@@ -2870,6 +2886,9 @@ class ProjectClassConfig(db.Model):
 
     # golive timestamp
     golive_timestamp = db.Column(db.DateTime())
+
+    # golive record of email notifications
+    golive_notified = db.relationship('User', secondary=golive_emails, lazy='dynamic')
 
     # deadline for students to make their choices on the live system
     live_deadline = db.Column(db.Date())

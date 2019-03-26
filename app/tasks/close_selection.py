@@ -67,7 +67,7 @@ def register_close_selection_tasks(celery):
 
         seq = (seq | close_finalize.si(task_id, config_id, convenor_id)).on_error(close_fail.si(task_id, convenor_id))
 
-        seq.apply_async()
+        raise self.replace(seq)
 
 
     @celery.task()
@@ -119,6 +119,7 @@ def register_close_selection_tasks(celery):
     def selector_close(self, sel_id):
         try:
             sel = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
+
         except SQLAlchemyError:
             raise self.retry()
 

@@ -46,14 +46,18 @@
 
 {#        {{ wtf.form_errors(pclass_form) }}#}
 
-        {{ wtf.form_field(pclass_form.name) }}
-        {{ wtf.form_field(pclass_form.abbreviation) }}
+        <div class="well">
+            {{ wtf.form_field(pclass_form.name) }}
+            {{ wtf.form_field(pclass_form.abbreviation) }}
 
-        {{ colour_field(pclass_form.colour, 'colour-group') }}
+            {{ colour_field(pclass_form.colour, 'colour-group') }}
+        </div>
 
         <div class="well">
+            <p>Personnel</p>
             {{ wtf.form_field(pclass_form.convenor) }}
             {{ wtf.form_field(pclass_form.coconvenors) }}
+            {{ wtf.form_field(pclass_form.office_contacts) }}
         </div>
 
         <div class="well">

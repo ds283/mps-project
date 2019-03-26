@@ -51,12 +51,22 @@ def GetPossibleConvenors():
             .order_by(User.last_name, User.first_name)
 
 
+def BuildPossibleOfficeContacts():
+    return db.session.query(User) \
+        .filter(User.active, User.roles.any(name='office')) \
+        .order_by(User.last_name, User.first_name)
+
+
 def BuildActiveFacultyName(fac):
     return fac.user.name
 
 
 def BuildConvenorRealName(fac):
     return fac.user.name
+
+
+def BuildOfficeContactName(user):
+    return user.name
 
 
 def GetAllProjectClasses():

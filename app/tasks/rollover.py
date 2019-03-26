@@ -156,7 +156,7 @@ def register_rollover_tasks(celery):
             seq = seq | reset_descriptions_msg.s(task_id) | descs_group
 
         seq = (seq | rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
-        seq.apply_async()
+        raise self.replace(seq)
 
 
     @celery.task()
@@ -261,7 +261,7 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update('FAILURE', 'Could not load ProjectClassConfig')
+            self.update('FAILURE', 'Could not load new ProjectClassConfig')
             return
 
         self.update_state(state='SUCCESS')
@@ -416,6 +416,9 @@ def register_rollover_tasks(celery):
             # retire old SubmissionPeriodRecords:
             for rec in old_config.periods:
                 rec.retired = True
+
+            # clear out list of go live notification recipients to keep associate table trim
+            rec.golive_notified = []
 
             db.session.commit()
         except SQLAlchemyError:

@@ -178,7 +178,7 @@ def register_golive_tasks(celery):
             .filter(User.active == True)
 
         for id, user, data in fd:
-            if data.id not in faculty:
+            if user not in config.golive_notified and data.id not in faculty:
                 faculty.add(data.id)
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
@@ -212,7 +212,7 @@ def register_golive_tasks(celery):
         selectors = set()
 
         for student in config.selecting_students.filter_by(retired=False).all():
-            if student.id not in selectors:
+            if student.user not in config.golive_notified and student.id not in selectors:
                 selectors.add(student.id)
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
@@ -221,6 +221,27 @@ def register_golive_tasks(celery):
                      notify.s(convenor_id, '{n} notification{pl} issued to student selectors', 'info'))
 
         raise self.replace(task)
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def set_notified(self, config_id, user_id):
+        try:
+            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            user = User.query.filter_by(id=user_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if user is None or config is None:
+            self.update_state('FAILURE', meta='Could not load database records')
+            raise Ignore()
+
+        config.golive_notified.append(user)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
 
     @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
@@ -241,8 +262,7 @@ def register_golive_tasks(celery):
             self.update_state('FAILURE', meta='Could not load database records')
             raise Ignore()
 
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='{name}: projects now published to students'.format(name=config.project_class.name),
+        msg = Message(subject='{name}: project list now published to students'.format(name=config.project_class.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[data.user.email])
@@ -265,7 +285,11 @@ def register_golive_tasks(celery):
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        email_chain = chain(send_log_email.si(task_id, msg),
+                            set_notified.si(config_id, faculty_id))
+        email_chain.apply_async(task_id=task_id)
 
         return 1
 
@@ -288,8 +312,7 @@ def register_golive_tasks(celery):
             self.update_state('FAILURE', meta='Could not load database records')
             raise Ignore()
 
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='{name}: projects list now available'.format(name=config.project_class.name),
+        msg = Message(subject='{name}: project list now available'.format(name=config.project_class.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[data.student.user.email])
@@ -299,7 +322,11 @@ def register_golive_tasks(celery):
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send confirmation request email to {r}'.format(r=', '.join(msg.recipients)))
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        email_chain = chain(send_log_email.si(task_id, msg),
+                            set_notified.si(config_id, data.student_id))
+        email_chain.apply_async(task_id=task_id)
 
         return 1
 
@@ -340,6 +367,29 @@ def register_golive_tasks(celery):
         except SQLAlchemyError:
             db.session.rollback()
             raise self.retry()
+
+        recipients = [config.project_class.convenor.user.email]
+
+        for coconvenor in config.project_class.coconvenors:
+            recipients.append(coconvenor.user.email)
+
+        for user in config.project_class.office_contacts:
+            recipients.append(user.email)
+
+        msg = Message(subject='[mpsprojects] "{name}": project list now published to '
+                              'students'.format(name=config.project_class.name),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_app.config['MAIL_REPLY_TO'],
+                      recipients=recipients)
+
+        msg.body = render_template('email/go_live/convenor.txt', pclass=config.project_class, config=config,
+                                   deadline=deadline)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Send convenor email notification')
+
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
     @celery.task(bind=True, default_retry_delay=30)

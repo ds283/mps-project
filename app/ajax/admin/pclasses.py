@@ -124,17 +124,34 @@ _popularity = \
 <span class="label label-default">Daily: {{ p.keep_daily_popularity }} week{{ daily_pl }}</span>
 """
 
-_convenor = \
+_personnel = \
 """
-{% set style = p.make_CSS_style() %}
-<a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
-    {{ p.convenor_name }}
-</a>
-{% for fac in p.coconvenors %}
-    <a class="label label-default" href="mailto:{{ fac.user.email }}">
-        {{ fac.user.name }}
+<div class="personnel-container">
+    {% if p.coconvenors.first() %}
+        <div>Convenors</div>
+    {% else %}
+        <div>Convenor</div>
+    {% endif %}
+    {% set style = p.make_CSS_style() %}
+    <a class="label label-info" {% if style %}style="{{ style }}"{% endif %} href="mailto:{{ p.convenor_email }}">
+        {{ p.convenor_name }}
     </a>
-{% endfor %}
+    {% for fac in p.coconvenors %}
+        <a class="label label-default" href="mailto:{{ fac.user.email }}">
+            {{ fac.user.name }}
+        </a>
+    {% endfor %}
+</div>
+{% if p.office_contacts.first() %}
+    <div class="personnel-container">
+        <div>Office contacts</div>
+        {% for user in p.office_contacts %}
+            <a class="label label-info" href="mailto:{{ user.email }}">
+                {{ user.name }}
+            </a>
+        {% endfor %}
+    </div>
+{% endif %}
 """
 
 _submissions = \
@@ -201,7 +218,7 @@ def pclasses_data(classes):
              'cats': render_template_string(_workload, p=p),
              'submissions': render_template_string(_submissions, p=p),
              'popularity': render_template_string(_popularity, p=p),
-             'convenor': render_template_string(_convenor, p=p),
+             'personnel': render_template_string(_personnel, p=p),
              'programmes': render_template_string(_programmes, pcl=p),
              'menu': render_template_string(_menu, pcl=p)} for p in classes]
 

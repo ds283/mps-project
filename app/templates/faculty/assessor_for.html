@@ -24,6 +24,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { 'url': $SCRIPT_ROOT + '/faculty/marking_ajax?pclass_filter={{ pclass_filter }}', dataSrc: '' },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name' },
                     { data: 'owner',

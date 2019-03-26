@@ -3786,46 +3786,75 @@ class EnrollmentRecord(db.Model):
             self.presentations_state = EnrollmentRecord.PRESENTATIONS_ENROLLED
 
 
-    @property
-    def supervisor_label(self):
+    def _generic_label(self, label, state, reenroll, comment, enrolled, sabbatical, exempt):
+        if state == enrolled:
+            return '<span class="label label-success"><i class="fa fa-check"></i> ' + label + ': active</span>'
 
-        if self.supervisor_state == self.SUPERVISOR_ENROLLED:
-            return '<span class="label label-success"><i class="fa fa-check"></i> Supervisor: active</span>'
-        elif self.supervisor_state == self.SUPERVISOR_SABBATICAL:
-            return '<span class="label label-warning"><i class="fa fa-times"></i> Supervisor: sab{year}</span>'.format(
-                year='' if self.supervisor_reenroll is None else ' ({yr})'.format(yr=self.supervisor_reenroll))
-        elif self.supervisor_state == self.SUPERVISOR_EXEMPT:
-            return '<span class="label label-danger"><i class="fa fa-times"></i> Supervisor: exempt</span>'
+        if comment is not None:
+            bleach = current_app.extensions['bleach']
+            comment_attr = 'data-toggle="tooltip" title="' + bleach.clean(comment) + '"'
+        else:
+            comment_attr = None
+
+        if state == sabbatical:
+            span = '<span class="label label-warning" ' + comment_attr + '><i class="fa fa-times"></i> ' + label + ': sab'
+            if reenroll is not None:
+                span += ' ' + str(reenroll)
+            span += '</span>'
+            return span
+
+        if state == exempt:
+            return '<span class="label label-danger" ' + comment_attr + '><i class="fa fa-times"></i> ' + label + ': exempt</span>'
 
         return '<span class="label label-danger">Unknown state</span>'
+
+
+
+    @property
+    def supervisor_label(self):
+        return self._generic_label('Supervisor', self.supervisor_state,
+                                   self.supervisor_reenroll, self.supervisor_comment,
+                                   EnrollmentRecord.SUPERVISOR_ENROLLED, EnrollmentRecord.SUPERVISOR_SABBATICAL,
+                                   EnrollmentRecord.SUPERVISOR_EXEMPT)
 
 
     @property
     def marker_label(self):
-
-        if self.marker_state == EnrollmentRecord.MARKER_ENROLLED:
-            return '<span class="label label-success"><i class="fa fa-check"></i> Marker: active</span>'
-        elif self.marker_state == EnrollmentRecord.MARKER_SABBATICAL:
-            return '<span class="label label-warning"><i class="fa fa-times"></i> Marker: sab{year}</span>'.format(
-                year='' if self.marker_reenroll is None else ' ({yr})'.format(yr=self.marker_reenroll))
-        elif self.marker_state == EnrollmentRecord.MARKER_EXEMPT:
-            return '<span class="label label-danger"><i class="fa fa-times"></i> Marker: exempt</span>'
-
-        return '<span class="label label-danger">Unknown state</span>'
+        return self._generic_label('Marker', self.marker_state, self.marker_reenroll, self.marker_comment,
+                                   EnrollmentRecord.MARKER_ENROLLED, EnrollmentRecord.MARKER_SABBATICAL,
+                                   EnrollmentRecord.MARKER_EXEMPT)
 
 
     @property
     def presentation_label(self):
+        return self._generic_label('Presentations', self.presentations_state,
+                                   self.presentations_reenroll, self.presentations_comment,
+                                   EnrollmentRecord.PRESENTATIONS_ENROLLED, EnrollmentRecord.PRESENTATIONS_SABBATICAL,
+                                   EnrollmentRecord.PRESENTATIONS_EXEMPT)
 
-        if self.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED:
-            return '<span class="label label-success"><i class="fa fa-check"></i> Presentations: active</span>'
-        elif self.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL:
-            return '<span class="label label-warning"><i class="fa fa-times"></i> Presentations: sab{year}</span>'.format(
-                year='' if self.presentations_reenroll is None else ' ({yr})'.format(yr=self.presentations_reenroll))
-        elif self.presentations_state == EnrollmentRecord.PRESENTATIONS_EXEMPT:
-            return '<span class="label label-danger"><i class="fa fa-times"></i> Presentations: exempt</span>'
 
-        return '<span class="label label-danger">Unknown state</span>'
+
+    @property
+    def short_supervisor_label(self):
+        return self._generic_label('S', self.supervisor_state,
+                                   self.supervisor_reenroll, self.supervisor_comment,
+                                   EnrollmentRecord.SUPERVISOR_ENROLLED, EnrollmentRecord.SUPERVISOR_SABBATICAL,
+                                   EnrollmentRecord.SUPERVISOR_EXEMPT)
+
+
+    @property
+    def short_marker_label(self):
+        return self._generic_label('M', self.marker_state, self.marker_reenroll, self.marker_comment,
+                                   EnrollmentRecord.MARKER_ENROLLED, EnrollmentRecord.MARKER_SABBATICAL,
+                                   EnrollmentRecord.MARKER_EXEMPT)
+
+
+    @property
+    def short_presentation_label(self):
+        return self._generic_label('P', self.presentations_state,
+                                   self.presentations_reenroll, self.presentations_comment,
+                                   EnrollmentRecord.PRESENTATIONS_ENROLLED, EnrollmentRecord.PRESENTATIONS_SABBATICAL,
+                                   EnrollmentRecord.PRESENTATIONS_EXEMPT)
 
 
     @property

@@ -11,6 +11,7 @@
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                 ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_ajax/{{ pclass.id }}', dataSrc: '' },
+                "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name' },
                     { data: 'owner',
@@ -34,7 +35,8 @@
                     responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                     buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
                     ajax: { url: $SCRIPT_ROOT + '/convenor/attach_liveproject_other_ajax/{{ pclass.id }}', dataSrc: '' },
-                    columns: [
+                    "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
+                columns: [
                         { data: 'name' },
                         { data: 'owner',
                           render: {

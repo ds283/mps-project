@@ -52,39 +52,15 @@ _full_enrollments = \
             {% else %}
                 <span class="label label-danger">Offered=0</span>
             {% endif %}
-            {% if record.supervisor_state == record.SUPERVISOR_ENROLLED %}
-                <span class="label label-success"><i class="fa fa-check"></i> Supv: active</span>
-            {% elif record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
-                <span class="label label-warning"><i class="fa fa-times"></i> Supv: sabbat</span>
-            {% elif record.supervisor_state == record.SUPERVISOR_EXEMPT %}
-                <span class="label label-danger"><i class="fa fa-times"></i> Supv: exempt</span>
-            {% else %}
-                <span class="label label-danger"><i class="fa fa-times"></i> Supv: unknown</span>
-            {% endif %}
+            {{ record.short_supervisor_label|safe }}
         {% endif %}
 
         {% if record.pclass.uses_marker %}
-            {% if record.marker_state == record.MARKER_ENROLLED %}
-                <span class="label label-success"><i class="fa fa-check"></i> Mark: active</span>
-            {% elif record.marker_state == record.MARKER_SABBATICAL %}
-                <span class="label label-warning"><i class="fa fa-times"></i> Mark: sabbat</span>
-            {% elif record.marker_state == record.MARKER_EXEMPT %}
-                <span class="label label-danger"><i class="fa fa-times"></i> Mark: exempt</span>
-            {% else %}
-                <span class="label label-danger"><i class="fa fa-times"></i> Mark: unknown</span>
-            {% endif %}
+            {{ record.short_marker_label|safe }}
         {% endif %}
 
         {% if record.pclass.uses_presentations %}
-            {% if record.presentations_state == record.PRESENTATIONS_ENROLLED %}
-                <span class="label label-success"><i class="fa fa-check"></i> Pres: active</span>
-            {% elif record.presentations_state == record.PRESENTATIONS_SABBATICAL %}
-                <span class="label label-warning"><i class="fa fa-times"></i> Pres: sabbat</span>
-            {% elif record.presentations_state == record.PRESENTATIONS_EXEMPT %}
-                <span class="label label-danger"><i class="fa fa-times"></i> Pres: exempt</span>
-            {% else %}
-                <span class="label label-danger"><i class="fa fa-times"></i> Pres: unknown</span>
-            {% endif %}
+            {{ record.short_presentation_label|safe }}
         {% endif %}
     </div>
 {% else %}

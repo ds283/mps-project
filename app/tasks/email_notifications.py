@@ -23,17 +23,25 @@ from ..shared.sqlalchemy import get_count
 from celery import chain, group
 from celery.exceptions import Ignore
 
-from datetime import datetime
+from datetime import datetime, date
+from bdateutil import isbday
+import holidays
 
 
 def register_email_notification_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_daily_notifications(self):
+        # test whether today is a working day, and if not then bail out; we don't want to bother people
+        # with emails at the weekend or on statutory holidays
+        today = date.today()
+        if not isbday(today, holidays=holidays.UK()):
+            return
+
         # search through all active users and dispatch notifications
         records = db.session.query(User).filter_by(active=True).all()
 
         task = group(send_user_notifications.si(r.id) for r in records if r is not None)
-        task.apply_async()
+        raise self.replace(task)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -42,7 +50,7 @@ def register_email_notification_tasks(celery):
 
         queue = chain(send_user_notifications.si(user_id),
                       notify_finalize.si(task_id)).on_error(notify_fail.si(task_id))
-        queue.apply_async()
+        raise self.replace(queue)
 
 
     @celery.task()

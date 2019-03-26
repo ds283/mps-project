@@ -5,6 +5,7 @@ asn1crypto==0.24.0
 Babel==2.6.0
 backcall==0.1.0
 bcrypt==3.1.6
+bdateutil==0.1
 billiard==3.6.0.0
 bleach==3.1.0
 bleach-whitelist==0.0.9
@@ -44,6 +45,7 @@ Flask-Uploads==0.2.1
 Flask-WTF==0.14.2
 flower==0.9.2
 guess-language-spirit==0.5.3
+holidays==0.9.10
 html5lib==1.0.1
 htmlmin==0.1.12
 idna==2.8

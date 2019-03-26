@@ -49,7 +49,7 @@ def register_system_tasks(celery):
             db.session.query(TaskRecord).delete()
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()
 
         return True
@@ -62,7 +62,7 @@ def register_system_tasks(celery):
             db.session.query(Notification).delete()
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()
 
         return True
@@ -86,7 +86,7 @@ def register_system_tasks(celery):
         try:
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()
 
         return True
@@ -110,7 +110,7 @@ def register_system_tasks(celery):
         try:
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()
 
         return True
@@ -133,7 +133,7 @@ def register_system_tasks(celery):
         try:
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()
 
         return True
@@ -199,7 +199,7 @@ def register_system_tasks(celery):
         try:
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()
 
         return True
@@ -308,5 +308,5 @@ def register_system_tasks(celery):
         try:
             db.session.commit()
         except SQLAlchemyError:
-            db.rollback()
+            db.session.rollback()
             raise self.retry()

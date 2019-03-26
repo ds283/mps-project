@@ -831,7 +831,7 @@ def move_description(did):
                 flash('Description "{name}" successfully moved to project '
                       '"{pname}"'.format(name=desc.label, pname=new_project.name), 'info')
             except SQLAlchemyError:
-                db.rollback()
+                db.session.rollback()
                 flash('Description "{name}" could not be moved due to a database error'.format(name=desc.label),
                       'error')
         else:

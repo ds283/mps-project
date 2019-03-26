@@ -2208,7 +2208,7 @@ def move_description(did, pclass_id):
                 flash('Description "{name}" successfully moved to project '
                       '"{pname}"'.format(name=desc.label, pname=new_project.name), 'info')
             except SQLAlchemyError:
-                db.rollback()
+                db.session.rollback()
                 flash('Description "{name}" could not be moved due to a database error'.format(name=desc.label),
                       'error')
         else:
@@ -3800,7 +3800,7 @@ def add_group_filter(id, gid):
         except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
-            db.rollback()
+            db.session.rollback()
 
     return redirect(request.referrer)
 
@@ -3824,7 +3824,7 @@ def remove_group_filter(id, gid):
         except StaleDataError:
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
-            db.rollback()
+            db.session.rollback()
 
     return redirect(request.referrer)
 
@@ -3846,7 +3846,7 @@ def clear_group_filters(id):
     except StaleDataError:
         # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
         # to the same endpoint?
-        db.rollback()
+        db.session.rollback()
 
     return redirect(request.referrer)
 
@@ -3870,7 +3870,7 @@ def add_skill_filter(id, skill_id):
         except (StaleDataError, IntegrityError):
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
-            db.rollback()
+            db.session.rollback()
 
     return redirect(request.referrer)
 
@@ -3894,7 +3894,7 @@ def remove_skill_filter(id, skill_id):
         except StaleDataError:
             # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
             # to the same endpoint?
-            db.rollback()
+            db.session.rollback()
 
     return redirect(request.referrer)
 
@@ -3915,7 +3915,7 @@ def clear_skill_filters(id):
     except StaleDataError:
         # presumably caused by some sort of race condition; maybe two threads are invoked concurrently
         # to the same endpoint?
-        db.rollback()
+        db.session.rollback()
 
     return redirect(request.referrer)
 

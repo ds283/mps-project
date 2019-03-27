@@ -85,11 +85,11 @@ def register_email_notification_tasks(celery):
                             EmailNotification.event_type == EmailNotification.CONFIRMATION_TO_PENDING))).subquery()
 
         outstanding_crqs = db.session.query(ConfirmRequest) \
-            .filter(ConfirmRequest.viewed != True) \
             .join(LiveProject, LiveProject.id == ConfirmRequest.project_id) \
             .filter(LiveProject.owner_id == user.id) \
             .join(crqs, crqs.c.data_1 == ConfirmRequest.id, isouter=True) \
-            .filter(crqs.c.data_1 == None) \
+            .filter(crqs.c.data_1 == None,
+                    ConfirmRequest.viewed != True) \
             .order_by(ConfirmRequest.request_timestamp.asc())
 
         outstanding_count = get_count(outstanding_crqs)
@@ -137,11 +137,31 @@ def register_email_notification_tasks(celery):
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
         # register a new task in the database
-        task_id = register_task(msg.subject,
-                                description='Send notification email to {r}'.format(r=', '.join(msg.recipients)))
+        task_id = register_task(msg.subject, description='Send notification email to '
+                                                         '{r}'.format(r=', '.join(msg.recipients)))
 
         # queue Celery task to send the email
         send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        created = user.email_notifications \
+            .filter(EmailNotification.event_type == EmailNotification.CONFIRMATION_REQUEST_CREATED).all()
+        for notification in created:
+            req = db.session.query(ConfirmRequest).filter_by(id=notification.data_1).first()
+            if req is None:
+                continue
+
+            pair_msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                               reply_to=req.project.owner.user.email,
+                               recipients=[req.owner.student.user.email, req.project.owner.user.email],
+                               subject='{name}: project meeting request'.format(name=req.project.config.project_class.name))
+            pair_msg.body = render_template('email/notifications/request_meeting.txt', supervisor=user,
+                                            student=req.owner.student, config=req.project.config,
+                                            project=req.project)
+
+            tk_id = register_task(msg.subject, description='Send meeting setup email')
+
+            # queue Celery task to send the email
+            send_log_email.apply_async(args=(tk_id, pair_msg), task_id=tk_id)
 
         user.last_email = datetime.now()
         user.email_notifications = []

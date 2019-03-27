@@ -852,7 +852,7 @@ class EmailNotification(db.Model):
 
 
     @assign(str_operations, CONFIRMATION_REQUEST_CREATED)
-    def _reqested_created(self):
+    def _request_created(self):
         req = db.session.query(ConfirmRequest).filter_by(id=self.data_1).first()
         if req is None:
             return '<missing database row>'
@@ -1086,6 +1086,7 @@ def add_notification(user, event, object_1, object_2=None, autocommit=True, noti
     if event == EmailNotification.CONFIRMATION_GRANTED:
         # object_1 = ConfirmRequest, object2 = None
         check_list.append((EmailNotification.CONFIRMATION_GRANT_DELETED, object_1.project_id, None))
+        check_list.append((EmailNotification.CONFIRMATION_TO_PENDING, object_1.project_id, None))
 
     if event == EmailNotification.CONFIRMATION_DECLINE_DELETED:
         # object_1 = ConfirmRequest, object2 = None
@@ -1100,6 +1101,7 @@ def add_notification(user, event, object_1, object_2=None, autocommit=True, noti
     if event == EmailNotification.CONFIRMATION_TO_PENDING:
         # object_1 = ConfirmRequest, object2 = None
         check_list.append((EmailNotification.CONFIRMATION_GRANTED, object_1.project_id, None))
+        check_list.append((EmailNotification.CONFIRMATION_DECLINED, object_1.project_id, None))
 
     dont_save = False
     for t, obj1_id, obj2_id in check_list:
@@ -1108,10 +1110,10 @@ def add_notification(user, event, object_1, object_2=None, autocommit=True, noti
 
         if get_count(q) > 0:
             q.delete()
-            db.session.commit()
             dont_save = True
 
     if dont_save:
+        db.session.commit()
         return
 
     # check whether an existing message with the same content already exists

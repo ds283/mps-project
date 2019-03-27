@@ -1,0 +1,20 @@
+Dear {{ supervisor.name }} and {{ student.user.name }}
+
+{{ student.user.name }} has requested a meeting to discuss the
+project
+
+{{ project.name|wordwrap(75) }}
+
+This project is part of "{{ config.project_class.name }}".
+
+{{ student.user.first_name }}: you should now email the project supervisor to arrange
+a convenient time and place to meet. You can do so by replying directly to this email.
+
+{{ supervisor.name }}: when you have met with the student and are
+satisfied that their background and course selection is appropriate for your project,
+please 'confirm' that a meeting has taken place using the appropriate drop-down menu on
+your dashboard for "{{ project.name }}".
+
+If you have queries, please direct them to the project convenor:
+
+{{ config.project_class.convenor.user.first_name }} {{ config.project_class.convenor.user.last_name }}

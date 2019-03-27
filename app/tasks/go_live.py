@@ -359,6 +359,10 @@ def register_golive_tasks(celery):
 
         config.live = True
         config.live_deadline = deadline
+
+        # try to avoid sending duplicate summary emails if we have been through Go Live before
+        send_summary_email = config.golive_timestamp is None
+
         config.golive_id = convenor_id
         config.golive_timestamp = datetime.now()
 
@@ -368,28 +372,29 @@ def register_golive_tasks(celery):
             db.session.rollback()
             raise self.retry()
 
-        recipients = [config.project_class.convenor.user.email]
+        if send_summary_email:
+            recipients = [config.project_class.convenor.user.email]
 
-        for coconvenor in config.project_class.coconvenors:
-            recipients.append(coconvenor.user.email)
+            for coconvenor in config.project_class.coconvenors:
+                recipients.append(coconvenor.user.email)
 
-        for user in config.project_class.office_contacts:
-            recipients.append(user.email)
+            for user in config.project_class.office_contacts:
+                recipients.append(user.email)
 
-        msg = Message(subject='[mpsprojects] "{name}": project list now published to '
-                              'students'.format(name=config.project_class.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=recipients)
+            msg = Message(subject='[mpsprojects] "{name}": project list now published to '
+                                  'students'.format(name=config.project_class.name),
+                          sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                          reply_to=current_app.config['MAIL_REPLY_TO'],
+                          recipients=recipients)
 
-        msg.body = render_template('email/go_live/convenor.txt', pclass=config.project_class, config=config,
-                                   deadline=deadline)
+            msg.body = render_template('email/go_live/convenor.txt', pclass=config.project_class, config=config,
+                                       deadline=deadline)
 
-        # register a new task in the database
-        task_id = register_task(msg.subject, description='Send convenor email notification')
+            # register a new task in the database
+            task_id = register_task(msg.subject, description='Send convenor email notification')
 
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+            send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+            send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
     @celery.task(bind=True, default_retry_delay=30)

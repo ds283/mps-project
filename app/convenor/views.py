@@ -3168,6 +3168,28 @@ def perform_go_live(id):
     return redirect(url_for('convenor.overview', id=config.pclass_id))
 
 
+@convenor.route('/reverse_golive/<int:config_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def reverse_golive(config_id):
+    # config id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(config_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    config.live = False
+    config.live_deadline = None
+
+    db.session.commit()
+
+    return redirect(url_for('convenor.overview', id=config.pclass_id))
+
+
 @convenor.route('/close_selections/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def close_selections(id):

@@ -5315,6 +5315,7 @@ class LiveProject(db.Model):
         req = ConfirmRequest(owner_id=sel.id,
                              project_id=self.id,
                              state=ConfirmRequest.REQUESTED,
+                             viewed=False,
                              request_timestamp=datetime.now())
         return req
 
@@ -5624,8 +5625,12 @@ class ConfirmRequest(db.Model):
     REQUESTED = 0
     CONFIRMED = 1
     DECLINED = 2
+
     # confirmation state
     state = db.Column(db.Integer())
+
+    # has this request been viewed?
+    viewed = db.Column(db.Boolean(), default=False)
 
     # timestamp of request
     request_timestamp = db.Column(db.DateTime())
@@ -5634,7 +5639,7 @@ class ConfirmRequest(db.Model):
     response_timestamp = db.Column(db.DateTime())
 
     # if declined, a short justification
-    decline_justifcation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+    decline_justification = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
 
     def confirm(self):

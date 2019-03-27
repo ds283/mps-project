@@ -50,6 +50,9 @@ _timestamps = \
     {% set pl = 's' %}{% if delta.days == 1 %}{% set pl = '' %}{% endif %}
     <span class="label label-danger"><i class="fa fa-clock-o"></i> {{ delta.days }} day{{ pl }}</span>
 {% endif %}
+{% if not req.viewed %}
+    <span class="label label-danger">NOT VIEWED</span>
+{% endif %}
 """
 
 

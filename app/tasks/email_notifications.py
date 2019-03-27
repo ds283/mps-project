@@ -83,7 +83,9 @@ def register_email_notification_tasks(celery):
             .filter(or_(EmailNotification.event_type == EmailNotification.CONFIRMATION_REQUEST_CREATED,
                         or_(EmailNotification.event_type == EmailNotification.CONFIRMATION_GRANTED,
                             EmailNotification.event_type == EmailNotification.CONFIRMATION_TO_PENDING))).subquery()
+
         outstanding_crqs = db.session.query(ConfirmRequest) \
+            .filter(ConfirmRequest.viewed != True) \
             .join(LiveProject, LiveProject.id == ConfirmRequest.project_id) \
             .filter(LiveProject.owner_id == user.id) \
             .join(crqs, crqs.c.data_1 == ConfirmRequest.id, isouter=True) \

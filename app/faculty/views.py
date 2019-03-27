@@ -1373,6 +1373,13 @@ def dashboard():
             else:
                 pane = None
 
+        # mark any unviewed confirmation requests as viewed, but do it with a 15 sec delay so that the
+        # NEW labels don't disappear immediately
+        if pane is not None:
+            celery = current_app.extensions['celery']
+            remove_new = celery.tasks['app.tasks.selecting.remove_new']
+            remove_new.apply_async(args=(int(pane), current_user.id), countdown=15)
+
     if pane is not None:
         session['faculty_dashboard_pane'] = pane
 

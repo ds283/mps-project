@@ -211,9 +211,9 @@ def register_golive_tasks(celery):
         # build list of faculty that are enrolled as supervisors
         selectors = set()
 
-        for student in config.selecting_students.filter_by(retired=False).all():
-            if student.user not in config.golive_notified and student.id not in selectors:
-                selectors.add(student.id)
+        for sel in config.selecting_students.filter_by(retired=False).all():
+            if sel.student.user not in config.golive_notified and sel.id not in selectors:
+                selectors.add(sel.id)
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
 

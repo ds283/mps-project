@@ -273,7 +273,7 @@ def register_system_tasks(celery):
         # currently, precompute tasks are run *here*, and *at login*, and nowhere else,
         # and the default lifetime for items in the cache is 24 hours
 
-        # the configuration item PRECOMPUTE_DELAY defaults to 10 minutes.
+        # the configuration item PRECOMPUTE_DELAY defaults to 30 minutes.
         # We start a precompute task if either:
         #  - If there is no recorded last precompute time. This means that the app has restarted since this
         #    user was last seen online, and therefore the cache has been flushed. It is likely that all
@@ -284,7 +284,7 @@ def register_system_tasks(celery):
         #    This means no precompute is kicked off. We won't pick up that the cache likely contains no
         #    entries until we get here.
         #    Of course, this means that we *also* perform redundant precomputes for all active users every
-        #    10 minutes or so. This does cover the possibility that the 24 hour cache period expires
+        #    30 minutes or so. This does cover the possibility that the 24 hour cache period expires
         #    while the user is still active. If it doesn't, at least we are only starting these jobs
         #    for users actively using the system, which is probably only a handful.
         compute_now = current_user.last_precompute is None
@@ -293,7 +293,7 @@ def register_system_tasks(celery):
 
             delay = current_app.config.get('PRECOMPUTE_DELAY')
             if delay is None:
-                delay = 600
+                delay = 1800
 
             if delta.seconds > delay:
                 compute_now = True

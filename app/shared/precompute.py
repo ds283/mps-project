@@ -92,7 +92,7 @@ def _check_if_compute(db, key):
 
     delay = current_app.config.get('PRECOMPUTE_DELAY')
     if delay is None:
-        delay = 600
+        delay = 1800            # default to 30 minutes
 
     return delta.seconds > delay
 

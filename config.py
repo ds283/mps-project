@@ -122,8 +122,8 @@ class Config(object):
 
     DEFAULT_USE_ACADEMIC_TITLE = True
 
-    # measured in seconds; should match delay used in scheduled job
-    PRECOMPUTE_DELAY = 600
+    # delay between precompute cycles, measured in seconds
+    PRECOMPUTE_DELAY = 1800
 
 
 class DevelopmentConfig(Config):

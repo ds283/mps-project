@@ -208,13 +208,13 @@ _presentations = \
 _workload = \
 """
 {% if config.uses_supervisor %}
-    <span class="label label-info">Supv {{ CATS_sup }}</span>
+    <span class="label label-info">S {{ CATS_sup }}</span>
 {% endif %}
 {% if config.uses_marker %}
-    <span class="label label-info">Mark {{ CATS_mark }}</span>
+    <span class="label label-info">M {{ CATS_mark }}</span>
 {% endif %}
 {% if config.uses_presentations %}
-    <span class="label label-info">Pres {{ CATS_pres }}</span>
+    <span class="label label-info">P {{ CATS_pres }}</span>
 {% endif %}
 <span class="label label-primary">Total {{ CATS_sup+CATS_mark+CATS_pres }}</span>
 """

@@ -137,8 +137,8 @@ _marking = \
 
 _workload = \
 """
-<span class="label {% if sup_overassigned %}label-danger{% else %}label-info{% endif %}">Supv {{ sup }}</span>
-<span class="label {% if mark_overassigned %}label-danger{% else %}label-default{% endif %}">2nd {{ mark }}</span>
+<span class="label {% if sup_overassigned %}label-danger{% else %}label-info{% endif %}">S {{ sup }}</span>
+<span class="label {% if mark_overassigned %}label-danger{% else %}label-default{% endif %}">M {{ mark }}</span>
 <span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ tot }}</span>
 """
 

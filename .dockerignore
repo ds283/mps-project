@@ -3,6 +3,7 @@
 .idea
 .vscode
 .DS_Store
+assets
 AWS
 backups
 database\ copies
@@ -15,3 +16,4 @@ nginx
 profiling
 thirdparty
 venv
+worker-output

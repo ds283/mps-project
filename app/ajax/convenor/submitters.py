@@ -99,16 +99,20 @@ _projects = \
         {{ feedback_state_tag(r, r.supervisor_response_state, 'Response') }}
     </div>
 {% endmacro %}
-{% set recs = sub.ordered_assignments.all() %}
-{% if recs|length == 1 %}
-    {{ tag(recs[0], false) }}
-{% elif recs|length > 1 %}
-    {% for rec in recs %}
-        {% if loop.index > 1 %}<p></p>{% endif %}
-        {{ tag(rec, true) }}
-    {% endfor %}
+{% if config.uses_supervisor %}
+    {% set recs = sub.ordered_assignments.all() %}
+    {% if recs|length == 1 %}
+        {{ tag(recs[0], false) }}
+    {% elif recs|length > 1 %}
+        {% for rec in recs %}
+            {% if loop.index > 1 %}<p></p>{% endif %}
+            {{ tag(rec, true) }}
+        {% endfor %}
+    {% else %}
+        <span class="label label-danger">None</span>
+    {% endif %}
 {% else %}
-    <span class="label label-danger">None</span>
+    <span class="label label-default">Not used</span>
 {% endif %}
 """
 
@@ -154,16 +158,97 @@ _markers = \
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>
 {% endmacro %}
-{% set recs = sub.ordered_assignments.all() %}
-{% if recs|length == 1 %}
-    {{ marker_tag(recs[0], false) }}
-{% elif recs|length > 1 %}
-    {% for rec in sub.ordered_assignments %}
-        {% if loop.index > 1 %}<p></p>{% endif %}
-        {{ marker_tag(rec, true) }}
-    {% endfor %}
+{% if config.uses_marker %}
+    {% set recs = sub.ordered_assignments.all() %}
+    {% if recs|length == 1 %}
+        {{ marker_tag(recs[0], false) }}
+    {% elif recs|length > 1 %}
+        {% for rec in sub.ordered_assignments %}
+            {% if loop.index > 1 %}<p></p>{% endif %}
+            {{ marker_tag(rec, true) }}
+        {% endfor %}
+    {% else %}
+        <span class="label label-danger">None</span>
+    {% endif %}
 {% else %}
-    <span class="label label-danger">None</span>
+    <span class="label label-default">Not used</span>
+{% endif %}
+"""
+
+
+_presentations = \
+"""
+{% macro feedback_state_tag(obj, state, label) %}
+    {% if state == obj.FEEDBACK_NOT_YET or state == obj.FEEDBACK_NOT_REQUIRED %}
+        {# empty #}
+    {% elif state == obj.FEEDBACK_WAITING %}
+        <span class="label label-default">{{ label }}: to do</span>
+    {% elif state == obj.FEEDBACK_SUBMITTED %}
+        <span class="label label-success">{{ label }}: submitted</span>        
+    {% elif state == obj.FEEDBACK_ENTERED %}
+        <span class="label label-warning">{{ label }}: in progress</span>        
+    {% elif state == obj.FEEDBACK_LATE %}
+        <span class="label label-danger">{{ label }}: late</span>
+    {% else %}
+        <span class="label label-danger">{{ label }}: error &ndash; unknown state</span>
+    {% endif %}        
+{% endmacro %}
+{% if config.uses_presentations %}
+    {% set recs = sub.ordered_assignments.all() %}
+    {% set ns = namespace(count=0) %}
+    {% for rec in recs %}
+        {% if rec.period.has_presentation %}
+            {% set pclass = rec.owner.config.project_class %}
+            {% set ns.count = ns.count + 1 %}
+            <div>
+                <span class="label label-primary">Pd. {{ rec.submission_period }}</span>
+                {% if rec.period.has_deployed_schedule %}
+                    {% set slot = rec.schedule_slot %}
+                    <div class="dropdown assignment-label">
+                        {% if slot is not none %}
+                            <a class="label label-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                {{ slot.short_date_as_string }}
+                                {{ slot.session_type_string }}
+                                <span class="caret"></span>
+                            </a>
+                        {% else %}
+                            <a class="label label-warning btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                Not attending
+                                <span class="caret"></span>
+                            </a>
+                        {% endif %}
+                        <ul class="dropdown-menu">
+                            {% set disabled = not rec.can_assign_feedback %}
+                            <li {% if disabled %}class="disabled"{% endif %}>
+                                <a {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                                    Add new feedback
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    {% if slot is not none %}
+                        {% set fns = namespace(flag=false) %}
+                        {% for a in slot.assessors %}
+                            {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
+                            {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
+                                {% set fns.flag = true %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if fns.flag and rec.number_presentation_feedback == 0 %}
+                            <span class="label label-danger">Feedback required</span>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <span class="label label-default">Awaiting scheduling</span>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endfor %}
+    {% if ns.count == 0 %}
+        <span class="label label-default">None</span>
+    {% endif %}
+{% else %}
+    <span class="label label-default">Not used</span>
 {% endif %}
 """
 
@@ -243,79 +328,6 @@ _menu = \
 """
 
 
-_presentations = \
-"""
-{% macro feedback_state_tag(obj, state, label) %}
-    {% if state == obj.FEEDBACK_NOT_YET or state == obj.FEEDBACK_NOT_REQUIRED %}
-        {# empty #}
-    {% elif state == obj.FEEDBACK_WAITING %}
-        <span class="label label-default">{{ label }}: to do</span>
-    {% elif state == obj.FEEDBACK_SUBMITTED %}
-        <span class="label label-success">{{ label }}: submitted</span>        
-    {% elif state == obj.FEEDBACK_ENTERED %}
-        <span class="label label-warning">{{ label }}: in progress</span>        
-    {% elif state == obj.FEEDBACK_LATE %}
-        <span class="label label-danger">{{ label }}: late</span>
-    {% else %}
-        <span class="label label-danger">{{ label }}: error &ndash; unknown state</span>
-    {% endif %}        
-{% endmacro %}
-{% set recs = sub.ordered_assignments.all() %}
-{% set ns = namespace(count=0) %}
-{% for rec in recs %}
-    {% if rec.period.has_presentation %}
-        {% set pclass = rec.owner.config.project_class %}
-        {% set ns.count = ns.count + 1 %}
-        <div>
-            <span class="label label-primary">Pd. {{ rec.submission_period }}</span>
-            {% if rec.period.has_deployed_schedule %}
-                {% set slot = rec.schedule_slot %}
-                <div class="dropdown assignment-label">
-                    {% if slot is not none %}
-                        <a class="label label-info btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
-                            {{ slot.short_date_as_string }}
-                            {{ slot.session_type_string }}
-                            <span class="caret"></span>
-                        </a>
-                    {% else %}
-                        <a class="label label-warning btn-table-block dropdown-toggle" type="button" data-toggle="dropdown">
-                            Not attending
-                            <span class="caret"></span>
-                        </a>
-                    {% endif %}
-                    <ul class="dropdown-menu">
-                        {% set disabled = not rec.can_assign_feedback %}
-                        <li {% if disabled %}class="disabled"{% endif %}>
-                            <a {% if not disabled %}href="{{ url_for('convenor.assign_presentation_feedback', id=rec.id, url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
-                                Add new feedback
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                {% if slot is not none %}
-                    {% set fns = namespace(flag=false) %}
-                    {% for a in slot.assessors %}
-                        {{ feedback_state_tag(rec, rec.presentation_feedback_state(a.id), a.user.name) }}
-                        {% if slot.feedback_state(a.id) > slot.FEEDBACK_NOT_YET %}
-                            {% set fns.flag = true %}
-                        {% endif %}
-                    {% endfor %}
-                    {% if fns.flag and rec.number_presentation_feedback == 0 %}
-                        <span class="label label-danger">Feedback required</span>
-                    {% endif %}
-                {% endif %}
-            {% else %}
-                <span class="label label-default">Awaiting scheduling</span>
-            {% endif %}
-        </div>
-    {% endif %}
-{% endfor %}
-{% if ns.count == 0 %}
-    <span class="label label-default">None</span>
-{% endif %}
-"""
-
-
 _name = \
 """
 {% set pclass = sub.config.project_class %}
@@ -344,9 +356,9 @@ def submitters_data(students, config):
                 'sortstring': s.student.user.last_name + s.student.user.first_name
              },
              'cohort': render_template_string(_cohort, sub=s),
-             'projects': render_template_string(_projects, sub=s),
-             'markers': render_template_string(_markers, sub=s),
-             'presentations': render_template_string(_presentations, sub=s),
+             'projects': render_template_string(_projects, sub=s, config=config),
+             'markers': render_template_string(_markers, sub=s, config=config),
+             'presentations': render_template_string(_presentations, sub=s, config=config),
              'menu': render_template_string(_menu, sub=s)} for s in students]
 
     return jsonify(data)

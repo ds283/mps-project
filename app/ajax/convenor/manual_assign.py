@@ -42,7 +42,6 @@ _action = \
 """
 
 def manual_assign_data(liveprojects, rec):
-
     data = [{'project': render_template_string(_name, p=p, r=rec),
              'supervisor': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=p.owner.user.email,
                                                                                     name=p.owner.user.name),

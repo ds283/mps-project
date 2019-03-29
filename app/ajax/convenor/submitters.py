@@ -350,12 +350,14 @@ _name = \
 
 
 def submitters_data(students, config):
-
     data = [{'name': {
                 'display': render_template_string(_name, sub=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
              },
-             'cohort': render_template_string(_cohort, sub=s),
+             'cohort': {
+                 'display': render_template_string(_cohort, sub=s),
+                 'value': s.student.cohort
+             },
              'projects': render_template_string(_projects, sub=s, config=config),
              'markers': render_template_string(_markers, sub=s, config=config),
              'presentations': render_template_string(_presentations, sub=s, config=config),

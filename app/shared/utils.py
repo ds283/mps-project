@@ -1012,13 +1012,14 @@ def get_automatch_pclasses():
     return pclasses
 
 
-def build_submitters_data(config, cohort_filter, prog_filter, state_filter):
+def build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter):
     # build a list of live students submitting work for evaluation in this project class
     submitters = config.submitting_students.filter_by(retired=False)
 
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
     prog_flag, prog_value = is_integer(prog_filter)
+    year_flag, year_value = is_integer(year_filter)
 
     if cohort_flag or prog_flag:
         submitters = submitters \
@@ -1044,6 +1045,9 @@ def build_submitters_data(config, cohort_filter, prog_filter, state_filter):
         data = [x for x in submitters.all() if x.has_not_started_flags]
     else:
         data = submitters.all()
+
+    if year_flag:
+        data = [s for s in data if s.academic_year == year_value]
 
     return data
 

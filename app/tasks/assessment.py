@@ -40,8 +40,8 @@ def register_assessment_tasks(celery):
         commit = False
         for assessment in assessments:
             for rec in submitter.records:
-                if get_count(assessment.submission_periods).filter_by(id=rec.period_id) > 0:
-                    if get_count(assessment.submitter_list).filter_by(submitter_id=rec.id) == 0:
+                if get_count(assessment.submission_periods.filter_by(id=rec.period_id)) > 0:
+                    if get_count(assessment.submitter_list.filter_by(submitter_id=rec.id)) == 0:
                         data = SubmitterAttendanceData(submitter_id=rec.id,
                                                        assessment_id=assessment.id,
                                                        attending=True)

@@ -20,7 +20,7 @@ _cohort = \
 _selections = \
 """
 {% if sel.has_submitted %}
-    {% for item in sel.ordered_selection %}
+    {% for item in sel.ordered_selections %}
         {% if item.rank <= sel.number_choices %}
             {% set project = item.liveproject %}
             <div class="dropdown">

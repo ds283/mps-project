@@ -182,7 +182,7 @@ class WorkflowHistoryMixin():
 
     # workflow event
     event = db.Column(db.Integer())
-    
+
     # year tag
     @declared_attr
     def year(cls):
@@ -1916,8 +1916,8 @@ class StudentBatch(db.Model):
     """
 
     __tablename__ = 'batch_student'
-    
-    
+
+
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
@@ -1935,7 +1935,7 @@ class StudentBatch(db.Model):
 
     # has this batch been converted to user accounts?
     converted = db.Column(db.Boolean(), default=False)
-    
+
     # generation timestamp
     timestamp = db.Column(db.DateTime())
 
@@ -1957,8 +1957,8 @@ class StudentBatchItem(db.Model):
     """
 
     __tablename__ = 'batch_student_items'
-    
-    
+
+
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
@@ -2004,9 +2004,9 @@ class StudentBatchItem(db.Model):
     # is this student intermitting?
     intermitting = db.Column(db.Boolean(), default=False)
 
-    
+
     # METADATA
-    
+
     # flag as "don't convert to user"
     dont_convert = db.Column(db.Boolean(), default=False)
 
@@ -4103,8 +4103,8 @@ class Project(db.Model):
     # which degree programmes are preferred for this project?
     programmes = db.relationship('DegreeProgramme', secondary=project_programmes, lazy='dynamic',
                                  backref=db.backref('projects', lazy='dynamic'))
-    
-    
+
+
     @validates('keywords', 'group_id', 'skills', include_removes=True)
     def _tags_validate(self, key, value, is_remove):
         with db.session.no_autoflush:
@@ -4584,7 +4584,7 @@ class Project(db.Model):
         # if user not in approvals team, ignore any comments that are only visible to the approvals team
         if not user.has_role('project_approver'):
             query = query.filter(DescriptionComment.visibility != DescriptionComment.VISIBILITY_APPROVALS_TEAM)
-            
+
         query = query \
             .join(ProjectDescription, ProjectDescription.id == DescriptionComment.parent_id) \
             .filter(ProjectDescription.parent_id == self.id) \
@@ -5426,6 +5426,16 @@ class LiveProject(db.Model):
 
 
     @property
+    def ordered_bookmarks(self):
+        return self.bookmarks.order_by(Bookmark.rank)
+
+
+    @property
+    def ordered_selections(self):
+        return self.selections.order_by(SelectionRecord.rank)
+
+
+    @property
     def number_bookmarks(self):
         return get_count(self.bookmarks)
 
@@ -5474,7 +5484,7 @@ class LiveProject(db.Model):
 
         # don't report popularity data if there isn't enough differentiation between projects for it to be
         # meaningful. Remember the lowest rank is actually numerically the highest number.
-        # We report scores only if there is enoug differentiation to push this rank above the 50th percentile
+        # We report scores only if there is enough differentiation to push this rank above the 50th percentile
         if rank is not None:
             frac = float(rank)/float(total)
         else:
@@ -5507,14 +5517,28 @@ class LiveProject(db.Model):
 
 
     def bookmarks_label(self, css_classes=None):
-        pl = 's' if self.number_bookmarks != 1 else ''
+        num = self.number_bookmarks
+
+        pl = 's' if num != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
-        return '<span class="label label-info {cls}">{n} bookmark{pl}</span>'.format(cls=cls, n=self.number_bookmarks, pl=pl)
+
+        if num > 0:
+            project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
+                            for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()]
+            tooltip = ''.join(project_tags)
+            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
+        else:
+            attrs = ''
+
+        return '<span class="label label-info {cls}" {attrs}>{n} ' \
+               'bookmark{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 
     def views_label(self, css_classes=None):
         pl = 's' if self.page_views != 1 else ''
-        return '<span class="label label-info">{n} view{pl}</span>'.format(n=self.page_views, pl=pl)
+        cls = '' if css_classes is None else ' '.join(css_classes)
+
+        return '<span class="label label-info {cls}">{n} view{pl}</span>'.format(cls=cls, n=self.page_views, pl=pl)
 
 
     def format_selections_label(self, css_classes=None):
@@ -5525,9 +5549,21 @@ class LiveProject(db.Model):
 
 
     def selections_label(self, css_classes=None):
-        pl = 's' if self.number_selections != 1 else ''
+        num = self.number_selections
+
+        pl = 's' if num != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
-        return '<span class="label label-primary {cls}">{n} selection{pl}</span>'.format(cls=cls, n=self.number_selections, pl=pl)
+
+        if num > 0:
+            project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
+                            for rec in self.selections.order_by(SelectionRecord.rank).limit(10).all()]
+            tooltip = ''.join(project_tags)
+            attrs = 'data-toggle="tooltip" data-html="true" title="{title}"'.format(title=tooltip)
+        else:
+            attrs = ''
+
+        return '<span class="label label-primary {cls}" {attrs}>{n} ' \
+               'selection{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 
     def satisfies_preferences(self, sel):
@@ -5907,7 +5943,7 @@ class SelectingStudent(db.Model):
 
 
     @property
-    def ordered_selection(self):
+    def ordered_selections(self):
         return self.selections.order_by(SelectionRecord.rank)
 
 
@@ -7132,7 +7168,7 @@ def _MatchingAttempt_current_score(id):
 
     if obj.levelling_bias is None or obj.mean_CATS_per_project is None or obj.intra_group_tension is None:
         return None
-    
+
     # build objective function: this is the reward function that measures how well the student
     # allocations match their preferences; corresponds to
     #   objective += X[idx] * W[idx] / R[idx]
@@ -7140,33 +7176,33 @@ def _MatchingAttempt_current_score(id):
     scores = [x.current_score for x in obj.records]
     if None in scores:
         scores = [x for x in scores if x is not None]
-    
+
     objective = sum(scores)
-    
+
     # break up subscribed faculty in a list of markers only, supervisors only, and markers and supervisors
     mark_only, sup_and_mark, sup_only = obj._faculty_groups
-    
+
     sup_CATS = obj._get_group_CATS(sup_only)
     mark_CATS = obj._get_group_CATS(mark_only)
     sup_mark_CATS = obj._get_group_CATS(sup_and_mark)
-    
+
     globalMin = None
     globalMax = None
-    
+
     # compute max(CATS) - min(CATS) values for each group, and also the global max and min cats
     sup_diff, globalMax, globalMin = obj._compute_group_max_min(sup_CATS, globalMax, globalMin)
     mark_diff, globalMax, globalMin = obj._compute_group_max_min(mark_CATS, globalMax, globalMin)
     sup_mark_diff, globalMax, globalMin = obj._compute_group_max_min(sup_mark_CATS, globalMax, globalMin)
-    
+
     # finally compute the largest number of projects that anyone is scheduled to 2nd mark
     maxMarking = obj._max_marking_allocation
-    
+
     global_diff = 0
     if globalMax is not None and globalMin is not None:
         global_diff = globalMax - globalMin
-    
+
     levelling = sup_diff + mark_diff + sup_mark_diff + abs(float(obj.intra_group_tension)) * global_diff
-    
+
     return objective \
            - abs(float(obj.levelling_bias)) * levelling / float(obj.mean_CATS_per_project) \
            - abs(float(obj.levelling_bias)) * maxMarking
@@ -7305,7 +7341,7 @@ def _MatchingAttempt_is_valid(id):
 
     if len(errors) > 0 or len(warnings) > 0:
         return False, student_issues, faculty_issues, errors, warnings
-    
+
     return True, student_issues, faculty_issues, errors, warnings
 
 
@@ -7351,10 +7387,10 @@ class PuLPMixin():
 
     # are we waiting for manual upload?
     awaiting_upload = db.Column(db.Boolean(), default=False)
-    
+
     # is the optimization job finished?
     finished = db.Column(db.Boolean(), default=False)
-    
+
     # is the celery task finished (need not be the same as whether the optimization job is finished)
     celery_finished = db.Column(db.Boolean(), default=False)
 
@@ -7720,7 +7756,7 @@ class MatchingAttempt(db.Model, PuLPMixin):
         """
         flag, self._student_issues, self._faculty_issues, self._errors, self._warnings = _MatchingAttempt_is_valid(self.id)
         self._validated = True
-        
+
         return flag
 
 
@@ -7808,8 +7844,8 @@ class MatchingAttempt(db.Model, PuLPMixin):
     @property
     def prefer_programme_status(self):
         return _MatchingAttempt_prefer_programme_status(self.id)
-    
-    
+
+
     @property
     def hint_status(self):
         return _MatchingAttempt_hint_status(self.id)
@@ -8603,7 +8639,7 @@ class PresentationAssessment(db.Model):
     @property
     def earliest_date(self):
         q = self.sessions.subquery()
-        
+
         record = db.session.query(PresentationSession) \
             .join(q, q.c.id == PresentationSession.id) \
             .order_by(PresentationSession.date.asc()).first()
@@ -10588,8 +10624,8 @@ class Module(db.Model):
             type = 'danger'
 
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
-    
-    
+
+
     @property
     def level_label(self):
         return self.level.short_label
@@ -10668,8 +10704,8 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
         :return:
         """
         return self._make_label(text, user_classes=user_classes)
-    
-    
+
+
     @property
     def short_label(self):
         return self.make_label(text=self.short_name)
@@ -10754,7 +10790,7 @@ class ScheduleEnumeration(db.Model):
 
     # key value
     key = db.Column(db.Integer())
-    
+
     # schedule identifier
     schedule_id = db.Column(db.Integer(), db.ForeignKey('scheduling_attempts.id'))
     schedule = db.relationship('ScheduleAttempt', foreign_keys=[schedule_id], uselist=False,

@@ -145,7 +145,7 @@ def convert_bookmarks(sel):
 
 
 def sanitize(sel):
-    for item in sel.ordered_selection:
+    for item in sel.ordered_selections:
         if item.converted_from_bookmark is None:
             item.converted_from_bookmark = False
         if item.hint != SelectionRecord.SELECTION_HINT_NEUTRAL:

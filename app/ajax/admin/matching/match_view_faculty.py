@@ -36,7 +36,7 @@ _projects = \
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         {% if adjustable %}<span class="caret"></span>{% endif %}</a>
         {% if adjustable %}
-            {% set list = r.selector.ordered_selection %}
+            {% set list = r.selector.ordered_selections %}
             <ul class="dropdown-menu">
                 {% if r.selector.has_submitted %}
                     <li class="dropdown-header">Submitted choices</li>

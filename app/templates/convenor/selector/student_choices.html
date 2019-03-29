@@ -29,7 +29,7 @@
                             from IP address
                             <strong>{{ sel.submission_IP }}</strong>
                         </div>
-                        {{ ranked_selection(sel, sel.ordered_selection, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) }}
+                        {{ ranked_selection(sel, sel.ordered_selections, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) }}
                     {% else %}
                         No preferences have been received for this student.
                     {% endif %}

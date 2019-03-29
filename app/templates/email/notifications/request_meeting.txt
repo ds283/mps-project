@@ -1,7 +1,6 @@
 Dear {{ supervisor.name }} and {{ student.user.name }}
 
-{{ student.user.name }} has requested a meeting to discuss the
-project
+{{ student.user.name }} has requested a meeting to discuss your project
 
 {{ project.name|wordwrap(75) }}
 
@@ -15,6 +14,7 @@ satisfied that their background and course selection is appropriate for your pro
 please 'confirm' that a meeting has taken place using the appropriate drop-down menu on
 your dashboard for "{{ project.name }}".
 
-If you have queries, please direct them to the project convenor:
+If you have any queries, please direct them to the project convenor:
 
-{{ config.project_class.convenor.user.first_name }} {{ config.project_class.convenor.user.last_name }}
+{{ config.project_class.convenor.user.first_name }} {{ config.project_class.convenor.user.last_name }} ({{ config.project_class.convenor.user.email }})
+project convenor

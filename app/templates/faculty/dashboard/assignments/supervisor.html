@@ -27,7 +27,11 @@
                             </div>
                         </td>
                         <td>
-                            <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                            {% if rec.period.config.uses_marker %}
+                                <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                            {% else %}
+                                <span class="label label-default">Not used</span>
+                            {% endif %}
                         </td>
                         <td>
                             <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">

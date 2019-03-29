@@ -51,13 +51,13 @@
         {% set CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(config.project_class) %}
         <div>
             {% if config.uses_supervisor %}
-                <span class="label label-info">Supv {{ CATS_supv }}</span>
+                <span class="label label-info">S {{ CATS_supv }}</span>
             {% endif %}
             {% if config.uses_marker %}
-                <span class="label label-info">Mark {{ CATS_mark }}</span>
+                <span class="label label-info">M {{ CATS_mark }}</span>
             {% endif %}
             {% if config.uses_presentations %}
-                <span class="label label-info">Pres {{ CATS_pres }}</span>
+                <span class="label label-info">P {{ CATS_pres }}</span>
             {% endif %}
             <span class="label label-primary">Total {{ CATS_supv+CATS_mark+CATS_pres }}</span>
         </div>
@@ -111,7 +111,11 @@
                                         {% endif %}
                                     </div>
                                     <div class="col-xs-3">
-                                        {{ faculty_data(item.marker) }}
+                                        {% if config.uses_marker %}
+                                            {{ faculty_data(item.marker) }}
+                                        {% else %}
+                                            <span class="label label-default">Not used</span>
+                                        {% endif %}
                                     </div>
                                 </div>
                             {% else %}
@@ -216,11 +220,13 @@
                         </thead>
                     </table>
 
-                    <hr class="intro-divider">
-                    <form action="{{ url_for('convenor.manual_assign', id=rec.id, text=text, url=url) }}" name="marker-assign-form" method="POST">
-                        {{ form.hidden_tag() }}
-                        {{ on_click_selector_field(form.marker, true) }}
-                    </form>
+                    {% if form and form.marker %}
+                        <hr class="intro-divider">
+                        <form action="{{ url_for('convenor.manual_assign', id=rec.id, text=text, url=url) }}" name="marker-assign-form" method="POST">
+                            {{ form.hidden_tag() }}
+                            {{ on_click_selector_field(form.marker, true) }}
+                        </form>
+                    {% endif %}
                 </div>
             </div>
 

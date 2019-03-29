@@ -48,7 +48,8 @@ _full_enrollments = \
         {% if record.pclass.uses_supervisor %}
             {% set offered = f.number_projects_offered(record.pclass) %}
             {% if offered > 0 %}
-                <span class="label label-info">Offered={{ offered }}</span>
+                {% set projects = f.projects_offered(record.pclass) %}
+                <span class="label label-info" data-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
             {% else %}
                 <span class="label label-danger">Offered=0</span>
             {% endif %}
@@ -78,7 +79,7 @@ _simple_enrollments = \
         {% if record.pclass.uses_supervisor %}
             {% set offered = f.number_projects_offered(record.pclass) %}
             {% if offered > 0 %}
-                <span class="label label-info">Offered={{ offered }}</span>
+                <span class="label label-info" data-toggle="tooltip" data-html="true" title="{% for p in projects %}<p>{{ loop.index }}. {{ p.name }}</p>{% endfor %}">Offered={{ offered }}</span>
             {% else %}
                 <span class="label label-danger">Offered=0</span>
             {% endif %}
@@ -111,9 +112,9 @@ _simple_workload = \
 _availability = \
 """
 {% if u %}
-    <span class="label label-info">Unbounded</span>
+    <span class="label label-info" data-toggle="tooltip" title="One or more projects do not have a limit on the number of students">Unbounded</span>number
 {% else %}
-    {{ t|round(2) }}
+    <span data-toggle="tooltip" data-html="true" title="<i>Availability</i> is the maximum CATS-weighted number of students who could be assigned to this supervisor">{{ t|round(2) }}</span>
 {% endif %}
 """
 

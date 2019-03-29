@@ -4503,16 +4503,23 @@ def manual_assign(id):
               'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
         return redirect(request.referrer)
 
-    AssignMarkerForm = AssignMarkerFormFactory(rec.project, rec.pclass_id)
+    AssignMarkerForm = AssignMarkerFormFactory(rec.project, rec.pclass_id, config.uses_marker)
     form = AssignMarkerForm(request.form)
 
     if form.validate_on_submit():
-        rec.marker = form.marker.data
-        db.session.commit()
+        modified = False
+
+        if hasattr(form, 'marker') and form.marker:
+            rec.marker = form.marker.data
+            modified = True
+
+        if modified:
+            db.session.commit()
 
     else:
         if request.method == 'GET':
-            form.marker.data = rec.marker
+            if hasattr(form, 'marker') and form.marker:
+                form.marker.data = rec.marker
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -4520,13 +4527,12 @@ def manual_assign(id):
         url = request.referrer
 
     return render_template('convenor/dashboard/manual_assign.html', rec=rec, config=config, url=url, text=text,
-                           form=form)
+                           form=form if config.uses_marker else None)
 
 
 @convenor.route('/manual_assign_ajax/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def manual_assign_ajax(id):
-
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
@@ -4552,7 +4558,6 @@ def manual_assign_ajax(id):
 @convenor.route('/assign_revert/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def assign_revert(id):
-
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 
@@ -4586,7 +4591,6 @@ def assign_revert(id):
 @convenor.route('/assign_from_selection/<int:id>/<int:sel_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def assign_from_selection(id, sel_id):
-
     # id is a SubmissionRecord
     rec = SubmissionRecord.query.get_or_404(id)
 

@@ -23,9 +23,9 @@ _workload = \
 {% macro faculty_data(fac) %}
     {% set CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(config.project_class) %}
     <div>
-        <span class="label label-info">Supv {{ CATS_supv }}</span>
-        <span class="label label-info">Mark {{ CATS_mark }}</span>
-        <span class="label label-info">Pres {{ CATS_pres }}</span>
+        <span class="label label-info">S {{ CATS_supv }}</span>
+        <span class="label label-info">M {{ CATS_mark }}</span>
+        <span class="label label-info">P {{ CATS_pres }}</span>
         <span class="label label-primary">Total {{ CATS_supv+CATS_mark+CATS_pres }}</span>
     </div>
 {% endmacro %}
@@ -42,7 +42,6 @@ _action = \
 """
 
 def manual_assign_data(liveprojects, rec):
-
     data = [{'project': render_template_string(_name, p=p, r=rec),
              'supervisor': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=p.owner.user.email,
                                                                                     name=p.owner.user.name),

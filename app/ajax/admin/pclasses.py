@@ -104,13 +104,13 @@ _options = \
 _workload = \
 """
 {% if p.uses_supervisor %}
-    <span class="label label-primary">Supv: {{ p.CATS_supervision }}</span>
+    <span class="label label-primary">S {{ p.CATS_supervision }}</span>
 {% endif %}
 {% if p.uses_marker %}
-    <span class="label label-info">Mark: {{ p.CATS_marking }}</span>
+    <span class="label label-info">M {{ p.CATS_marking }}</span>
 {% endif %}
 {% if p.uses_presentations %}
-    <span class="label label-info">Pres: {{ p.CATS_presentation }}</span>
+    <span class="label label-info">P {{ p.CATS_presentation }}</span>
 {% endif %}
 """
 

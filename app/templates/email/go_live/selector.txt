@@ -7,11 +7,23 @@ project management web app at https://mpsprojects.co.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
+{% if student.is_optional -%}
+You are receiving this email because you have the option to enroll as
+a participant for "{{ pclass.name }}". Depending on your current
+enrolment, this may require a change of degree programme or meeting special
+criteria such as a minimum perfomance in your end-of-stage exams.
+If you are unsure whether you are eligible for "{{ pclass.name }}", please
+seek guidance from the project convenor whose details are given below.
+
+If you do not wish to participate in "{{ pclass.name }}" then you
+need take no action and can ignore the remainder of this email.
+{%- else -%}
 You are receiving this email because you are enrolled as a participant for
 "{{ pclass.name }}". This runs in Y{{ pclass.start_level.academic_year }}, and it is now time to select
 your preferred projects. (If you believe this to be incorrect, for example
 if you are not expecting to participate in this project, please contact
 the convenor as soon as possible. Contact details are given below.)
+{%- endif %}
 
 This year's project list has now been published, and can be inspected
 by logging in to our web platform: https://mpsprojects.co.uk.
@@ -46,7 +58,15 @@ them in order of preference. Once you have bookmarked enough projects
 you can submit your ranked list; you can do this as many times as you
 like before the selection deadline. We are asking you to select
 at least {{ student.number_choices }} projects to help us find a good match for everyone.
+{% if student.is_optional -%}
+
 The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
+You do not need to do anything else to apply for enrolment in the programme.
+If you do not submit a selection by the deadline we will assume that you
+do not wish to apply.
+{%- else -%}
+The deadline for selections is {{ deadline.strftime("%a %d %b %Y") }}.
+{%- endif %}
 
 Some projects require more background than others. In these cases the
 project supervisor may require you to obtain a 'sign off' before

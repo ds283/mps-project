@@ -28,7 +28,7 @@ _meeting = \
 {% elif project.meeting_reqd == project.MEETING_OPTIONAL %}
     <span class="label label-warning">Optional</span>
 {% else %}
-    <span class="label label-default"><i class="fa fa-check"> Not required</span>
+    <span class="label label-default"><i class="fa fa-check"></i> Not required</span>
 {% endif %}
 """
 

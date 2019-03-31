@@ -112,7 +112,7 @@ _simple_workload = \
 _availability = \
 """
 {% if u %}
-    <span class="label label-info" data-toggle="tooltip" title="One or more projects do not have a limit on the number of students">Unbounded</span>number
+    <span class="label label-info" data-toggle="tooltip" title="One or more projects do not have a limit on the number of students">Unbounded</span>
 {% else %}
     <span data-toggle="tooltip" data-html="true" title="<i>Availability</i> is the maximum CATS-weighted number of students who could be assigned to this supervisor">{{ t|round(2) }}</span>
 {% endif %}

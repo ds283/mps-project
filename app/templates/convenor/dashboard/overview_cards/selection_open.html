@@ -85,13 +85,13 @@
                 </div>
                 <div class="col-xs-4">
                     <div class="pull-right">
-                        <a href="{{ url_for('convenor.close_selections', id=config.id) }}"
-                           class="btn btn-success grouped-button-margin">
-                            Close selections
-                        </a>
                         <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
-                           class="btn btn-warning grouped-button-margin">
+                           class="btn btn-default grouped-button-margin">
                             Reset popularity data
+                        </a>
+                        <a href="{{ url_for('convenor.close_selections', id=config.id) }}"
+                           class="btn btn-primary grouped-button-margin">
+                            Close selections
                         </a>
                     </div>
                 </div>

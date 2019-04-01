@@ -1538,13 +1538,13 @@ def liveprojects_ajax(id):
                                filter_record.skill_filters.all())
 
     if state_filter == 'submitted':
-        data = [ rec for rec in projects if rec.number_confirmed > 0 ]
+        data = [rec for rec in projects if rec.number_selections > 0]
     elif state_filter == 'bookmarks':
-        data = [ rec for rec in projects if rec.number_confirmed == 0 and rec.number_bookmarks > 0 ]
+        data = [rec for rec in projects if rec.number_selections == 0 and rec.number_bookmarks > 0]
     elif state_filter == 'none':
-        data = [ rec for rec in projects if rec.number_confirmed == 0 and rec.number_bookmarks == 0 ]
+        data = [rec for rec in projects if rec.number_selections == 0 and rec.number_bookmarks == 0]
     elif state_filter == 'confirmations':
-        data = [ rec for rec in projects if rec.number_pending > 0 ]
+        data = [rec for rec in projects if rec.number_pending > 0]
     else:
         data = projects
 

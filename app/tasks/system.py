@@ -262,24 +262,32 @@ def register_system_tasks(celery):
         for key in ping_list:
             value = ping_list[key]
 
-            user_id = literal_eval(key)
-            data_tuple = literal_eval(value)
+            user_id = literal_eval(key.decode('utf-8'))
+            data_tuple = literal_eval(value.decode('utf-8'))
 
             if not isinstance(user_id, int):
-                print('process_pings: decoded user_id is not of type int (value={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
+                print('process_pings: decoded "user_id" is not of type int (value={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
                 continue
 
             if not isinstance(data_tuple, tuple):
-                print('process_pings: decoded data_tuple is not of type tuple (user_id={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
+                print('process_pings: decoded "data_tuple" is not of type tuple (user_id={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
                 continue
 
             try:
-                since = literal_eval(data_tuple[1])
+                since = data_tuple[1]
+                if isinstance(since, str):
+                    since = literal_eval(since)
+
                 if not isinstance(since, int):
-                    print('process_pings: decoded since value is not of type int (user_id={v}, since={s}, data_tuple={d})'.format(v=user_id, s=since, d=data_tuple))
+                    print('process_pings: decoded "since" value is not of type int (user_id={v}, since={s}, data_tuple={d})'.format(v=user_id, s=since, d=data_tuple))
                     continue
 
-                task_list.append(user_id, data_tuple[0], since)
+                iso_timestamp = data_tuple[0]
+                if not isinstance(iso_timestamp, str):
+                    print('process_pings: decoded "iso_timestamp" value is not of type str (user_id={v}, since={s}, data_tuple={d})'.format(v=user_id, s=since, d=data_tuple))
+                    continue
+
+                task_list.append((user_id, iso_timestamp, since))
             except IndexError:
                 pass
 

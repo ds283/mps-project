@@ -630,6 +630,12 @@ class User(db.Model, UserMixin):
     # keep track of when this user was last active on the site
     last_active = db.Column(db.DateTime(), default=None)
 
+    # does this user has unprocessed pings to handle
+    ping = db.Column(db.Boolean(), default=False, nullable=False)
+
+    # last 'since' value used by front end
+    since = db.Column(db.Integer(), default=0, nullable=False)
+
     # keep track of when precompute was last run for this user
     last_precompute = db.Column(db.DateTime(), default=None)
 

@@ -60,6 +60,19 @@ _active = \
 """
 
 
+_name = \
+"""
+{{ t.name }}
+<div>
+    {% if t.queue == 'priority' %}
+        <span class="label label-danger">PRIORITY</span>
+    {% else %}
+        <span class="label label-default">{{ t.queue|upper }}</span>
+    {% endif %}
+</div>
+"""
+
+
 def _format_schedule(task):
 
     if task.interval is not None:
@@ -77,7 +90,7 @@ def _format_schedule(task):
 
 
 def scheduled_task_data(tasks):
-    data = [{'name': t.name,
+    data = [{'name': render_template_string(_name, t=t),
              'schedule': _format_schedule(t),
              'owner': '<a href="mailto:{e}">{name}</a>'.format(e=t.owner.email,
                                                                name=t.owner.name) if t.owner is not None

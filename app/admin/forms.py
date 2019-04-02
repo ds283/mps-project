@@ -677,9 +677,15 @@ class ScheduledTaskMixin():
                        ('app.tasks.maintenance.maintenance', 'Perform regular database maintenance'),
                        ('app.tasks.maintenance.asset_garbage_collection', 'Garbage collection for temporary assets'),
                        ('app.tasks.email_notifications.send_daily_notifications', 'Send daily email notifications'),
-                       ('app.tasks.batch_create.garbage_collection', 'Garbage collection for batch student import')]
+                       ('app.tasks.batch_create.garbage_collection', 'Garbage collection for batch student import'),
+                       ('app.tasks.system.process_pings', 'Process pings from front end instances')]
 
     task = SelectField('Task', choices=tasks_available)
+
+    queues_available = [('default', 'Default (for ordinary or long-running tasks)'),
+                        ('priority', 'High-priority')]
+
+    queue = SelectField('Queue', choices=queues_available)
 
     arguments = StringField('Arguments', validators=[valid_json, Length(max=DEFAULT_STRING_LENGTH)],
                             description='Format as a JSON list.')

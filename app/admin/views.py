@@ -1573,7 +1573,7 @@ def edit_levels():
 def edit_levels_ajax():
     """
     AJAX data point for FHEQ levels table
-    :return: 
+    :return:
     """
     levels = FHEQ_Level.query.all()
     return ajax.admin.FHEQ_levels_data(levels)
@@ -3160,7 +3160,7 @@ def remove_role(user_id, role_id):
 def email_log():
     """
     Display a log of sent emails
-    :return: 
+    :return:
     """
     if current_user.has_role('root'):
         form = EmailLogForm(request.form)
@@ -3464,7 +3464,6 @@ def delete_message(id):
 
     # convenors can only delete their own messages
     if not current_user.has_role('admin') and not current_user.has_role('root'):
-
         if data.user_id != current_user.id:
             flash('Only administrative users can edit messages that are not their own.')
             return home_dashboard()
@@ -3507,7 +3506,6 @@ def reset_dismissals(id):
 
     # convenors can only reset their own messages
     if not current_user.has_role('admin') and not current_user.has_role('root'):
-
         if message.user_id != current_user.id:
             flash('Only administrative users can reset dismissals for messages that are not their own.')
             return home_dashboard()
@@ -3552,20 +3550,15 @@ def add_scheduled_task():
     form = ScheduleTypeForm(request.form)
 
     if form.validate_on_submit():
-
         if form.type.data == 'interval':
-
             return redirect(url_for('admin.add_interval_task'))
 
         elif form.type.data == 'crontab':
-
             return redirect(url_for('admin.add_crontab_task'))
 
         else:
-
             flash('The task type was not recognized. If this error persists, please contact '
                   'the system administrator.')
-
             return redirect(url_for('admin.scheduled_tasks'))
 
     return render_template('admin/scheduled_type.html', form=form, title='Select schedule type')
@@ -3582,7 +3575,6 @@ def add_interval_task():
     form = AddIntervalScheduledTask(request.form)
 
     if form.validate_on_submit():
-
         # build or lookup an appropriate IntervalSchedule record from the database
         sch = IntervalSchedule.query.filter_by(every=form.every.data, period=form.period.data).first()
 
@@ -3603,7 +3595,7 @@ def add_interval_task():
                                       crontab_id=None,
                                       args=args,
                                       kwargs=kwargs,
-                                      queue=None,
+                                      queue=form.queue.data,
                                       exchange=None,
                                       routing_key=None,
                                       expires=form.expires.data,
@@ -3631,7 +3623,6 @@ def add_crontab_task():
     form = AddCrontabScheduledTask(request.form)
 
     if form.validate_on_submit():
-
         # build or lookup an appropriate IntervalSchedule record from the database
         sch = CrontabSchedule.query.filter_by(minute=form.minute.data,
                                               hour=form.hour.data,
@@ -3659,7 +3650,7 @@ def add_crontab_task():
                                       crontab_id=sch.id,
                                       args=args,
                                       kwargs=kwargs,
-                                      queue=None,
+                                      queue=form.queue.data,
                                       exchange=None,
                                       routing_key=None,
                                       expires=form.expires.data,
@@ -3688,7 +3679,6 @@ def edit_interval_task(id):
     form = EditIntervalScheduledTask(obj=data)
 
     if form.validate_on_submit():
-
         # build or lookup an appropriate IntervalSchedule record from the database
         sch = IntervalSchedule.query.filter_by(every=form.every.data, period=form.period.data).first()
 
@@ -3704,6 +3694,7 @@ def edit_interval_task(id):
         data.name = form.name.data
         data.owner_id = form.owner.data.id
         data.task = form.task.data
+        data.queue = form.queue.data
         data.interval_id = sch.id
         data.crontab_id = None
         data.args = args
@@ -3716,9 +3707,7 @@ def edit_interval_task(id):
         return redirect(url_for('admin.scheduled_tasks'))
 
     else:
-
         if request.method == 'GET':
-
             form.every.data = data.interval.every
             form.period.data = data.interval.period
 
@@ -3737,7 +3726,6 @@ def edit_crontab_task(id):
     form = EditCrontabScheduledTask(obj=data)
 
     if form.validate_on_submit():
-
         # build or lookup an appropriate IntervalSchedule record from the database
         sch = CrontabSchedule.query.filter_by(minute=form.minute.data,
                                               hour=form.hour.data,
@@ -3760,6 +3748,7 @@ def edit_crontab_task(id):
         data.name = form.name.data
         data.owner_id = form.owner.data.id
         data.task = form.task.data
+        data.queue = form.queue.data
         data.interval_id = None
         data.crontab_id = sch.id
         data.args = args
@@ -3772,9 +3761,7 @@ def edit_crontab_task(id):
         return redirect(url_for('admin.scheduled_tasks'))
 
     else:
-
         if request.method == 'GET':
-
             form.minute.data = data.crontab.minute
             form.hour.data = data.crontab.hour
             form.day_of_week.data = data.crontab.day_of_week
@@ -4245,7 +4232,8 @@ def delete_background_task(id):
 @limiter.exempt
 def notifications_ajax():
     """
-    Retrieve all notifications for the current user
+    Retrieve all notifications for the current user and take care of keep-alive tasks;
+    must exit as quickly as possible
     :return:
     """
     # return empty JSON if not logged in; we don't want this endpoint to require that the user is logged in,
@@ -4255,17 +4243,21 @@ def notifications_ajax():
         return jsonify({})
 
     # get timestamp that client wants messages from, if provided
-    since = request.args.get('since', 0.0, type=float)
+    since = request.args.get('since', 0, type=int)
+
+    # update database, but ignore any errors
+    try:
+        current_user.last_active = datetime.now()
+        current_user.since = since
+        current_user.ping = True
+        db.session.commit()
+    except SQLAlchemyError:
+        pass
 
     # query for all notifications associated with the current user
     notifications = current_user.notifications \
         .filter(Notification.timestamp >= since) \
         .order_by(Notification.timestamp.asc()).all()
-
-    celery = current_app.extensions['celery']
-    ping = celery.tasks['app.tasks.system.ping']
-
-    ping.si(since, current_user.id, datetime.now().isoformat()).apply_async(queue='priority')
 
     data = [{'uuid': n.uuid,
              'type': n.type,

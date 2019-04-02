@@ -71,6 +71,7 @@ from ..shared.validators import validate_is_convenor, validate_is_admin_or_conve
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import get_count, func
+from ..shared.internal_redis import get_redis
 
 from ..task_queue import register_task, progress_update
 from ..shared.forms.queries import ScheduleSessionQuery
@@ -4245,14 +4246,8 @@ def notifications_ajax():
     # get timestamp that client wants messages from, if provided
     since = request.args.get('since', 0, type=int)
 
-    # update database, but ignore any errors
-    try:
-        current_user.last_active = datetime.now()
-        current_user.since = since
-        current_user.ping = True
-        db.session.commit()
-    except SQLAlchemyError:
-        pass
+    redis = get_redis()
+    redis.hset('_pings', str(current_user.id), str((datetime.now().isoformat(), since)))
 
     # query for all notifications associated with the current user
     notifications = current_user.notifications \

@@ -12,6 +12,10 @@ from flask import g, current_app
 import redis
 
 def get_redis():
-    if 'db' not in g:
-        g.db = redis.Redis.from_url(url=current_app.config['CACHE_REDIS_URL'])
-    return g.db
+    db = current_app.config.get('REDIS_SESSION', None)
+    if db is not None:
+        return db
+
+    db = redis.Redis.from_url(url=current_app.config['CACHE_REDIS_URL'])
+    current_app.config['REDIS_SESSION'] = db
+    return db

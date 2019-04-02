@@ -40,6 +40,8 @@ from .shared.utils import home_dashboard_url, get_assessment_data
 from .shared.precompute import precompute_at_login
 import app.tasks as tasks
 
+from sqlalchemy.exc import SQLAlchemyError
+
 from mdx_smartypants import makeExtension
 from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 import latex2markdown
@@ -49,6 +51,7 @@ from os import path, makedirs
 from datetime import datetime
 
 from pymongo import MongoClient
+import redis
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
 from dozer import Dozer
@@ -71,7 +74,10 @@ def create_app():
     # initialize Scout monitoring
     scout = ScoutApm(app)
 
-    # create Mongo connection for Flask-Sessionstore
+    # create a long-lived Redis connection
+    app.config['REDIS_SESSION'] = redis.Redis.from_url(url=app.config['CACHE_REDIS_URL'])
+
+    # create long-lived Mongo connection for Flask-Sessionstore
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
     app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
@@ -224,7 +230,7 @@ def create_app():
         task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
 
         # queue Celery task to send the email
-        task = send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
     @security.login_context_processor
@@ -242,8 +248,11 @@ def create_app():
     def before_request_handler():
         if current_user.is_authenticated:
             if request.endpoint is not None and 'ajax' not in request.endpoint:
-                Notification.query.filter_by(remove_on_pageload=True).delete()
-                db.session.commit()
+                try:
+                    Notification.query.filter_by(remove_on_pageload=True).delete()
+                    db.session.commit()
+                except SQLAlchemyError:
+                    pass
 
 
     @app.template_filter('dealingwithdollars')

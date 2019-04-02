@@ -17,9 +17,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from ..database import db
 from ..models import User, TaskRecord, Notification, MatchingAttempt, ScheduleAttempt, StudentBatch
 from ..shared.precompute import precompute_at_login
+from ..shared.internal_redis import get_redis
 
-import redis
+from ast import literal_eval
 
+from datetime import datetime
+from dateutil import parser
 
 def register_system_tasks(celery):
 
@@ -239,78 +242,127 @@ def register_system_tasks(celery):
             raise self.retry()
 
 
-    @celery.task(bind=True, default_retry_delay=1, queue='priority')
+    @celery.task(bind=True, default_retry_delay=5, queue='priority')
     def process_pings(self):
-        # use Redis guard flag to determine whether we're already processing some pings
+        # use Redis-hosted guard flag to determine whether we're already processing some pings
         # if so, then we exit as quickly as we can; intervening pings will just be dropped, since apparently
         # we don't have capacity to process the
-        redis_db = redis.Redis.from_url(url=current_app.config['CACHE_REDIS_URL'])
-        processing = bool(redis_db.get('processing_pings'))
+        redis_db = get_redis()
+        processing = bool(redis_db.get('_processing_pings'))
         if processing is True:
             return
 
         # set flag with expiry time of 5 minutes
         # this prevents pings never being processed again if this task fails to reset its value
-        redis_db.set('processing_pings', 1, ex=300)
+        redis_db.set('_processing_pings', 1, ex=300)
 
+        ping_list = redis_db.hgetall('_pings')
+        task_list = []
+
+        for key in ping_list:
+            value = ping_list[key]
+
+            user_id = literal_eval(key)
+            data_tuple = literal_eval(value)
+
+            if not isinstance(user_id, int):
+                print('process_pings: decoded user_id is not of type int (value={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
+                continue
+
+            if not isinstance(data_tuple, tuple):
+                print('process_pings: decoded data_tuple is not of type tuple (user_id={v}, data_tuple={d})'.format(v=user_id, d=data_tuple))
+                continue
+
+            try:
+                since = literal_eval(data_tuple[1])
+                if not isinstance(since, int):
+                    print('process_pings: decoded since value is not of type int (user_id={v}, since={s}, data_tuple={d})'.format(v=user_id, s=since, d=data_tuple))
+                    continue
+
+                task_list.append(user_id, data_tuple[0], since)
+            except IndexError:
+                pass
+
+        tasks = group(handle_ping.si(v[0], v[1], v[2]).set(queue='priority') for v in task_list) \
+                | finalize_pings.si().set(queue='priority')
+        self.replace(tasks)
+
+
+    @celery.task(bind=True, default_retry_delay=3, queue='priority')
+    def finalize_pings(self):
+        redis_db = get_redis()
+
+        # delete guard key from Redis
+        redis_db.delete('_pings')
+        redis_db.delete('_processing_pings')
+
+
+    @celery.task(bind=True, default_retry_delay=1, queue='priority')
+    def handle_ping(self, user_id, timestamp, since):
         try:
-            users = db.session.query(User).filter_by(ping=True).all()
+            user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
-        for user in users:
-            notifications = user.notifications \
-                .filter(Notification.timestamp >= user.since) \
-                .order_by(Notification.timestamp.asc()).all()
+        if user is None:
+            self.update_state('FAILURE', meta='Could not read database record')
 
-            # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
-            for n in notifications:
-                if n.type == Notification.USER_MESSAGE \
-                        or n.type == Notification.SHOW_HIDE_REQUEST \
-                        or n.type == Notification.REPLACE_TEXT_REQUEST:
-                    n.remove_on_pageload = True
+        if not isinstance(timestamp, datetime):
+            timestamp = parser.parse(timestamp)
 
-            # determine whether to kick off a background precompute task
-            # currently, precompute tasks are run *here*, and *at login*, and nowhere else,
-            # and the default lifetime for items in the cache is 24 hours
+        if not isinstance(timestamp, datetime):
+            self.update_state('FAILURE', meta='Could not decode timestamp parameter')
+            raise Ignore()
 
-            # the configuration item PRECOMPUTE_DELAY defaults to 30 minutes.
-            # We start a precompute task if either:
-            #  - If there is no recorded last precompute time. This means that the app has restarted since this
-            #    user was last seen online, and therefore the cache has been flushed. It is likely that all
-            #    precomputed items have been purged, so we need to start an urgent precompute
-            #  - The time since the last recorded precompute exceeds PRECOMPUTE_DELAY.
-            #    If a user with a non-expired session comes back to the site after a delay, they do not
-            #    (currently) go through login again. (The session is 'stale' but still treated as current.)
-            #    This means no precompute is kicked off. We won't pick up that the cache likely contains no
-            #    entries until we get here.
-            #    Of course, this means that we *also* perform redundant precomputes for all active users every
-            #    30 minutes or so. This does cover the possibility that the 24 hour cache period expires
-            #    while the user is still active. If it doesn't, at least we are only starting these jobs
-            #    for users actively using the system, which is probably only a handful.
-            compute_now = user.last_precompute is None
-            if not compute_now:
-                delta = user.last_active - user.last_precompute
+        notifications = user.notifications \
+            .filter(Notification.timestamp >= since) \
+            .order_by(Notification.timestamp.asc()).all()
 
-                delay = current_app.config.get('PRECOMPUTE_DELAY')
-                if delay is None:
-                    delay = 1800
+        # mark any messages or instructions (as opposed to task progress updates) for removal on next page load
+        for n in notifications:
+            if n.type == Notification.USER_MESSAGE \
+                    or n.type == Notification.SHOW_HIDE_REQUEST \
+                    or n.type == Notification.REPLACE_TEXT_REQUEST:
+                n.remove_on_pageload = True
 
-                if delta.seconds > delay:
-                    compute_now = True
+        # determine whether to kick off a background precompute task
+        # currently, precompute tasks are run *here*, and *at login*, and nowhere else,
+        # and the default lifetime for items in the cache is 24 hours
 
-            # if we need to re-run a precompute, spawn one
-            if compute_now:
-                celery = current_app.extensions['celery']
-                precompute_at_login(user, celery, now=user.last_active, autocommit=False)
+        # the configuration item PRECOMPUTE_DELAY defaults to 30 minutes.
+        # We start a precompute task if either:
+        #  - If there is no recorded last precompute time. This means that the app has restarted since this
+        #    user was last seen online, and therefore the cache has been flushed. It is likely that all
+        #    precomputed items have been purged, so we need to start an urgent precompute
+        #  - The time since the last recorded precompute exceeds PRECOMPUTE_DELAY.
+        #    If a user with a non-expired session comes back to the site after a delay, they do not
+        #    (currently) go through login again. (The session is 'stale' but still treated as current.)
+        #    This means no precompute is kicked off. We won't pick up that the cache likely contains no
+        #    entries until we get here.
+        #    Of course, this means that we *also* perform redundant precomputes for all active users every
+        #    30 minutes or so. This does cover the possibility that the 24 hour cache period expires
+        #    while the user is still active. If it doesn't, at least we are only starting these jobs
+        #    for users actively using the system, which is probably only a handful.
+        user.last_active = timestamp
 
-            user.ping = False
+        compute_now = user.last_precompute is None
+        if not compute_now:
+            delta = timestamp - user.last_precompute
+
+            delay = current_app.config.get('PRECOMPUTE_DELAY')
+            if delay is None:
+                delay = 1800
+
+            if delta.seconds > delay:
+                compute_now = True
+
+        # if we need to re-run a precompute, spawn one
+        if compute_now:
+            celery = current_app.extensions['celery']
+            precompute_at_login(user, celery, now=timestamp, autocommit=False)
 
         try:
             db.session.commit()
         except SQLAlchemyError:
             db.session.rollback()
             raise self.retry()
-
-        # delete guard key from Redis
-        redis_db.delete('process_pings')

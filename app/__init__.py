@@ -117,8 +117,8 @@ def create_app():
         # panels.append('flask_debugtoolbar_lineprofilerpanel.panels.LineProfilerPanel')
         app.config['DEBUG_TB_PANELS'] = panels
 
-    app.config['BLEACH_ALLOWED_TAGS'] = markdown_tags
-    app.config['BLEACH_ALLOWED_ATTRS'] = markdown_attrs
+    # app.config['BLEACH_ALLOWED_TAGS'] = markdown_tags
+    # app.config['BLEACH_ALLOWED_ATTRS'] = markdown_attrs
 
     # set up CSS and javascript assets
     env = Environment(app)

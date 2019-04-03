@@ -141,9 +141,9 @@ def dashboard():
 
     enrollments.sort(key=lambda x: x[0].project_class.name)
 
-    # list of all project classes used to generate a simple informational dashboard in the event
+    # list of all (active, published) project classes used to generate a simple informational dashboard in the event
     # that this student doesn't have any live selector or submitter roles
-    pclasses = ProjectClass.query.filter_by(active=True)
+    pclasses = ProjectClass.query.filter_by(active=True, publish=True)
 
     # build list of system messages to consider displaying
     messages = []

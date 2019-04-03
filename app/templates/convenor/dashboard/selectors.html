@@ -145,6 +145,14 @@
                     href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='confirmations') }}">
                     Confirmations outstanding
                 </a>
+                <a class="btn btn-sm filter-btn {% if state_filter == 'convert' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='convert') }}">
+                    Convert
+                </a>
+                <a class="btn btn-sm filter-btn {% if state_filter == 'no-convert' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('convenor.selectors', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='no-convert') }}">
+                    Don't convert
+                </a>
 
                 {% if needs_rule %}
                     <hr class="intro-divider">

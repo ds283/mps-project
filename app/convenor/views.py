@@ -701,6 +701,12 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_
          data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
      elif state_filter == 'confirmations':
          data = [rec for rec in selectors.all() if rec.number_pending > 0]
+     elif state_filter == 'convert':
+         selectors = selectors.filter(SelectingStudent.convert_to_submitter == True)
+         data = selectors.all()
+     elif state_filter == 'no-convert':
+         selectors = selectors.filter(SelectingStudent.convert_to_submitter == False)
+         data = selectors.all()
      else:
          data = selectors.all()
 

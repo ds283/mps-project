@@ -90,24 +90,38 @@ class Config(object):
         'abbr',
         'acronym',
         'b',
+        'br',
         'blockquote',
         'code',
+        'dd',
+        'dt',
         'em',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'i',
+        'img',
         'li',
         'ol',
+        'p',
         'strong',
+        'tt',
         'ul',
         'div',
         'span'
     ]
 
     BLEACH_ALLOWED_ATTRIBUTES = {
-        'a': ['href', 'title'],
+        '*': ['style'],
+        'a': ['href', 'alt', 'title'],
         'abbr': ['title'],
         'acronym': ['title'],
-        'div': ['class']
+        'div': ['class'],
+        'img': ['src', 'alt', 'title'],
     }
+
+    BLEACH_ALLOWED_STYLES = [
+        'color',
+        'font-weight'
+    ]
 
 
     # user-facing defaults

@@ -572,30 +572,6 @@ def selectors(id):
     state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
 
-    if cohort_filter is None and session.get('convenor_selectors_cohort_filter'):
-        cohort_filter = session['convenor_selectors_cohort_filter']
-
-    if cohort_filter is not None:
-        session['convenor_selectors_cohort_filter'] = cohort_filter
-
-    if prog_filter is None and session.get('convenor_selectors_prog_filter'):
-        prog_filter = session['convenor_selectors_prog_filter']
-
-    if prog_filter is not None:
-        session['convenor_selectors_prog_filter'] = prog_filter
-
-    if state_filter is None and session.get('convenor_selectors_state_filter'):
-        state_filter = session['convenor_selectors_state_filter']
-
-    if state_filter is not None:
-        session['convenor_selectors_state_filter'] = state_filter
-
-    if year_filter is None and session.get('convenor_selectors_year_filter'):
-        year_filter = session['convenor_selectors_year_filter']
-
-    if year_filter is not None:
-        session['convenor_selectors_year_filter'] = year_filter
-
     # get current academic year
     current_year = get_current_year()
 
@@ -624,6 +600,39 @@ def selectors(id):
         .order_by(DegreeType.name.asc(),
                   DegreeProgramme.name.asc()).all()
     progs = [rec for rec in all_progs if rec.id in programmes]
+
+    if cohort_filter is None and session.get('convenor_selectors_cohort_filter'):
+        cohort_filter = session['convenor_selectors_cohort_filter']
+
+    if cohort_filter != 'all' and int(cohort_filter) not in cohorts:
+        cohort_filter = 'all'
+
+    if cohort_filter is not None:
+        session['convenor_selectors_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_selectors_prog_filter'):
+        prog_filter = session['convenor_selectors_prog_filter']
+
+    if prog_filter != 'all' and int(prog_filter) not in progs:
+        prog_filter = 'all'
+
+    if prog_filter is not None:
+        session['convenor_selectors_prog_filter'] = prog_filter
+
+    if state_filter is None and session.get('convenor_selectors_state_filter'):
+        state_filter = session['convenor_selectors_state_filter']
+
+    if state_filter is not None:
+        session['convenor_selectors_state_filter'] = state_filter
+
+    if year_filter is None and session.get('convenor_selectors_year_filter'):
+        year_filter = session['convenor_selectors_year_filter']
+
+    if year_filter != 'all' and int(year_filter) not in years:
+        year_filter = 'all'
+
+    if year_filter is not None:
+        session['convenor_selectors_year_filter'] = year_filter
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -725,24 +734,6 @@ def enroll_selectors(id):
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
-    if cohort_filter is None and session.get('convenor_sel_enroll_cohort_filter'):
-        cohort_filter = session['convenor_sel_enroll_cohort_filter']
-
-    if cohort_filter is not None:
-        session['convenor_sel_enroll_cohort_filter'] = cohort_filter
-
-    if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
-        prog_filter = session['convenor_sel_enroll_prog_filter']
-
-    if prog_filter is not None:
-        session['convenor_sel_enroll_prog_filter'] = prog_filter
-
-    if year_filter is None and session.get('convenor_sel_enroll_year_filter'):
-        year_filter = session['convenor_sel_enroll_year_filter']
-
-    if year_filter is not None:
-        session['convenor_sel_enroll_year_filter'] = year_filter
-
     # get current academic year
     current_year = get_current_year()
 
@@ -764,6 +755,33 @@ def enroll_selectors(id):
         .order_by(DegreeType.name.asc(),
                   DegreeProgramme.name.asc()).all()
     progs = [rec for rec in all_progs if rec.id in programmes]
+
+    if cohort_filter is None and session.get('convenor_sel_enroll_cohort_filter'):
+        cohort_filter = session['convenor_sel_enroll_cohort_filter']
+
+    if cohort_filter != 'all' and int(cohort_filter) not in cohorts:
+        cohort_filter = 'all'
+
+    if cohort_filter is not None:
+        session['convenor_sel_enroll_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
+        prog_filter = session['convenor_sel_enroll_prog_filter']
+
+    if prog_filter != 'all' and int(prog_filter) not in progs:
+        prog_filter = 'all'
+
+    if prog_filter is not None:
+        session['convenor_sel_enroll_prog_filter'] = prog_filter
+
+    if year_filter is None and session.get('convenor_sel_enroll_year_filter'):
+        year_filter = session['convenor_sel_enroll_year_filter']
+
+    if year_filter != 'all' and int(year_filter) not in years:
+        year_filter = 'all'
+
+    if year_filter is not None:
+        session['convenor_sel_enroll_year_filter'] = year_filter
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -1128,30 +1146,6 @@ def submitters(id):
     state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
 
-    if cohort_filter is None and session.get('convenor_submitters_cohort_filter'):
-        cohort_filter = session['convenor_submitters_cohort_filter']
-
-    if cohort_filter is not None:
-        session['convenor_submitters_cohort_filter'] = cohort_filter
-
-    if prog_filter is None and session.get('convenor_submitters_prog_filter'):
-        prog_filter = session['convenor_submitters_prog_filter']
-
-    if prog_filter is not None:
-        session['convenor_submitters_prog_filter'] = prog_filter
-
-    if state_filter is None and session.get('convenor_submitters_state_filter'):
-        state_filter = session['convenor_submitters_state_filter']
-
-    if state_filter is not None:
-        session['convenor_submitters_state_filter'] = state_filter
-
-    if year_filter is None and session.get('convenor_submitters_year_filter'):
-        year_filter = session['convenor_submitters_year_filter']
-
-    if year_filter is not None:
-        session['convenor_submitters_year_filter'] = year_filter
-
     # get current academic year
     current_year = get_current_year()
 
@@ -1179,6 +1173,39 @@ def submitters(id):
         .order_by(DegreeType.name.asc(),
                   DegreeProgramme.name.asc()).all()
     progs = [rec for rec in all_progs if rec.id in programmes]
+
+    if cohort_filter is None and session.get('convenor_submitters_cohort_filter'):
+        cohort_filter = session['convenor_submitters_cohort_filter']
+
+    if cohort_filter != 'all' and int(cohort_filter) not in cohorts:
+        cohort_filter = 'all'
+
+    if cohort_filter is not None:
+        session['convenor_submitters_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_submitters_prog_filter'):
+        prog_filter = session['convenor_submitters_prog_filter']
+
+    if prog_filter != 'all' and int(prog_filter) not in progs:
+        prog_filter = 'all'
+
+    if prog_filter is not None:
+        session['convenor_submitters_prog_filter'] = prog_filter
+
+    if state_filter is None and session.get('convenor_submitters_state_filter'):
+        state_filter = session['convenor_submitters_state_filter']
+
+    if state_filter is not None:
+        session['convenor_submitters_state_filter'] = state_filter
+
+    if year_filter is None and session.get('convenor_submitters_year_filter'):
+        year_filter = session['convenor_submitters_year_filter']
+
+    if year_filter != 'all' and int(year_filter) not in years:
+        year_filter = 'all'
+
+    if year_filter is not None:
+        session['convenor_submitters_year_filter'] = year_filter
 
     data = get_convenor_dashboard_data(pclass, config)
 
@@ -1246,24 +1273,6 @@ def enroll_submitters(id):
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
-    if cohort_filter is None and session.get('convenor_sub_enroll_cohort_filter'):
-        cohort_filter = session['convenor_sub_enroll_cohort_filter']
-
-    if cohort_filter is not None:
-        session['convenor_sub_enroll_cohort_filter'] = cohort_filter
-
-    if prog_filter is None and session.get('convenor_sub_enroll_prog_filter'):
-        prog_filter = session['convenor_sub_enroll_prog_filter']
-
-    if prog_filter is not None:
-        session['convenor_sub_enroll_prog_filter'] = prog_filter
-
-    if year_filter is None and session.get('convenor_sub_enroll_year_filter'):
-        year_filter = session['convenor_sub_enroll_year_filter']
-
-    if year_filter is not None:
-        session['convenor_sub_enroll_year_filter'] = year_filter
-
     candidates = build_enroll_submitter_candidates(config)
 
     # build list of available cohorts and degree programmes
@@ -1282,6 +1291,33 @@ def enroll_submitters(id):
         .order_by(DegreeType.name.asc(),
                   DegreeProgramme.name.asc()).all()
     progs = [ rec for rec in all_progs if rec.id in programmes ]
+
+    if cohort_filter is None and session.get('convenor_sub_enroll_cohort_filter'):
+        cohort_filter = session['convenor_sub_enroll_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_sel_enroll_cohort_filter'] = cohort_filter
+
+    if cohort_filter is not None:
+        session['convenor_sub_enroll_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_sub_enroll_prog_filter'):
+        prog_filter = session['convenor_sub_enroll_prog_filter']
+
+    if prog_filter != 'all' and int(prog_filter) not in progs:
+        prog_filter = 'all'
+
+    if prog_filter is not None:
+        session['convenor_sub_enroll_prog_filter'] = prog_filter
+
+    if year_filter is None and session.get('convenor_sub_enroll_year_filter'):
+        year_filter = session['convenor_sub_enroll_year_filter']
+
+    if year_filter != 'all' and int(year_filter) not in years:
+        year_filter = 'all'
+
+    if year_filter is not None:
+        session['convenor_sub_enroll_year_filter'] = year_filter
 
     data = get_convenor_dashboard_data(pclass, config)
 

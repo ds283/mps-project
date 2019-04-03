@@ -4,19 +4,13 @@
 
 {% block scripts %}
     {{ super() }}
-    <link
-            href="https://cdn.pydata.org/bokeh/release/bokeh-1.0.1.min.css"
-            rel="stylesheet" type="text/css">
-    {#    <link#}
-    {#        href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.1.min.css"#}
-    {#        rel="stylesheet" type="text/css">#}
-    {#    <link#}
-    {#        href="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.1.min.css"#}
-    {#        rel="stylesheet" type="text/css">#}
+    <link href="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
+    {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">#}
+    {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.css" rel="stylesheet" type="text/css">#}
 
-    <script src="https://cdn.pydata.org/bokeh/release/bokeh-1.0.1.min.js"></script>
-    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.1.min.js"></script>#}
-    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.1.min.js"></script>#}
+    <script src="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
+    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>#}
+    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.js"></script>#}
 
     {% if archive_div is defined and archive_div is not none and archive_script is defined and archive_script is not none %}
         {{ archive_script|safe }}

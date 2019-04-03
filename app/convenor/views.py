@@ -613,7 +613,7 @@ def selectors(id):
     if prog_filter is None and session.get('convenor_selectors_prog_filter'):
         prog_filter = session['convenor_selectors_prog_filter']
 
-    if prog_filter != 'all' and int(prog_filter) not in progs:
+    if prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:
@@ -768,7 +768,7 @@ def enroll_selectors(id):
     if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
         prog_filter = session['convenor_sel_enroll_prog_filter']
 
-    if prog_filter != 'all' and int(prog_filter) not in progs:
+    if prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:
@@ -1186,7 +1186,7 @@ def submitters(id):
     if prog_filter is None and session.get('convenor_submitters_prog_filter'):
         prog_filter = session['convenor_submitters_prog_filter']
 
-    if prog_filter != 'all' and int(prog_filter) not in progs:
+    if prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:
@@ -1304,7 +1304,7 @@ def enroll_submitters(id):
     if prog_filter is None and session.get('convenor_sub_enroll_prog_filter'):
         prog_filter = session['convenor_sub_enroll_prog_filter']
 
-    if prog_filter != 'all' and int(prog_filter) not in progs:
+    if prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:

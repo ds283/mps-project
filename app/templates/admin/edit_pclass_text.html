@@ -1,0 +1,50 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% block scripts %}
+    {{ super() }}
+    {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-colorpicker-min.js", "js/bootstrap-colorpicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+{% endblock %}
+
+{% block title %}
+    Customize messages for project class
+{% endblock %}
+
+{% block formtitle %}
+    {% if pclass %}
+        Customize messages for project class <strong>{{ pclass.name }}</strong>
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('admin.edit_pclass_text', id=pclass.id) }}" method="POST" name="customize_text_form">
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(pclass_form) }}#}
+
+        <div class="well">
+            Text displayed on student selector cards
+            {{ wtf.form_field(form.card_text_normal) }}
+            {{ wtf.form_field(form.card_text_optional) }}
+            {{ wtf.form_field(form.card_text_noninitial) }}
+        </div>
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(pclass) }}
+{% endblock %}

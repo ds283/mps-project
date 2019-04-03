@@ -2477,6 +2477,18 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     auto_enroll_years = db.Column(db.Integer(), default=AUTO_ENROLL_PREVIOUS_YEAR)
 
 
+    # SELECTOR CARD TEXT
+
+    # text displayed when a project is detected as being optional
+    card_text_optional = db.Column(db.Text())
+
+    # text displayed when a project is detected as being mandatory
+    card_text_normal = db.Column(db.Text())
+
+    # text displayed when a project is detected as being a change-supervisor request
+    card_text_noninitial = db.Column(db.Text())
+
+
     # OPTIONS
 
     # explicitly ask supervisors to confirm projects each year?
@@ -3197,6 +3209,21 @@ class ProjectClassConfig(db.Model):
     @property
     def template_periods(self):
         return self.project_class.periods.order_by(SubmissionPeriodDefinition.period.asc())
+
+
+    @property
+    def card_text_normal(self):
+        return self.project_class.card_text_normal
+
+
+    @property
+    def card_text_optional(self):
+        return self.project_class.card_text_optional
+
+
+    @property
+    def card_text_noninitial(self):
+        return self.project_class.card_text_noninitial
 
 
     @property

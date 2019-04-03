@@ -492,6 +492,18 @@ class EditProjectClassForm(Form, ProjectClassMixin, SaveChangesMixin):
                                                            unique_or_original_project_class_abbrev])
 
 
+class EditProjectTextForm(Form, SaveChangesMixin):
+
+    card_text_normal = TextAreaField('Text seen by normal selectors', render_kw={"rows": 5},
+                                     validators=[Optional()])
+
+    card_text_optional = TextAreaField('Text seen by selectors for whom this project is optional',
+                                       render_kw={"rows": 5}, validators=[Optional()])
+
+    card_text_noninitial = TextAreaField('Text seen by selectors who may be changing supervisor',
+                                         render_kw={"rows": 5}, validators=[Optional()])
+
+
 class SubmissionPeriodMixin():
 
     name = StringField('Name', description='Optional. Enter an alternative text name for this submission '

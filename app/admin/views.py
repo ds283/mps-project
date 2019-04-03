@@ -33,7 +33,8 @@ from .forms import RoleSelectForm, \
     AddDegreeProgrammeForm, EditDegreeProgrammeForm, \
     AddModuleForm, EditModuleForm, \
     AddTransferableSkillForm, EditTransferableSkillForm, AddSkillGroupForm, EditSkillGroupForm, \
-    AddProjectClassForm, EditProjectClassForm, AddSubmissionPeriodForm, EditSubmissionPeriodForm, \
+    AddProjectClassForm, EditProjectClassForm, EditProjectTextForm, \
+    AddSubmissionPeriodForm, EditSubmissionPeriodForm, \
     AddSupervisorForm, EditSupervisorForm, \
     EnrollmentRecordForm, EmailLogForm, \
     AddMessageFormFactory, EditMessageFormFactory, \
@@ -2368,6 +2369,9 @@ def add_pclass():
                             CATS_presentation=form.CATS_presentation.data,
                             keep_hourly_popularity=form.keep_hourly_popularity.data,
                             keep_daily_popularity=form.keep_daily_popularity.data,
+                            card_text_noninitial=None,
+                            card_text_normal=None,
+                            card_text_optional=None,
                             creator_id=current_user.id,
                             creation_timestamp=datetime.now())
         db.session.add(data)
@@ -2488,7 +2492,6 @@ def edit_pclass(id):
         data.last_edit_timestamp = datetime.now()
 
         if data.convenor.id != old_convenor.id:
-
             old_convenor.remove_convenorship(data)
             data.convenor.add_convenorship(data)
 
@@ -2511,6 +2514,25 @@ def edit_pclass(id):
 
     return render_template('admin/edit_project_class.html', pclass_form=form, pclass=data,
                            title='Edit project class')
+
+
+@admin.route('/edit_pclass_text/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_pclass_text(id):
+    data = ProjectClass.query.get_or_404(id)
+
+    form = EditProjectTextForm(obj=data)
+
+    if form.validate_on_submit():
+        data.card_text_normal = form.card_text_normal.data
+        data.card_text_optional = form.card_text_optional.data
+        data.card_text_noninitial = form.card_text_noninitial.data
+
+        db.session.commit()
+
+        return redirect(url_for('admin.edit_project_classes'))
+
+    return render_template('admin/edit_pclass_text.html', form=form, pclass=data)
 
 
 @admin.route('/activate_pclass/<int:id>')

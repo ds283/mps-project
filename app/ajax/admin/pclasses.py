@@ -33,7 +33,11 @@ _menu = \
                 <i class="fa fa-cogs"></i> Settings...
             </a>
         </li>
-        
+        <li>
+            <a href="{{ url_for('admin.edit_pclass_text', id=pcl.id) }}">
+                <i class="fa fa-pencil"></i> Customize messages...
+            </a>
+        </li>
         <li>
             <a href="{{ url_for('admin.edit_submission_periods', id=pcl.id) }}">
                 <i class="fa fa-cogs"></i> Submission periods...

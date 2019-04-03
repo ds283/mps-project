@@ -15,43 +15,58 @@
     </div>
 
     {% if sel.is_optional %}
-        <p>
-            <span style="color: red; ">This project is <strong>optional</strong> for your degree programme.</span>
-            If you wish to participate, add bookmarks to keep track of the projects
-            in which you are interested. Drag-and-drop your bookmarks using the drag handle
-            to rank them in order of preference. Submit your selection when you are finished.
-        </p>
+        {% set optional_text = config.card_text_optional %}
+        {% if optional_text and optional_text|length > 0 %}
+            {{ optional_text|markdown|bclean|blinkify|safe }}
+        {% else %}
+            <p>
+                <span style="color: red; ">This project is <strong>optional</strong> for your degree programme.</span>
+                If you wish to participate, add bookmarks to keep track of the projects
+                in which you are interested. Drag-and-drop your bookmarks using the drag handle
+                to rank them in order of preference. Submit your selection when you are finished.
+            </p>
+
+            <p>
+                <span style="color: red; ">If you do not submit a selection by the deadline, we will
+                assume that you do not wish to participate.</span>
+            </p>
+        {% endif %}
 
         <p>
-            <span style="color: red; ">If you do not submit a selection by the deadline, we will
-            assume that you do not wish to participate.</span>
-        </p>
-
-        <p>
-            Some projects require the project supervisor to confirm that
+            Some projects may require the project supervisor to confirm that
             a pre-selection meeting has taken place, or at least been arranged,
             before the project becomes available.
         </p>
     {% else %}
         {% if sel.is_initial_selection %}
-            <p>
-                This project is <strong>mandatory</strong> for your degree programme.
-                Add bookmarks to keep track of the projects in which you are interested,
-                then drag-and-drop to rank them in order of preference.
-                Submit your selection when you are finished.
-            </p>
+            {% set normal_text = config.card_text_normal %}
+            {% if normal_text and normal_text|length > 0 %}
+                {{ normal_text|markdown|bclean|blinkify|safe }}
+            {% else %}
+                <p>
+                    This project is <strong>mandatory</strong> for your degree programme.
+                    Add bookmarks to keep track of the projects in which you are interested,
+                    then drag-and-drop to rank them in order of preference.
+                    Submit your selection when you are finished.
+                </p>
+            {% endif %}
 
             <p>
-                Some projects require the project supervisor to confirm that
+                Some projects may require the project supervisor to confirm that
                 a pre-selection meeting has taken place, or at least been arranged,
                 before the project becomes available.
             </p>
         {% else %}
-            <p>
-                If you wish to <strong>switch supervisors</strong>,
-                then add bookmarks for each project of interest.
-                Drag-and-drop your bookmarks to indicate your order of preference.
-            </p>
+            {% set noninitial_text = config.card_text_noninitial %}
+            {% if noninitial_text and noninitial_text|length > 0 %}
+                {{  noninitial_text|markdown|bclean|blinkify|safe }}
+            {% else %}
+                <p>
+                    If you wish to <strong>switch supervisors</strong>,
+                    then add bookmarks for each project of interest.
+                    Drag-and-drop your bookmarks to indicate your order of preference.
+                </p>
+            {% endif %}
         {% endif %}
     {% endif %}
 {% endmacro %}
@@ -202,7 +217,6 @@
 
 
 {% macro selection_card(config, sel) %}
-
    <div class="panel
         {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
             panel-primary
@@ -233,7 +247,7 @@
                                 {% set numpl = '' %}
                             {% endif %}
                             {% if sel.is_optional %}
-                                <p>To enroll, select up to <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                <p>Select up to <strong>{{ num_choices }}</strong> project{{ numpl }}.
                                     It is not possible to guarantee that you will be assigned your highest-priority choices.</p>
                               {% else %}
                                 {% if sel.is_initial_selection %}

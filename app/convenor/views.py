@@ -660,39 +660,45 @@ def selectors_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    # build a list of live students selecting from this project class
-    selectors = config.selecting_students.filter_by(retired=False)
-
-    # filter by cohort and programme if required
-    cohort_flag, cohort_value = is_integer(cohort_filter)
-    prog_flag, prog_value = is_integer(prog_filter)
-    year_flag, year_value = is_integer(year_filter)
-
-    if cohort_flag or prog_flag:
-        selectors = selectors \
-            .join(StudentData, StudentData.id == SelectingStudent.student_id)
-
-    if cohort_flag:
-        selectors = selectors.filter(StudentData.cohort == cohort_value)
-
-    if prog_flag:
-        selectors = selectors.filter(StudentData.programme_id == prog_value)
-
-    if state_filter == 'submitted':
-        data = [rec for rec in selectors.all() if rec.has_submitted]
-    elif state_filter == 'bookmarks':
-        data = [rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks]
-    elif state_filter == 'none':
-        data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
-    elif state_filter == 'confirmations':
-        data = [rec for rec in selectors.all() if rec.number_pending > 0]
-    else:
-        data = selectors.all()
-
-    if year_flag:
-        data = [s for s in data if s.academic_year == year_value]
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 
     return ajax.convenor.selectors_data(data, config)
+
+
+def _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter):
+     # build a list of live students selecting from this project class
+     selectors = config.selecting_students.filter_by(retired=False)
+
+     # filter by cohort and programme if required
+     cohort_flag, cohort_value = is_integer(cohort_filter)
+     prog_flag, prog_value = is_integer(prog_filter)
+     year_flag, year_value = is_integer(year_filter)
+
+     if cohort_flag or prog_flag:
+         selectors = selectors \
+             .join(StudentData, StudentData.id == SelectingStudent.student_id)
+
+     if cohort_flag:
+         selectors = selectors.filter(StudentData.cohort == cohort_value)
+
+     if prog_flag:
+         selectors = selectors.filter(StudentData.programme_id == prog_value)
+
+     if state_filter == 'submitted':
+         data = [rec for rec in selectors.all() if rec.has_submitted]
+     elif state_filter == 'bookmarks':
+         data = [rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks]
+     elif state_filter == 'none':
+         data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
+     elif state_filter == 'confirmations':
+         data = [rec for rec in selectors.all() if rec.number_pending > 0]
+     else:
+         data = selectors.all()
+
+     if year_flag:
+         data = [s for s in data if s.academic_year == year_value]
+
+     return data
 
 
 @convenor.route('/enroll_selectors/<int:id>')
@@ -3761,6 +3767,56 @@ def disable_conversion(sid):
         return home_dashboard()
 
     sel.convert_to_submitter = False
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/convert_all/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def convert_all(configid):
+    # sid is a SelectingStudent
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not validate_is_convenor(config.project_class):
+        return home_dashboard()
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+    year_filter = request.args.get('year_filter')
+
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+
+    for s in data:
+        s.convert_to_submitter = True
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/convert_none/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def convert_none(configid):
+    # sid is a SelectingStudent
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not validate_is_convenor(config.project_class):
+        return home_dashboard()
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+    year_filter = request.args.get('year_filter')
+
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+
+    for s in data:
+        s.convert_to_submitter = False
+
     db.session.commit()
 
     return redirect(request.referrer)

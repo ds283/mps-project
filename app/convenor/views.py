@@ -604,7 +604,7 @@ def selectors(id):
     if cohort_filter is None and session.get('convenor_selectors_cohort_filter'):
         cohort_filter = session['convenor_selectors_cohort_filter']
 
-    if cohort_filter != 'all' and int(cohort_filter) not in cohorts:
+    if isinstance(cohort_filter, str) and cohort_filter != 'all' and int(cohort_filter) not in cohorts:
         cohort_filter = 'all'
 
     if cohort_filter is not None:
@@ -613,7 +613,7 @@ def selectors(id):
     if prog_filter is None and session.get('convenor_selectors_prog_filter'):
         prog_filter = session['convenor_selectors_prog_filter']
 
-    if prog_filter != 'all' and int(prog_filter) not in programmes:
+    if isinstance(prog_filter, str) and prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:
@@ -628,7 +628,7 @@ def selectors(id):
     if year_filter is None and session.get('convenor_selectors_year_filter'):
         year_filter = session['convenor_selectors_year_filter']
 
-    if year_filter != 'all' and int(year_filter) not in years:
+    if isinstance(year_filter, str) and year_filter != 'all' and int(year_filter) not in years:
         year_filter = 'all'
 
     if year_filter is not None:
@@ -765,7 +765,7 @@ def enroll_selectors(id):
     if cohort_filter is None and session.get('convenor_sel_enroll_cohort_filter'):
         cohort_filter = session['convenor_sel_enroll_cohort_filter']
 
-    if cohort_filter != 'all' and int(cohort_filter) not in cohorts:
+    if isinstance(cohort_filter, str) and cohort_filter != 'all' and int(cohort_filter) not in cohorts:
         cohort_filter = 'all'
 
     if cohort_filter is not None:
@@ -774,7 +774,7 @@ def enroll_selectors(id):
     if prog_filter is None and session.get('convenor_sel_enroll_prog_filter'):
         prog_filter = session['convenor_sel_enroll_prog_filter']
 
-    if prog_filter != 'all' and int(prog_filter) not in programmes:
+    if isinstance(prog_filter, str) and prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:
@@ -783,7 +783,7 @@ def enroll_selectors(id):
     if year_filter is None and session.get('convenor_sel_enroll_year_filter'):
         year_filter = session['convenor_sel_enroll_year_filter']
 
-    if year_filter != 'all' and int(year_filter) not in years:
+    if isinstance(year_filter, str) and year_filter != 'all' and int(year_filter) not in years:
         year_filter = 'all'
 
     if year_filter is not None:
@@ -1183,7 +1183,7 @@ def submitters(id):
     if cohort_filter is None and session.get('convenor_submitters_cohort_filter'):
         cohort_filter = session['convenor_submitters_cohort_filter']
 
-    if cohort_filter != 'all' and int(cohort_filter) not in cohorts:
+    if isinstance(cohort_filter, str) and cohort_filter != 'all' and int(cohort_filter) not in cohorts:
         cohort_filter = 'all'
 
     if cohort_filter is not None:
@@ -1192,7 +1192,7 @@ def submitters(id):
     if prog_filter is None and session.get('convenor_submitters_prog_filter'):
         prog_filter = session['convenor_submitters_prog_filter']
 
-    if prog_filter != 'all' and int(prog_filter) not in programmes:
+    if isinstance(prog_filter, all) and prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:
@@ -1207,7 +1207,7 @@ def submitters(id):
     if year_filter is None and session.get('convenor_submitters_year_filter'):
         year_filter = session['convenor_submitters_year_filter']
 
-    if year_filter != 'all' and int(year_filter) not in years:
+    if isinstance(year_filter, str) and year_filter != 'all' and int(year_filter) not in years:
         year_filter = 'all'
 
     if year_filter is not None:
@@ -1310,7 +1310,7 @@ def enroll_submitters(id):
     if prog_filter is None and session.get('convenor_sub_enroll_prog_filter'):
         prog_filter = session['convenor_sub_enroll_prog_filter']
 
-    if prog_filter != 'all' and int(prog_filter) not in programmes:
+    if isinstance(prog_filter, str) and prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:
@@ -1319,7 +1319,7 @@ def enroll_submitters(id):
     if year_filter is None and session.get('convenor_sub_enroll_year_filter'):
         year_filter = session['convenor_sub_enroll_year_filter']
 
-    if year_filter != 'all' and int(year_filter) not in years:
+    if isinstance(year_filter, str) and year_filter != 'all' and int(year_filter) not in years:
         year_filter = 'all'
 
     if year_filter is not None:

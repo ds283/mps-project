@@ -1,6 +1,6 @@
 {% macro project_metadata(project) %}
-    {{ project.selections_label()|safe }}
-    {{ project.bookmarks_label()|safe }}
+    {{ project.selections_label(popover=True)|safe }}
+    {{ project.bookmarks_label(popover=True)|safe }}
     {{ project.views_label()|safe }}
 
     {% if project.last_view %}

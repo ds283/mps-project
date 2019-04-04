@@ -5496,10 +5496,10 @@ class LiveProject(db.Model):
         if not self.parent.show_popularity:
             return None
 
-        return self.popularity_label(css_classes)
+        return self.popularity_label(css_classes=css_classes)
 
 
-    def popularity_label(self, css_classes=None):
+    def popularity_label(self, css_classes=None, popover=False):
         cls = '' if css_classes is None else ' '.join(css_classes)
 
         score = self.popularity_rank
@@ -5536,20 +5536,20 @@ class LiveProject(db.Model):
         return '<span class="label label-success {cls}">Popularity: {label}</span>'.format(cls=cls, label=label)
 
 
-    def format_bookmarks_label(self, css_classes=None):
+    def format_bookmarks_label(self, css_classes=None, popover=False):
         if not self.parent.show_bookmarks:
             return None
 
-        return self.bookmarks_label(css_classes)
+        return self.bookmarks_label(css_classes=css_classes, popover=popover)
 
 
-    def bookmarks_label(self, css_classes=None):
+    def bookmarks_label(self, css_classes=None, popover=False):
         num = self.number_bookmarks
 
         pl = 's' if num != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
 
-        if num > 0:
+        if popover and num > 0:
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.bookmarks.order_by(Bookmark.rank).limit(10).all()]
             tooltip = ''.join(project_tags)
@@ -5568,20 +5568,20 @@ class LiveProject(db.Model):
         return '<span class="label label-info {cls}">{n} view{pl}</span>'.format(cls=cls, n=self.page_views, pl=pl)
 
 
-    def format_selections_label(self, css_classes=None):
+    def format_selections_label(self, css_classes=None, popover=False):
         if not self.parent.show_selections:
             return None
 
-        return self.selections_label(css_classes)
+        return self.selections_label(css_classes=css_classes, popover=popover)
 
 
-    def selections_label(self, css_classes=None):
+    def selections_label(self, css_classes=None, popover=False):
         num = self.number_selections
 
         pl = 's' if num != 1 else ''
         cls = '' if css_classes is None else ' '.join(css_classes)
 
-        if num > 0:
+        if popover and num > 0:
             project_tags = ['<div>{name} #{rank}</div>'.format(name=rec.owner.student.user.name, rank=rec.rank)
                             for rec in self.selections.order_by(SelectionRecord.rank).limit(10).all()]
             tooltip = ''.join(project_tags)

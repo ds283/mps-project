@@ -8,10 +8,10 @@ It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
 {% if student.is_optional -%}
-You are receiving this email because you have the option to enroll as
-a participant for "{{ pclass.name }}". Depending on your current
+You are receiving this email because you have the option to apply or enroll
+as a participant for "{{ pclass.name }}". Depending on your current
 enrolment, this may require a change of degree programme or meeting special
-criteria such as a minimum perfomance in your end-of-stage exams.
+criteria such as a minimum performance in your end-of-stage exams.
 If you are unsure whether you are eligible for "{{ pclass.name }}", please
 seek guidance from the project convenor whose details are given below.
 

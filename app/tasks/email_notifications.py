@@ -84,12 +84,14 @@ def register_email_notification_tasks(celery):
                         or_(EmailNotification.event_type == EmailNotification.CONFIRMATION_GRANTED,
                             EmailNotification.event_type == EmailNotification.CONFIRMATION_TO_PENDING))).subquery()
 
+        # find outstanding confirm requests that aren't already included in the list of pending email notifications
         outstanding_crqs = db.session.query(ConfirmRequest) \
+            .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED,
+                    ConfirmRequest.viewed == False) \
             .join(LiveProject, LiveProject.id == ConfirmRequest.project_id) \
             .filter(LiveProject.owner_id == user.id) \
             .join(crqs, crqs.c.data_1 == ConfirmRequest.id, isouter=True) \
-            .filter(crqs.c.data_1 == None,
-                    ConfirmRequest.viewed != True) \
+            .filter(crqs.c.data_1 == None) \
             .order_by(ConfirmRequest.request_timestamp.asc())
 
         outstanding_count = get_count(outstanding_crqs)

@@ -49,57 +49,55 @@
                         {% endfor %}
                     </div>
                 </div>
-                <div>
-                    <div class="row vertical-align">
-                        <div class="col-xs-4">
-                            <div class="list-group">
-                                <div class="list-group-item">
-                                    Current supervision CATS <span class="badge">{{ config.CATS_supervision }}</span>
-                                </div>
-                                {% if pclass.CATS_supervision != config.CATS_supervision %}
-                                    <div class="list-group-item">
-                                        Updated value <span class="badge">{{ pclass.CATS_supervision }}</span>
-                                    </div>
-                                {% endif %}
+                <div class="row vertical-align">
+                    <div class="col-xs-4">
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                Current supervision CATS <span class="badge">{{ config.CATS_supervision }}</span>
                             </div>
-                        </div>
-                        <div class="col-xs-4">
-                            <div class="list-group">
+                            {% if pclass.CATS_supervision != config.CATS_supervision %}
                                 <div class="list-group-item">
-                                    Current 2nd-marking CATS <span class="badge">{{ config.CATS_marking }}</span>
+                                    Updated value <span class="badge">{{ pclass.CATS_supervision }}</span>
                                 </div>
-                                {% if pclass.CATS_marking != config.CATS_marking %}
-                                    <div class="list-group-item">
-                                        Updated value <span class="badge">{{ pclass.CATS_marking }}</span>
-                                    </div>
-                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-xs-4">
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                Current 2nd-marking CATS <span class="badge">{{ config.CATS_marking }}</span>
                             </div>
-                        </div>
-                        <div class="col-xs-4">
-                            <div class="list-group">
+                            {% if pclass.CATS_marking != config.CATS_marking %}
                                 <div class="list-group-item">
-                                    Current presentation CATS <span class="badge">{{ config.CATS_presentation }}</span>
+                                    Updated value <span class="badge">{{ pclass.CATS_marking }}</span>
                                 </div>
-                                {% if pclass.CATS_presentation != config.CATS_presentation %}
-                                    <div class="list-group-item">
-                                        Updated value <span class="badge">{{ pclass.CATS_presentation }}</span>
-                                    </div>
-                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-xs-4">
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                Current presentation CATS <span class="badge">{{ config.CATS_presentation }}</span>
+                            </div>
+                            {% if pclass.CATS_presentation != config.CATS_presentation %}
+                                <div class="list-group-item">
+                                    Updated value <span class="badge">{{ pclass.CATS_presentation }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if config.CATS_supervision != pclass.CATS_supervision or config.CATS_marking != pclass.CATS_marking or config.CATS_presentation != pclass.CATS_presentation %}
+                    <div class="row vertical-top">
+                        <div class="col-xs-12">
+                            <div class="pull-right">
+                                <a href="{{ url_for('convenor.update_CATS', config_id=config.id) }}" class="btn btn-default">
+                                    Update CATS values
+                                </a>
                             </div>
                         </div>
                     </div>
-                    {% if config.CATS_supervision != pclass.CATS_supervision or config.CATS_marking != pclass.CATS_marking or config.CATS_presentation != pclass.CATS_presentation %}
-                        <div class="row vertical-top">
-                            <div class="col-xs-12">
-                                <div class="pull-right">
-                                    <a href="{{ url_for('convenor.update_CATS', config_id=config.id) }}" class="btn btn-default">
-                                        Update CATS values
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-                </div>
+                {% endif %}
             </div>
 
             {# offer rollover of academic year if available #}
@@ -125,28 +123,17 @@
                     {% set state = config.selector_lifecycle %}
                     {% set sel_count = convenor_data['selectors'] %}
                     {% if state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
-
                         {{ issue_confirmations(config, issue_form, capacity_data, sel_count) }}
-
                     {% elif state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-
                         {# if we get here then we can assume requests have been issued because of the outermost if #}
                         {{ waiting_confirmations(config, issue_form, capacity_data, sel_count) }}
-
                     {% elif state == config.SELECTOR_LIFECYCLE_READY_GOLIVE %}
-
                         {{ golive(config, golive_form, capacity_data, sel_count) }}
-
                     {% elif state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-
-                        {{ selection_open(config) }}
-
+                        {{ selection_open(config, golive_form) }}
                     {% elif state == config.SELECTOR_LIFECYCLE_READY_MATCHING or state == config.SELECTOR_LIFECYCLE_READY_ROLLOVER%}
-
                         {{ selection_closed(config, config.year < current_year) }}
-
                     {% else %}
-
                         <div class="panel panel-danger">
                             <div class="panel-heading">Error</div>
                             <div class="panel-body">
@@ -154,7 +141,6 @@
                                 Unknown project lifecycle state {{ state }}
                             </div>
                         </div>
-
                     {% endif %}
                 </div>
 

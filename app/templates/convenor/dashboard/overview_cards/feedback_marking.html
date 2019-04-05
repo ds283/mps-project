@@ -21,8 +21,8 @@
         </div>
     </div>
     <hr class="intro-divider">
-    <form action="{{ url_for('convenor.open_feedback', id=config.id) }}"
-          method="POST" name="issue-form">
+    <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
+        {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline) }}
         <div class="row">
             <div class="col-xs-12">

@@ -1,101 +1,109 @@
-{% macro selection_open(config) %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import date_field %}
+
+{% macro selection_open(config, golive_form) %}
     <div class="panel panel-success">
-        <div class="panel-heading"><strong>Student selections are currently live</strong></div>
+        <div class="panel-heading">
+            <strong>Student selections are currently live</strong>
+            {% if config.live_deadline %}
+                &ndash;
+                deadline {{ config.live_deadline.strftime("%a %d %b %Y") }}
+            {% endif %}
+        </div>
         <div class="panel-body">
+            {% set data = config.selector_data %}
+            {% set submitted = data['have_submitted'] %}
+            {% set bookmarks = data['have_bookmarks'] %}
+            {% set missing = data['missing'] %}
+            {% set total = data['total'] %}
+            {% set outstanding_confirm = data['outstanding_confirm'] %}
             <div class="row vertical-top">
-                <div class="col-xs-8">
-                    {% set data = config.selector_data %}
-                    {% set submitted = data['have_submitted'] %}
-                    {% set bookmarks = data['have_bookmarks'] %}
-                    {% set missing = data['missing'] %}
-                    {% set total = data['total'] %}
-                    {% set outstanding_confirm = data['outstanding_confirm'] %}
-                    <div class="row vertical-top">
-                        <div class="col-xs-4"><strong>Submitted</strong></div>
-                        <div class="col-xs-4"><strong>Has bookmarks</strong></div>
-                        <div class="col-xs-4"><strong>No bookmarks</strong></div>
-                    </div>
-                    <div class="row vertical-top">
-                        <div class="col-xs-4">
-                            <strong>{{ submitted }}</strong>/{{ total }}
-                            <a class="btn btn-link"
-                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">
-                                Show ...
-                            </a>
+                <div class="col-xs-4">
+                    <div class="list-group">
+                        <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary"{% endif %}>
+                            Submitted
+                            <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='submitted') }}">(Show...)</a>
+                            <span class="badge">{{ submitted }}/{{ total }}</span>
                         </div>
-                        <div class="col-xs-4">
-                            <strong>{{ bookmarks }}</strong>/{{ total }}
-                            <a class="btn btn-link"
-                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">
-                                Show ...
-                            </a>
-                        </div>
-                        <div class="col-xs-4">
-                            <strong>{{ missing }}</strong>/{{ total }}
-                            <a class="btn btn-link"
-                                href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">
-                                Show ...
-                            </a>
-                        </div>
-                    </div>
-                    <div class="row vertical-top">
-                        <div class="col-xs-12">
-                            {% set pl = 's' %}{% if outstanding_confirm == 1 %}{% set pl = '' %}{% endif %}
-                            <strong>{{ outstanding_confirm }}</strong> outstanding confirmation request{{ pl }}.
-                            <a class="btn btn-link"
-                               href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">
-                                Show ...
-                            </a>
-                        </div>
-                    </div>
-                    <hr class="intro-divider">
-                    <div class="row vertical-top">
-                        <div class="col-xs-12">
-                            {% if submitted == total %}
-                                <p>All students have submitted validated choices.</p>
-                                <p>
-                                    It is safe to close selections.
-                                    {% if total == 0 %}
-                                        <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
-                                            Reverse Go Live to add more selectors
-                                        </a>
-                                    {% endif %}
-                                </p>
-                                <span class="label label-success"><i class="fa fa-check"></i> Ready to proceed</span>
-                            {% elif missing == 0 %}
-                                <p>
-                                    Some students have not yet submitted a validated selection, but all students
-                                    have bookmark data.
-                                </p>
-                                <p>
-                                    If selections are closed now, bookmark data will be used when performing
-                                    automatic matching for students who are missing a validated selection.
-                                </p>
-                                <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Proceed with caution</span>
-                            {% else %}
-                                <p>Some students are missing both a validated selection and bookmark data.</p>
-                                <p>
-                                    If selections are closed now, these students will be allocated an arbitrary project
-                                    during automated matching.
-                                </p>
-                                <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Proceed with caution</span>
-                            {% endif %}
+                        <div class="list-group-item {% if outstanding_confirm > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
+                            Confirmation requests
+                            <a href="{{ url_for('convenor.show_confirmations', id=config.pclass_id) }}">(Show...)</a>
+                            <span class="badge">{{ outstanding_confirm }}</span>
                         </div>
                     </div>
                 </div>
                 <div class="col-xs-4">
-                    <div class="pull-right">
-                        <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
-                           class="btn btn-default grouped-button-margin">
-                            Reset popularity data
-                        </a>
-                        <a href="{{ url_for('convenor.close_selections', id=config.id) }}"
-                           class="btn btn-primary grouped-button-margin">
-                            Close selections
-                        </a>
+                    <div class="list-group">
+                        <div class="list-group-item {% if bookmarks > 0 %}list-group-item-primary{% else %}list-group-item-secondary{% endif %}">
+                            Has bookmarks
+                            <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='bookmarks') }}">(Show...)</a>
+                            <span class="badge">{{ bookmarks }}/{{ total }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xs-4">
+                    <div class="list-group">
+                        <div class="list-group-item {% if bookmarks > 0 %}list-group-item-primary{% else %}list-group-item-secondary{% endif %}">
+                            No bookmarks
+                            <a href="{{ url_for('convenor.selectors', id=config.pclass_id, state_filter='none') }}">(Show...)</a>
+                            <span class="badge">{{ missing}}/{{ total }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
+            <div class="row vertical-top">
+                <div class="col-xs-12">
+                    {% if submitted == total %}
+                        <p>All students have submitted validated choices.</p>
+                        <p>
+                            It is safe to close selections.
+                            {% if total == 0 %}
+                                <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.reverse_golive', config_id=config.id) }}" style="margin-left: 10px;">
+                                    Reverse Go Live to add more selectors
+                                </a>
+                            {% endif %}
+                        </p>
+                        <span class="label label-success"><i class="fa fa-check"></i> Ready to proceed</span>
+                    {% elif missing == 0 %}
+                        <p>
+                            Some students have not yet submitted a validated selection, but all students
+                            have bookmark data.
+                        </p>
+                        <p>
+                            If selections are closed now, bookmark data will be used when performing
+                            automatic matching for students who are missing a validated selection.
+                        </p>
+                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Proceed with caution</span>
+                    {% else %}
+                        <p>Some students are missing both a validated selection and bookmark data.</p>
+                        <p>
+                            If selections are closed now, these students will be allocated an arbitrary project
+                            during automated matching.
+                        </p>
+                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Proceed with caution</span>
+                    {% endif %}
+                </div>
+            </div>
+            <hr class="intro-divider">
+            <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">
+                {{ golive_form.hidden_tag() }}
+                {{ date_field(golive_form.live_deadline) }}
+                <div class="row vertical-top">
+                    <div class="col-xs-12">
+                        <div class="pull-right">
+                            <a href="{{ url_for('convenor.reset_popularity_data', id=config.id) }}"
+                               class="btn btn-default grouped-button-margin">
+                                Reset popularity data
+                            </a>
+                            {{ wtf.form_field(golive_form.live, button_map={'live': 'default'}) }}
+                            <a href="{{ url_for('convenor.close_selections', id=config.id) }}"
+                               class="btn btn-primary grouped-button-margin">
+                                Close selections
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 {% endmacro %}

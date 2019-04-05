@@ -265,6 +265,7 @@ def overview(id):
 
         if config.live_deadline is not None:
             golive_form.live_deadline.data = config.live_deadline
+            golive_form.live.label.text = 'Save changes'
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
@@ -3409,6 +3410,29 @@ def reverse_golive(config_id):
     config.live_deadline = None
 
     db.session.commit()
+
+    return redirect(url_for('convenor.overview', id=config.pclass_id))
+
+
+@convenor.route('/adjust_selection_deadline/<int:configid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def adjust_selection_deadline(configid):
+    # config id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    form = GoLiveForm(request.form)
+    if form.validate_on_submit():
+        if form.live.data:
+            config.live_deadline = form.live_deadline.data
+            db.session.commit()
 
     return redirect(url_for('convenor.overview', id=config.pclass_id))
 

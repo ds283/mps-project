@@ -2,14 +2,14 @@
 {% from "macros.html" import date_field %}
 
 {% macro project_activity(config, period, feedback_form, today) %}
-    <form action="{{ url_for('convenor.open_feedback', id=config.id) }}"
-          method="POST" name="feedback-form">
-        {% if period.start_date and period.start_date > today %}
-            <p>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</p>
-        {% else %}
-            Normal project activity is underway.
-        {% endif %}
+    {% if period.start_date and period.start_date > today %}
+        <p>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</p>
+    {% else %}
+        Normal project activity is underway.
+    {% endif %}
+    <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
         <hr class="intro-divider">
+        {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline) }}
         <div class="row">
             <div class="col-xs-12">

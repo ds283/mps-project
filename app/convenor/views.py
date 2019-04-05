@@ -1193,7 +1193,7 @@ def submitters(id):
     if prog_filter is None and session.get('convenor_submitters_prog_filter'):
         prog_filter = session['convenor_submitters_prog_filter']
 
-    if isinstance(prog_filter, all) and prog_filter != 'all' and int(prog_filter) not in programmes:
+    if isinstance(prog_filter, str) and prog_filter != 'all' and int(prog_filter) not in programmes:
         prog_filter = 'all'
 
     if prog_filter is not None:

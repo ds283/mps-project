@@ -257,6 +257,7 @@ def register_system_tasks(celery):
         redis_db.set('_processing_pings', 1, ex=300)
 
         ping_list = redis_db.hgetall('_pings')
+        redis_db.delete('_pings')     # delete as close as possible to read, to avoid race conditions from other threads/instances
         task_list = []
 
         for key in ping_list:
@@ -301,7 +302,6 @@ def register_system_tasks(celery):
         redis_db = get_redis()
 
         # delete guard key from Redis
-        redis_db.delete('_pings')
         redis_db.delete('_processing_pings')
 
 

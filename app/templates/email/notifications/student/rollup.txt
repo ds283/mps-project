@@ -1,0 +1,38 @@
+Dear {{ user.name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+It is sent from an address that is not monitored or answered;
+please direct any queries to the project convenor.
+
+{% if notifications|length > 0 -%}
+This is a a summary of the events that have occurred since your last
+email notification:
+
+{% for notify in notifications -%}
+- {{ notify|string|wordwrap(75) }}
+
+{% endfor -%}
+{%- endif -%}
+
+{% if outstanding|length > 0 -%}
+You have open requests for meeting confirmations. These are required where
+a faculty member has requested to meet with all students who are interested
+in selecting their project. The purpose of these meetings is to ensure
+the project is appropriate for you, and that you have a suitable background
+from courses and other projects.
+
+{% for req in outstanding -%}
+{%- set line = req.project.owner.user.name + ' for "' + req.project.name + '" (' + req.project.config.project_class.name + ', requested at ' + req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") + ')' -%}
+- {{ line|wordwrap(75) }}
+
+{% endfor -%}
+If you have met with a prospective supervisor but are still waiting for
+your request to be confirmed, you should politely contact them again by
+email. If you are still unsuccessful, please speak to the project convenor.
+
+{% endif -%}
+
+You can adjust your email preferences, including the frequency with which
+you will be mailed notifications, in the 'Settings...' section of your
+account.

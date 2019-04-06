@@ -1,0 +1,15 @@
+Dear {{ user.name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+It is sent from an address that is not monitored or answered;
+please direct any queries to the project convenor.
+
+Your preferences are currently set so that notification emails are sent
+as soon as they are generated. The following event has occurred:
+
+{{ notification|string|wordwrap(75) }}
+
+You can adjust your email preferences, including the frequency with which
+you will be mailed notifications, in the 'Settings...' section of your
+account.

@@ -6,13 +6,16 @@ Dear {{ supervisor.name }} and {{ student.user.name }}
 
 This project is part of "{{ config.project_class.name }}".
 
-{{ student.user.first_name }}: you should now email the project supervisor to arrange
-a convenient time and place to meet. You can do so by replying directly to this email.
+{{ student.user.name }}: you should now email the project supervisor, or speak
+to them in person, to arrange a convenient time and place to meet. You can do
+so by replying directly to this email. The purpose of the meeting is to ensure
+that the project is suitable for your level of preparation, and possibly also
+to discuss a course selection for next year.
 
 {{ supervisor.name }}: when you have met with the student and are
-satisfied that their background and course selection is appropriate for your project,
-please 'confirm' that a meeting has taken place using the appropriate drop-down menu on
-your dashboard for "{{ project.name }}".
+satisfied that their background and course selection is appropriate for your
+project, please 'confirm' that a meeting has taken place using the
+drop-down menu on your dashboard for "{{ project.name }}".
 
 If you have any queries, please direct them to the project convenor:
 

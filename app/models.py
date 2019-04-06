@@ -858,7 +858,8 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{student} requested a meeting confirmation for project ' \
-               '"{proj}".'.format(student=req.owner.student.user.name, proj=req.project.name)
+               '"{proj}" (in {pclass}).'.format(student=req.owner.student.user.name, proj=req.project.name,
+                                                pclass=req.project.config.project_class.name)
 
 
     @assign(str_operations, CONFIRMATION_REQUEST_CANCELLED)
@@ -869,7 +870,8 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{student} cancelled their confirmation request for project ' \
-               '"{proj}".'.format(student=user.name, proj=proj.name)
+               '"{proj}" (in {pclass}).'.format(student=user.name, proj=proj.name,
+                                                pclass=proj.config.project_class.name)
 
 
     @assign(str_operations, CONFIRMATION_REQUEST_DELETED)
@@ -879,8 +881,9 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{supervisor} deleted your confirmation request for project ' \
-               '"{proj}". If you were not expecting this to happen, please contact the supervisor ' \
-               'directly.'.format(supervisor=proj.owner.user.name, proj=proj.name)
+               '"{proj}" (in {pclass}). If you were not expecting this to happen, please contact the supervisor ' \
+               'directly.'.format(supervisor=proj.owner.user.name, proj=proj.name,
+                                  pclass=proj.config.project_class.name)
 
 
     @assign(str_operations, CONFIRMATION_GRANT_DELETED)
@@ -890,8 +893,9 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{supervisor} removed your meeting confirmation for project ' \
-               '"{proj}". If you were not expecting this to happen, please contact the supervisor ' \
-               'directly.'.format(supervisor=proj.owner.user.name, proj=proj.name)
+               '"{proj}" (in {pclass}). If you were not expecting this to happen, please contact the supervisor ' \
+               'directly.'.format(supervisor=proj.owner.user.name, proj=proj.name,
+                                  pclass=proj.config.project_class.name)
 
 
     @assign(str_operations, CONFIRMATION_DECLINE_DELETED)
@@ -901,9 +905,10 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{supervisor} removed your declined request for meeting confirmation for project ' \
-               '"{proj}". If you were not expecting this to happen, please contact the supervisor ' \
+               '"{proj}" (in {pclass}). If you were not expecting this to happen, please contact the supervisor ' \
                'directly. Should you be interested in applying for this project, you are now able ' \
-               'to generate a new confirmation request.'.format(supervisor=proj.owner.user.name, proj=proj.name)
+               'to generate a new confirmation request.'.format(supervisor=proj.owner.user.name, proj=proj.name,
+                                                                pclass=proj.config.project_class.name)
 
 
     @assign(str_operations, CONFIRMATION_GRANTED)
@@ -913,9 +918,10 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{supervisor} confirmed your request to sign-off on project ' \
-               '"{proj}". If you are interested in applying for this project, you are now able ' \
+               '"{proj}" (in {pclass}). If you are interested in applying for this project, you are now able ' \
                'to include it when submitting your list of ranked ' \
-               'choices.'.format(supervisor=req.project.owner.user.name, proj=req.project.name)
+               'choices.'.format(supervisor=req.project.owner.user.name, proj=req.project.name,
+                                 pclass=req.project.config.project_class.name)
 
 
     @assign(str_operations, CONFIRMATION_DECLINED)
@@ -925,8 +931,9 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{supervisor} declined your request to sign-off on project ' \
-               '"{proj}". If you were not expecting this to happen, please contact the supervisor ' \
-               'directly.'.format(supervisor=req.project.owner.user.name, proj=req.project.name)
+               '"{proj}" (in {pclass}). If you were not expecting this to happen, please contact the supervisor ' \
+               'directly.'.format(supervisor=req.project.owner.user.name, proj=req.project.name,
+                                  pclass=req.project.config.project_class.name)
 
 
     @assign(str_operations, CONFIRMATION_TO_PENDING)
@@ -936,8 +943,9 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{supervisor} changed your meeting confirmation request for project ' \
-               '"{proj}" to "pending". If you were not expecting this to happen, please contact the supervisor ' \
-               'directly.'.format(supervisor=req.project.owner.user.name, proj=req.project.name)
+               '"{proj}" (in {pclass}) to "pending". If you were not expecting this to happen, please contact the supervisor ' \
+               'directly.'.format(supervisor=req.project.owner.user.name, proj=req.project.name,
+                                  pclass=req.project.config.project_class.name)
 
 
     @assign(str_operations, FACULTY_REENROLL_SUPERVISOR)

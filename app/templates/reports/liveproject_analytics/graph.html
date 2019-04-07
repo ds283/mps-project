@@ -1,0 +1,35 @@
+{% extends "reports/liveproject_analytics/nav.html" %}
+
+{% macro plot_js(script, div) %}
+    {% if div and script %}
+        {{ script|safe }}
+    {% endif %}
+{% endmacro %}
+
+{% macro plot_div(script, div) %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            {% if div and script %}
+                {{ div|safe }}
+            {% else %}
+                <span class="label label-warning">Insufficient data to generate plot</span>
+            {% endif %}
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endmacro %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {{ plot_js(rank_script, rank_div) }}
+    {{ plot_js(score_script, score_div) }}
+{% endblock %}
+
+{% block graphblock %}
+    <div class="well">
+        {{ plot_div(rank_script, rank_div) }}
+        {{ plot_div(score_script, score_div) }}
+    </div>
+{% endblock %}

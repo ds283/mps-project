@@ -5390,9 +5390,7 @@ class LiveProject(db.Model):
 
 
     def _get_popularity_attr(self, getter):
-        record = PopularityRecord.query \
-            .filter_by(liveproject_id=self.id) \
-            .order_by(PopularityRecord.datestamp.desc()).first()
+        record = self.popularity_data.order_by(PopularityRecord.datestamp.desc()).first()
 
         now = datetime.now()
 
@@ -5403,56 +5401,84 @@ class LiveProject(db.Model):
         return getter(record)
 
 
+    def _get_popularity_history(self, getter):
+        records = self.popularity_data.order_by(PopularityRecord.datestamp.asc()).all()
+
+        date_getter = lambda x: x.datestamp
+        xs = [date_getter(r) for r in records]
+        ys = [getter(r) for r in records]
+
+        return xs, ys
+
+
     @property
     def popularity_score(self):
-        def getter(record):
-            return record.score
-
-        return self._get_popularity_attr(getter)
+        return self._get_popularity_attr(lambda x: x.score)
 
 
     @property
     def popularity_rank(self):
-        def getter(record):
-            return record.score_rank, record.total_number
+        return self._get_popularity_attr(lambda x: (x.score_rank, x.total_number))
 
-        value = self._get_popularity_attr(getter)
 
-        return value
+    @property
+    def popularity_score_history(self):
+        return self._get_popularity_history(lambda x: x.score)
+
+
+    @property
+    def popularity_rank_history(self):
+        return self._get_popularity_history(lambda x: (x.score_rank, x.total_number))
 
 
     @property
     def lowest_popularity_rank(self):
-        def getter(record):
-            return record.lowest_score_rank
-
-        value = self._get_popularity_attr(getter)
-
-        return value
+        return self._get_popularity_attr(lambda x: x.lowest_score_rank)
 
 
     @property
     def views_rank(self):
-        def getter(record):
-            return record.views_rank, record.total_number
+        return self._get_popularity_attr(lambda x: (x.views_rank, x.total_number))
 
-        return self._get_popularity_attr(getter)
+
+    @property
+    def views_history(self):
+        return self._get_popularity_history(lambda x: x.views)
+
+
+    @property
+    def views_rank_history(self):
+        return self._get_popularity_history(lambda x: (x.views_rank, x.total_number))
 
 
     @property
     def bookmarks_rank(self):
-        def getter(record):
-            return record.bookmarks_rank, record.total_number
+        return self._get_popularity_attr(lambda x: (x.bookmarks_rank, x.total_number))
 
-        return self._get_popularity_attr(getter)
+
+    @property
+    def bookmarks_history(self):
+        return self._get_popularity_history(lambda x: x.bookmarks)
+
+
+    @property
+    def bookmarks_rank_history(self):
+        return self._get_popularity_history(lambda x: (x.bookmarks_rank, x.total_number))
 
 
     @property
     def selections_rank(self):
-        def getter(record):
-            return record.selections_rank, record.total_number
+        return self._get_popularity_attr(lambda x: (x.selections_rank, x.total_number))
 
-        return self._get_popularity_attr(getter)
+
+    @property
+    def selections_history(self):
+        return self._get_popularity_history(lambda x: x.selections)
+
+
+    @property
+    def selections_rank_history(self):
+        return self._get_popularity_history(lambda x: (x.selections_rank, x.total_number))
 
 
     @property
@@ -5597,7 +5623,7 @@ class LiveProject(db.Model):
         else:
             attrs = ''
 
-        return '<span class="label label-primary {cls}" {attrs}>{n} ' \
+        return '<span class="label label-info {cls}" {attrs}>{n} ' \
                'selection{pl}</span>'.format(cls=cls, n=num, pl=pl, attrs=attrs)
 
 

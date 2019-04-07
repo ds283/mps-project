@@ -3894,14 +3894,11 @@ def backups_overview():
         size = format_size(backup_total_size)
 
     if form.validate_on_submit():
-
         set_backup_config(form.keep_hourly.data, form.keep_daily.data, form.backup_limit.data, form.limit_units.data)
         flash('Your new backup configuration has been saved', 'success')
 
     else:
-
         if request.method == 'GET':
-
             form.keep_hourly.data = keep_hourly
             form.keep_daily.data = keep_daily
             form.backup_limit.data = limit
@@ -3909,17 +3906,16 @@ def backups_overview():
 
     # if there are enough datapoints, generate some plots showing how the backup size is scaling with time
     if backup_count > 1:
-
         # extract lists of data points
         backup_dates = db.session.query(BackupRecord.date).order_by(BackupRecord.date).all()
         archive_size = db.session.query(BackupRecord.archive_size).order_by(BackupRecord.date).all()
         backup_size = db.session.query(BackupRecord.backup_size).order_by(BackupRecord.date).all()
 
-        MB_SIZE = 1024*1024
+        MB_SIZE = 1024 * 1024
 
-        dates = [ x[0] for x in backup_dates ]
-        arc_size = [ x[0] / MB_SIZE for x in archive_size ]
-        bk_size = [ x[0] / MB_SIZE for x in backup_size ]
+        dates = [x[0] for x in backup_dates]
+        arc_size = [x[0] / MB_SIZE for x in archive_size]
+        bk_size = [x[0] / MB_SIZE for x in backup_size]
 
         archive_plot = figure(title='Archive size as a function of time',
                               x_axis_label='Time of backup', x_axis_type='datetime',
@@ -3947,7 +3943,6 @@ def backups_overview():
         backup_script, backup_div = components(backup_plot)
 
     else:
-
         archive_script = None
         archive_div = None
         backup_script = None
@@ -3957,7 +3952,6 @@ def backups_overview():
     last_batch = BackupRecord.query.order_by(BackupRecord.date.desc()).limit(4).all()
 
     if backup_max is not None:
-
         # construct empty/full gauge
         how_full = float(backup_total_size) / float(backup_max)
         angle = 2*pi * how_full
@@ -3982,7 +3976,6 @@ def backups_overview():
         gauge_script, gauge_div = components(gauge)
 
     else:
-
         gauge_script = None
         gauge_div = None
 
@@ -4001,7 +3994,6 @@ def manage_backups():
     Generate the backup-management view
     :return:
     """
-
     backup_count = get_backup_count()
 
     form = BackupManageForm(request.form)

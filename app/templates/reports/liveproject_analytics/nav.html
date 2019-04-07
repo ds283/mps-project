@@ -1,0 +1,132 @@
+{% extends "base_app.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    <link href="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.css" rel="stylesheet" type="text/css">
+    {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.css" rel="stylesheet" type="text/css">#}
+    {#    <link href="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.css" rel="stylesheet" type="text/css">#}
+
+    <script src="https://cdn.pydata.org/bokeh/release/bokeh-1.0.4.min.js"></script>
+    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-widgets-1.0.4.min.js"></script>#}
+    {#    <script src="https://cdn.pydata.org/bokeh/release/bokeh-tables-1.0.4.min.js"></script>#}
+{% endblock %}
+
+{% block bodyblock %}
+    {% if text and url %}
+        <div class="top-return-link">
+            <a href="{{ url }}">
+                <i class="fa fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+            <div class="well well-lg">
+                <p><span class="dashboard-project-title">{{ project.name }}</span></p>
+                <p>{{ project.config.year }}&ndash;{{ project.config.year+1 }} |
+                    <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a> |
+                    {{ project.config.project_class.name }}</p>
+                <hr class="intro-divider">
+                <div class="row vertical-top">
+                    <div class="col-xs-3">
+                        <div class="list-group">
+                            <div class="list-group-item list-group-item-info">
+                                {% set R = project.popularity_rank %}
+                                {% if R is not none %}
+                                    {% set rank, total = R %}
+                                    Popularity rank <span class="badge">{{ rank }}/{{ total }}</span>
+                                {% else %}
+                                    Popularity rank updating...
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-3">
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                Views <span class="badge">{{ project.page_views }}</span>
+                            </div>
+                            <div class="list-group-item">
+                                {% set R = project.views_rank %}
+                                {% if R is not none %}
+                                    {% set rank, total = R %}
+                                    View rank <span class="badge">{{ rank }}/{{ total }}</span>
+                                {% else %}
+                                    View rank updating...
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-3">
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                Bookmarks <span class="badge">{{ project.number_bookmarks }}</span>
+                            </div>
+                            <div class="list-group-item">
+                                {% set R = project.bookmarks_rank %}
+                                {% if R is not none %}
+                                    {% set rank, total = R %}
+                                    Bookmarks rank <span class="badge">{{ rank }}/{{ total }}</span>
+                                {% else %}
+                                    Bookmarks rank updating...
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-3">
+                        <div class="list-group">
+                            <div class="list-group-item">
+                                Selections <span class="badge">{{ project.number_selections }}</span>
+                            </div>
+                            <div class="list-group-item">
+                                {% set R = project.selections_rank %}
+                                {% if R is not none %}
+                                    {% set rank, total = R %}
+                                    Selections rank <span class="badge">{{ rank }}/{{ total }}</span>
+                                {% else %}
+                                    Selections rank updating...
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <ul class="nav nav-tabs">
+                <li {% if pane == 'popularity' %}class="active"{% endif %}>
+                    <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
+                        Popularity
+                    </a>
+                </li>
+                <li {% if pane == 'views' %}class="active"{% endif %}>
+                    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}">
+                        Page views
+                    </a>
+                </li>
+                <li {% if pane == 'bookmarks' %}class="active"{% endif %}>
+                    <a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}">
+                        Bookmarks
+                    </a>
+                </li>
+                <li {% if pane == 'selections' %}class="active"{% endif %}>
+                    <a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}">
+                        Selections
+                    </a>
+                </li>
+            </ul>
+            {% block graphblock %}
+            {% endblock %}
+        </div>
+        <div class="col-xs-1"></div>
+    </div>
+
+    {% if text and url %}
+        <div>
+            <a href="{{ url }}">
+                <i class="fa fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}

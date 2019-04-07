@@ -57,9 +57,16 @@ _popularity = \
 {% set R = project.popularity_rank %}
 {% if R is not none %}
     {% set rank, total = R %}
-    <span class="label label-success">Rank {{ rank }}/{{ total }}</span>
+    <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="label label-primary">Popularity {{ rank }}/{{ total }}</a>
 {% else %}
-    <span class="label label-default">Not available</span>
+    <span class="label label-default">Popularity updating...</span>
+{% endif %}
+{% set R = project.views_rank %}
+{% if R is not none %}
+    {% set rank, total = R %}
+    <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="label label-default">Views {{ rank }}/{{ total }}</a>
+{% else %}
+    <span class="label label-default">Views updating...</span>
 {% endif %}
 """
 
@@ -77,6 +84,13 @@ _menu = \
                 View web page
             </a>
         </li>
+        <li>
+            <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}">
+                View analytics
+            </a>
+        </li>
+        
+        <li role="separator" class="divider">
 
         {% if project.number_bookmarks > 0 %}
             <li>
@@ -168,7 +182,16 @@ _menu = \
 """
 
 
-def liveprojects_data(config, projects):
+def liveprojects_data(config, projects, url=None, text=None):
+
+    def get_popularity_rank(p):
+        data = p.popularity_rank
+
+        if data is None:
+            return -1
+
+        rank, total = data
+        return rank
 
     data = [{'number': '{c}'.format(c=p.number),
              'name': '<a href="{url}">{name}</a>'.format(name=p.name,
@@ -191,9 +214,9 @@ def liveprojects_data(config, projects):
                  'value': p.number_pending + p.number_confirmed
              },
              'popularity': {
-                 'display': render_template_string(_popularity, project=p),
-                 'value': p.popularity_rank[0] if p.popularity_rank is not None else 0
+                 'display': render_template_string(_popularity, project=p, url=url, text=text),
+                 'value': get_popularity_rank(p)
              },
-             'menu': render_template_string(_menu, project=p, config=config)} for p in projects]
+             'menu': render_template_string(_menu, project=p, config=config, url=url, text=text)} for p in projects]
 
     return jsonify(data)

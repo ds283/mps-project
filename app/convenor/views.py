@@ -1597,7 +1597,7 @@ def liveprojects_ajax(id):
     else:
         data = projects
 
-    return ajax.convenor.liveprojects_data(config, data)
+    return ajax.convenor.liveprojects_data(config, data, url=url_for('convenor.liveprojects', id=id), text='convenor LiveProjects view')
 
 
 @convenor.route('/attach_liveproject/<int:id>')

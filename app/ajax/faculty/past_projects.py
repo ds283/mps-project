@@ -37,16 +37,36 @@ _pclass = \
 """
 
 
-def pastproject_data(projects):
+_name = \
+"""
+{% from "faculty/macros.html" import project_metadata %}
+<a href="{{ url_for('faculty.live_project', pid=p.id, text='offered projects view', url=url_for('faculty.past_projects')) }}">
+    {{ p.name }}
+</a>
+<div>
+    {{ project_metadata(p) }}
+</div>
+"""
 
+
+_metadata = \
+"""
+{% from "faculty/macros.html" import project_selection_data, project_rank_data %}
+<div>
+    {{ project_selection_data(p) }}
+</div>
+<div style="margin-top: 6px;">
+    {{ project_rank_data(p, url_for('faculty.past_projects'), text='past projects view') }}
+</div>
+"""
+
+
+def pastproject_data(projects):
     data = [{'year': '{c}'.format(c=p.config.year),
-             'name': '<a href="{url}">{name}</a>'.format(name=p.name, url=url_for('faculty.live_project',
-                                                                                  pid=p.id,
-                                                                                  text='offered projects view',
-                                                                                  url=url_for('faculty.past_projects'))),
+             'name': render_template_string(_name, p=p),
              'pclass': render_template_string(_pclass, config=p.config),
              'group': p.group.make_label(),
-             'metadata': render_template_string('{% from "faculty/macros.html" import project_metadata %}{{ project_metadata(p) }}', p=p),
+             'metadata': render_template_string(_metadata, p=p),
              'students': 'Not yet implemented',
              'menu': render_template_string(_project_menu, project=p)} for p in projects]
 

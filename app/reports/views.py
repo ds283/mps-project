@@ -12,12 +12,16 @@ from flask import render_template, redirect, url_for, flash, request, session
 from flask_security import login_required, roles_required, roles_accepted, current_user
 
 from ..database import db
-from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, Project, WorkflowMixin
+from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, Project, LiveProject
 
 from ..shared.conversions import is_integer
-from ..shared.sqlalchemy import get_count
+from ..shared.validators import validate_is_convenor
 
 import app.ajax as ajax
+
+from bokeh.plotting import figure
+from bokeh.models.ranges import Range1d
+from bokeh.embed import components
 
 from . import reports
 
@@ -169,3 +173,123 @@ def all_projects_ajax():
         data = [(x.id, None) for x in data]
 
     return ajax.project.build_data(data, current_user.id)
+
+
+_analyse_labels = {'popularity': ('Popularity_rank', 'Popularity score'),
+                   'views': ('Page views rank', 'Page views'),
+                   'bookmarks': ('Bookmarks rank', 'Bookmarks'),
+                   'selections': ('Selections rank', 'Selections')}
+
+_analyse_colours = {'popularity': 'blue',
+                    'views': 'red',
+                    'bookmarks': 'green',
+                    'selections': 'cornflowerblue'}
+
+
+@reports.route('/liveproject_popularity/<int:proj_id>')
+@roles_accepted('faculty', 'admin', 'root', 'reports')
+def liveproject_analytics(proj_id):
+    project = LiveProject.query.get_or_404(proj_id)
+
+    authorized = False
+
+    # LiveProject owner is always authorized to view, as is root and admin users and anyone with a reports role
+    if current_user.has_role('root') or current_user.has_role('admin') \
+            or current_user.has_role('reports') or project.owner_id == current_user.id:
+        authorized = True
+
+    # if current user is convenor for the project class, then they are authorized
+    if validate_is_convenor(project.config.project_class):
+        authorized = True
+
+    if not authorized:
+        flash('You are not authorized to view the analytics page for this project', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    if url is None:
+        url = request.referrer
+
+    if text is None and url is not None:
+        text = 'previous page'
+
+    pane = request.args.get('pane', 'popularity')
+
+    if pane == 'views':
+        rank_dates, rank_values = project.views_rank_history
+        ranks = [x[0] for x in rank_values]
+
+        score_dates, scores = project.views_history
+
+    elif pane == 'bookmarks':
+        rank_dates, rank_values = project.bookmarks_rank_history
+        ranks = [x[0] for x in rank_values]
+
+        score_dates, scores = project.bookmarks_history
+
+    elif pane == 'selections':
+        rank_dates, rank_values = project.selections_rank_history
+        ranks = [x[0] for x in rank_values]
+
+        score_dates, scores = project.selections_history
+
+    else: # analyse == 'popularity':
+        rank_dates, rank_values = project.popularity_rank_history
+        ranks = [x[0] for x in rank_values]
+
+        score_dates, scores = project.popularity_score_history
+
+    rank_script = None
+    rank_div = None
+
+    score_script = None
+    score_div = None
+
+    labels = _analyse_labels[pane]
+    colour = _analyse_colours[pane]
+
+    if len(rank_values) > 0:
+        total = rank_values[0][1]
+        rank_div, rank_script = _build_rank_plot(rank_dates, ranks, total, labels[0], colour)
+
+    if len(scores) > 0:
+        score_div, score_script = _build_score_plot(score_dates, scores, labels[1], colour)
+
+    return render_template('reports/liveproject_analytics/graph.html', project=project, text=text, url=url,
+                           pane=pane, rank_script=rank_script, rank_div=rank_div,
+                           score_script=score_script, score_div=score_div)
+
+
+def _build_score_plot(pop_score_dates, pop_scores, title, colour):
+    plot = figure(title=title,
+                  x_axis_label='Date', x_axis_type='datetime', plot_width=800, plot_height=300)
+    plot.sizing_mode = 'scale_width'
+    plot.line(pop_score_dates, pop_scores, legend=title.lower(), line_color=colour, line_width=2)
+    plot.toolbar.logo = None
+    plot.border_fill_color = None
+    plot.background_fill_color = 'lightgrey'
+    plot.legend.location = 'bottom_right'
+
+    script, div = components(plot)
+
+    return div, script
+
+
+def _build_rank_plot(pop_rank_dates, pop_ranks, total, title, colour):
+    y_range = Range1d(total, -5)
+
+    plot = figure(title=title,
+                  x_axis_label='Date', x_axis_type='datetime', plot_width=800, plot_height=300)
+    plot.sizing_mode = 'scale_width'
+    plot.line(pop_rank_dates, pop_ranks, legend=title.lower(), line_color=colour, line_width=2)
+    plot.toolbar.logo = None
+    plot.border_fill_color = None
+    plot.background_fill_color = 'lightgrey'
+    plot.legend.location = 'bottom_right'
+    plot.y_range = y_range
+
+    script, div = components(plot)
+
+    return div, script

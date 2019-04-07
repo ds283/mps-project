@@ -1,4 +1,4 @@
-{% from "faculty/macros.html" import project_metadata %}
+{% from "faculty/macros.html" import project_metadata, project_rank_data, project_selection_data %}
 
 {% macro selector_card(data, sel_state, current_user) %}
     {% set config = data['config'] %}
@@ -183,9 +183,17 @@
                                 <a href="{{ url_for('faculty.live_project', pid=project.id, text='home dashboard', url=home_dashboard_url) }}">
                                     {{ project.name }}
                                 </a>
+                                <div>
+                                    {{ project_metadata(project) }}
+                                </div>
                             </div>
                             <div class="col-xs-3">
-                                {{ project_metadata(project) }}
+                                <div>
+                                    {{ project_selection_data(project) }}
+                                </div>
+                                <div style="margin-top: 6px;">
+                                    {{ project_rank_data(project, url_for('faculty.dashboard', pane=config.id), 'faculty dashboard') }}
+                                </div>
                             </div>
                             <div class="col-xs-3 faculty-confirm-area">
                                 {% for req in project.requests_waiting %}

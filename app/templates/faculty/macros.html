@@ -1,33 +1,53 @@
 {% macro project_metadata(project) %}
-    {{ project.selections_label(popover=True)|safe }}
-    {{ project.bookmarks_label(popover=True)|safe }}
     {{ project.views_label()|safe }}
-
     {% if project.last_view %}
         <span class="label label-default">last view {{ project.last_view.strftime("%a %d %b %Y %H:%M:%S") }}</span>
     {% endif %}
+{% endmacro %}
 
+{% macro project_selection_data(project) %}
+    {{ project.selections_label(popover=True)|safe }}
+    {{ project.bookmarks_label(popover=True)|safe }}
+{% endmacro %}
+
+{% macro project_rank_data(project, url, text) %}
     {% set R = project.popularity_rank %}
     {% if R is not none %}
         {% set rank, total = R %}
-        <span class="label label-success">Popularity {{ rank }}/{{ total }}</span>
+        {% if rank is none or total is none %}
+            <span class="label label-default">Popularity rank updating...</span>
+        {% else %}
+            <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="label label-primary">Popularity rank {{ rank }}/{{ total }}</a>
+        {% endif %}
     {% endif %}
 
     {% set R = project.selections_rank %}
     {% if R is not none %}
         {% set rank, total = R %}
-        <span class="label label-primary">Selections {{ rank }}/{{ total }}</span>
+        {% if rank is none or total is none %}
+            <span class="label label-default">Selection rank updating...</span>
+        {% else %}
+            <a href="{{ url_for('reports.liveproject_analytics', pane='selections', proj_id=project.id, url=url, text=text) }}" class="label label-default">Selection rank {{ rank }}/{{ total }}</a>
+        {% endif %}
     {% endif %}
 
     {% set R = project.bookmarks_rank %}
     {% if R is not none %}
         {% set rank, total = R %}
-        <span class="label label-info">Bookmarks {{ rank }}/{{ total }}</span>
+        {% if rank is none or total is none %}
+            <span class="label label-default">Bookmark rank updating...</span>
+        {% else %}
+            <a href="{{ url_for('reports.liveproject_analytics', pane='bookmarks', proj_id=project.id, url=url, text=text) }}" class="label label-default">Bookmark rank {{ rank }}/{{ total }}</a>
+        {% endif %}
     {% endif %}
 
     {% set R = project.views_rank %}
     {% if R is not none %}
         {% set rank, total = R %}
-        <span class="label label-info">Views {{ rank }}/{{ total }}</span>
+        {% if rank is none or total is none %}
+            <span class="label label-default">View rank updating...</span>
+        {% else %}
+            <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="label label-default">View rank {{ rank }}/{{ total }}</a>
+        {% endif %}
     {% endif %}
 {% endmacro %}

@@ -16,18 +16,29 @@
 
         $(document).ready(function () {
             $('#email-log').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
-                stateSave: true, serverSide: true,
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBipr',
+                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],  stateSave: true,
+                serverSide: true, processing: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/email_log_ajax',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'recipient' },
-                    { data: 'address' },
-                    { data: 'date' },
-                    { data: 'subject' },
-                    { data: 'menu' }
+                    { data: 'recipient',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'address',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'date',
+                      orderable: true,
+                      searchable: false },
+                    { data: 'subject',
+                      orderable: true,
+                      searchable: true },
+                    { data: 'menu',
+                      orderable: false,
+                      searchable: false }
                 ]
             });
         });

@@ -3198,6 +3198,7 @@ def email_log():
     return render_template('admin/email_log.html', form=form)
 
 
+@limiter.exempt
 @admin.route('/email_log_ajax', methods=['POST'])
 @roles_accepted('root', 'view_email')
 def email_log_ajax():
@@ -3249,7 +3250,7 @@ def email_log_ajax():
                 query = query.order_by(order_map[label].asc())
             elif dir == 'desc':
                 query = query.order_by(order_map[label].desc())
-                
+
     if length > 0:
         query = query.limit(length)
 

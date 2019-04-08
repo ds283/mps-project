@@ -199,7 +199,7 @@ def liveproject_analytics(proj_id):
         authorized = True
 
     # if current user is convenor for the project class, then they are authorized
-    if validate_is_convenor(project.config.project_class):
+    if project.config.project_class.is_convenor(current_user.id):
         authorized = True
 
     if not authorized:

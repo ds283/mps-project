@@ -247,14 +247,14 @@
                                 {% set numpl = '' %}
                             {% endif %}
                             {% if sel.is_optional %}
-                                <p>Select up to <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                <p>Select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
                                     It is not possible to guarantee that you will be assigned your highest-priority choices.</p>
                               {% else %}
                                 {% if sel.is_initial_selection %}
-                                    <p>Select up to <strong>{{ num_choices }}</strong> projects.
+                                    <p>Select at least <strong>{{ num_choices }}</strong> projects.
                                         It is not possible to guarantee that you will be assigned your highest-priority choices.</p>
                                  {% else %}
-                                    <p>To change supervisor, select up to <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
+                                    <p>To change supervisor, select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
                                 {% endif %}
                             {% endif %}
                             <p>

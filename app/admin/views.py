@@ -23,6 +23,7 @@ from collections import deque
 from celery import chain, group
 
 from ..limiter import limiter
+from ..cache import cache
 from ..uploads import solution_files, batch_user_files
 from .actions import register_user, estimate_CATS_load, availability_CSV_generator, pair_slots
 from .forms import RoleSelectForm, \
@@ -8989,5 +8990,13 @@ def reset_precompute():
     celery = current_app.extensions['celery']
     reset = celery.tasks['app.tasks.system.reset_precompute_times']
     reset.si(current_user.id).apply_async()
+
+    return redirect(request.referrer)
+
+
+@admin.route('/clear_redis_cache')
+@roles_accepted('root')
+def clear_redis_cache():
+    cache.clear()
 
     return redirect(request.referrer)

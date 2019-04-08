@@ -47,7 +47,7 @@ _name = \
 _address = \
 """
 {% if e.user is not none %}
-    <a href="mailto:{{ e.user.email }}">{{ e.user.email }}"</a>
+    <a href="mailto:{{ e.user.email }}">{{ e.user.email }}</a>
 {% elif e.recipient %}
     {{ e.recipient }}
 {% else %}

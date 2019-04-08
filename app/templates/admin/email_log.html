@@ -16,9 +16,9 @@
 
         $(document).ready(function () {
             $('#email-log').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBipr',
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],  stateSave: true,
-                serverSide: true, processing: true,
+                serverSide: true,
                 ajax: { url: $SCRIPT_ROOT + '/admin/email_log_ajax',
                         type: 'POST',
                         data: function (args) { return { "args": JSON.stringify(args) }; } },

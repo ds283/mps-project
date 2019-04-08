@@ -11,7 +11,7 @@
 
 name = \
 """
-{{ u.name }}
+<a href="mailto:{{ u.email }}">{{ u.name }}</a>
 <div>
     {{ 'REPACTIVE'|safe }}
     {% if u.student_data and u.student_data is not none %}
@@ -46,6 +46,9 @@ name = \
         <span class="label label-primary">Dark</span>
     {% else %}
         <span class="label label-danger">Unknown theme</span>
+    {% endif %}
+    {% if u.last_email %}
+        <span class="label label-info">Last notify {{ u.last_email.strftime("%a %d %b %Y %H:%M:%S") }}</span>
     {% endif %}
 </div>
 """

@@ -20,27 +20,52 @@ _email_log_menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('admin.delete_email', id=email.id) }}">
+            <a href="{{ url_for('admin.delete_email', id=e.id) }}">
                 <i class="fa fa-trash"></i> Delete
+            </a>
+        </li>
+        <li>
+            <a href="{{ url_for('admin.display_email', id=e.id) }}">
+                <i class="fa fa-eye"></i> View email
             </a>
         </li>
     </ul>
 </div>
 """
 
+
+_name = \
+"""
+{% if e.user is not none %}
+    <a href="mailto:{{ e.user.email }}" {% if e.user.last_email %}data-toggle="tooltip" title="Last notification at {{ e.user.last_email.strftime("%a %d %b %Y %H:%M:%S") }}"{% endif %}>{{ e.user.name }}</a>
+{% else %}
+    <span class="label label-warning">Not logged</span>
+{% endif %}
+"""
+
+
+_address = \
+"""
+{% if e.user is not none %}
+    <a href="mailto:{{ e.user.email }}">{{ e.user.email }}"</a>
+{% elif e.recipient %}
+    {{ e.recipient }}
+{% else %}
+    <span class="label label-danger">Invalid address or recipient</span>
+{% endif %}
+"""
+
+_subject = \
+"""
+<a href="{{ url_for('admin.display_email', id=e.id) }}">{{ e.subject }}</a>
+"""
+
+
 def email_log_data(emails):
+    data = [{'recipient': render_template_string(_name, e=e),
+             'address': render_template_string(_address, e=e),
+             'date': e.send_date.strftime("%a %d %b %Y %H:%M:%S"),
+             'subject': render_template_string(_subject, e=e),
+             'menu': render_template_string(_email_log_menu, e=e)} for e in emails]
 
-    data = [{'recipient': e.user.name if e.user is not None
-                else '<span class="label label-warning">Not logged</span>',
-             'address': e.user.email if e.user is not None
-                else e.recipient if e.recipient is not None
-                else '<span class="label label-danger">Invalid</span>',
-             'date': {
-                 'display': e.send_date.strftime("%a %d %b %Y %H:%M:%S"),
-                 'timestamp': e.send_date.timestamp()
-             },
-             'subject': '<a href="{link}">{sub}</a>'.format(link=url_for('admin.display_email', id=e.id),
-                                                            sub=e.subject),
-             'menu': render_template_string(_email_log_menu, email=e)} for e in emails]
-
-    return jsonify(data)
+    return data

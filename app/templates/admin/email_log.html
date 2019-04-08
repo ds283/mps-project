@@ -16,23 +16,19 @@
 
         $(document).ready(function () {
             $('#email-log').DataTable({
-                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
-                buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/email_log_ajax', dataSrc: '' },
+                responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftip',
+                stateSave: true, serverSide: true,
+                ajax: { url: $SCRIPT_ROOT + '/admin/email_log_ajax',
+                        type: 'POST',
+                        data: function (args) { return { "args": JSON.stringify(args) }; } },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'recipient' },
                     { data: 'address' },
-                    { data: 'date',
-                      render: {
-                        _: 'display',
-                        sort: 'timestamp',
-                        type: 'timestamp'
-                    } },
+                    { data: 'date' },
                     { data: 'subject' },
                     { data: 'menu' }
-                ],
-                deferRender: true
+                ]
             });
         });
     </script>
@@ -67,8 +63,8 @@
         <table id="email-log" class="table table-striped table-bordered">
             <thead>
             <tr>
-                <th width="20%"> Recipient</th>
-                <th width="20%"> Email address</th>
+                <th width="20%"> Recipients</th>
+                <th width="20%"> Email addresses</th>
                 <th width="15%"> Send date</th>
                 <th width="30%"> Subject</th>
                 <th width="15%"> Actions</th>

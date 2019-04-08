@@ -79,6 +79,7 @@ from ..shared.forms.queries import ScheduleSessionQuery
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import or_
+from sqlalchemy.sql import func
 
 import app.ajax as ajax
 
@@ -3197,15 +3198,68 @@ def email_log():
     return render_template('admin/email_log.html', form=form)
 
 
-@admin.route('/email_log_ajax', methods=['GET', 'POST'])
+@admin.route('/email_log_ajax', methods=['POST'])
 @roles_accepted('root', 'view_email')
 def email_log_ajax():
     """
     Ajax data point for email log
     :return:
     """
-    emails = db.session.query(EmailLog)
-    return ajax.site.email_log_data(emails)
+    data = json.loads(request.values.get("args"))
+
+    draw = None
+    try:
+        draw = int(data['draw'])
+        start = int(data['start'])
+        length = int(data['length'])
+
+        filter_value = str(data['search']['value'])
+
+        column_array = data['columns']
+        order_array = data['order']
+    except KeyError:
+        return jsonify({'draw': draw,
+                        'error': 'Could not interpret AJAX payload from client'})
+
+    query = db.session.query(EmailLog)
+    records_total = get_count(query)
+
+    # join EmailLog query to User records
+    query = query.join(User, User.id == EmailLog.user_id, isouter=True)
+
+    if filter_value:
+        query = query.filter(or_(EmailLog.subject.contains(filter_value),
+                                 User.email.contains(filter_value),
+                                 func.concat(User.first_name, ' ', User.last_name).contains(filter_value)))
+    records_filtered = get_count(query)
+
+    order_map = {'recipient': func.concat(User.last_name, User.first_name),
+                 'address': User.email,
+                 'date': EmailLog.send_date,
+                 'subject': EmailLog.subject}
+
+    for order in order_array:
+        col = int(order['column'])
+        dir = str(order['dir'])
+
+        label = str(column_array[col]['data'])
+
+        if label in order_map:
+            if dir == 'asc':
+                query = query.order_by(order_map[label].asc())
+            elif dir == 'desc':
+                query = query.order_by(order_map[label].desc())
+                
+    if length > 0:
+        query = query.limit(length)
+
+    emails = query.offset(start).all()
+    rows = ajax.site.email_log_data(emails)
+
+    return jsonify({'draw': draw,
+                    'recordsTotal': records_total,
+                    'recordsFiltered': records_filtered,
+                    'data': rows})
 
 
 @admin.route('/display_email/<int:id>')

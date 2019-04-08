@@ -55,8 +55,6 @@ import redis
 
 from werkzeug.contrib.profiler import ProfilerMiddleware
 from dozer import Dozer
-from scout_apm.flask import ScoutApm
-from scout_apm.sqlalchemy import instrument_sqlalchemy
 
 
 def create_app():
@@ -71,9 +69,6 @@ def create_app():
     app.config.from_pyfile('scout.py')
     app.config.from_pyfile('local.py')
 
-    # initialize Scout monitoring
-    scout = ScoutApm(app)
-
     # create a long-lived Redis connection
     app.config['REDIS_SESSION'] = redis.Redis.from_url(url=app.config['CACHE_REDIS_URL'])
 
@@ -86,7 +81,6 @@ def create_app():
         app.wsgi_app = Dozer(app.wsgi_app)
 
     db.init_app(app)
-    instrument_sqlalchemy(db.get_engine(app=app))
 
     migrate = Migrate(app, db)
     bootstrap = Bootstrap(app)
@@ -124,8 +118,10 @@ def create_app():
     env = Environment(app)
 
     if not app.debug:
-        from logging import ERROR, INFO, Formatter
+        from logging import ERROR, DEBUG, INFO, Formatter, basicConfig
         from logging.handlers import SMTPHandler, RotatingFileHandler
+
+        basicConfig(level=INFO)
 
         # disable email notification of exceptions for now; this seems to be
         # better handled through rollbar.com

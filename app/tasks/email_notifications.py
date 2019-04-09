@@ -147,7 +147,9 @@ def register_email_notification_tasks(celery):
 
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
         # to process, in order to avoid race conditions with other threads adding notifications to the database
-        n_ids = [n.id for n in user.email_notifications]
+        raw_list = [ (n.id, n.event_type) for n in user.email_notifications]
+        n_ids = [x[0] for x in raw_list]
+        c_ids = [x[0] for x in raw_list if x[1] == EmailNotification.CONFIRMATION_REQUEST_CREATED]
 
         # if we are not grouping notifications into summaries for this user,
         # generate a task to send each email in the queue
@@ -158,33 +160,37 @@ def register_email_notification_tasks(celery):
 
         # we always generate a possible summary, even if the 'group summaries' option is not used,
         # to advise of confirmation requests that are not being handled in a timely fashion.
-        if user.last_email is not None:
+        send_summary = user.last_email is None
+        if not send_summary:
             time_since_last_email = datetime.now() - user.last_email
+            send_summary = time_since_last_email.days > user.summary_frequency
 
-            if time_since_last_email.days > user.summary_frequency:
-                if task is None:
-                    task = dispatch_faculty_summary_email.s(None, user.id, n_ids if user.group_summaries else [])
-                else:
-                    task = task | dispatch_faculty_summary_email.s(user.id, n_ids if user.group_summaries else [])
+        if send_summary:
+            if task is None:
+                task = dispatch_faculty_summary_email.s(None, user.id, n_ids if user.group_summaries else [])
+            else:
+                task = task | dispatch_faculty_summary_email.s(user.id, n_ids if user.group_summaries else [])
 
-        # for each notification of a 'confirmation request created', we also need to send a paired email to
-        # both faculty and student
-        created = user.email_notifications \
-            .filter(EmailNotification.event_type == EmailNotification.CONFIRMATION_REQUEST_CREATED).all()
+        # if nothing to do, then return
+        if task is None:
+            return
 
-        if len(created) > 0:
+        # if there *is* something to do, also dispatch paired emails to both faculty and students
+        if len(c_ids) > 0:
             # we have to set up this task as a chain so that we can sequentially pass through any
             # list of previously-handled ids
             # If we used a group, each dispatch_new_request_notification() would return its own
             # copy of this list, so we would end up with a list-of-lists in reset_notifications
             if task is None:
-                task = chain(dispatch_new_request_notification.s([], n.id) for n in created)
-            else:
-                task = task | chain(dispatch_new_request_notification.s(n.id) for n in created)
+                c_id_head = c_ids[0]
+                c_ids_tail = c_ids[1:]
 
-        # if nothing to do, then return
-        if task is None:
-            return
+                if len(c_ids_tail) > 0:
+                    task = dispatch_new_request_notification.s([], c_id_head) | chain(dispatch_new_request_notification.s(c_id) for c_id in c_ids_tail)
+                else:
+                    task = dispatch_new_request_notification.s([], c_id_head)
+            else:
+                task = task | chain(dispatch_new_request_notification.s(c_id) for c_id in c_ids)
 
         task = task | reset_notifications.s() | reset_last_email_time.s(user_id)
         raise self.replace(task)
@@ -214,14 +220,16 @@ def register_email_notification_tasks(celery):
 
         # we always generate a possible summary, even if the 'group summaries' option is not used,
         # to advise of confirmation requests that are not being handled in a timely fashion.
-        if user.last_email is not None:
+        send_summary = user.last_email is None
+        if not send_summary:
             time_since_last_email = datetime.now() - user.last_email
+            send_summary = time_since_last_email.days > user.summary_frequency
 
-            if time_since_last_email.days > user.summary_frequency:
-                if task is None:
-                    task = dispatch_student_summary_email.s(None, user.id, n_ids if user.group_summaries else [])
-                else:
-                    task = task | dispatch_student_summary_email.s(user.id, n_ids if user.group_summaries else [])
+        if send_summary:
+            if task is None:
+                task = dispatch_student_summary_email.s(None, user.id, n_ids if user.group_summaries else [])
+            else:
+                task = task | dispatch_student_summary_email.s(user.id, n_ids if user.group_summaries else [])
 
         # if nothing to do, then return
         if task is None:

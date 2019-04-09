@@ -34,8 +34,7 @@ def _get_outstanding_faculty_confirmation_requests(user):
 
     crqs = user.email_notifications \
         .filter(or_(EmailNotification.event_type == EmailNotification.CONFIRMATION_REQUEST_CREATED,
-                    or_(EmailNotification.event_type == EmailNotification.CONFIRMATION_GRANTED,
-                        EmailNotification.event_type == EmailNotification.CONFIRMATION_TO_PENDING))).subquery()
+                    EmailNotification.event_type == EmailNotification.CONFIRMATION_TO_PENDING)).subquery()
 
     # find outstanding confirm requests that aren't already included in the list of pending email notifications
     outstanding_crqs = db.session.query(ConfirmRequest) \
@@ -47,7 +46,7 @@ def _get_outstanding_faculty_confirmation_requests(user):
         .filter(crqs.c.data_1 == None) \
         .order_by(ConfirmRequest.request_timestamp.asc()).all()
 
-    return outstanding_crqs
+    return [cr.id for cr in outstanding_crqs]
 
 
 def _get_outstanding_student_confirmation_requests(user):
@@ -62,7 +61,7 @@ def _get_outstanding_student_confirmation_requests(user):
         .filter(SelectingStudent.student_id == user.id) \
         .order_by(ConfirmRequest.request_timestamp.asc()).all()
 
-    return outstanding_crqs
+    return [cr.id for cr in outstanding_crqs]
 
 
 def register_email_notification_tasks(celery):
@@ -147,7 +146,7 @@ def register_email_notification_tasks(celery):
 
         # create snapshot of notifications list; this is what we use *everywhere* to decide which notifications
         # to process, in order to avoid race conditions with other threads adding notifications to the database
-        raw_list = [ (n.id, n.event_type) for n in user.email_notifications]
+        raw_list = [(n.id, n.event_type) for n in user.email_notifications]
         n_ids = [x[0] for x in raw_list]
         c_ids = [x[0] for x in raw_list if x[1] == EmailNotification.CONFIRMATION_REQUEST_CREATED]
 
@@ -160,20 +159,29 @@ def register_email_notification_tasks(celery):
 
         # we always generate a possible summary, even if the 'group summaries' option is not used,
         # to advise of confirmation requests that are not being handled in a timely fashion.
-        send_summary = user.last_email is None
-        if not send_summary:
+        has_summary = False
+        allow_summary = user.last_email is None
+        if not allow_summary:
             time_since_last_email = datetime.now() - user.last_email
-            send_summary = time_since_last_email.days > user.summary_frequency
+            allow_summary = time_since_last_email.days > user.summary_frequency
 
-        if send_summary:
-            if task is None:
-                task = dispatch_faculty_summary_email.s(None, user.id, n_ids if user.group_summaries else [])
-            else:
-                task = task | dispatch_faculty_summary_email.s(user.id, n_ids if user.group_summaries else [])
+        if allow_summary:
+            cr_ids = _get_outstanding_faculty_confirmation_requests(user)
+            summary_ids = n_ids if user.group_summaries else []
+
+            if len(summary_ids) > 0 or len(cr_ids) > 0:
+                has_summary = True
+                if task is None:
+                    task = dispatch_faculty_summary_email.s(None, user.id, summary_ids, cr_ids)
+                else:
+                    task = task | dispatch_faculty_summary_email.s(user.id, summary_ids, cr_ids)
 
         # if nothing to do, then return
         if task is None:
             return
+
+        if not has_summary:
+            task = task | no_summary_adapter.s()
 
         # if there *is* something to do, also dispatch paired emails to both faculty and students
         if len(c_ids) > 0:
@@ -192,7 +200,7 @@ def register_email_notification_tasks(celery):
             else:
                 task = task | chain(dispatch_new_request_notification.s(c_id) for c_id in c_ids)
 
-        task = task | reset_notifications.s() | reset_last_email_time.s(user_id)
+        task = task | group(reset_notifications.s(), reset_last_email_time.s(user_id))
         raise self.replace(task)
 
 
@@ -220,39 +228,58 @@ def register_email_notification_tasks(celery):
 
         # we always generate a possible summary, even if the 'group summaries' option is not used,
         # to advise of confirmation requests that are not being handled in a timely fashion.
-        send_summary = user.last_email is None
-        if not send_summary:
+        has_summary = False
+        allow_summary = user.last_email is None
+        if not allow_summary:
             time_since_last_email = datetime.now() - user.last_email
-            send_summary = time_since_last_email.days > user.summary_frequency
+            allow_summary = time_since_last_email.days > user.summary_frequency
 
-        if send_summary:
-            if task is None:
-                task = dispatch_student_summary_email.s(None, user.id, n_ids if user.group_summaries else [])
-            else:
-                task = task | dispatch_student_summary_email.s(user.id, n_ids if user.group_summaries else [])
+        if allow_summary:
+            cr_ids = _get_outstanding_student_confirmation_requests(user)
+            summary_ids = n_ids if user.group_summaries else []
+
+            if len(summary_ids) > 0 or len(cr_ids) > 0:
+                has_summary = True
+                if task is None:
+                    task = dispatch_student_summary_email.s(None, user.id, summary_ids, cr_ids)
+                else:
+                    task = task | dispatch_student_summary_email.s(user.id, summary_ids, cr_ids)
 
         # if nothing to do, then return
         if task is None:
             return
 
-        task = task | reset_notifications.s() | reset_last_email_time.s(user_id)
+        if not has_summary:
+            task = task | no_summary_adapter.s()
+
+        task = task | group(reset_notifications.s(), reset_last_email_time.s(user_id))
         raise self.replace(task)
 
 
-    @celery.task(bind=True, default_retry_delay=30)
-    def reset_notifications(self, n_ids):
-        # n_ids is either a singleton or a list of ids for EmailNotification instances
-        # that we have handled in this sweep
-        if isinstance(n_ids, int):
-            n_ids = [n_ids]
+    @celery.task(bind=True, defaut_retry_delay=1)
+    def no_summary_adapter(self, email_outcomes):
+        # email_outcomes should either be a singleton int or a list of ints
+        if isinstance(email_outcomes, int):
+            email_outcomes = [email_outcomes]
 
-        if not isinstance(n_ids, list):
-            print('!!!! n_ids = {x}'.format(x=n_ids))
-            print('!!!! type of n_ids = {x}'.format(x=type(n_ids)))
-            raise RuntimeError('Could not interpret n_ids argument in reset_notifications')
+        if not isinstance(email_outcomes, list):
+            print('!!!! email_outcomes = {x}'.format(x=email_outcomes))
+            print('!!!! type of email_outcomes = {x}'.format(x=type(email_outcomes)))
+            raise RuntimeError('Could not interpret reported_ids argument in no_summary_adapter')
+
+        # behave as if we were returning from a summary email task with no outstanding confirm requests
+        return email_outcomes, []
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def reset_notifications(self, reported_ids):
+        if not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list)) or len(reported_ids) != 2:
+            print('!!!! reported_ids = {x}'.format(x=reported_ids))
+            print('!!!! type of reported_ids = {x}'.format(x=type(reported_ids)))
+            raise RuntimeError('Could not interpret reported_ids argument in reset_notifications')
 
         # weed out duplicates; there shouldn't be any, but doesn't hurt
-        n_ids_set = set(n_ids)
+        n_ids_set = set(reported_ids[0])
         n_ids = list(n_ids_set)
 
         # return value from this group will become the return value from this task;
@@ -288,11 +315,12 @@ def register_email_notification_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def reset_last_email_time(self, n_ids, user_id):
-        # this function only gets called when an email has actually been sent
-        # n_ids is available if we want it, but it doesn't convey helpful information here
-        # (it might be useful to pass forward some kind of flag that might indicate whether sending an
-        # email was successful? but that isn't implemented yet)
+    def reset_last_email_time(self, reported_ids, user_id):
+        if not (isinstance(reported_ids, tuple) or isinstance(reported_ids, list)) or len(reported_ids) != 2:
+            print('!!!! reported_ids = {x}'.format(x=reported_ids))
+            print('!!!! type of reported_ids = {x}'.format(x=type(reported_ids)))
+            raise RuntimeError('Could not interpret reported_ids argument in reset_notifications')
+
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError:
@@ -301,6 +329,14 @@ def register_email_notification_tasks(celery):
         if user is None:
             self.update_state('FAILURE', meta='Could not read database records')
             raise Ignore()
+
+        n_ids, cr_ids = reported_ids
+
+        # if neither n_ids or cr_ids has any content, then no email was sent
+        # this shouldn't happen; it should be weeded out in the dispatch_* functions, but we catch it here
+        # just in case
+        if len(n_ids) == 0 and len(cr_ids) == 0:
+            raise RuntimeError('reset_last_email_time called for {name} with no work done'.format(name=user.name))
 
         user.last_email = datetime.now()
         try:
@@ -347,7 +383,7 @@ def register_email_notification_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def dispatch_faculty_summary_email(self, previous_ids, user_id, n_ids):
+    def dispatch_faculty_summary_email(self, previous_ids, user_id, n_ids, cr_ids):
         if previous_ids is None:
             previous_ids = []
 
@@ -360,20 +396,26 @@ def register_email_notification_tasks(celery):
             self.update_state('FAILURE', meta='Could not read database records')
             raise Ignore()
 
-        outstanding_crqs = _get_outstanding_faculty_confirmation_requests(user)
+        if not isinstance(n_ids, list):
+            raise RuntimeError('Can not interpret n_ids argument in dispatch_faculty_summary_email')
+        if not isinstance(cr_ids, list):
+            raise RuntimeError('Can not interpret cr_ids argument in dispatch_faculty_summary_email')
 
         try:
             notifications = [db.session.query(EmailNotification).filter_by(id=n_id).first() for n_id in n_ids]
+            outstanding_crqs = [db.session.query(ConfirmRequest).filter_by(id=cr_id).first() for cr_id in cr_ids]
         except SQLAlchemyError:
             raise self.retry()
 
-        if any(n is None for n in notifications):
+        if any(n is None for n in notifications) or any(cr is None for cr in outstanding_crqs):
             self.update_state('FAILURE', meta='Could not read database records')
             raise Ignore()
 
-        # if there are no notifications and no outstanding requests, then there is nothing to do
+        # if there are no notifications and no outstanding requests, then there is nothing to do;
+        # this should have been weeded out
         if len(n_ids) == 0 and len(outstanding_crqs) == 0:
-            return previous_ids
+            raise RuntimeError('dispatch_faculty_summary_email called for {name} with no work '
+                               'done'.format(name=user.name))
 
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=current_app.config['MAIL_REPLY_TO'],
@@ -394,7 +436,7 @@ def register_email_notification_tasks(celery):
         ids_set = set(n_ids)
 
         previous_set = previous_set.union(ids_set)
-        return list(previous_set)
+        return list(previous_set), cr_ids
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -467,7 +509,7 @@ def register_email_notification_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def dispatch_student_summary_email(self, previous_ids, user_id, n_ids):
+    def dispatch_student_summary_email(self, previous_ids, user_id, n_ids, cr_ids):
         if previous_ids is None:
             previous_ids = []
 
@@ -480,20 +522,26 @@ def register_email_notification_tasks(celery):
             self.update_state('FAILURE', meta='Could not read database records')
             raise Ignore()
 
-        outstanding_crqs = _get_outstanding_student_confirmation_requests(user)
+        if not isinstance(n_ids, list):
+            raise RuntimeError('Can not interpret n_ids argument in dispatch_student_summary_email')
+        if not isinstance(cr_ids, list):
+            raise RuntimeError('Can not interpret cr_ids argument in dispatch_student_summary_email')
 
         try:
             notifications = [db.session.query(EmailNotification).filter_by(id=n_id).first() for n_id in n_ids]
+            outstanding_crqs = [db.session.query(ConfirmRequest).filter_by(id=cr_id).first() for cr_id in cr_ids]
         except SQLAlchemyError:
             raise self.retry()
 
-        if any(n is None for n in notifications):
+        if any(n is None for n in notifications) or any(cr is None for cr in outstanding_crqs):
             self.update_state('FAILURE', meta='Could not read database records')
             raise Ignore()
 
-        # if there are no notifications and no outstanding requests, then there is nothing to do
+        # if there are no notifications and no outstanding requests, then there is nothing to do;
+        # this should have been weeded out
         if len(n_ids) == 0 and len(outstanding_crqs) == 0:
-            return previous_ids
+            raise RuntimeError('dispatch_student_summary_email called for {name} with no work '
+                               'done'.format(name=user.name))
 
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=current_app.config['MAIL_REPLY_TO'],
@@ -514,4 +562,4 @@ def register_email_notification_tasks(celery):
         ids_set = set(n_ids)
 
         previous_set = previous_set.union(ids_set)
-        return list(previous_set)
+        return list(previous_set), cr_ids

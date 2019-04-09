@@ -3231,6 +3231,7 @@ def email_log_ajax():
 
     if filter_value:
         query = query.filter(or_(EmailLog.subject.contains(filter_value),
+                                 EmailLog.recipient.contains(filter_value),
                                  User.email.contains(filter_value),
                                  func.concat(User.first_name, ' ', User.last_name).contains(filter_value)))
     records_filtered = get_count(query)

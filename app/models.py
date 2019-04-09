@@ -857,9 +857,10 @@ class EmailNotification(db.Model):
         if req is None:
             return '<missing database row>'
 
-        return '{student} requested a meeting confirmation for project ' \
-               '"{proj}" (in {pclass}).'.format(student=req.owner.student.user.name, proj=req.project.name,
-                                                pclass=req.project.config.project_class.name)
+        return '{student} requested a meeting confirmation for project "{proj}" ({pclass}, requested at ' \
+               '{time}).'.format(student=req.owner.student.user.name, proj=req.project.name,
+                                 pclass=req.project.config.project_class.name,
+                                 time=req.request_timestamp.strftime("%a %d %b %Y %H:%M:%S"))
 
 
     @assign(str_operations, CONFIRMATION_REQUEST_CANCELLED)
@@ -870,8 +871,8 @@ class EmailNotification(db.Model):
             return '<missing database row>'
 
         return '{student} cancelled their confirmation request for project ' \
-               '"{proj}" (in {pclass}).'.format(student=user.name, proj=proj.name,
-                                                pclass=proj.config.project_class.name)
+               '"{proj}" ({pclass}).'.format(student=user.name, proj=proj.name,
+                                             pclass=proj.config.project_class.name)
 
 
     @assign(str_operations, CONFIRMATION_REQUEST_DELETED)

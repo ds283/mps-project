@@ -56,7 +56,7 @@ def _get_outstanding_student_confirmation_requests(user):
 
     outstanding_crqs = db.session.query(ConfirmRequest) \
         .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED,
-                ConfirmRequest.request_timestamp > cutoff_time) \
+                ConfirmRequest.request_timestamp < cutoff_time) \
         .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id) \
         .filter(SelectingStudent.student_id == user.id) \
         .order_by(ConfirmRequest.request_timestamp.asc()).all()

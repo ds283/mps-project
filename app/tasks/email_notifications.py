@@ -272,6 +272,7 @@ def register_email_notification_tasks(celery):
             db.session.delete(notification)
             db.session.commit()
         except SQLAlchemyError:
+            db.session.rollback()
             raise self.retry()
 
         # return our value of n_id which will be passed through to reset_last_email_time
@@ -280,18 +281,10 @@ def register_email_notification_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def reset_last_email_time(self, n_ids, user_id):
-        if n_ids is None:
-            return
-
-        # otherwise assume we have a list of ints
-        if not isinstance(n_ids, list):
-            print('!!!! n_ids = {x}'.format(x=n_ids))
-            print('!!!! type of n_ids = {x}'.format(x=type(n_ids)))
-            raise RuntimeError('Could not interpret n_ids argument in reset_last_email_time')
-
-        if len(n_ids) == 0:
-            return
-
+        # this function only gets called when an email has actually been sent
+        # n_ids is available if we want it, but it doesn't convey helpful information here
+        # (it might be useful to pass forward some kind of flag that might indicate whether sending an
+        # email was successful? but that isn't implemented yet)
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError:
@@ -302,7 +295,11 @@ def register_email_notification_tasks(celery):
             raise Ignore()
 
         user.last_email = datetime.now()
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
 
 
     # dispatch_faculty_single_email is always at the front of a task chain and so does not need an

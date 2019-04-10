@@ -80,17 +80,41 @@
     <div class="panel panel-default">
         <div class="panel-heading">Manage website services</div>
         <div class="panel-body">
-            <div class="row vertical-bottom">
+            <div class="row">
+                <div class="col-xs-2"></div>
                 <div class="col-xs-8">
-                    Clear contents of Redis cache.
-                </div>
-                <div class="col-xs-4">
-                    <div class="pull-right">
-                        <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-danger">
-                            Clear
-                        </a>
+                    <div class="list-group">
+                        <div class="list-group-item">
+                            <div class="vertical-align">
+                                <div class="col-xs-9">
+                                    Clear contents of Redis cache.
+                                </div>
+                                <div class="col-xs-3">
+                                    <div class="pull-right">
+                                        <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-sm btn-danger services-btn">
+                                            Clear
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="vertical-align">
+                                <div class="col-xs-9">
+                                    Reset stored precompute time for all users.
+                                </div>
+                                <div class="col-xs-3">
+                                    <div class="pull-right">
+                                        <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-sm btn-warning services-btn">
+                                            Reset
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                <div class="col-xs-2"></div>
             </div>
         </div>
     </div>

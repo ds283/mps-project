@@ -83,7 +83,7 @@ def _format_schedule(task):
     elif task.crontab is not None:
         data = task.crontab
         return 'm({m}) h({h}) wd({wd}) mo({mo}) mon({mon})'.format(
-            m=data.minutes, h=data.hour, wd=data.day_of_week,
+            m=data.minute, h=data.hour, wd=data.day_of_week,
             mo=data.day_of_month, mon=data.month_of_year)
 
     return '<span class="label label-danger">Invalid</a>'

@@ -3794,7 +3794,7 @@ def edit_interval_task(id):
     return render_template('admin/edit_scheduled_task.html', task=data, form=form, title='Edit fixed-interval task')
 
 
-@admin.route('/edit_interval_task/<int:id>', methods=['GET', 'POST'])
+@admin.route('/edit_crontab_task/<int:id>', methods=['GET', 'POST'])
 @roles_required('root')
 def edit_crontab_task(id):
     """

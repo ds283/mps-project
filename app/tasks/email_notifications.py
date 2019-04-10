@@ -54,11 +54,15 @@ def _get_outstanding_student_confirmation_requests(user):
 
     cutoff_time = datetime.now() - timedelta(days=1)
 
+    # don't badger students for project classes where they've already submitted choices
+    # use SelectingStudent.submission_time = None for that
+
     outstanding_crqs = db.session.query(ConfirmRequest) \
         .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED,
                 ConfirmRequest.request_timestamp < cutoff_time) \
         .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id) \
-        .filter(SelectingStudent.student_id == user.id) \
+        .filter(SelectingStudent.student_id == user.id,
+                SelectingStudent.submission_time == None) \
         .order_by(ConfirmRequest.request_timestamp.asc()).all()
 
     return [cr.id for cr in outstanding_crqs]

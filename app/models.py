@@ -838,6 +838,9 @@ class EmailNotification(db.Model):
     data_1 = db.Column(db.Integer())
     data_2 = db.Column(db.Integer())
 
+    # timestamp
+    timestamp = db.Column(db.DateTime())
+
 
     # set up dispatch table of methods to handle each notification type
 
@@ -1132,7 +1135,8 @@ def add_notification(user, event, object_1, object_2=None, autocommit=True, noti
         return
 
     # insert new notification
-    obj = EmailNotification(owner_id=user_id, data_1=object_1_id, data_2=object_2_id, event_type=event)
+    obj = EmailNotification(owner_id=user_id, data_1=object_1_id, data_2=object_2_id, event_type=event,
+                            timestamp=datetime.now())
     db.session.add(obj)
 
     # send immediately if we are not grouping notifications into summaries

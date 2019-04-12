@@ -51,8 +51,10 @@ def _get_outstanding_faculty_confirmation_requests(user):
 
 def _get_outstanding_student_confirmation_requests(user):
     # build list of confirmation requests more than a day old owned by this student and which are still outstanding
+    # (in fact we use a cutoff of 23.5 hours so that any requests issued *exactly* 24 hours ago will
+    # definitely be included)
 
-    cutoff_time = datetime.now() - timedelta(days=1)
+    cutoff_time = datetime.now() - timedelta(days=23.5)
 
     # don't badger students for project classes where they've already submitted choices
     # use SelectingStudent.submission_time = None for that
@@ -167,7 +169,13 @@ def register_email_notification_tasks(celery):
         allow_summary = user.last_email is None
         if not allow_summary:
             time_since_last_email = datetime.now() - user.last_email
-            allow_summary = time_since_last_email.days > user.summary_frequency
+
+            # cutoff is user-specified frequency in days, minus 30 minutes overhead
+            # eg. messages sent after a 5pm scheduled mailing would be recording as being issued at
+            # 1701 or 1702. The next day, this value for user.last_email would appear to be 23 hours 59/58 mins
+            # and prevent another email being issued
+            frequency = timedelta(days=user.summary_frequency) - timedelta(hours=0.5)
+            allow_summary = time_since_last_email > frequency
 
         if allow_summary:
             cr_ids = _get_outstanding_faculty_confirmation_requests(user)
@@ -236,7 +244,13 @@ def register_email_notification_tasks(celery):
         allow_summary = user.last_email is None
         if not allow_summary:
             time_since_last_email = datetime.now() - user.last_email
-            allow_summary = time_since_last_email.days > user.summary_frequency
+
+            # cutoff is user-specified frequency in days, minus 30 minutes overhead
+            # eg. messages sent after a 5pm scheduled mailing would be recording as being issued at
+            # 1701 or 1702. The next day, this value for user.last_email would appear to be 23 hours 59/58 mins
+            # and prevent another email being issued
+            frequency = timedelta(days=user.summary_frequency) - timedelta(hours=0.5)
+            allow_summary = time_since_last_email > frequency
 
         if allow_summary:
             cr_ids = _get_outstanding_student_confirmation_requests(user)

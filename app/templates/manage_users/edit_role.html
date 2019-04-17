@@ -38,9 +38,9 @@
 
 {% block form_content %}
     {% if role %}
-        <form action="{{ url_for('admin.edit_role', id=role.id) }}" method="POST" name="role_form">
+        <form action="{{ url_for('manage_users.edit_role', id=role.id) }}" method="POST" name="role_form">
     {% else %}
-        <form action="{{ url_for('admin.add_role') }}" method="POST" name="role_form">
+        <form action="{{ url_for('manage_users.add_role') }}" method="POST" name="role_form">
     {% endif %}
 
         {{ role_form.hidden_tag() }}

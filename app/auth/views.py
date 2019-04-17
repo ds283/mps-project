@@ -35,7 +35,7 @@ def logout():
                                     'alternative user {fake})'.format(real=user.name, fake=current_user.name))
 
             login_user(user)
-            return redirect(url_for('admin.edit_users'))
+            return redirect(url_for('manage_users.edit_users'))
         except NoResultFound:
             pass
         except MultipleResultsFound:

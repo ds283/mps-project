@@ -620,7 +620,8 @@ def submit(sid):
         celery = current_app.extensions['celery']
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
 
-        msg = Message(subject='Your project choices have been received',
+        msg = Message(subject='Your project choices have been received '
+                              '({pcl})'.format(pcl=sel.config.project_class.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=current_app.config['MAIL_REPLY_TO'],
                       recipients=[sel.student.user.email])

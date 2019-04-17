@@ -318,6 +318,7 @@
             {%- set is_admin = current_user.has_role('admin') -%}
             {%- set is_edit_tags = current_user.has_role('edit_tags') -%}
             {%- set is_view_email = current_user.has_role('view_email') -%}
+            {%- set is_manage_users = current_user.has_role('manage_users') %}
             <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
                 <ul class="nav navbar-nav navbar-right">
 
@@ -372,20 +373,20 @@
                     {% endif %}
 
                     <!-- add admin menu if user is an administrator or system administrator, or a convenor -->
-                    {% if is_admin or is_root or is_edit_tags or is_convenor %}
+                    {% if is_admin or is_root or is_edit_tags or is_manage_users or is_convenor %}
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
                                 Admin
                                 <span class="caret"></span>
                             </a>
                             <ul class="dropdown-menu">
-                                {% if is_admin or is_root %}
-                                    <li><a href="{{ url_for('admin.edit_users') }}">
+                                {% if is_manage_users or is_root %}
+                                    <li><a href="{{ url_for('manage_users.edit_users') }}">
                                         <i class="fa fa-users"></i> Manage users...
                                     </a></li>
+                                    <li role="separator" class="divider"></li>
                                 {% endif %}
                                 {% if is_admin or is_root or is_convenor %}
-                                    <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Tools</li>
                                     <li><a href="{{ url_for('admin.edit_messages') }}">
                                         <i class="fa fa-comment"></i> Messages...
@@ -435,7 +436,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 {% if is_root %}
-                                    <li><a href="{{ url_for('admin.edit_roles') }}">
+                                    <li><a href="{{ url_for('manage_users.edit_roles') }}">
                                         <i class="fa fa-cogs"></i> Role editor...
                                     </a></li>
                                 {% endif %}

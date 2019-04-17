@@ -8,10 +8,11 @@
 {% from "project_approver/dashboard_panel.html" import project_approver_panel %}
 {% from "macros.html" import message_card %}
 
-{% set is_root = current_user.has_role('root') %}
-{% set is_admin = current_user.has_role('admin') %}
-{% set is_user_approver = current_user.has_role('user_approver') %}
-{% set is_project_approver = current_user.has_role('project_approver') %}
+{%- set is_root = current_user.has_role('root') -%}
+{%- set is_admin = current_user.has_role('admin') -%}
+{%- set is_manage_users = current_user.has_role('manage_users') -%}
+{%- set is_user_approver = current_user.has_role('user_approver') -%}
+{%- set is_project_approver = current_user.has_role('project_approver') -%}
 
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
@@ -27,12 +28,12 @@
                 </a>
             </li>
         {% endif %}
-        {% set approve_total = approvals_data['total'] %}
-        {% set user_num_rejected = approvals_data.get('approval_user_rejected') %}
-        {% set project_num_rejected = approvals_data.get('approval_project_rejected') %}
-        {% set user_warning = (user_num_rejected > 0) if user_num_rejected is not none else false %}
-        {% set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false %}
-        {% if is_user_approver or is_project_approver or (user_warning and (is_admin or is_root)) %}
+        {%- set approve_total = approvals_data['total'] -%}
+        {%- set user_num_rejected = approvals_data.get('approval_user_rejected') -%}
+        {%- set project_num_rejected = approvals_data.get('approval_project_rejected') -%}
+        {%- set user_warning = (user_num_rejected > 0) if user_num_rejected is not none else false -%}
+        {%- set project_warning = (project_num_rejected > 0) if project_num_rejected is not none else false -%}
+        {% if is_user_approver or is_project_approver or (user_warning and (is_manage_users or is_root)) %}
             <li {% if pane == 'approve' %}class="active"{% endif %}>
                 <a href="{{ url_for('faculty.dashboard', pane='approve') }}">
                     {% if user_warning or project_warning %}
@@ -90,7 +91,7 @@
             {% endif %}
 
             {% if pane == 'approve' %}
-                {% if is_user_approver or (approvals_data['approval_user_rejected'] > 0 and (is_admin or is_root)) %}
+                {% if is_user_approver or (approvals_data['approval_user_rejected'] > 0 and (is_manage_users or is_root)) %}
                     {{ user_approver_panel(approvals_data, current_user) }}
                 {% endif %}
                 {% if is_project_approver %}

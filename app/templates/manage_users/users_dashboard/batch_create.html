@@ -1,4 +1,4 @@
-{% extends "admin/users_dashboard/nav.html" %}
+{% extends "manage_users/users_dashboard/nav.html" %}
 
 {% block title %}
     Batch create students
@@ -49,7 +49,7 @@
                         <div class="col-xs-4">
                             <div class="pull-right">
                                 {% if not batch.celery_finished %}
-                                    <a href="{{ url_for('admin.terminate_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger btn-table-block">
+                                    <a href="{{ url_for('manage_users.terminate_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger btn-table-block">
                                         Terminate
                                     </a>
                                 {% else %}
@@ -57,24 +57,24 @@
                                         <a class="disabled btn btn-sm btn-success btn-table-block">
                                             Workflow complete
                                         </a>
-                                        <a href="{{ url_for('admin.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
                                             Delete
                                         </a>
                                     {% elif batch.success %}
-                                        <a href="{{ url_for('admin.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-default btn-table-block">
+                                        <a href="{{ url_for('manage_users.view_batch_data', batch_id=batch.id) }}" class="btn btn-sm btn-default btn-table-block">
                                             View records
                                         </a>
-                                        <a href="{{ url_for('admin.import_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary btn-table-block">
+                                        <a href="{{ url_for('manage_users.import_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary btn-table-block">
                                             Import
                                         </a>
-                                        <a href="{{ url_for('admin.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
                                             Delete
                                         </a>
                                     {% else %}
                                         <a class="disabled btn btn-sm btn-danger">
                                             Not usable
                                         </a>
-                                        <a href="{{ url_for('admin.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
                                             Delete
                                         </a>
                                     {% endif %}
@@ -96,7 +96,7 @@
                     Upload student list for batch user creation
                 </div>
                 <div class="panel-body">
-                    <form action="{{ url_for('admin.batch_create_users') }}" method="POST" enctype="multipart/form-data" name="batch_create_form">
+                    <form action="{{ url_for('manage_users.batch_create_users') }}" method="POST" enctype="multipart/form-data" name="batch_create_form">
                         {{ form.hidden_tag() }}
 
                         <label class="btn btn-default" for="file-selector">

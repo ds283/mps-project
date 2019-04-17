@@ -64,18 +64,18 @@ menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         <li class="dropdown-header">Edit</li>
         <li>
-            <a href="{{ url_for('admin.edit_user', id=user.id, pane=pane) }}">
+            <a href="{{ url_for('manage_users.edit_user', id=user.id, pane=pane) }}">
                 <i class="fa fa-cogs"></i> Account settings...
             </a>
         </li>
         {% if user.has_role('faculty') %}
             <li>
-                <a href="{{ url_for('admin.edit_affiliations', id=user.id, pane=pane) }}">
+                <a href="{{ url_for('manage_users.edit_affiliations', id=user.id, pane=pane) }}">
                     <i class="fa fa-cogs"></i> Affiliations...
                 </a>
             </li>
             <li>
-                <a href="{{ url_for('admin.edit_enrollments', id=user.id, pane=pane) }}">
+                <a href="{{ url_for('manage_users.edit_enrollments', id=user.id, pane=pane) }}">
                     <i class="fa fa-cogs"></i> Enrollments...
                 </a>
             </li>
@@ -86,11 +86,11 @@ menu = \
 
         <li {% if user.username == cuser.username or user.has_role('admin') or user.has_role('sysadmin') %}class="disabled"{% endif %}>
             {% if user.is_active %}
-                <a {% if user.username != cuser.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('admin.deactivate_user', id=user.id) }}"{% endif %}>
+                <a {% if user.username != cuser.username or user.has_role('admin') or user.has_role('sysadmin') %}href="{{ url_for('manage_users.deactivate_user', id=user.id) }}"{% endif %}>
                     <i class="fa fa-wrench"></i> Make inactive
                 </a>
             {% else %}
-                <a href="{{ url_for('admin.activate_user', id=user.id) }}">
+                <a href="{{ url_for('manage_users.activate_user', id=user.id) }}">
                     <i class="fa fa-wrench"></i> Make active
                 </a>
             {% endif %}
@@ -100,13 +100,13 @@ menu = \
         {% if not user.has_role('student') and not user.has_role('root') %}
             {% if user.has_role('admin') %}
                 <li {% if user.username == cuser.username %}class="disabled"{% endif %}>
-                    <a {% if user.username != cuser.username %}href="{{ url_for('admin.remove_admin', id=user.id) }}"{% endif %}>
+                    <a {% if user.username != cuser.username %}href="{{ url_for('manage_users.remove_admin', id=user.id) }}"{% endif %}>
                         <i class="fa fa-wrench"></i> Remove admin
                     </a>
                 </li>
             {% else %}
                 <li {% if not user.is_active %}class="disabled"{% endif %}>
-                    <a {% if user.is_active %}href="{{ url_for('admin.make_admin', id=user.id) }}{% endif %}">
+                    <a {% if user.is_active %}href="{{ url_for('manage_users.make_admin', id=user.id) }}{% endif %}">
                         <i class="fa fa-wrench"></i> Promote to admin
                     </a>
                 </li>
@@ -116,13 +116,13 @@ menu = \
         {% if cuser.has_role('root') and not user.has_role('student') %}
             {% if user.has_role('root') %}
                 <li {% if user.username == cuser.username %}class="disabled"{% endif %}>
-                    <a {% if user.username != cuser.username %}href="{{ url_for('admin.remove_root', id=user.id) }}"{% endif %}>
+                    <a {% if user.username != cuser.username %}href="{{ url_for('manage_users.remove_root', id=user.id) }}"{% endif %}>
                         <i class="fa fa-wrench"></i> Remove sysadmin
                     </a>
                 </li>
             {% else %}
                 <li {% if not user.is_active %}class="disabled"{% endif %}>
-                    <a {% if user.is_active %}href="{{ url_for('admin.make_root', id=user.id) }}{% endif %}">
+                    <a {% if user.is_active %}href="{{ url_for('manage_users.make_root', id=user.id) }}{% endif %}">
                         <i class="fa fa-wrench"></i> Promote to sysadmin
                     </a>
                 </li>
@@ -132,7 +132,7 @@ menu = \
         {# check whether we should offer role editor in the menu #}
         {% if cuser.has_role('root') and not user.has_role('student') %}
             <li>
-                <a href="{{ url_for('admin.assign_roles', id=user.id, pane=pane) }}">
+                <a href="{{ url_for('manage_users.assign_roles', id=user.id, pane=pane) }}">
                     <i class="fa fa-wrench"></i> Assign roles...
                 </a>
             </li>

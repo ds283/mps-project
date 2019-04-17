@@ -1,4 +1,4 @@
-{% extends "admin/users_dashboard/nav.html" %}
+{% extends "manage_users/users_dashboard/nav.html" %}
 
 {% block scripts %}
     {{ super() }}
@@ -16,7 +16,7 @@
             $('#edit-accounts').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/users_ajax{% if filter is not none %}?filter={{ filter }}{% endif %}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/manage_users/users_ajax{% if filter is not none %}?filter={{ filter }}{% endif %}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
@@ -58,39 +58,39 @@
         <div class="panel-body">
             <div class="well">
                 <p>Filter by role</p>
-                <a href="{{ url_for('admin.edit_users', filter='all') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='all') }}"
                    class="btn btn-sm filter-btn {% if filter is none or filter == 'all' %}btn-primary{% else %}btn-default{% endif %}">
                     All
                 </a>
-                <a href="{{ url_for('admin.edit_users', filter='active') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='active') }}"
                    class="btn btn-sm filter-btn {% if filter == 'active' %}btn-primary{% else %}btn-default{% endif %}">
                     Active
                 </a>
-                <a href="{{ url_for('admin.edit_users', filter='inactive') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='inactive') }}"
                    class="btn btn-sm filter-btn {% if filter == 'inactive' %}btn-primary{% else %}btn-default{% endif %}">
                     Inactive
                 </a>
-                <a href="{{ url_for('admin.edit_users', filter='student') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='student') }}"
                    class="btn btn-sm filter-btn {% if filter == 'student' %}btn-primary{% else %}btn-default{% endif %}">
                     Students
                 </a>
-                <a href="{{ url_for('admin.edit_users', filter='faculty') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='faculty') }}"
                    class="btn btn-sm filter-btn {% if filter == 'faculty' %}btn-primary{% else %}btn-default{% endif %}">
                     Faculty
                 </a>
-                <a href="{{ url_for('admin.edit_users', filter='office') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='office') }}"
                    class="btn btn-sm filter-btn {% if filter == 'office' %}btn-primary{% else %}btn-default{% endif %}">
                     Office
                 </a>
-                <a href="{{ url_for('admin.edit_users', filter='reports') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='reports') }}"
                    class="btn btn-sm filter-btn {% if filter == 'reports' %}btn-primary{% else %}btn-default{% endif %}">
                     Reporting
                 </a>
-                <a href="{{ url_for('admin.edit_users', filter='admin') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='admin') }}"
                    class="btn btn-sm filter-btn {% if filter == 'admin' %}btn-primary{% else %}btn-default{% endif %}">
                     Admin
                 </a>
-                <a href="{{ url_for('admin.edit_users', filter='root') }}"
+                <a href="{{ url_for('manage_users.edit_users', filter='root') }}"
                    class="btn btn-sm filter-btn {% if filter == 'root' %}btn-primary{% else %}btn-default{% endif %}">
                     Sysadmin
                 </a>
@@ -111,7 +111,7 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-            <a href="{{ url_for('admin.create_user') }}" class="btn btn-default btn-lg">
+            <a href="{{ url_for('manage_users.create_user') }}" class="btn btn-default btn-lg">
                 <i class="fa fa-plus"></i>
                 Add new user
             </a>

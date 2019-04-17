@@ -76,17 +76,17 @@ def create_user():
         role = form.roles.data
 
         if role == 'office':
-            return redirect(url_for('admin.create_office', role=role))
+            return redirect(url_for('manage_users.create_office', role=role))
 
         elif role == 'faculty':
-            return redirect(url_for('admin.create_faculty', role=role))
+            return redirect(url_for('manage_users.create_faculty', role=role))
 
         elif role == 'student':
-            return redirect(url_for('admin.create_student', role=role))
+            return redirect(url_for('manage_users.create_student', role=role))
 
         else:
             flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
-            return redirect(url_for('admin.edit_users'))
+            return redirect(url_for('manage_users.edit_users'))
 
     return render_template('security/register_role.html', role_form=form, title='Select new account role')
 
@@ -104,7 +104,7 @@ def create_office(role):
     # check whether role is ok
     if not (role == 'office'):
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
-        return redirect(url_for('admin.edit_users'))
+        return redirect(url_for('manage_users.edit_users'))
 
     form = ConfirmRegisterOfficeForm(request.form)
 
@@ -118,7 +118,7 @@ def create_office(role):
 
         db.session.commit()
 
-        return redirect(url_for('admin.edit_users'))
+        return redirect(url_for('manage_users.edit_users'))
     else:
         if request.method == 'GET':
             form.random_password.data = True
@@ -140,7 +140,7 @@ def create_faculty(role):
     # check whether role is ok
     if not (role == 'faculty'):
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
-        return redirect(url_for('admin.edit_users'))
+        return redirect(url_for('manage_users.edit_users'))
 
     form = ConfirmRegisterFacultyForm(request.form)
 
@@ -175,14 +175,14 @@ def create_faculty(role):
         db.session.commit()
 
         if form.submit.data:
-            return redirect(url_for('admin.edit_affiliations', id=data.id, create=1, pane=pane))
+            return redirect(url_for('manage_users.edit_affiliations', id=data.id, create=1, pane=pane))
         elif form.save_and_exit.data:
             if pane is None or pane == 'accounts':
-                return redirect(url_for('admin.edit_users'))
+                return redirect(url_for('manage_users.edit_users'))
             elif pane == 'faculty':
-                return redirect(url_for('admin.edit_users_faculty'))
+                return redirect(url_for('manage_users.edit_users_faculty'))
             elif pane == 'students':
-                return redirect(url_for('admin.edit_users_students'))
+                return redirect(url_for('manage_users.edit_users_students'))
             else:
                 raise RuntimeError('Unknown user pane "{pane}"'.format(pane=pane))
         else:
@@ -214,7 +214,7 @@ def create_student(role):
     # check whether role is ok
     if not (role == 'student'):
         flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
-        return redirect(url_for('admin.edit_users'))
+        return redirect(url_for('manage_users.edit_users'))
 
     form = ConfirmRegisterStudentForm(request.form)
 
@@ -246,11 +246,11 @@ def create_student(role):
         db.session.commit()
 
         if pane is None or pane == 'accounts':
-            return redirect(url_for('admin.edit_users'))
+            return redirect(url_for('manage_users.edit_users'))
         elif pane == 'faculty':
-            return redirect(url_for('admin.edit_users_faculty'))
+            return redirect(url_for('manage_users.edit_users_faculty'))
         elif pane == 'students':
-            return redirect(url_for('admin.edit_users_students'))
+            return redirect(url_for('manage_users.edit_users_students'))
         else:
             raise RuntimeError('Unknown user pane "{pane}"'.format(pane=pane))
 
@@ -552,7 +552,7 @@ def batch_create_users():
                             final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
                 seq.apply_async(task_id=uuid)
 
-                return redirect(url_for('admin.batch_create_users'))
+                return redirect(url_for('manage_users.batch_create_users'))
 
             else:
                 flash('Expected batch list to have extension .csv', 'error')
@@ -580,7 +580,7 @@ def terminate_batch(batch_id):
     title = 'Terminate batch user creation'
     panel_title = 'Terminate batch user creation for <strong>{name}</strong>'.format(name=record.name)
 
-    action_url = url_for('admin.perform_terminate_batch', batch_id=batch_id, url=request.referrer)
+    action_url = url_for('manage_users.perform_terminate_batch', batch_id=batch_id, url=request.referrer)
     message = '<p>Please confirm that you wish to terminate the batch user creation task ' \
               '<strong>{name}</strong>.</p>' \
               '<p>This action cannot be undone.</p>' \
@@ -598,7 +598,7 @@ def perform_terminate_batch(batch_id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('admin.batch_create_users')
+        url = url_for('manage_users.batch_create_users')
 
     if record.celery_finished:
         flash('Can not terminate batch read-in for "{name}" because it has finished'.format(name=record.name),
@@ -644,7 +644,7 @@ def delete_batch(batch_id):
     title = 'Delete batch user creation task'
     panel_title = 'Delete batch user creation for <strong>{name}</strong>'.format(name=record.name)
 
-    action_url = url_for('admin.perform_delete_batch', batch_id=batch_id, url=request.referrer)
+    action_url = url_for('manage_users.perform_delete_batch', batch_id=batch_id, url=request.referrer)
     message = '<p>Please confirm that you wish to delete the batch user creation task ' \
               '<strong>{name}</strong>.</p>' \
               '<p>This action cannot be undone.</p>' \
@@ -662,7 +662,7 @@ def perform_delete_batch(batch_id):
 
     url = request.args.get('url', None)
     if url is None:
-        url = url_for('admin.batch_create_users')
+        url = url_for('manage_users.batch_create_users')
 
     if not record.celery_finished:
         flash('Can not delete batch creation task for "{name}" because it has not yet '
@@ -736,7 +736,7 @@ def edit_batch_item(item_id):
 
         db.session.commit()
 
-        return redirect(url_for('admin.view_batch_data', batch_id=record.parent.id))
+        return redirect(url_for('manage_users.view_batch_data', batch_id=record.parent.id))
 
     return render_template('admin/users_dashboard/edit_batch_item.html', form=form, record=record,
                            title='Edit batch item')
@@ -952,16 +952,16 @@ def edit_user(id):
     pane = request.args.get('pane', None)
 
     if user.has_role('office'):
-        return redirect(url_for('admin.edit_office', id=id, pane=pane))
+        return redirect(url_for('manage_users.edit_office', id=id, pane=pane))
 
     elif user.has_role('faculty'):
-        return redirect(url_for('admin.edit_faculty', id=id, pane=pane))
+        return redirect(url_for('manage_users.edit_faculty', id=id, pane=pane))
 
     elif user.has_role('student'):
-        return redirect(url_for('admin.edit_student', id=id, pane=pane))
+        return redirect(url_for('manage_users.edit_student', id=id, pane=pane))
 
     flash('Requested role was not recognized. If this error persists, please contact the system administrator.')
-    return redirect(url_for('admin.edit_users'))
+    return redirect(url_for('manage_users.edit_users'))
 
 
 def _resend_confirm_email(user):
@@ -1003,7 +1003,7 @@ def edit_office(id):
         if resend_confirmation:
             _resend_confirm_email(user)
 
-        return redirect(url_for('admin.edit_users'))
+        return redirect(url_for('manage_users.edit_users'))
 
     return render_template('security/register_user.html', user_form=form, user=user, title='Edit a user account')
 
@@ -1051,11 +1051,11 @@ def edit_faculty(id):
             _resend_confirm_email(user)
 
         if pane is None or pane == 'accounts':
-            return redirect(url_for('admin.edit_users'))
+            return redirect(url_for('manage_users.edit_users'))
         elif pane == 'faculty':
-            return redirect(url_for('admin.edit_users_faculty'))
+            return redirect(url_for('manage_users.edit_users_faculty'))
         elif pane == 'students':
-            return redirect(url_for('admin.edit_users_students'))
+            return redirect(url_for('manage_users.edit_users_students'))
         else:
             raise RuntimeWarning('Unknown user dashboard pane')
 
@@ -1130,11 +1130,11 @@ def edit_student(id):
         if url is not None:
             return redirect(url)
         elif pane is None or pane == 'accounts':
-            return redirect(url_for('admin.edit_users'))
+            return redirect(url_for('manage_users.edit_users'))
         elif pane == 'faculty':
-            return redirect(url_for('admin.edit_users_faculty'))
+            return redirect(url_for('manage_users.edit_users_faculty'))
         elif pane == 'students':
-            return redirect(url_for('admin.edit_users_students'))
+            return redirect(url_for('manage_users.edit_users_students'))
         else:
             raise RuntimeWarning('Unknown user dashboard pane')
 

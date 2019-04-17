@@ -381,7 +381,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 {% if is_manage_users or is_root %}
-                                    <li><a href="{{ url_for('admin.edit_users') }}">
+                                    <li><a href="{{ url_for('manage_users.edit_users') }}">
                                         <i class="fa fa-users"></i> Manage users...
                                     </a></li>
                                 {% endif %}

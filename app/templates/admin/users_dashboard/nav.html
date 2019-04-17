@@ -5,22 +5,22 @@
 {% block pillblock %}
     <ul class="nav nav-pills dashboard-nav">
         <li {% if pane == 'accounts' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_users') }}">
+            <a href="{{ url_for('manage_users.edit_users') }}">
                 Account details
             </a>
         </li>
         <li {% if pane == 'faculty' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_users_faculty') }}">
+            <a href="{{ url_for('manage_users.edit_users_faculty') }}">
                 Faculty accounts
             </a>
         </li>
         <li {% if pane == 'students' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.edit_users_students') }}">
+            <a href="{{ url_for('manage_users.edit_users_students') }}">
                 Student accounts
             </a>
         </li>
         <li {% if pane == 'batch' %}class="active"{% endif %}>
-            <a href="{{ url_for('admin.batch_create_users') }}">
+            <a href="{{ url_for('manage_users.batch_create_users') }}">
                 Batch create students
             </a>
         </li>

@@ -264,7 +264,7 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
             <li>
-                <a href="{{ url_for('admin.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
+                <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
                     <i class="fa fa-pencil"></i> Edit student...
                 </a>
             </li>
@@ -334,7 +334,7 @@ _name = \
 <a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
 <div>
 {% if current_user.has_role('admin') or current_user.has_role('root') %}
-    <a href="{{ url_for('admin.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="label label-default">
+    <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="label label-default">
         #{{ sub.student.exam_number }}
     </a>
 {% else %}

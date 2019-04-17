@@ -66,7 +66,7 @@ _menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('admin.edit_batch_item', item_id=item.id) }}">
+            <a href="{{ url_for('manage_users.edit_batch_item', item_id=item.id) }}">
                 <i class="fa fa-pencil"></i> Edit...
             </a>
         </li>
@@ -75,13 +75,13 @@ _menu = \
 
         {% if item.dont_convert %}
             <li>
-                <a href="{{ url_for('admin.mark_batch_item_convert', item_id=item.id) }}">
+                <a href="{{ url_for('manage_users.mark_batch_item_convert', item_id=item.id) }}">
                     <i class="fa fa-wrench"></i> Allow import
                 </a>
             </li>
         {% else %}
             <li>
-                <a href="{{ url_for('admin.mark_batch_item_dont_convert', item_id=item.id) }}">
+                <a href="{{ url_for('manage_users.mark_batch_item_dont_convert', item_id=item.id) }}">
                     <i class="fa fa-wrench"></i> Disallow import
                 </a>
             </li>

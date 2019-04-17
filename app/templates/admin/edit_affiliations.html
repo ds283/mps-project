@@ -20,7 +20,7 @@
                         {% set style = group.make_CSS_style() %}
                         <a class="btn {% if style %}btn-default{% else %}btn-success{% endif %} selection-label"
                            {% if style %}style="{{ style }}"{% endif %}
-                           href="{{ url_for('admin.remove_affiliation', userid=user.id, groupid=group.id) }}">
+                           href="{{ url_for('manage_users.remove_affiliation', userid=user.id, groupid=group.id) }}">
                             <i class="fa fa-times"></i> {{ group.name }}
                         </a>
                     {% endif %}
@@ -35,7 +35,7 @@
                 <h4>
                 {% for group in research_groups %}
                     {% if group not in data.affiliations %}
-                        <a class="btn btn-default selection-label" href="{{ url_for('admin.add_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-plus"></i> {{ group.name }}</a>
+                        <a class="btn btn-default selection-label" href="{{ url_for('manage_users.add_affiliation', userid=user.id, groupid=group.id) }}"><i class="fa fa-plus"></i> {{ group.name }}</a>
                     {% endif %}
                 {% endfor %}
                 </h4>
@@ -46,19 +46,19 @@
     </div>
 
     {% if create %}
-        <a href="{{ url_for('admin.edit_enrollments', id=user.id, create=1, pane=pane) }}" class="btn btn-primary">
+        <a href="{{ url_for('manage_users.edit_enrollments', id=user.id, create=1, pane=pane) }}" class="btn btn-primary">
             Next: Project enrollments
         </a>
         {% if pane is none or pane == 'accounts' %}
-            <a href="{{ url_for('admin.edit_users') }}" class="btn btn-default">
+            <a href="{{ url_for('manage_users.edit_users') }}" class="btn btn-default">
                 Save and exit
             </a>
         {% elif pane == 'faculty' %}
-            <a href="{{ url_for('admin.edit_users_faculty') }}" class="btn btn-default">
+            <a href="{{ url_for('manage_users.edit_users_faculty') }}" class="btn btn-default">
                 Save and exit
             </a>
         {% elif pane == 'students' %}
-            <a href="{{ url_for('admin.edit_users_students') }}" class="btn btn-default">
+            <a href="{{ url_for('manage_users.edit_users_students') }}" class="btn btn-default">
                 Save and exit
             </a>
         {% else %}
@@ -66,15 +66,15 @@
         {% endif %}
     {% else %}
         {% if pane is none or pane == 'accounts' %}
-            <a href="{{ url_for('admin.edit_users') }}">
+            <a href="{{ url_for('manage_users.edit_users') }}">
                 <i class="fa fa-backward"></i> Return to user accounts
             </a>
         {% elif pane == 'faculty' %}
-            <a href="{{ url_for('admin.edit_users_faculty') }}">
+            <a href="{{ url_for('manage_users.edit_users_faculty') }}">
                 <i class="fa fa-backward"></i> Return to faculty accounts
             </a>
         {% elif pane == 'students' %}
-            <a href="{{ url_for('admin.edit_users_students') }}">
+            <a href="{{ url_for('manage_users.edit_users_students') }}">
                 <i class="fa fa-backward"></i> Return to student accounts
             </a>
         {% else %}

@@ -426,5 +426,8 @@ def create_app():
     from .loadbalancer import alb as alb_blueprint
     app.register_blueprint(alb_blueprint, url_prefix='/alb')
 
+    from .manage_users import manage_users as manage_users_blueprint
+    app.register_blueprint(manage_users_blueprint, url_prefix='/manage_users')
+
     return app, celery
 

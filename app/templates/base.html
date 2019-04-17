@@ -384,9 +384,9 @@
                                     <li><a href="{{ url_for('manage_users.edit_users') }}">
                                         <i class="fa fa-users"></i> Manage users...
                                     </a></li>
+                                    <li role="separator" class="divider"></li>
                                 {% endif %}
                                 {% if is_admin or is_root or is_convenor %}
-                                    <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Tools</li>
                                     <li><a href="{{ url_for('admin.edit_messages') }}">
                                         <i class="fa fa-comment"></i> Messages...

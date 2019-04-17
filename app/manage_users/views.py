@@ -289,7 +289,7 @@ def edit_users():
     if filter is not None:
         session['accounts_role_filter'] = filter
 
-    return render_template("admin/users_dashboard/accounts.html", filter=filter, pane='accounts')
+    return render_template("manage_users/users_dashboard/accounts.html", filter=filter, pane='accounts')
 
 
 @manage_users.route('/edit_users_students')
@@ -345,7 +345,7 @@ def edit_users_students():
         .filter(User.active == True).distinct().all()
     cohorts = [c[0] for c in cohort_data]
 
-    return render_template("admin/users_dashboard/students.html", filter=prog_filter, pane='students',
+    return render_template("manage_users/users_dashboard/students.html", filter=prog_filter, pane='students',
                            prog_filter=prog_filter, cohort_filter=cohort_filter, year_filter=year_filter,
                            valid_filter=valid_filter, programmes=programmes, cohorts=sorted(cohorts))
 
@@ -386,7 +386,7 @@ def edit_users_faculty():
         .filter(ProjectClass.active == True) \
         .order_by(ProjectClass.name.asc()).all()
 
-    return render_template("admin/users_dashboard/faculty.html", pane='faculty',
+    return render_template("manage_users/users_dashboard/faculty.html", pane='faculty',
                            group_filter=group_filter, pclass_filter=pclass_filter,
                            groups=groups, pclasses=pclasses)
 
@@ -560,7 +560,7 @@ def batch_create_users():
 
     batches = db.session.query(StudentBatch).all()
 
-    return render_template("admin/users_dashboard/batch_create.html", form=form, pane='batch', batches=batches)
+    return render_template("manage_users/users_dashboard/batch_create.html", form=form, pane='batch', batches=batches)
 
 
 @manage_users.route('/terminate_batch/<int:batch_id>')
@@ -690,7 +690,7 @@ def perform_delete_batch(batch_id):
 def view_batch_data(batch_id):
     record = StudentBatch.query.get_or_404(batch_id)
 
-    return render_template('admin/users_dashboard/view_batch.html', record=record, batch_id=batch_id)
+    return render_template('manage_users/users_dashboard/view_batch.html', record=record, batch_id=batch_id)
 
 
 @manage_users.route('/view_batch_data_ajax/<int:batch_id>')
@@ -739,7 +739,7 @@ def edit_batch_item(item_id):
 
         return redirect(url_for('manage_users.view_batch_data', batch_id=record.parent.id))
 
-    return render_template('admin/users_dashboard/edit_batch_item.html', form=form, record=record,
+    return render_template('manage_users/users_dashboard/edit_batch_item.html', form=form, record=record,
                            title='Edit batch item')
 
 
@@ -1170,7 +1170,7 @@ def edit_affiliations(id):
     create = request.args.get('create', default=None)
     pane = request.args.get('pane', default=None)
 
-    return render_template('admin/edit_affiliations.html', user=user, data=data, research_groups=research_groups,
+    return render_template('manage_users/edit_affiliations.html', user=user, data=data, research_groups=research_groups,
                            create=create, pane=pane)
 
 
@@ -1190,7 +1190,7 @@ def edit_enrollments(id):
     create = request.args.get('create', default=None)
     pane = request.args.get('pane', default=None)
 
-    return render_template('admin/edit_enrollments.html', user=user, data=data, project_classes=project_classes,
+    return render_template('manage_users/edit_enrollments.html', user=user, data=data, project_classes=project_classes,
                            create=create, pane=pane)
 
 
@@ -1255,7 +1255,7 @@ def edit_enrollment(id):
 
         return redirect(url)
 
-    return render_template('admin/edit_enrollment.html', record=record, form=form, url=url)
+    return render_template('manage_users/edit_enrollment.html', record=record, form=form, url=url)
 
 
 @manage_users.route('/enroll_projects_assessor/<int:id>/<int:pclassid>')
@@ -1366,7 +1366,7 @@ def edit_roles():
     Display list of roles
     :return:
     """
-    return render_template('admin/edit_roles.html')
+    return render_template('manage_users/edit_roles.html')
 
 
 @manage_users.route('/edit_roles_ajax')
@@ -1398,7 +1398,7 @@ def add_role():
 
         return redirect(url_for('manage_users.edit_roles'))
 
-    return render_template('admin/edit_role.html', title='Edit role', role_form=form)
+    return render_template('manage_users/edit_role.html', title='Edit role', role_form=form)
 
 
 @manage_users.route('/edit_role/<int:id>', methods=['GET', 'POST'])
@@ -1422,7 +1422,7 @@ def edit_role(id):
 
         return redirect(url_for('manage_users.edit_roles'))
 
-    return render_template('admin/edit_role.html', role=data, title='Edit role', role_form=form)
+    return render_template('manage_users/edit_role.html', role=data, title='Edit role', role_form=form)
 
 
 @manage_users.route('/assign_roles/<int:id>')
@@ -1441,7 +1441,7 @@ def assign_roles(id):
         .filter(Role.name != 'root', Role.name != 'admin',
                 Role.name != 'faculty', Role.name != 'student', Role.name != 'office').all()
 
-    return render_template('admin/users_dashboard/assign_roles.html', roles=roles, user=data, pane=pane)
+    return render_template('manage_users/users_dashboard/assign_roles.html', roles=roles, user=data, pane=pane)
 
 
 @manage_users.route('/attach_role/<int:user_id>/<int:role_id>')

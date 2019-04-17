@@ -20,7 +20,7 @@ from ..models import UploadedAsset, TaskRecord, User, StudentBatch, StudentBatch
 from ..task_queue import progress_update
 from ..shared.utils import canonical_uploaded_asset_filename
 
-from ..admin.actions import register_user
+from app.manage_users.actions import register_user
 
 import csv
 from datetime import datetime
@@ -363,7 +363,7 @@ def register_batch_create_tasks(celery):
             raise Ignore()
 
         user.post_message('Errors occurred during batch import', 'error', autocommit=True)
-        
+
         # raise new exception; will be caught by error handler on mark_user_task_failed()
         raise RuntimeError('Import process failed with an error')
 

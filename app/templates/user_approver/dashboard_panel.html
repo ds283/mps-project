@@ -28,7 +28,7 @@
     {% endif %}
 
     {# admin or root role needed to edit users #}
-    {% if current_user.has_role('admin') or current_user.has_role('root') %}
+    {% if current_user.has_role('manage_users') or current_user.has_role('root') %}
         <div class="panel {% if to_correct > 0 %}panel-warning{% else %}panel-default{% endif %}">
             <div class="panel-heading">{{ to_correct }} student {% if to_correct != 1 %}records require{% else %}record requires{% endif %} correction</div>
             <div class="panel-body">

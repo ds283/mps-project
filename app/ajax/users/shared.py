@@ -132,7 +132,7 @@ menu = \
         {# check whether we should offer role editor in the menu #}
         {% if cuser.has_role('root') and not user.has_role('student') %}
             <li>
-                <a href="{{ url_for('admin.assign_roles', id=user.id, pane=pane) }}">
+                <a href="{{ url_for('manage_users.assign_roles', id=user.id, pane=pane) }}">
                     <i class="fa fa-wrench"></i> Assign roles...
                 </a>
             </li>

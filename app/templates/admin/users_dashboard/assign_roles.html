@@ -19,7 +19,7 @@
                     {% for role in roles %}
                         {% if user.has_role(role.name) %}
                             <a class="btn btn-default selection-label" style="{{ role.make_CSS_style() }}"
-                               href="{{ url_for('admin.remove_role', user_id=user.id, role_id=role.id) }}">
+                               href="{{ url_for('manage_users.remove_role', user_id=user.id, role_id=role.id) }}">
                                 <i class="fa fa-times"></i>
                                 {{ role.name }}
                             </a>
@@ -41,7 +41,7 @@
                     {% for role in roles %}
                         {% if not user.has_role(role.name) %}
                             <a class="btn btn-default selection-label" style="{{ role.make_CSS_style() }}"
-                               href="{{ url_for('admin.attach_role', user_id=user.id, role_id=role.id) }}">
+                               href="{{ url_for('manage_users.attach_role', user_id=user.id, role_id=role.id) }}">
                                 <i class="fa fa-plus"></i>
                                 {{ role.name }}
                             </a>

@@ -24,7 +24,8 @@ from app.shared.forms.mixins import ThemeMixin, FirstLastNameMixin, FacultyDataM
 from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgrammeName
 from app.shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, \
     OptionalIf, password_strength, value_is_nonnegative, globally_unique_exam_number, unique_or_original_exam_number, \
-    unique_or_original_batch_item_userid, unique_or_original_batch_item_email, unique_or_original_batch_item_exam_number
+    unique_or_original_batch_item_userid, unique_or_original_batch_item_email, \
+    unique_or_original_batch_item_exam_number, globally_unique_role, unique_or_original_role
 
 
 class UniqueUserNameMixin():
@@ -68,13 +69,13 @@ class PasswordConfirmFormMixin():
         validators=[OptionalIf('random_password'), EqualTo('password', message='RETYPE_PASSWORD_MISMATCH')])
 
 
-class RoleMixin():
+class UserTypeMixin():
 
     available_roles = [('faculty', 'Faculty'), ('student', 'Student'), ('office', 'Office')]
     roles = SelectField('Role', choices=available_roles)
 
 
-class RoleSelectForm(Form, RoleMixin):
+class UserTypeSelectForm(Form, UserTypeMixin):
 
     submit = SubmitField('Select role')
 
@@ -261,3 +262,27 @@ class EnrollmentRecordMixin():
 class EnrollmentRecordForm(Form, EnrollmentRecordMixin, SaveChangesMixin):
 
     pass
+
+
+class RoleMixin():
+
+    description = StringField('Description', validators=[Length(max=DEFAULT_STRING_LENGTH)])
+
+    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+                         description='Specify a colour to help distinguish different roles')
+
+
+class AddRoleForm(Form, RoleMixin):
+
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
+                                           globally_unique_role])
+
+    submit = SubmitField('Add new role')
+
+
+class EditRoleForm(Form, RoleMixin, SaveChangesMixin):
+
+    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
+                                           Length(max=DEFAULT_STRING_LENGTH),
+                                           unique_or_original_role])

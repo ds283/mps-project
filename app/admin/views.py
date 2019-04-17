@@ -10,7 +10,6 @@
 
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
     stream_with_context, send_file, abort
-from werkzeug.local import LocalProxy
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
 from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
@@ -36,7 +35,6 @@ from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
     EditBackupOptionsForm, BackupManageForm, \
-    AddRoleForm, EditRoleForm, \
     NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
@@ -50,7 +48,7 @@ from ..database import db
 from ..models import MainConfig, User, FacultyData, ResearchGroup,\
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
-    BackupRecord, TaskRecord, Notification, EnrollmentRecord, Role, MatchingAttempt, MatchingRecord, \
+    BackupRecord, TaskRecord, Notification, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset
@@ -88,10 +86,6 @@ from bokeh.plotting import figure
 from bokeh.embed import components
 
 from numpy import histogram
-
-
-_security = LocalProxy(lambda: current_app.extensions['security'])
-_datastore = LocalProxy(lambda: _security.datastore)
 
 
 @admin.route('/edit_groups')
@@ -1724,143 +1718,6 @@ def perform_global_rollover():
         db.session.rollback()
 
     return home_dashboard()
-
-
-@admin.route('/edit_roles')
-@roles_required('root')
-def edit_roles():
-    """
-    Display list of roles
-    :return:
-    """
-    return render_template('admin/edit_roles.html')
-
-
-@admin.route('/roles_ajax')
-@roles_required('root')
-def roles_ajax():
-    """
-    Ajax data point for roles list
-    :return:
-    """
-    roles = db.session.query(Role).all()
-    return ajax.admin.roles_data(roles)
-
-
-@admin.route('/add_role', methods=['GET', 'POST'])
-@roles_required('root')
-def add_role():
-    """
-    Add a new user role
-    :return:
-    """
-    form = AddRoleForm(request.form)
-
-    if form.validate_on_submit():
-        data = Role(name=form.name.data,
-                    description=form.description.data,
-                    colour=form.colour.data,)
-        db.session.add(data)
-        db.session.commit()
-
-        return redirect(url_for('admin.edit_roles'))
-
-    return render_template('admin/edit_role.html', title='Edit role', role_form=form)
-
-
-@admin.route('/edit_role/<int:id>', methods=['GET', 'POST'])
-@roles_required('root')
-def edit_role(id):
-    """
-    Edit an existing role
-    :param id:
-    :return:
-    """
-    data = Role.query.get_or_404(id)
-
-    form = EditRoleForm(obj=data)
-    form.role = data
-
-    if form.validate_on_submit():
-        data.name = form.name.data
-        data.description = form.description.data
-        data.colour = form.colour.data
-        db.session.commit()
-
-        return redirect(url_for('admin.edit_roles'))
-
-    return render_template('admin/edit_role.html', role=data, title='Edit role', role_form=form)
-
-
-@admin.route('/assign_roles/<int:id>')
-@roles_required('root')
-def assign_roles(id):
-    """
-    Assign roles to a user
-    :param id:
-    :return:
-    """
-    data = User.query.get_or_404(id)
-
-    pane = request.args.get('pane', default=None)
-
-    roles = db.session.query(Role) \
-        .filter(Role.name != 'root', Role.name != 'admin',
-                Role.name != 'faculty', Role.name != 'student', Role.name != 'office').all()
-
-    return render_template('admin/users_dashboard/assign_roles.html', roles=roles, user=data, pane=pane)
-
-
-@admin.route('/attach_role/<int:user_id>/<int:role_id>')
-@roles_required('root')
-def attach_role(user_id, role_id):
-    """
-    Attach a role to a user
-    :param user_id:
-    :param role_id:
-    :return:
-    """
-    data = User.query.get_or_404(user_id)
-    role = Role.query.get_or_404(role_id)
-
-    if role.name == 'root' or role.name == 'admin':
-        flash('Admin roles cannot be assigned through the API', 'error')
-        return redirect(request.referrer)
-
-    if role.name == 'faculty' or role.name == 'office' or role.name == 'student':
-        flash('Account types cannot be assigned through the API', 'error')
-        return redirect(request.referrer)
-
-    _datastore.add_role_to_user(data, role.name)
-    _datastore.commit()
-
-    return redirect(request.referrer)
-
-
-@admin.route('/remove_role/<int:user_id>/<int:role_id>')
-@roles_required('root')
-def remove_role(user_id, role_id):
-    """
-    Remove a role from a user
-    :param user_id:
-    :param role_id:
-    :return:
-    """
-    data = User.query.get_or_404(user_id)
-    role = Role.query.get_or_404(role_id)
-
-    if role.name == 'root' or role.name == 'admin':
-        flash('Admin roles cannot be assigned through the API', 'error')
-        return redirect(request.referrer)
-
-    if role.name == 'faculty' or role.name == 'office' or role.name == 'student':
-        flash('Account types cannot be assigned through the API', 'error')
-        return redirect(request.referrer)
-
-    _datastore.remove_role_from_user(data, role.name)
-    _datastore.commit()
-
-    return redirect(request.referrer)
 
 
 @admin.route('/email_log', methods=['GET', 'POST'])

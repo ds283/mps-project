@@ -20,9 +20,10 @@ from celery import chain, group
 
 from . import manage_users
 
-from .forms import RoleSelectForm, ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, \
+from .forms import UserTypeSelectForm, ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, \
     ConfirmRegisterStudentForm, EditOfficeForm, EditFacultyForm, EditStudentForm, \
-    UploadBatchCreateForm, EditStudentBatchItemFormFactory, EnrollmentRecordForm
+    UploadBatchCreateForm, EditStudentBatchItemFormFactory, EnrollmentRecordForm, \
+    AddRoleForm, EditRoleForm
 from .actions import register_user
 
 from ..database import db
@@ -69,7 +70,7 @@ def create_user():
         return redirect(request.referrer)
 
     # first task is to capture the user role
-    form = RoleSelectForm(request.form)
+    form = UserTypeSelectForm(request.form)
 
     if form.validate_on_submit():
         # get role and redirect to appropriate form
@@ -1354,5 +1355,142 @@ def remove_enrollment(userid, pclassid):
 
     if data.is_enrolled(pclass):
         data.remove_enrollment(pclass)
+
+    return redirect(request.referrer)
+
+
+@manage_users.route('/edit_roles')
+@roles_required('root')
+def edit_roles():
+    """
+    Display list of roles
+    :return:
+    """
+    return render_template('admin/edit_roles.html')
+
+
+@manage_users.route('/edit_roles_ajax')
+@roles_required('root')
+def edit_roles_ajax():
+    """
+    Ajax data point for roles list
+    :return:
+    """
+    roles = db.session.query(Role).all()
+    return ajax.admin.roles_data(roles)
+
+
+@manage_users.route('/add_role', methods=['GET', 'POST'])
+@roles_required('root')
+def add_role():
+    """
+    Add a new user role
+    :return:
+    """
+    form = AddRoleForm(request.form)
+
+    if form.validate_on_submit():
+        data = Role(name=form.name.data,
+                    description=form.description.data,
+                    colour=form.colour.data,)
+        db.session.add(data)
+        db.session.commit()
+
+        return redirect(url_for('manage_users.edit_roles'))
+
+    return render_template('admin/edit_role.html', title='Edit role', role_form=form)
+
+
+@manage_users.route('/edit_role/<int:id>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_role(id):
+    """
+    Edit an existing role
+    :param id:
+    :return:
+    """
+    data = Role.query.get_or_404(id)
+
+    form = EditRoleForm(obj=data)
+    form.role = data
+
+    if form.validate_on_submit():
+        data.name = form.name.data
+        data.description = form.description.data
+        data.colour = form.colour.data
+        db.session.commit()
+
+        return redirect(url_for('manage_users.edit_roles'))
+
+    return render_template('admin/edit_role.html', role=data, title='Edit role', role_form=form)
+
+
+@manage_users.route('/assign_roles/<int:id>')
+@roles_required('root')
+def assign_roles(id):
+    """
+    Assign roles to a user
+    :param id:
+    :return:
+    """
+    data = User.query.get_or_404(id)
+
+    pane = request.args.get('pane', default=None)
+
+    roles = db.session.query(Role) \
+        .filter(Role.name != 'root', Role.name != 'admin',
+                Role.name != 'faculty', Role.name != 'student', Role.name != 'office').all()
+
+    return render_template('admin/users_dashboard/assign_roles.html', roles=roles, user=data, pane=pane)
+
+
+@manage_users.route('/attach_role/<int:user_id>/<int:role_id>')
+@roles_required('root')
+def attach_role(user_id, role_id):
+    """
+    Attach a role to a user
+    :param user_id:
+    :param role_id:
+    :return:
+    """
+    data = User.query.get_or_404(user_id)
+    role = Role.query.get_or_404(role_id)
+
+    if role.name == 'root' or role.name == 'admin':
+        flash('Admin roles cannot be assigned through the API', 'error')
+        return redirect(request.referrer)
+
+    if role.name == 'faculty' or role.name == 'office' or role.name == 'student':
+        flash('Account types cannot be assigned through the API', 'error')
+        return redirect(request.referrer)
+
+    _datastore.add_role_to_user(data, role.name)
+    _datastore.commit()
+
+    return redirect(request.referrer)
+
+
+@manage_users.route('/remove_role/<int:user_id>/<int:role_id>')
+@roles_required('root')
+def remove_role(user_id, role_id):
+    """
+    Remove a role from a user
+    :param user_id:
+    :param role_id:
+    :return:
+    """
+    data = User.query.get_or_404(user_id)
+    role = Role.query.get_or_404(role_id)
+
+    if role.name == 'root' or role.name == 'admin':
+        flash('Admin roles cannot be assigned through the API', 'error')
+        return redirect(request.referrer)
+
+    if role.name == 'faculty' or role.name == 'office' or role.name == 'student':
+        flash('Account types cannot be assigned through the API', 'error')
+        return redirect(request.referrer)
+
+    _datastore.remove_role_from_user(data, role.name)
+    _datastore.commit()
 
     return redirect(request.referrer)

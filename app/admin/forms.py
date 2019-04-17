@@ -25,8 +25,7 @@ from ..shared.forms.wtf_validators import globally_unique_group_name, unique_or_
     globally_unique_transferable_skill, unique_or_original_transferable_skill, \
     globally_unique_skill_group, unique_or_original_skill_group, globally_unique_project_class, \
     unique_or_original_project_class, globally_unique_project_class_abbrev, unique_or_original_project_class_abbrev, \
-    globally_unique_supervisor, unique_or_original_supervisor, globally_unique_role, unique_or_original_role, \
-    globally_unique_matching_name, \
+    globally_unique_supervisor, unique_or_original_supervisor, globally_unique_matching_name, \
     globally_unique_supervisor_abbrev, unique_or_original_supervisor_abbrev, unique_or_original_matching_name, \
     globally_unique_assessment_name, unique_or_original_assessment_name, \
     globally_unique_building_name, unique_or_original_building_name, \
@@ -673,30 +672,6 @@ class EditSkillGroupForm(Form, SkillGroupMixin, SaveChangesMixin):
     name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the group'),
                                            Length(max=DEFAULT_STRING_LENGTH),
                                            unique_or_original_skill_group])
-
-
-class RoleMixin():
-
-    description = StringField('Description', validators=[Length(max=DEFAULT_STRING_LENGTH)])
-
-    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
-                         description='Specify a colour to help distinguish different roles')
-
-
-class AddRoleForm(Form, RoleMixin):
-
-    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
-                                           Length(max=DEFAULT_STRING_LENGTH),
-                                           globally_unique_role])
-
-    submit = SubmitField('Add new role')
-
-
-class EditRoleForm(Form, RoleMixin, SaveChangesMixin):
-
-    name = StringField('Name', validators=[InputRequired(message='Please supply a unique name for the role'),
-                                           Length(max=DEFAULT_STRING_LENGTH),
-                                           unique_or_original_role])
 
 
 class PuLPSolverMixin():

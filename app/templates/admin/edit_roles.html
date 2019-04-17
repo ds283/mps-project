@@ -18,7 +18,7 @@
             $('#roles-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/admin/roles_ajax', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/manage_users/edit_roles_ajax', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name' },
@@ -51,7 +51,7 @@
                 </thead>
             </table>
             <div style="text-align: center;">
-                <a href="{{ url_for('admin.add_role') }}" class="btn btn-default btn-lg">
+                <a href="{{ url_for('manage_users.add_role') }}" class="btn btn-default btn-lg">
                     <i class="fa fa-plus"></i>
                     Add new role
                 </a>

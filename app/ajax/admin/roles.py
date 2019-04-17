@@ -20,7 +20,7 @@ _menu = \
     </button>
     <ul class="dropdown-menu dropdown-menu-right">
         <li>
-            <a href="{{ url_for('admin.edit_role', id=role.id) }}">
+            <a href="{{ url_for('manage_users.edit_role', id=role.id) }}">
                 <i class="fa fa-pencil"></i> Edit role
             </a>
         </li>

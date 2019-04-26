@@ -11,6 +11,7 @@
 
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
 from flask_security import roles_accepted, current_user
+from flask_mail import Message
 
 from celery import chain
 
@@ -29,6 +30,8 @@ from ..shared.validators import validate_is_convenor, validate_is_administrator,
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
+
+from ..student.actions import store_selection
 
 from ..task_queue import register_task
 
@@ -3470,6 +3473,55 @@ def close_selections(id):
     return redirect(request.referrer)
 
 
+@convenor.route('/submit_student_selection/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def submit_student_selection(sel_id):
+    # sel_id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    if not sel.is_valid_selection:
+        flash('The current bookmark list is not a valid set of project preferences. This is an internal error; '
+              'please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    try:
+        store_selection(sel)
+
+        db.session.commit()
+
+        celery = current_app.extensions['celery']
+        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+
+        msg = Message(subject='An administrator has submitted project choices on your behalf '
+                              '({pcl})'.format(pcl=sel.config.project_class.name),
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      reply_to=current_user.email,
+                      recipients=[sel.student.user.email, current_user.email])
+
+        msg.body = render_template('email/student_notifications/choices_received_proxy.txt', user=sel.student.user,
+                                   pclass=sel.config.project_class, config=sel.config, sel=sel)
+
+        # register a new task in the database
+        task_id = register_task(msg.subject, description='Send project choices confirmation email '
+                                                         'to {r}'.format(r=', '.join(msg.recipients)))
+        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+        flash("Project choices for this selector have been successfully stored. "
+              "A confirmation email has been sent to the selector's registered email address "
+              "and cc'd to you.", "info")
+
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('A database error occurred during submission. Please contact a system administrator.', 'error')
+
+    return redirect(request.referrer)
+
+
+
 @convenor.route('/enroll/<int:userid>/<int:pclassid>')
 @roles_accepted('faculty', 'admin', 'root')
 def enroll(userid, pclassid):
@@ -4505,6 +4557,7 @@ def publish_all_assignments(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
+    year_filter = request.args.get('year_filter')
 
     data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 
@@ -4537,6 +4590,7 @@ def unpublish_all_assignments(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
+    year_filter = request.args.get('year_filter')
 
     data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 

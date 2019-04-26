@@ -140,6 +140,7 @@ def convert_bookmarks(sel):
         db.session.add(data)
 
     sel.submission_time = datetime.now()
+    sel.submission_IP = None
 
     db.session.commit()
 
@@ -148,6 +149,7 @@ def sanitize(sel):
     for item in sel.ordered_selections:
         if item.converted_from_bookmark is None:
             item.converted_from_bookmark = False
+
         if item.hint != SelectionRecord.SELECTION_HINT_NEUTRAL:
             item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
 

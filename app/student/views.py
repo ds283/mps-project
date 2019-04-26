@@ -19,10 +19,11 @@ from sqlalchemy.orm.exc import StaleDataError
 from . import student
 
 from .forms import StudentFeedbackForm, StudentSettingsForm
+from .actions import store_selection
 
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LiveProject, \
-    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SelectionRecord, SubmissionRecord, TransferableSkill, \
+    Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SubmissionRecord, TransferableSkill, \
     User, EmailNotification, add_notification
 from ..task_queue import register_task
 
@@ -598,22 +599,7 @@ def submit(sid):
         return redirect(request.referrer)
 
     try:
-        # delete any existing selections
-        sel.selections = []
-
-        # iterate through bookmarks, converting them to a selection set
-        for bookmark in sel.bookmarks:
-            # rank is based on 1
-            if bookmark.rank <= sel.number_choices:
-                rec = SelectionRecord(owner_id=sel.id,
-                                      liveproject_id=bookmark.liveproject_id,
-                                      rank=bookmark.rank,
-                                      converted_from_bookmark=False,
-                                      hint=SelectionRecord.SELECTION_HINT_NEUTRAL)
-                sel.selections.append(rec)
-
-        sel.submission_time = datetime.now()
-        sel.submission_IP = current_user.current_login_ip
+        store_selection(sel)
 
         db.session.commit()
 
@@ -640,7 +626,6 @@ def submit(sid):
     except SQLAlchemyError:
         db.session.rollback()
         flash('A database error occurred during submission. Please contact a system administrator.', 'error')
-        return redirect(request.referrer)
 
     return redirect(request.referrer)
 

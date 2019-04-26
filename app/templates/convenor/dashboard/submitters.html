@@ -41,19 +41,6 @@
 {% endblock %}
 
 {% block bodyblock %}
-    <div class="row">
-        <div class="col-xs-12">
-            <div class="pull-right">
-                {% if pclass.publish %}
-                    <a href="{{ url_for('convenor.unpublish_all_assignments', id=config.id) }}" class="btn btn-default top-row-button"><i class="fa fa-eye-slash"></i> Unpublish all</a>
-                    <a href="{{ url_for('convenor.publish_all_assignments', id=config.id) }}" class="btn btn-default top-row-button"><i class="fa fa-eye"></i> Publish all</a>
-                {% else %}
-                    <a class="btn btn-default top-row-button disabled"><i class="fa fa-eye-slash"></i> Unpublish all</a>
-                    <a class="btn btn-default top-row-button disabled"><i class="fa fa-eye"></i> Publish all</a>
-                {% endif %}
-            </div>
-        </div>
-    </div>
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Students enrolled as <strong>submitters</strong> for <strong>{{ pclass.name }}</strong></div>
         <div class="panel-body">
@@ -147,6 +134,25 @@
                     href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='confirmations') }}">
                     Confirmations outstanding
                 </a>
+            </div>
+
+            <hr class="intro-divider">
+            <div class="row vertical-align">
+                <div class="col-xs-12">
+                    <div class="pull-right">
+                        {% if pclass.publish %}
+                            <a href="{{ url_for('convenor.unpublish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}" class="btn btn-default top-row-button">
+                                <i class="fa fa-eye-slash"></i> Unpublish all
+                            </a>
+                            <a href="{{ url_for('convenor.publish_all_assignments', id=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}" class="btn btn-default top-row-button">
+                                <i class="fa fa-eye"></i> Publish all
+                            </a>
+                        {% else %}
+                            <a class="btn btn-default top-row-button disabled"><i class="fa fa-eye-slash"></i> Unpublish all</a>
+                            <a class="btn btn-default top-row-button disabled"><i class="fa fa-eye"></i> Publish all</a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
 
             <table id="submitters-table" class="table table-striped table-bordered">

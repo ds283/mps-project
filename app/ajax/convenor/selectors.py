@@ -28,6 +28,24 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Selections</li>
+        {% if student.is_valid_selection %}
+            <li>
+                <a href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
+                    <i class="fa fa-paper-plane"></i> Submit selection
+                </a>
+            </li>
+        {% endif %}
+        
+        {% if student.has_submitted %}
+            <li>
+                <a href="{{ url_for('convenor.selector_choices', id=student.id) }}">
+                    <i class="fa fa-eye"></i> Show selection
+                </a>
+            </li>
+        {% endif %}
         
         {% if student.convert_to_submitter %}
             <li>
@@ -43,90 +61,50 @@ _menu = \
             </li>
         {% endif %}
 
-        {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.has_bookmarks %}
-            <li>
-                <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
-                    <i class="fa fa-trash"></i> Delete bookmarks
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-trash"></i> Delete bookmarks
-                </a>
-            </li>
-        {% endif %}
-
-        {% if student.number_bookmarks > 0 %}
+        {% if student.has_bookmarks %}
+            <li role="separator" class="divider"></li>
+            <li class="dropdown-header">Bookmarks</li>    
             <li>
                 <a href="{{ url_for('convenor.selector_bookmarks', id=student.id) }}">
-                    Show bookmarks
+                    <i class="fa fa-eye"></i> Show bookmarks
                 </a>
             </li>
-        {% else %}
-            <li class="disabled">
-                <a>Show bookmarks</a>
-            </li>
-        {% endif %}
-        
-        {% if student.has_submitted %}
-            <li>
-                <a href="{{ url_for('convenor.selector_choices', id=student.id) }}">
-                    Show submitted choices
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a>Show submitted choices</s>
-            </li>
+
+            {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                <li>
+                    <a href="{{ url_for('convenor.student_clear_bookmarks', sid=student.id) }}">
+                        <i class="fa fa-trash"></i> Delete bookmarks
+                    </a>
+                </li>
+            {% endif %}
         {% endif %}
 
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Meeting requests</li>
         {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_pending > 0 %}
+            <li role="separator" class="divider"></li>
+            <li class="dropdown-header">Meeting requests</li>
             <li>
                 <a href="{{ url_for('convenor.student_confirm_all', sid=student.id) }}">
-                    <i class="fa fa-check"></i> Confirm all requests
+                    <i class="fa fa-check"></i> Confirm all
                 </a>
             </li>
             <li>
                 <a href="{{ url_for('convenor.student_clear_requests', sid=student.id) }}">
-                    <i class="fa fa-trash"></i> Delete all requests
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-check"></i> Confirm all requests
-                </a>
-            </li>
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-trash"></i> Delete all requests
+                    <i class="fa fa-trash"></i> Delete all
                 </a>
             </li>
         {% endif %}
 
-        <li role="separator" class="divider"></li>
-        <li class="dropdown-header">Meeting confirmations</li>
         {% if state == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN and student.number_confirmed > 0 %}
+            <li role="separator" class="divider"></li>
+            <li class="dropdown-header">Meeting confirmations</li>
             <li>
-                <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
-                    <i class="fa fa-trash"></i> Delete confirmations
-                </a>
                 <a href="{{ url_for('convenor.student_make_all_confirms_pending', sid=student.id) }}">
                     <i class="fa fa-clock-o"></i> Make all pending
                 </a>
             </li>
-        {% else %}
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-trash"></i> Delete confirmations
-                </a>
-            </li>
-            <li class="disabled">
-                <a>
-                    <i class="fa fa-clock-o"></i> Make all pending
+            <li>
+                <a href="{{ url_for('convenor.student_remove_confirms', sid=student.id) }}">
+                    <i class="fa fa-trash"></i> Delete all
                 </a>
             </li>
         {% endif %}
@@ -134,12 +112,6 @@ _menu = \
         {% if student.number_pending > 0 or student.number_confirmed > 0 %}
             <li>
                 <a href="{{ url_for('convenor.selector_confirmations', id=student.id) }}">
-                    <i class="fa fa-cogs"></i> Show confirmations
-                </a>
-            </li>
-        {% else %}
-            <li class="disabled">
-                <a>
                     <i class="fa fa-cogs"></i> Show confirmations
                 </a>
             </li>
@@ -189,7 +161,12 @@ _submitted = \
         Show ...
     </a>
 {% else %}
-    <span class="label label-danger">No</span>
+    <span class="label label-default">No</span>
+    {% if sel.is_valid_selection %}
+        <span class="label label-success">Valid selection</span>
+    {% else %}
+        <span class="label label-danger">Invalid selection</span>
+    {% endif %}
 {% endif %}
 """
 

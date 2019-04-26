@@ -295,10 +295,12 @@ class ProjectClassMixin():
                                                            'project lifecycle.',
                                                validators=[Optional()])
 
-    selection_open_to_all = BooleanField('Project selection is open to undergraduates from all programmes',
-                                         description='By default, selectors are auto-enrolled based on their degree programme. '
-                                                     'If this option is selected then degree programme will not be considered '
-                                                     'when determining whether to auto-enroll a student.')
+    selection_open_to_all = BooleanField('This is an opt-in project open to all eligible undergraduates',
+                                         description='By default, selectors are auto-enrolled based on their degree programme '
+                                                     'and participation is mandatory. '
+                                                     'If this option is selected then all selectors from eligible years will be '
+                                                     'auto-enrolled as selectors. If no project selection is made, the selector '
+                                                     'is assumed not to have opted-in.')
 
     auto_enroll_years = RadioField('Auto enroll students as selectors in which years?',
                                    choices=auto_enroll_year_choices, coerce=int)

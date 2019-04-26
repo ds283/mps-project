@@ -81,8 +81,7 @@
                 </div>
                 <div>
                     <span class="label label-success"><i class="fa fa-check"></i> Preferences received</span>
-                    <a href="{{ url_for('student.view_selection', sid=sel.id) }}"
-                       class="btn btn-link">Show selection ...</a>
+                    <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
                 </div>
             {% else %}
                 <div>You have not yet submitted your project preferences.</div>
@@ -126,12 +125,35 @@
         is now closed.
     </div>
 
-    {% if not sel.has_submitted %}
-        <p>You did not submit a valid selection before the deadline.</p>
-        {% if sel.has_bookmarks and sel.is_valid_selection %}
-            <p>Your ranked list of bookmarks was:</p>
-            <hr class="intro-divider">
-            {{ ranked_selection(sel, sel.ordered_bookmarks) }}
+    {% if sel.has_submitted %}
+        <div>
+            {% set f = sel.selections.first() %}
+            {% if f.converted_from_bookmark %}
+                <p>
+                    You did not submit a valid selection before the deadline, but your bookmark data was
+                    used to build an approximate preference list.
+                </p>
+            {% else %}
+                {% if sel.submission_time %}
+                    <p>Your preferences were received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</p>
+                {% endif %}
+                <span class="label label-success"><i class="fa fa-check"></i> Preferences received</span>
+            {% endif %}
+            <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+        </div>
+    {% else %}
+        {% if config.selection_open_to_all %}
+            <p>This project was available on an <strong>opt-in basis</strong>.</p>
+            <p>
+                You did not submit a valid selection before the deadline,
+                so we have assumed
+                that you <strong>did not intend to apply</strong> to join this project.
+            </p>
+        {% else %}
+            <p>
+                You did not submit a valid selection before the deadline. You will be allocated a project
+                after the main matching calculation has been performed.
+            </p>
         {% endif %}
     {% endif %}
 {% endmacro %}

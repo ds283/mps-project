@@ -63,24 +63,42 @@
                                 </a>
                             {% endif %}
                         </p>
-                        <span class="label label-success"><i class="fa fa-check"></i> Ready to proceed</span>
+                        <span class="label label-success"><i class="fa fa-check"></i> READY TO PROCEED</span>
                     {% elif missing == 0 %}
                         <p>
                             Some students have not yet submitted a validated selection, but all students
                             have bookmark data.
                         </p>
-                        <p>
-                            If selections are closed now, bookmark data will be used when performing
-                            automatic matching for students who are missing a validated selection.
-                        </p>
-                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Proceed with caution</span>
+                        {% if config.selection_open_to_all %}
+                            <p><strong>Selection for this project is available to all eligible students on an opt-in basis.</strong></p>
+                            <p>
+                                If selections are closed now, students who have not submitted a validated selection
+                                will be assumed not to have opted-in and will be ignored when performing
+                                automatic matching.
+                            </p>
+                        {% else %}
+                            <p>
+                                If selections are closed now, bookmark data will be used when performing
+                                automatic matching for students who are missing a validated selection.
+                            </p>
+                        {% endif %}
+                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> PROCEED WITH CAUTION</span>
                     {% else %}
                         <p>Some students are missing both a validated selection and bookmark data.</p>
-                        <p>
-                            If selections are closed now, these students will be allocated an arbitrary project
-                            during automated matching.
-                        </p>
-                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Proceed with caution</span>
+                        {% if config.selection_open_to_all %}
+                            <p><strong>Selection for this project is available to all eligible students on an opt-in basis.</strong></p>
+                            <p>
+                                If selections are closed now, students who have not submitted a validated selection
+                                will be assumed not to have opted-in and will be ignored when performing
+                                automatic matching.
+                            </p>
+                        {% else %}
+                            <p>
+                                If selections are closed now, these students will be allocated an arbitrary project
+                                during automated matching.
+                            </p>
+                        {% endif %}
+                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> PROCEED WITH CAUTION</span>
                     {% endif %}
                 </div>
             </div>

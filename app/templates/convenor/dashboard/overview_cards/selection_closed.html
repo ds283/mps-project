@@ -7,43 +7,67 @@
             {% set missing = data['missing'] %}
             {% set total = data['total'] %}
             <div class="row vertical-top">
-                <div class="col-xs-6"><strong>Have submission data</strong></div>
-                <div class="col-xs-6"><strong>Missing submission data</strong></div>
-            </div>
-            <div class="row vertical-top">
                 <div class="col-xs-6">
-                    <strong>{{ submitted }}</strong>/{{ total }}
-                    <a class="btn btn-link"
-                        href="{{ url_for('convenor.selectors', id=config.id, state_filter='submitted') }}">
-                        Show ...
-                    </a>
+                    <div class="list-group">
+                        <div class="list-group-item {% if submitted == total %}list-group-item-success{% else %}list-group-item-secondary{% endif %}">
+                            Selection data
+                            <a href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='submitted') }}">(Show ...)</a>
+                            <span class="badge">{{ submitted }}/{{ total }}</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-xs-6">
-                    <strong>{{ missing }}</strong>/{{ total }}
-                    <a class="btn btn-link"
-                        href="{{ url_for('convenor.selectors', id=config.id, state_filter='none') }}">
-                        Show ...
-                    </a>
+                    <div class="list-group">
+                        <div class="list-group-item {% if missing > 0 %}list-group-item-danger{% else %}list-group-item-success{% endif %}">
+                            Missing data
+                            <a href="{{ url_for('convenor.selectors', id=config.project_class.id, state_filter='none') }}">(Show ...)</a>
+                            <span class="badge">{{ missing }}/{{ total }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <hr class="intro-divider">
             <div class="row vertical-top">
                 <div class="col-xs-12">
                     {% if submitted == total %}
                         <p>All students submitted validated choices before selection closed.</p>
                     {% elif missing == 0 %}
-                        <p>
-                            Some students did not submit a validated selection before closure.
-                            For students who had a list of ranked bookmarks, these lists have been
-                            converted into submission data. However, these choices will be downweighted
-                            during matching in order to prioritize rankings from students who
-                            submitted a correct list of choices.
+                        <p>Some students did not submit validated choices, but all students had bookmark data.</p>
+                        {% if config.selection_open_to_all %}
+                            <p><strong>Selection for this project was available to all eligible students on an opt-in basis.</strong></p>
+                            <p>
+                                Students who have not submitted a validated selection
+                                will be assumed not to have opted-in and will be ignored when performing
+                                automatic matching.
+                            </p>
+                        {% else %}
+                            <p>
+                                Where students did not submit validated choices, their bookmark lists
+                                have been converted into submission data. These choices will be downweighted
+                                during matching in order to prioritize rankings from students who
+                                submitted a correct list of choices.
+                            </p>
+                        {% endif %}
                     {% else %}
-                        <p>
-                            Some students have missing submission data.
-                            These students will be allocated an arbitrary project
-                            during automated matching.
-                        </p>
+                        {% if config.selection_open_to_all %}
+                            <p><strong>Selection for this project was available to all eligible students on an opt-in basis.</strong></p>
+                            <p>
+                                Students who have not submitted a validated selection
+                                will be assumed not to have opted-in and will be ignored when performing
+                                automatic matching.
+                            </p>
+                        {% else %}
+                            <p>
+                                Where students did not submit validated choices, their bookmark lists
+                                have been converted into submission data. These choices will be downweighted
+                                during matching in order to prioritize rankings from students who
+                                submitted a correct list of choices.
+                            </p>
+                            <p>
+                                Some students did not have bookmark lists.
+                                These students will be allocated an arbitrary project
+                                during automated matching.
+                            </p>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>

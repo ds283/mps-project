@@ -119,15 +119,19 @@ def register_close_selection_tasks(celery):
     def selector_close(self, sel_id):
         try:
             sel = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
-
         except SQLAlchemyError:
             raise self.retry()
 
+        # if a submission already exists, sanitize it
         if sel.has_submitted:
-            return sanitize(sel)
+            sanitize(sel)
+            return
 
-        if sel.has_bookmarks:
-            return convert_bookmarks(sel)
+        # if a submission does not exist, and this is not a 'submit to subscribe' type of project
+        # (tagged by 'selection_open_to_all'), then convert bookmarks into a submission
+        if not sel.config.selection_open_to_all and sel.has_bookmarks:
+            convert_bookmarks(sel)
+            return
 
 
 def convert_bookmarks(sel):

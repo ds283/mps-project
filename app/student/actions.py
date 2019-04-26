@@ -17,6 +17,7 @@ from app.models import SelectionRecord
 def store_selection(sel):
     # delete any existing selections
     sel.selections = []
+
     # iterate through bookmarks, converting them to a selection set
     for bookmark in sel.bookmarks:
         # rank is based on 1

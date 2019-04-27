@@ -54,7 +54,7 @@ def _get_outstanding_student_confirmation_requests(user):
     # (in fact we use a cutoff of 23.5 hours so that any requests issued *exactly* 24 hours ago will
     # definitely be included)
 
-    cutoff_time = datetime.now() - timedelta(days=23.5)
+    cutoff_time = datetime.now() - timedelta(hours=23.5)
 
     # don't badger students for project classes where they've already submitted choices
     # use SelectingStudent.submission_time = None for that

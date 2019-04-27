@@ -50,7 +50,6 @@ def _enumerate_selectors(configs):
     :param configs:
     :return:
     """
-
     number = 0
     sel_to_number = {}
     number_to_sel = {}
@@ -72,7 +71,7 @@ def _enumerate_selectors(configs):
         # existing assignment.
         # So in this case too, we shouldn't forward the selector for matching
 
-        open_to_all = config.selection_open_to_all
+        opt_in_type = config.selection_open_to_all
         enroll_previous_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
         enroll_any_year = config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
         carryover = config.supervisor_carryover
@@ -88,21 +87,23 @@ def _enumerate_selectors(configs):
                 attach = True
 
             else:
-                if open_to_all and \
+                if opt_in_type and \
                         ((enroll_previous_year and item.academic_year == config.start_year - 1) or
                          (enroll_any_year and config.start_year <= item.academic_year < config.start_year + config.extent)):
                     # interpret failure to submit as lack of interest; no need to generate a match
                     pass
+
                 elif carryover and config.start_year <= item.academic_year < config.start_year + config.extent:
                     # interpret failure to submit as evidence student is happy with existing allocation
 
                     # TODO: in reality there is some overlap with the previous case, if both carryover and
-                    #  open_to_all are set. In such a case, if a student has a previous SubmittingStudent instance
+                    #  opt_in_type are set. In such a case, if a student has a previous SubmittingStudent instance
                     #  and they don't respond, they probably mean to carryover. If they don't have a SubmittingStudent
                     #  instance then they probably mean to indicate that they don't want to participate.
                     #  I can't see any way to tell the difference using only data available in this method, but also
                     #  it doesn't seem to be critical
                     pass
+
                 else:
                     # otherwise, assume a match should be generated
                     attach = True
@@ -127,7 +128,7 @@ def _enumerate_liveprojects(configs):
     matching, and assign them to consecutive numbers beginning at 0.
     Also compute CATS values for supervising and marking each project
     :param configs:
-    :return: 
+    :return:
     """
 
     number = 0

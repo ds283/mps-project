@@ -31,7 +31,7 @@ _menu = \
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Selections</li>
-        {% if student.is_valid_selection and not student.has_submitted %}
+        {% if student.is_valid_selection %}
             <li>
                 <a href="{{ url_for('convenor.submit_student_selection', sel_id=student.id) }}">
                     <i class="fa fa-paper-plane"></i> Submit selection

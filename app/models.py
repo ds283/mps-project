@@ -7015,13 +7015,13 @@ class BackupRecord(db.Model):
     filename = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
 
     # uncompressed database size, in bytes
-    db_size = db.Column(db.Integer())
+    db_size = db.Column(db.BigInteger())
 
     # compressed archive size, in bytes
-    archive_size = db.Column(db.Integer())
+    archive_size = db.Column(db.BigInteger())
 
     # total size of backups at this time, in bytes
-    backup_size = db.Column(db.Integer())
+    backup_size = db.Column(db.BigInteger())
 
 
     def type_to_string(self):

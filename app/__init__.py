@@ -24,7 +24,7 @@ from flask_debug_api import DebugAPIExtension
 from flask_sessionstore import Session
 from flask_uploads import configure_uploads, patch_request_class
 from flask import Flask
-from werkzeug.contrib.fixers import ProxyFix
+from werkzeug.middleware.proxy_fix import ProxyFix
 from .cache import cache
 from .limiter import limiter
 from .uploads import solution_files, batch_user_files
@@ -75,7 +75,7 @@ def create_app():
     # create long-lived Mongo connection for Flask-Sessionstore
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
-    app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
     if app.config.get('PROFILE_MEMORY', False):
         app.wsgi_app = Dozer(app.wsgi_app)

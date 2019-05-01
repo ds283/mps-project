@@ -438,6 +438,13 @@ def remove_bookmark(sid, pid):
 
     if bm:
         sel.bookmarks.remove(bm)
+
+        # reorder bookmarks to keep the ranking contiguous
+        rk = 1
+        for bookmark in sel.bookmarks.order_by(Bookmark.rank.asc()):
+            bookmark.rank = rk
+            rk += 1
+
         db.session.commit()
 
     return redirect(request.referrer)
@@ -550,12 +557,10 @@ def update_ranking():
     sel = SelectingStudent.query.filter_by(id=sid).first()
 
     if config is None or sel is None:
-
         return jsonify({'status': 'data_missing'})
 
     # check logged-in user is eligible to modify ranking data
     if current_user.id != sel.student.id:
-
         return jsonify({'status': 'insufficient_privileges'})
 
     projects = map(_demap_project, ranking)

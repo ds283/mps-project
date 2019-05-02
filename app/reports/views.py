@@ -175,7 +175,7 @@ def all_projects_ajax():
     return ajax.project.build_data(data, current_user.id)
 
 
-_analyse_labels = {'popularity': ('Popularity_rank', 'Popularity score'),
+_analyse_labels = {'popularity': ('Popularity rank', 'Popularity score'),
                    'views': ('Page views rank', 'Page views'),
                    'bookmarks': ('Bookmarks rank', 'Bookmarks'),
                    'selections': ('Selections rank', 'Selections')}

@@ -1,6 +1,6 @@
 {% macro bookmark_projects(sel, list) %}
     <div class="container-fluid">
-        <div class="row vertical-align bookmark-table">
+        <div class="row vertical-top bookmark-table">
             <div class="col-xs-1"><strong>Rank</strong></div>
             <div class="col-xs-5"><strong>Project title</strong></div>
             <div class="col-xs-3"><strong>Research group</strong></div>
@@ -8,7 +8,7 @@
         </div>
         {% for item in list %}
             {% set project = item.liveproject %}
-            <div class="row vertical-align final-selection-table">
+            <div class="row vertical-top final-selection-table">
                 <div class="col-xs-1">
                     <span class="label label-primary">#{{ item.rank }}</span>
                 </div>
@@ -16,6 +16,11 @@
                     <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector bookmarks view', url=url_for('convenor.selector_bookmarks', id=sel.id)) }}">
                         {{ item.format_project|safe }}
                     </a>
+                    {% if project.is_available(sel) %}
+                        <span class="label label-success"><i class="fa fa-check"></i> Available</span>
+                    {% else %}
+                        <span class="label label-danger"><i class="fa fa-times"></i> Not available</span>
+                    {% endif %}
                 </div>
                 <div class="col-xs-3">
                     {{ project.group.make_label(project.group.name)|safe }}
@@ -40,7 +45,7 @@
         </div>
 
         {% for item in list %}
-            <div class="row vertical-align bookmark-table">
+            <div class="row vertical-top bookmark-table">
                 <div class="col-xs-5">
                     {{ item.format_name|safe }}
                 </div>
@@ -52,6 +57,11 @@
                         <span class="label label-success">Yes</span>
                     {% else %}
                         <span class="label label-default">No</span>
+                    {% endif %}
+                    {% if proj.is_available(item.owner) %}
+                        <span class="label label-success"><i class="fa fa-check"></i> Available</span>
+                    {% else %}
+                        <span class="label label-danger"><i class="fa fa-times"></i> Not available</span>
                     {% endif %}
                 </div>
                 <div class="col-xs-3">
@@ -80,7 +90,7 @@
         </div>
 
         {% for item in list %}
-            <div class="row vertical-align bookmark-table">
+            <div class="row vertical-top bookmark-table">
                 <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
                     {{ item.format_name|safe }}
                 </div>
@@ -135,7 +145,7 @@
         </div>
         {% for item in list %}
             {% set project = item.liveproject %}
-            <div class="row vertical-align final-selection-table">
+            <div class="row vertical-top final-selection-table">
                 <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}>
                     <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
                     {% if item.converted_from_bookmark %}

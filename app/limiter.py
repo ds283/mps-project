@@ -8,7 +8,15 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 limiter = Limiter(key_func=get_remote_address)
+
+
+# IP whitelist
+@limiter.request_filter
+def ip_whitelist():
+    # whitelist internal Sussex IPs
+    return request.remote_addr.startswith('139.184.')

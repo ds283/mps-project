@@ -75,7 +75,8 @@ def create_app():
     # create long-lived Mongo connection for Flask-Sessionstore
     app.config['SESSION_MONGODB'] = MongoClient(host=app.config['SESSION_MONGO_URL'])
 
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+    # we have two proxies -- we're behind both waitress and nginx
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2)
 
     if app.config.get('PROFILE_MEMORY', False):
         app.wsgi_app = Dozer(app.wsgi_app)
@@ -162,7 +163,6 @@ def create_app():
     # set max upload size = 64 Mb, optimizer solution files shouldn't be larger than this
     # (though MPS files can be quite large if those are being used)
     patch_request_class(app, 64*1024*1024)
-
 
     # configure Flask-Security, which needs access to the database models for User and Role
     from app import models

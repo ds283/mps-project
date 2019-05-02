@@ -167,7 +167,7 @@ class ProductionConfig(Config):
 
     # Flask-Limiter
     # RATELIMIT_STORAGE_URL is set in instance/secrets.py
-    RATELIMIT_DEFAULT = "12000/day;500/hour"
+    RATELIMIT_DEFAULT = "500/hour;120/minute"
 
     # our own, hand-rolled profiler:
     # determine whether to use Werkzeug profiler to write a .prof to disc

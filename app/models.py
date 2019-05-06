@@ -6701,7 +6701,7 @@ class SelectionRecord(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
     # id of owning SelectingStudent
-    # note we tag the backref with 'delete-orphan' to ensure that orphaned bookmark records are automatically
+    # note we tag the backref with 'delete-orphan' to ensure that orphaned selection records are automatically
     # removed from the database
     owner_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
     owner = db.relationship('SelectingStudent', foreign_keys=[owner_id], uselist=False,
@@ -6809,7 +6809,6 @@ class SelectionRecord(db.Model):
             return
 
         if hint == SelectionRecord.SELECTION_HINT_REQUIRE:
-
             # count number of other 'require' flags attached to this selector
             count = 0
             for item in self.owner.selections:
@@ -6850,6 +6849,53 @@ def _SelectionRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         cache.delete_memoized(_MatchingAttempt_current_score)
         cache.delete_memoized(_MatchingAttempt_hint_status)
+
+
+class CustomOffer(db.Model):
+    """
+    Model a customized offer to an individual student
+    """
+
+    __tablename__ = "custom_offers"
+
+
+    # unique ID for this record
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # id of LiveProject for which this offer has been made
+    # 'cascade' is set to delete-orphan, so the LiveProject record is the notional 'owner' of this one
+    liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
+    liveproject = db.relationship('LiveProject', foreign_keys=[liveproject_id], uselist=False,
+                                  backref=db.backref('custom_offers', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+    # id of SelectingStudent to whom this custom offer has been made
+    selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
+    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False,
+                               backref=db.backref('custom_offers', lazy='dynamic'))
+
+    OFFERED = 0
+    ACCEPTED = 1
+    DECLINED = 2
+
+    # status of offer
+    status = db.Column(db.Integer(), default=OFFERED, nullable=False)
+
+
+    # EDITING METADATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
 
 
 class EmailLog(db.Model):

@@ -373,19 +373,21 @@ def register_golive_tasks(celery):
             raise self.retry()
 
         if send_summary_email:
-            recipients = [config.project_class.convenor.user.email]
+            recipients = set([config.project_class.convenor.user.email])
+            if convenor is not None:
+                recipients.add(convenor.email)
 
             for coconvenor in config.project_class.coconvenors:
-                recipients.append(coconvenor.user.email)
+                recipients.add(coconvenor.user.email)
 
             for user in config.project_class.office_contacts:
-                recipients.append(user.email)
+                recipients.add(user.email)
 
             msg = Message(subject='[mpsprojects] "{name}": project list now published to '
                                   'students'.format(name=config.project_class.name),
                           sender=current_app.config['MAIL_DEFAULT_SENDER'],
                           reply_to=current_app.config['MAIL_REPLY_TO'],
-                          recipients=recipients)
+                          recipients=list(recipients))
 
             msg.body = render_template('email/go_live/convenor.txt', pclass=config.project_class, config=config,
                                        deadline=deadline)

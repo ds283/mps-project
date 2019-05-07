@@ -8,14 +8,16 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app
+from flask import current_app, render_template
+from flask_mail import Message
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import TaskRecord, ProjectClassConfig, User, BackupRecord, SelectingStudent, \
     SelectionRecord
 
-from ..task_queue import progress_update
+from ..task_queue import progress_update, register_task
 
 from celery import chain, group
 
@@ -96,7 +98,38 @@ def register_close_selection_tasks(celery):
                                   'complete'.format(proj=config.name, yra=config.year, yrb=config.year+1),
                                   'success', autocommit=False)
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        if config is not None:
+            recipients = set([config.project_class.convenor.user.email])
+            if convenor is not None:
+                recipients.add(convenor.email)
+
+            for coconvenor in config.project_class.coconvenors:
+                recipients.add(coconvenor.user.email)
+
+            for user in config.project_class.office_contacts:
+                recipients.add(user.email)
+
+            msg = Message(subject='[mpsprojects] "{name}": student selections now '
+                                  'closed'.format(name=config.project_class.name),
+                          sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                          reply_to=current_app.config['MAIL_REPLY_TO'],
+                          recipients=list(recipients))
+
+            data = config.selector_data
+            msg.body = render_template('email/close_selection/convenor.txt', pclass=config.project_class, config=config,
+                                       data=data)
+
+            # register a new task in the database
+            task_id = register_task(msg.subject, description='Send convenor email notification')
+
+            send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+            send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
     @celery.task(bind=True)
@@ -122,14 +155,15 @@ def register_close_selection_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        # if a submission already exists, sanitize it
+        # if a submission already exists, sanitize it (check that all flags are correct)
         if sel.has_submitted:
             sanitize(sel)
             return
 
         # if a submission does not exist, and this is not a 'submit to subscribe' type of project
         # (tagged by 'selection_open_to_all'), then convert bookmarks into a submission
-        if not sel.config.selection_open_to_all and sel.has_bookmarks:
+        # provided they exist and are a valid selection. Otherwise treat as a non-submission.
+        if not sel.config.selection_open_to_all and sel.is_valid_selection:
             convert_bookmarks(sel)
             return
 

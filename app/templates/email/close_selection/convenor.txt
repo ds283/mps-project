@@ -1,0 +1,16 @@
+{%- set total = data['total'] -%}
+{%- set submitted = data['have_submitted'] -%}
+{%- set missing = data['missing'] -%}
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+
+This email is advisory only, and does not require any action.
+
+Student selections for project class "{{ pclass.name }}"
+have now been closed. Students can no longer submit preferences for this
+project type, although convenors can still make edits.
+
+Close initiated by: {{ config.closed_by.name }} at {{ config.closed_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+Total number of selectors: {{ total }}
+Successful submissions (including custom offers): {{ submitted }} = {{ (100.0*submitted/total)|round(precision=0) }}%
+Missing submissions: {{ missing }} = {{ (100.0*missing/total)|round(precision=0) }}%

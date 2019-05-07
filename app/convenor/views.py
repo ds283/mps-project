@@ -20,7 +20,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    SubmissionPeriodRecord, WorkflowMixin
+    SubmissionPeriodRecord, WorkflowMixin, CustomOffer
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -3965,7 +3965,6 @@ def student_clear_bookmarks(sid):
 @convenor.route('/confirm_rollover/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def confirm_rollover(id):
-
     # pid is a ProjectClass
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -3989,7 +3988,6 @@ def confirm_rollover(id):
 @convenor.route('/rollover/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def rollover(id):
-
     # pid is a ProjectClass
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -4027,7 +4025,6 @@ def rollover(id):
 @convenor.route('/reset_popularity_data/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def reset_popularity_data(id):
-
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -4055,7 +4052,6 @@ def reset_popularity_data(id):
 @convenor.route('/perform_reset_popularity_data/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_reset_popularity_data(id):
-
     # id is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -4072,7 +4068,6 @@ def perform_reset_popularity_data(id):
 @convenor.route('/selector_bookmarks/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def selector_bookmarks(id):
-
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
 
@@ -4086,7 +4081,6 @@ def selector_bookmarks(id):
 @convenor.route('/project_bookmarks/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def project_bookmarks(id):
-
     # id is a LiveProject
     proj = LiveProject.query.get_or_404(id)
 
@@ -4100,7 +4094,6 @@ def project_bookmarks(id):
 @convenor.route('/selector_choices/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def selector_choices(id):
-
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
 
@@ -4114,7 +4107,6 @@ def selector_choices(id):
 @convenor.route('/project_choices/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def project_choices(id):
-
     # id is a LiveProject
     proj = LiveProject.query.get_or_404(id)
 
@@ -4128,7 +4120,6 @@ def project_choices(id):
 @convenor.route('/selector_confirmations/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def selector_confirmations(id):
-
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
 
@@ -4137,6 +4128,145 @@ def selector_confirmations(id):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/student_confirmations.html', sel=sel, now=datetime.now())
+
+
+@convenor.route('/project_custom_offers/<int:proj_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def project_custom_offers(proj_id):
+    # proj_id is a LiveProject
+    proj = LiveProject.query.get_or_404(proj_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(proj.config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/selector/project_custom_offers.html', project=proj,
+                           pclass_id=proj.config.project_class.id)
+
+
+@convenor.route('/project_custom_offers_ajax/<int:proj_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def project_custom_offers_ajax(proj_id):
+    # proj_id is a LiveProject
+    proj = LiveProject.query.get_or_404(proj_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(proj.config.project_class):
+        return jsonify({})
+
+    return ajax.convenor.project_offer_data(proj.ordered_custom_offers.all())
+
+
+@convenor.route('/selector_custom_offers/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selector_custom_offers(sel_id):
+    # sel_id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    return render_template('convenor/selector/student_custom_offers.html', sel=sel,
+                           pclass_id=sel.config.project_class.id)
+
+
+@convenor.route('/selector_custom_offers_ajax/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def selector_custom_offers_ajax(sel_id):
+    # sel_id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return jsonify({})
+
+    return ajax.convenor.project_offer_data(sel.ordered_custom_offers.all())
+
+
+@convenor.route('/new_selector_offer/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def new_selector_offer(sel_id):
+    # sel_id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/new_project_offer/<int:proj_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def new_project_offer(sel_id):
+    # proj_id is a LiveProject
+    proj = LiveProject.query.get_or_404(proj_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(proj.config.project_class):
+        return redirect(request.referrer)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/accept_custom_offer/<int:offer_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def accept_custom_offer(offer_id):
+    # offer_id is a CustomOffer
+    offer = CustomOffer.query.get_or_404(offer_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(offer.liveproject.config.project_class):
+        return redirect(request.referrer)
+
+    if offer.selector.number_offers_accepted > 0:
+        flash('A custom offer has already been accepted for selector {name}'.format(name=offer.selector.student.user.name),
+              'error')
+        return redirect(request.referrer)
+
+    offer.status = CustomOffer.ACCEPTED
+    offer.last_edit_timestamp = datetime.now()
+    offer.last_edit_id = current_user.id
+
+    db.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/decline_custom_offer/<int:offer_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def decline_custom_offer(offer_id):
+    # offer_id is a CustomOffer
+    offer = CustomOffer.query.get_or_404(offer_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(offer.liveproject.config.project_class):
+        return redirect(request.referrer)
+
+    offer.status = CustomOffer.DECLINED
+    offer.last_edit_timestamp = datetime.now()
+    offer.last_edit_id = current_user.id
+
+    db.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/delete_custom_offer/<int:offer_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_custom_offer(offer_id):
+    # offer_id is a CustomOffer
+    offer = CustomOffer.query.get_or_404(offer_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(offer.liveproject.config.project_class):
+        return redirect(request.referrer)
+
+    db.delete(offer)
+    db.commit()
+
+    return redirect(request.referrer)
 
 
 @convenor.route('/project_confirmations/<int:id>')

@@ -5394,6 +5394,15 @@ class LiveProject(db.Model):
             .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
 
 
+    @property
+    def ordered_custom_offers(self):
+        return self.custom_offers \
+            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id) \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id) \
+            .join(User, User.id == StudentData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc(), CustomOffer.creation_timestamp.asc())
+
+
     def _get_popularity_attr(self, getter):
         record = self.popularity_data.order_by(PopularityRecord.datestamp.desc()).first()
 
@@ -5507,6 +5516,11 @@ class LiveProject(db.Model):
 
 
     @property
+    def number_custom_offers(self):
+        return get_count(self.custom_offers)
+
+
+    @property
     def number_selections(self):
         return get_count(self.selections)
 
@@ -5529,6 +5543,62 @@ class LiveProject(db.Model):
     @property
     def requests_confirmed(self):
         return self._is_confirmed_query.all()
+
+
+    @property
+    def _custom_offers_pending_query(self):
+        return self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED) \
+            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id) \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id) \
+            .join(User, User.id == StudentData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
+
+    @property
+    def custom_offers_pending(self):
+        return self._custom_offers_pending_query.all()
+
+
+    @property
+    def number_offers_pending(self):
+        return get_count(self._custom_offers_pending_query)
+
+
+    @property
+    def _custom_offers_declined_query(self):
+        return self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED) \
+            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id) \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id) \
+            .join(User, User.id == StudentData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
+
+
+    @property
+    def custom_offers_declined(self):
+        return self._custom_offers_declined_query.all()
+
+
+    @property
+    def number_offers_declined(self):
+        return get_count(self._custom_offers_declined_query)
+
+
+    @property
+    def _custom_offers_accepted_query(self):
+        return self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED) \
+            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id) \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id) \
+            .join(User, User.id == StudentData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
+
+
+    @property
+    def custom_offers_accepted(self):
+        return self._custom_offers_accepted_query.all()
+
+
+    @property
+    def number_offers_accepted(self):
+        return get_count(self._custom_offers_accepted_query)
 
 
     def format_popularity_label(self, css_classes=None):
@@ -5918,8 +5988,75 @@ class SelectingStudent(db.Model):
 
 
     @property
+    def ordered_custom_offers(self):
+        return self.custom_offers \
+            .order_by(CustomOffer.creation_timestamp.asc())
+
+
+    @property
     def number_bookmarks(self):
         return get_count(self.bookmarks)
+
+
+    @property
+    def number_custom_offers(self):
+        return get_count(self.custom_offers)
+
+
+    @property
+    def _custom_offers_pending_query(self):
+        return self.custom_offers.filter(CustomOffer.status == CustomOffer.OFFERED) \
+            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id) \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id) \
+            .join(User, User.id == StudentData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
+
+    @property
+    def custom_offers_pending(self):
+        return self._custom_offers_pending_query.all()
+
+
+    @property
+    def number_offers_pending(self):
+        return get_count(self._custom_offers_pending_query)
+
+
+    @property
+    def _custom_offers_declined_query(self):
+        return self.custom_offers.filter(CustomOffer.status == CustomOffer.DECLINED) \
+            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id) \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id) \
+            .join(User, User.id == StudentData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
+
+
+    @property
+    def custom_offers_declined(self):
+        return self._custom_offers_declined_query.all()
+
+
+    @property
+    def number_offers_declined(self):
+        return get_count(self._custom_offers_declined_query)
+
+
+    @property
+    def _custom_offers_accepted_query(self):
+        return self.custom_offers.filter(CustomOffer.status == CustomOffer.ACCEPTED) \
+            .join(SelectingStudent, SelectingStudent.id == CustomOffer.selector_id) \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id) \
+            .join(User, User.id == StudentData.id) \
+            .order_by(User.last_name.asc(), User.first_name.asc())
+
+
+    @property
+    def custom_offers_accepted(self):
+        return self._custom_offers_accepted_query.all()
+
+
+    @property
+    def number_offers_accepted(self):
+        return get_count(self._custom_offers_accepted_query)
 
 
     @property
@@ -5997,15 +6134,41 @@ class SelectingStudent(db.Model):
         Determine whether a submission has been made
         :return:
         """
-        return get_count(self.selections) > 0
+        # have made a selection if have accepted a custom offer
+        if self.number_offers_accepted > 0:
+            return True
+
+        # have made a selection if submitted a list of choices:
+        if get_count(self.selections) > 0:
+            return True
+
+        return False
 
 
     def is_project_submitted(self, proj):
-        return get_count(self.selections.filter_by(liveproject_id=proj.id)) > 0
+        if isinstance(proj, int):
+            proj_id = proj
+        elif isinstance(proj, LiveProject):
+            proj_id = proj.id
+        else:
+            raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
+
+        if self.number_offers_accepted > 0:
+            accepted_offer = self.accepted_offer
+            return proj_id == accepted_offer.liveproject.id
+
+        return get_count(self.selections.filter_by(liveproject_id=proj_id)) > 0
 
 
     def is_project_bookmarked(self, proj):
-        return get_count(self.bookmarks.filter_by(liveproject_id=proj.id)) > 0
+        if isinstance(proj, int):
+            proj_id = proj
+        elif isinstance(proj, LiveProject):
+            proj_id = proj.id
+        else:
+            raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
+
+        return get_count(self.bookmarks.filter_by(liveproject_id=proj_id)) > 0
 
 
     @property
@@ -6013,18 +6176,37 @@ class SelectingStudent(db.Model):
         return self.selections.order_by(SelectionRecord.rank)
 
 
-    def project_rank(self, proj_id):
+    def project_rank(self, proj):
         # ignore bookmarks; these will have been converted to
         # SelectionRecords after closure if needed, and project_rank() is only really
         # meaningful once selections have closed
+        if isinstance(proj, int):
+            proj_id = proj
+        elif isinstance(proj, LiveProject):
+            proj_id = proj.id
+        else:
+            raise RuntimeError('Could not interpret "proj" parameter of type {x}'.format(x=type(proj)))
 
-        if self.has_submitted:
-            for item in self.selections.all():
-                if item.liveproject_id == proj_id:
-                    return item.rank
+        if not self.has_submitted:
             return None
 
+        if self.number_offers_accepted > 0:
+            accepted_offer = self.accepted_offer
+            if accepted_offer.liveproject.id == proj_id:
+                return 1
+
+            return None
+
+        for item in self.selections.all():
+            if item.liveproject_id == proj_id:
+                return item.rank
+
         return None
+
+
+    @property
+    def accepted_offer(self):
+        return self.ordered_custom_offers.filter_by(status=CustomOffer.ACCEPTED).first()
 
 
     def satisfies_recommended(self, desc):

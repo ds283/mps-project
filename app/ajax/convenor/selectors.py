@@ -28,6 +28,11 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+        <li>
+            <a href="{{ url_for('convenor.selector_custom_offers', sel_id=student.id) }}">
+                <i class="fa fa-cogs"></i> Custom offers...
+            </a>
+        </li>
 
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">Selections</li>
@@ -168,6 +173,14 @@ _submitted = \
         <span class="label label-danger">Invalid selection</span>
     {% endif %}
 {% endif %}
+{% set offers = sel.number_offers_accepted %}
+{% if offers > 0 %}
+    <div>
+        {% for offer in project.custom_offers_pending %}
+            <span class="label label-success">Accepted: {{ offer.liveproject.name }}</span>
+        {% endfor %}
+    </div>
+{% endif %}
 """
 
 _confirmations = \
@@ -182,6 +195,17 @@ _confirmations = \
     </a>
 {% else %}
     <span class="label label-default">None</span>
+{% endif %}
+{% set offers = sel.number_offers_pending + sel.number_offers_declined %}
+{% if offers > 0 %}
+    <div>
+        {% for offer in sel.custom_offers_pending %}
+            <span class="label label-primary">Offer: {{ offer.liveproject.name }}</span>
+        {% endfor %}
+        {% for offer in sel.custom_offers_declined %}
+            <span class="label label-default">Declined: {{ offer.liveproject.name }}</span>
+        {% endfor %}
+    </div>
 {% endif %}
 """
 

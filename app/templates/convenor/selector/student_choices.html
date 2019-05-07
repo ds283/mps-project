@@ -23,13 +23,30 @@
                         </div>
                     {% endif %}
                     {% if sel.has_submitted %}
-                        <div class="well">
-                            Last submission received at
-                            <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
-                            from IP address
-                            <strong>{{ sel.submission_IP }}</strong>
-                        </div>
-                        {{ ranked_selection(sel, sel.ordered_selections, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) }}
+                        {% if sel.has_accepted_offer %}
+                            {% set offer = sel.accepted_offer %}
+                            {% set project = offer.liveproject %}
+                            {% if project is not none %}
+                                <div>
+                                    {{ sel.student.user.name }} has accepted a custom offer for
+                                    the project
+                                    <strong>{{ project.name }}</strong>
+                                    supervised by
+                                    <i class="fa fa-user"></i> {{ project.owner.user.name }}
+                                </div>
+                            {% else %}
+                                <span class="label label-danger">MISSING ACCEPTED PROJECT</span>
+                                <p>This is an internal error. Please contact a system administrator.</p>
+                            {% endif %}
+                        {% else %}
+                            <div class="well">
+                                Last submission received at
+                                <strong>{{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}</strong>
+                                from IP address
+                                <strong>{{ sel.submission_IP }}</strong>
+                            </div>
+                            {{ ranked_selection(sel, sel.ordered_selections, lifecycle >= config.SELECTOR_LIFECYCLE_READY_MATCHING) }}
+                        {% endif %}
                     {% else %}
                         No preferences have been received for this student.
                     {% endif %}

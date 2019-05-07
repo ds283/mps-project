@@ -24,7 +24,7 @@ from .actions import store_selection
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SubmissionRecord, TransferableSkill, \
-    User, EmailNotification, add_notification
+    User, EmailNotification, add_notification, CustomOffer
 from ..task_queue import register_task
 
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count
@@ -680,10 +680,75 @@ def do_clear_submission(sid):
     return home_dashboard()
 
 
+@student.route('/manage_custom_offers/<int:sel_id>')
+@roles_required('student')
+def manage_custom_offers(sel_id):
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    # verify logged-in user is the selector
+    if current_user.id != sel.student_id:
+        flash('You do not have permission to manage custom offers for this selector.', 'error')
+        return home_dashboard()
+
+    return render_template('student/manage_custom_offers.html', sel=sel)
+
+
+@student.route('/accept_custom_offer/<int:offer_id>')
+@roles_required('student')
+def accept_custom_offer(offer_id):
+    offer = CustomOffer.query.get_or_404(offer_id)
+
+    sel = offer.selector
+
+    # verify logged-in user is the selector
+    if current_user.id != sel.student_id:
+        flash('You do not have permission to manage custom offers for this selector.', 'error')
+        return home_dashboard()
+
+    # reset any previous acceptances
+    accepted = sel.custom_offers.filter_by(status=CustomOffer.ACCEPTED).all()
+    for offer in accepted:
+        offer.status = CustomOffer.OFFERED
+
+    offer.status = CustomOffer.ACCEPTED
+    offer.last_edit_timestamp = datetime.now()
+    offer.last_edit_id = current_user.id
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        flash('Could not accept custom offer due to a database error. Please inform a system administrator.', 'info')
+
+    return home_dashboard()
+
+
+@student.route('/decline_custom_offer/<int:offer_id>')
+@roles_required('student')
+def decline_custom_offer(offer_id):
+    offer = CustomOffer.query.get_or_404(offer_id)
+
+    sel = offer.selector
+
+    # verify logged-in user is the selector
+    if current_user.id != sel.student_id:
+        flash('You do not have permission to manage custom offers for this selector.', 'error')
+        return home_dashboard()
+
+    offer.status = CustomOffer.DECLINED
+    offer.last_edit_timestamp = datetime.now()
+    offer.last_edit_id = current_user.id
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        flash('Could not decline custom offer due to a database error. Please inform a system administrator.', 'info')
+
+    return home_dashboard()
+
+
 @student.route('/view_selection/<int:sid>')
 @roles_accepted('student', 'admin', 'root')
 def view_selection(sid):
-
     sel = SelectingStudent.query.get_or_404(sid)
 
     # verify the logged-in user is allowed to perform operations for this SelectingStudent

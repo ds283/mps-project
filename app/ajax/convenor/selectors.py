@@ -161,10 +161,20 @@ _bookmarks = \
 _submitted = \
 """
 {% if sel.has_submitted %}
-    <span class="label label-success">Yes</span>
-    <a href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
-        Show ...
-    </a>
+    {% if sel.has_submission_list %}
+        <span class="label label-success">Yes</span>
+        <a href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
+            Show ...
+        </a>
+    {% endif %}
+    {% set offers = sel.number_offers_accepted %}
+    {% if offers > 0 %}
+        <div>
+            {% for offer in sel.custom_offers_accepted %}
+                <span class="label label-success">Accepted: {{ offer.liveproject.name }}</span>
+            {% endfor %}
+        </div>
+    {% endif %}
 {% else %}
     <span class="label label-default">No</span>
     {% if sel.is_valid_selection %}
@@ -172,14 +182,6 @@ _submitted = \
     {% else %}
         <span class="label label-danger">Invalid selection</span>
     {% endif %}
-{% endif %}
-{% set offers = sel.number_offers_accepted %}
-{% if offers > 0 %}
-    <div>
-        {% for offer in project.custom_offers_pending %}
-            <span class="label label-success">Accepted: {{ offer.liveproject.name }}</span>
-        {% endfor %}
-    </div>
 {% endif %}
 """
 

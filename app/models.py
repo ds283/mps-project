@@ -6060,6 +6060,16 @@ class SelectingStudent(db.Model):
 
 
     @property
+    def has_accepted_offer(self):
+        return self.number_offers_accepted > 0
+
+
+    @property
+    def has_submission_list(self):
+        return get_count(self.selections) > 0
+
+
+    @property
     def academic_year(self):
         """
         Compute the current academic year for this student, relative to our ProjectClassConfig record
@@ -6135,11 +6145,11 @@ class SelectingStudent(db.Model):
         :return:
         """
         # have made a selection if have accepted a custom offer
-        if self.number_offers_accepted > 0:
+        if self.has_accepted_offer:
             return True
 
         # have made a selection if submitted a list of choices:
-        if get_count(self.selections) > 0:
+        if self.has_submission_list:
             return True
 
         return False

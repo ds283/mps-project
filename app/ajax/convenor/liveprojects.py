@@ -40,7 +40,7 @@ _selections = \
 {% set offers = project.number_offers_accepted %}
 {% if offers > 0 %}
     <div>
-        {% for offer in project.custom_offers_pending %}
+        {% for offer in project.custom_offers_accepted %}
             <span class="label label-success">Accepted: {{ offer.selector.student.user.name }}</span>
         {% endfor %}
     </div>

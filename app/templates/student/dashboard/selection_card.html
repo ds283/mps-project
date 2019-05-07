@@ -76,13 +76,29 @@
     <div class="row vertical-top">
         <div class="col-xs-6">
             {% if sel.has_submitted %}
-                <div>
-                    You have already submitted a valid list of project preferences.
-                </div>
-                <div>
-                    <span class="label label-success"><i class="fa fa-check"></i> Preferences received</span>
-                    <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
-                </div>
+                {% if sel.has_accepted_offer %}
+                    {% set offer = sel.accepted_offer %}
+                    {% set project = offer.liveproject %}
+                    {% if project is not none %}
+                        <div>
+                            You have accepted a custom offer for the project
+                            <strong>{{ project.name }}</strong>
+                            supervised by
+                            <i class="fa fa-user"></i> {{ project.owner.user.name }}
+                        </div>
+                    {% else %}
+                        <span class="label label-danger">MISSING ACCEPTED PROJECT</span>
+                        <p>This is an internal error. Please contact a system administrator.</p>
+                    {% endif %}
+                {% else %}
+                    <div>
+                        You have already submitted a valid list of project preferences.
+                    </div>
+                    <div>
+                        <span class="label label-success"><i class="fa fa-check"></i> Preferences received</span>
+                        <a href="{{ url_for('student.view_selection', sid=sel.id) }}">Show selection...</a>
+                    </div>
+                {% endif %}
             {% else %}
                 <div>You have not yet submitted your project preferences.</div>
             {% endif %}
@@ -90,7 +106,7 @@
         <div class="col-xs-6" style="text-align: right;">
             <div class="pull-right">
                 <a href="{{ url_for('student.browse_projects', id=sel.id) }}" class="btn btn-success student-dashboard-button">Show available projects</a>
-                {% if sel.has_submitted %}
+                {% if sel.has_submission_list %}
                     <a class="btn btn-default student-dashboard-button" href="{{ url_for('student.clear_submission', sid=sel.id) }}">
                         Clear submission
                     </a>
@@ -108,11 +124,13 @@
             </div>
         </div>
     </div>
-    {% if sel.has_submitted %}
+    {% if sel.has_submission_list %}
         <div class="row">
             <div class="col-xs-12">
                 <div>You may continue to revise your list up to the deadline.</div>
-                <div>Last submission received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</div>
+                {% if sel.submission_time %}
+                    <div>Last submission received at {{ sel.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}.</div>
+                {% endif %}
             </div>
         </div>
     {% endif %}
@@ -269,14 +287,20 @@
                                 {% set numpl = '' %}
                             {% endif %}
                             {% if sel.is_optional %}
-                                <p>Select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
-                                    It is not possible to guarantee that you will be assigned your highest-priority choices.</p>
+                                <p>
+                                    Select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                    It is not possible to guarantee that you will be assigned your highest-priority choices.
+                                </p>
                               {% else %}
                                 {% if sel.is_initial_selection %}
-                                    <p>Select at least <strong>{{ num_choices }}</strong> projects.
-                                        It is not possible to guarantee that you will be assigned your highest-priority choices.</p>
+                                    <p>
+                                        Select at least <strong>{{ num_choices }}</strong> projects.
+                                        It is not possible to guarantee that you will be assigned your highest-priority choices.
+                                    </p>
                                  {% else %}
-                                    <p>To change supervisor, select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.</p>
+                                    <p>
+                                        To change supervisor, select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                    </p>
                                 {% endif %}
                             {% endif %}
                             <p>
@@ -291,6 +315,19 @@
                     {{ render_bookmarks(config, sel) }}
                 {% endif %}
                 <hr class="intro-divider">
+                {% if sel.number_custom_offers > 0 %}
+                    <div class="row vertical-align">
+                        <div class="col-xs-8">
+                            <strong>You have custom offers available.</strong>
+                        </div>
+                        <div class="col-xs-4">
+                            <div class="pull-right">
+                                <a href="{{ url_for('student.manage_custom_offers', sel_id=sel.id) }}" class="btn btn-default">Manage offers</a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="intro-divider">
+                {% endif %}
                 {{ show_submission_status(config, sel) }}
 
             {% elif config.selection_closed %}

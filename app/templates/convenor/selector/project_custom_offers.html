@@ -19,7 +19,12 @@
                 ajax: { 'url': $SCRIPT_ROOT + '/convenor/project_custom_offers_ajax/{{ project.id }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
-                    { data: 'student' },
+                    { data: 'student',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                    } },
                     { data: 'timestamp',
                       render: {
                         _: 'display',

@@ -26,9 +26,16 @@ _student = \
 
 _project = \
 """
-<a href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.student_custom_offers', sel_id=sel.id), text='selector custom offers') }}">
+<a href="{{ url_for('faculty.live_project', pid=proj.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id), text='selector custom offers') }}">
     {{ proj.name }}
 </a>
+"""
+
+
+_owner = \
+"""
+<a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a>
+{{ project.group.make_label()|safe }}
 """
 
 
@@ -63,7 +70,7 @@ _menu = \
             <li>
             <li>
                 <a href="{{ url_for('convenor.decline_custom_offer', offer_id=offer.id) }}">
-                    <i class="fa fa-check"></i> Decline
+                    <i class="fa fa-times"></i> Decline
                 </a>
             <li>
         {% elif status == offer.DECLINED and not offer.selector.has_submitted %}
@@ -90,8 +97,61 @@ _menu = \
 """
 
 
+_selector_offers = \
+"""
+{% for offer in record.custom_offers_accepted %}
+    <span class="label label-success">Accepted: {{ offer.liveproject.name }} ({{offer.liveproject.owner.user.last_name }})</span>
+{% endfor %}
+{% for offer in record.custom_offers_pending %}
+    <span class="label label-primary">Offer: {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
+{% endfor %}
+{% for offer in record.custom_offers_declined %}
+    <span class="label label-danger">Declined: {{ offer.liveproject.name }} ({{ offer.liveproject.owner.user.last_name }})</span>
+{% endfor %}
+"""
+
+
+_project_offers = \
+"""
+{% for offer in record.custom_offers_accepted %}
+    <span class="label label-success">Accepted: {{ offer.selector.student.user.name }}</span>
+{% endfor %}
+{% for offer in record.custom_offers_pending %}
+    <span class="label label-primary">Offer: {{ offer.selector.student.user.name }}</span>
+{% endfor %}
+{% for offer in record.custom_offers_declined %}
+    <span class="label label-danger">Declined: {{ offer.selector.student.user.name }}</span>
+{% endfor %}
+"""
+
+
+_sel_actions = \
+"""
+<div class="pull-right">
+    <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.selector_custom_offers', sel_id=sel.id)) }}"
+       class="btn btn-sm btn-default">
+       Make offer
+    </a>
+</div>
+"""
+
+
+_proj_actions = \
+"""
+<div class="pull-right">
+    <a href="{{ url_for('convenor.create_new_offer', proj_id=project.id, sel_id=sel.id, url=url_for('convenor.project_custom_offers', proj_id=project.id)) }}"
+       class="btn btn-sm btn-default">
+       Make offer
+    </a>
+</div>
+"""
+
+
 def project_offer_data(items):
-    data = [{'student': render_template_string(_student, sel=item.selector),
+    data = [{'student': {
+                 'display': render_template_string(_student, sel=item.selector),
+                 'sortvalue': item.selector.student.user.last_name + item.selector.student.user.first_name
+             },
              'timestamp': {
                  'display': item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"),
                  'timestamp': item.creation_timestamp.timestamp()
@@ -99,7 +159,7 @@ def project_offer_data(items):
              'status': {
                  'display': render_template_string(_status, offer=item),
                  'sortvalue': '{x}_{y}'.format(x=item.status,
-                                               y=item.last_edit_time.timestamp() if item.last_edit_time is not None else 0)
+                                               y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0)
              },
              'menu': render_template_string(_menu, offer=item)} for item in items]
 
@@ -108,6 +168,10 @@ def project_offer_data(items):
 
 def student_offer_data(items):
     data = [{'project': render_template_string(_project, sel=item.selector, proj=item.liveproject),
+             'owner': {
+                 'display': render_template_string(_owner, project=item.liveproject),
+                 'sortvalue': item.liveproject.owner.user.last_name + item.liveproject.owner.user.first_name
+             },
              'timestamp': {
                  'display': item.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S"),
                  'timestamp': item.creation_timestamp.timestamp()
@@ -115,8 +179,31 @@ def student_offer_data(items):
              'status': {
                  'display': render_template_string(_status, offer=item),
                  'sortvalue': '{x}_{y}'.format(x=item.status,
-                                               y=item.last_edit_time.timestamp() if item.last_edit_time is not None else 0)
+                                               y=item.last_edit_timestamp.timestamp() if item.last_edit_timestamp is not None else 0)
              },
              'menu': render_template_string(_menu, offer=item)} for item in items]
+
+    return jsonify(data)
+
+
+def project_offer_selectors(selectors, project):
+    data = [{'student': {
+                 'display': render_template_string(_student, sel=sel),
+                 'sortvalue': sel.student.user.last_name + sel.student.user.first_name
+            },
+            'offers': render_template_string(_selector_offers, record=sel),
+            'actions': render_template_string(_proj_actions, sel=sel, project=project)} for sel in selectors]
+
+    return jsonify(data)
+
+
+def student_offer_projects(projects, sel):
+    data = [{'project': render_template_string(_project, sel=sel, proj=project),
+             'owner': {
+                 'display': render_template_string(_owner, project=project),
+                 'sortvalue': project.owner.user.last_name + project.owner.user.first_name
+             },
+             'offers': render_template_string(_project_offers, record=project),
+             'actions': render_template_string(_sel_actions, sel=sel, project=project)} for project in projects]
 
     return jsonify(data)

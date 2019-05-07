@@ -20,6 +20,12 @@
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'project' },
+                    { data: 'owner',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                    } },
                     { data: 'timestamp',
                       render: {
                         _: 'display',
@@ -52,14 +58,15 @@
     </div>
 
    <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Edit custom offers for <i class="fa fa-user"></i> <strong>{{ sel.student.user.name }}</strong></strong></div>
+        <div class="panel-heading">Edit custom offers for <i class="fa fa-user"></i> <strong>{{ sel.student.user.name }}</strong></div>
         <div class="panel-body">
             <table id="custom-offers-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="30%"> Project</th>
-                    <th width="25%"> Timestamp</th>
-                    <th width="30%"> Status</th>
+                    <th width="25%"> Project</th>
+                    <th width="25%"> Owner</th>
+                    <th width="15%"> Timestamp</th>
+                    <th width="20%"> Status</th>
                     <th width="15%"> Actions</th>
                 </tr>
                 </thead>

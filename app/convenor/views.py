@@ -4181,7 +4181,7 @@ def selector_custom_offers_ajax(sel_id):
     if not validate_is_convenor(sel.config.project_class):
         return jsonify({})
 
-    return ajax.convenor.project_offer_data(sel.ordered_custom_offers.all())
+    return ajax.convenor.student_offer_data(sel.ordered_custom_offers.all())
 
 
 @convenor.route('/new_selector_offer/<int:sel_id>')
@@ -4194,12 +4194,29 @@ def new_selector_offer(sel_id):
     if not validate_is_convenor(sel.config.project_class):
         return redirect(request.referrer)
 
-    return redirect(request.referrer)
+    return render_template('convenor/selector/student_new_offer.html', sel=sel,
+                           pclass_id=sel.config.project_class.id)
+
+
+@convenor.route('/new_selector_offer_ajax/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def new_selector_offer_ajax(sel_id):
+    # sel_id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(sel.config.project_class):
+        return jsonify({})
+
+    config = sel.config
+    projects = config.live_projects.filter(~LiveProject.custom_offers.any(selector_id=sel_id))
+
+    return ajax.convenor.student_offer_projects(projects.all(), sel)
 
 
 @convenor.route('/new_project_offer/<int:proj_id>')
 @roles_accepted('faculty', 'admin', 'root')
-def new_project_offer(sel_id):
+def new_project_offer(proj_id):
     # proj_id is a LiveProject
     proj = LiveProject.query.get_or_404(proj_id)
 
@@ -4207,7 +4224,69 @@ def new_project_offer(sel_id):
     if not validate_is_convenor(proj.config.project_class):
         return redirect(request.referrer)
 
-    return redirect(request.referrer)
+    return render_template('convenor/selector/project_new_offer.html', project=proj,
+                           pclass_id=proj.config.project_class.id)
+
+
+@convenor.route('/new_project_offer_ajax/<int:proj_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def new_project_offer_ajax(proj_id):
+    # proj_id is a LiveProject
+    proj = LiveProject.query.get_or_404(proj_id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(proj.config.project_class):
+        return jsonify({})
+
+    # get list of available selectors
+    config = proj.config
+    selectors = config.selecting_students.filter(~SelectingStudent.custom_offers.any(liveproject_id=proj_id))
+
+    return ajax.convenor.project_offer_selectors(selectors.all(), proj)
+
+
+@convenor.route('/create_new_offer/<int:sel_id>/<int:proj_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def create_new_offer(sel_id, proj_id):
+    # proj_id is a LiveProject
+    proj = LiveProject.query.get_or_404(proj_id)
+
+    # sel_id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('convenor.overview', id=proj.config.project_class.id)
+
+    # check project and selector belong to the same project class
+    if proj.config_id != sel.config_id:
+        flash('Project "{pname}" and selector "{sname}" do not belong to the same project class, so a '
+              'custom offer cannot be created for this pair.'.format(pname=proj.name, sname=sel.student.user.name),
+              'error')
+        return redirect(url)
+
+    # check whether an offer with this selector and project already exists
+    q = db.session.query(CustomOffer).filter(CustomOffer.liveproject_id == proj_id,
+                                             CustomOffer.selector_id == sel_id)
+    if get_count(q) > 0:
+        flash('A request to create a custom offer for project "{pname}" and selector "{sname}" was ignored, '
+              'because an offer for this pair already exists'.format(pname=proj.name, sname=sel.student.user.name),
+              'info')
+        return redirect(url)
+
+    offer = CustomOffer(liveproject_id=proj.id,
+                        selector_id=sel.id,
+                        status=CustomOffer.OFFERED,
+                        creator_id=current_user.id,
+                        creation_timestamp=datetime.now())
+
+    try:
+        db.session.add(offer)
+        db.session.commit()
+    except SQLAlchemyError:
+        flash('Could not create custom offer due to a database error. Please contact a system administrator', 'error')
+
+    return redirect(url)
 
 
 @convenor.route('/accept_custom_offer/<int:offer_id>')
@@ -4229,7 +4308,7 @@ def accept_custom_offer(offer_id):
     offer.last_edit_timestamp = datetime.now()
     offer.last_edit_id = current_user.id
 
-    db.commit()
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -4248,7 +4327,7 @@ def decline_custom_offer(offer_id):
     offer.last_edit_timestamp = datetime.now()
     offer.last_edit_id = current_user.id
 
-    db.commit()
+    db.session.commit()
 
     return redirect(request.referrer)
 
@@ -4263,8 +4342,8 @@ def delete_custom_offer(offer_id):
     if not validate_is_convenor(offer.liveproject.config.project_class):
         return redirect(request.referrer)
 
-    db.delete(offer)
-    db.commit()
+    db.session.delete(offer)
+    db.session.commit()
 
     return redirect(request.referrer)
 

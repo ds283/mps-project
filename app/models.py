@@ -3392,7 +3392,7 @@ class ProjectClassConfig(db.Model):
         AFTER SELECTIONS ARE CLOSED,
         we report the total number of selectors, the number who made submissions,
         and the number who are entirely missing. This is because bookmarks are converted to SelectionRecords
-        on project closure, if needed.
+        on project closure, if possible (ie. the bookmarks formed a valid submission).
         :return:
         """
 

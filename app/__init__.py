@@ -43,7 +43,6 @@ import app.tasks as tasks
 from sqlalchemy.exc import SQLAlchemyError
 
 from mdx_smartypants import makeExtension
-from bleach_whitelist.bleach_whitelist import markdown_tags, markdown_attrs
 import latex2markdown
 from urllib import parse
 

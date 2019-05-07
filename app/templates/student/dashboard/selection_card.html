@@ -115,11 +115,11 @@
                 <a id="P{{ config.id }}-valid-button"
                    class="btn btn-primary {% if not is_valid %}hidden{% endif %} student-dashboard-button"
                    href="{{ url_for('student.submit', sid=sel.id) }}">
-                    {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
+                    {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
                 </a>
                 <a id="P{{ config.id }}-invalid-button"
                    class="btn btn-primary disabled {% if is_valid %}hidden{% endif %} student-dashboard-button">
-                    {% if sel.has_submitted %}Resubmit{% else %}Submit{% endif %} selection
+                    {% if sel.has_submission_list %}Resubmit{% else %}Submit{% endif %} selection
                 </a>
             </div>
         </div>

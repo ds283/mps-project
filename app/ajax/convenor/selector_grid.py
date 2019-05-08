@@ -64,7 +64,18 @@ _selections = \
         {% endfor %}
     {% endif %}
 {% else %}
-    <span class="label label-default">None</span>
+    <div class="row vertical-align">
+        <div class="col-xs-12">
+            {% if sel.number_bookmarks >= sel.number_choices %}
+                <span class="label label-info">Bookmarks available</span>
+                <a href="{{ url_for('convenor.force_convert_bookmarks', sel_id=sel.id) }}">
+                    Force conversion...
+                </a>
+            {% else %}
+                <span class="label label-default">None</span>
+            {% endif %}
+        </div>
+    </div>
 {% endif %}
 """
 

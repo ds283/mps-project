@@ -180,6 +180,7 @@ def convert_bookmarks(sel):
     sel.submission_time = datetime.now()
     sel.submission_IP = None
 
+    # allow exceptions to propagate up to calling function
     db.session.commit()
 
 
@@ -191,4 +192,5 @@ def sanitize(sel):
         if item.hint != SelectionRecord.SELECTION_HINT_NEUTRAL:
             item.hint = SelectionRecord.SELECTION_HINT_NEUTRAL
 
+    # allow exceptions to propagate up to calling function
     db.session.commit()

@@ -5734,3 +5734,46 @@ def update_CATS(config_id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@convenor.route('/force_convert_bookmarks/<int:sel_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def force_convert_bookmarks(sel_id):
+    # sel_id is a SelectingStudent
+    sel = SelectingStudent.query.get_or_404(sel_id)
+
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    if sel.config.selector_lifecycle <= ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        flash('Forced conversion of bookmarks can only be performed after student selections are closed.', 'info')
+        return redirect(request.referrer)
+
+    if sel.has_submitted:
+        flash('Cannot force conversion of bookmarks for selector "{name}" because an existing submission '
+              'exists.'.format(name=sel.student.user.name), 'error')
+        return redirect(request.referrer)
+
+    if sel.number_bookmarks < sel.number_choices:
+        flash('Cannot force conversion of bookmarks for selector "{name}" because too few bookmarks '
+              'exist.'.format(name=sel.student.user.name), 'error')
+        return redirect(request.referrer)
+
+    for item in sel.ordered_bookmarks:
+        data = SelectionRecord(owner_id=item.owner_id,
+                               liveproject_id=item.liveproject_id,
+                               rank=item.rank,
+                               converted_from_bookmark=True,
+                               hint=SelectionRecord.SELECTION_HINT_NEUTRAL)
+        db.session.add(data)
+
+    sel.submission_time = datetime.now()
+    sel.submission_IP = None
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        flash('Could not force conversion of bookmarks for selector "{name}" because of a database error. '
+              'Please contact a system administrator.'.format(name=sel.student.user.name), 'error')
+
+    return redirect(request.referrer)

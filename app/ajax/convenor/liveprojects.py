@@ -17,7 +17,7 @@ _bookmarks = \
 {% if bookmarks > 0 %}
     <span class="label label-info">{{ bookmarks }}</span>
     <a href="{{ url_for('convenor.project_bookmarks', id=project.id) }}">
-       Show ...
+       Show...
    </a>
 {% else %}
     <span class="label label-default">None</span>
@@ -31,7 +31,7 @@ _selections = \
     {% if selections > 0 %}
         <span class="label label-primary">{{ selections }}</span>
         <a href="{{ url_for('convenor.project_choices', id=project.id) }}">
-            Show ...
+            Show...
         </a>
     {% else %}
         <span class="label label-default">None</span>
@@ -56,7 +56,7 @@ _confirmations = \
     {% if pending > 0 %}<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending {{ pending }}</span>{% endif %}
     {% if pending > 0 or confirmed > 0 %}
         <a href="{{ url_for('convenor.project_confirmations', id=project.id) }}">
-            Show ...
+            Show...
         </a>
     {% else %}
         <span class="label label-default">None</span>

@@ -151,7 +151,7 @@ _bookmarks = \
 {% if count > 0 %}
     <span class="label label-primary">{{ count }}</span>
     <a href="{{ url_for('convenor.selector_bookmarks', id=sel.id) }}">
-        Show ...
+        Show...
     </a>
 {% else %}
     <span class="label label-default">None</span>
@@ -164,7 +164,7 @@ _submitted = \
     {% if sel.has_submission_list %}
         <span class="label label-success">Yes</span>
         <a href="{{ url_for('convenor.selector_choices', id=sel.id) }}">
-            Show ...
+            Show...
         </a>
     {% endif %}
     {% set offers = sel.number_offers_accepted %}
@@ -193,7 +193,7 @@ _confirmations = \
 {% if pending > 0 %}<span class="label label-warning"><i class="fa fa-clock-o"></i> Pending {{ pending }}</span>{% endif %}
 {% if pending > 0 or confirmed > 0 %}
     <a href="{{ url_for('convenor.selector_confirmations', id=sel.id) }}">
-        Show ...
+        Show...
     </a>
 {% else %}
     <span class="label label-default">None</span>

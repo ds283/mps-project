@@ -23,7 +23,6 @@ from uuid import uuid1
 
 
 def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
-
     self.update_state(state='STARTED',
                       meta='Looking up current project class configuration for id={id}'.format(id=cid))
 
@@ -43,7 +42,6 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
     lowest_rank = None
 
     try:
-
         # dig out PopularityRecords with given datestamp and config_id
         if query.count() != num_live:
             raise RuntimeError('Number of records in group is incorrect: '
@@ -54,7 +52,6 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
         current_value = None
 
         try:
-
             records = query.all()
             for record in records:
 
@@ -74,20 +71,16 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
             db.session.commit()
 
         except SQLAlchemyError:
-
             db.session.rollback()
             raise
 
     except SQLAlchemyError:
-
         raise self.retry()
 
     except RuntimeError:
-
         raise self.retry()
 
     self.update_state(state='SUCCESS')
-
     return lowest_rank
 
 
@@ -95,11 +88,9 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_popularity_data(self, liveid, datestamp, uuid, num_live):
-
         self.update_state(state='STARTED', meta='Computing popularity score')
 
         try:
-
             data = db.session.query(LiveProject).filter_by(id=liveid).one()
 
             # popularity score = page views + 4 * bookmarks + 10 * selection_score
@@ -131,7 +122,6 @@ def register_popularity_tasks(celery):
             db.session.commit()
 
         except SQLAlchemyError:
-
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -139,7 +129,6 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_popularity_score_rank(self, cid, uuid, num_live):
-
         query = db.session.query(PopularityRecord) \
             .filter_by(uuid=uuid, config_id=cid) \
             .order_by(PopularityRecord.score.desc())
@@ -155,7 +144,6 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def store_lowest_popularity_score_rank(self, lowest_rank, cid, uuid, num_live):
-
         self.update_state(state='STARTED', meta='Storing lowest-rank for popularity score')
 
         query = db.session.query(PopularityRecord).filter_by(uuid=uuid, config_id=cid)
@@ -188,7 +176,6 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_views_rank(self, cid, uuid, num_live):
-
         query = db.session.query(PopularityRecord) \
             .filter_by(uuid=uuid, config_id=cid) \
             .order_by(PopularityRecord.views.desc())
@@ -204,7 +191,6 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_bookmarks_rank(self, cid, uuid, num_live):
-
         query = db.session.query(PopularityRecord) \
             .filter_by(uuid=uuid, config_id=cid) \
             .order_by(PopularityRecord.bookmarks.desc())
@@ -220,7 +206,6 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def compute_selections_rank(self, cid, uuid, num_live):
-
         query = db.session.query(PopularityRecord) \
             .filter_by(uuid=uuid, config_id=cid) \
             .order_by(PopularityRecord.selections.desc())
@@ -236,7 +221,6 @@ def register_popularity_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def update_project_popularity_data(self, pid):
-
         self.update_state(state='STARTED',
                           meta='Looking up current project class configuration for id={id}'.format(id=pid))
 
@@ -259,6 +243,7 @@ def register_popularity_tasks(celery):
         datestamp = datetime.now()
         uuid = uuid1()
 
+        # only compute popularity for project classes where student selections are open
         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
             compute = group(compute_popularity_data.si(proj.id, datestamp, uuid, num_live)
                             for proj in config.live_projects)

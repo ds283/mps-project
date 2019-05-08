@@ -10,7 +10,7 @@
 
 from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, UploadedAsset, User, \
-    ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, ProjectClass, \
+    ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
     EnrollmentRecord, SubmitterAttendanceData
 
 from ..task_queue import progress_update, register_task
@@ -865,6 +865,60 @@ def _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_
     return record.score
 
 
+def _send_offline_email(celery, record, user, lp_asset, mps_asset):
+    send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
+
+    msg = Message(subject='Files for offline scheduling of {name} are now ready'.format(name=record.name),
+                  sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                  reply_to=current_app.config['MAIL_REPLY_TO'],
+                  recipients=[user.email])
+
+    msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user,
+                               lp_url=url_for('admin.download_generated_asset', asset_id=lp_asset.id),
+                               mps_url=url_for('admin.download_generated_asset', asset_id=mps_asset.id))
+
+    # register a new task in the database
+    task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
+    send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
+
+def _write_LP_MPS_files(self, record, prob, user):
+    lp_name, lp_abs_path = make_generated_asset_filename('lp')
+    mps_name, mps_abs_path = make_generated_asset_filename('mps')
+    prob.writeLP(lp_abs_path)
+    prob.writeMPS(mps_abs_path)
+
+    AssetLifetime = 24 * 60 * 60  # time to live is 24 hours
+
+    now = datetime.now()
+
+    lp_asset = GeneratedAsset(timestamp=now,
+                              lifetime=AssetLifetime,
+                              filename=lp_name,
+                              mimetype=None,
+                              target_name='schedule.lp')
+    lp_asset.access_control_list.append(user)
+
+    mps_asset = GeneratedAsset(timestamp=now,
+                               lifetime=AssetLifetime,
+                               filename=mps_name,
+                               mimetype=None,
+                               target_name='schedule.MPS')
+    mps_asset.access_control_list.append(user)
+
+    try:
+        db.session.add(lp_asset)
+        db.session.add(mps_asset)
+
+        record.celery_finished = True
+        db.session.commit()
+
+    except SQLAlchemyError:
+        raise self.retry()
+
+    return lp_asset, mps_asset
+
+
 def _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period):
     for number in number_to_talk:
         data = ScheduleEnumeration(schedule_id=record.id,
@@ -901,6 +955,9 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def create_schedule(self, id):
+        self.update_state(state='STARTED',
+                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
+
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError:
@@ -908,7 +965,7 @@ def register_scheduling_tasks(celery):
 
         if record is None:
             self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
-            raise self.retry()
+            raise Ignore()
 
         _create_slots(self, record)
 
@@ -938,6 +995,10 @@ def register_scheduling_tasks(celery):
         if isinstance(allow_new_slots, str):
             allow_new_slots = strtobool(allow_new_slots)
 
+        self.update_state(state='STARTED',
+                          meta='Looking up ScheduleAttempt records for new_id={new_id}, '
+                               'old_id={old_id}'.format(new_id=new_id, old_id=old_id))
+
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=new_id).first()
             old_record = db.session.query(ScheduleAttempt).filter_by(id=old_id).first()
@@ -946,7 +1007,7 @@ def register_scheduling_tasks(celery):
 
         if record is None or old_record is None:
             self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
-            raise self.retry()
+            raise Ignore()
 
         _create_slots(self, record)
 
@@ -981,6 +1042,9 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def offline_schedule(self, schedule_id, user_id):
+        self.update_state(state='STARTED',
+                          meta='Looking up ScheduleAttempt record for id={id}'.format(id=schedule_id))
+
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError:
@@ -988,7 +1052,7 @@ def register_scheduling_tasks(celery):
 
         if user is None:
             self.update_state(state='FAILURE', meta='Could not load owning User record')
-            raise Ignore
+            raise Ignore()
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
@@ -997,7 +1061,7 @@ def register_scheduling_tasks(celery):
 
         if record is None:
             self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
-            raise self.retry()
+            raise Ignore()
 
         _create_slots(self, record)
 
@@ -1018,62 +1082,17 @@ def register_scheduling_tasks(celery):
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP and .MPS files...",
-                        autocommit=True)
+        progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP and .MPS files...", autocommit=True)
 
-        lp_name, lp_abs_path = make_generated_asset_filename('lp')
-        mps_name, mps_abs_path = make_generated_asset_filename('mps')
-        prob.writeLP(lp_abs_path)
-        prob.writeMPS(mps_abs_path)
-
-        AssetLifetime = 24*60*60            # time to live is 24 hours
-
-        now = datetime.now()
-        lp_asset = GeneratedAsset(timestamp=now,
-                                  lifetime=AssetLifetime,
-                                  filename=lp_name,
-                                  mimetype=None,
-                                  target_name='schedule.lp')
-        lp_asset.access_control_list.append(user)
-
-        mps_asset = GeneratedAsset(timestamp=now,
-                                   lifetime=AssetLifetime,
-                                   filename=mps_name,
-                                   mimetype=None,
-                                   target_name='schedule.MPS')
-        mps_asset.access_control_list.append(user)
-
-        try:
-            db.session.add(lp_asset)
-            db.session.add(mps_asset)
-
-            record.celery_finished = True
-            db.session.commit()
-        except SQLAlchemyError:
-            raise self.retry()
-
-        send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
-        msg = Message(subject='Files for offline scheduling of {name} are now ready'.format(name=record.name),
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      reply_to=current_app.config['MAIL_REPLY_TO'],
-                      recipients=[user.email])
-
-        msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user,
-                                   lp_url=url_for('admin.download_generated_asset', asset_id=lp_asset.id),
-                                   mps_url=url_for('admin.download_generated_asset', asset_id=mps_asset.id))
-
-        # register a new task in the database
-        task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
-        send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+        lp_asset, mps_asset = _write_LP_MPS_files(self, record, prob, user)
+        _send_offline_email(celery, record, user, lp_asset, mps_asset)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 80,
                         'Storing schedule details for later processing...', autocommit=True)
-
         _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period)
 
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
                         'File generation for offline scheduling now complete', autocommit=True)
-
         user.post_message('The files necessary to perform offline scheduling have been generated, and a '
                           'set of download links has been emailed to you. The files will be available '
                           'for the next 24 hours.', 'info', autocommit=True)

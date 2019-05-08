@@ -49,15 +49,20 @@ _settings = \
     <span class="label label-info">Show popularity</span>
 {% endif %}
 <p>
-{% if f.CATS_supervision %}
-    <span class="label label-warning">CATS supv {{ f.CATS_supervision }}</span>
+{% if f.CATS_supervision is not none %}
+    <span class="label label-warning">S: {{ f.CATS_supervision }} CATS</span>
 {% else %}
-    <span class="label label-default">Default supervisory CATS</span>
+    <span class="label label-default">S: Default CATS</span>
 {% endif %}
-{% if f.CATS_markign %}
-    <span class="label label-warning">CATS mark {{ f.CATS_marking }}</span>
+{% if f.CATS_marking is not none %}
+    <span class="label label-warning">M {{ f.CATS_marking }} CATS</span>
 {% else %}
-    <span class="label label-default">Default marking CATS</span>
+    <span class="label label-default">M: Default CATS</span>
+{% endif %}
+{% if f.CATS_presentation is not none %}
+    <span class="label label-warning">P {{ f.CATS_marking }} CATS</span>
+{% else %}
+    <span class="label label-default">P: Default CATS</span>
 {% endif %}
 """
 

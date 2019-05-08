@@ -1043,6 +1043,11 @@ def edit_faculty(id):
         data.show_popularity = form.show_popularity.data
         data.dont_clash_presentations = form.dont_clash_presentations.data
         data.office = form.office.data
+
+        data.CATS_supervision = form.CATS_supervision.data
+        data.CATS_marking = form.CATS_marking.data
+        data.CATS_presentation = form.CATS_presentation.data
+
         data.last_edit_id = current_user.id
         data.last_edit_timestamp = datetime.now()
 
@@ -1061,7 +1066,6 @@ def edit_faculty(id):
             raise RuntimeWarning('Unknown user dashboard pane')
 
     else:
-
         # populate default values if this is the first time we are rendering the form,
         # distinguished by the method being 'GET' rather than 'POST'
         if request.method == 'GET':
@@ -1073,6 +1077,10 @@ def edit_faculty(id):
             form.show_popularity.data = data.show_popularity
             form.dont_clash_presentations.data = data.dont_clash_presentations
             form.office.data = data.office
+
+            form.CATS_supervision.data = data.CATS_supervision
+            form.CATS_marking.data = data.CATS_marking
+            form.CATS_presentation.data = data.CATS_presentation
 
             if form.project_capacity.data is None and form.enforce_capacity.data:
                 form.project_capacity.data = current_app.config['DEFAULT_PROJECT_CAPACITY']

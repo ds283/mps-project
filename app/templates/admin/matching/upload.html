@@ -1,0 +1,44 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    Upload solution for {{ match.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="panel panel-primary panel-primary-bg">
+                <div class="panel-heading">
+                    Upload offline optimizer solution for <strong>{{ match.name }}</strong>
+                </div>
+                <div class="panel-body">
+                    <form action="{{ url_for('admin.upload_schedule', match_id=match.id) }}" method="POST" enctype="multipart/form-data" name="match_form">
+                        {{ form.hidden_tag() }}
+
+                        {{ wtf.form_field(form.solver) }}
+
+                        <label class="btn btn-default" for="file-selector">
+                            <input id="file-selector" type="file" name="solution" style="display: none;"
+                                   onchange="$('#filename-data').html(this.files[0].name)">
+                            Select file...
+                        </label>
+                        <span class="label label-info" id="filename-data"></span>
+
+                        <hr class="intro-divider">
+                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ url_for('admin.manage_matching') }}">
+                    <i class="fa fa-backward"></i> Return to matching manager
+                </a>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

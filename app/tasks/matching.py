@@ -36,7 +36,6 @@ from os import path
 
 
 def _find_mean_project_CATS(configs):
-
     CATS_total = 0
     number = 0
 
@@ -48,15 +47,50 @@ def _find_mean_project_CATS(configs):
     return float(CATS_total)/number
 
 
-def _enumerate_selectors(configs):
+def _enumerate_selectors(record, configs, read_serialized=False):
     """
     Build a list of SelectingStudents who belong to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
     Also compute assignment multiplicity for each selector, ie. how many projects they should be
     assigned (eg. FYP = 1 but MPP = 2 since projects only last one term)
+    :param record:
     :param configs:
     :return:
     """
+    if read_serialized:
+        return _enumerate_selectors_serialized(record)
+
+    return _enumerate_selectors_primary(configs)
+
+
+def _enumerate_selectors_serialized(record):
+    sel_to_number = {}
+    number_to_sel = {}
+
+    multiplicity = {}
+
+    selector_dict = {}
+
+    record_data = db.session.query(MatchingEnumeration) \
+        .filter_by(category=MatchingEnumeration.SELECTOR, matching_id=record.id).subquery()
+    records = db.session.query(record_data.c.enumeration, SelectingStudent) \
+        .select_from(SelectingStudent) \
+        .join(record_data, record_data.c.key == SelectingStudent.id) \
+        .order_by(record_data.c.enumeration.asc()).all()
+
+    for n, sel in records:
+        sel_to_number[sel.id] = n
+        number_to_sel[n] = sel.id
+
+        submissions = sel.config.submissions
+        multiplicity[n] = submissions if submissions >= 1 else 1
+
+        selector_dict[n] = sel
+
+    return n+1, sel_to_number, number_to_sel, multiplicity, selector_dict
+
+
+def _enumerate_selectors_primary(configs):
     number = 0
     sel_to_number = {}
     number_to_sel = {}
@@ -129,15 +163,57 @@ def _enumerate_selectors(configs):
     return number, sel_to_number, number_to_sel, multiplicity, selector_dict
 
 
-def _enumerate_liveprojects(configs):
+def _enumerate_liveprojects(record, configs, read_serialized=False):
     """
     Build a list of LiveProjects belonging to projects that participate in automatic
     matching, and assign them to consecutive numbers beginning at 0.
     Also compute CATS values for supervising and marking each project
+    :param record:
     :param configs:
     :return:
     """
+    if read_serialized:
+        return _enumerate_liveprojects_serialized(record)
 
+    return _enumerate_liveprojects_primary(configs)
+
+
+def _enumerate_liveprojects_serialized(record):
+    lp_to_number = {}
+    number_to_lp = {}
+
+    CATS_supervisor = {}
+    CATS_marker = {}
+
+    capacity = {}
+
+    project_dict = {}
+
+    record_data = db.session.query(MatchingEnumeration) \
+        .filter_by(category=MatchingEnumeration.LIVEPROJECT, matching_id=record.id).subquery()
+    records = db.session.query(record_data.c.enumeration, LiveProject) \
+        .select_from(LiveProject) \
+        .join(record_data, record_data.c.key == LiveProject.id) \
+        .order_by(record_data.c.enumeration.asc()).all()
+
+    for n, lp in records:
+        lp_to_number[lp.id] = n
+        number_to_lp[n] = lp.id
+
+        sup = lp.config.CATS_supervision
+        mk = lp.config.CATS_marking
+        CATS_supervisor[n] = sup if sup is not None else 30
+        CATS_marker[n] = mk if mk is not None else 3
+
+        capacity[n] = lp.capacity if (lp.enforce_capacity and
+                                      lp.capacity is not None and lp.capacity > 0) else 0
+
+        project_dict[n] = lp
+
+    return n+1, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict
+
+
+def _enumerate_liveprojects_primary(configs):
     number = 0
     lp_to_number = {}
     number_to_lp = {}
@@ -164,8 +240,7 @@ def _enumerate_liveprojects(configs):
             CATS_marker[number] = mk if mk is not None else 3
 
             capacity[number] = item.capacity if (item.enforce_capacity and
-                                                 item.capacity is not None and
-                                                 item.capacity > 0) else 0
+                                                 item.capacity is not None and item.capacity > 0) else 0
 
             project_dict[number] = item
 
@@ -174,14 +249,48 @@ def _enumerate_liveprojects(configs):
     return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict
 
 
-def _enumerate_supervising_faculty(configs):
+def _enumerate_supervising_faculty(record, configs, read_serialized=False):
     """
     Build a list of active, enrolled supervising faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
+    :param record:
     :param configs:
     :return:
     """
+    if read_serialized:
+        return _enumerate_supervising_faculty_serialized(record)
 
+    return _enumerate_supervising_faculty_primary(configs)
+
+
+def _enumerate_supervising_faculty_serialized(record):
+    fac_to_number = {}
+    number_to_fac = {}
+
+    limit = {}
+
+    fac_dict = {}
+
+    record_data = db.session.query(MatchingEnumeration) \
+        .filter_by(category=MatchingEnumeration.SUPERVISOR, matching_id=record.id).subquery()
+    records = db.session.query(record_data.c.enumeration, EnrollmentRecord) \
+        .select_from(EnrollmentRecord) \
+        .join(record_data, record_data.c.key == EnrollmentRecord.id) \
+        .order_by(record_data.c.enumeration.asc()).all()
+
+    for n, fac in records:
+        fac_to_number[fac.id] = n
+        number_to_fac[n] = fac.id
+
+        lim = fac.owner.CATS_supervision
+        limit[n] = lim if lim is not None and lim > 0 else 0
+
+        fac_dict[n] = fac
+
+    return n+1, fac_to_number, number_to_fac, limit, fac_dict
+
+
+def _enumerate_supervising_faculty_primary(configs):
     number = 0
     fac_to_number = {}
     number_to_fac = {}
@@ -212,14 +321,48 @@ def _enumerate_supervising_faculty(configs):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def _enumerate_marking_faculty(configs):
+def _enumerate_marking_faculty(record, configs, read_serialized=False):
     """
     Build a list of active, enrolled 2nd-marking faculty belonging to projects that
     participate in automatic matching, and assign them to consecutive numbers beginning at zero
+    :param record:
     :param configs:
     :return:
     """
+    if read_serialized:
+        return _enumerate_marking_faculty_serialized(record)
 
+    return _enumerate_marking_faculty_primary(configs)
+
+
+def _enumerate_marking_faculty_serialized(record):
+    fac_to_number = {}
+    number_to_fac = {}
+
+    limit = {}
+
+    fac_dict = {}
+
+    record_data = db.session.query(MatchingEnumeration) \
+        .filter_by(category=MatchingEnumeration.MARKER, matching_id=record.id).subquery()
+    records = db.session.query(record_data.c.enumeration, EnrollmentRecord) \
+        .select_from(EnrollmentRecord) \
+        .join(record_data, record_data.c.key == EnrollmentRecord.id) \
+        .order_by(record_data.c.enumeration.asc()).all()
+
+    for n, fac in records:
+        fac_to_number[fac.id] = n
+        number_to_fac[n] = fac.id
+
+        lim = fac.owner.CATS_marking
+        limit[n] = lim if lim is not None and lim > 0 else 0
+
+        fac_dict[n] = fac
+
+    return n+1, fac_to_number, number_to_fac, limit, fac_dict
+
+
+def _enumerate_marking_faculty_primary(configs):
     number = 0
     fac_to_number = {}
     number_to_fac = {}
@@ -773,21 +916,23 @@ def _initialize(self, record, read_serialized=False):
         # multiplicities (for selectors) and CATS assignments (for projects)
         with Timer() as sel_timer:
             number_sel, sel_to_number, number_to_sel, multiplicity, \
-                sel_dict = _enumerate_selectors(configs, read_serialized=read_serialized)
+                sel_dict = _enumerate_selectors(record, configs, read_serialized=read_serialized)
         print(' -- enumerated selectors in time {s}'.format(s=sel_timer.interval))
 
         with Timer() as lp_timer:
             number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
-                lp_dict = _enumerate_liveprojects(configs, read_serialized=read_serialized)
+                lp_dict = _enumerate_liveprojects(record, configs, read_serialized=read_serialized)
         print(' -- enumerated LiveProjects in time {s}'.format(s=lp_timer.interval))
 
         # get supervising faculty and marking faculty lists
         with Timer() as sup_timer:
-            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = _enumerate_supervising_faculty(configs)
+            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = \
+                _enumerate_supervising_faculty(record, configs)
         print(' -- enumerated supervising faculty in time {s}'.format(s=sup_timer.interval))
 
         with Timer() as mark_timer:
-            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = _enumerate_marking_faculty(configs)
+            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = _enumerate_marking_faculty(record,
+                                                                                                             configs)
         print(' -- enumerated marking faculty in time {s}'.format(s=mark_timer.interval))
 
         with Timer() as partition_timer:
@@ -1105,7 +1250,7 @@ def register_matching_tasks(celery):
         sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
         sup_limits, mark_limits, multiplicity, capacity, \
         mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-        R, W, cstr, M, P = _initialize(self, record, read_serialized=True)
+        R, W, cstr, M, P = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                         autocommit=True)
@@ -1125,7 +1270,7 @@ def register_matching_tasks(celery):
         except SQLAlchemyError:
             raise self.retry()
 
-        _send_offline_email(record, user, lp_asset, mps_asset)
+        _send_offline_email(celery, record, user, lp_asset, mps_asset)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 80,
                         'Storing matching details for later processing...', autocommit=True)

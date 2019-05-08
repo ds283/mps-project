@@ -785,6 +785,14 @@ def NewMatchFormFactory(year):
     return NewMatchForm
 
 
+class UploadMatchForm(Form):
+
+    solver = SelectField('Solver', choices=solver_choices, coerce=int,
+                         description='Select the solver used to produce the solution file you are uploading.')
+
+    submit = SubmitField('Upload solution')
+
+
 def RenameMatchFormFactory(year):
 
     class RenameMatchForm(Form):

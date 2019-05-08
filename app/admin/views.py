@@ -8,19 +8,29 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import json
+import re
+from collections import deque
+from datetime import date, datetime, timedelta
+from math import pi
+from pathlib import Path
+from urllib.parse import urlsplit
+
+from bokeh.embed import components
+from bokeh.plotting import figure
+from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
     stream_with_context, send_file, abort
+from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
+from numpy import histogram
+from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql import func
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
-from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 
-from collections import deque
-
-from celery import chain, group
-
-from ..limiter import limiter
-from ..cache import cache
-from ..uploads import solution_files
+import app.ajax as ajax
+from . import admin
 from .actions import estimate_CATS_load, availability_CSV_generator, pair_slots
 from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
@@ -35,57 +45,37 @@ from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
     EditBackupOptionsForm, BackupManageForm, \
-    NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, \
+    NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, UploadMatchForm, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
-    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm,\
+    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm, \
     ImposeConstraintsScheduleFormFactory, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory
-
+from ..cache import cache
 from ..database import db
-from ..models import MainConfig, User, FacultyData, ResearchGroup,\
+from ..limiter import limiter
+from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset
-
+from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
+from ..shared.conversions import is_integer
+from ..shared.formatters import format_size
+from ..shared.forms.queries import ScheduleSessionQuery
+from ..shared.internal_redis import get_redis
+from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, canonical_generated_asset_filename, \
     make_uploaded_asset_filename
-from ..shared.formatters import format_size
-from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
-from ..shared.conversions import is_integer
-from ..shared.sqlalchemy import get_count
-from ..shared.internal_redis import get_redis
-
 from ..task_queue import register_task, progress_update
-from ..shared.forms.queries import ScheduleSessionQuery
-
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import or_
-from sqlalchemy.sql import func
-
-import app.ajax as ajax
-
-from . import admin
-
-from datetime import date, datetime, timedelta
-from urllib.parse import urlsplit
-import json
-import re
-from pathlib import Path
-
-from math import pi
-from bokeh.plotting import figure
-from bokeh.embed import components
-
-from numpy import histogram
+from ..uploads import solution_files
 
 
 @admin.route('/edit_groups')
@@ -7436,7 +7426,7 @@ def download_generated_asset(asset_id):
 @admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])
 @roles_required('root')
 def upload_schedule(schedule_id):
-    # is is a ScheduleAttempt
+    # schedule_id is a ScheduleAttempt
     record = ScheduleAttempt.query.get_or_404(schedule_id)
 
     form = UploadScheduleForm(request.form)
@@ -7496,7 +7486,61 @@ def upload_schedule(schedule_id):
 @admin.route('/upload_match/<int:match_id>')
 @roles_required('root')
 def upload_match(match_id):
-    return redirect(request.referrer)
+    # match_id is a MatchingAttempt
+    record = MatchingAttempt.query.get_or_404(match_id)
+
+    form = UploadMatchForm(request.form)
+
+    if form.validate_on_submit():
+        if 'solution' in request.files:
+            sol_file = request.files['solution']
+
+            # generate new filename for upload
+            incoming_filename = Path(sol_file.filename)
+            extension = incoming_filename.suffix.lower()
+
+            if extension in ('.sol', '.lp', '.mps'):
+                if (form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED or
+                        form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD) and extension not in ('.lp',):
+                    flash('Solution files for the CBC optimizer must be in .LP format', 'error')
+
+                else:
+                    filename, abs_path = make_uploaded_asset_filename(extension[1:])
+                    solution_files.save(sol_file, name=filename)
+
+                    asset = UploadedAsset(timestamp=datetime.now(),
+                                          lifetime=24*60*60,
+                                          filename=filename)
+                    asset.access_control_list.append(current_user)
+
+                    uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
+                                         owner=current_user,
+                                         description='Import a solution file that has been produced offline and '
+                                                     'convert to a project match')
+
+                    # update solver information from form
+                    record.solver = form.solver.data
+                    record.celery_finished = False
+                    record.celery_id = uuid
+
+                    db.session.add(asset)
+                    db.session.commit()
+
+                    celery = current_app.extensions['celery']
+                    schedule_task = celery.tasks['app.tasks.matching.process_offline_solution']
+
+                    schedule_task.apply_async(args=(record.id, asset.id, current_user.id), task_id=uuid)
+
+                    return redirect(url_for('admin.manage_matching'))
+
+            else:
+                flash('Optimizer solution files should have extension .sol or .mps.', 'error')
+
+    else:
+        if request.method == 'GET':
+            form.solver.data = record.solver
+
+    return render_template('admin/matching/upload.html', match=record, form=form)
 
 
 @admin.route('/view_schedule/<string:tag>', methods=['GET', 'POST'])

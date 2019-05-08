@@ -11101,6 +11101,36 @@ class ScheduleEnumeration(db.Model):
                                backref=db.backref('enumerations', lazy='dynamic', cascade='all, delete, delete-orphan'))
 
 
+class MatchingEnumeration(db.Model):
+    """
+    Record mapping of record ids to enumeration values used in matchig
+    """
+
+    __tablename__ = 'matching_enumerations'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # enumeration type
+    SELECTOR = 0
+    LIVEPROJECT = 1
+    SUPERVISOR = 2
+    MARKER = 3
+    category = db.Column(db.Integer())
+
+    # enumerated value
+    enumeration = db.Column(db.Integer())
+
+    # key value
+    key = db.Column(db.Integer())
+
+    # matching attempt
+    matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
+    matching = db.relationship('MatchingAttempt', foreign_keys=[matching_id], uselist=False,
+                               backref=db.backref('enumerations', lazy='dynamic', cascade='all, delete, delete-orphan'))
+
+
 # ############################
 
 

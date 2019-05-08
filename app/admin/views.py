@@ -2967,41 +2967,54 @@ def create_match():
     form = NewMatchForm(request.form)
 
     if form.validate_on_submit():
-        uuid = register_task('Match job "{name}"'.format(name=form.name.data),
-                             owner=current_user, description="Automated project matching task")
+        offline = False
 
-        data = MatchingAttempt(year=current_year,
-                               name=form.name.data,
-                               celery_id=uuid,
-                               finished=False,
-                               celery_finished=False,
-                               awaiting_upload=False,
-                               outcome=None,
-                               published=False,
-                               selected=False,
-                               construct_time=None,
-                               compute_time=None,
-                               ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
-                               ignore_programme_prefs=form.ignore_programme_prefs.data,
-                               years_memory=form.years_memory.data,
-                               supervising_limit=form.supervising_limit.data,
-                               marking_limit=form.marking_limit.data,
-                               max_marking_multiplicity=form.max_marking_multiplicity.data,
-                               levelling_bias=form.levelling_bias.data,
-                               intra_group_tension=form.intra_group_tension.data,
-                               programme_bias=form.programme_bias.data,
-                               bookmark_bias=form.bookmark_bias.data,
-                               use_hints=form.use_hints.data,
-                               encourage_bias=form.encourage_bias.data,
-                               discourage_bias=form.discourage_bias.data,
-                               strong_encourage_bias=form.strong_encourage_bias.data,
-                               strong_discourage_bias=form.strong_discourage_bias.data,
-                               solver=form.solver.data,
-                               creation_timestamp=datetime.now(),
-                               creator_id=current_user.id,
-                               last_edit_timestamp=None,
-                               last_edit_id=None,
-                               score=None)
+        if form.submit.data:
+            task_name = 'Perform project matching for "{name}"'.format(name=form.name.data)
+            desc = 'Automated project matching task'
+
+        elif form.offline.data:
+            offline = True
+            task_name = 'Generate files for offline scheduling for "{name}"'.format(name=form.name.data)
+            desc = 'Produce .LP and .MPS files for download and offline scheduling'
+
+        else:
+            raise RuntimeError('Unknown submit button in create_match()')
+
+        uuid = register_task(task_name, owner=current_user, description=desc)
+
+        attempt = MatchingAttempt(year=current_year,
+                                  name=form.name.data,
+                                  celery_id=uuid,
+                                  finished=False,
+                                  celery_finished=False,
+                                  awaiting_upload=False,
+                                  outcome=None,
+                                  published=False,
+                                  selected=False,
+                                  construct_time=None,
+                                  compute_time=None,
+                                  ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
+                                  ignore_programme_prefs=form.ignore_programme_prefs.data,
+                                  years_memory=form.years_memory.data,
+                                  supervising_limit=form.supervising_limit.data,
+                                  marking_limit=form.marking_limit.data,
+                                  max_marking_multiplicity=form.max_marking_multiplicity.data,
+                                  levelling_bias=form.levelling_bias.data,
+                                  intra_group_tension=form.intra_group_tension.data,
+                                  programme_bias=form.programme_bias.data,
+                                  bookmark_bias=form.bookmark_bias.data,
+                                  use_hints=form.use_hints.data,
+                                  encourage_bias=form.encourage_bias.data,
+                                  discourage_bias=form.discourage_bias.data,
+                                  strong_encourage_bias=form.strong_encourage_bias.data,
+                                  strong_discourage_bias=form.strong_discourage_bias.data,
+                                  solver=form.solver.data,
+                                  creation_timestamp=datetime.now(),
+                                  creator_id=current_user.id,
+                                  last_edit_timestamp=None,
+                                  last_edit_id=None,
+                                  score=None)
 
         # check whether there is any work to do -- is there a current config entry for each
         # attached pclass?
@@ -3013,9 +3026,9 @@ def create_match():
                 .order_by(ProjectClassConfig.year == current_year).first()
 
             if config is not None:
-                if config not in data.config_members:
+                if config not in attempt.config_members:
                     count += 1
-                    data.config_members.append(config)
+                    attempt.config_members.append(config)
 
         if count == 0:
             flash('No project classes were specified for inclusion, so no match was computed.', 'error')
@@ -3025,9 +3038,9 @@ def create_match():
         # with the projects we will include in this match
         for match in form.include_matches.data:
 
-            if match not in data.include_matches:
+            if match not in attempt.include_matches:
                 ok = True
-                for pclass_a in data.config_members:
+                for pclass_a in attempt.config_members:
                     for pclass_b in match.config_members:
                         if pclass_a.id == pclass_b.id:
                             ok = False
@@ -3037,20 +3050,26 @@ def create_match():
                             break
 
                 if ok:
-                    data.include_matches.append(match)
+                    attempt.include_matches.append(match)
 
-        db.session.add(data)
+        db.session.add(attempt)
         db.session.commit()
 
-        celery = current_app.extensions['celery']
-        match_task = celery.tasks['app.tasks.matching.create_match']
+        if offline:
+            celery = current_app.extensions['celery']
+            match_task = celery.tasks['app.tasks.matching.offline_match']
 
-        match_task.apply_async(args=(data.id,), task_id=uuid)
+            match_task.apply_async(args=(attempt.id, current_user.id), task_id=uuid)
+
+        else:
+            celery = current_app.extensions['celery']
+            match_task = celery.tasks['app.tasks.matching.create_match']
+
+            match_task.apply_async(args=(attempt.id,), task_id=uuid)
 
         return redirect(url_for('admin.manage_matching'))
 
     else:
-
         if request.method == 'GET':
             form.use_hints.data = True
 

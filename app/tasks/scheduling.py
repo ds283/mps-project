@@ -803,7 +803,7 @@ def _execute_from_solution(self, file, record, prob, X, Y, create_time, number_t
         else:
             progress_update(record.celery_id, TaskRecord.FAILURE, 100, "Unknown solver",
                             autocommit=True)
-            raise Ignore
+            raise Ignore()
 
         if status != pulp.LpStatusInfeasible:
             prob.assignVarsVals(values)
@@ -877,12 +877,8 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
                                lp_url=url_for('admin.download_generated_asset', asset_id=lp_asset.id),
                                mps_url=url_for('admin.download_generated_asset', asset_id=mps_asset.id))
 
-    # register a new task in the database
-    task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
-    send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
-
-def _write_LP_MPS_files(self, record, prob, user):
+def _write_LP_MPS_files(record, prob, user):
     lp_name, lp_abs_path = make_generated_asset_filename('lp')
     mps_name, mps_abs_path = make_generated_asset_filename('mps')
     prob.writeLP(lp_abs_path)
@@ -892,62 +888,42 @@ def _write_LP_MPS_files(self, record, prob, user):
 
     now = datetime.now()
 
-    lp_asset = GeneratedAsset(timestamp=now,
-                              lifetime=AssetLifetime,
-                              filename=lp_name,
-                              mimetype=None,
-                              target_name='schedule.lp')
-    lp_asset.access_control_list.append(user)
-
-    mps_asset = GeneratedAsset(timestamp=now,
+    def make_asset(name, target):
+        asset = GeneratedAsset(timestamp=now,
                                lifetime=AssetLifetime,
-                               filename=mps_name,
+                               filename=name,
                                mimetype=None,
-                               target_name='schedule.MPS')
-    mps_asset.access_control_list.append(user)
+                               target_name=target)
+        asset.access_control_list.append(user)
+        db.session.add(asset)
 
-    try:
-        db.session.add(lp_asset)
-        db.session.add(mps_asset)
+        return asset
 
-        record.celery_finished = True
-        db.session.commit()
+    lp_asset = make_asset(lp_name, 'schedule.lp')
+    mps_asset = make_asset(mps_name, 'schedule.mps')
 
-    except SQLAlchemyError:
-        raise self.retry()
+    # allow exceptions to propagate up to calling function
+    record.celery_finished = True
+    db.session.commit()
 
     return lp_asset, mps_asset
 
 
 def _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period):
-    for number in number_to_talk:
-        data = ScheduleEnumeration(schedule_id=record.id,
-                                   enumeration=number,
-                                   key=number_to_talk[number],
-                                   category=ScheduleEnumeration.SUBMITTER)
-        db.session.add(data)
+    def write_out(label, block):
+        for number in block:
+            data = ScheduleEnumeration(schedule_id=record.id,
+                                       enumeration=number,
+                                       key=block[number],
+                                       category=label)
+            db.session.add(data)
 
-    for number in number_to_assessor:
-        data = ScheduleEnumeration(schedule_id=record.id,
-                                   enumeration=number,
-                                   key=number_to_assessor[number],
-                                   category=ScheduleEnumeration.ASSESSOR)
-        db.session.add(data)
+    write_out(ScheduleEnumeration.SUBMITTER, number_to_talk)
+    write_out(ScheduleEnumeration.ASSESSOR, number_to_assessor)
+    write_out(ScheduleEnumeration.SLOT, number_to_slot)
+    write_out(ScheduleEnumeration.PERIOD, number_to_period)
 
-    for number in number_to_slot:
-        data = ScheduleEnumeration(schedule_id=record.id,
-                                   enumeration=number,
-                                   key=number_to_slot[number],
-                                   category=ScheduleEnumeration.SLOT)
-        db.session.add(data)
-
-    for number in number_to_period:
-        data = ScheduleEnumeration(schedule_id=record.id,
-                                   enumeration=number,
-                                   key=number_to_period[number],
-                                   category=ScheduleEnumeration.PERIOD)
-        db.session.add(data)
-
+    # allow exception to propgate up to calling function
     db.session.commit()
 
 
@@ -1047,17 +1023,13 @@ def register_scheduling_tasks(celery):
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
+            record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
         if user is None:
             self.update_state(state='FAILURE', meta='Could not load owning User record')
             raise Ignore()
-
-        try:
-            record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-        except SQLAlchemyError:
-            raise self.retry()
 
         if record is None:
             self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
@@ -1084,12 +1056,20 @@ def register_scheduling_tasks(celery):
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Writing .LP and .MPS files...", autocommit=True)
 
-        lp_asset, mps_asset = _write_LP_MPS_files(self, record, prob, user)
+        try:
+            lp_asset, mps_asset = _write_LP_MPS_files(record, prob, user)
+        except SQLAlchemyError:
+            raise self.retry()
+
         _send_offline_email(celery, record, user, lp_asset, mps_asset)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 80,
                         'Storing schedule details for later processing...', autocommit=True)
-        _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period)
+
+        try:
+            _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period)
+        except SQLAlchemyError:
+            raise self.retry()
 
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
                         'File generation for offline scheduling now complete', autocommit=True)
@@ -1100,28 +1080,27 @@ def register_scheduling_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, schedule_id, asset_id, user_id):
+        self.update_state(state='STARTED',
+                          meta='Looking up UploadedAsset record for id={id}'.format(id=asset_id))
+
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
             asset = db.session.query(UploadedAsset).filter_by(id=asset_id).first()
+            record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
         except SQLAlchemyError:
             raise self.retry()
 
         if user is None:
             self.update_state(state='FAILURE', meta='Could not load owning User record')
-            raise Ignore
+            raise Ignore()
 
         if asset is None:
             self.update_state(state='FAILURE', meta='Could not load UploadedAsset record')
-            raise Ignore
-
-        try:
-            record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-        except SQLAlchemyError:
-            raise self.retry()
+            raise Ignore()
 
         if record is None:
-            self.update_state('FAILURE', meta='Could not load ScheduleAttempt record from database')
-            raise self.retry()
+            self.update_state(state='FAILURE', meta='Could not load ScheduleAttempt record from database')
+            raise Ignore()
 
         number_talks, number_assessors, number_slots, number_periods, \
         talk_to_number, assessor_to_number, slot_to_number, period_to_number, \
@@ -1143,8 +1122,8 @@ def register_scheduling_tasks(celery):
         # ScheduleEnumeration records will be purged during normal database maintenance cycle,
         # so there is no need to delete them explicitly here
 
-        return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename),
-                                      record, prob, X, Y, create_time, number_talks, number_assessors, number_slots,
+        return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename), record,
+                                      prob, X, Y, create_time, number_talks, number_assessors, number_slots,
                                       talk_dict, assessor_dict, slot_dict)
 
 

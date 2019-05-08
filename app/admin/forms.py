@@ -776,7 +776,7 @@ def NewMatchFormFactory(year):
 
         submit = SubmitField('Create new match')
 
-        offlien = SubmitField('Perform matching offline')
+        offline = SubmitField('Perform matching offline')
 
         @staticmethod
         def validate_name(form, field):

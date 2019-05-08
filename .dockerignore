@@ -1,8 +1,10 @@
 .git
 .gitignore
 .idea
+.scannerwork
 .vscode
 .DS_Store
+__pycache__
 assets
 AWS
 backups
@@ -17,3 +19,4 @@ profiling
 thirdparty
 venv
 worker-output
+sonar-project.properties

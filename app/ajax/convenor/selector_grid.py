@@ -68,10 +68,22 @@ _selections = \
 {% endif %}
 """
 
+_name = \
+"""
+<a href="mailto:{{ sel.student.user.email }}">{{ sel.student.user.name }}</a>
+<div>
+{% if sel.convert_to_submitter %}
+    <span class="label label-success"><i class="fa fa-check"></i> Convert</span>
+{% else %}
+    <span class="label label-danger"><i class="fa fa-times"></i> Disable convert</span>
+{% endif %}
+</div>
+"""
+
 
 def selector_grid_data(students, config):
     data = [{'name': {
-                'display': s.student.user.name,
+                'display': render_template_string(_name, sel=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
              },
              'programme': s.student.programme.label,

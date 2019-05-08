@@ -169,8 +169,15 @@ def ProjectDescriptionClasses(project_id):
 
 
 def GetAutomatedMatchPClasses():
+    year = get_current_year()
+
     return db.session.query(ProjectClass) \
-        .filter_by(active=True, do_matching=True)
+        .filter(ProjectClass.active == True,
+                ProjectClass.do_matching == True) \
+        .join(ProjectClassConfig, ProjectClassConfig.pclass_id == ProjectClass.id) \
+        .filter(ProjectClassConfig.year == year,
+                ProjectClassConfig.live == True,
+                ProjectClassConfig.selection_closed == True)
 
 
 def GetMatchingAttempts(year):

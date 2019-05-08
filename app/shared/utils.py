@@ -134,12 +134,12 @@ def get_matching_data(configs=None):
     if configs is None:
         configs = _get_pclass_config_list()
 
-    matching_ready = True
+    matching_ready = False
 
     # loop through all active project classes
     for config in configs:
-        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-            matching_ready = False
+        if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
+            matching_ready = True
 
     return {'matching_ready': matching_ready}
 
@@ -449,7 +449,9 @@ def get_ready_to_match_data():
     rollover_data = get_rollover_data(configs=configs)
     matching_data = get_matching_data(configs=configs)
 
-    return rollover_data.update(matching_data)
+    rollover_data.update(matching_data)
+
+    return rollover_data
 
 
 def get_root_dashboard_data():

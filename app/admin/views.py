@@ -2978,7 +2978,7 @@ def create_match():
                                   celery_id=uuid,
                                   finished=False,
                                   celery_finished=False,
-                                  awaiting_upload=False,
+                                  awaiting_upload=offline,
                                   outcome=None,
                                   published=False,
                                   selected=False,
@@ -7483,7 +7483,7 @@ def upload_schedule(schedule_id):
     return render_template('admin/presentations/scheduling/upload.html', schedule=record, form=form)
 
 
-@admin.route('/upload_match/<int:match_id>')
+@admin.route('/upload_match/<int:match_id>', methods=['GET', 'POST'])
 @roles_required('root')
 def upload_match(match_id):
     # match_id is a MatchingAttempt

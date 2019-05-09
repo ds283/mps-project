@@ -11,7 +11,7 @@
 from ..database import db
 from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
-    UploadedAsset
+    UploadedAsset, FacultyData
 
 from ..task_queue import progress_update, register_task
 
@@ -45,6 +45,19 @@ def _find_mean_project_CATS(configs):
             number += 1
 
     return float(CATS_total)/number
+
+
+def _min(a, b):
+    if a is None and b is None:
+        return None
+
+    if a is None:
+        return b
+
+    if b is None:
+        return a
+
+    return a if a <= b else b
 
 
 def _enumerate_selectors(record, configs, read_serialized=False):
@@ -190,7 +203,8 @@ def _enumerate_liveprojects_serialized(record):
 
     capacity = {}
 
-    project_dict = {}
+    project_dict = {}           # mapping from enumerated number to LiveProject instance
+    project_group_dict = {}     # mapping from config.id to list of LiveProject.ids associated with it
 
     record_data = db.session.query(MatchingEnumeration) \
         .filter_by(category=MatchingEnumeration.LIVEPROJECT, matching_id=record.id).subquery()
@@ -213,7 +227,15 @@ def _enumerate_liveprojects_serialized(record):
 
         project_dict[n] = lp
 
-    return n+1, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict
+    group_data = db.session.query(MatchingEnumeration) \
+        .filter_by(category=MatchingEnumeration.LIVEPROJECT_GROUP, matching_id=record.id).all()
+    for record in group_data:
+        if record.key not in project_group_dict:
+            project_group_dict[record.key] = []
+
+        project_group_dict[record.key].append(record.enumeration)
+
+    return n+1, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict, project_group_dict
 
 
 def _enumerate_liveprojects_primary(configs):
@@ -226,12 +248,14 @@ def _enumerate_liveprojects_primary(configs):
 
     capacity = {}
 
-    project_dict = {}
+    project_dict = {}           # mapping from enumerated number to LiveProject instance
+    project_group_dict = {}     # mapping from config.id to list of LiveProject.ids associated with it
 
     for config in configs:
         # get LiveProject instances that belong to this config instance
-        projects = db.session.query(LiveProject) \
-            .filter_by(config_id=config.id).all()
+        projects = db.session.query(LiveProject).filter_by(config_id=config.id).all()
+
+        project_group_dict[config.id] = []
 
         for item in projects:
             lp_to_number[item.id] = number
@@ -246,10 +270,11 @@ def _enumerate_liveprojects_primary(configs):
                                                  item.capacity is not None and item.capacity > 0) else 0
 
             project_dict[number] = item
+            project_group_dict[config.id].append(number)
 
             number += 1
 
-    return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict
+    return number, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, project_dict, project_group_dict
 
 
 def _enumerate_supervising_faculty(record, configs, read_serialized=False):
@@ -270,27 +295,41 @@ def _enumerate_supervising_faculty_serialized(record):
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}
+    limit = {}                  # map from faculty number to global supervision CATS limit
+    config_limits = {}          # map from config.id to (map from faculty number to local supervision CATS limit)
 
     fac_dict = {}
 
+    # stored ids and primary keys refer to FacultyData instances, not EnrollmentRecord instances
     record_data = db.session.query(MatchingEnumeration) \
         .filter_by(category=MatchingEnumeration.SUPERVISOR, matching_id=record.id).subquery()
-    records = db.session.query(record_data.c.enumeration, EnrollmentRecord) \
-        .select_from(EnrollmentRecord) \
-        .join(record_data, record_data.c.key == EnrollmentRecord.id) \
+    records = db.session.query(record_data.c.enumeration, FacultyData) \
+        .select_from(FacultyData) \
+        .join(record_data, record_data.c.key == FacultyData.id) \
         .order_by(record_data.c.enumeration.asc()).all()
 
     for n, fac in records:
         fac_to_number[fac.id] = n
         number_to_fac[n] = fac.id
 
-        lim = fac.owner.CATS_supervision
+        lim = fac.CATS_supervision
         limit[n] = lim if lim is not None and lim > 0 else 0
 
         fac_dict[n] = fac
 
-    return n+1, fac_to_number, number_to_fac, limit, fac_dict
+    limit_data = db.session.query(MatchingEnumeration) \
+        .filter_by(category=MatchingEnumeration.SUPERVISOR_LIMITS, matching_id=record.id).all()
+    for record in limit_data:
+        config_id = record.key
+        fac_number = record.enumeration
+        limit = record.key2
+
+        if config_id not in config_limits:
+            config_limits[config_id] = {}
+
+        config_limits[config_id][fac_number] = limit
+
+    return n+1, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
 
 def _enumerate_supervising_faculty_primary(configs):
@@ -298,30 +337,39 @@ def _enumerate_supervising_faculty_primary(configs):
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}
+    limit = {}                  # map from faculty number to global supervision CATS limit
+    config_limits = {}          # map from config.id to (map from faculty number to local supervision CATS limit)
 
     fac_dict = {}
 
     for config in configs:
         # get EnrollmentRecord instances for this project class
-        faculty = db.session.query(EnrollmentRecord) \
+        erecords = db.session.query(EnrollmentRecord) \
             .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED) \
             .join(User, User.id==EnrollmentRecord.owner_id) \
             .filter(User.active).all()
 
-        for item in faculty:
-            if item.owner_id not in fac_to_number:
-                fac_to_number[item.owner_id] = number
-                number_to_fac[number] = item.owner_id
+        config_limits[config.id] = {}
 
-                lim = item.owner.CATS_supervision
+        # what gets written into our tables are links to the corresponding FacultyData instances
+        for erec in erecords:
+            fac = erec.owner
+
+            if fac.id not in fac_to_number:
+                fac_to_number[fac.id] = number
+                number_to_fac[number] = fac.id
+
+                lim = fac.CATS_supervision
                 limit[number] = lim if lim is not None and lim > 0 else 0
 
-                fac_dict[number] = item.owner
+                fac_dict[number] = fac
 
                 number += 1
 
-    return number, fac_to_number, number_to_fac, limit, fac_dict
+            if erec.CATS_supervision is not None:
+                config_limits[config.id][fac_to_number[fac.id]] = erec.CATS_supervision
+
+    return number, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
 
 def _enumerate_marking_faculty(record, configs, read_serialized=False):
@@ -342,27 +390,41 @@ def _enumerate_marking_faculty_serialized(record):
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}
+    limit = {}                  # map from faculty number to global marking CATS limit
+    config_limits = {}          # map from config.id to (map from faculty number to local marking CATS limit)
 
     fac_dict = {}
 
+    # stored ids and primary keys refer to FacultyData instances, not EnrollmentRecord instances
     record_data = db.session.query(MatchingEnumeration) \
         .filter_by(category=MatchingEnumeration.MARKER, matching_id=record.id).subquery()
-    records = db.session.query(record_data.c.enumeration, EnrollmentRecord) \
-        .select_from(EnrollmentRecord) \
-        .join(record_data, record_data.c.key == EnrollmentRecord.id) \
+    records = db.session.query(record_data.c.enumeration, FacultyData) \
+        .select_from(FacultyData) \
+        .join(record_data, record_data.c.key == FacultyData.id) \
         .order_by(record_data.c.enumeration.asc()).all()
 
     for n, fac in records:
         fac_to_number[fac.id] = n
         number_to_fac[n] = fac.id
 
-        lim = fac.owner.CATS_marking
+        lim = fac.CATS_marking
         limit[n] = lim if lim is not None and lim > 0 else 0
 
         fac_dict[n] = fac
 
-    return n+1, fac_to_number, number_to_fac, limit, fac_dict
+    limit_data = db.session.query(MatchingEnumeration) \
+        .filter_by(category=MatchingEnumeration.MARKER_LIMITS, matching_id=record.id).all()
+    for record in limit_data:
+        config_id = record.key
+        fac_number = record.enumeration
+        limit = record.key2
+
+        if config_id not in config_limits:
+            config_limits[config_id] = {}
+
+        config_limits[config_id][fac_number] = limit
+
+    return n+1, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
 
 def _enumerate_marking_faculty_primary(configs):
@@ -370,7 +432,8 @@ def _enumerate_marking_faculty_primary(configs):
     fac_to_number = {}
     number_to_fac = {}
 
-    limit = {}
+    limit = {}                  # map from faculty number to global marking CATS limit
+    config_limits = {}          # map from config.id to (map from faculty number to local marking CATS limit)
 
     fac_dict = {}
 
@@ -381,19 +444,27 @@ def _enumerate_marking_faculty_primary(configs):
             .join(User, User.id == EnrollmentRecord.owner_id) \
             .filter(User.active).all()
 
-        for item in faculty:
-            if item.owner_id not in fac_to_number:
-                fac_to_number[item.owner_id] = number
-                number_to_fac[number] = item.owner_id
+        config_limits[config.id] = {}
 
-                lim = item.owner.CATS_marking
+        # what gets written into our tables are links to the corresponding FacultyData instances
+        for erec in faculty:
+            fac = erec.owner
+
+            if fac.id not in fac_to_number:
+                fac_to_number[fac.id] = number
+                number_to_fac[number] = fac.id
+
+                lim = fac.CATS_marking
                 limit[number] = lim if lim is not None and lim > 0 else 0
 
-                fac_dict[number] = item.owner
+                fac_dict[number] = fac
 
                 number += 1
 
-    return number, fac_to_number, number_to_fac, limit, fac_dict
+            if erec.CATS_marking is not None:
+                config_limits[config.id][fac_to_number[fac.id]] = erec.CATS_marking
+
+    return number, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
 
 def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record):
@@ -567,28 +638,14 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
     return P
 
 
-def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
-                         multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                         sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
+def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, sup_pclass_limits,
+                         mark_limits, mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel, number_sup,
+                         record, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
                          levelling_bias, intra_group_tension, mean_CATS_per_project):
     """
     Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
-    :param R:
-    :param M:
-    :param W:
-    :param P:
-    :param CATS_supervisor:
-    :param CATS_marker:
-    :param capacity:
-    :param sup_limits:
-    :param mark_limits:
-    :param multiplicity:
-    :param number_lp:
-    :param number_mark:
-    :param number_sel:
-    :param number_sup:
-    :param record:
-    :return:
+    :param sup_pclass_limits:
+    :param mark_pclass_limits:
     """
     if not isinstance(levelling_bias, float):
         levelling_bias = float(levelling_bias)
@@ -699,6 +756,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
         proj = lp_dict[j]
 
+        # number of assigned students should equal number of assigned markers, or zero if no markers used
         if proj.config.uses_marker:
             prob += sum(X[(i, j)] for i in range(number_sel)) - \
                     sum(Y[(i, j)] for i in range(number_mark)) == 0
@@ -710,6 +768,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # CATS assigned to each supervisor must be within bounds
     for i in range(number_sup):
 
+        # enforce global limit, either from optimization configuration or from user's global record
         lim = record.supervising_limit
         if not record.ignore_per_faculty_limits and sup_limits[i] > 0:
             lim = sup_limits[i]
@@ -717,14 +776,33 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
                     for k in range(number_sel)) <= lim
 
+        # enforce ad-hoc per-project-class limits
+        for config_id in sup_pclass_limits:
+            fac_limits = sup_pclass_limits[config_id]
+            projects = lp_group_dict.get(config_id, None)
+
+            if i in fac_limits and projects is not None:
+                prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in projects
+                            for k in range(number_sel)) <= fac_limits[i]
+
     # CATS assigned to each marker must be within bounds
     for i in range(number_mark):
 
+        # enforce global limit
         lim = record.marking_limit
         if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
             lim = mark_limits[i]
 
         prob += sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim
+
+        # enforce ad-hoc per-project-class limits
+        for config_id in mark_pclass_limits:
+            fac_limits = mark_pclass_limits[config_id]
+            projects = lp_group_dict.get(config_id, None)
+
+            if i in fac_limits and projects is not None:
+                prob += sum(X[(k, j)] * CATS_marker[j] * P[(j, i)] for j in projects
+                            for k in range(number_sel)) <= fac_limits[i]
 
     # add constraints for any matches marked 'require' by a convenor
     for idx in cstr:
@@ -926,17 +1004,17 @@ def _initialize(self, record, read_serialized=False):
 
         with Timer() as lp_timer:
             number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
-                lp_dict = _enumerate_liveprojects(record, configs, read_serialized=read_serialized)
+                lp_dict, lp_group_dict = _enumerate_liveprojects(record, configs, read_serialized=read_serialized)
         print(' -- enumerated {n} LiveProjects in time {s}'.format(n=number_lp, s=lp_timer.interval))
 
         # get supervising faculty and marking faculty lists
         with Timer() as sup_timer:
-            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = \
+            number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict, sup_pclass_limits = \
                 _enumerate_supervising_faculty(record, configs)
         print(' -- enumerated {n} supervising faculty in time {s}'.format(n=number_sup, s=sup_timer.interval))
 
         with Timer() as mark_timer:
-            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = \
+            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict, mark_pclass_limits = \
                 _enumerate_marking_faculty(record, configs)
         print(' -- enumerated {n} marking faculty in time {s}'.format(n=number_mark, s=mark_timer.interval))
 
@@ -980,9 +1058,10 @@ def _initialize(self, record, read_serialized=False):
     return number_sel, number_lp, number_sup, number_mark, \
            sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
            number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-           sel_dict, lp_dict, sup_dict, mark_dict, \
+           sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
            sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-           sup_limits, mark_limits, multiplicity, capacity, \
+           sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,\
+           multiplicity, capacity, \
            mean_CATS_per_project, CATS_supervisor, CATS_marker, \
            R, W, cstr, M, P
 
@@ -1175,7 +1254,8 @@ def _write_LP_MPS_files(record, prob, user):
     return lp_asset, mps_asset
 
 
-def _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_sup, number_to_mark):
+def _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_sup, number_to_mark, lp_group_dict,
+                               sup_pclass_limits, mark_pclass_limits):
     def write_out(label, block):
         for number in block:
             data = MatchingEnumeration(matching_id=record.id,
@@ -1189,6 +1269,33 @@ def _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_su
     write_out(MatchingEnumeration.SUPERVISOR, number_to_sup)
     write_out(MatchingEnumeration.MARKER, number_to_mark)
 
+    for config_id in lp_group_dict:
+        lps = lp_group_dict[config_id]
+
+        for lp_id in lps:
+            data = MatchingEnumeration(matching_id=record.id,
+                                       enumeration=lp_id,
+                                       key=config_id,
+                                       category=MatchingEnumeration.LIVEPROJECT_GROUP)
+            db.session.add(data)
+
+    def write_limits(label, limit_dict):
+        for config_id in limit_dict:
+            limits = limit_dict[config_id]
+
+            for fac_number in limits:
+                data = MatchingEnumeration(matching_id=record.id,
+                                           enumeration=fac_number,
+                                           key=config_id,
+                                           key2=limits[fac_number],
+                                           category=label)
+                db.session.add(data)
+
+    write_limits(MatchingEnumeration.SUPERVISOR_LIMITS, sup_pclass_limits)
+    write_limits(MatchingEnumeration.MARKER_LIMITS, mark_pclass_limits)
+
+    # allow exception to propgate up to calling function
+    db.session.commit()
 
 
 def register_matching_tasks(celery):
@@ -1210,18 +1317,20 @@ def register_matching_tasks(celery):
         number_sel, number_lp, number_sup, number_mark, \
         sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
         number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-        sel_dict, lp_dict, sup_dict, mark_dict, \
+        sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
         sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-        sup_limits, mark_limits, multiplicity, capacity, \
+        sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
+        multiplicity, capacity, \
         mean_CATS_per_project, CATS_supervisor, CATS_marker, \
         R, W, cstr, M, P = _initialize(self, record)
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...", autocommit=True)
 
         with Timer() as create_time:
-            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
-                                              multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                                              sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
+                                              sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
+                                              number_lp, number_mark, number_sel, number_sup, record, lp_dict,
+                                              lp_group_dict, sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
                                               record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
@@ -1254,9 +1363,10 @@ def register_matching_tasks(celery):
         number_sel, number_lp, number_sup, number_mark, \
         sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
         number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-        sel_dict, lp_dict, sup_dict, mark_dict, \
+        sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
         sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-        sup_limits, mark_limits, multiplicity, capacity, \
+        sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
+        multiplicity, capacity, \
         mean_CATS_per_project, CATS_supervisor, CATS_marker, \
         R, W, cstr, M, P = _initialize(self, record)
 
@@ -1264,9 +1374,10 @@ def register_matching_tasks(celery):
                         autocommit=True)
 
         with Timer() as create_time:
-            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
-                                              multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                                              sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
+                                              sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
+                                              number_lp, number_mark, number_sel, number_sup, record, lp_dict,
+                                              lp_group_dict, sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
                                               record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
@@ -1284,7 +1395,8 @@ def register_matching_tasks(celery):
                         'Storing matching details for later processing...', autocommit=True)
 
         try:
-            _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_sup, number_to_mark)
+            _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_sup, number_to_mark,
+                                       lp_group_dict, sup_pclass_limits, mark_pclass_limits)
         except SQLAlchemyError:
             raise self.retry()
 
@@ -1322,9 +1434,10 @@ def register_matching_tasks(celery):
         number_sel, number_lp, number_sup, number_mark, \
         sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
         number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-        sel_dict, lp_dict, sup_dict, mark_dict, \
+        sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
         sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-        sup_limits, mark_limits, multiplicity, capacity, \
+        sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
+        multiplicity, capacity, \
         mean_CATS_per_project, CATS_supervisor, CATS_marker, \
         R, W, cstr, M, P = _initialize(self, record, read_serialized=True)
 
@@ -1332,9 +1445,10 @@ def register_matching_tasks(celery):
                         autocommit=True)
 
         with Timer() as create_time:
-            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, mark_limits,
-                                              multiplicity, number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                                              sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
+                                              sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
+                                              number_lp, number_mark, number_sel, number_sup, record, lp_dict,
+                                              lp_group_dict, sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
                                               record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))

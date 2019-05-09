@@ -34,7 +34,12 @@ _faculty_menu = \
         {% set record = userdata.get_enrollment_record(pclass) %}
         <li {% if record is none %}class="disabled"{% endif %}>
             <a {% if record is not none %}href="{{ url_for('manage_users.edit_enrollment', id=record.id, url=url_for('convenor.faculty', id=pclass.id)) }}"{% endif %}>
-                <i class="fa fa-cogs"></i> Edit enrollment
+                <i class="fa fa-cogs"></i> Edit enrollment...
+            </a>
+        </li>
+        <li {% if record is none %}class="disabled"{% endif %}>
+            <a {% if record is not none %}href="{{ url_for('convenor.custom_CATS_limits', record_id=record.id) }}"{% endif %}>
+                <i class="fa fa-cogs"></i> Custom CATS limits...
             </a>
         </li>
     </ul>
@@ -78,14 +83,43 @@ _projects = \
 {{ d.marker_label|safe }}
 """
 
+_name = \
+"""
+<a href="mailto:{{ u.email }}">{{ u.name }}</a>
+"""
+
+_enrollments = \
+"""
+{% set f = d.get_enrollment_record(pclass_id) %}
+{{ f.enrolled_labels|safe }}
+<div>
+    {% if f is not none and f.CATS_supervision is not none %}
+        <span class="label label-warning">S: {{ f.CATS_supervision }} CATS</span>
+    {% else %}
+        <span class="label label-default">S: Default CATS</span>
+    {% endif %}
+    {% if f is not none and f.CATS_marking is not none %}
+        <span class="label label-warning">M {{ f.CATS_marking }} CATS</span>
+    {% else %}
+        <span class="label label-default">M: Default CATS</span>
+    {% endif %}
+    {% if f is not none and f.CATS_presentation is not none %}
+        <span class="label label-warning">P {{ f.CATS_marking }} CATS</span>
+    {% else %}
+        <span class="label label-default">P: Default CATS</span>
+    {% endif %}
+</div>
+
+"""
+
 
 def faculty_data(faculty, pclass, config):
 
-    data = [{'name': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=u.email, name=u.name),
+    data = [{'name': {'display': render_template_string(_name, u=u, d=d, pclass_id=pclass.id),
                       'sortstring': u.last_name + u.first_name},
              'email': '<a href="mailto:{em}">{em}</a>'.format(em=u.email),
              'user': u.username,
-             'enrolled': d.enrolled_labels(pclass),
+             'enrolled': render_template_string(_enrollments, d=d, pclass_id=pclass.id),
              'projects': render_template_string(_projects, d=d, pclass=pclass),
              'golive': render_template_string(_golive, config=config, pclass=pclass, user=u, userdata=d),
              'menu': render_template_string(_faculty_menu, pclass=pclass, user=u, userdata=d)} for u, d in faculty]

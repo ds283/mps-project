@@ -1,0 +1,32 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Edit custom CATS limits for {{ user.name }}
+{% endblock %}
+
+{% block formtitle %}
+    Edit custom CATS limits for <i class="fa fa-user"></i> <strong>{{ user.name }}</strong>
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('convenor.custom_CATS_limits', record_id=record.id) }}" method="POST" name="CATS_form">
+
+        {{ form.hidden_tag() }}
+
+{#        {{ wtf.form_errors(form) }}#}
+
+        {{ wtf.form_field(form.CATS_supervision) }}
+        {{ wtf.form_field(form.CATS_marking) }}
+        {{ wtf.form_field(form.CATS_presentation) }}
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(record) }}
+{% endblock %}

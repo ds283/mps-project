@@ -235,7 +235,7 @@ _menu = \
                         <i class="fa fa-clone"></i> Duplicate
                     </a>
                 </li>
-                <li class="disabled"}>
+                <li>
                     <a href="{{ url_for('admin.compare_match', id=m.id, text=text, url=url) }}">
                         <i class="fa fa-balance-scale"></i> Compare to...
                     </a>

@@ -1494,7 +1494,7 @@ class FacultyData(db.Model):
 
 
     def enrolled_labels(self, pclass):
-        record = self.get_enrollment_record(pclass.id)
+        record = self.get_enrollment_record(pclass)
 
         if record is None:
             return '<span class="label label-warning">Not enrolled</span>'
@@ -11121,7 +11121,7 @@ class ScheduleEnumeration(db.Model):
 
 class MatchingEnumeration(db.Model):
     """
-    Record mapping of record ids to enumeration values used in matchig
+    Record mapping of record ids to enumeration values used in matching
     """
 
     __tablename__ = 'matching_enumerations'

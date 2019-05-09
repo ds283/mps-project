@@ -44,7 +44,7 @@ from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, Skill
     AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
     PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
 from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory, \
-    AssignPresentationFeedbackFormFactory
+    AssignPresentationFeedbackFormFactory, CustomCATSLimitForm
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -5777,3 +5777,31 @@ def force_convert_bookmarks(sel_id):
               'Please contact a system administrator.'.format(name=sel.student.user.name), 'error')
 
     return redirect(request.referrer)
+
+
+@convenor.route('/custom_CATS_limits/<int:record_id>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def custom_CATS_limits(record_id):
+    # record_id is an EnrollmentRecord
+    record = EnrollmentRecord.query.get_or_404(record_id)
+
+    if not validate_is_convenor(record.pclass):
+        return redirect(request.referrer)
+
+    form = CustomCATSLimitForm(obj=record)
+
+    if form.validate_on_submit():
+        record.CATS_supervision = form.CATS_supervision.data
+        record.CATS_marking = form.CATS_marking.data
+        record.CATS_presentation = form.CATS_presentation.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            flash('Could not update custom CATS values due to a database error. '
+                  'Please contact a system administrator.', 'error')
+
+        return redirect(url_for('convenor.faculty', id=record.pclass.id))
+
+    return render_template('convenor/dashboard/custom_CATS_limits.html', record=record, form=form,
+                           user=record.owner.user)

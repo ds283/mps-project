@@ -9,13 +9,13 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, DateField
-from wtforms.validators import InputRequired
+from wtforms import SubmitField, DateField, IntegerField
+from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy import QuerySelectField
 
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName
-from ..shared.forms.mixins import FeedbackMixin
+from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin
 from functools import partial
 
 
@@ -47,6 +47,21 @@ class OpenFeedbackForm(Form):
 
     # submit button: open feedback
     open_feedback = SubmitField('Open feedback period')
+
+
+class CustomCATSLimitForm(Form, SaveChangesMixin):
+
+    # custom CATS limit for supervision
+    CATS_supervision = IntegerField('Maximum CATS allocated for supervision',
+                                    validators=[Optional()])
+
+    # custom CATS limit for marking
+    CATS_marking = IntegerField('Maximum CATS allocated for marking',
+                                validators=[Optional()])
+
+    # custom CATS limit for presentations
+    CATS_presentation = IntegerField('Maximum CATS allocated for presentation assessment',
+                                     validators=[Optional()])
 
 
 def AssignMarkerFormFactory(live_project, pclass_id, uses_marker):

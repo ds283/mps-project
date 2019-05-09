@@ -8215,11 +8215,17 @@ def _MatchingRecord_current_score(id):
 
     # return None if SelectingStudent has no submission records.
     # This happens if they didn't submit a choices list and have no bookmarks.
-    # In this case we had to set thank rank matrix to 1 for all suitable projects, in order that
+    # In this case we had to set their rank matrix to 1 for all suitable projects, in order that
     # an allocation could be made (because of the constraint that allocation <= rank).
     # Also weight is 1 so we always score 1
     if not obj.selector.has_submitted:
         return 1.0
+
+    # if selector had a custom offer, we score 1.0 if the selector is assigned to this offer, otherwise
+    # we score 0
+    if obj.selector.has_accepted_offer:
+        offer = obj.selector.accepted_offer
+        return 1.0 if offer.liveproject_id == obj.project_id else 0.0
 
     # find selection record corresponding to our project
     record = obj.selector.selections.filter_by(liveproject_id=obj.project_id).first()

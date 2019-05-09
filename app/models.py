@@ -3818,6 +3818,18 @@ class EnrollmentRecord(db.Model):
     presentations_reenroll = db.Column(db.Integer())
 
 
+    # CUSTOM CATS LIMITS - these are blanked every year
+
+    # custom limit for supervising
+    CATS_supervision = db.Column(db.Integer())
+
+    # custom limit for marking
+    CATS_marking = db.Column(db.Integer())
+
+    # custom limit for presentations
+    CATS_presentation = db.Column(db.Integer())
+
+
     # METADATA
 
     # created by

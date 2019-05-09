@@ -430,7 +430,14 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record):
         weights = {}
         require = set()
 
-        if sel.has_submitted:
+        if sel.has_accepted_offer:
+            offer = sel.accepted_offer
+            project = offer.liveproject
+
+            ranks[project.id] = 1
+            require.add(project.id)
+
+        elif sel.has_submission_list:
             for item in sel.selections.all():
                 if item.hint != SelectionRecord.SELECTION_HINT_FORBID or not use_hints:
                     ranks[item.liveproject_id] = item.rank

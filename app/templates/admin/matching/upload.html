@@ -15,7 +15,7 @@
                     Upload offline optimizer solution for <strong>{{ match.name }}</strong>
                 </div>
                 <div class="panel-body">
-                    <form action="{{ url_for('admin.upload_schedule', match_id=match.id) }}" method="POST" enctype="multipart/form-data" name="match_form">
+                    <form action="{{ url_for('admin.upload_match', match_id=match.id) }}" method="POST" enctype="multipart/form-data" name="match_form">
                         {{ form.hidden_tag() }}
 
                         {{ wtf.form_field(form.solver) }}

@@ -3012,8 +3012,8 @@ def create_match():
         for pclass in form.pclasses_to_include.data:
 
             config = db.session.query(ProjectClassConfig) \
-                .filter(ProjectClassConfig.pclass_id == pclass.id) \
-                .order_by(ProjectClassConfig.year == current_year).first()
+                .filter(ProjectClassConfig.pclass_id == pclass.id,
+                        ProjectClassConfig.year == current_year).first()
 
             if config is not None:
                 if config not in attempt.config_members:

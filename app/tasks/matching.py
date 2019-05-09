@@ -120,6 +120,9 @@ def _enumerate_selectors_primary(configs):
         selectors = db.session.query(SelectingStudent) \
             .filter_by(retired=False, config_id=config.id, convert_to_submitter=True).all()
 
+        print(' :: length of raw selectors list for "{name}" '
+              '(config_id={y}) = {n}'.format(name=config.project_class.name, y=config.id, n=len(selectors)))
+
         for item in selectors:
             # decide what to do with this selector
             attach = False
@@ -393,16 +396,16 @@ def _enumerate_marking_faculty_primary(configs):
     return number, fac_to_number, number_to_fac, limit, fac_dict
 
 
-def _build_ranking_matrix(number_students, student_dict, number_projects, project_dict, record):
+def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
     Also build a weighting matrix that accounts for other factors we wish to weight
     in the assignment, such as degree programme
-    :param number_students:
-    :param student_dict:
-    :param number_projects:
-    :param project_dict:
+    :param number_sel:
+    :param sel_dict:
+    :param number_lp:
+    :param lp_dict:
     :return:
     """
 
@@ -420,9 +423,8 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
     strong_encourage_bias = float(record.strong_encourage_bias)
     strong_discourage_bias = float(record.strong_discourage_bias)
 
-    for i in range(0, number_students):
-
-        sel = student_dict[i]
+    for i in range(0, number_sel):
+        sel = sel_dict[i]
 
         ranks = {}
         weights = {}
@@ -453,16 +455,15 @@ def _build_ranking_matrix(number_students, student_dict, number_projects, projec
 
         else:
             # no ranking data, so rank all LiveProjects in the right project class equal to 1
-            for k in project_dict:
-                proj = project_dict[k]
+            for k in lp_dict:
+                proj = lp_dict[k]
 
                 if sel.config_id == proj.config_id:
                     ranks[proj.id] = 1
 
-        for j in range(0, number_projects):
-
+        for j in range(0, number_lp):
             idx = (i, j)
-            proj = project_dict[j]
+            proj = lp_dict[j]
 
             val = True
 
@@ -541,16 +542,13 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
     :param sup_dict:
     :return:
     """
-
     P = {}
 
     for i in range(number_proj):
-
         proj = proj_dict[i]
 
         for j in range(number_sup):
-
-            idx = (i,j)
+            idx = (i, j)
 
             fac = sup_dict[j]
 
@@ -585,7 +583,6 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     :param record:
     :return:
     """
-
     if not isinstance(levelling_bias, float):
         levelling_bias = float(levelling_bias)
 
@@ -909,31 +906,32 @@ def _initialize(self, record, read_serialized=False):
 
     try:
         # get list of project classes participating in automatic assignment
-        configs = record.config_members
+        configs = record.config_members.all()
         mean_CATS_per_project = _find_mean_project_CATS(configs)
+        print(' -- {n} ProjectClassConfig instances participate in this matching'.format(n=len(configs)))
 
         # get lists of selectors and liveprojects, together with auxiliary data such as
         # multiplicities (for selectors) and CATS assignments (for projects)
         with Timer() as sel_timer:
             number_sel, sel_to_number, number_to_sel, multiplicity, \
                 sel_dict = _enumerate_selectors(record, configs, read_serialized=read_serialized)
-        print(' -- enumerated selectors in time {s}'.format(s=sel_timer.interval))
+        print(' -- enumerated {n} selectors in time {s}'.format(n=number_sel, s=sel_timer.interval))
 
         with Timer() as lp_timer:
             number_lp, lp_to_number, number_to_lp, CATS_supervisor, CATS_marker, capacity, \
                 lp_dict = _enumerate_liveprojects(record, configs, read_serialized=read_serialized)
-        print(' -- enumerated LiveProjects in time {s}'.format(s=lp_timer.interval))
+        print(' -- enumerated {n} LiveProjects in time {s}'.format(n=number_lp, s=lp_timer.interval))
 
         # get supervising faculty and marking faculty lists
         with Timer() as sup_timer:
             number_sup, sup_to_number, number_to_sup, sup_limits, sup_dict = \
                 _enumerate_supervising_faculty(record, configs)
-        print(' -- enumerated supervising faculty in time {s}'.format(s=sup_timer.interval))
+        print(' -- enumerated {n} supervising faculty in time {s}'.format(n=number_sup, s=sup_timer.interval))
 
         with Timer() as mark_timer:
-            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = _enumerate_marking_faculty(record,
-                                                                                                             configs)
-        print(' -- enumerated marking faculty in time {s}'.format(s=mark_timer.interval))
+            number_mark, mark_to_number, number_to_mark, mark_limits, mark_dict = \
+                _enumerate_marking_faculty(record, configs)
+        print(' -- enumerated {n} marking faculty in time {s}'.format(n=number_mark, s=mark_timer.interval))
 
         with Timer() as partition_timer:
             # partition faculty into supervisors, markers and supervisors+markers
@@ -949,6 +947,9 @@ def _initialize(self, record, read_serialized=False):
             mark_only_numbers = {mark_to_number[x] for x in mark_only}
             sup_and_mark_numbers = {(sup_to_number[x], mark_to_number[x]) for x in sup_and_mark}
         print(' -- partitioned faculty in time {s}'.format(s=partition_timer.interval))
+        print('    :: {n} faculty are supervising only'.format(n=len(sup_only_numbers)))
+        print('    :: {n} faculty are marking only'.format(n=len(mark_only_numbers)))
+        print('    :: {n} faculty are supervising and marking'.format(n=len(sup_and_mark_numbers)))
 
         # build student ranking matrix
         with Timer() as rank_timer:

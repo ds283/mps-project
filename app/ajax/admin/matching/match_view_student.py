@@ -152,9 +152,28 @@ _rank = \
 """
 
 
-def student_view_data(selector_data):
+_scores = \
+"""
+{% if recs|length == 1 %}
+    {% set r = recs[0] %}
+    <span class="label label-primary">{{ r.current_score|round(precision=2) }}</span>
+{% elif recs|length > 1 %}
+    {% for r in recs %}
+        <span class="label label-default">#{{ r.submission_period }}: {{ r.current_score|round(precision=2) }}</span>
+    {% endfor %}
+    <span class="label label-primary">Total {{ total_score|round(precision=2) }}</span>
+{% endif %}
+"""
 
+
+def student_view_data(selector_data):
     # selector_data is a list of ((lists of) MatchingRecord, delta-value) pairs
+
+    def score_data(r):
+        total = sum([rec.current_score for rec in r])
+
+        return {'display': render_template_string(_scores, recs=r, total_score=total),
+                'sortvalue': total}
 
     data = [{'student': {
                 'display': render_template_string(_student, sel=r[0].selector, valid=all([rc.is_valid and not rc.is_project_overassigned for rc in r])),
@@ -167,6 +186,7 @@ def student_view_data(selector_data):
              'rank': {
                 'display': render_template_string(_rank, recs=r, delta=d),
                 'sortvalue': d
-             } } for r, d in selector_data]
+             },
+             'scores': score_data(r)} for r, d in selector_data]
 
     return jsonify(data)

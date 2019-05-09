@@ -776,13 +776,21 @@ def NewMatchFormFactory(year):
 
         submit = SubmitField('Create new match')
 
-        offlien = SubmitField('Perform matching offline')
+        offline = SubmitField('Perform matching offline')
 
         @staticmethod
         def validate_name(form, field):
             return globally_unique_matching_name(year, form, field)
 
     return NewMatchForm
+
+
+class UploadMatchForm(Form):
+
+    solver = SelectField('Solver', choices=solver_choices, coerce=int,
+                         description='Select the solver used to produce the solution file you are uploading.')
+
+    submit = SubmitField('Upload solution')
 
 
 def RenameMatchFormFactory(year):

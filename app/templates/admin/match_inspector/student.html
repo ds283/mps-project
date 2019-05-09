@@ -36,7 +36,13 @@
                         _: 'display',
                         sort: 'sortvalue',
                         type: 'sortvalue'
-                      } }
+                    } },
+                    { data: 'scores',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                    } }
                 ],
                 deferRender: true
             });
@@ -81,7 +87,8 @@
                         <th width="15%"> Cohort</th>
                         <th width="23%"> Project</th>
                         <th width="17%"> 2nd marker</th>
-                        <th width="15%"> Rank</th>
+                        <th width="7%"> Rank</th>
+                        <th width="8%"> Score</th>
                     </tr>
                 </thead>
             </table>

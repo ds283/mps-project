@@ -8,19 +8,29 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import json
+import re
+from collections import deque
+from datetime import date, datetime, timedelta
+from math import pi
+from pathlib import Path
+from urllib.parse import urlsplit
+
+from bokeh.embed import components
+from bokeh.plotting import figure
+from celery import chain, group
 from flask import current_app, render_template, redirect, url_for, flash, request, jsonify, session, \
     stream_with_context, send_file, abort
+from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
+from numpy import histogram
+from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql import func
 from werkzeug.datastructures import Headers
 from werkzeug.wrappers import Response
-from flask_security import login_required, roles_required, roles_accepted, current_user, login_user
 
-from collections import deque
-
-from celery import chain, group
-
-from ..limiter import limiter
-from ..cache import cache
-from ..uploads import solution_files
+import app.ajax as ajax
+from . import admin
 from .actions import estimate_CATS_load, availability_CSV_generator, pair_slots
 from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     AddDegreeTypeForm, EditDegreeTypeForm, \
@@ -35,57 +45,37 @@ from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     ScheduleTypeForm, AddIntervalScheduledTask, AddCrontabScheduledTask, \
     EditIntervalScheduledTask, EditCrontabScheduledTask, \
     EditBackupOptionsForm, BackupManageForm, \
-    NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, \
+    NewMatchFormFactory, RenameMatchFormFactory, CompareMatchFormFactory, UploadMatchForm, \
     AddPresentationAssessmentFormFactory, EditPresentationAssessmentFormFactory, \
     AddSessionForm, EditSessionForm, \
     AddBuildingForm, EditBuildingForm, AddRoomForm, EditRoomForm, AvailabilityForm, \
-    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm,\
+    NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm, \
     ImposeConstraintsScheduleFormFactory, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
     PublicScheduleFormFactory, CompareScheduleFormFactory
-
+from ..cache import cache
 from ..database import db
-from ..models import MainConfig, User, FacultyData, ResearchGroup,\
+from ..limiter import limiter
+from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     DegreeType, DegreeProgramme, SkillGroup, TransferableSkill, ProjectClass, ProjectClassConfig, Supervisor, \
     EmailLog, MessageOfTheDay, DatabaseSchedulerEntry, IntervalSchedule, CrontabSchedule, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset
-
+from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
+from ..shared.conversions import is_integer
+from ..shared.formatters import format_size
+from ..shared.forms.queries import ScheduleSessionQuery
+from ..shared.internal_redis import get_redis
+from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year, home_dashboard, get_matching_dashboard_data, \
     get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, canonical_generated_asset_filename, \
     make_uploaded_asset_filename
-from ..shared.formatters import format_size
-from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
-from ..shared.conversions import is_integer
-from ..shared.sqlalchemy import get_count
-from ..shared.internal_redis import get_redis
-
 from ..task_queue import register_task, progress_update
-from ..shared.forms.queries import ScheduleSessionQuery
-
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import or_
-from sqlalchemy.sql import func
-
-import app.ajax as ajax
-
-from . import admin
-
-from datetime import date, datetime, timedelta
-from urllib.parse import urlsplit
-import json
-import re
-from pathlib import Path
-
-from math import pi
-from bokeh.plotting import figure
-from bokeh.embed import components
-
-from numpy import histogram
+from ..uploads import solution_files
 
 
 @admin.route('/edit_groups')
@@ -2967,41 +2957,54 @@ def create_match():
     form = NewMatchForm(request.form)
 
     if form.validate_on_submit():
-        uuid = register_task('Match job "{name}"'.format(name=form.name.data),
-                             owner=current_user, description="Automated project matching task")
+        offline = False
 
-        data = MatchingAttempt(year=current_year,
-                               name=form.name.data,
-                               celery_id=uuid,
-                               finished=False,
-                               celery_finished=False,
-                               awaiting_upload=False,
-                               outcome=None,
-                               published=False,
-                               selected=False,
-                               construct_time=None,
-                               compute_time=None,
-                               ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
-                               ignore_programme_prefs=form.ignore_programme_prefs.data,
-                               years_memory=form.years_memory.data,
-                               supervising_limit=form.supervising_limit.data,
-                               marking_limit=form.marking_limit.data,
-                               max_marking_multiplicity=form.max_marking_multiplicity.data,
-                               levelling_bias=form.levelling_bias.data,
-                               intra_group_tension=form.intra_group_tension.data,
-                               programme_bias=form.programme_bias.data,
-                               bookmark_bias=form.bookmark_bias.data,
-                               use_hints=form.use_hints.data,
-                               encourage_bias=form.encourage_bias.data,
-                               discourage_bias=form.discourage_bias.data,
-                               strong_encourage_bias=form.strong_encourage_bias.data,
-                               strong_discourage_bias=form.strong_discourage_bias.data,
-                               solver=form.solver.data,
-                               creation_timestamp=datetime.now(),
-                               creator_id=current_user.id,
-                               last_edit_timestamp=None,
-                               last_edit_id=None,
-                               score=None)
+        if form.submit.data:
+            task_name = 'Perform project matching for "{name}"'.format(name=form.name.data)
+            desc = 'Automated project matching task'
+
+        elif form.offline.data:
+            offline = True
+            task_name = 'Generate files for offline scheduling for "{name}"'.format(name=form.name.data)
+            desc = 'Produce .LP and .MPS files for download and offline scheduling'
+
+        else:
+            raise RuntimeError('Unknown submit button in create_match()')
+
+        uuid = register_task(task_name, owner=current_user, description=desc)
+
+        attempt = MatchingAttempt(year=current_year,
+                                  name=form.name.data,
+                                  celery_id=uuid,
+                                  finished=False,
+                                  celery_finished=False,
+                                  awaiting_upload=offline,
+                                  outcome=None,
+                                  published=False,
+                                  selected=False,
+                                  construct_time=None,
+                                  compute_time=None,
+                                  ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
+                                  ignore_programme_prefs=form.ignore_programme_prefs.data,
+                                  years_memory=form.years_memory.data,
+                                  supervising_limit=form.supervising_limit.data,
+                                  marking_limit=form.marking_limit.data,
+                                  max_marking_multiplicity=form.max_marking_multiplicity.data,
+                                  levelling_bias=form.levelling_bias.data,
+                                  intra_group_tension=form.intra_group_tension.data,
+                                  programme_bias=form.programme_bias.data,
+                                  bookmark_bias=form.bookmark_bias.data,
+                                  use_hints=form.use_hints.data,
+                                  encourage_bias=form.encourage_bias.data,
+                                  discourage_bias=form.discourage_bias.data,
+                                  strong_encourage_bias=form.strong_encourage_bias.data,
+                                  strong_discourage_bias=form.strong_discourage_bias.data,
+                                  solver=form.solver.data,
+                                  creation_timestamp=datetime.now(),
+                                  creator_id=current_user.id,
+                                  last_edit_timestamp=None,
+                                  last_edit_id=None,
+                                  score=None)
 
         # check whether there is any work to do -- is there a current config entry for each
         # attached pclass?
@@ -3009,13 +3012,13 @@ def create_match():
         for pclass in form.pclasses_to_include.data:
 
             config = db.session.query(ProjectClassConfig) \
-                .filter(ProjectClassConfig.pclass_id == pclass.id) \
-                .order_by(ProjectClassConfig.year == current_year).first()
+                .filter(ProjectClassConfig.pclass_id == pclass.id,
+                        ProjectClassConfig.year == current_year).first()
 
             if config is not None:
-                if config not in data.config_members:
+                if config not in attempt.config_members:
                     count += 1
-                    data.config_members.append(config)
+                    attempt.config_members.append(config)
 
         if count == 0:
             flash('No project classes were specified for inclusion, so no match was computed.', 'error')
@@ -3025,9 +3028,9 @@ def create_match():
         # with the projects we will include in this match
         for match in form.include_matches.data:
 
-            if match not in data.include_matches:
+            if match not in attempt.include_matches:
                 ok = True
-                for pclass_a in data.config_members:
+                for pclass_a in attempt.config_members:
                     for pclass_b in match.config_members:
                         if pclass_a.id == pclass_b.id:
                             ok = False
@@ -3037,20 +3040,26 @@ def create_match():
                             break
 
                 if ok:
-                    data.include_matches.append(match)
+                    attempt.include_matches.append(match)
 
-        db.session.add(data)
+        db.session.add(attempt)
         db.session.commit()
 
-        celery = current_app.extensions['celery']
-        match_task = celery.tasks['app.tasks.matching.create_match']
+        if offline:
+            celery = current_app.extensions['celery']
+            match_task = celery.tasks['app.tasks.matching.offline_match']
 
-        match_task.apply_async(args=(data.id,), task_id=uuid)
+            match_task.apply_async(args=(attempt.id, current_user.id), task_id=uuid)
+
+        else:
+            celery = current_app.extensions['celery']
+            match_task = celery.tasks['app.tasks.matching.create_match']
+
+            match_task.apply_async(args=(attempt.id,), task_id=uuid)
 
         return redirect(url_for('admin.manage_matching'))
 
     else:
-
         if request.method == 'GET':
             form.use_hints.data = True
 
@@ -7417,7 +7426,7 @@ def download_generated_asset(asset_id):
 @admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])
 @roles_required('root')
 def upload_schedule(schedule_id):
-    # is is a ScheduleAttempt
+    # schedule_id is a ScheduleAttempt
     record = ScheduleAttempt.query.get_or_404(schedule_id)
 
     form = UploadScheduleForm(request.form)
@@ -7474,10 +7483,64 @@ def upload_schedule(schedule_id):
     return render_template('admin/presentations/scheduling/upload.html', schedule=record, form=form)
 
 
-@admin.route('/upload_match/<int:match_id>')
+@admin.route('/upload_match/<int:match_id>', methods=['GET', 'POST'])
 @roles_required('root')
 def upload_match(match_id):
-    return redirect(request.referrer)
+    # match_id is a MatchingAttempt
+    record = MatchingAttempt.query.get_or_404(match_id)
+
+    form = UploadMatchForm(request.form)
+
+    if form.validate_on_submit():
+        if 'solution' in request.files:
+            sol_file = request.files['solution']
+
+            # generate new filename for upload
+            incoming_filename = Path(sol_file.filename)
+            extension = incoming_filename.suffix.lower()
+
+            if extension in ('.sol', '.lp', '.mps'):
+                if (form.solver.data == ScheduleAttempt.SOLVER_CBC_PACKAGED or
+                        form.solver.data == ScheduleAttempt.SOLVER_CBC_CMD) and extension not in ('.lp',):
+                    flash('Solution files for the CBC optimizer must be in .LP format', 'error')
+
+                else:
+                    filename, abs_path = make_uploaded_asset_filename(extension[1:])
+                    solution_files.save(sol_file, name=filename)
+
+                    asset = UploadedAsset(timestamp=datetime.now(),
+                                          lifetime=24*60*60,
+                                          filename=filename)
+                    asset.access_control_list.append(current_user)
+
+                    uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
+                                         owner=current_user,
+                                         description='Import a solution file that has been produced offline and '
+                                                     'convert to a project match')
+
+                    # update solver information from form
+                    record.solver = form.solver.data
+                    record.celery_finished = False
+                    record.celery_id = uuid
+
+                    db.session.add(asset)
+                    db.session.commit()
+
+                    celery = current_app.extensions['celery']
+                    schedule_task = celery.tasks['app.tasks.matching.process_offline_solution']
+
+                    schedule_task.apply_async(args=(record.id, asset.id, current_user.id), task_id=uuid)
+
+                    return redirect(url_for('admin.manage_matching'))
+
+            else:
+                flash('Optimizer solution files should have extension .sol or .mps.', 'error')
+
+    else:
+        if request.method == 'GET':
+            form.solver.data = record.solver
+
+    return render_template('admin/matching/upload.html', match=record, form=form)
 
 
 @admin.route('/view_schedule/<string:tag>', methods=['GET', 'POST'])

@@ -14,8 +14,9 @@ from celery import group
 from celery.exceptions import Ignore
 
 from ..database import db
-from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, PresentationSession, \
-    PresentationAssessment, GeneratedAsset, UploadedAsset, ScheduleEnumeration, ProjectDescription
+from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, \
+    PresentationAssessment, GeneratedAsset, UploadedAsset, ScheduleEnumeration, ProjectDescription, \
+    MatchingEnumeration
 from ..shared.utils import get_current_year, canonical_generated_asset_filename, canonical_uploaded_asset_filename
 
 from datetime import datetime
@@ -27,9 +28,13 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def maintenance(self):
         projects_maintenance(self)
+
         project_descriptions_maintenance(self)
+
         assessor_attendance_maintenance(self)
         submitter_attendance_maintenance(self)
+
+        matching_enumeration_maintenance(self)
         schedule_enumeration_maintenance(self)
 
         self.update_state(state='SUCCESS')
@@ -83,6 +88,16 @@ def register_maintenance_tasks(celery):
         task.apply_async()
 
 
+    def matching_enumeration_maintenance(self):
+        try:
+            records = db.session.query(MatchingEnumeration).all()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        task = group(matching_enumeration_record_maintenance.s(r.id) for r in records)
+        task.apply_async()
+
+
     @celery.task(bind=True, default_retry_delay=30)
     def project_record_maintenance(self, pid):
         try:
@@ -91,7 +106,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if project is None:
-            raise Ignore
+            raise Ignore()
 
         if project.maintenance():
             try:
@@ -121,7 +136,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if desc is None:
-            raise Ignore
+            raise Ignore()
 
         if desc.maintenance():
             try:
@@ -141,7 +156,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore
+            raise Ignore()
 
         if record.maintenance():
             try:
@@ -161,7 +176,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore
+            raise Ignore()
 
         if record.maintenance():
             try:
@@ -181,9 +196,31 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore
+            raise Ignore()
 
         if not record.schedule.awaiting_upload:
+            # can purge this record
+            try:
+                db.session.delete(record)
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                raise self.retry()
+
+        self.update_state(state='SUCCESS')
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def matching_enumeration_record_maintenance(self, id):
+        try:
+            record = db.session.query(MatchingEnumeration).filter_by(id=id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            raise Ignore()
+
+        if not record.matching.awaiting_upload:
             # can purge this record
             try:
                 db.session.delete(record)
@@ -235,7 +272,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore
+            raise Ignore()
 
         now = datetime.now()
         age = now - record.timestamp
@@ -247,7 +284,7 @@ def register_maintenance_tasks(celery):
                 try:
                     remove(abs_asset_path)
                 except OSError:
-                    raise Ignore
+                    raise Ignore()
 
                 try:
                     db.session.delete(record)
@@ -264,7 +301,7 @@ def register_maintenance_tasks(celery):
             raise self.retry()
 
         if record is None:
-            raise Ignore
+            raise Ignore()
 
         abs_asset_path = canonicalizer(record.filename)
         if not path.exists(abs_asset_path):

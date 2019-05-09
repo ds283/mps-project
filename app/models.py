@@ -11133,8 +11133,11 @@ class MatchingEnumeration(db.Model):
     # enumeration type
     SELECTOR = 0
     LIVEPROJECT = 1
-    SUPERVISOR = 2
-    MARKER = 3
+    LIVEPROJECT_GROUP = 2
+    SUPERVISOR = 3
+    MARKER = 4
+    SUPERVISOR_LIMITS = 5
+    MARKER_LIMITS = 6
     category = db.Column(db.Integer())
 
     # enumerated value
@@ -11142,6 +11145,9 @@ class MatchingEnumeration(db.Model):
 
     # key value
     key = db.Column(db.Integer())
+
+    # 2nd key value (used for storing per-ProjectClass CATS limits
+    key2 = db.Column(db.Integer())
 
     # matching attempt
     matching_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))

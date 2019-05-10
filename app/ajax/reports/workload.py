@@ -171,19 +171,19 @@ def _FacultyData_affiliations_remove_handler(target, value, initiator):
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
-def _EnrollemntRecord_insert_handler(mapper, connection, target):
+def _EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_update')
-def _EnrollemntRecord_update_handler(mapper, connection, target):
+def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_delete')
-def _EnrollemntRecord_delete_handler(mapper, connection, target):
+def _EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _delete_cache_entry(target.owner_id)
 
@@ -194,12 +194,15 @@ def _SubmissionRecord_delete_cache(target):
         if target.project is not None:
             _delete_cache_entry(target.project.owner_id)
 
-        elif target.project_id is not None:
+        # need to allow for possibility target.project has not caught up to target.project_id or vice-versa
+        if target.project_id is not None and (target.project is None or target.project_id != target.project_id):
             proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
             if proj is not None:
                 _delete_cache_entry(proj.owner_id)
 
         _delete_cache_entry(target.marker_id)
+        if target.marker.id != target.marker_id:
+            _delete_cache_entry(target.marker.id)
 
 
 @listens_for(SubmissionRecord, 'before_insert')

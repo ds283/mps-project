@@ -485,7 +485,6 @@ def faculty_ajax(id):
         return jsonify({})
 
     if enroll_filter == 'enrolled':
-
         # build a list of only enrolled faculty, together with their FacultyData records
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id).subquery()
@@ -497,7 +496,6 @@ def faculty_ajax(id):
             .join(faculty_ids, User.id == faculty_ids.c.owner_id)
 
     elif enroll_filter == 'not-enrolled':
-
         # build a list of only enrolled faculty, together with their FacultyData records
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id).subquery()
@@ -544,21 +542,33 @@ def faculty_ajax(id):
             .join(faculty_ids_q, User.id == faculty_ids_q.c.owner_id)
 
     else:
-
         # build list of all active faculty, together with their FacultyData records
-        faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
+        faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id == User.id)
 
     # results from the 'faculty' query are (User, FacultyData) pairs, so the FacultyData record is rec[1]
     if state_filter == 'no-projects' and pclass.uses_supervisor:
         data = [rec for rec in faculty.all() if rec[1].number_projects_offered(pclass) == 0]
     elif state_filter == 'no-marker' and pclass.uses_supervisor:
-        data = [ rec for rec in faculty.all() if rec[1].number_assessor == 0 ]
+        data = [rec for rec in faculty.all() if rec[1].number_assessor == 0]
     elif state_filter == 'unofferable':
-        data = [ rec for rec in faculty.all() if rec[1].projects_unofferable > 0 ]
+        data = [rec for rec in faculty.all() if rec[1].projects_unofferable > 0]
+    elif state_filter == 'custom-cats':
+        data = [rec for rec in faculty.all() if _has_custom_CATS(rec[1], pclass)]
     else:
         data = faculty.all()
 
     return ajax.convenor.faculty_data(data, pclass, config)
+
+
+def _has_custom_CATS(fac_data, pclass):
+    record = fac_data.get_enrollment_record(pclass)
+
+    if record is None:
+        return False
+
+    return record.CATS_supervision is not None \
+           or record.CATS_marking is not None \
+           or record.CATS_presentation is not None
 
 
 @convenor.route('/selectors/<int:id>')

@@ -1526,7 +1526,6 @@ class FacultyData(db.Model):
         Determine whether this faculty member is convenor for any projects
         :return:
         """
-
         if self.convenor_for is not None and get_count(self.convenor_for) > 0:
             return True
 
@@ -1553,7 +1552,6 @@ class FacultyData(db.Model):
         :param pclass:
         :return:
         """
-
         flash('Installed {name} as convenor of {title}'.format(name=self.user.name, title=pclass.name))
 
 
@@ -1562,8 +1560,6 @@ class FacultyData(db.Model):
         Remove the convenorship of the given project class from this user
         :param pclass:
         :return:
-        """
-
         # currently our only task is to remove system messages emplaced by this user in their role as convenor
         for item in MessageOfTheDay.query.filter_by(user_id=self.id).all():
 

@@ -169,7 +169,7 @@ def register_close_selection_tasks(celery):
 
 
 def convert_bookmarks(sel):
-    for item in sel.ordered_bookmarks:
+    for item in sel.ordered_bookmarks.limit(sel.number_choices):
         data = SelectionRecord(owner_id=item.owner_id,
                                liveproject_id=item.liveproject_id,
                                rank=item.rank,

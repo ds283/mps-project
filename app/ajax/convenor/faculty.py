@@ -91,25 +91,28 @@ _name = \
 _enrollments = \
 """
 {% set f = d.get_enrollment_record(pclass_id) %}
-{{ f.enrolled_labels|safe }}
-<div>
-    {% if f is not none and f.CATS_supervision is not none %}
-        <span class="label label-warning">S: {{ f.CATS_supervision }} CATS</span>
-    {% else %}
-        <span class="label label-default">S: Default CATS</span>
-    {% endif %}
-    {% if f is not none and f.CATS_marking is not none %}
-        <span class="label label-warning">M {{ f.CATS_marking }} CATS</span>
-    {% else %}
-        <span class="label label-default">M: Default CATS</span>
-    {% endif %}
-    {% if f is not none and f.CATS_presentation is not none %}
-        <span class="label label-warning">P {{ f.CATS_marking }} CATS</span>
-    {% else %}
-        <span class="label label-default">P: Default CATS</span>
-    {% endif %}
-</div>
-
+{% if f is not none %}
+    {{ f.enrolled_labels|safe }}
+    <div>
+        {% if f.CATS_supervision is not none %}
+            <span class="label label-warning">S: {{ f.CATS_supervision }} CATS</span>
+        {% else %}
+            <span class="label label-default">S: Default CATS</span>
+        {% endif %}
+        {% if f.CATS_marking is not none %}
+            <span class="label label-warning">M {{ f.CATS_marking }} CATS</span>
+        {% else %}
+            <span class="label label-default">M: Default CATS</span>
+        {% endif %}
+        {% if f.CATS_presentation is not none %}
+            <span class="label label-warning">P {{ f.CATS_marking }} CATS</span>
+        {% else %}
+            <span class="label label-default">P: Default CATS</span>
+        {% endif %}
+    </div>
+{% else %}
+    <span class="label label-default">Not enrolled</span>
+{% endif %}
 """
 
 

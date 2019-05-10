@@ -1560,6 +1560,7 @@ class FacultyData(db.Model):
         Remove the convenorship of the given project class from this user
         :param pclass:
         :return:
+        """
         # currently our only task is to remove system messages emplaced by this user in their role as convenor
         for item in MessageOfTheDay.query.filter_by(user_id=self.id).all():
 

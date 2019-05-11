@@ -638,12 +638,34 @@ def _build_project_supervisor_matrix(number_proj, proj_dict, number_sup, sup_dic
     return P
 
 
+def _compute_existing_sup_CATS(record, fac_data):
+    CATS = 0
+
+    for match in record.include_matches:
+        sup, mark = match.get_faculty_CATS(fac_data.id)
+        CATS += sup
+
+    return CATS
+
+
+def _compute_existing_mark_CATS(record, fac_data):
+    CATS = 0
+
+    for match in record.include_matches:
+        sup, mark = match.get_faculty_CATS(fac_data.id)
+        CATS += mark
+
+    return CATS
+
+
 def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, sup_pclass_limits,
                          mark_limits, mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel, number_sup,
-                         record, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
-                         levelling_bias, intra_group_tension, mean_CATS_per_project):
+                         record, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
+                         sup_and_mark_numbers, levelling_bias, intra_group_tension, mean_CATS_per_project):
     """
     Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
+    :param sup_dict:
+    :param mark_dict:
     :param sup_pclass_limits:
     :param mark_pclass_limits:
     """
@@ -762,7 +784,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
                     sum(Y[(i, j)] for i in range(number_mark)) == 0
 
         else:
-            for j in range(number_mark):
+            for i in range(number_mark):
                 prob += Y[(i, j)] == 0      # enforce no markers assigned to this project
 
     # CATS assigned to each supervisor must be within bounds
@@ -773,8 +795,14 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         if not record.ignore_per_faculty_limits and sup_limits[i] > 0:
             lim = sup_limits[i]
 
-        prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
-                    for k in range(number_sel)) <= lim
+        sup_data = sup_dict[i]
+        existing_CATS = _compute_existing_sup_CATS(record, sup_data)
+        if existing_CATS > lim:
+            raise RuntimeError('Inconsistent matching problem: existing supervisory CATS load {n} for faculty '
+                               '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=sup_data.user.name))
+
+        prob += existing_CATS + sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
+                                    for k in range(number_sel)) <= lim
 
         # enforce ad-hoc per-project-class limits
         for config_id in sup_pclass_limits:
@@ -793,7 +821,13 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         if not record.ignore_per_faculty_limits and mark_limits[i] > 0:
             lim = mark_limits[i]
 
-        prob += sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim
+        mark_data = mark_dict[i]
+        existing_CATS = _compute_existing_mark_CATS(record, mark_data)
+        if existing_CATS > lim:
+            raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
+                               '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark_data.user.name))
+
+        prob += existing_CATS + sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim
 
         # enforce ad-hoc per-project-class limits
         for config_id in mark_pclass_limits:
@@ -1329,9 +1363,10 @@ def register_matching_tasks(celery):
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                                              lp_group_dict, sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
-                                              record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)
+                                              number_lp, number_mark, number_sel, number_sup, record, sup_dict,
+                                              mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
+                                              sup_and_mark_numbers, record.levelling_bias, record.intra_group_tension,
+                                              mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1376,9 +1411,10 @@ def register_matching_tasks(celery):
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                                              lp_group_dict, sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
-                                              record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)
+                                              number_lp, number_mark, number_sel, number_sup, record, sup_dict,
+                                              mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
+                                              sup_and_mark_numbers, record.levelling_bias, record.intra_group_tension,
+                                              mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1447,9 +1483,10 @@ def register_matching_tasks(celery):
         with Timer() as create_time:
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, lp_dict,
-                                              lp_group_dict, sup_only_numbers, mark_only_numbers, sup_and_mark_numbers,
-                                              record.levelling_bias, record.intra_group_tension, mean_CATS_per_project)
+                                              number_lp, number_mark, number_sel, number_sup, record, sup_dict,
+                                              mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
+                                              sup_and_mark_numbers, record.levelling_bias, record.intra_group_tension,
+                                              mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 

@@ -3940,61 +3940,39 @@ class EnrollmentRecord(db.Model):
         return label
 
 
+def _delete_EnrollmentRecord_cache(enrollment_id):
+    cache.delete_memoized(_Project_is_offerable)
+    cache.delete_memoized(_Project_num_assessors)
+
+    match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == enrollment_id)
+    for record in match_records:
+        cache.delete_memoized(_MatchingRecord_is_valid, record.id)
+        cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
+
+    schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=enrollment_id))
+    for slot in schedule_slots:
+        cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
+        if slot.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+
+
 @listens_for(EnrollmentRecord, 'before_update')
 def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_assessors)
-
-        match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == target.owner_id)
-        for record in match_records:
-            cache.delete_memoized(_MatchingRecord_is_valid, record.id)
-            cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
-
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
-        for slot in schedule_slots:
-            cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
-            cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
-            if slot.owner is not None:
-                cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+        _delete_EnrollmentRecord_cache(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
 def _EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_assessors)
-
-        match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == target.owner_id)
-        for record in match_records:
-            cache.delete_memoized(_MatchingRecord_is_valid, record.id)
-            cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
-
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
-        for slot in schedule_slots:
-            cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
-            cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
-            if slot.owner is not None:
-                cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+        _delete_EnrollmentRecord_cache(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_delete')
 def _EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_assessors)
-
-        match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == target.owner_id)
-        for record in match_records:
-            cache.delete_memoized(_MatchingRecord_is_valid, record.id)
-            cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
-
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
-        for slot in schedule_slots:
-            cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
-            cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
-            if slot.owner is not None:
-                cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+        _delete_EnrollmentRecord_cache(target.owner_id)
 
 
 class Supervisor(db.Model, ColouredLabelMixin):
@@ -7522,11 +7500,10 @@ def _MatchingAttempt_current_score(id):
 
 
 @cache.memoize()
-def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
+def _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id):
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
-    CATS_supervisor = 0
-    CATS_marker = 0
+    CATS = 0
 
     for item in obj.get_supervisor_records(fac_id).all():
         config = item.project.config
@@ -7534,7 +7511,16 @@ def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
         if pclass_id is None or config.pclass_id == pclass_id:
             if config.uses_supervisor:
                 if config.CATS_supervision is not None and config.CATS_supervision > 0:
-                    CATS_supervisor += config.CATS_supervision
+                    CATS += config.CATS_supervision
+
+    return CATS
+
+
+@cache.memoize()
+def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
+    obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
+
+    CATS = 0
 
     for item in obj.get_marker_records(fac_id).all():
         config = item.project.config
@@ -7542,9 +7528,17 @@ def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
         if pclass_id is None or config.pclass_id == pclass_id:
             if config.uses_marker:
                 if config.CATS_marking is not None and config.CATS_marking > 0:
-                    CATS_marker += config.CATS_marking
+                    CATS += config.CATS_marking
 
-    return CATS_supervisor, CATS_marker
+    return CATS
+
+
+@cache.memoize()
+def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
+    CATS_sup = _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id)
+    CATS_mark = _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id)
+
+    return CATS_sup, CATS_mark
 
 
 @cache.memoize()
@@ -7934,12 +7928,19 @@ class MatchingAttempt(db.Model, PuLPMixin):
                 self._faculty_list[item.id] = item
 
 
-    def get_faculty_CATS(self, fac_id, pclass_id=None):
+    def get_faculty_CATS(self, fac, pclass_id=None):
         """
         Compute faculty workload in CATS, optionally for a specific pclass
         :param fac: FacultyData instance
         :return:
         """
+        if isinstance(fac, int):
+            fac_id = fac
+        elif isinstance(fac, FacultyData):
+            fac_id = fac.id
+        else:
+            raise RuntimeError('Cannot interpret parameter fac of type {n} in get_faculty_CATS()'.format(n=type(fac)))
+
         return _MatchingAttempt_get_faculty_CATS(self.id, fac_id, pclass_id)
 
 
@@ -8178,40 +8179,35 @@ class MatchingAttempt(db.Model, PuLPMixin):
         return self.last_edit_timestamp is not None
 
 
+def _delete_MatchingAttempt_cache(target_id):
+    cache.delete_memoized(_MatchingAttempt_current_score, target_id)
+    cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target_id)
+    cache.delete_memoized(_MatchingAttempt_is_valid, target_id)
+    cache.delete_memoized(_MatchingAttempt_hint_status, target_id)
+
+    cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
+    cache.delete_memoized(_MatchingAttempt_get_faculty_sup_CATS)
+    cache.delete_memoized(_MatchingAttempt_get_faculty_mark_CATS)
+
+    cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+
+
 @listens_for(MatchingAttempt, 'before_update')
 def _MatchingAttempt_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingAttempt_current_score, target.id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingAttempt_cache(target.id)
 
 
 @listens_for(MatchingAttempt, 'before_insert')
 def _MatchingAttempt_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingAttempt_current_score, target.id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingAttempt_cache(target.id)
 
 
 @listens_for(MatchingAttempt, 'before_delete')
 def _MatchingAttempt_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingAttempt_current_score, target.id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingAttempt_cache(target.id)
 
 
 @cache.memoize()
@@ -8466,49 +8462,37 @@ class MatchingRecord(db.Model):
         return satisfied, violated
 
 
+def _delete_MatchingRecord_cache(record_id, attempt_id):
+    cache.delete_memoized(_MatchingRecord_current_score, record_id)
+    cache.delete_memoized(_MatchingRecord_is_valid, record_id)
+
+    cache.delete_memoized(_MatchingAttempt_current_score, attempt_id)
+    cache.delete_memoized(_MatchingAttempt_prefer_programme_status, attempt_id)
+    cache.delete_memoized(_MatchingAttempt_is_valid, attempt_id)
+    cache.delete_memoized(_MatchingAttempt_hint_status, attempt_id)
+
+    cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
+    cache.delete_memoized(_MatchingAttempt_get_faculty_sup_CATS)
+    cache.delete_memoized(_MatchingAttempt_get_faculty_mark_CATS)
+    cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+
+
 @listens_for(MatchingRecord, 'before_update')
 def _MatchingRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingRecord_current_score, target.id)
-        cache.delete_memoized(_MatchingRecord_is_valid, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_current_score, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.matching_id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingRecord_cache(target.id, target.matching_id)
 
 
 @listens_for(MatchingRecord, 'before_insert')
 def _MatchingRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingRecord_current_score, target.id)
-        cache.delete_memoized(_MatchingRecord_is_valid, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_current_score, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.matching_id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingRecord_cache(target.id, target.matching_id)
 
 
 @listens_for(MatchingRecord, 'before_delete')
 def _MatchingRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingRecord_current_score, target.id)
-        cache.delete_memoized(_MatchingRecord_is_valid, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_current_score, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.matching_id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingRecord_cache(target.id, target.matching_id)
 
 
 @cache.memoize()

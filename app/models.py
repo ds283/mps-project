@@ -1044,7 +1044,7 @@ class EmailNotification(db.Model):
     def __str__(self):
         try:
             method = self.str_operations[self.event_type].__get__(self, type(self))
-        except KeyError:
+        except KeyError as k:
             assert self.event_type in self.str_operations, "invalid notification type: " + repr(k)
         return method()
 
@@ -1052,7 +1052,7 @@ class EmailNotification(db.Model):
     def msg_subject(self):
         try:
             method = self.subject_operations[self.event_type].__get__(self, type(self))
-        except KeyError:
+        except KeyError as k:
             assert self.event_type in self.subject_operations, "invalid notification type: " + repr(k)
         return method()
 

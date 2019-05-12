@@ -48,9 +48,10 @@ _project = \
     {% if r.selector.has_submitted %}{% set adjustable = true %}{% endif %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
+    {% set proj_overassigned = r.is_project_overassigned %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label {% if r.is_project_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
-                {% if not r.is_project_overassigned and style %}style="{{ style }}"{% endif %}
+        <a class="label {% if proj_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
+                {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
             (No. {{ r.project.number }})
             {% if adjustable %}<span class="caret"></span>{% endif %}</a>
@@ -92,9 +93,45 @@ _project = \
 {% for r in recs %}
     {# if both not valid and overassigned, should leave error message from is_valid intact due to short-circuit evaluation #}
     {% if not r.is_valid or r.is_project_overassigned %}
-        <div class="has-error">
-            <p class="help-block">{% if recs|length > 1 %}#{{ r.submission_period }}: {% endif %}{{ r.error }}</p>
-        <div class="has-error">
+        <p></p>
+        {% set errors = r.errors %}
+        {% set warnings = r.warnings %}
+        {% if errors|length == 1 %}
+            <span class="label label-danger">1 error</span>
+        {% elif errors|length > 1 %}
+            <span class="label label-danger">{{ errors|length }} errors</span>
+        {% else %}
+            <span class="label label-success">0 errors</span>
+        {% endif %}
+        {% if warnings|length == 1 %}
+            <span class="label label-warning">1 warning</span>
+        {% elif warnings|length > 1 %}
+            <span class="label label-warning">{{ warnings|length }} warnings</span>
+        {% else %}
+            <span class="label label-success">0 warnings</span>
+        {% endif %}
+        {% if errors|length > 0 %}
+            <div class="has-error">
+                {% for item in errors %}
+                    {% if loop.index <= 10 %}
+                        <p class="help-block">{{ item }}</p>
+                    {% elif loop.index == 11 %}
+                        <p class="help-block">...</p>
+                    {% endif %}            
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if warnings|length > 0 %}
+            <div class="has-error">
+                {% for item in warnings %}
+                    {% if loop.index <= 10 %}
+                        <p class="help-block">Warning: {{ item }}</p>
+                    {% elif loop.index == 11 %}
+                        <p class="help-block">...</p>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
     {% endif %}
 {% endfor %}
 """
@@ -176,7 +213,9 @@ def student_view_data(selector_data):
                 'sortvalue': total}
 
     data = [{'student': {
-                'display': render_template_string(_student, sel=r[0].selector, valid=all([rc.is_valid and not rc.is_project_overassigned for rc in r])),
+                'display': render_template_string(_student, sel=r[0].selector,
+                                                  valid=all([rc.is_valid and
+                                                             not rc.is_project_overassigned for rc in r])),
                 'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name
              },
              'pclass': render_template_string(_pclass, sel=r[0].selector),

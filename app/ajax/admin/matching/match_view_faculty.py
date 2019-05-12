@@ -29,9 +29,10 @@ _projects = \
     {% if r.selector.has_submitted %}{% set adjustable = true %}{% endif %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
+    {% set proj_overassigned = r.is_project_overassigned %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label {% if r.is_project_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
-                {% if not r.is_project_overassigned and style %}style="{{ style }}"{% endif %}
+        <a class="label {% if proj_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
+                {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>#{{ r.submission_period }}:
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         {% if adjustable %}<span class="caret"></span>{% endif %}</a>
@@ -143,37 +144,42 @@ _workload = \
 """
 
 
-def faculty_view_data(faculty, rec, pclass_filter):
+def faculty_view_data(faculty, match_attempt, pclass_filter):
 
     data = []
 
     for f in faculty:
+        errors = {}
+
         # check for CATS overassignment
-        sup_overassigned, CATS_sup, sup_lim = rec.is_supervisor_overassigned(f)
-        mark_overassigned, CATS_mark, mark_lim = rec.is_marker_overassigned(f)
+        sup_overassigned, CATS_sup, sup_lim, sup_msg = match_attempt.is_supervisor_overassigned(f)
+        mark_overassigned, CATS_mark, mark_lim, mark_msg = match_attempt.is_marker_overassigned(f)
         overassigned = sup_overassigned or mark_overassigned
+
+        if sup_overassigned:
+            errors['sup_over'] = sup_msg
+        if mark_overassigned:
+            errors['mark_over'] = mark_msg
 
         if pclass_filter is None:
             workload_sup = CATS_sup
             workload_mark = CATS_mark
             workload_tot = CATS_sup + CATS_mark
         else:
-            workload_sup, workload_mark = rec.get_faculty_CATS(f.id, pclass_filter)
+            workload_sup, workload_mark = match_attempt.get_faculty_CATS(f.id, pclass_filter)
             workload_tot = workload_sup + workload_mark
 
         # check for project overassignment and cache error messages to prevent multiple display
-        supv_records = rec.get_supervisor_records(f.id).all()
-        mark_records = rec.get_marker_records(f.id).all()
+        supv_records = match_attempt.get_supervisor_records(f.id).all()
+        mark_records = match_attempt.get_marker_records(f.id).all()
 
-        errors = {}
-        proj_overassigned = False
         for item in supv_records:
             if pclass_filter is None or item.selector.config.pclass_id == pclass_filter:
-                if item.is_project_overassigned:
+                flag, msg = match_attempt.is_project_overassigned(item.project)
+                if flag:
                     if item.project_id not in errors:
-                        errors[item.project_id] = item.error
-        if len(errors) > 0:
-            proj_overassigned = True
+                        errors[item.project_id] = msg
+        proj_overassigned = len(errors) > 0
 
         err_msgs = errors.values()
 

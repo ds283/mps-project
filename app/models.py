@@ -7614,36 +7614,36 @@ def _MatchingAttempt_is_valid(id):
         return True, student_issues, faculty_issues, errors, warnings
 
     for record in obj.records:
+        # check whether each matching record validates independently
         if not record.is_valid:
-            errors[('basic', record.id)] \
-                = '{name}/{abbv}: {err}'.format(err=record.error,
-                                                name=record.selector.student.user.name,
-                                                abbv=record.selector.config.project_class.abbreviation)
+            for n, e in enumerate(record.errors):
+                errors[('basic', (record.id, n))] \
+                    = '{name}/{abbv}: {err}'.format(err=e, name=record.selector.student.user.name,
+                                                    abbv=record.selector.config.project_class.abbreviation)
+
+            for n, e in enumerate(record.warnings):
+                warnings[('basic', (record.id, n))] \
+                    = '{name}/{abbv}: {err}'.format(err=e, name=record.selector.student.user.name,
+                                                    abbv=record.selector.config.project_class.abbreviation)
+
             student_issues = True
 
     for project in obj.projects:
-        if obj.is_project_overassigned(project):
-            errors[('capacity', project.id)] = \
-                'Project {name} ({supv}) is over-assigned ' \
-                '(assigned={m}, max capacity={n})'.format(supv=project.owner.user.name, name=project.name,
-                                                          m=obj.number_project_assignments(project),
-                                                          n=project.capacity)
+        proj_over, msg = obj.is_project_overassigned(project)
+        if proj_over:
+            errors[('capacity', project.id)] = msg
             student_issues = True
             faculty_issues = True
 
     for fac in obj.faculty:
-        sup_over, CATS_sup, sup_lim = obj.is_supervisor_overassigned(fac)
+        sup_over, CATS_sup, sup_lim, msg = obj.is_supervisor_overassigned(fac)
         if sup_over:
-            warnings[('supervising', fac.id)] = \
-                'Supervising workload for {name} exceeds CATS limit ' \
-                '(assigned={m}, max capacity={n})'.format(name=fac.user.name, m=CATS_sup, n=sup_lim)
+            warnings[('supervising', fac.id)] = msg
             faculty_issues = True
 
-        mark_over, CATS_mark, mark_lim = obj.is_marker_overassigned(fac)
+        mark_over, CATS_mark, mark_lim, msg = obj.is_marker_overassigned(fac)
         if mark_over:
-            warnings[('marking', fac.id)] = \
-                'Marking workload for {name} exceeds CATS limit ' \
-                '(assigned={m}, max capacity={n})'.format(name=fac.user.name, m=CATS_mark, n=mark_lim)
+            warnings[('marking', fac.id)] = msg
             faculty_issues = True
 
     if len(errors) > 0 or len(warnings) > 0:
@@ -8026,10 +8026,15 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     def is_project_overassigned(self, project):
         count = self.number_project_assignments(project)
-        if project.enforce_capacity and project.capacity is not None and 0 < project.capacity < count:
-            return True
 
-        return False
+        if project.enforce_capacity and project.capacity is not None and 0 < project.capacity < count:
+            supervisor = project.owner
+            message = 'Project "{supv} ({name})" is over-assigned ' \
+                      '(assigned={m}, max capacity={n})'.format(supv=supervisor.user.name, name=project.name,
+                                                                m=count, n=project.capacity)
+            return True, message
+
+        return False, None
 
 
     def is_supervisor_overassigned(self, faculty):
@@ -8042,9 +8047,11 @@ class MatchingAttempt(db.Model, PuLPMixin):
                 sup_lim = faculty.CATS_supervision
 
         if CATS_sup > sup_lim:
-            return True, CATS_sup, sup_lim
+            message = 'Supervising workload for {name} exceeds CATS limit ' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=CATS_sup, n=sup_lim)
+            return True, CATS_sup, sup_lim, message
 
-        return False, CATS_sup, sup_lim
+        return False, CATS_sup, sup_lim, None
 
 
     def is_marker_overassigned(self, faculty):
@@ -8057,9 +8064,11 @@ class MatchingAttempt(db.Model, PuLPMixin):
                 mark_lim = faculty.CATS_marking
 
         if CATS_mark > mark_lim:
-            return True, CATS_mark, mark_lim
+            message = 'Marking workload for {name} exceeds CATS limit ' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=CATS_mark, n=mark_lim)
+            return True, CATS_mark, mark_lim, message
 
-        return False, CATS_mark, mark_lim
+        return False, CATS_mark, mark_lim, None
 
 
     @property
@@ -8273,38 +8282,62 @@ def _MatchingRecord_current_score(id):
 @cache.memoize()
 def _MatchingRecord_is_valid(id):
     obj = db.session.query(MatchingRecord).filter_by(id=id).one()
+    attempt = obj.matching_attempt
+    project = obj.project
+
+    errors = {}
+    warnings = {}
+
 
     if obj.supervisor_id == obj.marker_id:
-        return False, 'Supervisor and marker are the same'
+        errors[('basic', 0)] = 'Supervisor and marker are the same'
 
-    if (obj.selector.has_submitted or obj.selector.has_bookmarks) \
-            and obj.selector.project_rank(obj.project_id) is None:
-        return False, "Assigned project does not appear in this selector's choices"
+    if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:
+        warnings[('assignment', 0)] = "Assigned project does not appear in this selector's choices"
 
-    if obj.project.config_id != obj.selector.config_id:
-        return False, 'Assigned project does not belong to the correct class for this selector'
+    if obj.selector.has_accepted_offer:
+        offer = obj.selector.accepted_offer
+        offer_project = offer.liveproject if offer is not None else None
+
+        if offer_project is not None and project.id != offer_project.id:
+            warnings[('assignment', 1)] = 'This selector accepted a custom offer for project "{name}", ' \
+                                          'but their assigned project differs'.format(name=project.name)
+
+    if project.config_id != obj.selector.config_id:
+        errors[('pclass', 0)] = 'Assigned project does not belong to the correct class for this selector'
 
     # check whether this project is also assigned to the same selector in another submission period
-    count = get_count(obj.matching_attempt.records.filter_by(selector_id=obj.selector_id,
-                                                             project_id=obj.project_id))
+    count = get_count(attempt.records.filter_by(selector_id=obj.selector_id,
+                                                project_id=obj.project_id))
 
     if count != 1:
         # only refuse to validate if we are the first member of the multiplet;
         # this prevents errors being reported multiple times
-        lo_rec = obj.matching_attempt.records \
+        lo_rec = attempt.records \
             .filter_by(selector_id=obj.selector_id, project_id=obj.project_id) \
             .order_by(MatchingRecord.submission_period.asc()).first()
 
         if lo_rec is not None and lo_rec.submission_period == obj.submission_period:
-            return False, 'Project "{name}" is duplicated in multiple submission periods'.format(name=obj.project.name)
+            warnings[('assignment', 2)] = 'Project "{name}" is duplicated in multiple submission ' \
+                                          'periods'.format(name=project.name)
 
     # check whether the assigned marker is compatible with this project
-    count = get_count(obj.project.assessor_list_query.filter_by(id=obj.marker_id))
+    if obj.selector.config.uses_marker:
+        count = get_count(project.assessor_list_query.filter_by(id=obj.marker_id))
 
-    if count != 1:
-        return False, 'Assigned 2nd marker is not compatible with assigned project'
+        if count != 1:
+            errors[('assignment', 3)] = 'Assigned 2nd marker is not compatible with assigned project'
 
-    return True, None
+    # check whether our project is overassigned
+    # (we have to ask our parent MatchingAttempt for help with this)
+    flag, msg = attempt.is_project_overassigned(project)
+    if flag:
+        errors[('overassigned'), 1] = msg
+
+    if len(errors) > 0 or len(warnings) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
 
 
 class MatchingRecord(db.Model):
@@ -8355,7 +8388,30 @@ class MatchingRecord(db.Model):
 
     @orm.reconstructor
     def _reconstruct(self):
-        self.error = None
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @property
+    def is_valid(self):
+        flag, self._errors, self._warnings = _MatchingRecord_is_valid(self.id)
+
+        return flag
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
 
 
     @property
@@ -8382,22 +8438,9 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def is_valid(self):
-        flag, self.error = _MatchingRecord_is_valid(self.id)
-
-        return flag
-
-
-    @property
     def is_project_overassigned(self):
-        if self.matching_attempt.is_project_overassigned(self.project):
-            self.error = 'Project "{supv} - {name}" is over-assigned ' \
-                         '(assigned={m}, max capacity={n})'.format(supv=self.project.owner.user.name, name=self.project.name,
-                                                                   m=self.matching_attempt.number_project_assignments(self.project),
-                                                                   n=self.project.capacity)
-            return True
-
-        return False
+        flag, msg = self.matching_attempt.is_project_overassigned(self.project)
+        return flag
 
 
     @property

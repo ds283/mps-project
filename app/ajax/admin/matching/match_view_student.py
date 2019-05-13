@@ -35,7 +35,7 @@ _pclass = \
 
 _cohort = \
 """
-{{ sel.student.programme.label|safe }}
+{{ sel.student.programme.short_label|safe }}
 {{ sel.academic_year_label(show_details=True)|safe }}
 {{ sel.student.cohort_label|safe }}
 """
@@ -45,40 +45,50 @@ _project = \
 """
 {% macro project_tag(r, show_period) %}
     {% set adjustable = false %}
-    {% if r.selector.has_submitted %}{% set adjustable = true %}{% endif %}
+    {% if r.selector.has_submission_list %}{% set adjustable = true %}{% endif %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
     {% set proj_overassigned = r.is_project_overassigned %}
-    <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label {% if proj_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
-                {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
-                {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
-            (No. {{ r.project.number }})
-            {% if adjustable %}<span class="caret"></span>{% endif %}</a>
-        {% if adjustable %}
-            {% set list = r.selector.ordered_selections %}
-            <ul class="dropdown-menu">
-                <li class="dropdown-header">Submitted choices</li>
-                {% for item in list %}
-                    {% set disabled = false %}
-                    {% if item.liveproject_id == r.project_id %}{% set disabled = true %}{% endif %}
-                    <li {% if disabled %}class="disabled"{% endif %}>
-                        <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
-                           #{{ item.rank }}:
-                           {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project|safe }} 
-                        </a>
-                    </li> 
-                {% endfor %}
-            </ul>
-        {% endif %}
+    <div>
+        <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
+            <a class="label {% if proj_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} {% if adjustable %}dropdown-toggle{% endif %}"
+                    {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
+                    {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>{% if show_period %}#{{ r.submission_period }}: {% endif %}{{ r.supervisor.user.name }}
+                (No. {{ r.project.number }})
+                {% if adjustable %}<span class="caret"></span>{% endif %}</a>
+            {% if adjustable %}
+                {% set list = r.selector.ordered_selections %}
+                <ul class="dropdown-menu">
+                    <li class="dropdown-header">Submitted choices</li>
+                    {% for item in list %}
+                        {% set disabled = false %}
+                        {% if item.liveproject_id == r.project_id %}{% set disabled = true %}{% endif %}
+                        <li {% if disabled %}class="disabled"{% endif %}>
+                            <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
+                               #{{ item.rank }}:
+                               {{ item.liveproject.owner.user.name }} &ndash; No. {{ item.liveproject.number }}: {{ item.format_project|safe }} 
+                            </a>
+                        </li> 
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
         {% set outcome = r.hint_status %}
         {% if outcome is not none %}
             {% set satisfied, violated = outcome %}
             {% if satisfied|length > 0 %}
-                <span class="label label-success">{% for i in range(satisfied|length) %}<i class="fa fa-check"></i>{% endfor %}</span>
+                <span class="label label-success">{%- for i in range(satisfied|length) -%}<i class="fa fa-check"></i>{%- endfor %} HINT</span>
             {% endif %}
             {% if violated|length > 0 %}
-                <span class="label label-warning">{% for i in range(violated|length) %}<i class="fa fa-times"></i>{% endfor %}</span>
+                <span class="label label-warning">{%- for i in range(violated|length) -%}<i class="fa fa-times"></i>{%- endfor %} HINT</span>
+            {% endif %}
+        {% endif %}
+        {% set prog_status = r.project.satisfies_preferences(r.selector) %}
+        {% if prog_status is not none %}
+            {% if prog_status %}
+                <span class="label label-success"><i class="fa fa-check"></i> PROG</span>
+            {% else %}
+                <span class="label label-warning"><i class="fa fa-times"></i> PROG</span>
             {% endif %}
         {% endif %}
     </div>

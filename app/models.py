@@ -5690,17 +5690,17 @@ class LiveProject(db.Model):
 
 
     def satisfies_preferences(self, sel):
-        number_preferences = get_count(self.programmes)
-        number_matches = get_count(self.programmes.filter_by(id=sel.student.programme_id))
+        preferences = get_count(self.programmes)
+        matches = get_count(self.programmes.filter_by(id=sel.student.programme_id))
 
-        if number_matches == 1:
-            return True
+        if preferences == 0:
+            return None
 
-        if number_matches > 1:
+        if matches > 1:
             raise RuntimeError('Inconsistent number of degree preferences match a single SelectingStudent')
 
-        if number_matches == 0 and number_preferences == 0:
-            return None
+        if matches == 1:
+            return True
 
         return False
 
@@ -7555,7 +7555,7 @@ def _MatchingAttempt_prefer_programme_status(id):
         outcome = rec.project.satisfies_preferences(rec.selector)
 
         if outcome is None:
-            break
+            continue
 
         if outcome:
             matched += 1
@@ -7576,7 +7576,6 @@ def _MatchingAttempt_hint_status(id):
     violated = set()
 
     for rec in obj.records:
-
         s, v = rec.hint_status
 
         satisfied = satisfied | s

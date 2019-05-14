@@ -8155,7 +8155,13 @@ class MatchingAttempt(db.Model, PuLPMixin):
     def _get_group_CATS(self, group):
         fsum = lambda x: x[0] + x[1]
 
-        return [fsum(self.get_faculty_CATS(x.id)) for x in group]
+        # compute our self-CATS
+        CAT_lists = {'self': [fsum(self.get_faculty_CATS(x.id)) for x in group]}
+
+        for m in self.include_matches:
+            CAT_lists[m.id] = [fsum(m.get_faculty_CATS(x.id)) for x in group]
+
+        return [sum(i) for i in zip(*CAT_lists.values())]
 
 
     @property

@@ -163,7 +163,6 @@ _workload = \
 
 
 def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
-
     data = []
 
     for f in faculty:
@@ -177,6 +176,7 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
         included_sup_CATS = None
         included_mark_CATS = None
         included_workload_CATS = None
+
         if show_includes and get_count(match_attempt.include_matches) > 0:
             included_sup_CATS = {}
             included_mark_CATS = {}

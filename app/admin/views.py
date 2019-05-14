@@ -3684,7 +3684,10 @@ def match_faculty_view(id):
         return redirect(request.referrer)
 
     pclass_filter = request.args.get('pclass_filter')
-    include_match_CATS = request.args.get('show_includes')
+    show_includes = request.args.get('show_includes')
+
+    if show_includes != 'true' and show_includes != 'false':
+        show_inclueds = 'false'
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -3696,17 +3699,16 @@ def match_faculty_view(id):
     if pclass_filter is not None:
         session['admin_match_pclass_filter'] = pclass_filter
 
-    if include_match_CATS is None and session.get('admin_match_include_match_CATS'):
-        include_match_CATS = session['admin_match_include_match_CATS']
+    if show_includes is None and session.get('admin_match_include_match_CATS'):
+        show_includes = session['admin_match_include_match_CATS']
 
-    if include_match_CATS is not None:
-        session['admin_match_include_match_CATS'] = include_match_CATS
+    if show_includes is not None:
+        session['admin_match_include_match_CATS'] = show_includes
 
     pclasses = get_automatch_pclasses()
-    show_includes = include_match_CATS == 'true'
 
     return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record,
-                           pclasses=pclasses, pclass_filter=pclass_filter,
+                           pclasses=pclasses, pclass_filter=pclass_filter, show_includes=show_includes,
                            text=text, url=url)
 
 
@@ -3782,8 +3784,7 @@ def match_dists_view(id):
     delta_script, delta_div = components(delta_plot)
 
     return render_template('admin/match_inspector/dists.html', pane='dists', record=record, pclasses=pclasses,
-                           pclass_filter=pclass_filter, show_includes=show_includes,
-                           CATS_script=CATS_script, CATS_div=CATS_div,
+                           pclass_filter=pclass_filter, CATS_script=CATS_script, CATS_div=CATS_div,
                            delta_script=delta_script, delta_div=delta_div,
                            text=text, url=url)
 
@@ -3821,12 +3822,12 @@ def match_faculty_view_ajax(id):
         return jsonify({})
 
     pclass_filter = request.args.get('pclass_filter')
-    include_match_CATS = request.args.get('show_includes')
-    show_includes = include_match_CATS == 'true'
+    show_includes = request.args.get('show_includes')
 
     flag, pclass_value = is_integer(pclass_filter)
 
-    return ajax.admin.faculty_view_data(record.faculty, record, pclass_value if flag else None, show_includes)
+    return ajax.admin.faculty_view_data(record.faculty, record, pclass_value if flag else None,
+                                        show_includes == 'true')
 
 
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')

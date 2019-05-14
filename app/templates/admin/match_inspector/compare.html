@@ -1,6 +1,7 @@
 {% extends "base_app.html" %}
 
 {% if pclass_filter is none %}{% set pclass_filter = 'all' %}{% endif %}
+{% if diff_filter is none %}{% set diff_filter = 'all' %}{% endif %}
 
 {% block scripts %}
     {{ super() }}
@@ -18,7 +19,7 @@
             $('#compare_match').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/do_match_compare_ajax/{{ record1.id }}/{{ record2.id }}?pclass_filter={{ pclass_filter }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/do_match_compare_ajax/{{ record1.id }}/{{ record2.id }}?pclass_filter={{ pclass_filter }}&diff_filter={{ diff_filter }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'student',
@@ -28,7 +29,19 @@
                       } },
                     { data: 'cohort' },
                     { data: 'record1' },
+                    { data: 'delta1',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                      } },
                     { data: 'record2' },
+                    { data: 'delta2',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                      } },
                     { data: 'menu' }
                 ],
                 deferRender: true
@@ -56,23 +69,39 @@
             <div class="well">
                 <p>Filter by project class</p>
                 <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter='all', text=text, url=url) }}">
+                    href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter='all', diff_filter=diff_filter, text=text, url=url) }}">
                     All
                 </a>
                 {% for pclass in pclasses %}
                     <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass.id, text=text, url=url) }}">
+                        href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass.id, diff_filter=diff_filter, text=text, url=url) }}">
                         {{ pclass.name }}
                     </a>
                 {% endfor %}
+                <hr class="intro-divider">
+                <p>Filter by difference</p>
+                <a class="btn btn-sm filter-btn {% if diff_filter is none or diff_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass_filter, diff_filter='all', text=text, url=url) }}">
+                    All
+                </a>
+                <a class="btn btn-sm filter-btn {% if diff_filter == 'projects' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass_filter, diff_filter='projects', text=text, url=url) }}">
+                    Show project differences
+                </a>
+                <a class="btn btn-sm filter-btn {% if diff_filter == 'markers' %}btn-primary{% else %}btn-default{% endif %}"
+                    href="{{ url_for('admin.do_match_compare', id1=record1.id, id2=record2.id, pclass_filter=pclass_filter, diff_filter='markers', text=text, url=url) }}">
+                    Show marker differences
+                </a>
             </div>
             <table id="compare_match" class="table table-striped table-bordered">
                 <thead>
                     <tr>
                         <th width="10%"> Student</th>
                         <th width="15%"> Cohort</th>
-                        <th width="30%"> {{ record1.name }}</th>
-                        <th width="30%"> {{ record2.name }}</th>
+                        <th width="20%"> {{ record1.name }}</th>
+                        <th width="10%"> Delta/Rank</th>
+                        <th width="20%"> {{ record2.name }}</th>
+                        <th width="10%"> Delta/Rank</th>
                         <th width="15%"> Actions</th>
                     </tr>
                 </thead>

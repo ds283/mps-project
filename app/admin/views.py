@@ -3442,6 +3442,7 @@ def do_match_compare(id1, id2):
     record2 = MatchingAttempt.query.get_or_404(id2)
 
     pclass_filter = request.args.get('pclass_filter')
+    diff_filter = request.args.get('diff_filter')
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
@@ -3467,7 +3468,7 @@ def do_match_compare(id1, id2):
 
     if not record2.finished:
         if record2.awaiting_upload:
-            flash('Can not comapre match "{name}" because it is still awaiting '
+            flash('Can not compare match "{name}" because it is still awaiting '
                   'manual upload.'.format(name=record2.name), 'error')
         else:
             flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name),
@@ -3483,10 +3484,20 @@ def do_match_compare(id1, id2):
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
         pclass_filter = session['admin_match_pclass_filter']
 
+    if pclass_filter is not None:
+        session['admin_match_pclass_filter'] = pclass_filter
+
+    # if no difference filter supplied, check if one is stored in ession
+    if diff_filter is None and session.get('admin_match_diff_filter'):
+        diff_filter = session['admin_match_diff_filter']
+
+    if diff_filter is not None:
+        session['admin_match_diff_filter'] = diff_filter
+
     pclasses = record1.available_pclasses
 
     return render_template('admin/match_inspector/compare.html', record1=record1, record2=record2, text=text, url=url,
-                           pclasses=pclasses, pclass_filter=pclass_filter)
+                           pclasses=pclasses, pclass_filter=pclass_filter, diff_filter=diff_filter)
 
 
 @admin.route('/do_match_compare_ajax/<int:id1>/<int:id2>')
@@ -3529,6 +3540,8 @@ def do_match_compare_ajax(id1, id2):
     pclass_filter = request.args.get('pclass_filter')
     flag, pclass_value = is_integer(pclass_filter)
 
+    diff_filter = request.args.get('diff_filter')
+
     # we know record2 has at least the same pclasses included as record1, although it may in fact have more
     # (there seems no simple query to restrict record2 to have exactly the same pclasses, and anyway there might
     # be use cases where it's useful to compare a match on a subset to a match on a larger group)
@@ -3555,7 +3568,10 @@ def do_match_compare_ajax(id1, id2):
         if left.submission_period != right.submission_period:
             raise RuntimeError('Unexpected discrepancy between LHS and RHS submission periods')
 
-        if left.project_id != right.project_id or left.marker_id != right.marker_id:
+        # if the records do not agree, then add it to the list of discrepant results
+        if diff_filter == 'all' and (left.project_id != right.project_id or left.marker_id != right.marker_id) \
+                or diff_filter == 'projects' and (left.project_id != right.project_id) \
+                or diff_filter == 'markers' and (left.marker_id != right.marker_id):
             if not flag or pclass_value == left.selector.config.pclass_id:
                 data.append((left, right))
 

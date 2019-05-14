@@ -21,7 +21,7 @@ _student = \
 
 _cohort = \
 """
-{{ sel.student.programme.label|safe }}
+{{ sel.student.programme.short_label|safe }}
 {{ sel.academic_year_label(show_details=True)|safe }}
 {{ sel.student.cohort_label|safe }}
 """
@@ -34,11 +34,22 @@ _records = \
     {% set style = pclass.make_CSS_style()|safe %}
     <span class="label label-info" {% if style %}style="{{ style }}"{% endif %}>#{{ r.submission_period }}:
         {{ r.supervisor.user.name }} (No. {{ r.project.number }})</span>
+{% else %}
+    <span class="label label-success">PROJECT MATCH</span>
 {% endif %}
 {% if r.marker_id != c.marker_id %}
     <span class="label label-default">#{{ r.submission_period }}:
         {{ r.marker.user.name }}</span>
+{% else %}
+    <span class="label label-success">MARKER MATCH</span>
 {% endif %}
+"""
+
+
+_delta = \
+"""
+<span class="label {% if r.hi_ranked %}label-success{% elif r.lo_ranked %}label-warning{% else %}label-info{% endif %}">{{ r.rank }}</span>
+<span class="label label-primary">&delta; = {{ r.delta }}</span>
 """
 
 
@@ -67,14 +78,18 @@ _menu = \
 
 
 def compare_match_data(records):
-    
+
     data = [{'student': {
                 'display': render_template_string(_student, sel=l.selector),
                 'sortvalue': l.selector.student.user.last_name + l.selector.student.user.first_name
              },
              'cohort': render_template_string(_cohort, sel=l.selector),
              'record1': render_template_string(_records, r=l, c=r),
+             'delta1': {'display': render_template_string(_delta, r=l),
+                        'sortvalue': l.delta},
              'record2': render_template_string(_records, r=r, c=l),
+             'delta2': {'display': render_template_string(_delta, r=r),
+                        'sortvalue': r.delta},
              'menu': render_template_string(_menu, l=l, r=r)} for l, r in records]
-    
+
     return jsonify(data)

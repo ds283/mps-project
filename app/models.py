@@ -7975,6 +7975,7 @@ class MatchingAttempt(db.Model, PuLPMixin):
         fsum = lambda deltas: sum(deltas) if None not in deltas else None
         sum_delta_set = [fsum(d) for d in delta_set]
 
+        # return list of summed delta in the same order as the list returned from .selectors()
         return sum_delta_set
 
 
@@ -8446,6 +8447,7 @@ class MatchingRecord(db.Model):
     def delta(self):
         if self.rank is None:
             return None
+
         return self.rank-1
 
 

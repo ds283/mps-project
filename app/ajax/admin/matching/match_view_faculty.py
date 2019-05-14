@@ -148,9 +148,9 @@ _workload = \
 <span class="label {% if sup_overassigned %}label-danger{% else %}label-info{% endif %}">S {{ sup }}</span>
 <span class="label {% if mark_overassigned %}label-danger{% else %}label-default{% endif %}">M {{ mark }}</span>
 <span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ tot }}</span>
-{% if m.include_matches.count() > 0 %}
+{% if m.include_matches.count() > 0 and include_sup_CATS is not none and include_mark_CATS is not none and include_workload_CATS is not none %}
     <p></p>
-    {% for match in m.include_matches and include_sup_CATS is not none and include_mark_CATS is not none and include_workload_CATS is not none %}
+    {% for match in m.include_matches %}
         <span class="label label-primary">{{ match.name }}</span>
         <span class="label label-info">S {{ included_sup_CATS[match.id] }}</span>
         <span class="label label-default">M {{ included_mark_CATS[match.id] }}</span>

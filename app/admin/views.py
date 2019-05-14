@@ -3684,6 +3684,8 @@ def match_faculty_view(id):
         return redirect(request.referrer)
 
     pclass_filter = request.args.get('pclass_filter')
+    include_match_CATS = request.args.get('show_includes')
+
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
@@ -3694,7 +3696,14 @@ def match_faculty_view(id):
     if pclass_filter is not None:
         session['admin_match_pclass_filter'] = pclass_filter
 
+    if include_match_CATS is None and session.get('admin_match_include_match_CATS'):
+        include_match_CATS = session['admin_match_include_match_CATS']
+
+    if include_match_CATS is not None:
+        session['admin_match_include_match_CATS'] = include_match_CATS
+
     pclasses = get_automatch_pclasses()
+    show_includes = include_match_CATS == 'true'
 
     return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record,
                            pclasses=pclasses, pclass_filter=pclass_filter,
@@ -3724,7 +3733,6 @@ def match_dists_view(id):
         return redirect(request.referrer)
 
     pclass_filter = request.args.get('pclass_filter')
-    include_match_CATS = request.args.get('show_includes')
 
     text = request.args.get('text', None)
     url = request.args.get('url', None)
@@ -3736,14 +3744,7 @@ def match_dists_view(id):
     if pclass_filter is not None:
         session['admin_match_pclass_filter'] = pclass_filter
 
-    if include_match_CATS is None and session.get('admin_match_include_match_CATS'):
-        include_match_CATS = session['admin_match_include_match_CATS']
-
-    if include_match_CATS is not None:
-        session['admin_match_include_match_CATS'] = include_match_CATS
-
     flag, pclass_value = is_integer(pclass_filter)
-    show_includes = include_match_CATS == 'true'
 
     pclasses = get_automatch_pclasses()
 

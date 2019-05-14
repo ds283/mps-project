@@ -1,6 +1,7 @@
 {% extends "admin/match_inspector/nav.html" %}
 
 {% if pclass_filter is none %}{% set pclass_filter = 'all' %}{% endif %}
+{% if show_includes is none %}{% set show_includes = 'false' %}{% endif %}
 
 {% block scripts %}
     {{ super() }}
@@ -18,7 +19,7 @@
             $('#match_faculty').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { 'url': $SCRIPT_ROOT + '/admin/match_faculty_view_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}', dataSrc: '' },
+                ajax: { 'url': $SCRIPT_ROOT + '/admin/match_faculty_view_ajax/{{ record.id }}?pclass_filter={{ pclass_filter }}&show_includes={{ show_includes }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
@@ -61,15 +62,28 @@
             <div class="well">
                 <p>Filter by project class</p>
                 <a class="btn btn-sm filter-btn {% if pclass_filter is none or pclass_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('admin.match_faculty_view', id=record.id, pclass_filter='all', text=text, url=url) }}">
+                    href="{{ url_for('admin.match_faculty_view', id=record.id, pclass_filter='all', show_includes=show_includes, text=text, url=url) }}">
                     All
                 </a>
                 {% for pclass in pclasses %}
                     <a class="btn btn-sm filter-btn {% if pclass_filter == pclass.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('admin.match_faculty_view', id=record.id, pclass_filter=pclass.id, text=text, url=url) }}">
+                        href="{{ url_for('admin.match_faculty_view', id=record.id, pclass_filter=pclass.id, show_includes=show_includes, text=text, url=url) }}">
                         {{ pclass.name }}
                     </a>
                 {% endfor %}
+                {% set number_include_matches = record.include_matches.count() %}
+                {% if number_include_matches > 0 %}
+                    <hr class="intro-divider">
+                    <p>Show CATS from included matches</p>
+                    <a class="btn btn-sm filter-btn {% if show_includes is none or show_includes == 'false' %}btn-primary{% else %}btn-default{% endif %}"
+                        href="{{ url_for('admin.match_faculty_view', id=record.id, pclass_filter=pclass_filter, show_includes='false', text=text, url=url) }}">
+                        Don't include
+                    </a>
+                    <a class="btn btn-sm filter-btn {% if show_includes == 'true' %}btn-primary{% else %}btn-default{% endif %}"
+                        href="{{ url_for('admin.match_faculty_view', id=record.id, pclass_filter=pclass_filter, show_includes='true', text=text, url=url) }}">
+                        Include
+                    </a>
+                {% endif %}
             </div>
             <table id="match_faculty" class="table table-striped table-bordered">
                 <thead>

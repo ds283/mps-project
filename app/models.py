@@ -7827,7 +7827,7 @@ class MatchingAttempt(db.Model, PuLPMixin):
     include_matches = db.relationship('MatchingAttempt', secondary=match_balancing,
                                       primaryjoin=match_balancing.c.child_id==id,
                                       secondaryjoin=match_balancing.c.parent_id==id,
-                                      backref='balanced_with')
+                                      backref='balanced_with', lazy='dynamic')
 
 
     # CONFIGURATION

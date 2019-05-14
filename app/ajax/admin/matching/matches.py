@@ -322,6 +322,13 @@ _name = \
     {% set pclass = config.project_class %}
     {{ pclass.make_label(pclass.abbreviation)|safe }}
 {% endfor %}
+{% set number_extra_matches = m.include_matches.count() %}
+{% if number_extra_matches > 0 %}
+    <p></p>
+    {% for match in m.include_matches %}
+        <span class="label label-primary">Inc: {{ match.name }}</span>
+    {% endfor %}
+{% endif %}
 {% if m.finished and m.solution_usable %}
     <p></p>
     {% if m.construct_time %}

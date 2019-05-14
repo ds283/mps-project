@@ -10,8 +10,8 @@
 
 from flask import jsonify, render_template_string
 
-from ....database import db
-from ....models import MatchingRecord
+from ....shared.utils import get_count
+
 
 _name = \
 """
@@ -148,10 +148,21 @@ _workload = \
 <span class="label {% if sup_overassigned %}label-danger{% else %}label-info{% endif %}">S {{ sup }}</span>
 <span class="label {% if mark_overassigned %}label-danger{% else %}label-default{% endif %}">M {{ mark }}</span>
 <span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ tot }}</span>
+{% if m.include_matches.count() > 0 %}
+    <p></p>
+    {% for match in m.include_matches and include_sup_CATS is not none and include_mark_CATS is not none and include_workload_CATS is not none %}
+        <span class="label label-primary">{{ match.name }}</span>
+        <span class="label label-info">S {{ included_sup_CATS[match.id] }}</span>
+        <span class="label label-default">M {{ included_mark_CATS[match.id] }}</span>
+        <span class="label label-primary">Total {{ included_workload_CATS[match.id] }}</span>
+    {% endfor %}
+    <p></p>
+    <span class="label label-primary">Grand total: {{ total_CATS_value }}</span>
+{% endif %}
 """
 
 
-def faculty_view_data(faculty, match_attempt, pclass_filter):
+def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
 
     data = []
 
@@ -162,6 +173,35 @@ def faculty_view_data(faculty, match_attempt, pclass_filter):
         # check for CATS overassignment
         sup_overassigned, CATS_sup, sup_lim, sup_msg = match_attempt.is_supervisor_overassigned(f)
         mark_overassigned, CATS_mark, mark_lim, mark_msg = match_attempt.is_marker_overassigned(f)
+
+        included_sup_CATS = None
+        included_mark_CATS = None
+        included_workload_CATS = None
+        if show_includes and get_count(match_attempt.include_matches) > 0:
+            included_sup_CATS = {}
+            included_mark_CATS = {}
+            included_workload_CATS = {}
+
+            for match in match_attempt.include_matches:
+                sup, mark = match.get_faculty_CATS(f, pclass_id=pclass_filter)
+
+                included_sup_CATS[match.id] = sup
+                included_mark_CATS[match.id] = mark
+                included_workload_CATS[match.id] = sup + mark
+
+            total_sup = CATS_sup + sum(included_sup_CATS.values())
+            total_mark = CATS_mark + sum(included_mark_CATS.values())
+
+            sup_overassigned = total_sup > sup_lim
+            mark_overassigned = total_mark > mark_lim
+
+            if sup_overassigned and sup_msg is None:
+                sup_msg = 'Supervising workload for {name} exceeds CATS limit after inclusion of all matches ' \
+                          '(assigned={m}, max capacity={n})'.format(name=f.user.name, m=total_sup, n=sup_lim)
+
+            if mark_overassigned and mark_msg is None:
+                mark_msg = 'Marking workload for {name} exceeds CATS limit ' \
+                           '(assigned={m}, max capacity={n})'.format(name=f.user.name, m=total_mark, n=mark_lim)
 
         if sup_overassigned:
             sup_errors['sup_over'] = sup_msg
@@ -192,16 +232,25 @@ def faculty_view_data(faculty, match_attempt, pclass_filter):
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 
+        total_CATS_value = workload_tot
+        if included_workload_CATS is not None:
+            total_CATS_value += sum(included_workload_CATS.values())
+
         data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned),
                               'sortvalue': f.user.last_name + f.user.first_name},
                      'projects': render_template_string(_projects, recs=supv_records,
                                                         pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
                      'marking': render_template_string(_marking, recs=mark_records,
                                                        pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
-                     'workload': {'display': render_template_string(_workload, sup=workload_sup, mark=workload_mark,
+                     'workload': {'display': render_template_string(_workload, m=match_attempt,
+                                                                    sup=workload_sup, mark=workload_mark,
                                                                     tot=workload_tot,
                                                                     sup_overassigned=sup_overassigned,
-                                                                    mark_overassigned=mark_overassigned),
-                                  'sortvalue': CATS_sup + CATS_mark}})
+                                                                    mark_overassigned=mark_overassigned,
+                                                                    included_sup_CATS=included_sup_CATS,
+                                                                    included_mark_CATS=included_mark_CATS,
+                                                                    included_workload_CATS=included_workload_CATS,
+                                                                    total_CATS_value=total_CATS_value),
+                                  'sortvalue': total_CATS_value}})
 
     return jsonify(data)

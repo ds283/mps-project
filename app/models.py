@@ -7836,7 +7836,7 @@ class MatchingAttempt(db.Model, PuLPMixin):
     # CONFIGURATION
 
     # record participants in this matching attempt
-    # note, there is no need to track the selectors since they are in 1-to-1 correspondance with the attached
+    # note, there is no need to track the selectors since they are in 1-to-1 correspondence with the attached
     # MatchingRecords, available under the backref .records
 
     # participating supervisors

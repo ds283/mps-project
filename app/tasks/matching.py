@@ -1353,19 +1353,20 @@ def register_matching_tasks(celery):
             self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
             raise Ignore()
 
-        number_sel, number_lp, number_sup, number_mark, \
-        sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
-        number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-        sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
-        sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-        sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
-        multiplicity, capacity, \
-        mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-        R, W, cstr, M, P = _initialize(self, record)
-
-        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...", autocommit=True)
-
         with Timer() as create_time:
+            number_sel, number_lp, number_sup, number_mark, \
+            sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
+            number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
+            sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
+            sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
+            sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
+            multiplicity, capacity, \
+            mean_CATS_per_project, CATS_supervisor, CATS_marker, \
+            R, W, cstr, M, P = _initialize(self, record)
+
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                            autocommit=True)
+
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
                                               number_lp, number_mark, number_sel, number_sup, record, sup_dict,
@@ -1400,20 +1401,19 @@ def register_matching_tasks(celery):
             self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
             raise Ignore()
 
-        number_sel, number_lp, number_sup, number_mark, \
-        sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
-        number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-        sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
-        sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-        sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
-        multiplicity, capacity, \
-        mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-        R, W, cstr, M, P = _initialize(self, record)
-
-        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
-                        autocommit=True)
-
         with Timer() as create_time:
+            number_sel, number_lp, number_sup, number_mark, \
+            sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
+            number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
+            sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
+            sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
+            sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
+            multiplicity, capacity, \
+            mean_CATS_per_project, CATS_supervisor, CATS_marker, \
+            R, W, cstr, M, P = _initialize(self, record)
+
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                            autocommit=True)
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
                                               number_lp, number_mark, number_sel, number_sup, record, sup_dict,
@@ -1472,20 +1472,20 @@ def register_matching_tasks(celery):
             self.update_state(state='FAILURE', meta='Could not load MatchingAttempt record from database')
             raise Ignore()
 
-        number_sel, number_lp, number_sup, number_mark, \
-        sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
-        number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
-        sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
-        sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
-        sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
-        multiplicity, capacity, \
-        mean_CATS_per_project, CATS_supervisor, CATS_marker, \
-        R, W, cstr, M, P = _initialize(self, record, read_serialized=True)
-
-        progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
-                        autocommit=True)
-
         with Timer() as create_time:
+            number_sel, number_lp, number_sup, number_mark, \
+            sel_to_number, lp_to_number, sup_to_number, mark_to_number, \
+            number_to_sel, number_to_lp, number_to_sup, number_to_mark, \
+            sel_dict, lp_dict, lp_group_dict, sup_dict, mark_dict, \
+            sup_only_numbers, mark_only_numbers, sup_and_mark_numbers, \
+            sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits, \
+            multiplicity, capacity, \
+            mean_CATS_per_project, CATS_supervisor, CATS_marker, \
+            R, W, cstr, M, P = _initialize(self, record, read_serialized=True)
+
+            progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
+                            autocommit=True)
+
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
                                               number_lp, number_mark, number_sel, number_sup, record, sup_dict,

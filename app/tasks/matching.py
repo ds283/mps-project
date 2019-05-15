@@ -224,7 +224,7 @@ def _enumerate_liveprojects_serialized(record):
 
         sup = lp.config.CATS_supervision
         mk = lp.config.CATS_marking
-        CATS_supervisor[n] = sup if sup is not None else 30
+        CATS_supervisor[n] = sup if sup is not None else 35
         CATS_marker[n] = mk if mk is not None else 3
 
         capacity[n] = lp.capacity if (lp.enforce_capacity and
@@ -268,7 +268,7 @@ def _enumerate_liveprojects_primary(configs):
 
             sup = config.CATS_supervision
             mk = config.CATS_marking
-            CATS_supervisor[number] = sup if sup is not None else 30
+            CATS_supervisor[number] = sup if sup is not None else 35
             CATS_marker[number] = mk if mk is not None else 3
 
             capacity[number] = item.capacity if (item.enforce_capacity and
@@ -750,7 +750,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # upper and lower limits roughly equal to one ranking place in matching to students
     prob += objective \
             - abs(levelling_bias) * levelling / mean_CATS_per_project \
-            - abs(levelling_bias) * maxMarking, "objective function"
+            - abs(levelling_bias) * maxMarking, "objective"
 
 
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
@@ -809,7 +809,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         prob += existing_CATS + sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
                                     for k in range(number_sel)) <= lim
 
-        # enforce ad-hoc per-project-class limits
+        # enforce ad-hoc per-project-class supervisor limits
         for config_id in sup_pclass_limits:
             fac_limits = sup_pclass_limits[config_id]
             projects = lp_group_dict.get(config_id, None)
@@ -834,17 +834,17 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
         prob += existing_CATS + sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim
 
-        # enforce ad-hoc per-project-class limits
+        # enforce ad-hoc per-project-class marking limits
         for config_id in mark_pclass_limits:
             fac_limits = mark_pclass_limits[config_id]
             projects = lp_group_dict.get(config_id, None)
 
             if i in fac_limits and projects is not None:
-                prob += sum(X[(k, j)] * CATS_marker[j] * P[(j, i)] for j in projects
-                            for k in range(number_sel)) <= fac_limits[i]
+                prob += sum(Y[(i, j)] * CATS_marker[j] for j in projects) <= fac_limits[i]
 
     # add constraints for any matches marked 'require' by a convenor
     for idx in cstr:
+        # impose 'force' constraints, where we require a student to be allocated a particular project
         prob += X[idx] == 1
 
 
@@ -954,7 +954,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
         assigned = []
 
         for i in range(number_mark):
-            Y[(i,j)].round()
+            Y[(i, j)].round()
             m = pulp.value(Y[(i,j)])
             if m > 0:
                 for k in range(m):
@@ -977,7 +977,7 @@ def _store_PuLP_solution(X, Y, record, number_sel, number_to_sel, number_lp, num
         assigned = []
 
         for j in range(number_lp):
-            X[(i,j)].round()
+            X[(i, j)].round()
             if pulp.value(X[(i,j)]) == 1:
                 assigned.append(j)
 

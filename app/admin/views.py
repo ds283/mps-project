@@ -2984,6 +2984,7 @@ def create_match():
                                   selected=False,
                                   construct_time=None,
                                   compute_time=None,
+                                  include_only_submitted=form.include_only_submitted.data,
                                   ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
                                   ignore_programme_prefs=form.ignore_programme_prefs.data,
                                   years_memory=form.years_memory.data,

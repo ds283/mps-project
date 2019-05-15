@@ -7767,6 +7767,9 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # MATCHING OPTIONS
 
+    # include only selectors who submitted choices
+    include_only_submitted = db.Column(db.Boolean())
+
     # ignore CATS limits specified in faculty accounts?
     ignore_per_faculty_limits = db.Column(db.Boolean())
 

@@ -697,6 +697,8 @@ def MatchingMixinFactory(query_factory):
                                                                query_factory=GetAutomatedMatchPClasses,
                                                                get_label='name')
 
+        include_only_submitted = BooleanField('Include only selectors who submitted preferences')
+
         ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts')
 
         ignore_programme_prefs = BooleanField('Ignore degree programme preferences')

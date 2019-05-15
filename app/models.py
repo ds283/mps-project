@@ -7828,8 +7828,8 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # other MatchingAttempts to include in CATS calculations
     include_matches = db.relationship('MatchingAttempt', secondary=match_balancing,
-                                      primaryjoin=match_balancing.c.child_id==id,
-                                      secondaryjoin=match_balancing.c.parent_id==id,
+                                      primaryjoin=match_balancing.c.child_id == id,
+                                      secondaryjoin=match_balancing.c.parent_id == id,
                                       backref='balanced_with', lazy='dynamic')
 
 
@@ -7840,15 +7840,15 @@ class MatchingAttempt(db.Model, PuLPMixin):
     # MatchingRecords, available under the backref .records
 
     # participating supervisors
-    supervisors = db.relationship('FacultyData', secondary=supervisors_matching_table,
+    supervisors = db.relationship('FacultyData', secondary=supervisors_matching_table, lazy='dynamic',
                                   backref=db.backref('supervisor_matching_attempts', lazy='dynamic'))
 
     # participating markers
-    markers = db.relationship('FacultyData', secondary=marker_matching_table,
+    markers = db.relationship('FacultyData', secondary=marker_matching_table, lazy='dynamic',
                               backref=db.backref('marker_matching_attempts', lazy='dynamic'))
 
     # participating projects
-    projects = db.relationship('LiveProject', secondary=project_matching_table,
+    projects = db.relationship('LiveProject', secondary=project_matching_table, lazy='dynamic',
                                backref=db.backref('project_matching_attempts', lazy='dynamic'))
 
     # mean CATS per project during matching

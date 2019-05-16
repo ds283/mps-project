@@ -11,13 +11,14 @@
 from ..database import db
 from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
-    UploadedAsset, FacultyData
+    UploadedAsset, FacultyData, ProjectClassConfig
 
 from ..task_queue import progress_update, register_task
 
 from celery import group, chain
 from celery.exceptions import Ignore
 
+from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
 import pulp
@@ -257,8 +258,14 @@ def _enumerate_liveprojects_primary(configs):
     project_group_dict = {}     # mapping from config.id to list of LiveProject.ids associated with it
 
     for config in configs:
-        # get LiveProject instances that belong to this config instance
-        projects = db.session.query(LiveProject).filter_by(config_id=config.id).all()
+        # get LiveProject instances that belong to this config instance and are associated with
+        # a supervisor who is still enrolled
+        # (eg. enrollment status may have changed since the projects went live)
+        projects = db.session.query(LiveProject).filter_by(config_id=config.id) \
+            .join(ProjectClassConfig, ProjectClassConfig.id == LiveProject.config_id) \
+            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == LiveProject.owner_id,
+                                         EnrollmentRecord.pclass_id == ProjectClassConfig.pclass_id)) \
+            .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED).all()
 
         project_group_dict[config.id] = []
 
@@ -472,12 +479,13 @@ def _enumerate_marking_faculty_primary(configs):
     return number, fac_to_number, number_to_fac, limit, fac_dict, config_limits
 
 
-def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record):
+def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record):
     """
     Construct a dictionary mapping from (student, project) pairs to the rank assigned
     to that project by the student.
     Also build a weighting matrix that accounts for other factors we wish to weight
-    in the assignment, such as degree programme
+    in the assignment, such as degree programme or convenor-provided hints
+    :param lp_to_number:
     :param number_sel:
     :param sel_dict:
     :param number_lp:
@@ -510,31 +518,44 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record):
             offer = sel.accepted_offer
             project = offer.liveproject
 
-            ranks[project.id] = 1
-            require.add(project.id)
+            if project.id in lp_to_number:
+                ranks[project.id] = 1
+                require.add(project.id)
+            else:
+                raise RuntimeError('Could not assign custom offer to selector "{name}" because target LiveProject '
+                                   'does not exist'.format(name=sel.student.user.name))
 
         elif sel.has_submission_list:
+            valid_projects = 0
+
             for item in sel.selections.all():
-                if item.hint != SelectionRecord.SELECTION_HINT_FORBID or not use_hints:
-                    ranks[item.liveproject_id] = item.rank
+                if item.liveproject_id in lp_to_number:
+                    valid_projects += 1
 
-                w = 1.0
-                if item.converted_from_bookmark:
-                    w *= bookmark_bias
-                if use_hints:
-                    if item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE:
-                        w *= encourage_bias
-                    elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
-                        w *= discourage_bias
-                    elif item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG:
-                        w *= strong_encourage_bias
-                    elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
-                        w *= strong_discourage_bias
+                    if item.hint != SelectionRecord.SELECTION_HINT_FORBID or not use_hints:
+                        ranks[item.liveproject_id] = item.rank
 
-                weights[item.liveproject_id] = w
+                    w = 1.0
+                    if item.converted_from_bookmark:
+                        w *= bookmark_bias
+                    if use_hints:
+                        if item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE:
+                            w *= encourage_bias
+                        elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE:
+                            w *= discourage_bias
+                        elif item.hint == SelectionRecord.SELECTION_HINT_ENCOURAGE_STRONG:
+                            w *= strong_encourage_bias
+                        elif item.hint == SelectionRecord.SELECTION_HINT_DISCOURAGE_STRONG:
+                            w *= strong_discourage_bias
 
-                if use_hints and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
-                    require.add(item.liveproject_id)
+                    weights[item.liveproject_id] = w
+
+                    if use_hints and item.hint == SelectionRecord.SELECTION_HINT_REQUIRE:
+                        require.add(item.liveproject_id)
+
+            if valid_projects == 0:
+                raise RuntimeError('Could not build rank matrix for selector "{name}" because no LiveProjects '
+                                   'on their preference list exist'.format(name=sel.student.user.name))
 
         else:
             # no ranking data, so rank all LiveProjects in the right project class equal to 1
@@ -1077,7 +1098,7 @@ def _initialize(self, record, read_serialized=False):
 
         # build student ranking matrix
         with Timer() as rank_timer:
-            R, W, cstr = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_dict, record)
+            R, W, cstr = _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict, record)
         print(' -- built student ranking matrix in time {s}'.format(s=rank_timer.interval))
 
         # build marker compatibility matrix

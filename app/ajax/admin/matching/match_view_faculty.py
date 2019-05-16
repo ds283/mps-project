@@ -149,13 +149,10 @@ _workload = \
 {% if m.include_matches.count() > 0 and included_sup_CATS is not none and included_mark_CATS is not none and included_workload_CATS is not none %}
     <p></p>
     {% for match in m.include_matches %}
-        <span class="label label-primary">{{ match.name }}</span>
-        <span class="label label-info">S {{ included_sup_CATS[match.id] }}</span>
-        <span class="label label-default">M {{ included_mark_CATS[match.id] }}</span>
-        <span class="label label-primary">Total {{ included_workload_CATS[match.id] }}</span>
+        <span class="label label-info">{{ match.name }} S {{ included_sup_CATS[match.id] }} M {{ included_mark_CATS[match.id] }} T {{ included_workload_CATS[match.id] }}</span>
     {% endfor %}
     <p></p>
-    <span class="label label-primary">Grand total: {{ total_CATS_value }}</span>
+    <span class="label label-primary">Total {{ total_CATS_value }}</span>
 {% endif %}
 """
 

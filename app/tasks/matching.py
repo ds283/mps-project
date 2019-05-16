@@ -686,10 +686,12 @@ def _compute_existing_mark_CATS(record, fac_data):
 
 def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, sup_pclass_limits,
                          mark_limits, mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel, number_sup,
-                         record, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
-                         sup_and_mark_numbers, levelling_bias, intra_group_tension, mean_CATS_per_project):
+                         record, sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
+                         mark_only_numbers, sup_and_mark_numbers, levelling_bias, intra_group_tension,
+                         mean_CATS_per_project):
     """
     Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
+    :param sel_dict:
     :param sup_dict:
     :param mark_dict:
     :param sup_pclass_limits:
@@ -778,23 +780,45 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
     # selectors can only be assigned to projects that they have ranked
     # (unless no ranking data was available, in which case all elements of R were set to 1)
-    for key in X:
-        prob += X[key] <= R[key]
+    for i in range(number_sel):
+        sel = sel_dict[i]
+        user = sel.student.user
+
+        for j in range(number_lp):
+            proj = lp_dict[j]
+            key = (i, j)
+            prob += X[key] <= R[key], \
+                    '_C{first}{last}_rk_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
+                                                            cfg=proj.config_id, num=proj.number)
 
     # markers can only be assigned projects to which they are attached
-    for key in Y:
-        prob += Y[key] <= M[key]
+    for i in range(number_mark):
+        mark = mark_dict[i]
+        user = mark.user
+
+        for j in range(number_lp):
+            proj = lp_dict[j]
+            key = (i, j)
+            prob += Y[key] <= M[key], \
+                    '_C{last}_mark_{cfg}_{num}'.format(last=user.last_name, cfg=proj.config_id, num=proj.number)
 
     # enforce desired multiplicity for each selector
     # (usually requires that each selector is assigned just one project, but can be 2 for eg. MPP)
     for i in range(number_sel):
-        prob += sum(X[(i, j)] for j in range(number_lp)) == multiplicity[i]
+        sel = sel_dict[i]
+        user = sel.student.user
+
+        prob += sum(X[(i, j)] for j in range(number_lp)) == multiplicity[i], \
+                '_C{first}{last}_assign'.format(first=user.first_name, last=user.last_name)
 
     # enforce maximum capacity for each project
     # note capacity[j] will be zero if this project is not enforcing an upper limit on capacity
     for j in range(number_lp):
+        proj = lp_dict[j]
+
         if capacity[j] != 0:
-            prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j]
+            prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j], \
+                    '_C{cfg}_{num}_capacity'.format(cfg=proj.config_id, num=proj.number)
 
     # number of students assigned to each project must match number of markers assigned to each project,
     # if markers are being used; otherwise, number of markers should be zero
@@ -807,14 +831,23 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         # number of assigned students should equal number of assigned markers, or zero if no markers used
         if proj.config.uses_marker:
             prob += sum(X[(i, j)] for i in range(number_sel)) - \
-                    sum(Y[(i, j)] for i in range(number_mark)) == 0
+                    sum(Y[(i, j)] for i in range(number_mark)) == 0, \
+                    '_C{cfg}_{num}_mark_parity'.format(cfg=proj.config_id, num=proj.number)
 
         else:
             for i in range(number_mark):
-                prob += Y[(i, j)] == 0      # enforce no markers assigned to this project
+                mark = mark_dict[i]
+                user = mark.user
+
+                # enforce no markers assigned to this project
+                prob += Y[(i, j)] == 0, \
+                        '_C{first}{last}_nomarkers_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
+                                                                       cfg=proj.config_id, num=proj.number)
 
     # CATS assigned to each supervisor must be within bounds
     for i in range(number_sup):
+        sup = sup_dict[i]
+        user = sup.user
 
         # enforce global limit, either from optimization configuration or from user's global record
         lim = record.supervising_limit
@@ -828,7 +861,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
                                '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=sup_data.user.name))
 
         prob += existing_CATS + sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
-                                    for k in range(number_sel)) <= lim
+                                    for k in range(number_sel)) <= lim, \
+                '_C{first}{last}_sup_CATS'.format(first=user.first_name, last=user.last_name)
 
         # enforce ad-hoc per-project-class supervisor limits
         for config_id in sup_pclass_limits:
@@ -837,10 +871,14 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
             if i in fac_limits and projects is not None:
                 prob += sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in projects
-                            for k in range(number_sel)) <= fac_limits[i]
+                            for k in range(number_sel)) <= fac_limits[i], \
+                        '_C{first}{last}_sup_CATS_config_{cfg}'.format(first=user.first_name, last=user.last_name,
+                                                                       cfg=config_id)
 
     # CATS assigned to each marker must be within bounds
     for i in range(number_mark):
+        mark = mark_dict[i]
+        user = mark.user
 
         # enforce global limit
         lim = record.marking_limit
@@ -853,7 +891,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
             raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
                                '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark_data.user.name))
 
-        prob += existing_CATS + sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim
+        prob += existing_CATS + sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim, \
+                '_C{first}{last}_mark_CATS'.format(first=user.first_name, last=user.last_name)
 
         # enforce ad-hoc per-project-class marking limits
         for config_id in mark_pclass_limits:
@@ -861,12 +900,22 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
             projects = lp_group_dict.get(config_id, None)
 
             if i in fac_limits and projects is not None:
-                prob += sum(Y[(i, j)] * CATS_marker[j] for j in projects) <= fac_limits[i]
+                prob += sum(Y[(i, j)] * CATS_marker[j] for j in projects) <= fac_limits[i], \
+                        '_C{first}{last}_mark_CATS_config_{cfg}'.format(first=user.first_name, last=user.last_name,
+                                                                        cfg=config_id)
 
     # add constraints for any matches marked 'require' by a convenor
     for idx in cstr:
+        i = idx[0]
+        j = idx[1]
+        sel = sel_dict[i]
+        proj = lp_dict[j]
+        user = sel.student.user
+
         # impose 'force' constraints, where we require a student to be allocated a particular project
-        prob += X[idx] == 1
+        prob += X[idx] == 1, \
+                '_C{first}{last}_force_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
+                                                           cfg=proj.config_id, num=proj.number)
 
 
     # WORKLOAD LEVELLING
@@ -1390,10 +1439,10 @@ def register_matching_tasks(celery):
 
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, sup_dict,
-                                              mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
-                                              sup_and_mark_numbers, record.levelling_bias, record.intra_group_tension,
-                                              mean_CATS_per_project)
+                                              number_lp, number_mark, number_sel, number_sup, record, sel_dict,
+                                              sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
+                                              mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
+                                              record.intra_group_tension, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1437,10 +1486,10 @@ def register_matching_tasks(celery):
                             autocommit=True)
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, sup_dict,
-                                              mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
-                                              sup_and_mark_numbers, record.levelling_bias, record.intra_group_tension,
-                                              mean_CATS_per_project)
+                                              number_lp, number_mark, number_sel, number_sup, record, sel_dict,
+                                              sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
+                                              mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
+                                              record.intra_group_tension, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1509,10 +1558,10 @@ def register_matching_tasks(celery):
 
             prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
                                               sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, sup_dict,
-                                              mark_dict, lp_dict, lp_group_dict, sup_only_numbers, mark_only_numbers,
-                                              sup_and_mark_numbers, record.levelling_bias, record.intra_group_tension,
-                                              mean_CATS_per_project)
+                                              number_lp, number_mark, number_sel, number_sup, record, sel_dict,
+                                              sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
+                                              mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
+                                              record.intra_group_tension, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 

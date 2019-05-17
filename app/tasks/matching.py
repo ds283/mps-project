@@ -528,7 +528,7 @@ def _build_ranking_matrix(number_sel, sel_dict, number_lp, lp_to_number, lp_dict
         elif sel.has_submission_list:
             valid_projects = 0
 
-            for item in sel.selections.all():
+            for item in sel.ordered_selections:
                 if item.liveproject_id in lp_to_number:
                     valid_projects += 1
 

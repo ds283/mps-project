@@ -3855,13 +3855,20 @@ def reassign_match_project(id, pid):
 
     if record.selector.has_submitted:
         if record.selector.is_project_submitted(project):
-            record.project_id = project.id
-            record.rank = record.selector.project_rank(project.id)
+            enroll_record = project.owner.get_enrollment_record(project.config.pclass_id)
 
-            record.matching_attempt.last_edit_id = current_user.id
-            record.matching_attempt.last_edit_timestamp = datetime.now()
+            if enroll_record is not None and enroll_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+                record.project_id = project.id
+                record.rank = record.selector.project_rank(project.id)
 
-            db.session.commit()
+                record.matching_attempt.last_edit_id = current_user.id
+                record.matching_attempt.last_edit_timestamp = datetime.now()
+
+                db.session.commit()
+            else:
+                flash("Could not reassign '{proj}' to {name} because this project's supervisor is no longer "
+                      "enrolled for this project class.".format(proj=project.name,
+                                                                name=record.selector.student.user.name))
         else:
             flash("Could not reassign '{proj}' to {name}; this project "
                   "was not included in this selector's choices".format(proj=project.name,

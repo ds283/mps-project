@@ -5709,8 +5709,13 @@ class LiveProject(db.Model):
     def assessor_list_query(self):
         fac_ids = self.assessors.subquery()
 
+        # restrict attention to markers who are correctly enrolled, so that we always serve a valid
+        # and up-to-date list
         return db.session.query(FacultyData) \
             .join(fac_ids, fac_ids.c.id == FacultyData.id) \
+            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id,
+                                         EnrollmentRecord.pclass_id == self.config.pclass_id)) \
+            .filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True) \
             .order_by(User.last_name.asc(), User.first_name.asc())
@@ -6933,6 +6938,14 @@ class SelectionRecord(db.Model):
 
     # convenor hint for this match
     hint = db.Column(db.Integer())
+
+
+    @property
+    def is_selectable(self):
+        # determine whether the project tagged in this selection is really selectable; eg. the supervisor
+        # might now be marked on sabbatical or exempted
+        record = self.liveproject.owner.get_enrollment_record(self.liveproject.config.pclass_id)
+        return record is not None and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
 
 
     @property

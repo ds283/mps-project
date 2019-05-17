@@ -62,7 +62,7 @@ _project = \
                     <li class="dropdown-header">Submitted choices</li>
                     {% for item in list %}
                         {% set disabled = false %}
-                        {% if item.liveproject_id == r.project_id %}{% set disabled = true %}{% endif %}
+                        {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
                         <li {% if disabled %}class="disabled"{% endif %}>
                             <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                                #{{ item.rank }}:

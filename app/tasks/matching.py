@@ -746,6 +746,11 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     # projects assigned to any individual faculty member.
     maxMarking = pulp.LpVariable("maxMarking", lowBound=0, cat=pulp.LpContinuous)
 
+    # add variables designed to allow violation of maximum CATS if necessary to obtain a feasible
+    # solution
+    sup_elastic_CATS = pulp.LpVariable.dicts("sup_elastic_CATS", range(number_sup), cat=pulp.LpInteger, lowBound=0)
+    mark_elastic_CATS = pulp.LpVariable.dicts("mark_elastic_CATS", range(number_mark), cat=pulp.LpInteger, lowBound=0)
+
 
     # OBJECTIVE FUNCTION
 
@@ -771,9 +776,14 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
     # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
     # upper and lower limits roughly equal to one ranking place in matching to students
+
+    # also we subtract off all 'elastic' variables with a high cofficient to discourage violation
+    # of CATS limits except where really necessary
     prob += objective \
             - abs(levelling_bias) * levelling / mean_CATS_per_project \
-            - abs(levelling_bias) * maxMarking, "objective"
+            - abs(levelling_bias) * maxMarking \
+            - sum(2*sup_elastic_CATS[i] for i in range(number_sup)) \
+            - sum(10*mark_elastic_CATS[i] for i in range(number_mark)), "objective"
 
 
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
@@ -861,7 +871,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
                                '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=sup_data.user.name))
 
         prob += existing_CATS + sum(X[(k, j)] * CATS_supervisor[j] * P[(j, i)] for j in range(number_lp)
-                                    for k in range(number_sel)) <= lim, \
+                                    for k in range(number_sel)) <= lim + sup_elastic_CATS[i], \
                 '_C{first}{last}_sup_CATS'.format(first=user.first_name, last=user.last_name)
 
         # enforce ad-hoc per-project-class supervisor limits
@@ -891,7 +901,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
             raise RuntimeError('Inconsistent matching problem: existing marking CATS load {n} for faculty '
                                '"{name}" exceeds specified CATS limit'.format(n=existing_CATS, name=mark_data.user.name))
 
-        prob += existing_CATS + sum(Y[(i, j)] * CATS_marker[j] for j in range(number_lp)) <= lim, \
+        prob += existing_CATS + sum(Y[(i, j)] * CATS_marker[j]
+                                    for j in range(number_lp)) <= lim + mark_elastic_CATS[i], \
                 '_C{first}{last}_mark_CATS'.format(first=user.first_name, last=user.last_name)
 
         # enforce ad-hoc per-project-class marking limits

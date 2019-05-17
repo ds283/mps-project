@@ -141,14 +141,14 @@ _workload = \
 """
 <span class="label {% if sup_overassigned %}label-danger{% else %}label-info{% endif %}">S {{ sup }}</span>
 <span class="label {% if mark_overassigned %}label-danger{% else %}label-default{% endif %}">M {{ mark }}</span>
-<span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ tot }}</span>
+<span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">T {{ tot }}</span>
 {% if m.include_matches.count() > 0 and included_sup_CATS is not none and included_mark_CATS is not none and included_workload_CATS is not none %}
     <p></p>
     {% for match in m.include_matches %}
         <span class="label label-info">{{ match.name }} S {{ included_sup_CATS[match.id] }} M {{ included_mark_CATS[match.id] }} T {{ included_workload_CATS[match.id] }}</span>
     {% endfor %}
     <p></p>
-    <span class="label label-primary">Total {{ total_CATS_value }}</span>
+    <span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ total_CATS_value }}</span>
 {% endif %}
 """
 
@@ -160,7 +160,7 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
         sup_errors = {}
         mark_errors = {}
 
-        # check for CATS overassignment, initially without any included matches
+        # check for CATS overassignment
         sup_overassigned, CATS_sup, included_sup, sup_lim, sup_msg = \
             match_attempt.is_supervisor_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
         mark_overassigned, CATS_mark, included_mark, mark_lim, mark_msg = \
@@ -195,7 +195,6 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
             if key in included_mark:
                 included_workload[key] = included_sup[key] + included_mark[key]
 
-        # check for project overassignment and cache error messages to prevent multiple display
         supv_records = match_attempt.get_supervisor_records(f.id).all()
         mark_records = match_attempt.get_marker_records(f.id).all()
 
@@ -206,7 +205,7 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
                     if item.project_id not in sup_errors:
                         sup_errors[item.project_id] = msg
         proj_overassigned = len(sup_errors) > 0
-        overassgned = overassigned or proj_overassigned
+        overassigned = overassigned or proj_overassigned
 
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()

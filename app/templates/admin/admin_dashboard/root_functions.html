@@ -7,7 +7,7 @@
     {% endif %}
 {% endmacro %}
 
-{% macro root_functions(data, has_assessments) %}
+{% macro root_functions(data, matching_ready, has_assessments) %}
     {% set rollover_ready = data['rollover_ready'] %}
     {% set rollover_in_progress = data['rollover_in_progress'] %}
 

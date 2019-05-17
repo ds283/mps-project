@@ -102,7 +102,7 @@
             {% if is_root and pane == 'system' %}
                 <div class="well">
                     {{ admin_dashboard_card(root_dash_data) }}
-                    {{ root_functions(root_dash_data, has_assessments) }}
+                    {{ root_functions(root_dash_data, matching_ready, has_assessments) }}
                 </div>
             {% else %}
                 {% if enrollments and enrollments|length > 0 %}

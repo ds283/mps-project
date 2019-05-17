@@ -5805,6 +5805,9 @@ def custom_CATS_limits(record_id):
         record.CATS_marking = form.CATS_marking.data
         record.CATS_presentation = form.CATS_presentation.data
 
+        record.last_edit_id = current_user.id
+        record.last_edit_timestamp = datetime.now()
+
         try:
             db.session.commit()
         except SQLAlchemyError:

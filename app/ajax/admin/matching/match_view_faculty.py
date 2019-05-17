@@ -160,52 +160,40 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
         sup_errors = {}
         mark_errors = {}
 
-        # check for CATS overassignment
-        sup_overassigned, CATS_sup, sup_lim, sup_msg = match_attempt.is_supervisor_overassigned(f)
-        mark_overassigned, CATS_mark, mark_lim, mark_msg = match_attempt.is_marker_overassigned(f)
-
-        included_sup_CATS = None
-        included_mark_CATS = None
-        included_workload_CATS = None
-
-        if show_includes and get_count(match_attempt.include_matches) > 0:
-            included_sup_CATS = {}
-            included_mark_CATS = {}
-            included_workload_CATS = {}
-
-            for match in match_attempt.include_matches:
-                sup, mark = match.get_faculty_CATS(f, pclass_id=pclass_filter)
-
-                included_sup_CATS[match.id] = sup
-                included_mark_CATS[match.id] = mark
-                included_workload_CATS[match.id] = sup + mark
-
-            total_sup = CATS_sup + sum(included_sup_CATS.values())
-            total_mark = CATS_mark + sum(included_mark_CATS.values())
-
-            sup_overassigned = total_sup > sup_lim
-            mark_overassigned = total_mark > mark_lim
-
-            if sup_overassigned and sup_msg is None:
-                sup_msg = 'Supervising workload for {name} exceeds CATS limit after inclusion of all matches ' \
-                          '(assigned={m}, max capacity={n})'.format(name=f.user.name, m=total_sup, n=sup_lim)
-
-            if mark_overassigned and mark_msg is None:
-                mark_msg = 'Marking workload for {name} exceeds CATS limit ' \
-                           '(assigned={m}, max capacity={n})'.format(name=f.user.name, m=total_mark, n=mark_lim)
+        # check for CATS overassignment, initially without any included matches
+        sup_overassigned, CATS_sup, included_sup, sup_lim, sup_msg = \
+            match_attempt.is_supervisor_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
+        mark_overassigned, CATS_mark, included_mark, mark_lim, mark_msg = \
+            match_attempt.is_marker_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
 
         if sup_overassigned:
             sup_errors['sup_over'] = sup_msg
         if mark_overassigned:
             mark_errors['mark_over'] = mark_msg
+        overassigned = sup_overassigned or mark_overassigned
 
-        if pclass_filter is None:
-            workload_sup = CATS_sup
-            workload_mark = CATS_mark
-            workload_tot = CATS_sup + CATS_mark
+        if show_includes:
+            this_sup, this_mark = match_attempt.get_faculty_CATS(f, pclass_id=pclass_filter)
         else:
-            workload_sup, workload_mark = match_attempt.get_faculty_CATS(f.id, pclass_filter)
-            workload_tot = workload_sup + workload_mark
+            this_sup = CATS_sup
+            this_mark = CATS_mark
+
+        if pclass_filter is not None:
+            _sup_overassigned, _CATS_sup, _included_sup, _sup_lim, _sup_msg = \
+                match_attempt.is_supervisor_overassigned(f, include_matches=show_includes)
+            _mark_overassigned, _CATS_mark, _included_mark, _mark_lim, _mark_msg = \
+                match_attempt.is_marker_overassigned(f, include_matches=show_includes)
+
+            if _sup_overassigned:
+                sup_errors['sup_over_full'] = _sup_msg
+            if _mark_overassigned:
+                mark_errors['mark_over_full'] = _mark_msg
+            overassigned = overassigned or _sup_overassigned or _mark_overassigned
+
+        included_workload = {}
+        for key in included_sup:
+            if key in included_mark:
+                included_workload[key] = included_sup[key] + included_mark[key]
 
         # check for project overassignment and cache error messages to prevent multiple display
         supv_records = match_attempt.get_supervisor_records(f.id).all()
@@ -218,30 +206,28 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
                     if item.project_id not in sup_errors:
                         sup_errors[item.project_id] = msg
         proj_overassigned = len(sup_errors) > 0
-        overassigned = sup_overassigned or mark_overassigned or proj_overassigned
+        overassgned = overassigned or proj_overassigned
 
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 
-        total_CATS_value = workload_tot
-        if included_workload_CATS is not None:
-            total_CATS_value += sum(included_workload_CATS.values())
-
         data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned),
                               'sortvalue': f.user.last_name + f.user.first_name},
-                     'projects': render_template_string(_projects, recs=supv_records,
-                                                        pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
-                     'marking': render_template_string(_marking, recs=mark_records,
-                                                       pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
+                     'projects': {'display': render_template_string(_projects, recs=supv_records,
+                                                                    pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
+                                  'sortvalue': len(supv_records)},
+                     'marking': {'display': render_template_string(_marking, recs=mark_records,
+                                                                   pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
+                                 'sortvalue': len(mark_records)},
                      'workload': {'display': render_template_string(_workload, m=match_attempt,
-                                                                    sup=workload_sup, mark=workload_mark,
-                                                                    tot=workload_tot,
+                                                                    sup=this_sup, mark=this_mark,
+                                                                    tot=this_sup + this_mark,
                                                                     sup_overassigned=sup_overassigned,
                                                                     mark_overassigned=mark_overassigned,
-                                                                    included_sup_CATS=included_sup_CATS,
-                                                                    included_mark_CATS=included_mark_CATS,
-                                                                    included_workload_CATS=included_workload_CATS,
-                                                                    total_CATS_value=total_CATS_value),
-                                  'sortvalue': total_CATS_value}})
+                                                                    included_sup_CATS=included_sup,
+                                                                    included_mark_CATS=included_mark,
+                                                                    included_workload_CATS=included_workload,
+                                                                    total_CATS_value=CATS_sup + CATS_mark),
+                                  'sortvalue': CATS_sup + CATS_mark}})
 
     return jsonify(data)

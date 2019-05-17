@@ -7648,12 +7648,12 @@ def _MatchingAttempt_is_valid(id):
             faculty_issues = True
 
     for fac in obj.faculty:
-        sup_over, CATS_sup, sup_lim, msg = obj.is_supervisor_overassigned(fac)
+        sup_over, CATS_sup, include_CATS_sup, sup_lim, msg = obj.is_supervisor_overassigned(fac, include_matches=True)
         if sup_over:
             warnings[('supervising', fac.id)] = msg
             faculty_issues = True
 
-        mark_over, CATS_mark, mark_lim, msg = obj.is_marker_overassigned(fac)
+        mark_over, CATS_mark, include_CATS_mark, mark_lim, msg = obj.is_marker_overassigned(fac, include_matches=True)
         if mark_over:
             warnings[('marking', fac.id)] = msg
             faculty_issues = True
@@ -8004,22 +8004,34 @@ class MatchingAttempt(db.Model, PuLPMixin):
     @property
     def delta_max(self):
         filtered_deltas = [x for x in self.selector_deltas if x is not None]
+        if len(filtered_deltas) == 0:
+            return None
+
         return max(filtered_deltas)
 
 
     @property
     def delta_min(self):
         filtered_deltas = [x for x in self.selector_deltas if x is not None]
+        if len(filtered_deltas) == 0:
+            return None
+
         return min(filtered_deltas)
 
 
     @property
     def CATS_max(self):
+        if len(self.faculty_CATS) == 0:
+            return None
+
         return max(self.faculty_CATS)
 
 
     @property
     def CATS_min(self):
+        if len(self.faculty_CATS) == 0:
+            return None
+
         return min(self.faculty_CATS)
 
 
@@ -8053,38 +8065,87 @@ class MatchingAttempt(db.Model, PuLPMixin):
         return False, None
 
 
-    def is_supervisor_overassigned(self, faculty):
-        CATS_sup, CATS_mark = self.get_faculty_CATS(faculty.id)
+    def is_supervisor_overassigned(self, faculty, include_matches=False, pclass_id=None):
+        sup, mark = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
-        sup_lim = self.supervising_limit
+        limit = self.supervising_limit
+        total = sup
+
+        message = None
+        rval = False
+        included_matches = {}
+
+        if include_matches:
+            for match in self.include_matches:
+                sup, mark = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+                included_matches[match.id] = sup
+
+            if len(included_matches) > 0:
+                total += sum(included_matches.values())
 
         if not self.ignore_per_faculty_limits:
             if faculty.CATS_supervision is not None and faculty.CATS_supervision > 0:
-                sup_lim = faculty.CATS_supervision
+                limit = faculty.CATS_supervision
 
-        if CATS_sup > sup_lim:
-            message = 'Supervising workload for {name} exceeds CATS limit ' \
-                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=CATS_sup, n=sup_lim)
-            return True, CATS_sup, sup_lim, message
+        if sup > limit:
+            message = 'Supervising workload for {name} exceeds CATS limit {pcl}' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=sup, n=limit,
+                                                                pcl='' if pclass_id is None else 'for this project '
+                                                                                                 'class ')
+            rval = True
 
-        return False, CATS_sup, sup_lim, None
+        if not rval and total > limit:
+            message = 'Supervising workload for {name} exceeds CATS limit {pcl}after inclusion of all matches ' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=total, n=limit,
+                                                                pcl='' if pclass_id is None else 'for this project '
+                                                                                                 'class ')
+            rval = True
+
+        if include_matches:
+            return rval, total, included_matches, limit, message
+
+        return rval, sup, limit, message
 
 
-    def is_marker_overassigned(self, faculty):
-        CATS_sup, CATS_mark = self.get_faculty_CATS(faculty.id)
+    def is_marker_overassigned(self, faculty, include_matches=False, pclass_id=None):
+        sup, mark = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
-        mark_lim = self.marking_limit
+        limit = self.marking_limit
+        total = mark
+
+        message = None
+        rval = False
+        included_matches = {}
+
+        if include_matches:
+            for match in self.include_matches:
+                sup, mark = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+                included_matches[match.id] = mark
+
+            if len(included_matches) > 0:
+                total += sum(included_matches.values())
 
         if not self.ignore_per_faculty_limits:
             if faculty.CATS_marking is not None and faculty.CATS_marking > 0:
-                mark_lim = faculty.CATS_marking
+                limit = faculty.CATS_marking
 
-        if CATS_mark > mark_lim:
-            message = 'Marking workload for {name} exceeds CATS limit ' \
-                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=CATS_mark, n=mark_lim)
-            return True, CATS_mark, mark_lim, message
+        if mark > limit:
+            message = 'Marking workload for {name} exceeds CATS limit {pcl}' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=mark, n=limit,
+                                                                pcl='' if pclass_id is None else 'for this project '
+                                                                                                 'class ')
+            rval = True
 
-        return False, CATS_mark, mark_lim, None
+        if not rval and total > limit:
+            message = 'Marking workload for {name} exceeds CATS limit {pcl}after inclusion of all matches ' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=total, n=limit,
+                                                                pcl='' if pclass_id is None else 'for this project '
+                                                                                                 'class ')
+
+        if include_matches:
+            return rval, total, included_matches, limit, message
+
+        return rval, mark, limit, message
 
 
     @property

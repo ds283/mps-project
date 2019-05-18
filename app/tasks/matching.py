@@ -798,8 +798,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
             proj = lp_dict[j]
             key = (i, j)
             prob += X[key] <= R[key], \
-                    '_C{first}{last}_rk_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
-                                                            cfg=proj.config_id, num=proj.number)
+                    '_C{first}{last}_{scfg}_rk_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
+                                                                   scfg=sel.config_id, cfg=proj.config_id, num=proj.number)
 
     # markers can only be assigned projects to which they are attached
     for i in range(number_mark):
@@ -810,7 +810,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
             proj = lp_dict[j]
             key = (i, j)
             prob += Y[key] <= M[key], \
-                    '_C{last}_mark_{cfg}_{num}'.format(last=user.last_name, cfg=proj.config_id, num=proj.number)
+                    '_C{first}{last}_mark_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
+                                                              cfg=proj.config_id, num=proj.number)
 
     # enforce desired multiplicity for each selector
     # (usually requires that each selector is assigned just one project, but can be 2 for eg. MPP)
@@ -819,7 +820,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
         user = sel.student.user
 
         prob += sum(X[(i, j)] for j in range(number_lp)) == multiplicity[i], \
-                '_C{first}{last}_assign'.format(first=user.first_name, last=user.last_name)
+                '_C{first}{last}_{scfg}_assign'.format(first=user.first_name, last=user.last_name, scfg=sel.config_id)
 
     # enforce maximum capacity for each project
     # note capacity[j] will be zero if this project is not enforcing an upper limit on capacity
@@ -925,8 +926,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
         # impose 'force' constraints, where we require a student to be allocated a particular project
         prob += X[idx] == 1, \
-                '_C{first}{last}_force_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
-                                                           cfg=proj.config_id, num=proj.number)
+                '_C{first}{last}_{scfg}_force_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
+                                                                  scfg=sel.config_id, cfg=proj.config_id, num=proj.number)
 
 
     # WORKLOAD LEVELLING

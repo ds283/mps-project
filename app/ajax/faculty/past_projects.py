@@ -56,7 +56,7 @@ _metadata = \
     {{ project_selection_data(p) }}
 </div>
 <div style="margin-top: 6px;">
-    {{ project_rank_data(p, url_for('faculty.past_projects'), text='past projects view') }}
+    {{ project_rank_data(p, url_for('faculty.past_projects'), text='past projects view', live=false) }}
 </div>
 """
 

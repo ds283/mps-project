@@ -5390,13 +5390,13 @@ class LiveProject(db.Model):
             .order_by(User.last_name.asc(), User.first_name.asc(), CustomOffer.creation_timestamp.asc())
 
 
-    def _get_popularity_attr(self, getter):
+    def _get_popularity_attr(self, getter, live=True):
         record = self.popularity_data.order_by(PopularityRecord.datestamp.desc()).first()
 
         now = datetime.now()
 
         # return None if no value stored, or if stored value is too stale (> 1 day old)
-        if record is None or (now - record.datestamp) > timedelta(days=1):
+        if record is None or (live and (now - record.datestamp) > timedelta(days=1)):
             return None
 
         return getter(record)
@@ -5413,13 +5413,13 @@ class LiveProject(db.Model):
 
 
     @property
-    def popularity_score(self):
-        return self._get_popularity_attr(lambda x: x.score)
+    def popularity_score(self, live=True):
+        return self._get_popularity_attr(lambda x: x.score, live=live)
 
 
     @property
-    def popularity_rank(self):
-        return self._get_popularity_attr(lambda x: (x.score_rank, x.total_number))
+    def popularity_rank(self, live=True):
+        return self._get_popularity_attr(lambda x: (x.score_rank, x.total_number), live=live)
 
 
     @property
@@ -5433,13 +5433,13 @@ class LiveProject(db.Model):
 
 
     @property
-    def lowest_popularity_rank(self):
-        return self._get_popularity_attr(lambda x: x.lowest_score_rank)
+    def lowest_popularity_rank(self, live=True):
+        return self._get_popularity_attr(lambda x: x.lowest_score_rank, live=live)
 
 
     @property
-    def views_rank(self):
-        return self._get_popularity_attr(lambda x: (x.views_rank, x.total_number))
+    def views_rank(self, live=True):
+        return self._get_popularity_attr(lambda x: (x.views_rank, x.total_number), live=live)
 
 
     @property
@@ -5453,8 +5453,8 @@ class LiveProject(db.Model):
 
 
     @property
-    def bookmarks_rank(self):
-        return self._get_popularity_attr(lambda x: (x.bookmarks_rank, x.total_number))
+    def bookmarks_rank(self, live=True):
+        return self._get_popularity_attr(lambda x: (x.bookmarks_rank, x.total_number), live=live)
 
 
     @property
@@ -5468,8 +5468,8 @@ class LiveProject(db.Model):
 
 
     @property
-    def selections_rank(self):
-        return self._get_popularity_attr(lambda x: (x.selections_rank, x.total_number))
+    def selections_rank(self, live=True):
+        return self._get_popularity_attr(lambda x: (x.selections_rank, x.total_number), live=live)
 
 
     @property
@@ -5598,12 +5598,12 @@ class LiveProject(db.Model):
     def popularity_label(self, css_classes=None, popover=False):
         cls = '' if css_classes is None else ' '.join(css_classes)
 
-        score = self.popularity_rank
+        score = self.popularity_rank(live=True)
         if score is None:
             return '<span class="label label-default {cls}">Popularity score unavailable</span>'.format(cls=cls)
 
         rank, total = score
-        lowest_rank = self.lowest_popularity_rank
+        lowest_rank = self.lowest_popularity_rank(live=True)
 
         # don't report popularity data if there isn't enough differentiation between projects for it to be
         # meaningful. Remember the lowest rank is actually numerically the highest number.

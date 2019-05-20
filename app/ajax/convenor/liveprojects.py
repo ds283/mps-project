@@ -77,14 +77,14 @@ _confirmations = \
 
 _popularity = \
 """
-{% set R = project.popularity_rank(live=true) %}
+{% set R = project.popularity_rank(live=True) %}
 {% if R is not none %}
     {% set rank, total = R %}
     <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="label label-primary">Popularity {{ rank }}/{{ total }}</a>
 {% else %}
     <span class="label label-default">Popularity updating...</span>
 {% endif %}
-{% set R = project.views_rank(live=true) %}
+{% set R = project.views_rank(live=True) %}
 {% if R is not none %}
     {% set rank, total = R %}
     <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="label label-default">Views {{ rank }}/{{ total }}</a>

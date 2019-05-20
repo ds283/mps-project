@@ -5412,12 +5412,10 @@ class LiveProject(db.Model):
         return xs, ys
 
 
-    @property
     def popularity_score(self, live=True):
         return self._get_popularity_attr(lambda x: x.score, live=live)
 
 
-    @property
     def popularity_rank(self, live=True):
         return self._get_popularity_attr(lambda x: (x.score_rank, x.total_number), live=live)
 
@@ -5432,12 +5430,10 @@ class LiveProject(db.Model):
         return self._get_popularity_history(lambda x: (x.score_rank, x.total_number))
 
 
-    @property
     def lowest_popularity_rank(self, live=True):
         return self._get_popularity_attr(lambda x: x.lowest_score_rank, live=live)
 
 
-    @property
     def views_rank(self, live=True):
         return self._get_popularity_attr(lambda x: (x.views_rank, x.total_number), live=live)
 
@@ -5452,7 +5448,6 @@ class LiveProject(db.Model):
         return self._get_popularity_history(lambda x: (x.views_rank, x.total_number))
 
 
-    @property
     def bookmarks_rank(self, live=True):
         return self._get_popularity_attr(lambda x: (x.bookmarks_rank, x.total_number), live=live)
 
@@ -5467,7 +5462,6 @@ class LiveProject(db.Model):
         return self._get_popularity_history(lambda x: (x.bookmarks_rank, x.total_number))
 
 
-    @property
     def selections_rank(self, live=True):
         return self._get_popularity_attr(lambda x: (x.selections_rank, x.total_number), live=live)
 

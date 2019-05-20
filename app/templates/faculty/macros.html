@@ -20,7 +20,7 @@
 
 {% macro project_rank_data(project, url, text, live) %}
     {% if project is not none %}
-        {% set R = project.popularity_rank(live=live) %}
+        {% set R = project.popularity_rank(live) %}
         {% if R is not none %}
             {% set rank, total = R %}
             {% if rank is none or total is none %}
@@ -30,7 +30,7 @@
             {% endif %}
         {% endif %}
 
-        {% set R = project.selections_rank(live=live) %}
+        {% set R = project.selections_rank(live) %}
         {% if R is not none %}
             {% set rank, total = R %}
             {% if rank is none or total is none %}
@@ -40,7 +40,7 @@
             {% endif %}
         {% endif %}
 
-        {% set R = project.bookmarks_rank(live=live) %}
+        {% set R = project.bookmarks_rank(live) %}
         {% if R is not none %}
             {% set rank, total = R %}
             {% if rank is none or total is none %}
@@ -50,7 +50,7 @@
             {% endif %}
         {% endif %}
 
-        {% set R = project.views_rank(live=live) %}
+        {% set R = project.views_rank(live) %}
         {% if R is not none %}
             {% set rank, total = R %}
             {% if rank is none or total is none %}

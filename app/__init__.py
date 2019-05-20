@@ -36,7 +36,7 @@ from config import app_config, site_revision, site_copyright_dates
 from .database import db
 from .models import User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
-from .shared.utils import home_dashboard_url, get_assessment_data
+from .shared.utils import home_dashboard_url, get_global_context_data
 from .shared.precompute import precompute_at_login
 import app.tasks as tasks
 
@@ -298,6 +298,7 @@ def create_app():
         return bleach.clean(s)
 
 
+    # collect all global context functions together in an attempt to avoid function call overhead
     @app.context_processor
     def global_context():
         if not has_request_context():
@@ -311,21 +312,16 @@ def create_app():
 
         ctx = {'real_user': real_user,
                'website_revision': site_revision,
-               'website_copyright_dates': site_copyright_dates}
+               'website_copyright_dates': site_copyright_dates,
+               'home_dashboard_url': home_dashboard_url()}
 
-        if current_user is not None and current_user.has_role('root'):
-            assessment_data = get_assessment_data()
-            ctx.update(assessment_data)
+        if current_user is None or not current_user.has_role('root'):
+            return ctx
+
+        data = get_global_context_data()
+        ctx.update(data)
 
         return ctx
-
-
-    @app.context_processor
-    def inject_home_dashboard_url():
-        if not has_request_context():
-            return {}
-
-        return {'home_dashboard_url': home_dashboard_url()}
 
 
     @app.errorhandler(404)

@@ -2984,6 +2984,7 @@ def create_match():
                                   selected=False,
                                   construct_time=None,
                                   compute_time=None,
+                                  include_only_submitted=form.include_only_submitted.data,
                                   ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
                                   ignore_programme_prefs=form.ignore_programme_prefs.data,
                                   years_memory=form.years_memory.data,
@@ -3442,6 +3443,7 @@ def do_match_compare(id1, id2):
     record2 = MatchingAttempt.query.get_or_404(id2)
 
     pclass_filter = request.args.get('pclass_filter')
+    diff_filter = request.args.get('diff_filter')
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
@@ -3467,7 +3469,7 @@ def do_match_compare(id1, id2):
 
     if not record2.finished:
         if record2.awaiting_upload:
-            flash('Can not comapre match "{name}" because it is still awaiting '
+            flash('Can not compare match "{name}" because it is still awaiting '
                   'manual upload.'.format(name=record2.name), 'error')
         else:
             flash('Can not compare match "{name}" because it has not yet terminated.'.format(name=record2.name),
@@ -3483,10 +3485,20 @@ def do_match_compare(id1, id2):
     if pclass_filter is None and session.get('admin_match_pclass_filter'):
         pclass_filter = session['admin_match_pclass_filter']
 
+    if pclass_filter is not None:
+        session['admin_match_pclass_filter'] = pclass_filter
+
+    # if no difference filter supplied, check if one is stored in ession
+    if diff_filter is None and session.get('admin_match_diff_filter'):
+        diff_filter = session['admin_match_diff_filter']
+
+    if diff_filter is not None:
+        session['admin_match_diff_filter'] = diff_filter
+
     pclasses = record1.available_pclasses
 
     return render_template('admin/match_inspector/compare.html', record1=record1, record2=record2, text=text, url=url,
-                           pclasses=pclasses, pclass_filter=pclass_filter)
+                           pclasses=pclasses, pclass_filter=pclass_filter, diff_filter=diff_filter)
 
 
 @admin.route('/do_match_compare_ajax/<int:id1>/<int:id2>')
@@ -3529,6 +3541,8 @@ def do_match_compare_ajax(id1, id2):
     pclass_filter = request.args.get('pclass_filter')
     flag, pclass_value = is_integer(pclass_filter)
 
+    diff_filter = request.args.get('diff_filter')
+
     # we know record2 has at least the same pclasses included as record1, although it may in fact have more
     # (there seems no simple query to restrict record2 to have exactly the same pclasses, and anyway there might
     # be use cases where it's useful to compare a match on a subset to a match on a larger group)
@@ -3555,7 +3569,10 @@ def do_match_compare_ajax(id1, id2):
         if left.submission_period != right.submission_period:
             raise RuntimeError('Unexpected discrepancy between LHS and RHS submission periods')
 
-        if left.project_id != right.project_id or left.marker_id != right.marker_id:
+        # if the records do not agree, then add it to the list of discrepant results
+        if diff_filter == 'all' and (left.project_id != right.project_id or left.marker_id != right.marker_id) \
+                or diff_filter == 'projects' and (left.project_id != right.project_id) \
+                or diff_filter == 'markers' and (left.marker_id != right.marker_id):
             if not flag or pclass_value == left.selector.config.pclass_id:
                 data.append((left, right))
 
@@ -3668,6 +3685,11 @@ def match_faculty_view(id):
         return redirect(request.referrer)
 
     pclass_filter = request.args.get('pclass_filter')
+    show_includes = request.args.get('show_includes')
+
+    if show_includes != 'true' and show_includes != 'false':
+        show_inclueds = 'false'
+
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
@@ -3678,10 +3700,16 @@ def match_faculty_view(id):
     if pclass_filter is not None:
         session['admin_match_pclass_filter'] = pclass_filter
 
+    if show_includes is None and session.get('admin_match_include_match_CATS'):
+        show_includes = session['admin_match_include_match_CATS']
+
+    if show_includes is not None:
+        session['admin_match_include_match_CATS'] = show_includes
+
     pclasses = get_automatch_pclasses()
 
     return render_template('admin/match_inspector/faculty.html', pane='faculty', record=record,
-                           pclasses=pclasses, pclass_filter=pclass_filter,
+                           pclasses=pclasses, pclass_filter=pclass_filter, show_includes=show_includes,
                            text=text, url=url)
 
 
@@ -3708,6 +3736,7 @@ def match_dists_view(id):
         return redirect(request.referrer)
 
     pclass_filter = request.args.get('pclass_filter')
+
     text = request.args.get('text', None)
     url = request.args.get('url', None)
 
@@ -3794,10 +3823,12 @@ def match_faculty_view_ajax(id):
         return jsonify({})
 
     pclass_filter = request.args.get('pclass_filter')
+    show_includes = request.args.get('show_includes')
 
     flag, pclass_value = is_integer(pclass_filter)
 
-    return ajax.admin.faculty_view_data(record.faculty, record, pclass_value if flag else None)
+    return ajax.admin.faculty_view_data(record.faculty, record, pclass_value if flag else None,
+                                        show_includes == 'true')
 
 
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')
@@ -3824,13 +3855,20 @@ def reassign_match_project(id, pid):
 
     if record.selector.has_submitted:
         if record.selector.is_project_submitted(project):
-            record.project_id = project.id
-            record.rank = record.selector.project_rank(project.id)
+            enroll_record = project.owner.get_enrollment_record(project.config.pclass_id)
 
-            record.matching_attempt.last_edit_id = current_user.id
-            record.matching_attempt.last_edit_timestamp = datetime.now()
+            if enroll_record is not None and enroll_record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED:
+                record.project_id = project.id
+                record.rank = record.selector.project_rank(project.id)
 
-            db.session.commit()
+                record.matching_attempt.last_edit_id = current_user.id
+                record.matching_attempt.last_edit_timestamp = datetime.now()
+
+                db.session.commit()
+            else:
+                flash("Could not reassign '{proj}' to {name} because this project's supervisor is no longer "
+                      "enrolled for this project class.".format(proj=project.name,
+                                                                name=record.selector.student.user.name))
         else:
             flash("Could not reassign '{proj}' to {name}; this project "
                   "was not included in this selector's choices".format(proj=project.name,

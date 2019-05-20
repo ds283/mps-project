@@ -15,9 +15,11 @@ from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import User, TaskRecord, EmailNotification, ConfirmRequest, LiveProject, Role, SelectingStudent
+from ..models import User, TaskRecord, EmailNotification, ConfirmRequest, LiveProject, Role, SelectingStudent, \
+    ProjectClassConfig
 
 from ..task_queue import progress_update, register_task
+from ..shared.utils import get_current_year
 from ..shared.sqlalchemy import get_count
 
 from celery import chain, group
@@ -36,10 +38,20 @@ def _get_outstanding_faculty_confirmation_requests(user):
         .filter(or_(EmailNotification.event_type == EmailNotification.CONFIRMATION_REQUEST_CREATED,
                     EmailNotification.event_type == EmailNotification.CONFIRMATION_TO_PENDING)).subquery()
 
-    # find outstanding confirm requests that aren't already included in the list of pending email notifications
+    year = get_current_year()
+
+    # find outstanding confirm requests that aren't already included in the list of pending email notifications;
+    # filter out anything not intended for the current year, or any project classes that are not yet live,
+    # or any project classes that are closed.
+    # Also filter out notifications associated with any student who has already submitted their choices.
     outstanding_crqs = db.session.query(ConfirmRequest) \
         .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED,
                 ConfirmRequest.viewed == False) \
+        .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id) \
+        .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id) \
+        .filter(ProjectClassConfig.year == year,
+                ProjectClassConfig.live == True, ProjectClassConfig.selection_closed == False) \
+        .filter(SelectingStudent.submission_time == None) \
         .join(LiveProject, LiveProject.id == ConfirmRequest.project_id) \
         .filter(LiveProject.owner_id == user.id) \
         .join(crqs, crqs.c.data_1 == ConfirmRequest.id, isouter=True) \
@@ -59,10 +71,15 @@ def _get_outstanding_student_confirmation_requests(user):
     # don't badger students for project classes where they've already submitted choices
     # use SelectingStudent.submission_time = None for that
 
+    year = get_current_year()
+
     outstanding_crqs = db.session.query(ConfirmRequest) \
         .filter(ConfirmRequest.state == ConfirmRequest.REQUESTED,
                 ConfirmRequest.request_timestamp < cutoff_time) \
         .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id) \
+        .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id) \
+        .filter(ProjectClassConfig.year == year,
+                ProjectClassConfig.live == True, ProjectClassConfig.selection_closed == False) \
         .filter(SelectingStudent.student_id == user.id,
                 SelectingStudent.submission_time == None) \
         .order_by(ConfirmRequest.request_timestamp.asc()).all()

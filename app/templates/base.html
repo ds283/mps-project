@@ -405,6 +405,11 @@
                                 {% if is_root %}
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Sysadmin only</li>
+                                    {% if matching_ready %}
+                                        <li><a href="{{ url_for('admin.manage_matching') }}">
+                                            <i class="fa fa-cogs"></i> Manage matching...
+                                        </a></li>
+                                    {% endif %}
                                     {% if has_assessments is defined and has_assessments %}
                                         <li><a href="{{ url_for('admin.manage_assessments') }}">
                                             <i class="fa fa-cogs"></i> Manage assessments...

@@ -43,6 +43,7 @@
                         </div>
 
                         <div class="well {% if form.pclasses_to_include.errors %}has-error{% endif %}">
+                            {{ wtf.form_field(form.include_only_submitted) }}
                             <p>Select which project classes to include in this match</p>
                             {% for widget in form.pclasses_to_include %}
                                 {{ wtf.form_field(widget) }}

@@ -10,8 +10,8 @@
 
 from flask import jsonify, render_template_string
 
-from ....database import db
-from ....models import MatchingRecord
+from ....shared.utils import get_count
+
 
 _name = \
 """
@@ -26,26 +26,23 @@ _projects = \
 """
 {% macro project_tag(r) %}
     {% set adjustable = false %}
-    {% if r.selector.has_submitted %}{% set adjustable = true %}{% endif %}
+    {% if r.selector.has_submission_list %}{% set adjustable = true %}{% endif %}
     {% set pclass = r.selector.config.project_class %}
     {% set style = pclass.make_CSS_style() %}
+    {% set proj_overassigned = r.is_project_overassigned %}
     <div class="{% if adjustable %}dropdown{% else %}disabled{% endif %} match-assign-button" style="display: inline-block;">
-        <a class="label {% if r.is_project_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
-                {% if not r.is_project_overassigned and style %}style="{{ style }}"{% endif %}
+        <a class="label {% if proj_overassigned %}label-danger{% elif style %}label-default{% else %}label-info{% endif %} btn-table-block {% if adjustable %}dropdown-toggle{% endif %}"
+                {% if not proj_overassigned and style %}style="{{ style }}"{% endif %}
                 {% if adjustable %}type="button" data-toggle="dropdown"{% endif %}>#{{ r.submission_period }}:
             {{ r.selector.student.user.name }} (No. {{ r.project.number }})
         {% if adjustable %}<span class="caret"></span>{% endif %}</a>
         {% if adjustable %}
             {% set list = r.selector.ordered_selections %}
             <ul class="dropdown-menu">
-                {% if r.selector.has_submitted %}
-                    <li class="dropdown-header">Submitted choices</li>
-                {% elif r.selector.has_bookmarks %}
-                    <li class="dropdown-header">Ranked bookmarks</li>
-                {% endif %}
+                <li class="dropdown-header">Submitted choices</li>
                 {% for item in list %}
                     {% set disabled = false %}
-                    {% if item.liveproject_id == r.project_id %}{% set disabled = true %}{% endif %}
+                    {% if item.liveproject_id == r.project_id or not item.is_selectable %}{% set disabled = true %}{% endif %}
                     <li {% if disabled %}class="disabled"{% endif %}>
                         <a {% if not disabled %}href="{{ url_for('admin.reassign_match_project', id=r.id, pid=item.liveproject_id) }}"{% endif %}>
                            #{{ item.rank }}:
@@ -55,17 +52,25 @@ _projects = \
                 {% endfor %}
             </ul>
         {% endif %}
-        {% set outcome = r.hint_status %}
-        {% if outcome is not none %}
-            {% set satisfied, violated = outcome %}
-            {% if satisfied|length > 0 %}
-                <span class="label label-success">{% for i in range(satisfied|length) %}<i class="fa fa-check"></i>{% endfor %}</span>
-            {% endif %}
-            {% if violated|length > 0 %}
-                <span class="label label-warning">{% for i in range(violated|length) %}<i class="fa fa-times"></i>{% endfor %}</span>
-            {% endif %}
-        {% endif %}
     </div>
+    {% set outcome = r.hint_status %}
+    {% if outcome is not none %}
+        {% set satisfied, violated = outcome %}
+        {% if satisfied|length > 0 %}
+            <span class="label label-success">{%- for i in range(satisfied|length) -%}<i class="fa fa-check"></i>{%- endfor %} HINT</span>
+        {% endif %}
+        {% if violated|length > 0 %}
+            <span class="label label-warning">{%- for i in range(violated|length) -%}<i class="fa fa-times"></i>{%- endfor %} HINT</span>
+        {% endif %}
+    {% endif %}
+    {% set prog_status = r.project.satisfies_preferences(r.selector) %}
+    {% if prog_status is not none %}
+        {% if prog_status %}
+            <span class="label label-success"><i class="fa fa-check"></i> PROG</span>
+        {% else %}
+            <span class="label label-warning"><i class="fa fa-times"></i> PROG</span>
+        {% endif %}
+    {% endif %}
 {% endmacro %}
 {% set ns = namespace(count=0) %}
 {% for r in recs %}
@@ -76,11 +81,6 @@ _projects = \
 {% endfor %}
 {% if ns.count == 0 %}
     <span class="label label-default btn-table-block">None</span>
-{% endif %}
-{% if overassigned %}
-    <div class="has-error">
-        <p class="help-block">Supervising workload exceeds CATS limit (assigned={{ assigned }}, max capacity={{ lim }})</p>
-    </div>
 {% endif %}
 {% if err_msgs|length > 0 %}
     <div class="has-error">
@@ -127,9 +127,11 @@ _marking = \
 {% if ns.count == 0 %}
     <span class="label label-default btn-table-block">None</span>
 {% endif %}
-{% if overassigned %}
+{% if err_msgs|length > 0 %}
     <div class="has-error">
-        <p class="help-block">Marking workload exceeds CATS limit (assigned={{ assigned }}, max capacity={{ lim }})</p>
+        {% for msg in err_msgs %}
+            <p class="help-block">{{ msg }}</p>
+        {% endfor %}
     </div>
 {% endif %}
 """
@@ -139,56 +141,92 @@ _workload = \
 """
 <span class="label {% if sup_overassigned %}label-danger{% else %}label-info{% endif %}">S {{ sup }}</span>
 <span class="label {% if mark_overassigned %}label-danger{% else %}label-default{% endif %}">M {{ mark }}</span>
-<span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ tot }}</span>
+<span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">T {{ tot }}</span>
+{% if m.include_matches.count() > 0 and included_sup_CATS is not none and included_mark_CATS is not none and included_workload_CATS is not none %}
+    <p></p>
+    {% for match in m.include_matches %}
+        <span class="label label-info">{{ match.name }} S {{ included_sup_CATS[match.id] }} M {{ included_mark_CATS[match.id] }} T {{ included_workload_CATS[match.id] }}</span>
+    {% endfor %}
+    <p></p>
+    <span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ total_CATS_value }}</span>
+{% endif %}
 """
 
 
-def faculty_view_data(faculty, rec, pclass_filter):
-
+def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
     data = []
 
     for f in faculty:
+        sup_errors = {}
+        mark_errors = {}
+
         # check for CATS overassignment
-        sup_overassigned, CATS_sup, sup_lim = rec.is_supervisor_overassigned(f)
-        mark_overassigned, CATS_mark, mark_lim = rec.is_marker_overassigned(f)
+        sup_overassigned, CATS_sup, included_sup, sup_lim, sup_msg = \
+            match_attempt.is_supervisor_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
+        mark_overassigned, CATS_mark, included_mark, mark_lim, mark_msg = \
+            match_attempt.is_marker_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
+
+        if sup_overassigned:
+            sup_errors['sup_over'] = sup_msg
+        if mark_overassigned:
+            mark_errors['mark_over'] = mark_msg
         overassigned = sup_overassigned or mark_overassigned
 
-        if pclass_filter is None:
-            workload_sup = CATS_sup
-            workload_mark = CATS_mark
-            workload_tot = CATS_sup + CATS_mark
+        if show_includes:
+            this_sup, this_mark = match_attempt.get_faculty_CATS(f, pclass_id=pclass_filter)
         else:
-            workload_sup, workload_mark = rec.get_faculty_CATS(f.id, pclass_filter)
-            workload_tot = workload_sup + workload_mark
+            this_sup = CATS_sup
+            this_mark = CATS_mark
 
-        # check for project overassignment and cache error messages to prevent multiple display
-        supv_records = rec.get_supervisor_records(f.id).all()
-        mark_records = rec.get_marker_records(f.id).all()
+        if pclass_filter is not None:
+            _sup_overassigned, _CATS_sup, _included_sup, _sup_lim, _sup_msg = \
+                match_attempt.is_supervisor_overassigned(f, include_matches=show_includes)
+            _mark_overassigned, _CATS_mark, _included_mark, _mark_lim, _mark_msg = \
+                match_attempt.is_marker_overassigned(f, include_matches=show_includes)
 
-        errors = {}
-        proj_overassigned = False
+            if _sup_overassigned:
+                sup_errors['sup_over_full'] = _sup_msg
+            if _mark_overassigned:
+                mark_errors['mark_over_full'] = _mark_msg
+            overassigned = overassigned or _sup_overassigned or _mark_overassigned
+
+        included_workload = {}
+        for key in included_sup:
+            if key in included_mark:
+                included_workload[key] = included_sup[key] + included_mark[key]
+
+        supv_records = match_attempt.get_supervisor_records(f.id).all()
+        mark_records = match_attempt.get_marker_records(f.id).all()
+
         for item in supv_records:
             if pclass_filter is None or item.selector.config.pclass_id == pclass_filter:
-                if item.is_project_overassigned:
-                    if item.project_id not in errors:
-                        errors[item.project_id] = item.error
-        if len(errors) > 0:
-            proj_overassigned = True
+                flag, msg = match_attempt.is_project_overassigned(item.project)
+                if flag:
+                    if item.project_id not in sup_errors:
+                        sup_errors[item.project_id] = msg
+        proj_overassigned = len(sup_errors) > 0
+        overassigned = overassigned or proj_overassigned
 
-        err_msgs = errors.values()
+        sup_err_msgs = sup_errors.values()
+        mark_err_msgs = mark_errors.values()
 
-        data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned or proj_overassigned),
+        data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned),
                               'sortvalue': f.user.last_name + f.user.first_name},
-                     'projects': render_template_string(_projects, recs=supv_records,
-                                                        overassigned=sup_overassigned, assigned=CATS_sup, lim=sup_lim,
-                                                        pclass_filter=pclass_filter, err_msgs=err_msgs),
-                     'marking': render_template_string(_marking, recs=mark_records,
-                                                       overassigned=mark_overassigned, assigned=CATS_mark, lim=mark_lim,
-                                                       pclass_filter=pclass_filter),
-                     'workload': {'display': render_template_string(_workload, sup=workload_sup, mark=workload_mark,
-                                                                    tot=workload_tot,
+                     'projects': {'display': render_template_string(_projects, recs=supv_records,
+                                                                    pclass_filter=pclass_filter, err_msgs=sup_err_msgs),
+                                  'sortvalue': len(supv_records)},
+                     'marking': {'display': render_template_string(_marking, recs=mark_records,
+                                                                   pclass_filter=pclass_filter, err_msgs=mark_err_msgs),
+                                 'sortvalue': len(mark_records)},
+                     'workload': {'display': render_template_string(_workload, m=match_attempt,
+                                                                    sup=this_sup, mark=this_mark,
+                                                                    tot=this_sup + this_mark,
                                                                     sup_overassigned=sup_overassigned,
-                                                                    mark_overassigned=mark_overassigned),
+                                                                    mark_overassigned=mark_overassigned,
+                                                                    included_sup_CATS=included_sup,
+                                                                    included_mark_CATS=included_mark,
+                                                                    included_workload_CATS=included_workload,
+                                                                    total_CATS_value=CATS_sup + CATS_mark),
                                   'sortvalue': CATS_sup + CATS_mark}})
 
     return jsonify(data)

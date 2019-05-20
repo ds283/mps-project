@@ -69,6 +69,7 @@ _info = \
 """
 <span class="label label-primary">Supervisor <i class="fa fa-chevron-circle-down"></i> {{ m.supervising_limit }} CATS</span>
 <span class="label label-info">2nd mark <i class="fa fa-chevron-circle-down"></i> {{ m.marking_limit }} CATS</span>
+<span class="label label-info">Marker multiplicity <i class="fa fa-chevron-circle-down"></i> {{ m.max_marking_multiplicity }}</span>
 {% if m.ignore_per_faculty_limits %}
     <span class="label label-warning"><i class="fa fa-times"></i> Ignore per-faculty limits</span>
 {% else %}
@@ -79,7 +80,11 @@ _info = \
 {% else %}
     <span class="label label-default"><i class="fa fa-check"></i> Apply programme prefs</span>
 {% endif %}
-<span class="label label-info">Marker multiplicity <i class="fa fa-chevron-circle-down"></i> {{ m.max_marking_multiplicity }}</span>
+{% if m.include_only_submitted %}
+    <span class="label label-warning"><i class="fa fa-times"></i> Only submitted selectors</span>
+{% else %}
+    <span class="label label-default"><i class="fa fa-check"></i> All selectors</span>
+{% endif %}
 <p></p>
 <span class="label label-success">Solver {{ m.solver_name }}</span>
 <span class="label label-default">Levelling <i class="fa fa-times"></i> {{ m.levelling_bias }}</span>
@@ -322,6 +327,20 @@ _name = \
     {% set pclass = config.project_class %}
     {{ pclass.make_label(pclass.abbreviation)|safe }}
 {% endfor %}
+{% if m.finished %}
+    <p></p>
+    <span class="label label-info">{{ m.records.count() }} selectors</span>
+    <span class="label label-info">{{ m.supervisors.count() }} supervisors</span>
+    <span class="label label-info">{{ m.markers.count() }} markers</span>
+    <span class="label label-info">{{ m.projects.count() }} projects</span>
+{% endif %}
+{% set number_extra_matches = m.include_matches.count() %}
+{% if number_extra_matches > 0 %}
+    <p></p>
+    {% for match in m.include_matches %}
+        <span class="label label-primary">Inc: {{ match.name }}</span>
+    {% endfor %}
+{% endif %}
 {% if m.finished and m.solution_usable %}
     <p></p>
     {% if m.construct_time %}
@@ -347,7 +366,6 @@ def matches_data(matches, text=None, url=None):
     :param matches:
     :return:
     """
-
     number = len(matches)
 
     data = [{'name': render_template_string(_name, m=m, text=text, url=url),

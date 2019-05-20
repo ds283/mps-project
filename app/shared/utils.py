@@ -158,6 +158,17 @@ def get_assessment_data(pcs=None):
     return {'has_assessments': presentation_assessments}
 
 
+def get_global_context_data():
+    pcs = _get_pclass_list()
+    configs = _get_pclass_config_list(pcs)
+
+    assessment = get_assessment_data(pcs)
+    matching = get_matching_data(configs)
+
+    assessment.update(matching)
+    return assessment
+
+
 def get_pclass_config_data(configs=None):
     if configs is None:
         configs = _get_pclass_config_list()
@@ -432,7 +443,7 @@ def _get_pclass_list():
 
 def _get_pclass_config_list(pcs=None):
     if pcs is None:
-        pcs = _get_pclass_config_list()
+        pcs = _get_pclass_list()
 
     cs = [db.session.query(ProjectClassConfig). \
               filter_by(pclass_id=pclass.id). \
@@ -461,19 +472,17 @@ def get_root_dashboard_data():
     configs = _get_pclass_config_list(pcs=pcs)
 
     # don't need get_assessment_data since these keys are made available in the global context
+    # don't need get_matching_data since these keys are made available in the global context
     rollover_data = get_rollover_data(configs=configs, current_year=current_year)
     message_data = get_schedule_message_data(configs=configs)
-    matching_data = get_matching_data(configs=configs)
     config_data = get_pclass_config_data(configs=configs)
 
     data = {'warning': (config_data['config_warning']
-                        or matching_data['matching_ready']
                         or rollover_data['rollover_ready']),
             'current_year': current_year}
 
     data.update(rollover_data)
     data.update(message_data)
-    data.update(matching_data)
     data.update(config_data)
 
     return data
@@ -653,7 +662,7 @@ def _capacity_delete_EnrollmentRecord_cache(record):
         return
 
     if record.owner is None:
-        owner = db.session.query(FacultyData).filter_by(id=record.owner_id)
+        owner = db.session.query(FacultyData).filter_by(id=record.owner_id).one()
     else:
         owner = record.owner
 

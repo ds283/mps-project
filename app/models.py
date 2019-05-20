@@ -1044,7 +1044,7 @@ class EmailNotification(db.Model):
     def __str__(self):
         try:
             method = self.str_operations[self.event_type].__get__(self, type(self))
-        except KeyError:
+        except KeyError as k:
             assert self.event_type in self.str_operations, "invalid notification type: " + repr(k)
         return method()
 
@@ -1052,7 +1052,7 @@ class EmailNotification(db.Model):
     def msg_subject(self):
         try:
             method = self.subject_operations[self.event_type].__get__(self, type(self))
-        except KeyError:
+        except KeyError as k:
             assert self.event_type in self.subject_operations, "invalid notification type: " + repr(k)
         return method()
 
@@ -3940,61 +3940,39 @@ class EnrollmentRecord(db.Model):
         return label
 
 
+def _delete_EnrollmentRecord_cache(enrollment_id):
+    cache.delete_memoized(_Project_is_offerable)
+    cache.delete_memoized(_Project_num_assessors)
+
+    match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == enrollment_id)
+    for record in match_records:
+        cache.delete_memoized(_MatchingRecord_is_valid, record.id)
+        cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
+
+    schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=enrollment_id))
+    for slot in schedule_slots:
+        cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
+        if slot.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+
+
 @listens_for(EnrollmentRecord, 'before_update')
 def _EnrollmentRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_assessors)
-
-        match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == target.owner_id)
-        for record in match_records:
-            cache.delete_memoized(_MatchingRecord_is_valid, record.id)
-            cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
-
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
-        for slot in schedule_slots:
-            cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
-            cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
-            if slot.owner is not None:
-                cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+        _delete_EnrollmentRecord_cache(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_insert')
 def _EnrollmentRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_assessors)
-
-        match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == target.owner_id)
-        for record in match_records:
-            cache.delete_memoized(_MatchingRecord_is_valid, record.id)
-            cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
-
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
-        for slot in schedule_slots:
-            cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
-            cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
-            if slot.owner is not None:
-                cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+        _delete_EnrollmentRecord_cache(target.owner_id)
 
 
 @listens_for(EnrollmentRecord, 'before_delete')
 def _EnrollmentRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_Project_is_offerable)
-        cache.delete_memoized(_Project_num_assessors)
-
-        match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == target.owner_id)
-        for record in match_records:
-            cache.delete_memoized(_MatchingRecord_is_valid, record.id)
-            cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
-
-        schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=target.owner_id))
-        for slot in schedule_slots:
-            cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
-            cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
-            if slot.owner is not None:
-                cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+        _delete_EnrollmentRecord_cache(target.owner_id)
 
 
 class Supervisor(db.Model, ColouredLabelMixin):
@@ -5712,17 +5690,17 @@ class LiveProject(db.Model):
 
 
     def satisfies_preferences(self, sel):
-        number_preferences = get_count(self.programmes)
-        number_matches = get_count(self.programmes.filter_by(id=sel.student.programme_id))
+        preferences = get_count(self.programmes)
+        matches = get_count(self.programmes.filter_by(id=sel.student.programme_id))
 
-        if number_matches == 1:
-            return True
+        if preferences == 0:
+            return None
 
-        if number_matches > 1:
+        if matches > 1:
             raise RuntimeError('Inconsistent number of degree preferences match a single SelectingStudent')
 
-        if number_matches == 0 and number_preferences == 0:
-            return None
+        if matches == 1:
+            return True
 
         return False
 
@@ -5731,8 +5709,13 @@ class LiveProject(db.Model):
     def assessor_list_query(self):
         fac_ids = self.assessors.subquery()
 
+        # restrict attention to markers who are correctly enrolled, so that we always serve a valid
+        # and up-to-date list
         return db.session.query(FacultyData) \
             .join(fac_ids, fac_ids.c.id == FacultyData.id) \
+            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id,
+                                         EnrollmentRecord.pclass_id == self.config.pclass_id)) \
+            .filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
             .join(User, User.id == FacultyData.id) \
             .filter(User.active == True) \
             .order_by(User.last_name.asc(), User.first_name.asc())
@@ -6958,6 +6941,14 @@ class SelectionRecord(db.Model):
 
 
     @property
+    def is_selectable(self):
+        # determine whether the project tagged in this selection is really selectable; eg. the supervisor
+        # might now be marked on sabbatical or exempted
+        record = self.liveproject.owner.get_enrollment_record(self.liveproject.config.pclass_id)
+        return record is not None and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
+
+
+    @property
     def format_project(self):
         if self.hint in self._icons:
             tag = self._icons[self.hint]
@@ -7522,11 +7513,10 @@ def _MatchingAttempt_current_score(id):
 
 
 @cache.memoize()
-def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
+def _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id):
     obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
 
-    CATS_supervisor = 0
-    CATS_marker = 0
+    CATS = 0
 
     for item in obj.get_supervisor_records(fac_id).all():
         config = item.project.config
@@ -7534,7 +7524,16 @@ def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
         if pclass_id is None or config.pclass_id == pclass_id:
             if config.uses_supervisor:
                 if config.CATS_supervision is not None and config.CATS_supervision > 0:
-                    CATS_supervisor += config.CATS_supervision
+                    CATS += config.CATS_supervision
+
+    return CATS
+
+
+@cache.memoize()
+def _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id):
+    obj = db.session.query(MatchingAttempt).filter_by(id=id).one()
+
+    CATS = 0
 
     for item in obj.get_marker_records(fac_id).all():
         config = item.project.config
@@ -7542,9 +7541,17 @@ def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
         if pclass_id is None or config.pclass_id == pclass_id:
             if config.uses_marker:
                 if config.CATS_marking is not None and config.CATS_marking > 0:
-                    CATS_marker += config.CATS_marking
+                    CATS += config.CATS_marking
 
-    return CATS_supervisor, CATS_marker
+    return CATS
+
+
+@cache.memoize()
+def _MatchingAttempt_get_faculty_CATS(id, fac_id, pclass_id):
+    CATS_sup = _MatchingAttempt_get_faculty_sup_CATS(id, fac_id, pclass_id)
+    CATS_mark = _MatchingAttempt_get_faculty_mark_CATS(id, fac_id, pclass_id)
+
+    return CATS_sup, CATS_mark
 
 
 @cache.memoize()
@@ -7561,7 +7568,7 @@ def _MatchingAttempt_prefer_programme_status(id):
         outcome = rec.project.satisfies_preferences(rec.selector)
 
         if outcome is None:
-            break
+            continue
 
         if outcome:
             matched += 1
@@ -7582,7 +7589,6 @@ def _MatchingAttempt_hint_status(id):
     violated = set()
 
     for rec in obj.records:
-
         s, v = rec.hint_status
 
         satisfied = satisfied | s
@@ -7620,36 +7626,36 @@ def _MatchingAttempt_is_valid(id):
         return True, student_issues, faculty_issues, errors, warnings
 
     for record in obj.records:
+        # check whether each matching record validates independently
         if not record.is_valid:
-            errors[('basic', record.id)] \
-                = '{name}/{abbv}: {err}'.format(err=record.error,
-                                                name=record.selector.student.user.name,
-                                                abbv=record.selector.config.project_class.abbreviation)
+            for n, e in enumerate(record.errors):
+                errors[('basic', (record.id, n))] \
+                    = '{name}/{abbv}: {err}'.format(err=e, name=record.selector.student.user.name,
+                                                    abbv=record.selector.config.project_class.abbreviation)
+
+            for n, e in enumerate(record.warnings):
+                warnings[('basic', (record.id, n))] \
+                    = '{name}/{abbv}: {err}'.format(err=e, name=record.selector.student.user.name,
+                                                    abbv=record.selector.config.project_class.abbreviation)
+
             student_issues = True
 
     for project in obj.projects:
-        if obj.is_project_overassigned(project):
-            errors[('capacity', project.id)] = \
-                'Project {name} ({supv}) is over-assigned ' \
-                '(assigned={m}, max capacity={n})'.format(supv=project.owner.user.name, name=project.name,
-                                                          m=obj.number_project_assignments(project),
-                                                          n=project.capacity)
+        proj_over, msg = obj.is_project_overassigned(project)
+        if proj_over:
+            errors[('capacity', project.id)] = msg
             student_issues = True
             faculty_issues = True
 
     for fac in obj.faculty:
-        sup_over, CATS_sup, sup_lim = obj.is_supervisor_overassigned(fac)
+        sup_over, CATS_sup, include_CATS_sup, sup_lim, msg = obj.is_supervisor_overassigned(fac, include_matches=True)
         if sup_over:
-            warnings[('supervising', fac.id)] = \
-                'Supervising workload for {name} exceeds CATS limit ' \
-                '(assigned={m}, max capacity={n})'.format(name=fac.user.name, m=CATS_sup, n=sup_lim)
+            warnings[('supervising', fac.id)] = msg
             faculty_issues = True
 
-        mark_over, CATS_mark, mark_lim = obj.is_marker_overassigned(fac)
+        mark_over, CATS_mark, include_CATS_mark, mark_lim, msg = obj.is_marker_overassigned(fac, include_matches=True)
         if mark_over:
-            warnings[('marking', fac.id)] = \
-                'Marking workload for {name} exceeds CATS limit ' \
-                '(assigned={m}, max capacity={n})'.format(name=fac.user.name, m=CATS_mark, n=mark_lim)
+            warnings[('marking', fac.id)] = msg
             faculty_issues = True
 
     if len(errors) > 0 or len(warnings) > 0:
@@ -7774,6 +7780,9 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # MATCHING OPTIONS
 
+    # include only selectors who submitted choices
+    include_only_submitted = db.Column(db.Boolean())
+
     # ignore CATS limits specified in faculty accounts?
     ignore_per_faculty_limits = db.Column(db.Boolean())
 
@@ -7832,27 +7841,27 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # other MatchingAttempts to include in CATS calculations
     include_matches = db.relationship('MatchingAttempt', secondary=match_balancing,
-                                      primaryjoin=match_balancing.c.child_id==id,
-                                      secondaryjoin=match_balancing.c.parent_id==id,
-                                      backref='balanced_with')
+                                      primaryjoin=match_balancing.c.child_id == id,
+                                      secondaryjoin=match_balancing.c.parent_id == id,
+                                      backref='balanced_with', lazy='dynamic')
 
 
     # CONFIGURATION
 
     # record participants in this matching attempt
-    # note, there is no need to track the selectors since they are in 1-to-1 correspondance with the attached
+    # note, there is no need to track the selectors since they are in 1-to-1 correspondence with the attached
     # MatchingRecords, available under the backref .records
 
     # participating supervisors
-    supervisors = db.relationship('FacultyData', secondary=supervisors_matching_table,
+    supervisors = db.relationship('FacultyData', secondary=supervisors_matching_table, lazy='dynamic',
                                   backref=db.backref('supervisor_matching_attempts', lazy='dynamic'))
 
     # participating markers
-    markers = db.relationship('FacultyData', secondary=marker_matching_table,
+    markers = db.relationship('FacultyData', secondary=marker_matching_table, lazy='dynamic',
                               backref=db.backref('marker_matching_attempts', lazy='dynamic'))
 
     # participating projects
-    projects = db.relationship('LiveProject', secondary=project_matching_table,
+    projects = db.relationship('LiveProject', secondary=project_matching_table, lazy='dynamic',
                                backref=db.backref('project_matching_attempts', lazy='dynamic'))
 
     # mean CATS per project during matching
@@ -7934,12 +7943,19 @@ class MatchingAttempt(db.Model, PuLPMixin):
                 self._faculty_list[item.id] = item
 
 
-    def get_faculty_CATS(self, fac_id, pclass_id=None):
+    def get_faculty_CATS(self, fac, pclass_id=None):
         """
         Compute faculty workload in CATS, optionally for a specific pclass
         :param fac: FacultyData instance
         :return:
         """
+        if isinstance(fac, int):
+            fac_id = fac
+        elif isinstance(fac, FacultyData):
+            fac_id = fac.id
+        else:
+            raise RuntimeError('Cannot interpret parameter fac of type {n} in get_faculty_CATS()'.format(n=type(fac)))
+
         return _MatchingAttempt_get_faculty_CATS(self.id, fac_id, pclass_id)
 
 
@@ -7975,6 +7991,7 @@ class MatchingAttempt(db.Model, PuLPMixin):
         fsum = lambda deltas: sum(deltas) if None not in deltas else None
         sum_delta_set = [fsum(d) for d in delta_set]
 
+        # return list of summed delta in the same order as the list returned from .selectors()
         return sum_delta_set
 
 
@@ -7987,22 +8004,34 @@ class MatchingAttempt(db.Model, PuLPMixin):
     @property
     def delta_max(self):
         filtered_deltas = [x for x in self.selector_deltas if x is not None]
+        if len(filtered_deltas) == 0:
+            return None
+
         return max(filtered_deltas)
 
 
     @property
     def delta_min(self):
         filtered_deltas = [x for x in self.selector_deltas if x is not None]
+        if len(filtered_deltas) == 0:
+            return None
+
         return min(filtered_deltas)
 
 
     @property
     def CATS_max(self):
+        if len(self.faculty_CATS) == 0:
+            return None
+
         return max(self.faculty_CATS)
 
 
     @property
     def CATS_min(self):
+        if len(self.faculty_CATS) == 0:
+            return None
+
         return min(self.faculty_CATS)
 
 
@@ -8025,40 +8054,98 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     def is_project_overassigned(self, project):
         count = self.number_project_assignments(project)
+
         if project.enforce_capacity and project.capacity is not None and 0 < project.capacity < count:
-            return True
+            supervisor = project.owner
+            message = 'Project "{supv} ({name})" is over-assigned ' \
+                      '(assigned={m}, max capacity={n})'.format(supv=supervisor.user.name, name=project.name,
+                                                                m=count, n=project.capacity)
+            return True, message
 
-        return False
+        return False, None
 
 
-    def is_supervisor_overassigned(self, faculty):
-        CATS_sup, CATS_mark = self.get_faculty_CATS(faculty.id)
+    def is_supervisor_overassigned(self, faculty, include_matches=False, pclass_id=None):
+        sup, mark = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
-        sup_lim = self.supervising_limit
+        limit = self.supervising_limit
+        total = sup
+
+        message = None
+        rval = False
+        included_matches = {}
+
+        if include_matches:
+            for match in self.include_matches:
+                sup, mark = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+                included_matches[match.id] = sup
+
+            if len(included_matches) > 0:
+                total += sum(included_matches.values())
 
         if not self.ignore_per_faculty_limits:
             if faculty.CATS_supervision is not None and faculty.CATS_supervision > 0:
-                sup_lim = faculty.CATS_supervision
+                limit = faculty.CATS_supervision
 
-        if CATS_sup > sup_lim:
-            return True, CATS_sup, sup_lim
+        if sup > limit:
+            message = 'Supervising workload for {name} exceeds CATS limit {pcl}' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=sup, n=limit,
+                                                                pcl='' if pclass_id is None else 'for this project '
+                                                                                                 'class ')
+            rval = True
 
-        return False, CATS_sup, sup_lim
+        if not rval and total > limit:
+            message = 'Supervising workload for {name} exceeds CATS limit {pcl}after inclusion of all matches ' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=total, n=limit,
+                                                                pcl='' if pclass_id is None else 'for this project '
+                                                                                                 'class ')
+            rval = True
+
+        if include_matches:
+            return rval, total, included_matches, limit, message
+
+        return rval, sup, limit, message
 
 
-    def is_marker_overassigned(self, faculty):
-        CATS_sup, CATS_mark = self.get_faculty_CATS(faculty.id)
+    def is_marker_overassigned(self, faculty, include_matches=False, pclass_id=None):
+        sup, mark = self.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
 
-        mark_lim = self.marking_limit
+        limit = self.marking_limit
+        total = mark
+
+        message = None
+        rval = False
+        included_matches = {}
+
+        if include_matches:
+            for match in self.include_matches:
+                sup, mark = match.get_faculty_CATS(faculty.id, pclass_id=pclass_id)
+                included_matches[match.id] = mark
+
+            if len(included_matches) > 0:
+                total += sum(included_matches.values())
 
         if not self.ignore_per_faculty_limits:
             if faculty.CATS_marking is not None and faculty.CATS_marking > 0:
-                mark_lim = faculty.CATS_marking
+                limit = faculty.CATS_marking
 
-        if CATS_mark > mark_lim:
-            return True, CATS_mark, mark_lim
+        if mark > limit:
+            message = 'Marking workload for {name} exceeds CATS limit {pcl}' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=mark, n=limit,
+                                                                pcl='' if pclass_id is None else 'for this project '
+                                                                                                 'class ')
+            rval = True
 
-        return False, CATS_mark, mark_lim
+        if not rval and total > limit:
+            message = 'Marking workload for {name} exceeds CATS limit {pcl}after inclusion of all matches ' \
+                      '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=total, n=limit,
+                                                                pcl='' if pclass_id is None else 'for this project '
+                                                                                                 'class ')
+
+        if include_matches:
+            return rval, total, included_matches, limit, message
+
+        return rval, mark, limit, message
 
 
     @property
@@ -8145,7 +8232,13 @@ class MatchingAttempt(db.Model, PuLPMixin):
     def _get_group_CATS(self, group):
         fsum = lambda x: x[0] + x[1]
 
-        return [fsum(self.get_faculty_CATS(x.id)) for x in group]
+        # compute our self-CATS
+        CAT_lists = {'self': [fsum(self.get_faculty_CATS(x.id)) for x in group]}
+
+        for m in self.include_matches:
+            CAT_lists[m.id] = [fsum(m.get_faculty_CATS(x.id)) for x in group]
+
+        return [sum(i) for i in zip(*CAT_lists.values())]
 
 
     @property
@@ -8178,40 +8271,35 @@ class MatchingAttempt(db.Model, PuLPMixin):
         return self.last_edit_timestamp is not None
 
 
+def _delete_MatchingAttempt_cache(target_id):
+    cache.delete_memoized(_MatchingAttempt_current_score, target_id)
+    cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target_id)
+    cache.delete_memoized(_MatchingAttempt_is_valid, target_id)
+    cache.delete_memoized(_MatchingAttempt_hint_status, target_id)
+
+    cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
+    cache.delete_memoized(_MatchingAttempt_get_faculty_sup_CATS)
+    cache.delete_memoized(_MatchingAttempt_get_faculty_mark_CATS)
+
+    cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+
+
 @listens_for(MatchingAttempt, 'before_update')
 def _MatchingAttempt_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingAttempt_current_score, target.id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingAttempt_cache(target.id)
 
 
 @listens_for(MatchingAttempt, 'before_insert')
 def _MatchingAttempt_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingAttempt_current_score, target.id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingAttempt_cache(target.id)
 
 
 @listens_for(MatchingAttempt, 'before_delete')
 def _MatchingAttempt_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingAttempt_current_score, target.id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingAttempt_cache(target.id)
 
 
 @cache.memoize()
@@ -8277,38 +8365,62 @@ def _MatchingRecord_current_score(id):
 @cache.memoize()
 def _MatchingRecord_is_valid(id):
     obj = db.session.query(MatchingRecord).filter_by(id=id).one()
+    attempt = obj.matching_attempt
+    project = obj.project
+
+    errors = {}
+    warnings = {}
+
 
     if obj.supervisor_id == obj.marker_id:
-        return False, 'Supervisor and marker are the same'
+        errors[('basic', 0)] = 'Supervisor and marker are the same'
 
-    if (obj.selector.has_submitted or obj.selector.has_bookmarks) \
-            and obj.selector.project_rank(obj.project_id) is None:
-        return False, "Assigned project does not appear in this selector's choices"
+    if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:
+        warnings[('assignment', 0)] = "Assigned project does not appear in this selector's choices"
 
-    if obj.project.config_id != obj.selector.config_id:
-        return False, 'Assigned project does not belong to the correct class for this selector'
+    if obj.selector.has_accepted_offer:
+        offer = obj.selector.accepted_offer
+        offer_project = offer.liveproject if offer is not None else None
+
+        if offer_project is not None and project.id != offer_project.id:
+            warnings[('assignment', 1)] = 'This selector accepted a custom offer for project "{name}", ' \
+                                          'but their assigned project differs'.format(name=project.name)
+
+    if project.config_id != obj.selector.config_id:
+        errors[('pclass', 0)] = 'Assigned project does not belong to the correct class for this selector'
 
     # check whether this project is also assigned to the same selector in another submission period
-    count = get_count(obj.matching_attempt.records.filter_by(selector_id=obj.selector_id,
-                                                             project_id=obj.project_id))
+    count = get_count(attempt.records.filter_by(selector_id=obj.selector_id,
+                                                project_id=obj.project_id))
 
     if count != 1:
         # only refuse to validate if we are the first member of the multiplet;
         # this prevents errors being reported multiple times
-        lo_rec = obj.matching_attempt.records \
+        lo_rec = attempt.records \
             .filter_by(selector_id=obj.selector_id, project_id=obj.project_id) \
             .order_by(MatchingRecord.submission_period.asc()).first()
 
         if lo_rec is not None and lo_rec.submission_period == obj.submission_period:
-            return False, 'Project "{name}" is duplicated in multiple submission periods'.format(name=obj.project.name)
+            warnings[('assignment', 2)] = 'Project "{name}" is duplicated in multiple submission ' \
+                                          'periods'.format(name=project.name)
 
     # check whether the assigned marker is compatible with this project
-    count = get_count(obj.project.assessor_list_query.filter_by(id=obj.marker_id))
+    if obj.selector.config.uses_marker:
+        count = get_count(project.assessor_list_query.filter_by(id=obj.marker_id))
 
-    if count != 1:
-        return False, 'Assigned 2nd marker is not compatible with assigned project'
+        if count != 1:
+            errors[('assignment', 3)] = 'Assigned 2nd marker is not compatible with assigned project'
 
-    return True, None
+    # check whether our project is overassigned
+    # (we have to ask our parent MatchingAttempt for help with this)
+    flag, msg = attempt.is_project_overassigned(project)
+    if flag:
+        errors[('overassigned'), 1] = msg
+
+    if len(errors) > 0 or len(warnings) > 0:
+        return False, errors, warnings
+
+    return True, errors, warnings
 
 
 class MatchingRecord(db.Model):
@@ -8359,7 +8471,30 @@ class MatchingRecord(db.Model):
 
     @orm.reconstructor
     def _reconstruct(self):
-        self.error = None
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
+
+
+    @property
+    def is_valid(self):
+        flag, self._errors, self._warnings = _MatchingRecord_is_valid(self.id)
+
+        return flag
+
+
+    @property
+    def errors(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._errors.values()
+
+
+    @property
+    def warnings(self):
+        if not self._validated:
+            check = self.is_valid
+        return self._warnings.values()
 
 
     @property
@@ -8386,28 +8521,16 @@ class MatchingRecord(db.Model):
 
 
     @property
-    def is_valid(self):
-        flag, self.error = _MatchingRecord_is_valid(self.id)
-
-        return flag
-
-
-    @property
     def is_project_overassigned(self):
-        if self.matching_attempt.is_project_overassigned(self.project):
-            self.error = 'Project "{supv} - {name}" is over-assigned ' \
-                         '(assigned={m}, max capacity={n})'.format(supv=self.project.owner.user.name, name=self.project.name,
-                                                                   m=self.matching_attempt.number_project_assignments(self.project),
-                                                                   n=self.project.capacity)
-            return True
-
-        return False
+        flag, msg = self.matching_attempt.is_project_overassigned(self.project)
+        return flag
 
 
     @property
     def delta(self):
         if self.rank is None:
             return None
+
         return self.rank-1
 
 
@@ -8466,49 +8589,37 @@ class MatchingRecord(db.Model):
         return satisfied, violated
 
 
+def _delete_MatchingRecord_cache(record_id, attempt_id):
+    cache.delete_memoized(_MatchingRecord_current_score, record_id)
+    cache.delete_memoized(_MatchingRecord_is_valid, record_id)
+
+    cache.delete_memoized(_MatchingAttempt_current_score, attempt_id)
+    cache.delete_memoized(_MatchingAttempt_prefer_programme_status, attempt_id)
+    cache.delete_memoized(_MatchingAttempt_is_valid, attempt_id)
+    cache.delete_memoized(_MatchingAttempt_hint_status, attempt_id)
+
+    cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
+    cache.delete_memoized(_MatchingAttempt_get_faculty_sup_CATS)
+    cache.delete_memoized(_MatchingAttempt_get_faculty_mark_CATS)
+    cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+
+
 @listens_for(MatchingRecord, 'before_update')
 def _MatchingRecord_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingRecord_current_score, target.id)
-        cache.delete_memoized(_MatchingRecord_is_valid, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_current_score, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.matching_id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingRecord_cache(target.id, target.matching_id)
 
 
 @listens_for(MatchingRecord, 'before_insert')
 def _MatchingRecord_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingRecord_current_score, target.id)
-        cache.delete_memoized(_MatchingRecord_is_valid, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_current_score, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.matching_id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingRecord_cache(target.id, target.matching_id)
 
 
 @listens_for(MatchingRecord, 'before_delete')
 def _MatchingRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_MatchingRecord_current_score, target.id)
-        cache.delete_memoized(_MatchingRecord_is_valid, target.id)
-
-        cache.delete_memoized(_MatchingAttempt_current_score, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_is_valid, target.matching_id)
-        cache.delete_memoized(_MatchingAttempt_hint_status, target.matching_id)
-
-        cache.delete_memoized(_MatchingAttempt_get_faculty_CATS)
-        cache.delete_memoized(_MatchingAttempt_number_project_assignments)
+        _delete_MatchingRecord_cache(target.id, target.matching_id)
 
 
 @cache.memoize()

@@ -17,7 +17,7 @@ from ..database import db
 from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, \
     SelectingStudent, SubmittingStudent, StudentData, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     SubmissionRecord, SubmissionPeriodRecord, add_notification, EmailNotification, ProjectClass, Project, \
-    ProjectDescription
+    ProjectDescription, ConfirmRequest
 
 from ..task_queue import progress_update
 
@@ -130,6 +130,14 @@ def register_rollover_tasks(celery):
             project_descs.add(desc.id)
         descs_group = group(reset_project_description.s(desc.id))
 
+        # remove ConfirmRequest items that were never actioned
+        confirm_request_query = db.session.query(ConfirmRequest) \
+            .join(SelectingStudent, SelectingStudent.id == ConfirmRequest.owner_id) \
+            .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id) \
+            .filter(ProjectClassConfig.pclass_id == config.pclass_id,
+                    ConfirmRequest.state == ConfirmRequest.REQUESTED).all()
+        confirm_request_group = group(remove_confirm_request.s(rec.id) for rec in confirm_request_query.all())
+
         # get backup task from Celery instance
         celery = current_app.extensions['celery']
         backup = celery.tasks['app.tasks.backup.backup']
@@ -162,6 +170,9 @@ def register_rollover_tasks(celery):
         if len(project_descs) > 0:
             seq = seq | reset_descriptions_msg.s(task_id) | descs_group
 
+        if len(confirm_request_group) > 0:
+            seq = seq | confirm_request_msg.s(task_id) | confirm_request_group
+
         seq = (seq | rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
         raise self.replace(seq)
 
@@ -173,7 +184,7 @@ def register_rollover_tasks(celery):
 
     @celery.task()
     def rollover_new_config_msg(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 15, 'Generating database records for new academic year...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 10, 'Generating database records for new academic year...', autocommit=True)
 
 
     @celery.task(bind=True)
@@ -189,7 +200,7 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 35, 'Converting selector records into submitter records...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 20, 'Converting selector records into submitter records...', autocommit=True)
         return new_config_id
 
 
@@ -203,7 +214,7 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 50, 'Attaching new student records...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 30, 'Attaching new student records...', autocommit=True)
         return new_config_id
 
 
@@ -217,7 +228,7 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 65, 'Retiring current student records...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 40, 'Retiring current student records...', autocommit=True)
         return new_config_id
 
 
@@ -231,7 +242,7 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 75, 'Checking for faculty re-enrollments...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 50, 'Checking for faculty re-enrollments...', autocommit=True)
         return new_config_id
 
 
@@ -245,7 +256,7 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 80, 'Performing routine maintenance...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 60, 'Performing routine maintenance...', autocommit=True)
         return new_config_id
 
 
@@ -259,7 +270,21 @@ def register_rollover_tasks(celery):
             self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 95, 'Reset project description lifecycles...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 70, 'Reset project description lifecycles...', autocommit=True)
+        return new_config_id
+
+
+    @celery.task(bind=True)
+    def confirm_request_msg(self, results, task_id):
+        if isinstance(results, int):
+            new_config_id = results
+        elif isinstance(results, list):
+            new_config_id = results[0]
+        else:
+            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            raise RuntimeError('Unexpected type forwarded in rollover chain')
+
+        progress_update(task_id, TaskRecord.RUNNING, 80, 'Remove unused confirmation requests...', autocommit=True)
         return new_config_id
 
 
@@ -766,6 +791,29 @@ def register_rollover_tasks(celery):
             raise Ignore()
 
         record.confirmed = False
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            db.session.rollback()
+            raise self.retry()
+
+        self.update_state(state='SUCCESS')
+        return new_config_id
+
+    @celery.task(bind=True)
+    def remove_confirm_request(self, new_config_id, request_id):
+        # get ConfirmRequest corresponding to request_id
+        try:
+            record = db.session.query(ConfirmRequest).filter_by(id=request_id).first()
+        except SQLAlchemyError:
+            raise self.retry()
+
+        if record is None:
+            self.update_state('FAILURE', 'Could not not ConfirmRequest')
+            raise Ignore()
+
+        db.session.delete(record)
 
         try:
             db.session.commit()

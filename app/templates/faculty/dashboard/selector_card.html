@@ -192,7 +192,7 @@
                                     {{ project_selection_data(project) }}
                                 </div>
                                 <div style="margin-top: 6px;">
-                                    {{ project_rank_data(project, url_for('faculty.dashboard', pane=config.id), 'faculty dashboard') }}
+                                    {{ project_rank_data(project, url_for('faculty.dashboard', pane=config.id), text='faculty dashboard', live=true) }}
                                 </div>
                             </div>
                             <div class="col-xs-3 faculty-confirm-area">

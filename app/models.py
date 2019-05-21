@@ -1816,6 +1816,45 @@ class FacultyData(db.Model):
         return total, unbounded
 
 
+def _FacultyData_delete_cache(faculty_id):
+    year = _get_current_year()
+
+    marker_records = db.session.query(MatchingRecord) \
+        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt) \
+        .filter(MatchingAttempt.year == year,
+                MatchingRecord.marker_id == faculty_id)
+
+    superv_records = db.session.query(MatchingRecord) \
+        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt) \
+        .filter(MatchingAttempt.year == year) \
+        .join(LiveProject, LiveProject.id == MatchingRecord.project_id) \
+        .filter(LiveProject.owner_id == faculty_id)
+
+    match_records = marker_records.union(superv_records)
+
+    for record in match_records:
+        cache.delete_memoized(_MatchingRecord_is_valid, record.id)
+        cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
+
+    schedule_slots = db.session.query(ScheduleSlot) \
+        .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id) \
+        .filter(ScheduleAttempt.year == year,
+                ScheduleSlot.assessors.any(id=faculty_id))
+    for slot in schedule_slots:
+        cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
+        cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
+        if slot.owner is not None:
+            cache.delete_memoized(_PresentationAssessment_is_valid, slot.owner.owner_id)
+
+
+# no need for insert handler, since at insert time no MatchingRecord or ScheduleSlot can reference this instance
+# no need for delete handler, since not intended to be able to delete faculty users
+@listens_for(FacultyData, 'before_update')
+def _FacultyData_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        _FacultyData_delete_cache(target.id)
+
+
 class StudentData(db.Model, WorkflowMixin):
     """
     Models extra data held on students
@@ -3944,12 +3983,29 @@ def _delete_EnrollmentRecord_cache(enrollment_id):
     cache.delete_memoized(_Project_is_offerable)
     cache.delete_memoized(_Project_num_assessors)
 
-    match_records = db.session.query(MatchingRecord).filter(MatchingRecord.marker_id == enrollment_id)
+    year = _get_current_year()
+
+    marker_records = db.session.query(MatchingRecord) \
+        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt) \
+        .filter(MatchingAttempt.year == year,
+                MatchingRecord.marker_id == enrollment_id)
+
+    superv_records = db.session.query(MatchingRecord) \
+        .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt) \
+        .filter(MatchingAttempt.year == year) \
+        .join(LiveProject, LiveProject.id == MatchingRecord.project_id) \
+        .filter(LiveProject.owner_id == enrollment_id)
+
+    match_records = marker_records.union(superv_records)
+
     for record in match_records:
         cache.delete_memoized(_MatchingRecord_is_valid, record.id)
         cache.delete_memoized(_MatchingAttempt_is_valid, record.matching_id)
 
-    schedule_slots = db.session.query(ScheduleSlot).filter(ScheduleSlot.assessors.any(id=enrollment_id))
+    schedule_slots = db.session.query(ScheduleSlot) \
+        .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id) \
+        .filter(ScheduleAttempt.year == year,
+                ScheduleSlot.assessors.any(id=enrollment_id))
     for slot in schedule_slots:
         cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)
@@ -7616,9 +7672,11 @@ def _MatchingAttempt_is_valid(id):
     student_issues = False
     faculty_issues = False
 
+    # IF MATCHING CALCULATION IS NOT FINISHED, NOTHING TO VALIDATE
     if not obj.finished:
         return True, student_issues, faculty_issues, errors, warnings
 
+    # 1. EACH MATCHING RECORD SHOULD VALIDATE INDEPENDENTLY ACCORDING TO ITS OWN CRITERIA
     for record in obj.records:
         # check whether each matching record validates independently
         if not record.is_valid:
@@ -7634,6 +7692,7 @@ def _MatchingAttempt_is_valid(id):
 
             student_issues = True
 
+    # 2. EACH PARTICIPATING PROJECT SHOULD NOT BE OVERASSIGNED
     for project in obj.projects:
         proj_over, msg = obj.is_project_overassigned(project)
         if proj_over:
@@ -7641,16 +7700,33 @@ def _MatchingAttempt_is_valid(id):
             student_issues = True
             faculty_issues = True
 
+    # 3. EACH PARTICIPATING FACULTY SHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
     for fac in obj.faculty:
-        sup_over, CATS_sup, include_CATS_sup, sup_lim, msg = obj.is_supervisor_overassigned(fac, include_matches=True)
-        if sup_over:
+        sup_flag, CATS_sup, include_CATS_sup, sup_lim, msg = obj.is_supervisor_overassigned(fac, include_matches=True)
+        if sup_flag:
             warnings[('supervising', fac.id)] = msg
             faculty_issues = True
 
-        mark_over, CATS_mark, include_CATS_mark, mark_lim, msg = obj.is_marker_overassigned(fac, include_matches=True)
-        if mark_over:
+        mark_flag, CATS_mark, include_CATS_mark, mark_lim, msg = obj.is_marker_overassigned(fac, include_matches=True)
+        if mark_flag:
             warnings[('marking', fac.id)] = msg
             faculty_issues = True
+
+        # 4. FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
+        for config in obj.config_members:
+            rec = fac.get_enrollment_record(config.pclass_id)
+
+            sup, mark = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
+
+            if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
+                warnings[('custom_sup', fac.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
+                                                   'limit {n}'.format(name=fac.user.name, n=rec.CATS_supervision)
+                faculty_issues = True
+
+            if rec.CATS_marking is not None and mark > rec.CATS_marking:
+                warnings[('custom_mark', fac.id)] = 'Assignment to {name} violates their custom marking CATS ' \
+                                                    'limit {n}'.format(name=fac.user.name, n=rec.CATS_marking)
+                faculty_issues = True
 
     if len(errors) > 0 or len(warnings) > 0:
         return False, student_issues, faculty_issues, errors, warnings
@@ -8366,12 +8442,15 @@ def _MatchingRecord_is_valid(id):
     warnings = {}
 
 
+    # 1. SUPERVISOR AND MARKER SHOULD NOT BE THE SAME PERSON
     if obj.supervisor_id == obj.marker_id:
         errors[('basic', 0)] = 'Supervisor and marker are the same'
 
+    # 2. IF THERE IS A SUBMISSION LIST, WARN IF ASSIGNED SUPERVISOR IS NOT ON THIS LIST
     if obj.selector.has_submission_list and obj.selector.project_rank(obj.project_id) is None:
         warnings[('assignment', 0)] = "Assigned project does not appear in this selector's choices"
 
+    # 3. IF THERE WAS AN ACCEPTED CUSTOM OFFER, WARN IF ASSIGNED SUPERVISOR IS NOT THE ONE IN THE OFFER
     if obj.selector.has_accepted_offer:
         offer = obj.selector.accepted_offer
         offer_project = offer.liveproject if offer is not None else None
@@ -8380,10 +8459,11 @@ def _MatchingRecord_is_valid(id):
             warnings[('assignment', 1)] = 'This selector accepted a custom offer for project "{name}", ' \
                                           'but their assigned project differs'.format(name=project.name)
 
+    # 4. ASSIGNED PROJECT MUST BE PART OF THIS PROJECT CLASS
     if project.config_id != obj.selector.config_id:
         errors[('pclass', 0)] = 'Assigned project does not belong to the correct class for this selector'
 
-    # check whether this project is also assigned to the same selector in another submission period
+    # 5. PROJECT SHOULD NOT BE MULTIPLY ASSIGNED TO SAME SELECTOR BUT A DIFFERENT SUBMISSION PERIOD
     count = get_count(attempt.records.filter_by(selector_id=obj.selector_id,
                                                 project_id=obj.project_id))
 
@@ -8398,14 +8478,14 @@ def _MatchingRecord_is_valid(id):
             warnings[('assignment', 2)] = 'Project "{name}" is duplicated in multiple submission ' \
                                           'periods'.format(name=project.name)
 
-    # check whether the assigned marker is compatible with this project
+    # 6. ASSIGNED MARKER SHOULD BE COMPATIBLE WITH ASSIGNED PROJECT
     if obj.selector.config.uses_marker:
         count = get_count(project.assessor_list_query.filter_by(id=obj.marker_id))
 
         if count != 1:
             errors[('assignment', 3)] = 'Assigned 2nd marker is not compatible with assigned project'
 
-    # check whether our project is overassigned
+    # 7. ASSIGNED PROJECT SHOULD NOT BE OVERASSIGNED
     # (we have to ask our parent MatchingAttempt for help with this)
     flag, msg = attempt.is_project_overassigned(project)
     if flag:
@@ -10034,7 +10114,7 @@ def _ScheduleAttempt_is_valid(id):
     if not obj.finished:
         return True, errors, warnings
 
-    # CONSTRAINT 1 - SLOTS SHOULD SATISFY THEIR OWN CONSISTENCY RULES
+    # CONSTRAINT 1. SLOTS SHOULD SATISFY THEIR OWN CONSISTENCY RULES
     for slot in obj.slots:
         # check whether each slot validates individually
         if not slot.is_valid:
@@ -10063,6 +10143,8 @@ def _ScheduleAttempt_is_valid(id):
             errors[('talks', rec.submitter_id)] = \
                 'Submitter "{name}" has been scheduled in more than one ' \
                 'slot'.format(name=rec.submitter.owner.student.user.name)
+
+    # CONSTRAINT 3. CATS LIMITS SHOULD BE RESPECTED, FROM FacultyData AND EnrollmentRecords MODELS
 
     if len(errors) > 0 or len(warnings) > 0:
         return False, errors, warnings

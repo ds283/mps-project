@@ -207,6 +207,24 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
         proj_overassigned = len(sup_errors) > 0
         overassigned = overassigned or proj_overassigned
 
+        # FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
+        for config in match_attempt.config_members:
+            rec = f.get_enrollment_record(config.pclass_id)
+
+            sup, mark = match_attempt.get_faculty_CATS(f, pclass_id=config.pclass_id)
+
+            if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
+                sup_errors[('custom_sup', f.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
+                                                   'limit {n}'.format(name=f.user.name, n=rec.CATS_supervision)
+                overassigned = True
+                sup_overassigned = True
+
+            if rec.CATS_marking is not None and mark > rec.CATS_marking:
+                mark_errors[('custom_mark', f.id)] = 'Assignment to {name} violates their custom marking CATS ' \
+                                                     'limit {n}'.format(name=f.user.name, n=rec.CATS_marking)
+                overassigned = True
+                mark_overassigned = True
+
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 

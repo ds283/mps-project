@@ -298,11 +298,9 @@ def create_app():
         return bleach.clean(s)
 
 
-    # collect all global context functions together in an attempt to avoid function call overhead
-    @app.context_processor
-    def global_context():
+    def _get_previous_login():
         if not has_request_context():
-            return {}
+            return None
 
         if session.get('previous_login', None) is not None:
             real_id = session['previous_login']
@@ -310,18 +308,20 @@ def create_app():
         else:
             real_user = None
 
-        ctx = {'real_user': real_user,
-               'website_revision': site_revision,
-               'website_copyright_dates': site_copyright_dates,
-               'home_dashboard_url': home_dashboard_url()}
+        return real_user
 
-        if current_user is None or not current_user.has_role('root'):
-            return ctx
 
-        data = get_global_context_data()
-        ctx.update(data)
+    # collect all global context functions together in an attempt to avoid function call overhead
+    @app.context_processor
+    def global_context():
+        if not has_request_context():
+            return {}
 
-        return ctx
+        return {'get_previous_login': _get_previous_login,
+                'website_revision': site_revision,
+                'website_copyright_dates': site_copyright_dates,
+                'home_dashboard_url': home_dashboard_url(),
+                'get_base_context': get_global_context_data}
 
 
     @app.errorhandler(404)

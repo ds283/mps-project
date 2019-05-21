@@ -1,6 +1,8 @@
 {% extends "bootstrap/base.html" %}
 {% from "macros.html" import flashed_messages %}
 
+{% set real_user = get_previous_login() %}
+
 {% block scripts %}
     {{ super() }}
     <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
@@ -403,6 +405,9 @@
                                     </a></li>
                                 {% endif %}
                                 {% if is_root %}
+                                    {% set data = get_base_context() %}
+                                    {% set matching_ready = data['matching_ready'] %}
+                                    {% set has_assessments = data['has_assessments'] %}
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Sysadmin only</li>
                                     {% if matching_ready %}
@@ -410,7 +415,7 @@
                                             <i class="fa fa-cogs"></i> Manage matching...
                                         </a></li>
                                     {% endif %}
-                                    {% if has_assessments is defined and has_assessments %}
+                                    {% if has_assessments %}
                                         <li><a href="{{ url_for('admin.manage_assessments') }}">
                                             <i class="fa fa-cogs"></i> Manage assessments...
                                         </a></li>

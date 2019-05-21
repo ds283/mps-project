@@ -99,7 +99,7 @@ _full_workload = \
     <span class="label label-default">None</span>
 {% endfor %}
 <p></p>
-<span class="label label-primary">Total = {{ tot }}</span>
+<span class="label label-primary">Total {{ tot }}</span>
 """
 
 

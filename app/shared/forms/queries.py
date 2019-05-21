@@ -212,9 +212,7 @@ def GetComparatorSchedules(assessment_id, self_id, is_root):
 
 def MarkerQuery(live_project):
     if live_project is not None:
-        return live_project.assessor_list_query.join(EnrollmentRecord, (EnrollmentRecord.owner_id == FacultyData.id) &
-                                                                       (EnrollmentRecord.pclass_id == live_project.config.pclass_id)) \
-            .filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED)
+        return live_project.assessor_list_query
 
     return []
 

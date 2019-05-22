@@ -4,6 +4,7 @@
 
 {% if cohort_filter is none %}{% set cohort_filter = 'all' %}{% endif %}
 {% if prog_filter is none %}{% set prog_filter = 'all' %}{% endif %}
+{% if year_filter is none %}{% set year_filter = 'all' %}{% endif %}
 
 {% block scripts %}
     {{ super() }}
@@ -15,7 +16,7 @@
             $('#selector-grid-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/selector_grid_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&prog_filter={{ prog_filter }}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/convenor/selector_grid_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&prog_filter={{ prog_filter }}&year_filter={{ year_filter }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
@@ -47,24 +48,56 @@
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Selector grid for <strong>{{ pclass.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong></div>
         <div class="panel-body">
-            {% if cohorts and cohorts is not none and cohorts|length > 1 %}
-                <div class="well">
-                    <p>Filter by cohort</p>
-                    <a class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('convenor.selector_grid', id=pclass.id, cohort_filter='all', prog_filter=prog_filter) }}">
-                        All
-                    </a>
-                    {% for cohort in cohorts %}
-                        <a class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.selector_grid', id=pclass.id, cohort_filter=cohort, prog_filter=prog_filter) }}">
-                            {{ cohort }}
-                        </a>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            <div class="well">
+                {% set needs_rule = false %}
+                {% set has_cohorts = (cohorts and cohorts is not none and cohorts|length > 1) %}
+                {% set has_years = (years and years is not none and years|length > 1) %}
+                {% if has_cohorts or has_years %}
+                    {% set needs_rule = true %}
+                    <div class="row">
+                        {% if has_cohorts %}
+                            {% if has_years %}
+                                <div class="col-xs-6">
+                            {% else %}
+                                <div class="col-xs-12">
+                            {% endif %}
+                                <p>Filter by cohort</p>
+                                <a class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                                    href="{{ url_for('convenor.selector_grid', id=pclass.id, cohort_filter='all', prog_filter=prog_filter, year_filter=year_filter) }}">
+                                    All
+                                </a>
+                                {% for cohort in cohorts %}
+                                    <a class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}"
+                                    href="{{ url_for('convenor.selector_grid', id=pclass.id, cohort_filter='all', prog_filter=prog_filter, year_filter=year_filter) }}">
+                                        {{ cohort }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {% if has_years %}
+                            {% if has_cohorts %}
+                                <div class="col-xs-6">
+                            {% else %}
+                                <div class="col-xs-12">
+                            {% endif %}
+                                <p>Filter by academic year</p>
+                                <a class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                                    href="{{ url_for('convenor.selector_grid', id=pclass.id, cohort_filter=cohort_filter, prog_filter='all', year_filter=year_filter) }}">
+                                    All
+                                </a>
+                                {% for year in years %}
+                                    <a class="btn btn-sm filter-btn {% if year_filter == year|string %}btn-primary{% else %}btn-default{% endif %}"
+                                        href="{{ url_for('convenor.selector_grid', id=pclass.id, cohort_filter=cohort_filter, prog_filter='all', year_filter=year) }}">
+                                        Y{{ year }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
 
-            {% if progs and progs is not none and progs|length > 1 %}
-                <div class="well">
+                {% if progs and progs is not none and progs|length > 1 %}
+                    {% if needs_rule %}<hr class="intro-divider">{% set needs_rule = false %}{% endif %}
                     <p>Filter by degree programme</p>
                     <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
                         href="{{ url_for('convenor.selector_grid', id=pclass.id, cohort_filter=cohort_filter, prog_filter='all') }}">
@@ -76,8 +109,8 @@
                             {{ prog.full_name }}
                         </a>
                     {% endfor %}
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
 
             <table id="selector-grid-table" class="table table-striped table-bordered">
                 <thead>

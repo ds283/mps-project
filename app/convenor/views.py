@@ -986,6 +986,10 @@ def selector_grid(id):
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    year_filter = request.args.get('year_filter')
+
     # get current academic year
     current_year = get_current_year()
 
@@ -999,29 +1003,16 @@ def selector_grid(id):
         flash('The selector grid view is available only after student choices are closed', 'error')
         return redirect(request.referrer)
 
-    cohort_filter = request.args.get('cohort_filter')
-    prog_filter = request.args.get('prog_filter')
-
-    if cohort_filter is None and session.get('convenor_sel_grid_cohort_filter'):
-        cohort_filter = session['convenor_sel_grid_cohort_filter']
-
-    if cohort_filter is not None:
-        session['convenor_sel_grid_cohort_filter'] = cohort_filter
-
-    if prog_filter is None and session.get('convenor_sel_grid_prog_filter'):
-        prog_filter = session['convenor_sel_grid_prog_filter']
-
-    if prog_filter is not None:
-        session['convenor_sel_grid_prog_filter'] = prog_filter
-
     # build a list of live students selecting from this project class
     selectors = config.selecting_students.filter_by(retired=False).all()
 
     # build list of available cohorts and degree programmes
     cohorts = set()
     programmes = set()
+    years = set()
     for sel in selectors:
         cohorts.add(sel.student.cohort)
+        years.add(sel.academic_year)
         programmes.add(sel.student.programme_id)
 
     # build list of available programmes
@@ -1035,12 +1026,33 @@ def selector_grid(id):
         .filter_by(active=True) \
         .order_by(ResearchGroup.name.asc()).all()
 
+    if cohort_filter is None and session.get('convenor_sel_grid_cohort_filter'):
+        cohort_filter = session['convenor_sel_grid_cohort_filter']
+
+    if cohort_filter is not None:
+        session['convenor_sel_grid_cohort_filter'] = cohort_filter
+
+    if prog_filter is None and session.get('convenor_sel_grid_prog_filter'):
+        prog_filter = session['convenor_sel_grid_prog_filter']
+
+    if prog_filter is not None:
+        session['convenor_sel_grid_prog_filter'] = prog_filter
+
+    if year_filter is None and session.get('convenor_sel_grid_year_filter'):
+        year_filter = session['convenor_sel_grid_year_filter']
+
+    if isinstance(year_filter, str) and year_filter != 'all' and int(year_filter) not in years:
+        year_filter = 'all'
+
+    if year_filter is not None:
+        session['convenor_sel_grid_filter'] = year_filter
+
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selector_grid.html', pane='selectors', subpane='grid',
                            pclass=pclass, config=config, convenor_data=data,
-                           current_year=current_year, cohorts=sorted(cohorts), progs=progs,
-                           cohort_filter=cohort_filter, prog_filter=prog_filter, groups=groups)
+                           current_year=current_year, cohorts=sorted(cohorts), progs=progs, years=sorted(years),
+                           cohort_filter=cohort_filter, prog_filter=prog_filter, year_filter=year_filter, groups=groups)
 
 
 @convenor.route('/selector_grid_ajax/<int:id>')
@@ -1056,6 +1068,7 @@ def selector_grid_ajax(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
+    year_filter = request.args.get('year_filter')
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
@@ -1072,6 +1085,7 @@ def selector_grid_ajax(id):
     # filter by cohort and programme if required
     cohort_flag, cohort_value = is_integer(cohort_filter)
     prog_flag, prog_value = is_integer(prog_filter)
+    year_flag, year_value = is_integer(year_filter)
 
     if cohort_flag or prog_flag:
         selectors = selectors \
@@ -1083,7 +1097,12 @@ def selector_grid_ajax(id):
     if prog_flag:
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
-    return ajax.convenor.selector_grid_data(selectors.all(), config)
+    if year_flag:
+        data = [x for x in selectors.all() if x.academic_year == year_value]
+    else:
+        data = selectors.all()
+
+    return ajax.convenor.selector_grid_data(data, config)
 
 
 @convenor.route('/show_confirmations/<int:id>')

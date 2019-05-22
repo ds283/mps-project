@@ -1838,7 +1838,8 @@ def _FacultyData_delete_cache(faculty_id):
 
     schedule_slots = db.session.query(ScheduleSlot) \
         .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id) \
-        .filter(ScheduleAttempt.year == year,
+        .join(PresentationAssessment, PresentationAssessment.id == ScheduleAttempt.owner_id) \
+        .filter(PresentationAssessment.year == year,
                 ScheduleSlot.assessors.any(id=faculty_id))
     for slot in schedule_slots:
         cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
@@ -3979,7 +3980,7 @@ class EnrollmentRecord(db.Model):
         return label
 
 
-def _delete_EnrollmentRecord_cache(enrollment_id):
+def _delete_EnrollmentRecord_cache(faculty_id):
     cache.delete_memoized(_Project_is_offerable)
     cache.delete_memoized(_Project_num_assessors)
 
@@ -3988,13 +3989,13 @@ def _delete_EnrollmentRecord_cache(enrollment_id):
     marker_records = db.session.query(MatchingRecord) \
         .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt) \
         .filter(MatchingAttempt.year == year,
-                MatchingRecord.marker_id == enrollment_id)
+                MatchingRecord.marker_id == faculty_id)
 
     superv_records = db.session.query(MatchingRecord) \
         .join(MatchingAttempt, MatchingAttempt.id == MatchingRecord.matching_attempt) \
         .filter(MatchingAttempt.year == year) \
         .join(LiveProject, LiveProject.id == MatchingRecord.project_id) \
-        .filter(LiveProject.owner_id == enrollment_id)
+        .filter(LiveProject.owner_id == faculty_id)
 
     match_records = marker_records.union(superv_records)
 
@@ -4004,8 +4005,9 @@ def _delete_EnrollmentRecord_cache(enrollment_id):
 
     schedule_slots = db.session.query(ScheduleSlot) \
         .join(ScheduleAttempt, ScheduleAttempt.id == ScheduleSlot.owner_id) \
-        .filter(ScheduleAttempt.year == year,
-                ScheduleSlot.assessors.any(id=enrollment_id))
+        .join(PresentationAssessment, PresentationAssessment.id == ScheduleAttempt.owner_id) \
+        .filter(PresentationAssessment.year == year,
+                ScheduleSlot.assessors.any(id=faculty_id))
     for slot in schedule_slots:
         cache.delete_memoized(_ScheduleSlot_is_valid, slot.id)
         cache.delete_memoized(_ScheduleAttempt_is_valid, slot.owner_id)

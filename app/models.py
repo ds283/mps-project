@@ -6233,7 +6233,6 @@ class SelectingStudent(db.Model):
     @property
     def number_selections(self):
         return get_count(self.selections)
-    
 
 
     def project_rank(self, proj):

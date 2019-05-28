@@ -6230,6 +6230,11 @@ class SelectingStudent(db.Model):
         return self.selections.order_by(SelectionRecord.rank)
 
 
+    @property
+    def number_selections(self):
+        return get_count(self.selections)
+
+
     def project_rank(self, proj):
         # ignore bookmarks; these will have been converted to
         # SelectionRecords after closure if needed, and project_rank() is only really

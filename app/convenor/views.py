@@ -1067,7 +1067,6 @@ def selector_grid_ajax(id):
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
-    state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
 
     # get current configuration record for this project class
@@ -1101,6 +1100,10 @@ def selector_grid_ajax(id):
         data = [x for x in selectors.all() if x.academic_year == year_value]
     else:
         data = selectors.all()
+
+    # for selection_open_to_all type project classes (eg. RP), no need to include students who did not respond
+    if pclass.selection_open_to_all:
+        data = [x for x in data if x.has_submitted or x.has_bookmarks]
 
     return ajax.convenor.selector_grid_data(data, config)
 

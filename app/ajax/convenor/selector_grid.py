@@ -93,6 +93,20 @@ _name = \
 
 
 def selector_grid_data(students, config):
+
+    def sel_count(sel):
+        if not sel.has_submitted:
+            return 0
+
+        # group 'accepted offer' students together at the top
+        if sel.has_accepted_offer:
+            return 100
+
+        if sel.has_submission_list:
+            return sel.number_selections
+
+        return -1
+
     data = [{'name': {
                 'display': render_template_string(_name, sel=s),
                 'sortstring': s.student.user.last_name + s.student.user.first_name
@@ -102,6 +116,9 @@ def selector_grid_data(students, config):
                  'display': render_template_string(_cohort, sel=s),
                  'value': s.student.cohort
              },
-             'selections': render_template_string(_selections, sel=s, config=config)} for s in students]
+             'selections': {
+                 'display': render_template_string(_selections, sel=s, config=config),
+                 'sortvalue': sel_count(s)
+             }} for s in students]
 
     return jsonify(data)

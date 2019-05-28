@@ -31,7 +31,12 @@
                         type: 'value'
                       } },
                     { data: 'programme' },
-                    { data: 'selections' }
+                    { data: 'selections',
+                      render: {
+                        _: 'display',
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
+                      } }
                 ],
                 deferRender: true
             });

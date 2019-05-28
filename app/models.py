@@ -7704,14 +7704,14 @@ def _MatchingAttempt_is_valid(id):
 
     # 3. EACH PARTICIPATING FACULTY SHOULD NOT BE OVERASSIGNED, EITHER AS MARKER OR SUPERVISOR
     for fac in obj.faculty:
-        sup_flag, CATS_sup, include_CATS_sup, sup_lim, msg = obj.is_supervisor_overassigned(fac, include_matches=True)
-        if sup_flag:
-            warnings[('supervising', fac.id)] = msg
+        data = obj.is_supervisor_overassigned(fac, include_matches=True)
+        if data['flag']:
+            warnings[('supervising', fac.id)] = data['error_message']
             faculty_issues = True
 
-        mark_flag, CATS_mark, include_CATS_mark, mark_lim, msg = obj.is_marker_overassigned(fac, include_matches=True)
-        if mark_flag:
-            warnings[('marking', fac.id)] = msg
+        data = obj.is_marker_overassigned(fac, include_matches=True)
+        if data['flag']:
+            warnings[('marking', fac.id)] = data['error_message']
             faculty_issues = True
 
         # 4. FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
@@ -8173,10 +8173,15 @@ class MatchingAttempt(db.Model, PuLPMixin):
                                                                                                  'class ')
             rval = True
 
-        if include_matches:
-            return rval, total, included_matches, limit, message
+        data = {'flag': rval,
+                'CATS_total': total,
+                'CATS_limit': limit,
+                'error_message': message}
 
-        return rval, sup, limit, message
+        if include_matches:
+            data['included'] = included_matches
+
+        return data
 
 
     def is_marker_overassigned(self, faculty, include_matches=False, pclass_id=None):
@@ -8213,11 +8218,17 @@ class MatchingAttempt(db.Model, PuLPMixin):
                       '(assigned={m}, max capacity={n})'.format(name=faculty.user.name, m=total, n=limit,
                                                                 pcl='' if pclass_id is None else 'for this project '
                                                                                                  'class ')
+            rval = True
+
+        data = {'flag': rval,
+                'CATS_total': total,
+                'CATS_limit': limit,
+                'error_message': message}
 
         if include_matches:
-            return rval, total, included_matches, limit, message
+            data['included'] = included_matches
 
-        return rval, mark, limit, message
+        return data
 
 
     @property

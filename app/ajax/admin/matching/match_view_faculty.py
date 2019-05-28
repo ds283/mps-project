@@ -142,10 +142,10 @@ _workload = \
 <span class="label {% if sup_overassigned %}label-danger{% else %}label-info{% endif %}">S {{ sup }}</span>
 <span class="label {% if mark_overassigned %}label-danger{% else %}label-default{% endif %}">M {{ mark }}</span>
 <span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">T {{ tot }}</span>
-{% if m.include_matches.count() > 0 and included_sup_CATS is not none and included_mark_CATS is not none and included_workload_CATS is not none %}
+{% if included_sup is not none and included_mark is not none and included_workload is not none and included_workload|length > 0 %}
     <p></p>
     {% for match in m.include_matches %}
-        <span class="label label-info">{{ match.name }} S {{ included_sup_CATS[match.id] }} M {{ included_mark_CATS[match.id] }} T {{ included_workload_CATS[match.id] }}</span>
+        <span class="label label-info">{{ match.name }} S {{ included_sup[match.id] }} M {{ included_mark[match.id] }} T {{ included_workload[match.id] }}</span>
     {% endfor %}
     <p></p>
     <span class="label {% if sup_overassigned or mark_overassigned %}label-danger{% else %}label-primary{% endif %}">Total {{ total_CATS_value }}</span>
@@ -161,10 +161,17 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
         mark_errors = {}
 
         # check for CATS overassignment
-        sup_overassigned, CATS_sup, included_sup, sup_lim, sup_msg = \
-            match_attempt.is_supervisor_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
-        mark_overassigned, CATS_mark, included_mark, mark_lim, mark_msg = \
-            match_attempt.is_marker_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
+        payload = match_attempt.is_supervisor_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
+        sup_overassigned = payload.get('flag', False)
+        CATS_sup = payload.get('CATS_total', None)
+        included_sup = payload.get('included', {})
+        sup_msg = payload.get('error_message', None)
+
+        payload = match_attempt.is_marker_overassigned(f, include_matches=show_includes, pclass_id=pclass_filter)
+        mark_overassigned = payload.get('flag', False)
+        CATS_mark = payload.get('CATS_total', None)
+        included_mark = payload.get('included', {})
+        mark_msg = payload.get('error_message', None)
 
         if sup_overassigned:
             sup_errors['sup_over'] = sup_msg
@@ -179,10 +186,15 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
             this_mark = CATS_mark
 
         if pclass_filter is not None:
-            _sup_overassigned, _CATS_sup, _included_sup, _sup_lim, _sup_msg = \
-                match_attempt.is_supervisor_overassigned(f, include_matches=show_includes)
-            _mark_overassigned, _CATS_mark, _included_mark, _mark_lim, _mark_msg = \
-                match_attempt.is_marker_overassigned(f, include_matches=show_includes)
+            payload = match_attempt.is_supervisor_overassigned(f, include_matches=show_includes)
+            _sup_overassigned = payload.get('flag', False)
+            _CATS_sup = payload.get('CATS_total', None)
+            _sup_msg = payload.get('CATS_limit', None)
+
+            payload = match_attempt.is_marker_overassigned(f, include_matches=show_includes)
+            _mark_overassigned = payload.get('flag', False)
+            _CATS_mark = payload.get('CATS_total', None)
+            _mark_msg = payload.get('CATS_limit', None)
 
             if _sup_overassigned:
                 sup_errors['sup_over_full'] = _sup_msg
@@ -241,9 +253,9 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
                                                                     tot=this_sup + this_mark,
                                                                     sup_overassigned=sup_overassigned,
                                                                     mark_overassigned=mark_overassigned,
-                                                                    included_sup_CATS=included_sup,
-                                                                    included_mark_CATS=included_mark,
-                                                                    included_workload_CATS=included_workload,
+                                                                    included_sup=included_sup,
+                                                                    included_mark=included_mark,
+                                                                    included_workload=included_workload,
                                                                     total_CATS_value=CATS_sup + CATS_mark),
                                   'sortvalue': CATS_sup + CATS_mark}})
 

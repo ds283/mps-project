@@ -1,9 +1,10 @@
 {% extends "convenor/dashboard/submitter_nav.html" %}
 
-{% if cohort_filter is none %}{% set cohort_filter = 'all' %}{% endif %}
-{% if prog_filter is none %}{% set prog_filter = 'all' %}{% endif %}
-{% if year_filter is none %}{% set year_filter = 'all' %}{% endif %}
-{% if state_filter is none %}{% set state_filter = 'all' %}{% endif %}
+{% if cohort_filter is not defined or cohort_filter is none %}{% set cohort_filter = 'all' %}{% endif %}
+{% if prog_filter is not defined or prog_filter is none %}{% set prog_filter = 'all' %}{% endif %}
+{% if year_filter is not defined or year_filter is none %}{% set year_filter = 'all' %}{% endif %}
+{% if state_filter is not defined or state_filter is none %}{% set state_filter = 'all' %}{% endif %}
+{% if data_display is not defined or data_display is none %}{% set data_display = 'name' %}{% endif %}
 
 {% block scripts %}
     {{ super() }}
@@ -15,13 +16,14 @@
             $('#submitters-table').DataTable({
                 responsive: true, bAutoWidth: false, colReorder: true, dom: 'lftBip',
                 buttons: ['copy', 'csv', 'excel', 'pdf', 'print'], stateSave: true,
-                ajax: { url: $SCRIPT_ROOT + '/convenor/submitters_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&prog_filter={{ prog_filter }}&state_filter={{ state_filter }}', dataSrc: '' },
+                ajax: { url: $SCRIPT_ROOT + '/convenor/submitters_ajax/{{ pclass.id }}?cohort_filter={{ cohort_filter }}&year_filter={{ year_filter }}&prog_filter={{ prog_filter }}&state_filter={{ state_filter }}&data_display={{ data_display }}', dataSrc: '' },
                 "fnDrawCallback": function () { $('body').tooltip({selector: '[data-toggle="tooltip"]'}); },
                 columns: [
                     { data: 'name',
                       render: {
                         _: 'display',
-                        sort: 'sortstring'
+                        sort: 'sortvalue',
+                        type: 'sortvalue'
                       } },
                     { data: 'cohort',
                       render: {
@@ -59,12 +61,12 @@
                             {% endif %}
                                 <p>Filter by cohort</p>
                                 <a class="btn btn-sm filter-btn {% if cohort_filter is none or cohort_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter='all', year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}">
+                                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter='all', year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}">
                                     All
                                 </a>
                                 {% for cohort in cohorts %}
                                     <a class="btn btn-sm filter-btn {% if cohort_filter == cohort|string %}btn-primary{% else %}btn-default{% endif %}"
-                                        href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter) }}">
+                                        href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}">
                                         {{ cohort }}
                                     </a>
                                 {% endfor %}
@@ -78,12 +80,12 @@
                             {% endif %}
                                 <p>Filter by academic year</p>
                                 <a class="btn btn-sm filter-btn {% if year_filter is none or year_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter='all', prog_filter=prog_filter, state_filter=state_filter) }}">
+                                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter='all', prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}">
                                     All
                                 </a>
                                 {% for year in years %}
                                     <a class="btn btn-sm filter-btn {% if year_filter == year|string %}btn-primary{% else %}btn-default{% endif %}"
-                                        href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year, prog_filter=prog_filter, state_filter=state_filter) }}">
+                                        href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year, prog_filter=prog_filter, state_filter=state_filter, data_display=data_display) }}">
                                         Y{{ year }}
                                     </a>
                                 {% endfor %}
@@ -99,12 +101,12 @@
                     {% set needs_rule = true %}
                     <p>Filter by degree programme</p>
                     <a class="btn btn-sm filter-btn {% if prog_filter is none or prog_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                        href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all', state_filter=state_filter) }}">
+                        href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter='all', state_filter=state_filter, data_display=data_display) }}">
                         All
                     </a>
                     {% for prog in progs %}
                         <a class="btn btn-sm filter-btn {% if prog_filter == prog.id|string %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id, state_filter=state_filter) }}">
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog.id, state_filter=state_filter, data_display=data_display) }}">
                             {{ prog.full_name }}
                         </a>
                     {% endfor %}
@@ -113,27 +115,50 @@
                 {% if needs_rule %}
                     <hr class="intro-divider">
                 {% endif %}
-                <p>Filter by status</p>
-                <a class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='all') }}">
-                    All
-                </a>
-                <a class="btn btn-sm filter-btn {% if state_filter == 'submitted' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='submitted') }}">
-                    Submitted
-                </a>
-                <a class="btn btn-sm filter-btn {% if state_filter == 'bookmarks' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='bookmarks') }}">
-                    Bookmarks only
-                </a>
-                <a class="btn btn-sm filter-btn {% if state_filter == 'none' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='none') }}">
-                    No bookmarks
-                </a>
-                <a class="btn btn-sm filter-btn {% if state_filter == 'confirmations' %}btn-primary{% else %}btn-default{% endif %}"
-                    href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='confirmations') }}">
-                    Confirmations outstanding
-                </a>
+                <div class="row">
+                    <div class="col-xs-6">
+                        <p>Filter by status</p>
+                        <a class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='all', data_display=data_display) }}">
+                            All
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'submitted' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='submitted', data_display=data_display) }}">
+                            Submitted
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'bookmarks' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='bookmarks', data_display=data_display) }}">
+                            Bookmarks only
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'none' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='none', data_display=data_display) }}">
+                            No bookmarks
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'confirmations' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='confirmations', data_display=data_display) }}">
+                            Confirmations outstanding
+                        </a>
+                    </div>
+                    <div class="col-xs-6">
+                        <p>Display data</p>
+                        <a class="btn btn-sm filter-btn {% if data_display is none or data_display == 'name' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display='name') }}">
+                            Name
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if data_display == 'number' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display='number') }}">
+                            Candidate number
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if data_display == 'both-name' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display='both-name') }}">
+                            Name and candidate number, sort on name
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if data_display == 'both-number' %}btn-primary{% else %}btn-default{% endif %}"
+                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, data_display='both-number') }}">
+                            Name and candidate number, sort on number
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <hr class="intro-divider">

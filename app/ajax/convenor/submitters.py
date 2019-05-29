@@ -331,28 +331,34 @@ _menu = \
 _name = \
 """
 {% set pclass = sub.config.project_class %}
-<a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
 <div>
-{% if current_user.has_role('admin') or current_user.has_role('root') %}
-    <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="label label-default">
-        #{{ sub.student.exam_number }}
-    </a>
-{% else %}
-    <span class="label label-default">#{{ sub.student.exam_number }}</span>
-{% endif %}
-{% if sub.published and pclass.publish %}
-    <span class="label label-primary"><i class="fa fa-eye"></i> Published</span>
-{% else %}
-    <span class="label label-warning"><i class="fa fa-eye-slash"></i> Unpublished</span>
-{% endif %}
+    {% if show_name %}
+        <a href="mailto:{{ sub.student.user.email }}">{{ sub.student.user.name }}</a>
+    {% endif %}
+    {% if show_number %}
+        {% if current_user.has_role('admin') or current_user.has_role('root') %}
+            <a href="{{ url_for('manage_users.edit_student', id=sub.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}" class="label label-default">
+                #{{ sub.student.exam_number }}
+            </a>
+        {% else %}
+            <span class="label label-default">#{{ sub.student.exam_number }}</span>
+        {% endif %}
+    {% endif %}
+</div>
+<div>
+    {% if sub.published and pclass.publish %}
+        <span class="label label-primary"><i class="fa fa-eye"></i> Published</span>
+    {% else %}
+        <span class="label label-warning"><i class="fa fa-eye-slash"></i> Unpublished</span>
+    {% endif %}
 </div>
 """
 
 
-def submitters_data(students, config):
+def submitters_data(students, config, show_name, show_number, sort_number):
     data = [{'name': {
-                'display': render_template_string(_name, sub=s),
-                'sortstring': s.student.user.last_name + s.student.user.first_name
+                'display': render_template_string(_name, sub=s, show_name=show_name, show_number=show_number),
+                'sortvalue': s.student.exam_number if sort_number else s.student.user.last_name + s.student.user.first_name
              },
              'cohort': {
                  'display': render_template_string(_cohort, sub=s),

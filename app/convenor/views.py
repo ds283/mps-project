@@ -1187,6 +1187,7 @@ def submitters(id):
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
+    data_display = request.args.get('data_display')
 
     # get current academic year
     current_year = get_current_year()
@@ -1249,13 +1250,23 @@ def submitters(id):
     if year_filter is not None:
         session['convenor_submitters_year_filter'] = year_filter
 
+    if data_display is None and session.get('convenor_submitters_data_display'):
+        data_display = session['convenor_submitters_data_display']
+
+    if data_display != 'name' and data_display != 'number' and data_display != 'both-name' \
+            and data_display != 'both-number':
+        data_display = 'name'
+
+    if data_display is not None:
+        session['convenor_submitters_data_display'] = data_display
+
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/submitters.html', pane='submitters', subpane='list',
                            pclass=pclass, config=config, convenor_data=data, current_year=current_year,
                            cohorts=sorted(cohorts), progs=progs, years=sorted(years),
                            cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter,
-                           year_filter=year_filter)
+                           year_filter=year_filter, data_display=data_display)
 
 
 @convenor.route('/submitters_ajax/<int:id>', methods=['GET', 'POST'])
@@ -1282,10 +1293,25 @@ def submitters_ajax(id):
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
+    data_display = request.args.get('data_display')
+
+    show_name = True
+    show_number = False
+    sort_number = False
+
+    if data_display == 'number':
+        show_name = False
+        show_number = True
+        sort_number = True
+    elif data_display == 'both-name':
+        show_number = True
+    elif data_display == 'both-number':
+        show_number = True
+        sort_number = True
 
     data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
 
-    return ajax.convenor.submitters_data(data, config)
+    return ajax.convenor.submitters_data(data, config, show_name, show_number, sort_number)
 
 
 @convenor.route('/enroll_submitters/<int:id>')
@@ -1307,8 +1333,8 @@ def enroll_submitters(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
 
-    if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
-        flash('Manual enrollment of selectors is only possible before student choices are closed', 'error')
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('Manual enrollment of selectors is no longer possible at this stage in the project lifecycle.', 'error')
         return redirect(request.referrer)
 
     cohort_filter = request.args.get('cohort_filter')

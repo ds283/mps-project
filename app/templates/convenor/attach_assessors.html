@@ -222,7 +222,7 @@
                                     {% endfor %}
                                 {% endif %}
                                 {% if live_counterpart is not none %}
-                                    {% for marker in live.assessor_list %}
+                                    {% for marker in live_counterpart.assessor_list %}
                                         {% if not data.is_assessor(marker.id) and (running_counterpart is none or (running_counterpart is not none and not running_counterpart.is_assessor(marker.id))) %}
                                             <div class="dropdown project-status-button" style="display: inline-block;">
                                                 <a class="label label-warning" type="button" data-toggle="dropdown">{{ marker.user.name }} <span class="caret"></span></a>

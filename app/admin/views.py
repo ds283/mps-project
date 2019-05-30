@@ -3036,7 +3036,7 @@ def create_match():
                         if pclass_a.id == pclass_b.id:
                             ok = False
                             flash('Excluded CATS from existing match "{name}" since it contains project class '
-                                  '"{pname}" which overlaps with the current match'.format(name=match.label,
+                                  '"{pname}" which overlaps with the current match'.format(name=match.name,
                                                                                            pname=pclass_a.name))
                             break
 

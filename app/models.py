@@ -6379,6 +6379,20 @@ class SubmittingStudent(db.Model):
         return get_count(q) > 0
 
 
+    def detach_records(self):
+        """
+        Remove submission records from any linked ScheduleSlot instance, preparatory to deleting this
+        record itself
+        :return:
+        """
+        for rec in self.records:
+            for slot in rec.scheduled_slots:
+                slot.talks.remove(rec)
+
+            for slot in rec.original_scheduled_slots:
+                slot.original_talks.remove(rec)
+
+
 class PresentationFeedback(db.Model):
     """
     Collect details of feedback for a student presentation
@@ -9489,7 +9503,8 @@ class SubmitterAttendanceData(db.Model):
     # submitted for whom this attendance record exists
     submitter_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'))
     submitter = db.relationship('SubmissionRecord', foreign_keys=[submitter_id], uselist=False,
-                                backref=db.backref('assessment_attendance', lazy='dynamic'))
+                                backref=db.backref('assessment_attendance', lazy='dynamic',
+                                                   cascade='all, delete, delete-orphan'))
 
     # assessment that owns this availability record
     assessment_id = db.Column(db.Integer(), db.ForeignKey('presentation_assessments.id'))
@@ -10704,7 +10719,7 @@ class ScheduleSlot(db.Model):
 
     # talks scheduled in this slot
     talks = db.relationship('SubmissionRecord', secondary=submitter_to_slots, lazy='dynamic',
-                            backref=db.backref('scheduled_slot', lazy='dynamic'))
+                            backref=db.backref('scheduled_slots', lazy='dynamic'))
 
 
     # ORIGINAL VERSIONS to allow reversion later
@@ -10713,7 +10728,8 @@ class ScheduleSlot(db.Model):
     original_assessors = db.relationship('FacultyData', secondary=orig_fac_to_slots, lazy='dynamic')
 
     # original set of submitters attached to this slot
-    original_talks = db.relationship('SubmissionRecord', secondary=orig_sub_to_slots, lazy='dynamic')
+    original_talks = db.relationship('SubmissionRecord', secondary=orig_sub_to_slots, lazy='dynamic',
+                                     backref=db.backref('original_scheduled_slots', lazy='dynamic'))
 
 
     def _init__(self, *args, **kwargs):

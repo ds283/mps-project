@@ -1552,12 +1552,14 @@ def delete_submitter(sid):
         return redirect(request.referrer)
 
     try:
+        sub.detach_records()
         db.session.delete(sub)
+
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
-        flash('Could not delete submitter due to a database error. Please contact a system administrator.',
-              'error')
+        flash('Could not delete submitter due to a database error ("{n}"). Please contact a system '
+              'administrator.'.format(n=e), 'error')
 
     return redirect(request.referrer)
 

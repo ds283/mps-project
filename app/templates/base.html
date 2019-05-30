@@ -3,6 +3,21 @@
 
 {% set real_user = get_previous_login() %}
 
+{%- set is_faculty = current_user.has_role('faculty') -%}
+{%- set is_office = current_user.has_role('office') -%}
+{%- set is_student = current_user.has_role('student') -%}
+{%- set is_reports = current_user.has_role('reports') -%}
+{%- set is_convenor = is_faculty and current_user.faculty_data is not none and current_user.faculty_data.is_convenor -%}
+{%- set is_root = current_user.has_role('root') -%}
+{%- set is_admin = current_user.has_role('admin') -%}
+{%- set is_edit_tags = current_user.has_role('edit_tags') -%}
+{%- set is_view_email = current_user.has_role('view_email') -%}
+{%- set is_manage_users = current_user.has_role('manage_users') %}
+
+{% set data = get_base_context() %}
+{% set matching_ready = data['matching_ready'] %}
+{% set has_assessments = data['has_assessments'] %}
+
 {% block scripts %}
     {{ super() }}
     <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
@@ -311,16 +326,6 @@
             </div>
 
             <!-- Collect nav links and other content into a menu for mobile devices -->
-            {%- set is_faculty = current_user.has_role('faculty') -%}
-            {%- set is_office = current_user.has_role('office') -%}
-            {%- set is_student = current_user.has_role('student') -%}
-            {%- set is_reports = current_user.has_role('reports') -%}
-            {%- set is_convenor = is_faculty and current_user.faculty_data is not none and current_user.faculty_data.is_convenor -%}
-            {%- set is_root = current_user.has_role('root') -%}
-            {%- set is_admin = current_user.has_role('admin') -%}
-            {%- set is_edit_tags = current_user.has_role('edit_tags') -%}
-            {%- set is_view_email = current_user.has_role('view_email') -%}
-            {%- set is_manage_users = current_user.has_role('manage_users') %}
             <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
                 <ul class="nav navbar-nav navbar-right">
 

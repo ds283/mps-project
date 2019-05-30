@@ -9,6 +9,7 @@
 #
 
 from flask import render_template_string, jsonify
+from ...models import ProjectClassConfig
 
 
 _cohort = \
@@ -293,6 +294,17 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+        {% if allow_delete %}
+            <li>
+                <a href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">
+                    <i class="fa fa-trash"></i> Delete
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a><i class="fa fa-trash"></i> Delete disabled</a>
+            </li>
+        {% endif %}
         
         {% if sub.published and pclass.publish %}
             <li>
@@ -380,6 +392,9 @@ _name = \
 
 
 def submitters_data(students, config, show_name, show_number, sort_number):
+    submittter_state = config.submitter_lifecycle
+    allow_delete = submittter_state <= ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY
+
     data = [{'name': {
                 'display': render_template_string(_name, sub=s, show_name=show_name, show_number=show_number),
                 'sortvalue': s.student.exam_number if sort_number else s.student.user.last_name + s.student.user.first_name
@@ -391,6 +406,6 @@ def submitters_data(students, config, show_name, show_number, sort_number):
              'projects': render_template_string(_projects, sub=s, config=config),
              'markers': render_template_string(_markers, sub=s, config=config),
              'presentations': render_template_string(_presentations, sub=s, config=config),
-             'menu': render_template_string(_menu, sub=s)} for s in students]
+             'menu': render_template_string(_menu, sub=s, allow_delete=allow_delete)} for s in students]
 
     return jsonify(data)

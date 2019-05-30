@@ -954,7 +954,6 @@ def delete_selector(sid):
     :param sid:
     :return:
     """
-
     sel = SelectingStudent.query.get_or_404(sid)
 
     # reject user if not a convenor for this project class
@@ -1542,7 +1541,6 @@ def delete_submitter(sid):
     :param sid:
     :return:
     """
-
     sub = SubmittingStudent.query.get_or_404(sid)
 
     # reject user if not a convenor for this project class
@@ -4769,7 +4767,7 @@ def publish_assignment(id):
         return redirect(request.referrer)
 
     if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to publish an assignment to students', 'error')
+        flash('It is now too late to publish an assignment to students for this project class.', 'error')
         return redirect(request.referrer)
 
     sub.published = True
@@ -4794,7 +4792,7 @@ def unpublish_assignment(id):
         return redirect(request.referrer)
 
     if sub.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to publish an assignment to students', 'error')
+        flash('It is now too late to unpublish an assignment for this project class.', 'error')
         return redirect(request.referrer)
 
     sub.published = False
@@ -4818,7 +4816,7 @@ def publish_all_assignments(id):
         return redirect(request.referrer)
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to publish an assignment to students', 'error')
+        flash('It is now too late to publish assignments to students for this project class.', 'error')
         return redirect(request.referrer)
 
     cohort_filter = request.args.get('cohort_filter')
@@ -4851,7 +4849,7 @@ def unpublish_all_assignments(id):
         return redirect(request.referrer)
 
     if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to unpublish an assignment', 'error')
+        flash('It is now too late to unpublish assignments for this project class.', 'error')
         return redirect(request.referrer)
 
     cohort_filter = request.args.get('cohort_filter')
@@ -4884,15 +4882,15 @@ def mark_started(id):
         return redirect(request.referrer)
 
     if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to mark a submission period as started', 'error')
+        flash('It is now too late to mark a submission period as "started" for this project class.', 'error')
         return redirect(request.referrer)
 
     if rec.submission_period > rec.owner.config.submission_period:
-        flash('Cannot mark this submission period as started because it is not yet open', 'error')
+        flash('Cannot mark this submission period as started because it is not yet open.', 'error')
         return redirect(request.referrer)
 
     if not rec.owner.published:
-        flash('Cannot mark this submission period as started because it is not published to the submitter', 'error')
+        flash('Cannot mark this submission period as started because it is not published to the submitter.', 'error')
         return redirect(request.referrer)
 
     rec.student_engaged = True
@@ -4917,15 +4915,15 @@ def mark_waiting(id):
         return redirect(request.referrer)
 
     if rec.owner.config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-        flash('It is now too late to mark a submission period as started', 'error')
+        flash('It is now too late to mark a submission period as "waiting" for this project class.', 'error')
         return redirect(request.referrer)
 
     if rec.submission_period > rec.owner.config.submission_period:
-        flash('Cannot mark this submission period as started because it is not yet open', 'error')
+        flash('Cannot mark this submission period as started because it is not yet open.', 'error')
         return redirect(request.referrer)
 
     if not rec.owner.published:
-        flash('Cannot mark this submission period as started because it is not published to the submitter', 'error')
+        flash('Cannot mark this submission period as started because it is not published to the submitter.', 'error')
         return redirect(request.referrer)
 
     rec.student_engaged = False

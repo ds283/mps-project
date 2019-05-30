@@ -47,9 +47,18 @@ _projects = \
                 </li>
                 
                 {% set disabled = r.period.feedback_open or r.student_engaged %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
-                </li>
+                {% if disabled %}
+                    <li class="disabled">
+                        <a>Can't reassign: Feedback open or student engaged</a>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Manually reassign</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
+                    </li>
+                {% endif %}
             </ul>
         </div>
         {% if r.owner.published %}
@@ -130,9 +139,18 @@ _marking = \
                 </li>
                 
                 {% set disabled = r.period.feedback_open or r.student_engaged %}
-                <li {% if disabled %}class="disabled"{% endif %}>
-                    <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
-                </li>
+                {% if disabled %}
+                    <li class="disabled">
+                        <a>Can't reassign: Feedback open or student engaged</a>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{{ url_for('convenor.manual_assign', id=r.id, text='workload view', url=url_for('convenor.faculty_workload', id=pclass.id)) }}">Manually reassign</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
+                    </li>
+                {% endif %}
             </ul>
         </div>
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}

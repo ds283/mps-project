@@ -5286,6 +5286,73 @@ def assign_liveproject(id, pid):
     return redirect(request.referrer)
 
 
+@convenor.route('/deassign_project/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def deassign_project(id):
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for {name} '
+              'because feedback is already open'.format(name=rec.period.display_name), 'error')
+        return redirect(request.referrer)
+
+    if rec.student_engaged:
+        flash('Can not reassign for {name} '
+              'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
+        return redirect(request.referrer)
+
+    # as long as we don't set both project and project_id (or marker and marker_id) simultaneously to zero,
+    # the before-update listener for SubmissionRecord will invalidate the correct workload cache entries
+    rec.project = None
+    rec.marker = None
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/deassign_marker/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def deassign_marker(id):
+    # id is a SubmissionRecord
+    rec = SubmissionRecord.query.get_or_404(id)
+
+    # find the old ProjectClassConfig from which we will draw the list of available LiveProjects
+    config = rec.previous_config
+    if config is None:
+        flash('Can not reassign because the list of available Live Projects could not be found', 'error')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    if rec.period.feedback_open:
+        flash('Can not reassign for {name} '
+              'because feedback is already open'.format(name=rec.period.display_name), 'error')
+        return redirect(request.referrer)
+
+    if rec.student_engaged:
+        flash('Can not reassign for {name} '
+              'because the project is already marked as started'.format(name=rec.period.display_name), 'error')
+        return redirect(request.referrer)
+
+    # as long as we don't set both marker and marker_id simultaneously to zero, the before-update listener
+    # for SubmissionRecord will invalidate the correct workload cache entries
+    rec.marker = None
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @convenor.route('/assign_presentation_feedback/<int:id>/', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def assign_presentation_feedback(id):

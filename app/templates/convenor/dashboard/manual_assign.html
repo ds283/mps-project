@@ -62,7 +62,16 @@
             <span class="label label-primary">Total {{ CATS_supv+CATS_mark+CATS_pres }}</span>
         </div>
     {% else %}
-        <span class="label label-danger">No project allocation</span>
+        <span class="label label-danger">Not allocated</span>
+    {% endif %}
+{% endmacro %}
+
+{% macro record_label(item, text, url) %}
+    {% if item.submission_period == rec.submission_period %}
+        <a class="label label-success" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
+        <i class="fa fa-check"></i>
+    {% else %}
+        <a class="label label-default" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
     {% endif %}
 {% endmacro %}
 
@@ -93,26 +102,46 @@
                                 <div class="col-xs-3"><strong>Marker</strong></div>
                             </div>
                             {% for item in rec.owner.records %}
-                                <div class="row vertical-align final-selection-table">
+                                <div class="row vertical-top final-selection-table">
                                     <div class="col-xs-6">
-                                        <a class="label label-default" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">#{{ item.submission_period }}</a>
-                                        {% if item.submission_period == rec.submission_period %}<i class="fa fa-check"></i>{% endif %}
                                         {% if item.project is not none %}
-                                            <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
-                                                {{ item.project.name }}
-                                            </a>
+                                            <div class="row vertical-top">
+                                                <div class="col-xs-9">
+                                                    {{ record_label(item, text, url) }}
+                                                    <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                        {{ item.project.name }}
+                                                    </a>
+                                                </div>
+                                                <div class="col-xs-3">
+                                                    <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Remove</a>
+                                                </div>
+                                            </div>
                                         {% else %}
-                                            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">No project allocation</a>
+                                            {{ record_label(item, text, url) }}
+                                            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">No project allocated</a>
                                         {% endif %}
                                     </div>
                                     <div class="col-xs-3">
                                         {% if item.project is not none %}
                                             {{ faculty_data(item.project.owner) }}
+                                        {% else %}
+                                            <span class="label label-danger">Not allocated</span>
                                         {% endif %}
                                     </div>
                                     <div class="col-xs-3">
                                         {% if config.uses_marker %}
-                                            {{ faculty_data(item.marker) }}
+                                            {% if item.marker is not none %}
+                                                <div class="row vertical-top">
+                                                    <div class="col-xs-8">
+                                                        {{ faculty_data(item.marker) }}
+                                                    </div>
+                                                    <div class="col-xs-4">
+                                                        <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.deassign_marker', id=item.id) }}">Remove</a>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <span class="label label-danger">Not allocated</span>
+                                            {% endif %}
                                         {% else %}
                                             <span class="label label-default">Not used</span>
                                         {% endif %}

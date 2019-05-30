@@ -195,13 +195,15 @@ def _SubmissionRecord_delete_cache(target):
             _delete_cache_entry(target.project.owner_id)
 
         # need to allow for possibility target.project has not caught up to target.project_id or vice-versa
-        if target.project_id is not None and (target.project is None or target.project_id != target.project_id):
+        if target.project_id is not None and (target.project is None
+                                              or (target.project is not None
+                                                  and target.project_id != target.project.id)):
             proj = db.session.query(LiveProject).filter_by(id=target.project_id).first()
             if proj is not None:
                 _delete_cache_entry(proj.owner_id)
 
         _delete_cache_entry(target.marker_id)
-        if target.marker.id != target.marker_id:
+        if target.marker is not None and target.marker.id != target.marker_id:
             _delete_cache_entry(target.marker.id)
 
 
@@ -221,6 +223,26 @@ def _SubmissionRecord_update_handler(mapper, connection, target):
 def _SubmissionRecord_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
         _SubmissionRecord_delete_cache(target)
+
+
+@listens_for(SubmissionRecord.project, 'set', active_history=True)
+def _SubmissionRecord_project_set_receiver(target, value, oldvalue, initiator):
+    with db.session.no_autoflush:
+        if isinstance(oldvalue, LiveProject):
+            _delete_cache_entry(oldvalue.owner_id)
+
+        if isinstance(value, LiveProject):
+            _delete_cache_entry(value.owner_id)
+
+
+@listens_for(SubmissionRecord.marker, 'set', active_history=True)
+def _SubmissionRecord_project_set_receiver(target, value, oldvalue, initiator):
+    with db.session.no_autoflush:
+        if isinstance(oldvalue, FacultyData):
+            _delete_cache_entry(oldvalue.id)
+
+        if isinstance(value, FacultyData):
+            _delete_cache_entry(value.id)
 
 
 def _ScheduleSlot_assessors_delete_cache(target, value):

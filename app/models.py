@@ -10574,7 +10574,10 @@ def _ScheduleSlot_is_valid(id):
 
     # CONSTRAINT 6. ASSESSORS SHOULD NOT BE PROJECT SUPERVISORS
     for talk in obj.talks:
-        if talk.project.owner in obj.assessors:
+        if talk.project is None:
+            errors[('supervisor', talk.id)] = 'Project supervisor for "{student}" is not ' \
+                                              'set'.format(student=talk.owner.student.user.name)
+        elif talk.project.owner in obj.assessors:
             errors[('supervisor', talk.id)] = 'Assessor "{name}" is project supervisor for ' \
                                               '"{student}"'.format(name=talk.project.owner.user.name,
                                                                    student=talk.owner.student.user.name)
@@ -10618,7 +10621,8 @@ def _ScheduleSlot_is_valid(id):
             talk_i = talks_list[i]
             talk_j = talks_list[j]
 
-            if talk_i.project_id == talk_j.project_id and talk_i.project.dont_clash_presentations:
+            if talk_i.project_id == talk_j.project_id and \
+                    (talk_i.project is not None and talk_i.project.dont_clash_presentations):
                 errors[('clash', (talk_i.id, talk_j.id))] = \
                     'Submitters "{name_a}" and "{name_b}" share a project ' \
                     '"{proj}" that is marked not to be co-scheduled'.format(name_a=talk_i.owner.student.user.name,

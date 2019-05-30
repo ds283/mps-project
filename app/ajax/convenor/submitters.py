@@ -55,9 +55,18 @@ _projects = \
                 <span class="caret"></span></a>
                 <ul class="dropdown-menu">
                     {% set disabled = r.period.feedback_open or r.student_engaged %}
-                    <li {% if disabled %}class="disabled"{% endif %}>
-                        <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
-                    </li>
+                    {% if disabled %}
+                        <li class="disabled">
+                            <a>Can't reassign: Feedback open or student engaged</a>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('convenor.deassign_project', id=r.id) }}">Remove assignment</a>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
             {% if sub.published %}
@@ -88,7 +97,7 @@ _projects = \
                 </div>
             {% endif %}
         {% else %}
-            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocation</a>
+            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocated</a>
         {% endif %}
     </div>
 {% endmacro %}
@@ -147,13 +156,28 @@ _markers = \
                 </a>
                 <ul class="dropdown-menu">
                     {% set disabled = r.period.feedback_open or r.student_engaged %}
-                    <li {% if disabled %}class="disabled"{% endif %}>
-                        <a {% if not disabled %}href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>Manually reassign</a>
-                    </li>
+                    {% if disabled %}
+                        <li class="disabled">
+                            <a>Can't reassign: Feedback open or student engaged</a>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">Manually reassign</a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('convenor.deassign_marker', id=r.id) }}">Remove assignment</a>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
         {% else %}
-            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocation</a>
+            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                {% if r.project is none %}
+                    No project allocated
+                {% else %}
+                    No marker allocated
+                {% endif %}
+            </a>
         {% endif %}
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>

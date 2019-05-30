@@ -222,6 +222,8 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
         # FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
         for config in match_attempt.config_members:
             rec = f.get_enrollment_record(config.pclass_id)
+            if rec is None:
+                continue
 
             sup, mark = match_attempt.get_faculty_CATS(f, pclass_id=config.pclass_id)
 

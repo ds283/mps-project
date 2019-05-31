@@ -28,7 +28,11 @@
                         </td>
                         <td>
                             {% if rec.period.config.uses_marker %}
-                                <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                                {% if rec.marker is not none %}
+                                    <a href="mailto:{{ rec.marker.user.email }}">{{ rec.marker.user.name }}</a>
+                                {% else %}
+                                    <span class="label label-warning">Marker not yet assigned</span>
+                                {% endif %}
                             {% else %}
                                 <span class="label label-default">Not used</span>
                             {% endif %}

@@ -7552,35 +7552,7 @@ def _MatchingAttempt_current_score(id):
     if None in scores:
         scores = [x for x in scores if x is not None]
 
-    objective = sum(scores)
-
-    # break up subscribed faculty in a list of markers only, supervisors only, and markers and supervisors
-    mark_only, sup_and_mark, sup_only = obj._faculty_groups
-
-    sup_CATS = obj._get_group_CATS(sup_only)
-    mark_CATS = obj._get_group_CATS(mark_only)
-    sup_mark_CATS = obj._get_group_CATS(sup_and_mark)
-
-    globalMin = None
-    globalMax = None
-
-    # compute max(CATS) - min(CATS) values for each group, and also the global max and min cats
-    sup_diff, globalMax, globalMin = obj._compute_group_max_min(sup_CATS, globalMax, globalMin)
-    mark_diff, globalMax, globalMin = obj._compute_group_max_min(mark_CATS, globalMax, globalMin)
-    sup_mark_diff, globalMax, globalMin = obj._compute_group_max_min(sup_mark_CATS, globalMax, globalMin)
-
-    # finally compute the largest number of projects that anyone is scheduled to 2nd mark
-    maxMarking = obj._max_marking_allocation
-
-    global_diff = 0
-    if globalMax is not None and globalMin is not None:
-        global_diff = globalMax - globalMin
-
-    levelling = sup_diff + mark_diff + sup_mark_diff + abs(float(obj.intra_group_tension)) * global_diff
-
-    return objective \
-           - abs(float(obj.levelling_bias)) * levelling / float(obj.mean_CATS_per_project) \
-           - abs(float(obj.levelling_bias)) * maxMarking
+    return sum(scores)
 
 
 @cache.memoize()
@@ -7701,14 +7673,20 @@ def _MatchingAttempt_is_valid(id):
     for record in obj.records:
         # check whether each matching record validates independently
         if not record.is_valid:
-            for n, e in enumerate(record.errors):
+            record_errors = record.errors
+            record_warnings = record.warnings
+
+            if len(record_errors) == 0 and len(record_warnings) == 0:
+                raise RuntimeError('Internal inconsistency in response from _MatchingRecord_is_valid')
+
+            for n, msg in enumerate(record_errors):
                 errors[('basic', (record.id, n))] \
-                    = '{name}/{abbv}: {err}'.format(err=e, name=record.selector.student.user.name,
+                    = '{name}/{abbv}: {msg}'.format(msg=msg, name=record.selector.student.user.name,
                                                     abbv=record.selector.config.project_class.abbreviation)
 
-            for n, e in enumerate(record.warnings):
+            for n, msg in enumerate(record_warnings):
                 warnings[('basic', (record.id, n))] \
-                    = '{name}/{abbv}: {err}'.format(err=e, name=record.selector.student.user.name,
+                    = '{name}/{abbv}: {msg}'.format(msg=msg, name=record.selector.student.user.name,
                                                     abbv=record.selector.config.project_class.abbreviation)
 
             student_issues = True
@@ -7749,10 +7727,12 @@ def _MatchingAttempt_is_valid(id):
                                                     'limit {n}'.format(name=fac.user.name, n=rec.CATS_marking)
                 faculty_issues = True
 
-    if len(errors) > 0 or len(warnings) > 0:
-        return False, student_issues, faculty_issues, errors, warnings
+    is_valid = (not student_issues) and (not faculty_issues)
 
-    return True, student_issues, faculty_issues, errors, warnings
+    if not is_valid and (len(errors) == 0 and len(warnings) == 0):
+        raise RuntimeError('Internal inconsistency in _MatchingAttempt_is_valid')
+
+    return is_valid, student_issues, faculty_issues, errors, warnings
 
 
 class PuLPMixin():
@@ -8521,12 +8501,10 @@ def _MatchingRecord_is_valid(id):
     # (we have to ask our parent MatchingAttempt for help with this)
     flag, msg = attempt.is_project_overassigned(project)
     if flag:
-        errors[('overassigned'), 1] = msg
+        errors[('overassigned', 0)] = msg
 
-    if len(errors) > 0 or len(warnings) > 0:
-        return False, errors, warnings
-
-    return True, errors, warnings
+    is_valid = (len(errors) == 0 and len(warnings) == 0)
+    return is_valid, errors, warnings
 
 
 class MatchingRecord(db.Model):
@@ -8572,7 +8550,10 @@ class MatchingRecord(db.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.error = None
+
+        self._validated = False
+        self._errors = {}
+        self._warnings = {}
 
 
     @orm.reconstructor

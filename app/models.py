@@ -7840,8 +7840,7 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # is this match based on another
     base_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
-    base_match = db.relationship('MatchingAttempt', foreign_keys=[base_id], uselist=False,
-                                 backref=db.backref('descendents', lazy='dynamic'))
+    base_match = db.relationship('MatchingAttempt', foreign_keys=[base_id], uselist=False)
 
 
     # PARTICIPATING PCLASSES

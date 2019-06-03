@@ -2978,9 +2978,14 @@ def create_match():
 
         uuid = register_task(task_name, owner=current_user, description=desc)
 
-        control = getattr(form, 'include_only_submitted', default=None)
-        include_only_submitted = (control.data if control is not None else False) or \
-                                 (base_match.include_only_submitted if base_match is not None else False)
+        control = getattr(form, 'include_only_submitted', None)
+        # logic for include_only_submitted is a bit delicate:
+        #   Form    Base    Outcome
+        #   T/F     None    T/F based on form
+        #   T/F     True    T/F based on form
+        #   absent  False   False
+        include_only_submitted = (control.data if control is not None else False) and \
+                                 (base_match.include_only_submitted if base_match is not None else True)
 
         attempt = MatchingAttempt(year=current_year,
                                   base_id=base_id,
@@ -3027,15 +3032,15 @@ def create_match():
                         ProjectClassConfig.year == current_year).first()
 
             if config is not None:
-                if get_count(attempt.config_members.filter_by(id=config.id)) == 0:
+                if config not in attempt.config_members:
                     count += 1
                     attempt.config_members.append(config)
 
         if base_match is not None:
             for config in base_match.config_members:
-                if get_count(attempt.config_members.filter_by(id=config.id)) == 0:
+                if config not in attempt.config_members:
                     count += 1
-                    attempt.config_members.append(config.id)
+                    attempt.config_members.append(config)
 
         if count == 0:
             flash('No project classes were specified for inclusion, so no match was computed.', 'error')
@@ -3058,12 +3063,12 @@ def create_match():
         # for matches we are supposed to take account of when levelling workload, check that there is no overlap
         # with the projects we will include in this match
         for match in form.include_matches.data:
-            if get_count(attempt.include_matches.filter_by(id=match.id)) == 0:
+            if match not in attempt.include_matches:
                 if _validate_included_match(match):
                     attempt.include_matches.append(match)
 
         for match in base_match.include_matches:
-            if get_count(attempt.include_matches.filter_by(id=match.id)) == 0:
+            if match not in attempt.include_matches:
                 if _validate_included_match(match):
                     attempt.include_matches.append(match)
 

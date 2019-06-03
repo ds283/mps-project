@@ -684,8 +684,9 @@ def _compute_existing_mark_CATS(record, fac_data):
     return CATS
 
 
-def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits, sup_pclass_limits,
-                         mark_limits, mark_pclass_limits, multiplicity, number_lp, number_mark, number_sel, number_sup,
+def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_supervisor, CATS_marker, capacity,
+                         sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
+                         multiplicity, number_lp, number_mark, number_sel, number_sup,
                          record, sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
                          mark_only_numbers, sup_and_mark_numbers, levelling_bias, intra_group_tension,
                          mean_CATS_per_project):
@@ -768,11 +769,11 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
 
     # also we subtract off all 'elastic' variables with a high coefficient to discourage violation
     # of CATS limits except where really necessary
-    prob += _build_score_function(R, W, X, number_lp, number_sel) \
+    prob += _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, old_X, old_Y, has_base_match) \
             - abs(levelling_bias) * levelling / mean_CATS_per_project \
             - abs(levelling_bias) * maxMarking \
-            - sum(2*sup_elastic_CATS[i] for i in range(number_sup)) \
-            - sum(10*mark_elastic_CATS[i] for i in range(number_mark)), "objective"
+            - sum(2.0*sup_elastic_CATS[i] for i in range(number_sup)) \
+            - sum(10.0*mark_elastic_CATS[i] for i in range(number_mark)), "objective"
 
 
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
@@ -987,17 +988,38 @@ def _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacit
     return prob, X, Y
 
 
-def _build_score_function(R, W, X, number_lp, number_sel):
+def _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, old_X, old_Y, has_base_match):
     # generate score function, used as a component of the maximization objective
     objective = 0
 
     # reward the solution for assigning students to highly ranked projects:
     for i in range(number_sel):
+        old_match = i in has_base_match
+
         for j in range(number_lp):
             idx = (i, j)
-            if R[idx] > 0:
-                # score is 1/rank of assigned project, weighted
-                objective += X[idx] * W[idx] / R[idx]
+
+            if old_match:
+                if idx in old_X:
+                    # this match was in the base, so bias it to be present here
+                    objective += 2.0*X[idx]
+                else:
+                    # this match was not in the base, so bias it to be absent here
+                    objective += 2.0*(1.0-X[idx])
+            else:
+                if R[idx] > 0:
+                    # score is 1/rank of assigned project, weighted
+                    objective += X[idx] * W[idx] / R[idx]
+
+    # inherit any marking choices from base match, if any exist
+    for i in range(number_mark):
+        for j in range(number_lp):
+            idx = (i, j)
+
+            if idx in old_Y:
+                objective += 2.0*Y[idx]
+            else:
+                objective += 2.0*(1.0-Y[idx])
 
     return objective
 
@@ -1187,9 +1209,44 @@ def _initialize(self, record, read_serialized=False):
            R, W, cstr, M, P
 
 
-def _execute_live(self, record, prob, X, Y, W, R, create_time, number_sel, number_lp, number_mark, number_to_sel,
-                  number_to_lp, number_to_mark, sel_dict, lp_dict, sup_dict, mark_dict, multiplicity,
-                  mean_CATS_per_project):
+def _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number):
+    old_X = set()
+    old_Y = set()
+    has_base_match = set()
+
+    if record.base_match is None:
+        return old_X, old_Y, has_base_match
+
+    for record in record.base_match.records:
+        if record.selector_id not in sel_to_number:
+            raise RuntimeError('Missing SelectingStudent when reconstructing X and Y maps')
+
+        sel_number = sel_to_number[record.selector_id]
+
+        if record.project_id not in lp_to_number:
+            raise RuntimeError('Missing LiveProject when reconstructing X and Y maps')
+
+        proj_number = lp_to_number[record.project_id]
+
+        if record.marker_id is not None:
+            if record.marker_id not in mark_to_number:
+                raise RuntimeError('Missing marker when reconstructing X and Y maps')
+
+            marker_number = mark_to_number[record.marker_id]
+        else:
+            marker_number = None
+
+        old_X.add((sel_number, proj_number))
+        has_base_match.ass(sel_number)
+        if marker_number is not None:
+            old_Y.add((marker_number, proj_number))
+
+    return old_X, old_Y, has_base_match
+
+
+def _execute_live(self, record, prob, X, Y, W, R, create_time,
+                  number_sel, number_lp, number_mark, number_to_sel, number_to_lp, number_to_mark,
+                  sel_dict, lp_dict, sup_dict, mark_dict, multiplicity, mean_CATS_per_project):
     print('Solving PuLP problem for project matching')
 
     progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Solving PuLP linear programming problem...",
@@ -1213,14 +1270,14 @@ def _execute_live(self, record, prob, X, Y, W, R, create_time, number_sel, numbe
         else:
             status = prob.solve()
 
-    return _process_PuLP_solution(self, record, status, solve_time, X, Y, W, R, create_time, number_sel,
-                                  number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark, multiplicity,
-                                  sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project)
+    return _process_PuLP_solution(self, record, status, solve_time, X, Y, W, R, create_time,
+                                  number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
+                                  multiplicity, sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project)
 
 
-def _execute_from_solution(self, file, record, prob, X, Y, W, R, create_time, number_sel, number_lp, number_mark,
-                           number_to_sel, number_to_lp, number_to_mark, sel_dict, lp_dict, sup_dict, mark_dict,
-                           multiplicity, mean_CATS_per_project):
+def _execute_from_solution(self, file, record, prob, X, Y, W, R, create_time,
+                           number_sel, number_lp, number_mark, number_to_sel, number_to_lp, number_to_mark,
+                           sel_dict, lp_dict, sup_dict, mark_dict, multiplicity, mean_CATS_per_project):
     print('Processing PuLP solution from "{name}"'.format(name=file))
 
     if not path.exists(file):
@@ -1270,14 +1327,14 @@ def _execute_from_solution(self, file, record, prob, X, Y, W, R, create_time, nu
         prob.restoreObjective(wasNone, dummyVar)
         prob.solver = solver
 
-    return _process_PuLP_solution(self, record, status, solve_time, X, Y, W, R, create_time, number_sel,
-                                  number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark, multiplicity,
-                                  sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project)
+    return _process_PuLP_solution(self, record, status, solve_time, X, Y, W, R, create_time,
+                                  number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
+                                  multiplicity, sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project)
 
 
-def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_time, number_sel, number_to_sel,
-                           number_lp, number_to_lp, number_mark, number_to_mark, multiplicity, sel_dict, sup_dict,
-                           mark_dict, lp_dict, mean_CATS_per_project):
+def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_time,
+                           number_sel, number_to_sel, number_lp, number_to_lp, number_mark, number_to_mark,
+                           multiplicity, sel_dict, sup_dict, mark_dict, lp_dict, mean_CATS_per_project):
     state = pulp.LpStatus[output]
 
     if state == 'Optimal':
@@ -1285,7 +1342,7 @@ def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_
 
         # we don't just read the objective function out directly, because we don't want to include
         # contributions from the levelling and slack terms
-        score = _build_score_function(R, W, X, number_lp, number_sel)
+        score = _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, set(), set(), set())
         record.score = pulp.value(score)
 
         record.construct_time = create_time.interval
@@ -1448,21 +1505,23 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record)
 
+            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number)
+
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
 
-            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
-                                              sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, sel_dict,
-                                              sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_supervisor, CATS_marker,
+                                              capacity, sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
+                                              multiplicity, number_lp, number_mark, number_sel, number_sup, record,
+                                              sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
                                               mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
                                               record.intra_group_tension, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        return _execute_live(self, record, prob, X, Y, W, R, create_time, number_sel, number_lp, number_mark,
-                             number_to_sel, number_to_lp, number_to_mark, sel_dict, lp_dict, sup_dict, mark_dict,
-                             multiplicity, mean_CATS_per_project)
+        return _execute_live(self, record, prob, X, Y, W, R, create_time,
+                             number_sel, number_lp, number_mark, number_to_sel, number_to_lp, number_to_mark,
+                             sel_dict, lp_dict, sup_dict, mark_dict, multiplicity, mean_CATS_per_project)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -1495,12 +1554,15 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record)
 
+            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number)
+
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
-            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
-                                              sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, sel_dict,
-                                              sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
+
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_supervisor, CATS_marker,
+                                              capacity, sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
+                                              multiplicity, number_lp, number_mark, number_sel, number_sup, record,
+                                              sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
                                               mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
                                               record.intra_group_tension, mean_CATS_per_project)
 
@@ -1566,22 +1628,24 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record, read_serialized=True)
 
+            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number)
+
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
 
-            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, CATS_supervisor, CATS_marker, capacity, sup_limits,
-                                              sup_pclass_limits, mark_limits, mark_pclass_limits, multiplicity,
-                                              number_lp, number_mark, number_sel, number_sup, record, sel_dict,
-                                              sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
+            prob, X, Y = _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_supervisor, CATS_marker,
+                                              capacity, sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
+                                              multiplicity, number_lp, number_mark, number_sel, number_sup, record,
+                                              sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
                                               mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
                                               record.intra_group_tension, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename), record, prob, X, Y, W, R,
-                                      create_time, number_sel, number_lp, number_mark, number_to_sel, number_to_lp,
-                                      number_to_mark, sel_dict, lp_dict, sup_dict, mark_dict, multiplicity,
-                                      mean_CATS_per_project)
+        return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename),
+                                      record, prob, X, Y, W, R, create_time,
+                                      number_sel, number_lp, number_mark, number_to_sel, number_to_lp, number_to_mark,
+                                      sel_dict, lp_dict, sup_dict, mark_dict, multiplicity, mean_CATS_per_project)
 
 
 

@@ -1228,7 +1228,7 @@ def _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number):
     has_base_match = set()
 
     if record.base_match is None:
-        print('-- no base in use for this match (record.base_id={base_id}'.format(base_id=record.base_id))
+        print('-- no base in use for this match (record.base_id={base_id})'.format(base_id=record.base_id))
         return old_X, old_Y, has_base_match
 
     for record in record.base_match.records:

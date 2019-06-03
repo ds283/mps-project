@@ -73,6 +73,9 @@
                                     included from base "<strong>{{ base_match.name }}</strong>"
                                 </p>
                             {% endif %}
+                            {% if form.base_bias is defined %}
+                                {{ wtf.form_field(form.base_bias) }}
+                            {% endif %}
                         </div>
 
                         <div class="well">

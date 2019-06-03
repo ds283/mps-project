@@ -713,7 +713,7 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
 
         marking_limit = IntegerField('CATS limit for marking',
                                      validators=[InputRequired(message='Please specify the maximum number of CATS '
-                                                                      'that can be allocated per faculty')])
+                                                                       'that can be allocated per faculty')])
 
         max_marking_multiplicity = IntegerField('Maximum multiplicity for 2nd markers',
                                                 description='2nd markers may be assigned multiple instances of the same '
@@ -722,6 +722,15 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
 
         include_matches = QuerySelectMultipleField('When levelling workloads, include CATS from existing matches',
                                                    query_factory=include_matches_query, get_label='name')
+
+        if base_match is not None:
+            base_bias = FloatField('Bias to base match', default=10.0,
+                                   description='Choose large values to bias the fit towards the base match. '
+                                               'Smaller values allow the optimizer to modify the base match to '
+                                               'improve the fit in other ways, such as levelling workloads or '
+                                               'including the preferences of selectors who did not appear in '
+                                               'the base.',
+                                   validators=[InputRequired(message='Please specify a base bias')])
 
         levelling_bias = FloatField('Workload levelling bias', default=1.0,
                                     description='This sets the normalization of the workload levelling tension in '

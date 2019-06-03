@@ -688,7 +688,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
                          sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
                          multiplicity, number_lp, number_mark, number_sel, number_sup,
                          record, sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
-                         mark_only_numbers, sup_and_mark_numbers, levelling_bias, intra_group_tension,
+                         mark_only_numbers, sup_and_mark_numbers, levelling_bias, intra_group_tension, base_bias,
                          mean_CATS_per_project):
     """
     Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
@@ -769,7 +769,8 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
 
     # also we subtract off all 'elastic' variables with a high coefficient to discourage violation
     # of CATS limits except where really necessary
-    prob += _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, old_X, old_Y, has_base_match) \
+    prob += _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark,
+                                  old_X, old_Y, has_base_match, base_bias) \
             - abs(levelling_bias) * levelling / mean_CATS_per_project \
             - abs(levelling_bias) * maxMarking \
             - sum(2.0*sup_elastic_CATS[i] for i in range(number_sup)) \
@@ -988,38 +989,50 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     return prob, X, Y
 
 
-def _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, old_X, old_Y, has_base_match):
+def _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, old_X, old_Y, has_base_match, base_bias):
     # generate score function, used as a component of the maximization objective
     objective = 0
 
+    fbase_bias = None
+
+    if len(has_base_match) > 0:
+        if base_bias is None:
+            raise RuntimeError('base_bias = None in _build_score_function')
+        else:
+            fbase_bias = float(base_bias)
+            print('-- using base bias of {f}'.format(f=fbase_bias))
+
     # reward the solution for assigning students to highly ranked projects:
     for i in range(number_sel):
-        old_match = i in has_base_match
+        has_old_match = i in has_base_match
+        if has_old_match:
+            print('-- using old match data for selector {n}'.format(n=i))
 
         for j in range(number_lp):
             idx = (i, j)
 
-            if old_match:
+            if has_old_match:
                 if idx in old_X:
                     # this match was in the base, so bias it to be present here
-                    objective += 2.0*X[idx]
+                    objective += fbase_bias*X[idx]
                 else:
                     # this match was not in the base, so bias it to be absent here
-                    objective += 2.0*(1.0-X[idx])
+                    objective += fbase_bias*(1-X[idx])
             else:
                 if R[idx] > 0:
                     # score is 1/rank of assigned project, weighted
                     objective += X[idx] * W[idx] / R[idx]
 
     # inherit any marking choices from base match, if any exist
-    for i in range(number_mark):
-        for j in range(number_lp):
-            idx = (i, j)
+    if len(old_Y) > 0:
+        for i in range(number_mark):
+            for j in range(number_lp):
+                idx = (i, j)
 
-            if idx in old_Y:
-                objective += 2.0*Y[idx]
-            else:
-                objective += 2.0*(1.0-Y[idx])
+                if idx in old_Y:
+                    objective += fbase_bias*Y[idx]
+                else:
+                    objective += fbase_bias*(1-Y[idx])
 
     return objective
 
@@ -1215,6 +1228,7 @@ def _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number):
     has_base_match = set()
 
     if record.base_match is None:
+        print('-- no base in use for this match (record.base_id={base_id}'.format(base_id=record.base_id))
         return old_X, old_Y, has_base_match
 
     for record in record.base_match.records:
@@ -1237,9 +1251,17 @@ def _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number):
             marker_number = None
 
         old_X.add((sel_number, proj_number))
-        has_base_match.ass(sel_number)
+        has_base_match.add(sel_number)
+        print('>> registered base match between selector {sel_n} (={sel_name}) and project {proj_n} '
+              '(={proj_name})'.format(sel_n=sel_number, proj_n=proj_number,
+                                      sel_name=record.selector.student.user.name,
+                                      proj_name=record.project.name))
         if marker_number is not None:
             old_Y.add((marker_number, proj_number))
+            print('>> registered base match between marker {mark_n} (={mark_name}) and project {proj_n} '
+                  '(={proj_name})'.format(mark_n=marker_number, proj_n=proj_number,
+                                          mark_name=record.marker.user.name,
+                                          proj_name=record.project.name))
 
     return old_X, old_Y, has_base_match
 
@@ -1341,8 +1363,9 @@ def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_
         record.outcome = MatchingAttempt.OUTCOME_OPTIMAL
 
         # we don't just read the objective function out directly, because we don't want to include
-        # contributions from the levelling and slack terms
-        score = _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, set(), set(), set())
+        # contributions from the levelling and slack terms.
+        # We don't account for biasing terms coming from a base match.
+        score = _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, set(), set(), set(), 1.0)
         record.score = pulp.value(score)
 
         record.construct_time = create_time.interval
@@ -1515,7 +1538,7 @@ def register_matching_tasks(celery):
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record,
                                               sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
                                               mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
-                                              record.intra_group_tension, mean_CATS_per_project)
+                                              record.intra_group_tension, record.base_bias, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1564,7 +1587,7 @@ def register_matching_tasks(celery):
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record,
                                               sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
                                               mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
-                                              record.intra_group_tension, mean_CATS_per_project)
+                                              record.intra_group_tension, record.base_bias, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1638,7 +1661,7 @@ def register_matching_tasks(celery):
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record,
                                               sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
                                               mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
-                                              record.intra_group_tension, mean_CATS_per_project)
+                                              record.intra_group_tension, record.base_bias, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 

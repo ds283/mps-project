@@ -2978,17 +2978,20 @@ def create_match():
 
         uuid = register_task(task_name, owner=current_user, description=desc)
 
-        control = getattr(form, 'include_only_submitted', None)
+        include_control = getattr(form, 'include_only_submitted', None)
         # logic for include_only_submitted is a bit delicate:
         #   Form    Base    Outcome
         #   T/F     None    T/F based on form
         #   T/F     True    T/F based on form
         #   absent  False   False
-        include_only_submitted = (control.data if control is not None else False) and \
+        include_only_submitted = (include_control.data if include_control is not None else False) and \
                                  (base_match.include_only_submitted if base_match is not None else True)
+
+        base_bias_control = getattr(form, 'base_bias', None)
 
         attempt = MatchingAttempt(year=current_year,
                                   base_id=base_id,
+                                  base_bias=base_bias_control.data if base_bias_control is not None else None,
                                   name=form.name.data,
                                   celery_id=uuid,
                                   finished=False,

@@ -7838,9 +7838,12 @@ class MatchingAttempt(db.Model, PuLPMixin):
     # flag matching attempts that have been selected for use during rollover
     selected = db.Column(db.Boolean())
 
-    # is this match based on another
+    # is this match based on another one?
     base_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
     base_match = db.relationship('MatchingAttempt', foreign_keys=[base_id], uselist=False)
+
+    # bias towards base match
+    base_bias = db.Column(db.Numeric(8, 3))
 
 
     # PARTICIPATING PCLASSES

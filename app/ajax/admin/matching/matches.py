@@ -335,11 +335,14 @@ _name = \
     <span class="label label-info">{{ m.markers.count() }} markers</span>
     <span class="label label-info">{{ m.projects.count() }} projects</span>
 {% endif %}
-{% set number_extra_matches = m.include_matches.count() %}
-{% if number_extra_matches > 0 %}
+{% set has_extra_matches = m.include_matches.first() is not none or m.base_match is not none %}
+{% if has_extra_matches %}
     <p></p>
+    {% if m.base_match is not none %}
+        <span class="label label-success"><i class="fa fa-plus-circle"></i> Base: {{ m.base_match.name }}</span>
+    {% endif %}
     {% for match in m.include_matches %}
-        <span class="label label-primary">Inc: {{ match.name }}</span>
+        <span class="label label-primary"><i class="fa fa-arrow-right"></i> Inc: {{ match.name }}</span>
     {% endfor %}
 {% endif %}
 {% if m.finished and m.solution_usable %}

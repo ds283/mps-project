@@ -2958,7 +2958,7 @@ def create_match():
     if base_id is not None:
         base_match = MatchingAttempt.query.get_or_404(base_id)
 
-    NewMatchForm = NewMatchFormFactory(current_year, base_id=base_id)
+    NewMatchForm = NewMatchFormFactory(current_year, base_id=base_id, base_match=base_match)
     form = NewMatchForm(request.form)
 
     if form.validate_on_submit():
@@ -2978,7 +2978,12 @@ def create_match():
 
         uuid = register_task(task_name, owner=current_user, description=desc)
 
+        control = getattr(form, 'include_only_submitted', default=None)
+        include_only_submitted = (control.data if control is not None else False) or \
+                                 (base_match.include_only_submitted if base_match is not None else False)
+
         attempt = MatchingAttempt(year=current_year,
+                                  base_id=base_id,
                                   name=form.name.data,
                                   celery_id=uuid,
                                   finished=False,
@@ -2989,7 +2994,7 @@ def create_match():
                                   selected=False,
                                   construct_time=None,
                                   compute_time=None,
-                                  include_only_submitted=form.include_only_submitted.data,
+                                  include_only_submitted=include_only_submitted,
                                   ignore_per_faculty_limits=form.ignore_per_faculty_limits.data,
                                   ignore_programme_prefs=form.ignore_programme_prefs.data,
                                   years_memory=form.years_memory.data,
@@ -3022,30 +3027,44 @@ def create_match():
                         ProjectClassConfig.year == current_year).first()
 
             if config is not None:
-                if config not in attempt.config_members:
+                if get_count(attempt.config_members.filter_by(id=config.id)) == 0:
                     count += 1
                     attempt.config_members.append(config)
+
+        if base_match is not None:
+            for config in base_match.config_members:
+                if get_count(attempt.config_members.filter_by(id=config.id)) == 0:
+                    count += 1
+                    attempt.config_members.append(config.id)
 
         if count == 0:
             flash('No project classes were specified for inclusion, so no match was computed.', 'error')
             return redirect(url_for('admin.manage_caching'))
 
+        def _validate_included_match(match):
+            ok = True
+
+            for config_a in attempt.config_members:
+                for config_b in match.config_members:
+                    if config_a.id == config_b.id:
+                        ok = False
+                        flash('Excluded CATS from existing match "{name}" since it contains project class '
+                              '"{pname}" which overlaps with the current match'.format(name=match.name,
+                                                                                       pname=config_a.name))
+                        break
+
+            return ok
+
         # for matches we are supposed to take account of when levelling workload, check that there is no overlap
         # with the projects we will include in this match
         for match in form.include_matches.data:
+            if get_count(attempt.include_matches.filter_by(id=match.id)) == 0:
+                if _validate_included_match(match):
+                    attempt.include_matches.append(match)
 
-            if match not in attempt.include_matches:
-                ok = True
-                for pclass_a in attempt.config_members:
-                    for pclass_b in match.config_members:
-                        if pclass_a.id == pclass_b.id:
-                            ok = False
-                            flash('Excluded CATS from existing match "{name}" since it contains project class '
-                                  '"{pname}" which overlaps with the current match'.format(name=match.name,
-                                                                                           pname=pclass_a.name))
-                            break
-
-                if ok:
+        for match in base_match.include_matches:
+            if get_count(attempt.include_matches.filter_by(id=match.id)) == 0:
+                if _validate_included_match(match):
                     attempt.include_matches.append(match)
 
         db.session.add(attempt)

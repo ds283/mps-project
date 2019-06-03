@@ -51,16 +51,10 @@
                         </div>
 
                         <div class="well {% if form.pclasses_to_include.errors %}has-error{% endif %}">
-                            {{ wtf.form_field(form.include_only_submitted) }}
-                            <p>Select project classes to include in this match</p>
-                            {% if have_base %}
-                                <p>
-                                    {% for pcl in base_match.config_members -%}
-                                        {% if loop.index > 1 %}, {% endif %}<strong>{{ pcl.name }}</strong>
-                                    {%- endfor %}
-                                    included from base "<strong>{{ base_match.name }}</strong>"
-                                </p>
+                            {% if form.include_only_submitted is defined %}
+                                {{ wtf.form_field(form.include_only_submitted) }}
                             {% endif %}
+                            <p>Select project classes to include in this match</p>
                             {% for widget in form.pclasses_to_include %}
                                 {{ wtf.form_field(widget) }}
                             {% else %}
@@ -70,6 +64,14 @@
                                 {% for error in form.pclasses_to_include.errors %}
                                     <p class="help-block">{{ error }}</p>
                                 {% endfor %}
+                            {% endif %}
+                            {% if have_base %}
+                                <p>
+                                    {% for pcl in base_match.config_members -%}
+                                        {% if loop.index > 1 %}, {% endif %}<strong>{{ pcl.name }}</strong>
+                                    {%- endfor %}
+                                    included from base "<strong>{{ base_match.name }}</strong>"
+                                </p>
                             {% endif %}
                         </div>
 

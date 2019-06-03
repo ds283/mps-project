@@ -684,7 +684,7 @@ class PuLPSolverMixin():
                                      'problem as a .LP or .MPS file and perform the optimization offline.')
 
 
-def MatchingMixinFactory(pclasses_query, include_matches_query):
+def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
 
     class MatchingMixin():
 
@@ -697,7 +697,8 @@ def MatchingMixinFactory(pclasses_query, include_matches_query):
                                                                query_factory=pclasses_query,
                                                                get_label='name')
 
-        include_only_submitted = BooleanField('Include only selectors who submitted preferences')
+        if base_match is None or base_match.include_only_submitted is True:
+            include_only_submitted = BooleanField('Include only selectors who submitted preferences')
 
         ignore_per_faculty_limits = BooleanField('Ignore CATS limits specified in faculty accounts')
 
@@ -770,10 +771,11 @@ def MatchingMixinFactory(pclasses_query, include_matches_query):
     return MatchingMixin
 
 
-def NewMatchFormFactory(year, base_id=None):
+def NewMatchFormFactory(year, base_id=None, base_match=None):
 
     Mixin = MatchingMixinFactory(partial(GetAutomatedMatchPClasses, year, base_id),
-                                 partial(GetMatchingAttempts, year, base_id))
+                                 partial(GetMatchingAttempts, year, base_id),
+                                 base_match=base_match)
 
     class NewMatchForm(Form, Mixin, PuLPSolverMixin):
 

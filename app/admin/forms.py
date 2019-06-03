@@ -684,7 +684,7 @@ class PuLPSolverMixin():
                                      'problem as a .LP or .MPS file and perform the optimization offline.')
 
 
-def MatchingMixinFactory(query_factory):
+def MatchingMixinFactory(pclasses_query, include_matches_query):
 
     class MatchingMixin():
 
@@ -694,7 +694,7 @@ def MatchingMixinFactory(query_factory):
                                        Length(max=DEFAULT_STRING_LENGTH)])
 
         pclasses_to_include = CheckboxQuerySelectMultipleField('Include which project classes',
-                                                               query_factory=GetAutomatedMatchPClasses,
+                                                               query_factory=pclasses_query,
                                                                get_label='name')
 
         include_only_submitted = BooleanField('Include only selectors who submitted preferences')
@@ -720,7 +720,7 @@ def MatchingMixinFactory(query_factory):
                                                 validators=[InputRequired(message='Please specify a multiplicity')])
 
         include_matches = QuerySelectMultipleField('When levelling workloads, include CATS from existing matches',
-                                                   query_factory=query_factory, get_label='name')
+                                                   query_factory=include_matches_query, get_label='name')
 
         levelling_bias = FloatField('Workload levelling bias', default=1.0,
                                     description='This sets the normalization of the workload levelling tension in '
@@ -770,9 +770,10 @@ def MatchingMixinFactory(query_factory):
     return MatchingMixin
 
 
-def NewMatchFormFactory(year):
+def NewMatchFormFactory(year, base_id=None):
 
-    Mixin = MatchingMixinFactory(partial(GetMatchingAttempts, year))
+    Mixin = MatchingMixinFactory(partial(GetAutomatedMatchPClasses, year, base_id),
+                                 partial(GetMatchingAttempts, year, base_id))
 
     class NewMatchForm(Form, Mixin, PuLPSolverMixin):
 

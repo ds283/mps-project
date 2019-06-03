@@ -2953,7 +2953,12 @@ def create_match():
 
     info = get_matching_dashboard_data()
 
-    NewMatchForm = NewMatchFormFactory(current_year)
+    base_id = request.args.get('base_id', None)
+    base_match = None
+    if base_id is not None:
+        base_match = MatchingAttempt.query.get_or_404(base_id)
+
+    NewMatchForm = NewMatchFormFactory(current_year, base_id=base_id)
     form = NewMatchForm(request.form)
 
     if form.validate_on_submit():
@@ -3070,7 +3075,8 @@ def create_match():
 
     return render_template('admin/matching/create.html', pane='create', info=info, form=form,
                            supervising_CATS=supervising_CATS, marking_CATS=marking_CATS,
-                           num_supervisors=num_supervisors, num_markers=num_markers)
+                           num_supervisors=num_supervisors, num_markers=num_markers,
+                           base_match=base_match)
 
 
 @admin.route('/terminate_match/<int:id>')

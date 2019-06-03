@@ -217,6 +217,11 @@ _menu = \
                 </li>
             {% endif %}
             <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('admin.duplicate_match', id=m.id) }}"{% endif %}>
+                    <i class="fa fa-clone"></i> Duplicate
+                </a>
+            </li>
+            <li {% if disabled %}class="disabled"{% endif %}>
                 <a {% if not disabled %}href="{{ url_for('admin.terminate_match', id=m.id) }}"{% endif %}>
                     <i class="fa fa-hand-paper-o"></i> Terminate
                 </a>
@@ -245,18 +250,14 @@ _menu = \
                         <i class="fa fa-balance-scale"></i> Compare to...
                     </a>
                 </li>
+                <li>
+                    <a href="{{ url_for('admin.create_match', base_id=m.id) }}">
+                        <i class="fa fa-plus-circle"></i> Use as base...
+                    </a>
+                </li>
             {% else %}
                 <li class="disabled">
-                    <a><i class="fa fa-exchange"></i> Rename...</a>
-                </li>
-                <li class="disabled">
-                    <a><i class="fa fa-undo"></i> Revert to original</a>
-                </li>
-                <li class="disabled">
-                    <a><i class="fa fa-clone"></i> Duplicate</a>
-                </li>
-                <li class="disabled">
-                    <a><i class="fa fa-balance-scale"></i> Compare to...</a>
+                    <a><i class="fa fa-times"></i> Solution is not usable</a>
                 </li>
             {% endif %}
 

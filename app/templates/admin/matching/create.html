@@ -4,14 +4,22 @@
     Create new match
 {% endblock %}
 
+{% set have_base = base_match is defined and base_match is not none %}
+
 {% block bodyblock %}
     <div class="row">
         <div class="col-xs-2"></div>
         <div class="col-xs-8">
             <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">Create new match</div>
+                <div class="panel-heading">
+                    {% if have_base %}
+                        Create new match based on <strong>{{ base_match.name }}</strong>
+                    {% else %}
+                        Create new match
+                    {% endif %}
+                </div>
                 <div class="panel-body">
-                    <form action="{{ url_for('admin.create_match') }}" method="POST" name="match_form">
+                    <form action="{{ url_for('admin.create_match', base_id=base_match.id if have_base else none) }}" method="POST" name="match_form">
                         {{ form.hidden_tag() }}
 
                         {{ wtf.form_field(form.name) }}
@@ -44,7 +52,15 @@
 
                         <div class="well {% if form.pclasses_to_include.errors %}has-error{% endif %}">
                             {{ wtf.form_field(form.include_only_submitted) }}
-                            <p>Select which project classes to include in this match</p>
+                            <p>Select project classes to include in this match</p>
+                            {% if have_base %}
+                                <p>
+                                    {% for pcl in base_match.config_members -%}
+                                        {% if loop.index > 1 %}, {% endif %}<strong>{{ pcl.name }}</strong>
+                                    {%- endfor %}
+                                    included from base "<strong>{{ base_match.name }}</strong>"
+                                </p>
+                            {% endif %}
                             {% for widget in form.pclasses_to_include %}
                                 {{ wtf.form_field(widget) }}
                             {% else %}
@@ -65,6 +81,14 @@
                             {{ wtf.form_field(form.max_marking_multiplicity) }}
                             {{ wtf.form_field(form.years_memory) }}
                             {{ wtf.form_field(form.include_matches) }}
+                            {% if have_base and base_match.include_matches.first() is not none %}
+                                <p>
+                                    {% for match in base_match.include_matches -%}
+                                        {% if loop.index > 1 %}, {% endif %}<strong>{{ match.name }}</strong>
+                                    {%- endfor %}
+                                    included from base "<strong>{{ base_match.name }}</strong>"
+                                </p>
+                            {% endif %}
                         </div>
 
                         <div class="well">

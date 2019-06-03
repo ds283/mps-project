@@ -262,19 +262,7 @@ _menu = \
                 </li>                
             {% else %}
                 <li class="disabled">
-                    <a><i class="fa fa-exchange"></i> Rename...</a>
-                </li>
-                <li class="disabled">
-                    <a><i class="fa fa-undo"></i> Revert to original</a>
-                </li>
-                <li class="disabled">
-                    <a><i class="fa fa-clone"></i> Duplicate</a>
-                </li>
-                <li class="disabled">>
-                    <a><i class="fa fa-balance-scale"></i> Compare to...
-                </li>
-                <li class="disabled">
-                    <a><i class="fa fa-wrench"></i> Impose constraints....</a>
+                    <a><i class="fa fa-times"></i> Solution is not usable</a>
                 </li>
             {% endif %}
 
@@ -385,10 +373,10 @@ _periods = \
 def assessment_schedules_data(schedules, text, url):
     """
     Build AJAX JSON payload
-    :param schedules: 
-    :return: 
+    :param schedules:
+    :return:
     """
-    
+
     data = [{'name': render_template_string(_name, s=s, text=text, url=url),
              'status': render_template_string(_status, s=s),
              'score': {

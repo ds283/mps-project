@@ -168,10 +168,8 @@ def ProjectDescriptionClasses(project_id):
         .join(used_ids, ProjectClass.id == used_ids.c.project_class_id)
 
 
-def GetAutomatedMatchPClasses():
-    year = get_current_year()
-
-    return db.session.query(ProjectClass) \
+def GetAutomatedMatchPClasses(year, base_id):
+    pclasses = db.session.query(ProjectClass) \
         .filter(ProjectClass.active == True,
                 ProjectClass.do_matching == True) \
         .join(ProjectClassConfig, ProjectClassConfig.pclass_id == ProjectClass.id) \
@@ -179,11 +177,35 @@ def GetAutomatedMatchPClasses():
                 ProjectClassConfig.live == True,
                 ProjectClassConfig.selection_closed == True)
 
+    if base_id is None:
+        return pclasses
 
-def GetMatchingAttempts(year):
-    return db.session.query(MatchingAttempt) \
+    base = db.session.query(MatchingAttempt).filter_by(id=base_id).one()
+    c_members = base.config_members.subquery()
+    p_members = db.session.query(ProjectClass) \
+        .join(c_members, c_members.c.pclass_id == ProjectClass.id).subquery()
+
+    pclasses = pclasses.join(p_members, p_members.c.id == ProjectClass.id, isouter=True) \
+        .filter(p_members.c.id == None)
+
+    return pclasses
+
+
+def GetMatchingAttempts(year, base_id):
+    attempts = db.session.query(MatchingAttempt) \
         .filter_by(year=year) \
         .order_by(MatchingAttempt.name.asc())
+
+    if base_id is None:
+        return attempts
+
+    base = db.session.query(MatchingAttempt).filter_by(id=base_id).one()
+    included = base.include_matches.subquery()
+
+    attempts = attempts.join(included, included.c.id == MatchingAttempt.id, isouter=True) \
+        .filter(included.c.id == None)
+
+    return attempts
 
 
 def GetComparatorMatches(year, self_id, pclasses, is_root):

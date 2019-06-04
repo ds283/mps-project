@@ -19,6 +19,61 @@ _name = \
 {% if overassigned %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
+<div>
+    {% for config in match.config_members %}
+        {% if pclass_filter is none or (pclass_filter is not none and config.pclass_id == pclass_filter) %}
+            {% set rec = enrollments.get(config.pclass_id) %}
+            {% if rec is not none %}
+                {% set pcl = rec.pclass %}
+                {% set style = pcl.make_CSS_style() %}
+                <span class="label {% if style is not none %}label-default{% else %}label-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                    {{ f.number_projects_offered(pcl.id) }}
+                    {%- if rec.supervisor_state == rec.SUPERVISOR_ENROLLED %}
+                        S <i class="fa fa-check"></i>
+                    {%- else %}
+                        S <i class="fa fa-times"></i>
+                    {%- endif -%}
+                    {%- if rec.marker_state == rec.MARKER_ENROLLED %}
+                        M <i class="fa fa-check"></i>
+                    {%- else %}
+                        M <i class="fa fa-times"></i>
+                    {%- endif -%}
+                </span>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+</div>
+<div>
+    {% for config in match.config_members %}
+        {% if pclass_filter is none or (pclass_filter is not none and config.pclass_id == pclass_filter) %}
+            {% set rec = enrollments.get(config.pclass_id) %}
+            {% if rec is not none %}
+                {% set pcl = rec.pclass %}
+                {% if rec.CATS_supervision is not none or rec.CATS_marking is not none %}
+                    {% set style = pcl.make_CSS_style() %}
+                    <span class="label {% if style is not none %}label-default{% else %}label-info{% endif %}" {% if style is not none %}style="{{ style }}"{% endif %}>{{ pcl.abbreviation }}
+                        {%- if rec.CATS_supervision is not none %}
+                            S {{ rec.CATS_supervision }}
+                        {%- endif -%}
+                        {%- if rec.CATS_marking is not none %}
+                            M {{ rec.CATS_marking }}
+                        {%- endif -%}
+                    </span>
+                {% endif %}
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    {% if f.CATS_supervision is not none or f.CATS_marking is not none %}
+        <span class="label label-primary">Global
+            {%- if f.CATS_supervision is not none %}
+                S {{ f.CATS_supervision }}
+            {%- endif -%}
+            {%- if f.CATS_marking is not none %}
+                M {{ f.CATS_marking }}
+            {%- endif -%}
+        </span>
+    {% endif %}
+</div>
 """
 
 
@@ -189,12 +244,12 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
             payload = match_attempt.is_supervisor_overassigned(f, include_matches=show_includes)
             _sup_overassigned = payload.get('flag', False)
             _CATS_sup = payload.get('CATS_total', None)
-            _sup_msg = payload.get('CATS_limit', None)
+            _sup_msg = payload.get('error_message', None)
 
             payload = match_attempt.is_marker_overassigned(f, include_matches=show_includes)
             _mark_overassigned = payload.get('flag', False)
             _CATS_mark = payload.get('CATS_total', None)
-            _mark_msg = payload.get('CATS_limit', None)
+            _mark_msg = payload.get('error_message', None)
 
             if _sup_overassigned:
                 sup_errors['sup_over_full'] = _sup_msg
@@ -220,8 +275,11 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
         overassigned = overassigned or proj_overassigned
 
         # FOR EACH INCLUDED PROJECT CLASS, FACULTY ASSIGNMENTS SHOULD RESPECT ANY CUSTOM CATS LIMITS
+        enrollments = {}
         for config in match_attempt.config_members:
             rec = f.get_enrollment_record(config.pclass_id)
+            enrollments[config.pclass_id] = rec
+
             if rec is None:
                 continue
 
@@ -242,7 +300,9 @@ def faculty_view_data(faculty, match_attempt, pclass_filter, show_includes):
         sup_err_msgs = sup_errors.values()
         mark_err_msgs = mark_errors.values()
 
-        data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned),
+        data.append({'name': {'display': render_template_string(_name, f=f, overassigned=overassigned,
+                                                                match=match_attempt, enrollments=enrollments,
+                                                                pclass_filter=pclass_filter),
                               'sortvalue': f.user.last_name + f.user.first_name},
                      'projects': {'display': render_template_string(_projects, recs=supv_records,
                                                                     pclass_filter=pclass_filter, err_msgs=sup_err_msgs),

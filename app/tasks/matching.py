@@ -688,8 +688,7 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
                          sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
                          multiplicity, number_lp, number_mark, number_sel, number_sup,
                          record, sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
-                         mark_only_numbers, sup_and_mark_numbers, levelling_bias, intra_group_tension, base_bias,
-                         mean_CATS_per_project):
+                         mark_only_numbers, sup_and_mark_numbers, mean_CATS_per_project):
     """
     Generate a PuLP problem to find an optimal assignment of projects+2nd markers to students
     :param sel_dict:
@@ -698,26 +697,36 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     :param sup_pclass_limits:
     :param mark_pclass_limits:
     """
-    if not isinstance(levelling_bias, float):
-        levelling_bias = float(levelling_bias)
+    def _floatify(item):
+        if isinstance(item, float):
+            return item
 
-    if not isinstance(intra_group_tension, float):
-        intra_group_tension = float(intra_group_tension)
+        return float(item)
 
-    if not isinstance(mean_CATS_per_project, float):
-        mean_CATS_per_project = float(mean_CATS_per_project)
+    levelling_bias = _floatify(record.levelling_bias)
+    intra_group_tension = _floatify(record.intra_group_tension)
+    supervising_pressure = _floatify(record.supervising_pressure)
+    marking_pressure = _floatify(record.marking_pressure)
+    CATS_violation_penalty = _floatify(record.CATS_violation_penalty)
+    no_assignment_penalty = _floatify(record.no_assignment_penalty)
+    base_bias = _floatify(record.base_bias)
+
+    mean_CATS_per_project = _floatify(mean_CATS_per_project)
 
     # generate PuLP problem
     prob = pulp.LpProblem(record.name, pulp.LpMaximize)
 
     # generate decision variables for project assignment matrix
     # the entries of this matrix are either 0 or 1
-    X = pulp.LpVariable.dicts("x", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
+    X = pulp.LpVariable.dicts("X", itertools.product(range(number_sel), range(number_lp)), cat=pulp.LpBinary)
 
     # generate decision variables for marker assignment matrix
     # the entries of this matrix are integers, indicating multiplicity of assignment if > 1
-    Y = pulp.LpVariable.dicts("y", itertools.product(range(number_mark), range(number_lp)),
+    Y = pulp.LpVariable.dicts("Y", itertools.product(range(number_mark), range(number_lp)),
                               cat=pulp.LpInteger, lowBound=0)
+
+    # generate auxiliary variables that track whether a given supervisor has any projects assigned or not
+    Z = pulp.LpVariable.dicts("Z", range(number_sup), cat=pulp.LpBinary)
 
     # to implement workload balancing we use pairs of continuous variables that relax
     # to the maximum and minimum workload for each faculty group:
@@ -729,52 +738,70 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
 
     # we also tension the workload between groups, so that the workload of no one group
     # is pushed too far away from the others, subject to existing CATS caps
-    supMax = pulp.LpVariable("supMax", lowBound=0, cat=pulp.LpContinuous)
-    supMin = pulp.LpVariable("supMin", lowBound=0, cat=pulp.LpContinuous)
+    supMax = pulp.LpVariable("sMax", lowBound=0, cat=pulp.LpContinuous)
+    supMin = pulp.LpVariable("sMin", lowBound=0, cat=pulp.LpContinuous)
 
-    markMax = pulp.LpVariable("markMax", lowBound=0, cat=pulp.LpContinuous)
-    markMin = pulp.LpVariable("markMin", lowBound=0, cat=pulp.LpContinuous)
+    markMax = pulp.LpVariable("mMax", lowBound=0, cat=pulp.LpContinuous)
+    markMin = pulp.LpVariable("mMin", lowBound=0, cat=pulp.LpContinuous)
 
-    supMarkMax = pulp.LpVariable("supMarkMax", lowBound=0, cat=pulp.LpContinuous)
-    supMarkMin = pulp.LpVariable("supMarkMin", lowBound=0, cat=pulp.LpContinuous)
+    supMarkMax = pulp.LpVariable("smMax", lowBound=0, cat=pulp.LpContinuous)
+    supMarkMin = pulp.LpVariable("smMin", lowBound=0, cat=pulp.LpContinuous)
 
-    globalMax = pulp.LpVariable("globalMax", lowBound=0, cat=pulp.LpContinuous)
-    globalMin = pulp.LpVariable("globalMin", lowBound=0, cat=pulp.LpContinuous)
+    globalMax = pulp.LpVariable("gMax", lowBound=0, cat=pulp.LpContinuous)
+    globalMin = pulp.LpVariable("gMin", lowBound=0, cat=pulp.LpContinuous)
 
     # finally, to spread second-marking tasks fairly among a pool of faculty, where any
     # particular assignment won't significantly affect markMax/markMin or supMarkMax/supMarkMin,
     # we add a term to the objective function designed to keep down the maximum number of
     # projects assigned to any individual faculty member.
+    maxProjects = pulp.LpVariable("maxProjects", lowBound=0, cat=pulp.LpContinuous)
     maxMarking = pulp.LpVariable("maxMarking", lowBound=0, cat=pulp.LpContinuous)
 
     # add variables designed to allow violation of maximum CATS if necessary to obtain a feasible
     # solution
-    sup_elastic_CATS = pulp.LpVariable.dicts("sup_elastic_CATS", range(number_sup), cat=pulp.LpInteger, lowBound=0)
-    mark_elastic_CATS = pulp.LpVariable.dicts("mark_elastic_CATS", range(number_mark), cat=pulp.LpInteger, lowBound=0)
+    sup_elastic_CATS = pulp.LpVariable.dicts("P", range(number_sup), cat=pulp.LpContinuous, lowBound=0)
+    mark_elastic_CATS = pulp.LpVariable.dicts("Q", range(number_mark), cat=pulp.LpContinuous, lowBound=0)
 
 
     # OBJECTIVE FUNCTION
 
     # tension top and bottom workloads in each group against each other
-    levelling = (supMax - supMin) \
-                + (markMax - markMin) \
-                + (supMarkMax - supMarkMin) \
-                + abs(intra_group_tension)*(globalMax - globalMin)
+    group_levelling = (supMax - supMin) + (markMax - markMin) + (supMarkMax - supMarkMin)
+    global_levelling = (globalMax - globalMin)
 
     # apart from attempting to balance workloads, there is no need to add a reward for marker assignments;
     # these only need to satisfy the constraints, and any one solution is as good as another
 
     # dividing through by mean_CATS_per_project makes a workload discrepancy of 1 project between
     # upper and lower limits roughly equal to one ranking place in matching to students
+    group_levelling_term = abs(levelling_bias) * group_levelling / mean_CATS_per_project
+    global_levelling_term = abs(intra_group_tension) * global_levelling / mean_CATS_per_project
 
-    # also we subtract off all 'elastic' variables with a high coefficient to discourage violation
-    # of CATS limits except where really necessary
+    # try to keep marking assignments under control by imposing a penalty for the highest number of marking assignments
+    marking_bias = abs(marking_pressure) * maxMarking
+
+    # likewise for supervising
+    supervising_bias = abs(supervising_pressure) * maxProjects
+
+    # we subtract off a penalty for all 'elastic' variables with a high coefficient, to discourage violation
+    # of CATS limits except where really necessary; notice that these elastic variables are measured in
+    # units of CATS, not projects, so the coefficents really are large
+    elastic_CATS_penalty = abs(CATS_violation_penalty) * \
+                           (sum(sup_elastic_CATS[i] for i in range(number_sup)) \
+                            + sum(mark_elastic_CATS[i] for i in range(number_mark)))
+
+    # we also impose a penalty for every supervisor who does not have any project assignments
+    no_assignment_penalty = 2.0 * abs(no_assignment_penalty) * sum(1-Z[i] for i in range(number_sup))
+
     prob += _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark,
                                   old_X, old_Y, has_base_match, base_bias) \
-            - abs(levelling_bias) * levelling / mean_CATS_per_project \
-            - abs(levelling_bias) * maxMarking \
-            - sum(2.0*sup_elastic_CATS[i] for i in range(number_sup)) \
-            - sum(10.0*mark_elastic_CATS[i] for i in range(number_mark)), "objective"
+            - group_levelling_term \
+            - global_levelling_term \
+            - marking_bias \
+            - no_assignment_penalty \
+            - supervising_bias \
+            - elastic_CATS_penalty, \
+            "objective"
 
 
     # STUDENT RANKING, WORKLOAD LIMITS, PROJECT CAPACITY LIMITS
@@ -789,8 +816,10 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
             proj = lp_dict[j]
             key = (i, j)
             prob += X[key] <= R[key], \
-                    '_C{first}{last}_{scfg}_rk_{cfg}_{num}'.format(first=user.first_name, last=user.last_name,
-                                                                   scfg=sel.config_id, cfg=proj.config_id, num=proj.number)
+                    '_C{first}{last}_{scfg}_rk_{cfg}_{pfirst}{plast}_proj{num}' \
+                        .format(first=user.first_name, last=user.last_name, scfg=sel.config_id,
+                                cfg=proj.config_id, num=proj.number, pfirst=proj.owner.user.first_name,
+                                plast=proj.owner.user.last_name)
 
     # markers can only be assigned projects to which they are attached
     for i in range(number_mark):
@@ -820,7 +849,9 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
 
         if capacity[j] != 0:
             prob += sum(X[(i, j)] for i in range(number_sel)) <= capacity[j], \
-                    '_C{cfg}_{num}_capacity'.format(cfg=proj.config_id, num=proj.number)
+                    '_C{cfg}_{first}{last}_proj{num}_capacity'.format(cfg=proj.config_id, num=proj.number,
+                                                                      first=proj.owner.user.first_name,
+                                                                      last=proj.owner.user.last_name)
 
     # number of students assigned to each project must match number of markers assigned to each project,
     # if markers are being used; otherwise, number of markers should be zero
@@ -876,6 +907,15 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
                             for k in range(number_sel)) <= fac_limits[i], \
                         '_C{first}{last}_sup_CATS_config_{cfg}'.format(first=user.first_name, last=user.last_name,
                                                                        cfg=config_id)
+
+        # add constraint forcing summary Z variables to be 0 if this supervisor has no assigned projects,
+        # and 1 if there are
+        normalize = float(number_lp + number_sel + 1)
+        prob += sum(X[(k, j)] * P[(j, i)] for j in range(number_lp) for k in range(number_sel)) >= Z[i], \
+                '_CZ{first}{last}_upperb'.format(first=user.first_name, last=user.last_name)
+        prob += sum(X[(k, j)] * P[(j, i)] for j in range(number_lp) for k in range(number_sel))/normalize <= Z[i], \
+                '_CZ{first}{last}_lowerb'.format(first=user.first_name, last=user.last_name)
+
 
     # CATS assigned to each marker must be within bounds
     for i in range(number_mark):
@@ -977,6 +1017,14 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     if global_trivial:
         prob += globalMin == 0
         prob += globalMax == 0
+
+    # maxProjects should be larger than the total number of projects assigned for supervising to any
+    # individual faculty member
+    if number_sup > 0:
+        for i in range(number_sup):
+            prob += sum(X[(k, j)] * P[(j, i)] for j in range(number_lp) for k in range(number_sel)) <= maxProjects
+    else:
+        prob += maxProjects == 0
 
     # maxMarking should be larger than the total number of projects assigned for 2nd marking to
     # any individual faculty member
@@ -1537,8 +1585,7 @@ def register_matching_tasks(celery):
                                               capacity, sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record,
                                               sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
-                                              mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
-                                              record.intra_group_tension, record.base_bias, mean_CATS_per_project)
+                                              mark_only_numbers, sup_and_mark_numbers, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1586,8 +1633,7 @@ def register_matching_tasks(celery):
                                               capacity, sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record,
                                               sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
-                                              mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
-                                              record.intra_group_tension, record.base_bias, mean_CATS_per_project)
+                                              mark_only_numbers, sup_and_mark_numbers, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1660,8 +1706,7 @@ def register_matching_tasks(celery):
                                               capacity, sup_limits, sup_pclass_limits, mark_limits, mark_pclass_limits,
                                               multiplicity, number_lp, number_mark, number_sel, number_sup, record,
                                               sel_dict, sup_dict, mark_dict, lp_dict, lp_group_dict, sup_only_numbers,
-                                              mark_only_numbers, sup_and_mark_numbers, record.levelling_bias,
-                                              record.intra_group_tension, record.base_bias, mean_CATS_per_project)
+                                              mark_only_numbers, sup_and_mark_numbers, mean_CATS_per_project)
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
@@ -1791,6 +1836,10 @@ def register_matching_tasks(celery):
                                    strong_discourage_bias=record.strong_discourage_bias,
                                    bookmark_bias=record.bookmark_bias,
                                    levelling_bias=record.levelling_bias,
+                                   supervising_pressure=record.supervising_pressure,
+                                   marking_pressure=record.marking_pressure,
+                                   CATS_violation_penalty=record.CATS_violation_penalty,
+                                   no_assignment_penalty=record.no_assignment_penalty,
                                    intra_group_tension=record.intra_group_tension,
                                    programme_bias=record.programme_bias,
                                    include_matches=record.include_matches,

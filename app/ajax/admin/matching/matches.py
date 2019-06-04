@@ -43,28 +43,6 @@ _status = \
 {% endif %}
 """
 
-
-_timestamp = \
-"""
-Created by
-<a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
-on
-{% if m.creation_timestamp is not none %}
-    {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-{% else %}
-    <span class="label label-default">Unknown</span>
-{% endif %}
-{% if m.last_edited_by is not none %}
-    <p></p>
-    Last edited by 
-    <a href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
-    {% if m.last_edit_timestamp is not none %}
-        {{ m.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-    {% endif %}
-{% endif %}
-"""
-
-
 _info = \
 """
 <span class="label label-primary">Supervisor <i class="fa fa-chevron-circle-down"></i> {{ m.supervising_limit }} CATS</span>
@@ -85,12 +63,27 @@ _info = \
 {% else %}
     <span class="label label-default"><i class="fa fa-check"></i> All selectors</span>
 {% endif %}
-<p></p>
-<span class="label label-success">Solver {{ m.solver_name }}</span>
-<span class="label label-default">Levelling <i class="fa fa-times"></i> {{ m.levelling_bias }}</span>
-<span class="label label-default">Group <i class="fa fa-times"></i> {{ m.intra_group_tension }}</span>
-<span class="label label-default">Programme <i class="fa fa-times"></i> {{ m.programme_bias }}</span>
-<span class="label label-default">Bookmarks <i class="fa fa-times"></i> {{ m.bookmark_bias }}</span>
+<div>
+    <span class="label label-success">Solver {{ m.solver_name }}</span>
+</div>
+<div>
+    <div>Matching</div>
+    <span class="label label-default">Group {{ m.intra_group_tension }}</span>
+    <span class="label label-default">Programme {{ m.programme_bias }}</span>
+    <span class="label label-default">Bookmarks {{ m.bookmark_bias }}</span>
+</div>
+<div>
+    <div>Biases</div>
+    <span class="label label-default">Levelling {{ m.levelling_bias }}</span>
+    <span class="label label-default">Group tension {{ m.intra_group_tension }}</span>
+    <span class="label label-default">S pressure {{ m.supervising_pressure }}</span>
+    <span class="label label-default">M pressure {{ m.marking_pressure }}</span>
+</div>
+<div>
+    <div>Penalties</div>
+    <span class="label label-default">CATS violation {{ m.CATS_violation_penalty }}</span>
+    <span class="label label-default">No assignment {{ m.no_assignment_penalty }}</span>
+</div>
 <p></p>
 {% if m.use_hints %}
     <span class="label label-success"><i class="fa fa-check"></i> Use hints</span>
@@ -126,6 +119,24 @@ _info = \
         </div>
     {% endif %}
 {% endif %}
+<div style="padding-top: 2px;">
+    Created by
+    <a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
+    on
+    {% if m.creation_timestamp is not none %}
+        {{ m.creation_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+    {% else %}
+        <span class="label label-default">Unknown</span>
+    {% endif %}
+    {% if m.last_edited_by is not none %}
+        <p></p>
+        Last edited by 
+        <a href="mailto:{{ m.last_edited_by.email }}">{{ m.last_edited_by.name }}</a>
+        {% if m.last_edit_timestamp is not none %}
+            {{ m.last_edit_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+        {% endif %}
+    {% endif %}
+</div>
 <p></p>
 {% set errors = m.errors %}
 {% set warnings = m.warnings %}
@@ -379,7 +390,6 @@ def matches_data(matches, text=None, url=None):
                  'display': render_template_string(_score, m=m),
                  'value': float(m.score) if m.solution_usable and m.score is not None else 0
              },
-             'timestamp': render_template_string(_timestamp, m=m),
              'info': render_template_string(_info, m=m),
              'menu': render_template_string(_menu, m=m, text=text, url=url, compare=allow_compare)} for m in matches]
 

@@ -97,14 +97,24 @@
                         </div>
 
                         <div class="well">
-                            <p>Optimization settings</p>
+                            <p>Matching parameters</p>
                             {{ wtf.form_field(form.ignore_programme_prefs) }}
                             {{ wtf.form_field(form.programme_bias) }}
+                            {{ wtf.form_field(form.bookmark_bias) }}
+                        </div>
+
+                        <div class="well">
+                            <p>Biasing parameters</p>
                             {{ wtf.form_field(form.levelling_bias) }}
                             {{ wtf.form_field(form.intra_group_tension) }}
-                            {{ wtf.form_field(form.bookmark_bias) }}
-                            <hr class="intro-divider">
-                            {{ wtf.form_field(form.solver) }}
+                            {{ wtf.form_field(form.supervising_pressure) }}
+                            {{ wtf.form_field(form.marking_pressure) }}
+                        </div>
+
+                        <div class="well">
+                            <p>Violation penalties</p>
+                            {{ wtf.form_field(form.CATS_violation_penalty) }}
+                            {{ wtf.form_field(form.no_assignment_penalty) }}
                         </div>
 
                         <div class="well">
@@ -114,6 +124,10 @@
                             {{ wtf.form_field(form.discourage_bias) }}
                             {{ wtf.form_field(form.strong_encourage_bias) }}
                             {{ wtf.form_field(form.strong_discourage_bias) }}
+                        </div>
+
+                        <div class="well">
+                            {{ wtf.form_field(form.solver) }}
                         </div>
 
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}

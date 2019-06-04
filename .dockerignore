@@ -8,7 +8,7 @@ __pycache__
 assets
 AWS
 backups
-database\ copies
+database-copies
 instance
 logs
 mongodb

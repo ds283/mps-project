@@ -743,12 +743,31 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                                 'student matches to high-ranked projects.',
                                     validators=[InputRequired(message='Please specify a levelling bias')])
 
-        intra_group_tension = FloatField('Intra-group tension', default=1.0,
+        intra_group_tension = FloatField('Intra-group tension', default=2.0,
                                          description='This sets the tension with which the typical workload for '
                                                      'each faculty group (supervisors, markers, and those who do both) '
                                                      'are held together. Set to large values to keep workloads '
                                                      'as closely matched as possible.',
                                          validators=[InputRequired(message='Please specify an intra-group tension')])
+
+        supervising_pressure = FloatField('Supervising downward pressure', default=1.0,
+                                          description='Sets the pressure to apply to the maximum supervisory'
+                                                      'allocation for any individual faculty member.',
+                                          validators=[InputRequired(message='Please specify a supervising pressure')])
+
+        marking_pressure = FloatField('Marking downward pressure', default=1.0,
+                                      description='Sets the pressure to apply to the maximum marking allocation for '
+                                                  'any individual faculty member.',
+                                      validators=[InputRequired(message='Please specify a marking pressure')])
+
+        CATS_violation_penalty = FloatField('CATS limit violation penalty', default=5.0,
+                                            description='Determines the penalty imposed for violating CATS limits.',
+                                            validators=[InputRequired(message='Please specify a penalty')])
+
+        no_assignment_penalty = FloatField('No assignment penalty', default=5.0,
+                                           description='Determines the penalty imposed for leaving supervisory '
+                                                       'faculty without a project assignments.',
+                                           validators=[InputRequired(message='Please specify a penalty')])
 
         programme_bias = FloatField('Degree programme preference bias', default=1.5,
                                     description='Values greater than 1 bias the optimization to match students '

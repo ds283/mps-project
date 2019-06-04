@@ -7905,6 +7905,12 @@ class MatchingAttempt(db.Model, PuLPMixin):
     # bias for 'strong discourage'
     strong_discourage_bias = db.Column(db.Numeric(8, 3))
 
+
+    # MATCHING
+
+    # programme matching bias
+    programme_bias = db.Column(db.Numeric(8, 3))
+
     # bookmark bias - penalty for using bookmarks rather than a real submission
     bookmark_bias = db.Column(db.Numeric(8, 3))
 
@@ -7915,15 +7921,24 @@ class MatchingAttempt(db.Model, PuLPMixin):
     # (this is the prefactor we use to set the normalization of the tension term in the objective function.
     # the tension term represents the difference in CATS between the upper and lower workload in each group,
     # plus another term (the 'intra group tension') that tensions all groups together. 'Group' here means
-    # faculty that supervise only, mark only, or supervise and mark. Each group will typically have a different
-    # median workload.)
+    # faculty that supervise only, mark only, or (most commonly) both supervise and mark.
+    # Each group will typically have a different median workload.)
     levelling_bias = db.Column(db.Numeric(8, 3))
 
     # intra-group tensioning
     intra_group_tension = db.Column(db.Numeric(8, 3))
 
-    # programme matching bias
-    programme_bias = db.Column(db.Numeric(8, 3))
+    # pressure to keep maximum supervisory assignment low
+    supervising_pressure = db.Column(db.Numeric(8, 3))
+
+    # pressure to keep maximum marking assignment low
+    marking_pressure = db.Column(db.Numeric(8, 3))
+
+    # penalty for violating CATS limits
+    CATS_violation_penalty = db.Column(db.Numeric(8, 3))
+
+    # penality for leaving supervisory faculty without an assignment
+    no_assignment_penalty = db.Column(db.Numeric(8, 3))
 
     # other MatchingAttempts to include in CATS calculations
     include_matches = db.relationship('MatchingAttempt', secondary=match_balancing,

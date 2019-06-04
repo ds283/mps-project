@@ -30,37 +30,35 @@ _selections = \
         {% endif %}
     {% else %}
         {% for item in sel.ordered_selections %}
-            {% if item.rank <= sel.number_choices %}
-                {% set project = item.liveproject %}
-                <div class="dropdown">
-                    {% set style = project.group.make_CSS_style() %}
-                    <a class="label label-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">#{{ item.rank }}
-                        {{ item.format_project|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}
-                    <span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        {% set menu_items = item.menu_order %}
-                        {% for mi in menu_items %}
-                            {% if mi is string %}
-                                <li role="separator" class="divider"></li>
-                                <li class="dropdown-header">{{ mi }}</li>
-                            {% elif mi is number %}
-                                {% set disabled = (mi == item.hint) %}
-                                <li {% if disabled %}class="disabled"{% endif %}>
-                                    <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                        {{ item.menu_item(mi)|safe }}
-                                    </a>
-                                </li>
-                            {% endif %}
-                        {% endfor %}
-                    </ul>
-                    {% if item.converted_from_bookmark %}
-                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Bookmark</span>
-                    {% endif %}
-                    {% if item.hint != item.SELECTION_HINT_NEUTRAL %}
-                        <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Hint</span>
-                    {% endif %}
-                </div>
-            {% endif %}
+            {% set project = item.liveproject %}
+            <div class="dropdown">
+                {% set style = project.group.make_CSS_style() %}
+                <a class="label label-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">#{{ item.rank }}
+                    {{ item.format_project|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}
+                <span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    {% set menu_items = item.menu_order %}
+                    {% for mi in menu_items %}
+                        {% if mi is string %}
+                            <li role="separator" class="divider"></li>
+                            <li class="dropdown-header">{{ mi }}</li>
+                        {% elif mi is number %}
+                            {% set disabled = (mi == item.hint) %}
+                            <li {% if disabled %}class="disabled"{% endif %}>
+                                <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                    {{ item.menu_item(mi)|safe }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+                {% if item.converted_from_bookmark %}
+                    <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Bookmark</span>
+                {% endif %}
+                {% if item.hint != item.SELECTION_HINT_NEUTRAL %}
+                    <span class="label label-warning"><i class="fa fa-exclamation-triangle"></i> Hint</span>
+                {% endif %}
+            </div>
         {% endfor %}
     {% endif %}
 {% else %}

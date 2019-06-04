@@ -698,6 +698,9 @@ def _create_PuLP_problem(R, M, W, P, cstr, old_X, old_Y, has_base_match, CATS_su
     :param mark_pclass_limits:
     """
     def _floatify(item):
+        if item is None:
+            return None
+
         if isinstance(item, float):
             return item
 

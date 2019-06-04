@@ -11,12 +11,12 @@
             {% endif %}
         </div>
         <div class="panel-body">
-            {% set data = config.selector_data %}
-            {% set submitted = data['have_submitted'] %}
-            {% set bookmarks = data['have_bookmarks'] %}
-            {% set missing = data['missing'] %}
-            {% set total = data['total'] %}
-            {% set outstanding_confirm = data['outstanding_confirm'] %}
+            {% set selector_data = config.selector_data %}
+            {% set submitted = selector_data['have_submitted'] %}
+            {% set bookmarks = selector_data['have_bookmarks'] %}
+            {% set missing = selector_data['missing'] %}
+            {% set total = selector_data['total'] %}
+            {% set outstanding_confirm = selector_data['outstanding_confirm'] %}
             <div class="row vertical-top">
                 <div class="col-xs-4">
                     <div class="list-group">

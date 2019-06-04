@@ -14,9 +14,9 @@
 {%- set is_view_email = current_user.has_role('view_email') -%}
 {%- set is_manage_users = current_user.has_role('manage_users') %}
 
-{% set data = get_base_context() %}
-{% set matching_ready = data['matching_ready'] %}
-{% set has_assessments = data['has_assessments'] %}
+{% set base_context_data = get_base_context() %}
+{% set matching_ready = base_context_data['matching_ready'] %}
+{% set has_assessments = base_context_data['has_assessments'] %}
 
 {% block scripts %}
     {{ super() }}
@@ -410,9 +410,6 @@
                                     </a></li>
                                 {% endif %}
                                 {% if is_root %}
-                                    {% set data = get_base_context() %}
-                                    {% set matching_ready = data['matching_ready'] %}
-                                    {% set has_assessments = data['has_assessments'] %}
                                     <li role="separator" class="divider"></li>
                                     <li class="dropdown-header">Sysadmin only</li>
                                     {% if matching_ready %}

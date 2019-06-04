@@ -3070,10 +3070,11 @@ def create_match():
                 if _validate_included_match(match):
                     attempt.include_matches.append(match)
 
-        for match in base_match.include_matches:
-            if match not in attempt.include_matches:
-                if _validate_included_match(match):
-                    attempt.include_matches.append(match)
+        if base_match is not None:
+            for match in base_match.include_matches:
+                if match not in attempt.include_matches:
+                    if _validate_included_match(match):
+                        attempt.include_matches.append(match)
 
         db.session.add(attempt)
         db.session.commit()

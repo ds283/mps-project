@@ -119,7 +119,7 @@ _info = \
         </div>
     {% endif %}
 {% endif %}
-<div style="padding-top: 2px;">
+<div style="padding-top: 5px;">
     Created by
     <a href="mailto:{{ m.created_by.email }}">{{ m.created_by.name }}</a>
     on
@@ -261,11 +261,13 @@ _menu = \
                         <i class="fa fa-balance-scale"></i> Compare to...
                     </a>
                 </li>
-                <li>
-                    <a href="{{ url_for('admin.create_match', base_id=m.id) }}">
-                        <i class="fa fa-plus-circle"></i> Use as base...
-                    </a>
-                </li>
+                {% if is_root %}
+                    <li>
+                        <a href="{{ url_for('admin.create_match', base_id=m.id) }}">
+                            <i class="fa fa-plus-circle"></i> Use as base...
+                        </a>
+                    </li>
+                {% endif %}
             {% else %}
                 <li class="disabled">
                     <a><i class="fa fa-times"></i> Solution is not usable</a>
@@ -351,6 +353,11 @@ _name = \
     <p></p>
     {% if m.base_match is not none %}
         <span class="label label-success"><i class="fa fa-plus-circle"></i> Base: {{ m.base_match.name }}</span>
+        {% if m.force_base %}
+            <span class="label label-info">Force match</span>
+        {% else %}
+            <span class="label label-info">Bias {{ m.base_bias }}</span>
+        {% endif %}
     {% endif %}
     {% for match in m.include_matches %}
         <span class="label label-primary"><i class="fa fa-arrow-right"></i> Inc: {{ match.name }}</span>
@@ -375,7 +382,7 @@ _name = \
 """
 
 
-def matches_data(matches, text=None, url=None):
+def matches_data(matches, text=None, url=None, is_root=False):
     """
     Build AJAX JSON payload
     :param matches:
@@ -391,6 +398,7 @@ def matches_data(matches, text=None, url=None):
                  'value': float(m.score) if m.solution_usable and m.score is not None else 0
              },
              'info': render_template_string(_info, m=m),
-             'menu': render_template_string(_menu, m=m, text=text, url=url, compare=allow_compare)} for m in matches]
+             'menu': render_template_string(_menu, m=m, text=text, url=url, compare=allow_compare,
+                                            is_root=is_root)} for m in matches]
 
     return jsonify(data)

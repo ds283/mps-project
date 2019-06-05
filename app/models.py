@@ -7732,6 +7732,12 @@ def _MatchingAttempt_is_valid(id):
     if not is_valid and (len(errors) == 0 and len(warnings) == 0):
         raise RuntimeError('Internal inconsistency in _MatchingAttempt_is_valid')
 
+    print('** COMPUTED _MatchingAttempt_is_valid for match "{name}"'.format(name=obj.name))
+    print('** is_valid = {x}, student_issues = {y}, faculty_issues = {z}'.format(x=is_valid, y=faculty_issues,
+                                                                                 z=student_issues))
+    print('** errors = {e}'.format(e=errors))
+    print('** warnings = {w}'.format(w=warnings))
+
     return is_valid, student_issues, faculty_issues, errors, warnings
 
 
@@ -7852,6 +7858,9 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # bias towards base match
     base_bias = db.Column(db.Numeric(8, 3))
+
+    # force agreement with base matches
+    force_base = db.Column(db.Boolean())
 
 
     # PARTICIPATING PCLASSES
@@ -8276,6 +8285,8 @@ class MatchingAttempt(db.Model, PuLPMixin):
     def errors(self):
         if not self._validated:
             check = self.is_valid
+        print('** RETURNING ERRORS FOR MATCHING ATTEMPT "{name}"'.format(name=self.name))
+        print('** errors = {e}'.format(e=self._errors.values()))
         return self._errors.values()
 
 
@@ -8283,6 +8294,8 @@ class MatchingAttempt(db.Model, PuLPMixin):
     def warnings(self):
         if not self._validated:
             check = self.is_valid
+        print('** RETURNING WARNINGS FOR MATCHING ATTEMPT "{name}"'.format(name=self.name))
+        print('** warnings = {e}'.format(e=self._warnings.values()))
         return self._warnings.values()
 
 

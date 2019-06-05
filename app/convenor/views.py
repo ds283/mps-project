@@ -4640,7 +4640,8 @@ def audit_matches_ajax(pclass_id):
     matches = config.published_matches.all()
 
     return ajax.admin.matches_data(matches, text='matching audit dashboard',
-                                   url=url_for('convenor.audit_matches', pclass_id=pclass_id))
+                                   url=url_for('convenor.audit_matches', pclass_id=pclass_id),
+                                   is_root=current_user.has_role('root'))
 
 
 @convenor.route('/audit_schedules/<int:pclass_id>')

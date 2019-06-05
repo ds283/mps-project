@@ -732,6 +732,8 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                                'the base.',
                                    validators=[InputRequired(message='Please specify a base bias')])
 
+            force_base = BooleanField('Force agreement with assignments in "{name}"'.format(name=base_match.name))
+
         levelling_bias = FloatField('Workload levelling bias', default=1.0,
                                     description='This sets the normalization of the workload levelling tension in '
                                                 'the objective function. This term tensions good student matches against '
@@ -751,7 +753,7 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
                                          validators=[InputRequired(message='Please specify an intra-group tension')])
 
         supervising_pressure = FloatField('Supervising downward pressure', default=1.0,
-                                          description='Sets the pressure to apply to the maximum supervisory'
+                                          description='Sets the pressure to apply to the maximum supervisory '
                                                       'allocation for any individual faculty member.',
                                           validators=[InputRequired(message='Please specify a supervising pressure')])
 
@@ -766,7 +768,7 @@ def MatchingMixinFactory(pclasses_query, include_matches_query, base_match):
 
         no_assignment_penalty = FloatField('No assignment penalty', default=5.0,
                                            description='Determines the penalty imposed for leaving supervisory '
-                                                       'faculty without a project assignments.',
+                                                       'faculty without a project assignment.',
                                            validators=[InputRequired(message='Please specify a penalty')])
 
         programme_bias = FloatField('Degree programme preference bias', default=1.5,

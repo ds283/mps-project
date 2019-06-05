@@ -1046,7 +1046,7 @@ def _build_score_function(R, W, X, Y, number_lp, number_sel, number_mark, old_X,
 
     fbase_bias = None
 
-    if len(has_base_match) > 0:
+    if len(old_X) > 0 or len(old_Y) > 0:
         if base_bias is None:
             raise RuntimeError('base_bias = None in _build_score_function')
         else:
@@ -1273,10 +1273,12 @@ def _initialize(self, record, read_serialized=False):
            R, W, cstr, M, P
 
 
-def _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number):
+def _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number, cstr):
     old_X = set()
     old_Y = set()
     has_base_match = set()
+
+    force = record.force_base
 
     if record.base_match is None:
         print('-- no base in use for this match (record.base_id={base_id})'.format(base_id=record.base_id))
@@ -1301,12 +1303,23 @@ def _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number):
         else:
             marker_number = None
 
-        old_X.add((sel_number, proj_number))
-        has_base_match.add(sel_number)
-        print('>> registered base match between selector {sel_n} (={sel_name}) and project {proj_n} '
-              '(={proj_name})'.format(sel_n=sel_number, proj_n=proj_number,
-                                      sel_name=record.selector.student.user.name,
-                                      proj_name=record.project.name))
+        idx = (sel_number, proj_number)
+
+        if force:
+            cstr.add(idx)
+            print('>> registered force constraint for selector {sel_n} (={sel_name}) and project {proj_n} '
+                  '(={proj_name})'.format(sel_n=sel_number, proj_n=proj_number,
+                                          sel_name=record.selector.student.user.name,
+                                          proj_name=record.project.name))
+
+        else:
+            old_X.add(idx)
+            has_base_match.add(sel_number)
+            print('>> registered base match between selector {sel_n} (={sel_name}) and project {proj_n} '
+                  '(={proj_name})'.format(sel_n=sel_number, proj_n=proj_number,
+                                          sel_name=record.selector.student.user.name,
+                                          proj_name=record.project.name))
+
         if marker_number is not None:
             old_Y.add((marker_number, proj_number))
             print('>> registered base match between marker {mark_n} (={mark_name}) and project {proj_n} '
@@ -1579,7 +1592,7 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record)
 
-            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number)
+            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number, cstr)
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
@@ -1627,7 +1640,7 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record)
 
-            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number)
+            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number, cstr)
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
@@ -1700,7 +1713,7 @@ def register_matching_tasks(celery):
             mean_CATS_per_project, CATS_supervisor, CATS_marker, \
             R, W, cstr, M, P = _initialize(self, record, read_serialized=True)
 
-            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number)
+            old_X, old_Y, has_base_match = _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number, cstr)
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 20, "Generating PuLP linear programming problem...",
                             autocommit=True)
@@ -1813,6 +1826,9 @@ def register_matching_tasks(celery):
         try:
             # generate a new MatchingRecord
             data = MatchingAttempt(year=record.year,
+                                   base_id=record.base_id,
+                                   base_bias=record.base_bias,
+                                   force_base=record.force_base,
                                    name=new_name,
                                    config_members=record.config_members,
                                    published=record.published,

@@ -76,6 +76,9 @@
                             {% if form.base_bias is defined %}
                                 {{ wtf.form_field(form.base_bias) }}
                             {% endif %}
+                            {% if form.force_base is defined %}
+                                {{ wtf.form_field(form.force_base) }}
+                            {% endif %}
                         </div>
 
                         <div class="well">

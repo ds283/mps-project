@@ -2929,7 +2929,8 @@ def matches_ajax():
     current_year = get_current_year()
     matches = db.session.query(MatchingAttempt).filter_by(year=current_year).all()
 
-    return ajax.admin.matches_data(matches, text='matching dashboard', url=url_for('admin.manage_matching'))
+    return ajax.admin.matches_data(matches, text='matching dashboard', url=url_for('admin.manage_matching'),
+                                   is_root=True)
 
 
 @admin.route('/create_match', methods=['GET', 'POST'])
@@ -2988,10 +2989,12 @@ def create_match():
                                  (base_match.include_only_submitted if base_match is not None else True)
 
         base_bias_control = getattr(form, 'base_bias', None)
+        force_base_control = getattr(form, 'force_base', None)
 
         attempt = MatchingAttempt(year=current_year,
                                   base_id=base_id,
                                   base_bias=base_bias_control.data if base_bias_control is not None else None,
+                                  force_base=force_base_control.data if force_base_control is not None else None,
                                   name=form.name.data,
                                   celery_id=uuid,
                                   finished=False,

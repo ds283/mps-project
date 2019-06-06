@@ -25,6 +25,8 @@
 
 {% block content %}
     {% set is_approver = current_user.has_role('project_approver') %}
+    {% set lifecycle = sel.config.selector_lifecycle if sel is not none else none %}
+    {% set selections_open = (lifecycle == sel.config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) if lifecycle is not none else false %}
     <div class="container-fluid bg-project">
         <br/>
         {% if form %}
@@ -98,7 +100,7 @@
                                         Key facts
                                     </div>
                                     <div class="col-xs-8">
-                                        {% if sel and sel.config.selector_lifecycle == sel.config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                                        {% if sel and selections_open %}
                                             <div class="pull-right">
                                                 {% if sel.bookmarks.filter_by(liveproject_id=project.id).first() %}
                                                     <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}"
@@ -151,7 +153,7 @@
                                                         <span class="label label-default project-label"><i
                                                                 class="fa fa-check"></i> Meeting not required</span>
                                                     {% endif %}
-                                                    {% if project.is_available(sel) %}
+                                                    {% if selections_open and project.is_available(sel) %}
                                                         <span class="label label-success project-label"><i
                                                                 class="fa fa-check"></i> Available</span>
                                                     {% endif %}
@@ -160,7 +162,7 @@
                                         </div>
                                     {% endif %}
 
-                                    {% if project.show_popularity_data %}
+                                    {% if selections_open and project.show_popularity_data %}
                                         <div class="row sm-gap-below vertical-top">
                                             <div class="col-xs-3">Popularity</div>
                                             <div class="col-xs-9">

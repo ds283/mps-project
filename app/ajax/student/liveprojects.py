@@ -79,32 +79,39 @@ _menu = \
                 View project...
             </a>
         </li>
-        <li>
-            {% if sel.is_project_bookmarked(project) %}
-                <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
-                    Remove bookmark
-                </a>
-            {% else %}
-                <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}">
-                    Add bookmark
-                </a>
-            {% endif %}
-        </li>
-        <li {% if project.is_available(sel) %}class="disabled"{% endif %}>
-            {% if not project.is_available(sel) %}
-                {% if project.is_waiting(sel) %}
-                    <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
-                        Cancel confirmation
+        {% if is_live %}
+            <li>
+                {% if sel.is_project_bookmarked(project) %}
+                    <a href="{{ url_for('student.remove_bookmark', sid=sel.id, pid=project.id) }}">
+                        Remove bookmark
                     </a>
                 {% else %}
-                    <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
-                        Request confirmation
+                    <a href="{{ url_for('student.add_bookmark', sid=sel.id, pid=project.id) }}">
+                        Add bookmark
                     </a>
                 {% endif %}
-            {% else %}
-                <a>Project available</a>
-            {% endif %}
-        </li>
+            </li>
+            <li {% if project.is_available(sel) %}class="disabled"{% endif %}>
+                {% if not project.is_available(sel) %}
+                    {% if project.is_waiting(sel) %}
+                        <a href="{{ url_for('student.cancel_confirmation', sid=sel.id, pid=project.id) }}">
+                            Cancel confirmation
+                        </a>
+                    {% else %}
+                        <a href="{{ url_for('student.request_confirmation', sid=sel.id, pid=project.id) }}">
+                            Request confirmation
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <a>Project available</a>
+                {% endif %}
+            </li>
+        {% else %}
+            <li role="separator" class="divider">
+            <li class="disabled">
+                <a>Project selection not live</a>
+            </li>
+        {% endif %}
     </ul>
 </div>
 """
@@ -131,6 +138,7 @@ _project_skills = \
 {% endfor %}
 """
 
+
 _project_group = \
 """
 <a href="{{ url_for('student.add_group_filter', id=sel.id, gid=group.id) }}"
@@ -140,8 +148,14 @@ _project_group = \
 """
 
 
+_not_live = \
+"""
+<span class="label label-default">Not live</span>
+"""
+
+
 @cache.memoize()
-def _element(sel_id, project_id):
+def _element(sel_id, project_id, is_live):
     sel = db.session.query(SelectingStudent).filter_by(id=sel_id).one()
     p = db.session.query(LiveProject).filter_by(id=project_id).one()
 
@@ -156,48 +170,55 @@ def _element(sel_id, project_id):
              'skills': render_template_string(_project_skills, sel=sel, skills=p.ordered_skills),
              'prefer': render_template_string(_project_prefer, project=p),
              'meeting': render_template_string(_meeting, sel=sel, project=p),
-             'availability': render_template_string(_status, sel=sel, project=p),
-             'bookmarks': render_template_string(_bookmarks, sel=sel, project=p),
-             'menu': render_template_string(_menu, sel=sel, project=p)}
+             'availability': render_template_string(_status, sel=sel, project=p) if is_live else
+                             render_template_string(_not_live),
+             'bookmarks': render_template_string(_bookmarks, sel=sel, project=p) if is_live else
+                          render_template_string(_not_live),
+             'menu': render_template_string(_menu, sel=sel, project=p, is_live=is_live)}
+
+
+def _delete_browsing_cache(owner_id, project_id):
+    cache.delete_memoized(_element, owner_id, project_id, True)
+    cache.delete_memoized(_element, owner_id, project_id, False)
 
 
 @listens_for(ConfirmRequest, 'before_insert')
 def _ConfirmRequest_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.owner_id, target.project_id)
+        _delete_browsing_cache(target.owner_id, target.project_id)
 
 
 @listens_for(ConfirmRequest, 'before_update')
 def _ConfirmRequest_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.owner_id, target.project_id)
+        _delete_browsing_cache(target.owner_id, target.project_id)
 
 
 @listens_for(ConfirmRequest, 'before_delete')
 def _ConfirmRequest_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.owner_id, target.project_id)
+        _delete_browsing_cache(target.owner_id, target.project_id)
 
 
 @listens_for(Bookmark, 'before_update')
 def _Bookmark_update_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.owner_id, target.liveproject_id)
+        _delete_browsing_cache(target.owner_id, target.liveproject_id)
 
 
 @listens_for(Bookmark, 'before_insert')
 def _Bookmark_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.owner_id, target.liveproject_id)
+        _delete_browsing_cache(target.owner_id, target.liveproject_id)
 
 
 @listens_for(Bookmark, 'before_delete')
 def _Bookmark_delete_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        cache.delete_memoized(_element, target.owner_id, target.liveproject_id)
+        _delete_browsing_cache(target.owner_id, target.liveproject_id)
 
 
-def liveprojects_data(sel_id, projects):
-    data = [_element(sel_id, project_id) for project_id in projects]
+def liveprojects_data(sel_id, projects, is_live=True):
+    data = [_element(sel_id, project_id, is_live) for project_id in projects]
 
     return jsonify(data)

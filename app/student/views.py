@@ -37,7 +37,6 @@ import parse
 
 
 def _verify_submitter(rec):
-
     if rec.owner.student_id != current_user.id:
         flash('You do not have permission to view feedback for this user. '
               'If you believe this is incorrect, contract the system administrator.', 'error')
@@ -52,7 +51,6 @@ def _verify_selector(sel):
     :param sel:
     :return:
     """
-
     # verify the logged-in user is allowed to perform operations for this SelectingStudent
     if sel.student_id != current_user.id and not current_user.has_role('admin') and not current_user.has_role('root'):
         flash('You do not have permission to perform operations for this user. '
@@ -69,8 +67,7 @@ def _verify_view_project(sel, project):
     :param project:
     :return:
     """
-
-    if not project in sel.config.live_projects:
+    if get_count(sel.config.live_projects.filter_by(id=project.id)) == 0:
         flash('You are not able to view or bookmark this project because it is not attached to your student '
               'record for this type of project. Return to the dashboard and try to access the project from there. '
               'If problems persist, contact the system administrator.', 'error')
@@ -79,15 +76,23 @@ def _verify_view_project(sel, project):
     return True
 
 
-def _verify_open(config):
+def _verify_open(config, state=None, strict=False):
     """
     Validate that a particular ProjectClassConfig is open for student selections
     :param config:
     :return:
     """
+    if state is None:
+        state = config.selector_lifecycle
 
-    if config.selector_lifecycle != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
-        flash('Project "{name}" is not open for student selections'.format(name=config.name), 'error')
+    if strict and state != ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        flash('It is not possible to perform this operations because selections for '
+              '"{proj}" are not open.'.format(proj=config.name), 'error')
+        return False
+
+    if not strict and state < ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN:
+        flash('It is not possible to perform this operations because selections for '
+              '"{proj}" are not yet open.'.format(proj=config.name), 'error')
         return False
 
     return True
@@ -166,20 +171,23 @@ def dashboard():
 
 
 @student.route('/browse_projects/<int:id>')
-@roles_accepted('student', 'admin', 'root')
+@roles_accepted('student')
 def browse_projects(id):
     """
     Browse the live project table for a particular ProjectClassConfig
     :param id:
     :return:
     """
-
     # id is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(id)
 
     # verify the logged-in user is allowed to view this SelectingStudent
     if not _verify_selector(sel):
         return redirect(url_for('student.dashboard'))
+
+    state = sel.config.selector_lifecycle
+    if not _verify_open(sel.config, state=state):
+        return redirect(request.referrer)
 
     # supply list of transferable skill groups and research groups that can be filtered against
     groups = db.session.query(ResearchGroup) \
@@ -196,12 +204,13 @@ def browse_projects(id):
             skill_list[skill.group.name] = []
         skill_list[skill.group.name].append(skill)
 
-    return render_template('student/browse_projects.html', sel=sel, config=sel.config,
+    is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+    return render_template('student/browse_projects.html', sel=sel, config=sel.config, is_live=is_live,
                            groups=groups, skill_groups=sorted(skill_list.keys()), skill_list=skill_list)
 
 
 @student.route('/projects_ajax/<int:id>')
-@roles_accepted('student', 'admin', 'root')
+@roles_accepted('student')
 def projects_ajax(id):
     """
     Ajax data point for live projects table
@@ -215,10 +224,15 @@ def projects_ajax(id):
     if not _verify_selector(sel):
         return jsonify({})
 
+    state = sel.config.selector_lifecycle
+    if not _verify_open(sel.config, state=state):
+        return jsonify({})
+
     projects = filter_projects(sel.config.live_projects.all(),
                                sel.group_filters.all(), sel.skill_filters.all(), setter=lambda x: x.id)
 
-    return ajax.student.liveprojects_data(sel.id, projects)
+    is_live = state < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING
+    return ajax.student.liveprojects_data(sel.id, projects, is_live=is_live)
 
 
 @student.route('/add_group_filter/<id>/<gid>')
@@ -335,7 +349,6 @@ def view_project(sid, pid):
     :param pid:
     :return:
     """
-
     # sid is a SelectingStudent
     sel = SelectingStudent.query.get_or_404(sid)
 
@@ -350,6 +363,10 @@ def view_project(sid, pid):
     if not _verify_view_project(sel, project):
         return redirect(url_for('student.dashboard'))
 
+    # verify prokect is open
+    if not _verify_open(sel.config):
+        return redirect(url_for('student.dashboard'))
+
     # update page views
     if project.page_views is None:
         project.page_views = 1
@@ -357,7 +374,10 @@ def view_project(sid, pid):
         project.page_views += 1
 
     project.last_view = datetime.today()
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
 
     # build list of keywords
     if isinstance(project.keywords, str):
@@ -395,7 +415,7 @@ def add_bookmark(sid, pid):
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
-    if not _verify_open(project.config):
+    if not _verify_open(project.config, strict=True):
         return redirect(request.referrer)
 
     # verify student is allowed to view this live project
@@ -426,7 +446,7 @@ def remove_bookmark(sid, pid):
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
-    if not _verify_open(project.config):
+    if not _verify_open(project.config, strict=True):
         return redirect(request.referrer)
 
     # verify student is allowed to view this live project
@@ -464,7 +484,7 @@ def request_confirmation(sid, pid):
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
-    if not _verify_open(project.config):
+    if not _verify_open(project.config, strict=True):
         return redirect(request.referrer)
 
     # verify student is allowed to view this live project
@@ -510,7 +530,7 @@ def cancel_confirmation(sid, pid):
     project = LiveProject.query.get_or_404(pid)
 
     # verify project is open
-    if not _verify_open(project.config):
+    if not _verify_open(project.config, strict=True):
         return redirect(request.referrer)
 
     # verify student is allowed to view this live project

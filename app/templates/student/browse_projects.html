@@ -48,8 +48,10 @@
                     { data: 'group' },
                     { data: 'skills' },
                     { data: 'meeting' },
-                    { data: 'availability' },
-                    { data: 'bookmarks' },
+                    {% if is_live %}
+                        { data: 'availability' },
+                        { data: 'bookmarks' },
+                    {% endif %}
                     { data: 'menu' }
                 ],
                 deferRender: true
@@ -86,31 +88,42 @@
             <strong>{{ config.name }} {{ config.year+1 }}&ndash;{{ config.year+2 }}</strong>
         </div>
         <div class="panel-body">
-            <div class="row" style="margin-bottom: 10px;">
-                <div class="col-xs-12">
-                    <div class="pull-right">
-                        {% set bookmarks = sel.number_bookmarks %}
-                        {% set bmpl = 's' %}
-                        {% if bookmarks == 1 %}{% set bmpl = '' %}{% endif %}
-                        {% set ncpl = 's' %}
-                        {% if sel.number_choices == 1 %}{% set ncpl = '' %}{% endif %}
-                        <span class="label label-success">{{ bookmarks }} bookmark{{ bmpl }} &ndash; {{ sel.number_choices }} selection{{ ncpl }} required</span>
+            {% if is_live %}
+                <div class="row" style="margin-bottom: 10px;">
+                    <div class="col-xs-12">
+                        <div class="pull-right">
+                            {% set bookmarks = sel.number_bookmarks %}
+                            {% set bmpl = 's' %}
+                            {% if bookmarks == 1 %}{% set bmpl = '' %}{% endif %}
+                            {% set ncpl = 's' %}
+                            {% if sel.number_choices == 1 %}{% set ncpl = '' %}{% endif %}
+                            <span class="label label-success">{{ bookmarks }} bookmark{{ bmpl }} &ndash; {{ sel.number_choices }} selection{{ ncpl }} required</span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endif %}
             {{ filter_block(sel, groups, skill_groups, skill_list, 'student.clear_group_filters', 'student.add_group_filter', 'student.remove_group_filter', 'student.clear_skill_filters', 'student.add_skill_filter', 'student.remove_skill_filter') }}
 
             <table id="liveprojects-table" class="table table-striped table-bordered">
                 <thead>
                 <tr>
-                    <th width="18%"> Title</th>
-                    <th width="15%"> Supervisor</th>
-                    <th width="15%"> Research group</th>
-                    <th width="15%"> Transferable skills</th>
-                    <th width="7%"> Meeting</th>
-                    <th width="10%"> Availability</th>
-                    <th width="5%"> Bookmark</th>
-                    <th width="15%"> Actions</th>
+                    {% if is_live %}
+                        <th width="18%"> Title</th>
+                        <th width="15%"> Supervisor</th>
+                        <th width="15%"> Research group</th>
+                        <th width="15%"> Transferable skills</th>
+                        <th width="7%"> Meeting</th>
+                        <th width="10%"> Availability</th>
+                        <th width="5%"> Bookmark</th>
+                        <th width="15%"> Actions</th>
+                    {% else %}
+                        <th width="28%"> Title</th>
+                        <th width="15%"> Supervisor</th>
+                        <th width="15%"> Research group</th>
+                        <th width="20%"> Transferable skills</th>
+                        <th width="7%"> Meeting</th>
+                        <th width="15%"> Actions</th>
+                    {% endif %}
                 </tr>
                 </thead>
             </table>

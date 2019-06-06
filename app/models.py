@@ -7659,7 +7659,6 @@ def _MatchingAttempt_is_valid(id):
     #      This is also a fatal error.
     #   3. Validate that faculty CATS limits are respected.
     #      This is a warning, not an error
-
     errors = {}
     warnings = {}
     student_issues = False
@@ -7677,7 +7676,9 @@ def _MatchingAttempt_is_valid(id):
             record_warnings = record.warnings
 
             if len(record_errors) == 0 and len(record_warnings) == 0:
-                raise RuntimeError('Internal inconsistency in response from _MatchingRecord_is_valid')
+                current_app.logger.info('** Internal inconsistency in response from _MatchingRecord_is_valid: '
+                                        'record_errors = {x}, record_warnings = {y}'.format(x=record_errors,
+                                                                                            y=record_warnings))
 
             for n, msg in enumerate(record_errors):
                 errors[('basic', (record.id, n))] \
@@ -7715,28 +7716,24 @@ def _MatchingAttempt_is_valid(id):
         for config in obj.config_members:
             rec = fac.get_enrollment_record(config.pclass_id)
 
-            sup, mark = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
+            if rec is not None:
+                sup, mark = obj.get_faculty_CATS(fac, pclass_id=config.pclass_id)
 
-            if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
-                warnings[('custom_sup', fac.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
-                                                   'limit {n}'.format(name=fac.user.name, n=rec.CATS_supervision)
-                faculty_issues = True
+                if rec.CATS_supervision is not None and sup > rec.CATS_supervision:
+                    warnings[('custom_sup', fac.id)] = 'Assignment to {name} violates their custom supervising CATS ' \
+                                                       'limit {n}'.format(name=fac.user.name, n=rec.CATS_supervision)
+                    faculty_issues = True
 
-            if rec.CATS_marking is not None and mark > rec.CATS_marking:
-                warnings[('custom_mark', fac.id)] = 'Assignment to {name} violates their custom marking CATS ' \
-                                                    'limit {n}'.format(name=fac.user.name, n=rec.CATS_marking)
-                faculty_issues = True
+                if rec.CATS_marking is not None and mark > rec.CATS_marking:
+                    warnings[('custom_mark', fac.id)] = 'Assignment to {name} violates their custom marking CATS ' \
+                                                        'limit {n}'.format(name=fac.user.name, n=rec.CATS_marking)
+                    faculty_issues = True
 
     is_valid = (not student_issues) and (not faculty_issues)
 
     if not is_valid and (len(errors) == 0 and len(warnings) == 0):
-        raise RuntimeError('Internal inconsistency in _MatchingAttempt_is_valid')
-
-    print('** COMPUTED _MatchingAttempt_is_valid for match "{name}"'.format(name=obj.name))
-    print('** is_valid = {x}, student_issues = {y}, faculty_issues = {z}'.format(x=is_valid, y=faculty_issues,
-                                                                                 z=student_issues))
-    print('** errors = {e}'.format(e=errors))
-    print('** warnings = {w}'.format(w=warnings))
+        current_app.logger.info('** Internal inconsistency in _MatchingAttempt_is_valid: not valid, but '
+                                'len(errors) ==0 and len(warnings) == 0')
 
     return is_valid, student_issues, faculty_issues, errors, warnings
 
@@ -8275,8 +8272,12 @@ class MatchingAttempt(db.Model, PuLPMixin):
         Perform validation
         :return:
         """
-        flag, self._student_issues, self._faculty_issues, self._errors, self._warnings = _MatchingAttempt_is_valid(self.id)
-        self._validated = True
+        try:
+            flag, self._student_issues, self._faculty_issues, self._errors, self._warnings = _MatchingAttempt_is_valid(self.id)
+            self._validated = True
+        except Exception as e:
+            current_app.logger.exception('** Exception in MatchingAttempt.is_valid', exc_info=e)
+            return None
 
         return flag
 
@@ -8285,8 +8286,6 @@ class MatchingAttempt(db.Model, PuLPMixin):
     def errors(self):
         if not self._validated:
             check = self.is_valid
-        print('** RETURNING ERRORS FOR MATCHING ATTEMPT "{name}"'.format(name=self.name))
-        print('** errors = {e}'.format(e=self._errors.values()))
         return self._errors.values()
 
 
@@ -8294,8 +8293,6 @@ class MatchingAttempt(db.Model, PuLPMixin):
     def warnings(self):
         if not self._validated:
             check = self.is_valid
-        print('** RETURNING WARNINGS FOR MATCHING ATTEMPT "{name}"'.format(name=self.name))
-        print('** warnings = {e}'.format(e=self._warnings.values()))
         return self._warnings.values()
 
 
@@ -8496,7 +8493,6 @@ def _MatchingRecord_is_valid(id):
     errors = {}
     warnings = {}
 
-
     # 1. SUPERVISOR AND MARKER SHOULD NOT BE THE SAME PERSON
     if obj.supervisor_id == obj.marker_id:
         errors[('basic', 0)] = 'Supervisor and marker are the same'
@@ -8512,7 +8508,7 @@ def _MatchingRecord_is_valid(id):
 
         if offer_project is not None and project.id != offer_project.id:
             warnings[('assignment', 1)] = 'This selector accepted a custom offer for project "{name}", ' \
-                                          'but their assigned project differs'.format(name=project.name)
+                                          'but their assigned project is different'.format(name=project.name)
 
     # 4. ASSIGNED PROJECT MUST BE PART OF THIS PROJECT CLASS
     if project.config_id != obj.selector.config_id:
@@ -8608,7 +8604,12 @@ class MatchingRecord(db.Model):
 
     @property
     def is_valid(self):
-        flag, self._errors, self._warnings = _MatchingRecord_is_valid(self.id)
+        try:
+            flag, self._errors, self._warnings = _MatchingRecord_is_valid(self.id)
+            self._validated = True
+        except Exception as e:
+            current_app.logger.exception('** Exception in MatchingRecord.is_valid', exc_info=e)
+            return None
 
         return flag
 

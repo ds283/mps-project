@@ -150,7 +150,8 @@ def register_issue_confirm_tasks(celery):
 
         task = chain(group(send_notification_email.si(d, config_id) for d in notify_list if d is not None),
                      notify.s(convenor_id, '{n} confirmation request{pl} issued', 'info'))
-        task.apply_async()
+
+        raise self.replace(task)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -268,7 +269,8 @@ def register_issue_confirm_tasks(celery):
 
         tasks = chain(group(send_reminder_email.si(r, config_id) for r in recipients if r is not None),
                       notify.s(convenor_id, '{n} reminder email{pl} issued', 'info'))
-        tasks.apply_async()
+
+        raise self.replace(tasks)
 
 
     @celery.task(bind=True, default_retry_delay=30)

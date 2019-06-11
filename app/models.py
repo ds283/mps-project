@@ -2539,6 +2539,15 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     card_text_noninitial = db.Column(db.Text())
 
 
+    # MATCHING EMAIL TEXT
+
+    # preamble for draft matching email
+    email_text_draft_match_preamble = db.Column(db.Text())
+
+    # preamble for final matching email
+    email_text_final_match_preamble = db.Column(db.Text())
+
+
     # OPTIONS
 
     # explicitly ask supervisors to confirm projects each year?
@@ -3274,6 +3283,16 @@ class ProjectClassConfig(db.Model):
     @property
     def card_text_noninitial(self):
         return self.project_class.card_text_noninitial
+
+
+    @property
+    def email_text_draft_match_preamble(self):
+        return self.project_class.email_text_draft_match_preamble
+
+
+    @property
+    def email_text_final_match_preamble(self):
+        return self.project_class.email_text_final_match_preamble
 
 
     @property
@@ -7973,6 +7992,21 @@ class MatchingAttempt(db.Model, PuLPMixin):
 
     # mean CATS per project during matching
     mean_CATS_per_project = db.Column(db.Numeric(8, 5))
+
+
+    # CIRCULATION STATUS
+
+    # draft circulated to selectors?
+    draft_to_selectors = db.Column(db.DateTime())
+
+    # draft circulated to supervisors?
+    draft_to_supervisors = db.Column(db.DateTime())
+
+    # final verison circulated to selectors?
+    final_to_selectors = db.Column(db.DateTime())
+
+    # final version circulated to supervisors?
+    final_to_supervisors = db.Column(db.DateTime())
 
 
     # EDITING METADATA

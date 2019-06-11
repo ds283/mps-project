@@ -45,6 +45,17 @@
             {{ wtf.form_field(form.card_text_noninitial) }}
         </div>
 
+        <div class="well">
+            <strong>Preamble for email notification of project matching</strong>
+            <p>
+                You can optionally override the text used in the email preamble.
+                If you do not provide an override, default wording will be used.
+            </p>
+            <hr class="intro-divider">
+            {{ wtf.form_field(form.email_text_draft_match_preamble) }}
+            {{ wtf.form_field(form.email_text_final_match_preamble) }}
+        </div>
+
         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
 
     </form>

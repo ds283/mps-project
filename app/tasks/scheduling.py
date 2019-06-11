@@ -1285,23 +1285,32 @@ def register_scheduling_tasks(celery):
 
         progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of student submitters...", autocommit=True)
 
-        recipients = []
+        recipients = set()
         for a in record.owner.submitter_list:
             if a.attending:
-                recipients.append(a)
+                recipients.add(a.id)
 
         notify = celery.tasks['app.tasks.utilities.email_notification']
 
-        task = group(publish_email_to_submitter.si(id, a.id, not bool(record.deployed)) for a in recipients) | notify.s(user_id)
-        task.apply_async()
+        task = chain(group(publish_email_to_submitter.si(id, a_id, not bool(record.deployed)) for a_id in recipients),
+                     notify.s(user_id, '{n} email notification{pl} issued', 'info'),
+                     publish_to_submitter_finalize.si(task_id))
 
         if record.deployed:
             record.final_to_submitters = datetime.now()
         else:
             record.draft_to_submitters = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            raise self.retry()
 
+        raise self.replace(task)
+
+
+    @celery.task(bind=True)
+    def publish_to_submitter_finalize(self, task_id):
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
 
 
@@ -1321,7 +1330,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if attend_data is None:
-            self.update_state('FAILIURE', meta='Could not load SubmitterAttendanceData record from database')
+            self.update_state('FAILURE', meta='Could not load SubmitterAttendanceData record from database')
             raise self.retry()
 
         sub_record = attend_data.submitter
@@ -1335,13 +1344,13 @@ def register_scheduling_tasks(celery):
                       recipients=[user.email])
 
         if is_draft:
-            msg.subject ='Draft timetable for project assessment "{name}"'.format(name=event.name)
+            msg.subject ='Notification: Draft timetable for project assessment "{name}"'.format(name=event.name)
             msg.body = render_template('email/scheduling/draft_notify_students.txt', user=user, event=event,
                                        slot=record.get_student_slot(sub_record.owner_id).first(),
                                        period=sub_record.period, schedule=record)
 
         else:
-            msg.subject ='Final timetable for project assessment "{name}"'.format(name=event.name)
+            msg.subject ='Notification: Final timetable for project assessment "{name}"'.format(name=event.name)
             msg.body = render_template('email/scheduling/final_notify_students.txt', user=user, event=event,
                                        slot=record.get_student_slot(sub_record.owner_id).first(),
                                        period=sub_record.period, schedule=record)
@@ -1368,16 +1377,25 @@ def register_scheduling_tasks(celery):
 
         progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of faculty assessors...", autocommit=True)
 
-        task = group(publish_email_to_assessor.si(id, a.id, not bool(record.deployed)) for a in record.owner.assessor_list.all()) | notify.s(user_id)
-        task.apply_async()
+        task = chain(group(publish_email_to_assessor.si(id, a.id, not bool(record.deployed)) for a in record.owner.assessor_list.all()),
+                     notify.s(user_id, '{n} email notification{pl} issued', 'info'),
+                     publish_to_assessors_finalize.si(task_id))
 
         if record.deployed:
             record.final_to_assessors = datetime.now()
         else:
             record.draft_to_assessors = datetime.now()
 
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError:
+            raise self.retry()
 
+        raise self.replace(task)
+
+
+    @celery.task(bind=True)
+    def publish_to_assessors_finalize(self, task_id):
         progress_update(task_id, TaskRecord.SUCCESS, 100, "Email job is complete", autocommit=True)
 
 
@@ -1412,7 +1430,7 @@ def register_scheduling_tasks(celery):
                       recipients=[user.email])
 
         if is_draft:
-            msg.subject = 'Draft timetable for project assessment "{name}"'.format(name=event.name)
+            msg.subject = 'Notification: Draft timetable for project assessment "{name}"'.format(name=event.name)
 
             if len(slots) > 0:
                 msg.body = render_template('email/scheduling/draft_notify_faculty.txt', user=user, event=event,
@@ -1422,7 +1440,7 @@ def register_scheduling_tasks(celery):
                                            schedule=record)
 
         else:
-            msg.subject = 'Final timetable for project assessment "{name}"'.format(name=event.name)
+            msg.subject = 'Notification: Final timetable for project assessment "{name}"'.format(name=event.name)
 
             if len(slots) > 0:
                 msg.body = render_template('email/scheduling/final_notify_faculty.txt', user=user, event=event,

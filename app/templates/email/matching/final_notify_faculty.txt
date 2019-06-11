@@ -1,0 +1,27 @@
+Dear {{ user.first_name }}
+
+Thank you for your efforts in preparing project descriptions and accommodating
+student meetings over the last term.  The final project allocation is now
+available. Unless you have already been contacted to discuss changes, there
+should be no variation compared to the draft allocation of which you have
+already been notified.
+
+{% for key in matches -%}
+{%- set match_list = matches[key] -%}
+{%- set config = match_list[0].selector.config -%}
+-- {{ config.name }}
+convenor {{ config.convenor_name }} <{{ config.convenor_email }}>
+
+{% for item in match_list %}
+Period {{ item.submission_period }}: {{ item.selector.student.name }} ({{ item.project.name }})
+{% endfor %}
+{%- endfor %}
+
+If you anticipate any problems with this allocation, please let the
+appropriate project convenor know as soon as possible.
+
+Best wishes,
+{% for convenor in convenors -%}
+{{ convenor.user.first_name }} {{ convenor.user.last_name }}
+{% endfor -%}
+(the project convenors)

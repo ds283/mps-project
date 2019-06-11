@@ -353,6 +353,12 @@ class EditProjectTextForm(Form, SaveChangesMixin):
     card_text_noninitial = TextAreaField('Text seen by selectors who may be changing supervisor',
                                          render_kw={"rows": 5}, validators=[Optional()])
 
+    email_text_draft_match_preamble = TextAreaField('Preamble for notification of draft matching',
+                                                    render_kw={"rows": 5}, validators=[Optional()])
+
+    email_text_final_match_preamble = TextAreaField('Preamble for notification of final matching',
+                                                    render_kw={"rows": 5}, validators=[Optional()])
+
 
 class SubmissionPeriodMixin():
 

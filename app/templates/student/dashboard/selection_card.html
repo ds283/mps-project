@@ -59,7 +59,7 @@
         {% else %}
             {% set noninitial_text = config.card_text_noninitial %}
             {% if noninitial_text and noninitial_text|length > 0 %}
-                {{  noninitial_text|markdown|bclean|blinkify|safe }}
+                {{ noninitial_text|markdown|bclean|blinkify|safe }}
             {% else %}
                 <p>
                     If you wish to <strong>switch supervisors</strong>,

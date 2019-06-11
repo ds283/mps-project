@@ -1041,6 +1041,8 @@ def add_pclass():
                             card_text_noninitial=None,
                             card_text_normal=None,
                             card_text_optional=None,
+                            email_text_draft_match_preamble=None,
+                            email_text_final_match_preamble=None,
                             creator_id=current_user.id,
                             creation_timestamp=datetime.now())
         db.session.add(data)
@@ -1196,6 +1198,8 @@ def edit_pclass_text(id):
         data.card_text_normal = form.card_text_normal.data
         data.card_text_optional = form.card_text_optional.data
         data.card_text_noninitial = form.card_text_noninitial.data
+        data.email_text_draft_match_preamble = form.email_text_draft_match_preamble.data
+        data.email_text_final_match_preamble = form.email_text_final_match_preamble.data
 
         db.session.commit()
 
@@ -3188,7 +3192,7 @@ def delete_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     if not record.finished:
@@ -3224,7 +3228,7 @@ def perform_delete_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(url)
 
     if not record.finished:
@@ -3261,7 +3265,7 @@ def revert_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     if not record.finished:
@@ -3302,7 +3306,7 @@ def perform_revert_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -3354,7 +3358,7 @@ def duplicate_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year.', 'info')
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year.', 'info')
         return redirect(request.referrer)
 
     if not record.finished:
@@ -3415,7 +3419,7 @@ def rename_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -3637,7 +3641,7 @@ def merge_replace_records(src_id, dest_id):
 
     year = get_current_year()
     if dest.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be edited because it belongs to a previous year', 'info')
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
     if source.selector_id != dest.selector_id:
@@ -3888,7 +3892,7 @@ def reassign_match_project(id, pid):
 
     year = get_current_year()
     if record.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be edited because '
+        flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -3935,7 +3939,7 @@ def reassign_match_marker(id, mid):
 
     year = get_current_year()
     if record.matching_attempt.year != year:
-        flash('Match "{name}" can no longer be edited because '
+        flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -3963,6 +3967,84 @@ def reassign_match_marker(id, mid):
     return redirect(request.referrer)
 
 
+@admin.route('/publish_matching_selectors/<int:id>')
+@roles_required('root')
+def publish_matching_selectors(id):
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be modified because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for email because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" is not yet available for email because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Match "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared by email.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    task_id = register_task('Send matching to selectors', owner=current_user,
+                            description='Email details of match "{name}" to submitters'.format(name=record.name))
+
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.matching.publish_to_selectors']
+
+    task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
+
+    return redirect(request.referrer)
+
+
+@admin.route('/publish_matching_supervisors/<int:id>')
+@roles_required('root')
+def publish_matching_supervisors(id):
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be modified because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        if record.awaiting_upload:
+            flash('Match "{name}" is not yet available for email because it is still awaiting '
+                  'manual upload.'.format(name=record.name), 'error')
+        else:
+            flash('Match "{name}" is not yet available for email because it has not yet '
+                  'terminated.'.format(name=record.name), 'error')
+        return redirect(request.referrer)
+
+    if not record.solution_usable:
+        flash('Match "{name}" did not yield an optimal solution and is not available for use. '
+              'It cannot be shared by email.'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    task_id = register_task('Send matching to supervisors', owner=current_user,
+                            description='Email details of match "{name}" to supervisors'.format(name=record.name))
+
+    celery = current_app.extensions['celery']
+    task = celery.tasks['app.tasks.matching.publish_to_supervisors']
+
+    task.apply_async(args=(id, current_user.id, task_id), task_id=task_id)
+
+    return redirect(request.referrer)
+
+
 @admin.route('/publish_match/<int:id>')
 @roles_required('root')
 def publish_match(id):
@@ -3973,7 +4055,7 @@ def publish_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because '
+        flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -4007,7 +4089,7 @@ def unpublish_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because '
+        flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -4041,7 +4123,7 @@ def select_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because '
+        flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -4098,7 +4180,7 @@ def deselect_match(id):
 
     year = get_current_year()
     if record.year != year:
-        flash('Match "{name}" can no longer be edited because '
+        flash('Match "{name}" can no longer be modified because '
               'it belongs to a previous year'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
@@ -6024,7 +6106,7 @@ def publish_schedule_submitters(id):
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with submitters.'.format(name=record.name), 'info')
+              'It cannot be shared by email.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     task_id = register_task('Send schedule to submitters', owner=current_user,
@@ -6060,7 +6142,7 @@ def publish_schedule_assessors(id):
 
     if not record.solution_usable:
         flash('Schedule "{name}" did not yield an optimal solution and is not available for use. '
-              'It cannot be shared with assessors.'.format(name=record.name), 'info')
+              'It cannot be shared by email.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
     task_id = register_task('Send draft schedule to assessors', owner=current_user,

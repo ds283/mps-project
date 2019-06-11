@@ -34,6 +34,28 @@ _status = \
     {% else %}
         <span class="label label-success">Original</span>
     {% endif %}
+    <p></p>
+    {% if m.solution_usable %}
+        {% if m.draft_to_selectors is not none %}
+            <span class="label label-info">Draft to selectors: {{ m.draft_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+        {% if m.draft_to_supervisors is not none %}
+            <span class="label label-info">Draft to supervisors: {{ m.draft_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+        {% if m.final_to_selectors is not none %}
+            <span class="label label-primary">Final to selectors: {{ m.final_to_selectors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+        {% if m.final_to_supervisors is not none %}
+            <span class="label label-primary">Final to supervisors: {{ m.final_to_supervisors.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+        {% endif %}
+    {% endif %}
+    <p></p>
+    {% if m.published and current_user.has_role('root') %}
+        <span class="label label-primary">Published</span>
+    {% endif %}
+    {% if m.selected %}
+        <span class="label label-success">Selected</span>
+    {% endif %}
 {% else %}
     {% if m.awaiting_upload %}
         <span class="label label-success">Awaiting upload</span>
@@ -317,6 +339,20 @@ _menu = \
                         </a>
                     </li>
                 {% endif %}
+                
+                {% if m.selected or m.published %}
+                    <li role="separator" class="divider">
+                    <li>
+                        <a href="{{ url_for('admin.publish_matching_selectors', id=m.id) }}">
+                            <i class="fa fa-envelope-o"></i> Email to selectors
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('admin.publish_matching_supervisors', id=m.id) }}">
+                            <i class="fa fa-envelope-o"></i> Email to supervisors
+                        </a>
+                    </li>
+                {% endif %}
             {% endif %}            
         {% endif %}        
     </ul>
@@ -371,13 +407,6 @@ _name = \
     {% if m.compute_time %}
         <span class="label label-default"><i class="fa fa-clock-o"></i> Compute {{ m.formatted_compute_time }}</span>
     {% endif %}
-{% endif %}
-<p></p>
-{% if m.published and current_user.has_role('root') %}
-    <span class="label label-primary">Published</span>
-{% endif %}
-{% if m.selected %}
-    <span class="label label-success">Selected</span>
 {% endif %}
 """
 

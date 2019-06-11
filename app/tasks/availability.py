@@ -318,7 +318,8 @@ def register_availability_tasks(celery):
 
         tasks = chain(group(send_reminder_email.si(r) for r in recipients if r is not None),
                       notify.s(user_id, '{n} email notification{pl} issued', 'info'))
-        tasks.apply_async()
+
+        raise self.replace(tasks)
 
 
     @celery.task(bind=True, default_retry_delay=30)

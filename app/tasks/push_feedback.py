@@ -49,7 +49,8 @@ def register_push_feedback_tasks(celery):
 
         tasks = chain(group(send_notification_email.si(r, user_id) for r in recipients if r is not None),
                       notify.s(user_id, '{n} feedback email{pl} issued', 'info'))
-        tasks.apply_async()
+
+        raise self.replace(tasks)
 
 
     @celery.task(bind=True, default_retry_delay=30)

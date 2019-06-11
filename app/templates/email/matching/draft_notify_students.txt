@@ -1,0 +1,41 @@
+Dear {{ user.first_name }}
+
+{% set text = pclass.email_text_draft_match_preamble -%}
+{%- if text is not none and text|length > 0 -%}
+{{ text|wordwrap(79) }}
+{%- else -%}
+You are receiving this email because we expect you will undertake a project
+of type "{{ config.name }}" in academic year {{ config.year+1 }}-{{ config.year+2 }}.
+If you believe this is incorrect, please advise the project convenor
+(contact details are given below).
+
+We have now reached a provisional allocation of projects. Please be aware that
+this is not yet the final version. We do not expect significant alterations,
+but it is possible that some details may change to accommodate students who are
+transferring between programmes. If changes are required we will advise you as
+soon as we are able. A further email will be sent when the allocation is
+finalized.
+{%- endif %}
+
+{% if number == 1 -%}
+You have been allocated the following project:
+{% elif number > 1 -%}
+You have been allocated the following projects:
+{%- endif %}
+{% for item in matches %}
+{%- if number > 1 -%}
+Period {{ item.submission_period }}: {{ item.project.name }} ({{ item.project.owner.user.name }}, rank {{ item.rank }})
+{%- else -%}
+{{ item.project.name }} ({{ item.project.owner.user.name }}, rank {{ item.rank }})
+{%- endif %}
+{%- endfor %}
+
+If you believe there has been an error in the allocation, please contact
+the project convenor as soon as possible.
+
+This is an automated email. Please do not reply to it directly, because
+messages sent to this mailbox are not monitored or answered.
+
+Best wishes,
+{{ pclass.convenor.user.first_name }} {{ pclass.convenor.user.last_name }} <{{ pclass.convenor_email }}>
+(the project convenor)

@@ -5527,7 +5527,7 @@ def supervisor_submit_feedback(id):
         flash('It is not possible to submit before the feedback period has opened.', 'error')
         return redirect(request.referrer)
 
-    if not record.is_marker_valid:
+    if not record.is_supervisor_valid:
         flash('Cannot submit feedback because it is still incomplete.', 'error')
         return redirect(request.referrer)
 

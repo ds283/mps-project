@@ -420,7 +420,7 @@ def register_rollover_tasks(celery):
 
             new_config = ProjectClassConfig(year=new_year,
                                             pclass_id=pclass_id,
-                                            convenor_id=convenor_id,
+                                            convenor_id=old_config.project_class.convenor_id,
                                             creator_id=convenor_id,
                                             creation_timestamp=datetime.now(),
                                             requests_issued=False,

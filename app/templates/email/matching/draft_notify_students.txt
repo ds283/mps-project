@@ -21,12 +21,15 @@ finalized.
 You have been allocated the following project:
 {% elif number > 1 -%}
 You have been allocated the following projects:
-{%- endif %}
+{% endif -%}
 {% for item in matches %}
-{%- if number > 1 -%}
-Period {{ item.submission_period }}: {{ item.project.name }} ({{ item.project.owner.user.name }}, rank {{ item.rank }})
+{% if number > 1 -%}
+{%- set period = pclass.get_period(item.submission_period) -%}
+{%- set text = period.display_name(config.year+1) + ': ' + item.project.name + ' (' + item.project.owner.user.name + ' <' + item.project.owner.user.email + '>, rank ' + item.rank|string + ')' -%}
+{{ text|wordwrap(79) }}
 {%- else -%}
-{{ item.project.name }} ({{ item.project.owner.user.name }}, rank {{ item.rank }})
+{%- set text = item.project.name + ' (' + item.project.owner.user.name + ' <' + item.project.owner.user.email + '>, rank ' + item.rank|string + ')' -%}
+{{ text|wordwrap(79) }}
 {%- endif %}
 {%- endfor %}
 

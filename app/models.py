@@ -2783,6 +2783,14 @@ class ProjectClass(db.Model, ColouredLabelMixin):
             db.session.commit()
 
 
+    def get_period(self, n):
+        # note submission periods start at 1
+        if n <= 0 or n > self.submissions:
+            return None
+
+        return self.periods.filter_by(period=n).one()
+
+
     def validate_presentations(self):
         if not self.uses_presentations:
             return
@@ -2901,6 +2909,20 @@ class SubmissionPeriodDefinition(db.Model):
 
     # last edited timestamp
     last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def display_name(self, year):
+        if isinstance(year, int):
+            pass
+        elif isinstance(year, float):
+            year = int(year)
+        else:
+            year = year.year
+
+        if self.name is not None and len(self.name) > 0:
+            return str(self.name).format(year1=year, year2=year+1)
+
+        return 'Submission Period #{n}'.format(n=self.period)
 
 
 class ProjectClassConfig(db.Model):

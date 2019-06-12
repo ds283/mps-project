@@ -2000,7 +2000,7 @@ def register_matching_tasks(celery):
             self.update_state('FAILURE', meta='Could not load MatchingAttempt record from database')
             raise self.retry()
 
-        progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of student selectors...", autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 10, "Building list of project supervisors...", autocommit=True)
 
         recipients = set()
         for fac in record.supervisors:

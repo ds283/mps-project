@@ -25,8 +25,8 @@
 
 {% block content %}
     {% set is_approver = current_user.has_role('project_approver') %}
-    {% set lifecycle = sel.config.selector_lifecycle if sel is not none else none %}
-    {% set selections_open = (lifecycle == sel.config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) if lifecycle is not none else false %}
+    {% set lifecycle = sel.config.selector_lifecycle if sel is defined and sel is not none else none %}
+    {% set selections_open = (lifecycle == sel.config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) if lifecycle is defined and lifecycle is not none else false %}
     <div class="container-fluid bg-project">
         <br/>
         {% if form %}

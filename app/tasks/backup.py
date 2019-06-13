@@ -19,6 +19,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from math import floor
 
 from celery import group, chain
+from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import BackupRecord
@@ -150,9 +151,7 @@ def register_backup_tasks(celery):
             self.update_state(state='SUCCESS')
             return paths
 
-        else:
-
-            raise self.retry()
+        raise self.retry()
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -178,9 +177,7 @@ def register_backup_tasks(celery):
             self.update_state(state='SUCCESS')
             return paths
 
-        else:
-
-            raise self.retry()
+        raise self.retry()
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -193,19 +190,19 @@ def register_backup_tasks(celery):
             db_size = path.getsize(temp_SQL_file)
         else:
             self.update_state(state='FAILED', meta='Missing database backup file')
-            return
+            raise Ignore()
 
         if path.exists(backup_abspath) and path.isfile(backup_abspath):
             archive_size = path.getsize(backup_abspath)
         else:
             self.update_state(state='FAILED', meta='Missing compressed website archive')
-            return
+            raise Ignore()
 
         if path.exists(backup_folder) and path.isdir(backup_folder):
             backup_size = _count_dir_size(backup_folder)
         else:
             self.update_state(state='FAILED', meta='Backup folder is not a directory')
-            return
+            raise Ignore()
 
         # store details
         try:
@@ -220,12 +217,15 @@ def register_backup_tasks(celery):
             db.session.add(data)
             db.session.commit()
 
-            remove(temp_SQL_file)
-
         except SQLAlchemyError:
-
             db.session.rollback()
             raise self.retry()
+
+        try:
+            remove(temp_SQL_file)
+        except OSError as e:
+            current_app.logger.critical('** CRITICAL ERROR: remove of temporary SQL archive failed in '
+                                        'insert_backup_record()', exc_info=e)
 
         self.update_state(state='SUCCESS')
 

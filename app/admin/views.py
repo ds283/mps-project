@@ -3876,6 +3876,40 @@ def match_faculty_view_ajax(id):
                                         show_includes == 'true')
 
 
+@admin.route('/delete_match_record/<int:record_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_match_record(record_id):
+    record = MatchingRecord.query.get_or_404(record_id)
+
+    if not validate_match_inspector(record.matching_attempt):
+        return redirect(request.referrer)
+
+    if record.matching_attempt.selected:
+        flash('Match "{name}" cannot be edited because an administrative user has marked it as '
+              '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+              'info')
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.matching_attempt.year != year:
+        flash('Match "{name}" can no longer be modified because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    attempt = record.matching_attempt
+
+    try:
+        # remove all matching records associated with this selector
+        db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=record.selector_id).delete()
+        db.session.commit()
+
+    except SQLAlchemyError:
+        flash('Could not delete matching records for this selector because a database error was encountered.', 'error')
+        db.session.rollback()
+
+    return redirect(request.referrer)
+
+
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')
 @roles_accepted('faculty', 'admin', 'root')
 def reassign_match_project(id, pid):

@@ -8598,6 +8598,16 @@ def _MatchingRecord_is_valid(id):
     if flag:
         errors[('overassigned', 0)] = msg
 
+    # 8. SELECTOR SHOULD BE MARKED FOR CONVERSION
+    if not obj.selector.convert_to_submitter:
+        # only refuse to validate if we are the first member of the multiplet
+        lo_rec = attempt.records \
+            .filter_by(selector_id=obj.selector_id).order_by(MatchingRecord.submission_period.asc()).first()
+
+        if lo_rec is not None and lo_rec.id == obj.id:
+            warnings[('conversion', 1)] = 'Selector "{name}" is not marked for conversion to submitter, ' \
+                                          'but is included in this matching'.format(name=obj.selector.student.user.name)
+
     is_valid = (len(errors) == 0 and len(warnings) == 0)
     return is_valid, errors, warnings
 

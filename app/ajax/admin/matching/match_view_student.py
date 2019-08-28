@@ -20,11 +20,13 @@ _student = \
 {% if not sel.convert_to_submitter %}
     <div class="has-error">
         <p class="help-block">
-            Conversion of this student is disabled
-            <a class="btn btn-sm btn-danger" href="{{ url_for('admin.delete_match_record', record_id=record_id) }}">
-                Delete
-            </a>
+            Conversion of this student is disabled.
         </p>
+    <div>
+    <div>
+        <a class="btn btn-sm btn-danger" href="{{ url_for('admin.delete_match_record', record_id=record_id) }}">
+            Delete
+        </a>
     </div>
 {% endif %}
 """

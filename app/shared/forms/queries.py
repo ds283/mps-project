@@ -13,10 +13,11 @@ from flask_login import current_user
 
 from ...database import db
 from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData, ProjectClass, Role,\
-    ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, project_classes, description_pclasses, \
+    ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
-    Building, Room, PresentationFeedback, Module, FHEQ_Level, ScheduleSlot, PresentationSession, \
-    ScheduleAttempt, SubmissionRecord
+    Building, Room, PresentationFeedback, FHEQ_Level, ScheduleSlot, PresentationSession, \
+    ScheduleAttempt
+from ...models import project_classes, description_pclasses, roles_to_users
 
 from ..utils import get_current_year
 
@@ -348,7 +349,14 @@ def BuildScheduleSessionLabel(session):
 def GetMaskableRoles(user_id):
     user = db.session.query(User).filter_by(id=user_id).one()
 
-    return user.roles.filter(Role.name != 'faculty', Role.name != 'student', Role.name != 'office')
+    # after migration to Flask-Security-Too, user.roles is no longer a dynamic collection, meaning that it can't
+    # be treated as a query. Instead we have to construct our own query to get the list of Role instances
+    # associated with a given user
+    user_roles = db.session.query(roles_to_users.c.role_id).filter(roles_to_users.c.user_id == user.id).subquery()
+
+    return db.session.query(Role) \
+        .join(user_roles, Role.id == user_roles.c.role_id) \
+        .filter(Role.name != 'faculty', Role.name != 'student', Role.name != 'office')
 
 
 def GetDestinationProjects(user_id, project_id):

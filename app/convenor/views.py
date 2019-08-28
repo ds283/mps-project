@@ -20,7 +20,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    SubmissionPeriodRecord, WorkflowMixin, CustomOffer
+    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, MatchingAttempt
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -585,6 +585,8 @@ def selectors(id):
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
+    match_filter = request.args.get('match_filter')
+    match_show = request.args.get('match_show')
 
     # get current academic year
     current_year = get_current_year()
@@ -648,11 +650,43 @@ def selectors(id):
     if year_filter is not None:
         session['convenor_selectors_year_filter'] = year_filter
 
+    # get list of current published matchings (if any) that include this project type;
+    # these can be used to filter for students that are/are not included in the matching
+    if config.has_published_matches:
+        matches = config.published_matches.all()
+        match_ids = [x.id for x in matches]
+    else:
+        matches = None
+
+    if match_filter is None and session.get('convenor_selectors_match_filter'):
+        match_filter = session['convenor_selectors_match_filter']
+
+    if match_show is None and session.get('convenor_selectors_match_show'):
+        match_show = session['convenor_selectors_match_show']
+
+    if matches is None:
+        match_filter = 'all'
+        match_show = 'all'
+    else:
+        if isinstance(match_filter, str) and match_filter != 'all' and int(match_filter) not in match_ids:
+            match_filter = 'all'
+            match_show = 'all'
+
+    if match_show not in ['all', 'included', 'missing']:
+        match_show = 'all'
+
+    if match_filter is not None:
+        session['convenor_selectors_match_filter'] = match_filter
+
+    if match_show is not None:
+        session['convenor_selectors_match_show'] = match_show
+
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selectors.html', pane='selectors', subpane='list',
                            pclass=pclass, config=config, convenor_data=data, current_year=current_year,
                            cohorts=sorted(cohorts), progs=progs, years=sorted(years),
+                           matches=matches, match_filter=match_filter, match_show=match_show,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, state_filter=state_filter,
                            year_filter=year_filter)
 
@@ -676,6 +710,8 @@ def selectors_ajax(id):
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
+    match_filter = request.args.get('match_filter')
+    match_show = request.args.get('match_show')
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
@@ -683,51 +719,64 @@ def selectors_ajax(id):
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
 
     return ajax.convenor.selectors_data(data, config)
 
 
-def _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter):
-     # build a list of live students selecting from this project class
-     selectors = config.selecting_students.filter_by(retired=False)
+def _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show):
+    # build a list of live students selecting from this project class
+    selectors = config.selecting_students.filter_by(retired=False)
 
-     # filter by cohort and programme if required
-     cohort_flag, cohort_value = is_integer(cohort_filter)
-     prog_flag, prog_value = is_integer(prog_filter)
-     year_flag, year_value = is_integer(year_filter)
+    # filter by cohort and programme if required
+    cohort_flag, cohort_value = is_integer(cohort_filter)
+    prog_flag, prog_value = is_integer(prog_filter)
+    year_flag, year_value = is_integer(year_filter)
+    match_flag, match_value = is_integer(match_filter)
 
-     if cohort_flag or prog_flag:
-         selectors = selectors \
-             .join(StudentData, StudentData.id == SelectingStudent.student_id)
+    if cohort_flag or prog_flag:
+        selectors = selectors \
+            .join(StudentData, StudentData.id == SelectingStudent.student_id)
 
-     if cohort_flag:
-         selectors = selectors.filter(StudentData.cohort == cohort_value)
+    if cohort_flag:
+        selectors = selectors.filter(StudentData.cohort == cohort_value)
 
-     if prog_flag:
-         selectors = selectors.filter(StudentData.programme_id == prog_value)
+    if prog_flag:
+        selectors = selectors.filter(StudentData.programme_id == prog_value)
 
-     if state_filter == 'submitted':
-         data = [rec for rec in selectors.all() if rec.has_submitted]
-     elif state_filter == 'bookmarks':
-         data = [rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks]
-     elif state_filter == 'none':
-         data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
-     elif state_filter == 'confirmations':
-         data = [rec for rec in selectors.all() if rec.number_pending > 0]
-     elif state_filter == 'convert':
-         selectors = selectors.filter(SelectingStudent.convert_to_submitter == True)
-         data = selectors.all()
-     elif state_filter == 'no-convert':
-         selectors = selectors.filter(SelectingStudent.convert_to_submitter == False)
-         data = selectors.all()
-     else:
-         data = selectors.all()
+    if state_filter == 'submitted':
+        data = [rec for rec in selectors.all() if rec.has_submitted]
+    elif state_filter == 'bookmarks':
+        data = [rec for rec in selectors.all() if not rec.has_submitted and rec.has_bookmarks]
+    elif state_filter == 'none':
+        data = [rec for rec in selectors.all() if not rec.has_submitted and not rec.has_bookmarks]
+    elif state_filter == 'confirmations':
+        data = [rec for rec in selectors.all() if rec.number_pending > 0]
+    elif state_filter == 'convert':
+        selectors = selectors.filter(SelectingStudent.convert_to_submitter == True)
+        data = selectors.all()
+    elif state_filter == 'no-convert':
+        selectors = selectors.filter(SelectingStudent.convert_to_submitter == False)
+        data = selectors.all()
+    else:
+        data = selectors.all()
 
-     if year_flag:
-         data = [s for s in data if s.academic_year == year_value]
+    if year_flag:
+        data = [s for s in data if s.academic_year == year_value]
 
-     return data
+    if match_flag:
+        match = config.published_matches.filter_by(id=match_value).first()
+
+        if match is not None:
+            # get list of student ids that are included in the match
+            student_set = set(x.selector.student_id for x in match.records)
+
+            if match_show == 'included':
+                data = [s for s in data if s.student_id in student_set]
+            elif match_show == 'missing':
+                data = [s for s in data if s.student_id not in student_set]
+
+    return data
 
 
 @convenor.route('/enroll_selectors/<int:id>')
@@ -988,6 +1037,8 @@ def selector_grid(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
+    match_filter = request.args.get('match_filter')
+    match_show = request.args.get('match_show')
 
     # get current academic year
     current_year = get_current_year()
@@ -1046,11 +1097,43 @@ def selector_grid(id):
     if year_filter is not None:
         session['convenor_sel_grid_filter'] = year_filter
 
+    # get list of current published matchings (if any) that include this project type;
+    # these can be used to filter for students that are/are not included in the matching
+    if config.has_published_matches:
+        matches = config.published_matches.all()
+        match_ids = [x.id for x in matches]
+    else:
+        matches = None
+
+    if match_filter is None and session.get('convenor_sel_grid_match_filter'):
+        match_filter = session['convenor_selectors_match_filter']
+
+    if match_show is None and session.get('convenor_sel_grid_match_show'):
+        match_show = session['convenor_selectors_match_show']
+
+    if matches is None:
+        match_filter = 'all'
+        match_show = 'all'
+    else:
+        if isinstance(match_filter, str) and match_filter != 'all' and int(match_filter) not in match_ids:
+            match_filter = 'all'
+            match_show = 'all'
+
+    if match_show not in ['all', 'included', 'missing']:
+        match_show = 'all'
+
+    if match_filter is not None:
+        session['convenor_sel_grid_match_filter'] = match_filter
+
+    if match_show is not None:
+        session['convenor_sel_grid_match_show'] = match_show
+
     data = get_convenor_dashboard_data(pclass, config)
 
     return render_template('convenor/dashboard/selector_grid.html', pane='selectors', subpane='grid',
                            pclass=pclass, config=config, convenor_data=data,
                            current_year=current_year, cohorts=sorted(cohorts), progs=progs, years=sorted(years),
+                           matches=matches, match_filter=match_filter, match_show=match_show,
                            cohort_filter=cohort_filter, prog_filter=prog_filter, year_filter=year_filter, groups=groups)
 
 
@@ -1067,6 +1150,8 @@ def selector_grid_ajax(id):
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
+    match_filter = request.args.get('match_filter')
+    match_show = request.args.get('match_show')
 
     # get current configuration record for this project class
     config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
@@ -1084,6 +1169,7 @@ def selector_grid_ajax(id):
     cohort_flag, cohort_value = is_integer(cohort_filter)
     prog_flag, prog_value = is_integer(prog_filter)
     year_flag, year_value = is_integer(year_filter)
+    match_flag, match_value = is_integer(match_filter)
 
     if cohort_flag or prog_flag:
         selectors = selectors \
@@ -1096,13 +1182,25 @@ def selector_grid_ajax(id):
         selectors = selectors.filter(StudentData.programme_id == prog_value)
 
     if year_flag:
-        data = [x for x in selectors.all() if x.academic_year == year_value]
+        data = [s for s in selectors.all() if s.academic_year == year_value]
     else:
         data = selectors.all()
 
     # for selection_open_to_all type project classes (eg. RP), no need to include students who did not respond
     if pclass.selection_open_to_all:
-        data = [x for x in data if x.has_submitted or x.has_bookmarks]
+        data = [s for s in data if s.has_submitted or s.has_bookmarks]
+
+    if match_flag:
+        match = config.published_matches.filter_by(id=match_value).first()
+
+        if match is not None:
+            # get list of student ids that are included in the match
+            student_set = set(x.selector.student_id for x in match.records)
+
+            if match_show == 'included':
+                data = [s for s in data if s.student_id in student_set]
+            elif match_show == 'missing':
+                data = [s for s in data if s.student_id not in student_set]
 
     return ajax.convenor.selector_grid_data(data, config)
 
@@ -3962,8 +4060,10 @@ def convert_all(configid):
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
+    match_filter = request.args.get('match_filter')
+    match_show = request.args.get('match_show')
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
 
     for s in data:
         s.convert_to_submitter = True
@@ -3987,8 +4087,10 @@ def convert_none(configid):
     prog_filter = request.args.get('prog_filter')
     state_filter = request.args.get('state_filter')
     year_filter = request.args.get('year_filter')
+    match_filter = request.args.get('match_filter')
+    match_show = request.args.get('match_show')
 
-    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
 
     for s in data:
         s.convert_to_submitter = False

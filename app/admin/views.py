@@ -7798,4 +7798,6 @@ def reset_precompute():
 def clear_redis_cache():
     cache.clear()
 
+    flash('The Redis cache has been successfully cleared.', 'success')
+
     return redirect(request.referrer)

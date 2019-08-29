@@ -3188,30 +3188,29 @@ def perform_terminate_match(id):
 @admin.route('/delete_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def delete_match(id):
+    attempt = MatchingAttempt.query.get_or_404(id)
 
-    record = MatchingAttempt.query.get_or_404(id)
-
-    if not validate_match_inspector(record):
+    if not validate_match_inspector(attempt):
         return redirect(request.referrer)
 
     year = get_current_year()
-    if record.year != year:
+    if attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
-    if not record.finished:
-        flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
+    if not attempt.finished:
+        flash('Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
         return redirect(request.referrer)
 
     title = 'Delete match'
-    panel_title = 'Delete match <strong>{name}</strong>'.format(name=record.name)
+    panel_title = 'Delete match <strong>{name}</strong>'.format(name=attempt.name)
 
     action_url = url_for('admin.perform_delete_match', id=id, url=request.referrer)
     message = '<p>Please confirm that you wish to delete the matching ' \
               '<strong>{name}</strong>.</p>' \
               '<p>This action cannot be undone.</p>' \
-        .format(name=record.name)
+        .format(name=attempt.name)
     submit_label = 'Delete match'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -3221,39 +3220,40 @@ def delete_match(id):
 @admin.route('/perform_delete_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_delete_match(id):
-    record = MatchingAttempt.query.get_or_404(id)
+    attempt = MatchingAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
         url = url_for('admin.manage_matching')
 
-    if not validate_match_inspector(record):
+    if not validate_match_inspector(attempt):
         return redirect(url)
 
     year = get_current_year()
-    if record.year != year:
+    if attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(url)
 
-    if not record.finished:
-        flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
+    if not attempt.finished:
+        flash('Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
         return redirect(url)
 
-    if not current_user.has_role('root') and current_user.id != record.creator_id:
+    if not current_user.has_role('root') and current_user.id != attempt.creator_id:
         flash('Match "{name}" cannot be deleted because it belongs to another user')
         return redirect(url)
 
     try:
         # delete all MatchingRecords associated with this MatchingAttempt
-        db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
+        db.session.query(MatchingRecord).filter_by(matching_id=attempt.id).delete()
 
-        db.session.delete(record)
+        db.session.delete(attempt)
         db.session.commit()
+        flash('Match "{name}" was successfully deleted.'.format(name=attempt.name), 'success')
     except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not delete match "{name}" due to a database error. '
-              'Please contact a system administrator.'.format(name=record.name),
+              'Please contact a system administrator.'.format(name=attempt.name),
               'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
@@ -3263,31 +3263,30 @@ def perform_delete_match(id):
 @admin.route('/clean_up_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def clean_up_match(id):
+    attempt = MatchingAttempt.query.get_or_404(id)
 
-    record = MatchingAttempt.query.get_or_404(id)
-
-    if not validate_match_inspector(record):
+    if not validate_match_inspector(attempt):
         return redirect(request.referrer)
 
     year = get_current_year()
-    if record.year != year:
+    if attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
-    if not record.finished:
-        flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
+    if not attempt.finished:
+        flash('Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
         return redirect(request.referrer)
 
     title = 'Clean up match'
-    panel_title = 'Clean up match <strong>{name}</strong>'.format(name=record.name)
+    panel_title = 'Clean up match <strong>{name}</strong>'.format(name=attempt.name)
 
     action_url = url_for('admin.perform_clean_up_match', id=id, url=request.referrer)
     message = '<p>Please confirm that you wish to clean up the matching ' \
               '<strong>{name}</strong>.</p>' \
               '<p>Some selectors may be removed if they are no longer available for conversion.</p>' \
               '<p>This action cannot be undone.</p>' \
-        .format(name=record.name)
+        .format(name=attempt.name)
     submit_label = 'Clean up match'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -3297,40 +3296,41 @@ def clean_up_match(id):
 @admin.route('/perform_clean_up_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_clean_up_match(id):
-    record = MatchingAttempt.query.get_or_404(id)
+    attempt = MatchingAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
         url = url_for('admin.manage_matching')
 
-    if not validate_match_inspector(record):
+    if not validate_match_inspector(attempt):
         return redirect(url)
 
     year = get_current_year()
-    if record.year != year:
+    if attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(url)
 
-    if not record.finished:
-        flash('Can not clean up match "{name}" because it has not terminated.'.format(name=record.name),
+    if not attempt.finished:
+        flash('Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
         return redirect(url)
 
-    if not current_user.has_role('root') and current_user.id != record.creator_id:
+    if not current_user.has_role('root') and current_user.id != attempt.creator_id:
         flash('Match "{name}" cannot be cleaned up because it belongs to another user')
         return redirect(url)
 
     try:
         # delete all MatchingRecords associated with selectors who are not converting
-        db.session.query(MatchingRecord).filter_by(matching_id=record.id) \
-            .join(SelectingStudent, MatchingRecord.selector_id == SelectingStudent.id) \
-            .filter(SelectingStudent.convert_to_submitter == False).delete()
+        for rec in attempt.records:
+            if not rec.selector.convert_to_submitter:
+                db.session.delete(rec)
 
         db.session.commit()
+        flash('Match "{name}" was successfully cleaned up.'.format(name=attempt.name), 'success')
     except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not clean up match "{name}" due to a database error. '
-              'Please contact a system administrator.'.format(name=record.name),
+              'Please contact a system administrator.'.format(name=attempt.name),
               'error')
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 

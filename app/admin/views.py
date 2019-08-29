@@ -62,7 +62,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset
+    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset, SelectingStudent
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
@@ -3249,6 +3249,82 @@ def perform_delete_match(id):
     except SQLAlchemyError:
         db.session.rollback()
         flash('Can not delete match "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=record.name),
+              'error')
+
+    return redirect(url)
+
+
+@admin.route('/clean_up_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def clean_up_match(id):
+
+    record = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(record):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
+    if not record.finished:
+        flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(request.referrer)
+
+    title = 'Clean up match'
+    panel_title = 'Clean up match <strong>{name}</strong>'.format(name=record.name)
+
+    action_url = url_for('admin.perform_clean_up_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to clean up the matching ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>Some selectors may be removed if they are no longer available for conversion.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=record.name)
+    submit_label = 'Clean up match'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_clean_up_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_clean_up_match(id):
+    record = MatchingAttempt.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.manage_matching')
+
+    if not validate_match_inspector(record):
+        return redirect(url)
+
+    year = get_current_year()
+    if record.year != year:
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
+        return redirect(url)
+
+    if not record.finished:
+        flash('Can not clean up match "{name}" because it has not terminated.'.format(name=record.name),
+              'error')
+        return redirect(url)
+
+    if not current_user.has_role('root') and current_user.id != record.creator_id:
+        flash('Match "{name}" cannot be cleaned up because it belongs to another user')
+        return redirect(url)
+
+    try:
+        # delete all MatchingRecords associated with selectors who are not converting
+        db.session.query(MatchingRecord).filter_by(matching_id=record.id) \
+            .join(SelectingStudent, MatchingRecord.selector_id == SelectingStudent.id) \
+            .filter(SelectingStudent.convert_to_submitter == False).delete()
+
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash('Can not clean up match "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
 

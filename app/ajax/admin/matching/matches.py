@@ -302,9 +302,12 @@ _menu = \
                         <i class="fa fa-trash"></i> Delete
                     </a>
                 </li>
-            {% else %}
-                <li class="disabled">
-                    <a><i class="fa fa-trash"></i> Delete</a>
+                <li>
+                    {% if m.can_clean_up %}
+                        <a href="{{ url_for('admin.clean_up_match', id=m.id) }}">
+                            <i class="fa fa-scissors"></i> Clean up
+                        </a>
+                    {% endif %}
                 </li>
             {% endif %}
             

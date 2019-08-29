@@ -6320,6 +6320,13 @@ class SelectingStudent(db.Model):
         return True
 
 
+@listens_for(SelectingStudent, 'before_update')
+def _SelectingStudent_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        for record in target.matching_records:
+            _delete_MatchingRecord_cache(record.id, record.matching_id)
+
+
 class SubmittingStudent(db.Model):
     """
     Model a student who is submitting work for evaluation in the current cycle
@@ -8449,6 +8456,19 @@ class MatchingAttempt(db.Model, PuLPMixin):
         return self.last_edit_timestamp is not None
 
 
+    @property
+    def can_clean_up(self):
+        # check whether any MatchingRecords are associated with selectors who are not converting
+        no_convert_query = self.records \
+            .join(SelectingStudent, MatchingRecord.selector_id == SelectingStudent.id) \
+            .filter(SelectingStudent.convert_to_submitter == False)
+
+        if get_count(no_convert_query) > 0:
+            return True
+
+        return False
+
+
 def _delete_MatchingAttempt_cache(target_id):
     cache.delete_memoized(_MatchingAttempt_current_score, target_id)
     cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target_id)
@@ -8630,7 +8650,8 @@ class MatchingRecord(db.Model):
 
     # owning SelectingStudent
     selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False)
+    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False,
+                               backref=db.backref('matching_records', lazy='dynamic'))
 
     # submission period
     submission_period = db.Column(db.Integer())

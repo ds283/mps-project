@@ -45,7 +45,8 @@ def register_rollover_tasks(celery):
         try:
             config = ProjectClassConfig.query.filter_by(id=current_id).first()
             convenor = User.query.filter_by(id=convenor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if convenor is None or config is None:
@@ -303,7 +304,8 @@ def register_rollover_tasks(celery):
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
             config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None:
@@ -329,7 +331,8 @@ def register_rollover_tasks(celery):
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='FAILURE')
@@ -344,7 +347,8 @@ def register_rollover_tasks(celery):
         # get current configuration record
         try:
             item = SelectingStudent.query.filter_by(id=sid).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if item is None:
@@ -356,8 +360,9 @@ def register_rollover_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -369,7 +374,8 @@ def register_rollover_tasks(celery):
         # get current configuration record
         try:
             item = SubmittingStudent.query.filter_by(id=sid).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if item is None:
@@ -385,8 +391,9 @@ def register_rollover_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -401,7 +408,8 @@ def register_rollover_tasks(celery):
         # get current configuration record; makes this task idempotent, so it's safe to run twice or more
         try:
             old_config = ProjectClassConfig.query.filter_by(id=current_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # check whether a new configuration record needs to be inserted;
@@ -467,8 +475,9 @@ def register_rollover_tasks(celery):
             rec.golive_notified = []
 
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -485,7 +494,8 @@ def register_rollover_tasks(celery):
             selector = SelectingStudent.query.filter_by(id=sel_id).first()
             if match_id is not None:
                 match = MatchingAttempt.query.filter_by(id=match_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None:
@@ -560,8 +570,9 @@ def register_rollover_tasks(celery):
                     db.session.add(sub_record)
 
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return self.retry()
 
         else:
@@ -636,8 +647,9 @@ def register_rollover_tasks(celery):
                     self.update_state('FAILURE', meta='Unexpected academic year')
                     return
 
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return self.retry()
 
         self.update_state(state='SUCCESS')
@@ -650,7 +662,8 @@ def register_rollover_tasks(celery):
         try:
             config = ProjectClassConfig.query.filter_by(id=new_config_id).first()
             student = StudentData.query.filter_by(id=sid).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None:
@@ -697,8 +710,9 @@ def register_rollover_tasks(celery):
                     add_blank_submitter(student, old_config_id, new_config_id, autocommit=False)
 
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -710,7 +724,8 @@ def register_rollover_tasks(celery):
         # get faculty enrollment record
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=rec_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -723,8 +738,9 @@ def register_rollover_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -736,7 +752,8 @@ def register_rollover_tasks(celery):
         # get faculty enrollment record
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=rec_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -770,8 +787,9 @@ def register_rollover_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -783,7 +801,8 @@ def register_rollover_tasks(celery):
         # get ProjectDescription
         try:
             record = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -794,8 +813,9 @@ def register_rollover_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -806,7 +826,8 @@ def register_rollover_tasks(celery):
         # get ConfirmRequest corresponding to request_id
         try:
             record = db.session.query(ConfirmRequest).filter_by(id=request_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -817,8 +838,9 @@ def register_rollover_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')

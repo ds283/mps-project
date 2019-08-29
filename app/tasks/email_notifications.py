@@ -124,7 +124,8 @@ def register_email_notification_tasks(celery):
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -160,7 +161,8 @@ def register_email_notification_tasks(celery):
     def dispatch_faculty_notifications(self, user_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -237,7 +239,8 @@ def register_email_notification_tasks(celery):
     def dispatch_student_notifications(self, user_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -331,7 +334,8 @@ def register_email_notification_tasks(celery):
 
         try:
             notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if notification is None:
@@ -341,8 +345,9 @@ def register_email_notification_tasks(celery):
         try:
             db.session.delete(notification)
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # return our value of n_id which will be passed through to reset_last_email_time
@@ -358,7 +363,8 @@ def register_email_notification_tasks(celery):
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -376,8 +382,9 @@ def register_email_notification_tasks(celery):
         user.last_email = datetime.now()
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -388,7 +395,8 @@ def register_email_notification_tasks(celery):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
             notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None or notification is None:
@@ -424,7 +432,8 @@ def register_email_notification_tasks(celery):
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -439,7 +448,8 @@ def register_email_notification_tasks(celery):
         try:
             notifications = [db.session.query(EmailNotification).filter_by(id=n_id).first() for n_id in n_ids]
             outstanding_crqs = [db.session.query(ConfirmRequest).filter_by(id=cr_id).first() for cr_id in cr_ids]
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if any(n is None for n in notifications) or any(cr is None for cr in outstanding_crqs):
@@ -478,7 +488,8 @@ def register_email_notification_tasks(celery):
     def dispatch_new_request_notification(self, previous_ids, n_id):
         try:
             notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if notification is None:
@@ -487,7 +498,8 @@ def register_email_notification_tasks(celery):
 
         try:
             req = db.session.query(ConfirmRequest).filter_by(id=notification.data_1).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
@@ -519,7 +531,8 @@ def register_email_notification_tasks(celery):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
             notification = db.session.query(EmailNotification).filter_by(id=n_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None or notification is None:
@@ -550,7 +563,8 @@ def register_email_notification_tasks(celery):
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -565,7 +579,8 @@ def register_email_notification_tasks(celery):
         try:
             notifications = [db.session.query(EmailNotification).filter_by(id=n_id).first() for n_id in n_ids]
             outstanding_crqs = [db.session.query(ConfirmRequest).filter_by(id=cr_id).first() for cr_id in cr_ids]
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if any(n is None for n in notifications) or any(cr is None for cr in outstanding_crqs):

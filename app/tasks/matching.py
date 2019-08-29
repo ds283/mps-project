@@ -1260,7 +1260,8 @@ def _initialize(self, record, read_serialized=False):
             P = _build_project_supervisor_matrix(number_lp, lp_dict, number_sup, sup_dict)
         print(' -- built project-to-supervisor mapping matrix in time {s}'.format(s=sup_mapping_timer.interval))
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
     return number_sel, number_lp, number_sup, number_mark, \
@@ -1445,8 +1446,9 @@ def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_
                                  mean_CATS_per_project)
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
     elif state == 'Not Solved':
@@ -1467,8 +1469,9 @@ def _process_PuLP_solution(self, record, output, solve_time, X, Y, W, R, create_
         record.celery_finished = True
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
     return record.score
@@ -1575,7 +1578,8 @@ def register_matching_tasks(celery):
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1619,7 +1623,8 @@ def register_matching_tasks(celery):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
             record = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -1658,7 +1663,8 @@ def register_matching_tasks(celery):
 
         try:
             lp_asset, mps_asset = _write_LP_MPS_files(record, prob, user)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         _send_offline_email(celery, record, user, lp_asset, mps_asset)
@@ -1669,7 +1675,8 @@ def register_matching_tasks(celery):
         try:
             _store_enumeration_details(record, number_to_sel, number_to_lp, number_to_sup, number_to_mark,
                                        lp_group_dict, sup_pclass_limits, mark_pclass_limits)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
@@ -1688,7 +1695,8 @@ def register_matching_tasks(celery):
             user = db.session.query(User).filter_by(id=user_id).first()
             asset = db.session.query(UploadedAsset).filter_by(id=asset_id).first()
             record = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -1741,7 +1749,8 @@ def register_matching_tasks(celery):
 
         try:
             record = db.session.query(MatchingRecord).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1754,8 +1763,9 @@ def register_matching_tasks(celery):
             record.rank = record.selector.project_rank(record.original_project_id)
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return None
@@ -1768,7 +1778,8 @@ def register_matching_tasks(celery):
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1780,8 +1791,9 @@ def register_matching_tasks(celery):
             record.last_edit_timestamp = None
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return None
@@ -1794,7 +1806,8 @@ def register_matching_tasks(celery):
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1814,7 +1827,8 @@ def register_matching_tasks(celery):
 
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1890,8 +1904,9 @@ def register_matching_tasks(celery):
 
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return None
@@ -1901,7 +1916,8 @@ def register_matching_tasks(celery):
     def publish_to_selectors(self, id, user_id, task_id):
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1927,7 +1943,9 @@ def register_matching_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         raise self.replace(task)
@@ -1948,7 +1966,8 @@ def register_matching_tasks(celery):
             matches = db.session.query(MatchingRecord) \
                 .filter_by(matching_id=attempt_id, selector_id=sel_id) \
                 .order_by(MatchingRecord.submission_period).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1993,7 +2012,8 @@ def register_matching_tasks(celery):
     def publish_to_supervisors(self, id, user_id, task_id):
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -2019,7 +2039,9 @@ def register_matching_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         raise self.replace(task)
@@ -2038,7 +2060,8 @@ def register_matching_tasks(celery):
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=attempt_id).first()
             fac = db.session.query(FacultyData).filter_by(id=fac_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:

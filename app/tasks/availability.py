@@ -31,7 +31,8 @@ def register_availability_tasks(celery):
 
         try:
             data = db.session.query(PresentationAssessment).filter_by(id=data_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None:
@@ -72,7 +73,8 @@ def register_availability_tasks(celery):
                 db.session.add(a_record)
 
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         progress_update(celery_id, TaskRecord.RUNNING, 80, "Building list of submitters...", autocommit=True)
@@ -99,7 +101,8 @@ def register_availability_tasks(celery):
                 db.session.add(s_record)
 
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         progress_update(celery_id, TaskRecord.SUCCESS, 100, 'Availability requests issued', autocommit=False)
@@ -111,7 +114,8 @@ def register_availability_tasks(celery):
                 count = get_count(data.assessors)
                 user.post_message('{n} availability request{pl} issued'.format(n=count, pl='' if count == 1 else 's'),
                                   'info', autocommit=True)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             pass
 
 
@@ -122,7 +126,8 @@ def register_availability_tasks(celery):
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -144,7 +149,8 @@ def register_availability_tasks(celery):
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -196,7 +202,8 @@ def register_availability_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -207,7 +214,8 @@ def register_availability_tasks(celery):
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=record_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -241,7 +249,8 @@ def register_availability_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -252,7 +261,8 @@ def register_availability_tasks(celery):
 
         try:
             data = db.session.query(PresentationAssessment).filter_by(id=assessment_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None:
@@ -264,7 +274,8 @@ def register_availability_tasks(celery):
 
         try:
             session = db.session.query(PresentationSession).filter_by(id=sess_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if session is None:
@@ -290,7 +301,8 @@ def register_availability_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -301,7 +313,8 @@ def register_availability_tasks(celery):
 
         try:
             data = db.session.query(PresentationAssessment).filter_by(id=assessment_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None:
@@ -326,7 +339,8 @@ def register_availability_tasks(celery):
     def send_reminder_email(self, assessor_id):
         try:
             assessor = db.session.query(AssessorAttendanceData).filter_by(id=assessor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if assessor is None:

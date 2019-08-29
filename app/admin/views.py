@@ -1707,8 +1707,9 @@ def perform_global_rollover():
         db.session.query(MatchingAttempt).filter_by(selected=False).delete()
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not complete rollover due to database error. Please check the logs.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
     return home_dashboard()
@@ -2803,10 +2804,11 @@ def terminate_background_task(id):
         # remove task from database
         db.session.delete(record)
         db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
+    except SQLAlchemyError as e:
         flash('Could not terminate task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name), 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(request.referrer)
 
@@ -2825,11 +2827,12 @@ def delete_background_task(id):
         # remove task from database
         db.session.delete(record)
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Could not delete match "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -3172,11 +3175,12 @@ def perform_terminate_match(id):
 
         db.session.delete(record)
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not terminate matching task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -3246,11 +3250,12 @@ def perform_delete_match(id):
 
         db.session.delete(record)
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not delete match "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -3322,11 +3327,12 @@ def perform_clean_up_match(id):
             .filter(SelectingStudent.convert_to_submitter == False).delete()
 
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not clean up match "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -3510,10 +3516,11 @@ def rename_match(id):
         try:
             record.name = form.name.data
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
             flash('Could not rename match "{name}" due to a database error. '
                   'Please contact a system administrator.'.format(name=record.name), 'error')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
@@ -3738,10 +3745,11 @@ def merge_replace_records(src_id, dest_id):
         dest.matching_attempt.last_edit_timestamp = datetime.now()
 
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not merge matching records due to a database error. '
               'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -3979,9 +3987,10 @@ def delete_match_record(record_id):
         db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=record.selector_id).delete()
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not delete matching records for this selector because a database error was encountered.', 'error')
         db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -5616,9 +5625,11 @@ def perform_adjust_assessment_schedule(id):
         db.session.add(new_schedule)
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('A database error was encountered. Please check that the supplied name and tag are unique.', 'error')
         db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
         return redirect(request.referrer)
 
     celery = current_app.extensions['celery']
@@ -5682,11 +5693,12 @@ def perform_terminate_schedule(id):
         db.session.delete(record)
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not terminate scheduling task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -5775,11 +5787,12 @@ def perform_delete_schedule(id):
         db.session.delete(record)
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not delete schedule "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -5959,10 +5972,11 @@ def rename_schedule(id):
             record.tag = form.tag.data
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
             flash('Could not rename schedule "{name}" due to a database error. '
                   'Please contact a system administrator.'.format(name=record.name), 'error')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 

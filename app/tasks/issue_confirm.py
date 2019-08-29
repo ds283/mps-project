@@ -38,7 +38,8 @@ def register_issue_confirm_tasks(celery):
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
             convenor = User.query.filter_by(id=convenor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None or convenor is None:
@@ -116,7 +117,8 @@ def register_issue_confirm_tasks(celery):
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None:
@@ -139,7 +141,8 @@ def register_issue_confirm_tasks(celery):
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None:
@@ -161,7 +164,8 @@ def register_issue_confirm_tasks(celery):
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if convenor is not None:
@@ -181,7 +185,8 @@ def register_issue_confirm_tasks(celery):
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if convenor is None:
@@ -198,7 +203,8 @@ def register_issue_confirm_tasks(celery):
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None or config is None:
@@ -211,8 +217,9 @@ def register_issue_confirm_tasks(celery):
         try:
             config.confirmation_required.append(data)
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return faculty_id
@@ -223,7 +230,8 @@ def register_issue_confirm_tasks(celery):
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None or config is None:
@@ -253,7 +261,8 @@ def register_issue_confirm_tasks(celery):
     def reminder_email(self, config_id, convenor_id):
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None:
@@ -278,7 +287,8 @@ def register_issue_confirm_tasks(celery):
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None or config is None:
@@ -308,7 +318,8 @@ def register_issue_confirm_tasks(celery):
     def enroll_adjust(self, enroll_id, old_supervisor_state, current_year):
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # load current configuration record for this project
@@ -348,7 +359,8 @@ def register_issue_confirm_tasks(celery):
     def enrollment_created(self, enroll_id, current_year):
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # load current configuration record for this project
@@ -385,7 +397,8 @@ def register_issue_confirm_tasks(celery):
             faculty = db.session.query(FacultyData).filter_by(id=faculty_id).first()
             config = db.session.query(ProjectClassConfig) \
                 .filter(ProjectClassConfig.pclass_id == pclass_id, ProjectClassConfig.year == current_year).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if faculty is None or config is None:
@@ -414,7 +427,8 @@ def register_issue_confirm_tasks(celery):
         try:
             record = db.session.query(ProjectDescription).filter_by(id=record_id).first()
             current_user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None or current_user is None:
@@ -449,7 +463,8 @@ def register_issue_confirm_tasks(celery):
                 .filter(EnrollmentRecord.owner_id == user_id,
                         EnrollmentRecord.pclass_id != exclude_pclass_id).all()
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None or user.faculty_data is None:
@@ -483,7 +498,8 @@ def register_issue_confirm_tasks(celery):
         try:
             comment = db.session.query(DescriptionComment).filter_by(id=comment_id).first()
             project_approver = db.session.query(Role).filter_by(name='project_approver').first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if comment is None or project_approver is None:

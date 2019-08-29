@@ -34,7 +34,8 @@ def register_close_selection_tasks(celery):
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
             convenor = User.query.filter_by(id=convenor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None or convenor is None:
@@ -84,7 +85,8 @@ def register_close_selection_tasks(celery):
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is not None:
@@ -100,8 +102,9 @@ def register_close_selection_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is not None:
@@ -138,7 +141,8 @@ def register_close_selection_tasks(celery):
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if convenor is not None:
@@ -152,7 +156,8 @@ def register_close_selection_tasks(celery):
     def selector_close(self, sel_id):
         try:
             sel = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # if a submission already exists, sanitize it (check that all flags are correct)

@@ -217,8 +217,9 @@ def register_backup_tasks(celery):
             db.session.add(data)
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         try:
@@ -247,7 +248,8 @@ def register_backup_tasks(celery):
                 if not success:
                     self.update_state(state='FAILED', meta='Delete failed: {msg}'.format(msg=msg))
                     return
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
 
@@ -284,7 +286,8 @@ def register_backup_tasks(celery):
             records = db.session.query(BackupRecord) \
                 .filter_by(type=BackupRecord.SCHEDULED_BACKUP) \
                 .order_by(BackupRecord.date.desc()).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         for record in records:
@@ -327,7 +330,8 @@ def register_backup_tasks(celery):
         # query database for backup records, and queue a retry if it fails
         try:
             records = db.session.query(BackupRecord.id).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # build a group of tasks, one for each backup
@@ -344,7 +348,8 @@ def register_backup_tasks(celery):
         # query database for backup records, and queue a retry if it fails
         try:
             record = db.session.query(BackupRecord).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -373,13 +378,15 @@ def register_backup_tasks(celery):
         while get_backup_size() > backup_max and get_backup_count() > 0:
             try:
                 oldest_backup = db.session.query(BackupRecord.id).order_by(BackupRecord.date.asc()).first()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 return self.retry()
 
             if oldest_backup is not None:
                 try:
                     success, msg = remove_backup(oldest_backup[0])
-                except SQLAlchemyError:
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     return self.retry()
 
                 if not success:
@@ -424,7 +431,8 @@ def register_backup_tasks(celery):
 
         try:
             record = BackupRecord.query.filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record.date < limit:
@@ -445,8 +453,9 @@ def register_backup_tasks(celery):
         """
         try:
             success, msg = remove_backup(id)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if not success:

@@ -246,8 +246,8 @@ def create_app():
                 try:
                     Notification.query.filter_by(remove_on_pageload=True).delete()
                     db.session.commit()
-                except SQLAlchemyError:
-                    pass
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
 
     @app.template_filter('dealingwithdollars')

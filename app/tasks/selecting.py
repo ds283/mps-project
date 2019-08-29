@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import current_app
+
 from ..database import db
 from ..models import ConfirmRequest, LiveProject
 
@@ -25,7 +27,8 @@ def register_selecting_tasks(celery):
             lps = db.session.query(LiveProject) \
                 .filter(LiveProject.config_id == config_id,
                         LiveProject.owner_id == faculty_id).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         for lp in lps:
@@ -38,6 +41,7 @@ def register_selecting_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

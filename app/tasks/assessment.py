@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import current_app
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from celery.exceptions import Ignore
@@ -26,7 +28,8 @@ def register_assessment_tasks(celery):
 
         try:
             submitter = db.session.query(SubmittingStudent).filter_by(id=submitter_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if submitter is None:

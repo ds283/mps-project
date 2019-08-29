@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import current_app
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from celery.exceptions import Ignore
@@ -25,7 +27,8 @@ def register_assessor_tasks(celery):
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -34,7 +37,8 @@ def register_assessor_tasks(celery):
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -68,7 +72,8 @@ def register_assessor_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -78,7 +83,8 @@ def register_assessor_tasks(celery):
 
         try:
             record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -87,7 +93,8 @@ def register_assessor_tasks(celery):
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -124,5 +131,6 @@ def register_assessor_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

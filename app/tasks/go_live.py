@@ -45,7 +45,8 @@ def register_golive_tasks(celery):
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
             convenor = User.query.filter_by(id=convenor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None or convenor is None:
@@ -158,7 +159,8 @@ def register_golive_tasks(celery):
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None:
@@ -201,7 +203,8 @@ def register_golive_tasks(celery):
 
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is None:
@@ -228,7 +231,8 @@ def register_golive_tasks(celery):
         try:
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
             user = User.query.filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None or config is None:
@@ -239,8 +243,9 @@ def register_golive_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -255,7 +260,8 @@ def register_golive_tasks(celery):
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None or config is None:
@@ -305,7 +311,8 @@ def register_golive_tasks(celery):
         try:
             data = SelectingStudent.query.filter_by(id=selector_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None or config is None:
@@ -344,7 +351,8 @@ def register_golive_tasks(celery):
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if convenor is not None:
@@ -368,8 +376,9 @@ def register_golive_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if send_summary_email:
@@ -405,7 +414,8 @@ def register_golive_tasks(celery):
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if convenor is not None:
@@ -414,8 +424,9 @@ def register_golive_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -424,12 +435,14 @@ def register_golive_tasks(celery):
         try:
             add_liveproject(number, pid, config_id, autocommit=True)
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         except KeyError as e:
             db.session.rollback()
+            current_app.logger.exception("KeyError exception", exc_info=e)
             self.update_state(state='FAILURE', meta='Database error: {msg}'.format(msg=str(e)))
             raise Ignore()
 
@@ -439,7 +452,8 @@ def register_golive_tasks(celery):
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
             config = ProjectClassConfig.query.filter_by(id=config_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if config is not None:
@@ -454,6 +468,7 @@ def register_golive_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

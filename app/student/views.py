@@ -376,8 +376,9 @@ def view_project(sid, pid):
     project.last_view = datetime.today()
     try:
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     # build list of keywords
     if isinstance(project.keywords, str):
@@ -648,9 +649,10 @@ def submit(sid):
         flash('Your project preferences were submitted successfully. '
               'A confirmation email has been sent to your registered email address.', 'info')
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('A database error occurred during submission. Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -736,8 +738,10 @@ def accept_custom_offer(offer_id):
 
     try:
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not accept custom offer due to a database error. Please inform a system administrator.', 'info')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return home_dashboard()
 
@@ -760,8 +764,10 @@ def decline_custom_offer(offer_id):
 
     try:
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not decline custom offer due to a database error. Please inform a system administrator.', 'info')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return home_dashboard()
 

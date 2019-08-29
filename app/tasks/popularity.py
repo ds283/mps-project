@@ -27,12 +27,11 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
                       meta='Looking up current project class configuration for id={id}'.format(id=cid))
 
     try:
-
         # get most recent configuration record for this project class
         config = db.session.query(ProjectClassConfig).filter_by(id=cid).one()
 
-    except SQLAlchemyError:
-
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
     self.update_state(state='STARTED',
@@ -70,11 +69,13 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
 
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
     except RuntimeError:
@@ -121,7 +122,8 @@ def register_popularity_tasks(celery):
 
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -161,11 +163,13 @@ def register_popularity_tasks(celery):
 
                 db.session.commit()
 
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         except RuntimeError:
@@ -267,7 +271,8 @@ def register_popularity_tasks(celery):
         try:
             pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         tasks = group(update_project_popularity_data.si(i.id) for i in pclass_ids)
@@ -303,8 +308,9 @@ def register_popularity_tasks(celery):
 
                 db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -331,7 +337,8 @@ def register_popularity_tasks(celery):
         try:
             liveproject = db.session.query(LiveProject).filter_by(id=liveid).first()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # extract time limits from parent project class
@@ -388,14 +395,13 @@ def register_popularity_tasks(celery):
                           meta='Looking up current project class configuration for id={id}'.format(id=pid))
 
         try:
-
             # get most recent configuration record for this project class
             config = db.session.query(ProjectClassConfig) \
                 .filter_by(pclass_id=pid) \
                 .order_by(ProjectClassConfig.year.desc()).first()
 
-        except SQLAlchemyError:
-
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         self.update_state(state='STARTED',
@@ -416,11 +422,10 @@ def register_popularity_tasks(celery):
         self.update_state(state='STARTED', meta='Thin out popularity data')
 
         try:
-
             pclass_ids = db.session.query(ProjectClass.id).filter_by(active=True).all()
 
-        except SQLAlchemyError:
-
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         tasks = group(thin_project_popularity_data.si(i.id) for i in pclass_ids)

@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import current_app
+
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_, or_
 
@@ -28,7 +30,8 @@ def register_precompute_tasks(celery):
         # find all current selecting students
         try:
             data = db.session.query(StudentData).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None:
@@ -42,7 +45,8 @@ def register_precompute_tasks(celery):
     def selector_liveprojects(self, sel_id):
         try:
             sel = db.session.query(SelectingStudent).filter_by(id=sel_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if sel is None:
@@ -56,7 +60,8 @@ def register_precompute_tasks(celery):
     def cache_liveproject(self, sel_id, proj_id):
         try:
             proj = db.session.query(LiveProject).filter_by(id=proj_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if proj is None:
@@ -72,7 +77,8 @@ def register_precompute_tasks(celery):
         try:
             data = db.session.query(StudentData) \
                 .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_user_approval.si(student.id) for student in data)
@@ -92,7 +98,8 @@ def register_precompute_tasks(celery):
                 .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
                         or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user_id),
                             and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user_id))).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_user_correction.si(student.id) for student in data)
@@ -110,7 +117,8 @@ def register_precompute_tasks(celery):
         try:
             data = db.session.query(ProjectDescription) \
                 .filter(ProjectDescription.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_project_approval.si(desc.id, current_user_id) for desc in data)
@@ -127,7 +135,8 @@ def register_precompute_tasks(celery):
         try:
             data = db.session.query(ProjectDescription) \
                 .filter(ProjectDescription.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_project_rejected.si(desc.id, current_user_id) for desc in data)
@@ -143,7 +152,8 @@ def register_precompute_tasks(celery):
     def user_account_data(self, current_user_id):
         try:
             data = db.session.query(User).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_user_account.si(user.id, current_user_id) for user in data)
@@ -154,7 +164,8 @@ def register_precompute_tasks(celery):
     def user_faculty_data(self, current_user_id):
         try:
             data = db.session.query(FacultyData).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_user_faculty.si(user.id, current_user_id) for user in data)
@@ -165,7 +176,8 @@ def register_precompute_tasks(celery):
     def user_student_data(self, current_user_id):
         try:
             data = db.session.query(StudentData).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_user_student.si(user.id, current_user_id) for user in data)
@@ -194,7 +206,8 @@ def register_precompute_tasks(celery):
             projects = db.session.query(Project) \
                 .join(User, User.id == Project.owner_id) \
                 .filter(User.active == True).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_assessor_data.si(p.id, current_user_id) for p in projects)
@@ -219,7 +232,8 @@ def register_precompute_tasks(celery):
             data = db.session.query(FacultyData) \
                 .join(User, User.id == FacultyData.id) \
                 .filter(User.active == True).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(workload_faculty.si(f.id) for f in data)
@@ -238,7 +252,8 @@ def register_precompute_tasks(celery):
         # generate project line for each project
         try:
             data = db.session.query(Project).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(cache_project.si(p.id) for p in data)

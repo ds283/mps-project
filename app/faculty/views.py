@@ -543,9 +543,10 @@ def perform_delete_project(id):
 
         db.session.delete(data)
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
-        raise
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not delete project due to a database error. Please contact a system administrator', 'error')
 
     return redirect(url)
 
@@ -835,10 +836,11 @@ def move_description(did):
                 db.session.commit()
                 flash('Description "{name}" successfully moved to project '
                       '"{pname}"'.format(name=desc.label, pname=new_project.name), 'info')
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
                 flash('Description "{name}" could not be moved due to a database error'.format(name=desc.label),
                       'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         else:
             flash('Description "{name}" could not be moved because its parent project is '
                   'missing'.format(name=desc.label), 'error')

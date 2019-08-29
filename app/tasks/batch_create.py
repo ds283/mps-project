@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import current_app
+
 from celery import group, chain
 from celery.exceptions import Ignore
 from sqlalchemy.exc import SQLAlchemyError
@@ -99,7 +101,8 @@ def register_batch_create_tasks(celery):
             record = db.session.query(StudentBatch).filter_by(id=record_id).first()
             asset = db.session.query(UploadedAsset).filter_by(id=asset_id).first()
             user = db.session.query(User).filter_by(id=current_user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None or asset is None or user is None:
@@ -110,7 +113,8 @@ def register_batch_create_tasks(celery):
 
             try:
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
             raise RuntimeError('Could not load database records')
@@ -140,7 +144,8 @@ def register_batch_create_tasks(celery):
 
                 try:
                     db.session.commit()
-                except SQLAlchemyError:
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
                 raise RuntimeError('Missing fields in input CSV')
@@ -297,7 +302,8 @@ def register_batch_create_tasks(celery):
     def import_batch_item(self, item_id, user_id):
         try:
             item = db.session.query(StudentBatchItem).filter_by(id=item_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if item is None:
@@ -314,8 +320,9 @@ def register_batch_create_tasks(celery):
                 result = _create_record(item, user_id)
 
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return result
@@ -326,7 +333,8 @@ def register_batch_create_tasks(celery):
         try:
             record = db.session.query(StudentBatch).filter_by(id=record_id).first()
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None or user is None:
@@ -346,8 +354,9 @@ def register_batch_create_tasks(celery):
         record.converted = True
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -355,7 +364,8 @@ def register_batch_create_tasks(celery):
     def import_error(self, user_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -372,7 +382,8 @@ def register_batch_create_tasks(celery):
     def garbage_collection(self):
         try:
             records = db.session.query(StudentBatch).filter_by(celery_finished=True).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         expiry = group(check_expiry.si(r.id) for r in records)
@@ -383,7 +394,8 @@ def register_batch_create_tasks(celery):
     def check_expiry(self, record_id):
         try:
             record = db.session.query(StudentBatch).filter_by(id=record_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -403,5 +415,6 @@ def register_batch_create_tasks(celery):
                 db.session.query(StudentBatchItem).filter_by(parent_id=record.id).delete()
                 db.session.delete(record)
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()

@@ -618,11 +618,12 @@ def perform_terminate_batch(batch_id):
         db.session.delete(record)
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not terminate batch user creation task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -676,11 +677,12 @@ def perform_delete_batch(batch_id):
         db.session.delete(record)
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not delete batch user creation task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 

@@ -960,10 +960,11 @@ def enroll_all_selectors(configid):
         db.session.commit()
         flash('Added {count} selectors to project "{proj}"'.format(count=len(candidates),
                                                                     proj=config.project_class.name), 'info')
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Could not add selectors because a database error occurred. Please check the logs '
               'for further information.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -1016,10 +1017,11 @@ def delete_selector(sid):
     try:
         db.session.delete(sel)      # delete should cascade to Bookmark and SelectionRecord items
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Could not delete selector due to a database error. Please contact a system administrator.',
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -1594,10 +1596,11 @@ def enroll_all_submitters(configid):
         db.session.commit()
         flash('Added {count} submitters to project "{proj}"'.format(count=len(candidates),
                                                                     proj=config.project_class.name), 'info')
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Could not add submitters because a database error occurred. Please check the logs '
               'for further information.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -2590,10 +2593,11 @@ def move_description(did, pclass_id):
                 db.session.commit()
                 flash('Description "{name}" successfully moved to project '
                       '"{pname}"'.format(name=desc.label, pname=new_project.name), 'info')
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
                 flash('Description "{name}" could not be moved due to a database error'.format(name=desc.label),
                       'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         else:
             flash('Description "{name}" could not be moved because its parent project is '
                   'missing'.format(name=desc.label), 'error')
@@ -3670,9 +3674,10 @@ def submit_student_selection(sel_id):
               "A confirmation email has been sent to the selector's registered email address "
               "and cc'd to you.", "info")
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('A database error occurred during submission. Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -4443,8 +4448,10 @@ def create_new_offer(sel_id, proj_id):
     try:
         db.session.add(offer)
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not create custom offer due to a database error. Please contact a system administrator', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(url)
 
@@ -6000,9 +6007,11 @@ def force_convert_bookmarks(sel_id):
 
     try:
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not force conversion of bookmarks for selector "{name}" because of a database error. '
               'Please contact a system administrator.'.format(name=sel.student.user.name), 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -6028,9 +6037,11 @@ def custom_CATS_limits(record_id):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             flash('Could not update custom CATS values due to a database error. '
                   'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('convenor.faculty', id=record.pclass.id))
 

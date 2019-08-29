@@ -366,11 +366,6 @@ description_to_modules = db.Table('description_to_modules',
 # PROJECT ASSOCIATIONS (LIVE)
 
 
-# association table giving association between projects and project classes
-live_project_classes = db.Table('live_project_to_classes',
-                                db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
-
 # association table giving association between projects and transferable skills
 live_project_skills = db.Table('live_project_to_skills',
                                db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),

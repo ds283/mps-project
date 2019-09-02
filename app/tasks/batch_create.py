@@ -17,8 +17,7 @@ from sqlalchemy import or_
 from sqlalchemy.sql.functions import func
 
 from ..database import db
-from ..models import UploadedAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData, \
-    BackupRecord
+from ..models import UploadedAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData
 from ..task_queue import progress_update
 from ..shared.utils import canonical_uploaded_asset_filename
 
@@ -93,6 +92,179 @@ def _create_record(item, user_id):
     return OUTCOME_CREATED
 
 
+class SkipRow(Exception):
+    """Report an exception associated with processing a single row"""
+
+
+def _get_name(row, current_line):
+    if 'name' not in row:
+        print('## skipping row {row} because could not determine student name'.format(row=current_line))
+        raise SkipRow
+
+    name = row['name']
+    name_parts = [x.strip() for x in name.split(',') if len(x) > 0]
+
+    if len(name_parts) == 0:
+        print('## skipping row {row} because name first contained no parts'.format(row=current_line))
+        raise SkipRow
+
+    if len(name_parts) >= 2:
+        last_name_parts = [x.strip() for x in name_parts[0].split(' ') if len(x) > 0]
+        first_name_parts = [x.strip() for x in name_parts[1].split(' ') if len(x) > 0]
+
+        # remove any bracketed nicknames
+        last_name_parts = [x for x in last_name_parts if len(x) > 0 and x[0] != '(' and x[-1] != ')']
+        first_name_parts = [x for x in first_name_parts if len(x) > 0 and x[0] != '(' and x[-1] != ')']
+
+        if len(last_name_parts) == 0 or len(first_name_parts) == 0:
+            print('## skipping row {row} because cannot identify one or both of first and last name'.format(row=current_line))
+            raise SkipRow
+
+        last_name = ' '.join(last_name_parts)
+        first_name = first_name_parts[0]
+
+        return first_name, last_name
+
+    last_name_parts = [x.strip() for x in name_parts[0].split(' ') if len(x) > 0]
+
+    if len(last_name_parts) == 0:
+        print('## skipping row {row} because cannot identify last name'.format(row=current_line))
+        raise SkipRow
+
+    last_name = ' '.join(last_name_parts)
+    first_name = '<Unknown>'
+
+    return first_name, last_name
+
+
+def _get_username(row, current_line):
+    if 'username' in row:
+        return row['username']
+
+    if 'email' in row:
+        email = row['email']
+        userid, _, _ = email.partition('@')
+        return userid
+
+    if 'email address' in row:
+        email = row['email']
+        userid, _, _ = email.partition('@')
+        return userid
+
+    print('## skipping row {row} because could not extract userid'.format(row=current_line))
+    raise SkipRow
+
+
+def _get_intermitting(row, current_line):
+    if 'student status' in row:
+        return (row['student status'].lower() == 'intermitting')
+
+    if 'status' in row:
+        return (row['status'].lower() == 'intermitting')
+
+    print('## skipping row {row} because could not extract intermitting status'.format(row=current_line))
+    raise SkipRow
+
+
+def _get_registration_number(row, current_line):
+    if 'registration number' in row:
+        return int(row['registration number'])
+
+    if 'registration no.' in row:
+        return int(row['registration no.'])
+
+    print('## skipping row {row} because could not extract student registration number'.format(row=current_line))
+    raise SkipRow
+
+
+def _get_email(row, current_line):
+    if 'email address' in row:
+        return row['email address']
+
+    if 'email' in row:
+        return row['email']
+
+    print('## skipping row {row} because could not extract email address'.format(row=current_line))
+    raise SkipRow
+
+
+def _get_course_year(row, current_line):
+    if 'year of course' in row:
+        return int(row['year of course'])
+
+    if 'year' in row:
+        return int(row['year'])
+
+    print('## skipping row {row} because could not extract course year'.format(row=current_line))
+    raise SkipRow
+
+
+def _get_cohort(row, current_line):
+    # convert start date string into a Python date object
+    if 'start date' in row:
+        return parse(row['start date']).year
+
+    if 'cohort' in row:
+        return parse(row['cohort']).year
+
+    print('## skipping row {row} because could not extract start date/cohort'.format(row=current_line))
+    raise SkipRow
+
+
+def _get_course_code(row, current_line):
+    programme = None
+
+    if 'course code' in row:
+        course_code = row['Course Code']
+        programme = db.session.query(DegreeProgramme).filter_by(course_code=course_code).first()
+
+    elif 'course' in row:
+
+    # ignore lines where we cannot determine the programme -- they're probably V&E students
+    if programme is not None:
+        return programme
+
+    print('## skipping row {row} because cannot identify degree programme'.format(user=current_line))
+    raise SkipRow
+
+
+def _guess_year_data(cohort, year_of_course, current_year):
+    estimated_year_of_course = current_year - cohort + 1
+
+    difference = estimated_year_of_course - year_of_course
+
+    if difference == 1:
+        return True, 0
+
+    elif difference > 1:
+        return True, difference-1
+
+    return False, 0
+
+
+def _match_existing_student(username, email):
+    # test whether we can find an existing student record with this email address.
+    # if we can, check whether it is a student account.
+    # If not, there's not much we can do
+    dont_convert = False
+
+    existing_record = db.session.query(User) \
+        .join(StudentData, StudentData.id == User.id) \
+        .filter(or_(func.lower(User.email) == func.lower(email),
+                    func.lower(User.username) == func.lower(username))).first()
+
+    if existing_record is not None:
+        if not existing_record.has_role('student'):
+            print('## skipping row "{user}" because matched to existing user that is '
+                  'not a student'.format(user=username))
+            raise SkipRow
+
+        if existing_record.email.lower() != email.lower():
+            dont_convert = True
+
+    return dont_convert, existing_record
+
+
 def register_batch_create_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -123,165 +295,83 @@ def register_batch_create_tasks(celery):
 
         with open(canonical_uploaded_asset_filename(asset.filename), 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
-            headers = reader.fieldnames
 
-            required_fields = ['Name', 'Registration Number', 'Student Status', 'Year of Course', 'Course Code',
-                               'Username', 'Email Address', 'Start Date']
-
-            missing_fields = []
-            for item in required_fields:
-                if item not in headers:
-                    missing_fields.append(item)
-
-            if len(missing_fields) > 0:
-                user.post_message('Failed to process student batch creation; the following columns were missing: '
-                                  '{missing}.'.format(missing=', '.join(missing_fields)), 'error')
-                progress_update(record.celery_id, TaskRecord.FAILURE, 100,
-                                "Uploaded file was not in correct format", autocommit=True)
-
-                record.celery_finished = True
-                record.success = False
-
-                try:
-                    db.session.commit()
-                except SQLAlchemyError as e:
-                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                    raise self.retry()
-
-                raise RuntimeError('Missing fields in input CSV')
+            # force column headers to lower case
+            reader.fieldnames = [name.lower() for name in reader.fieldnames]
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Reading uploaded user list...", autocommit=True)
 
-            lines = 0
+            current_line = 0
             interpreted_lines = 0
 
             ignored_lines = []
 
             for row in reader:
-                lines += 1
+                current_line += 1
 
                 # in Python 3.6, row is an OrderedDict
+                first_name = None
+                last_name = None
+                username = None
 
-                # get name and break into comma-separated parts
-                name = row['Name']
-                name_parts = [x.strip() for x in name.split(',') if len(x) > 0]
+                try:
+                    # get name and break into comma-separated parts
+                    first_name, last_name = _get_name(row, current_line)
+                    username = _get_username(row, current_line)
+                    intermitting = _get_intermitting(row, current_line)
+                    registration_number = _get_registration_number(row, current_line)
+                    year_of_course = _get_course_year(row, current_line)
 
-                if len(name_parts) == 0:
-                    ignored_lines.append('<line #{no}>'.format(no=lines))
-                    continue
+                    cohort = _get_cohort(row, current_line)
+                    # attempt to deduce whether a foundation year or repeated years have been involved
+                    foundation_year, repeated_years = _guess_year_data(cohort, year_of_course, current_year)
 
-                if len(name_parts) >= 2:
-                    last_name_parts = [x.strip() for x in name_parts[0].split(' ') if len(x) > 0]
-                    first_name_parts = [x.strip() for x in name_parts[1].split(' ') if len(x) > 0]
+                    email = _get_email(row, current_line)
+                    # ignore cases where the email address is 'INTERMITTING' or 'RESITTING'
+                    if email.lower() == 'intermitting' or email.lower() == 'resitting':
+                        print('## skipping row "{user}" because email is "{email}"'.format(user=username, email=email))
+                        raise SkipRow
 
-                    if len(last_name_parts) == 0 or len(first_name_parts) == 0:
-                        print('## skipping row {row} because cannot identify one or both of first and last name'.format(row=lines))
-                        ignored_lines.append('<line #{no}>'.format(no=lines))
-                        continue
+                    programme = _get_course_code(row, current_line)
 
-                    last_name = ' '.join(last_name_parts)
-                    first_name = first_name_parts[0]
+                    dont_convert, existing_record = _match_existing_student(email, username)
 
-                else:
-                    last_name_parts = [x.strip() for x in name_parts[0].split(' ') if len(x) > 0]
+                    item = StudentBatchItem(parent_id=record.id,
+                                            existing_id=existing_record.id if existing_record is not None else None,
+                                            user_id=username,
+                                            first_name=first_name,
+                                            last_name=last_name,
+                                            email=email,
+                                            exam_number=registration_number,
+                                            cohort=cohort,
+                                            programme_id=programme.id if programme is not None else None,
+                                            foundation_year=foundation_year,
+                                            repeated_years=repeated_years,
+                                            intermitting=intermitting,
+                                            dont_convert=dont_convert)
 
-                    if len(last_name_parts) == 0:
-                        print('## skipping row {row} because cannot identify last name'.format(row=lines))
-                        ignored_lines.append('<line #{no}>'.format(no=lines))
-                        continue
+                    interpreted_lines += 1
+                    db.session.add(item)
 
-                    last_name = ' '.join(last_name_parts)
-                    first_name = '<Unknown>'
+                except SkipRow:
 
-                username = row['Username']
+                    if username is None:
+                        ignored_lines.append('<line #{no}>'.format(no=current_line))
 
-                registration_number = int(row['Registration Number'])
-
-                intermitting = (row['Student Status'].lower() == 'intermitting')
-
-                course_code = row['Course Code']
-                programme = db.session.query(DegreeProgramme).filter_by(course_code=course_code).first()
-
-                # ignore lines where we cannot determine the programme -- they're probably V&E students
-                if programme is None:
-                    print('## skipping row "{user}" because cannot identify degree programme'.format(user=username))
-                    ignored_lines.append(username)
-                    continue
-
-                email = row['Email Address']
-
-                # ignore cases where the email address is 'INTERMITTING' or 'RESITTING'
-                if email.lower() == 'intermitting' or email.lower() == 'resitting':
-                    print('## skipping row "{user}" because email is "{email}"'.format(user=username, email=email))
-                    ignored_lines.append(username)
-                    continue
-
-                # convert start date string into
-                start_date = parse(row['Start Date'])
-                year_of_course = int(row['Year of Course'])
-
-                # attempt to deduce whether a foundation year or repeated years have been involved
-                cohort = None
-                foundation_year = False
-                repeated_years = None
-
-                if isinstance(start_date, datetime):
-                    cohort = start_date.year
-                    estimated_year_of_course = current_year - start_date.year + 1
-
-                    difference = estimated_year_of_course - year_of_course
-                    if difference > 0:
-                        if difference == 1:
-                            foundation_year = True
-                            repeated_years = 0
-
+                    else:
+                        if first_name is not None and last_name is not None:
+                            ignored_lines.append('{user} ({first} {last})'.format(user=username, first=first_name,
+                                                                                  last=last_name))
                         else:
-                            foundation_year = True
-                            repeated_years = difference - 1
-
-                dont_convert = False
-
-                # test whether we can find an existing student record with this email address.
-                # if we can, check whether it is a student account.
-                # If not, there's not much we can do
-                existing_record = db.session.query(User) \
-                    .join(StudentData, StudentData.id == User.id) \
-                    .filter(or_(func.lower(User.email) == func.lower(email),
-                                func.lower(User.username) == func.lower(username),
-                                StudentData.exam_number == registration_number)).first()
-                if existing_record is not None:
-                    if not existing_record.has_role('student'):
-                        print('## skipping row "{user}" because existing user is not a student'.format(user=username))
-                        ignored_lines.append(username)
-                        continue
-
-                    if existing_record.email.lower() != email.lower():
-                        dont_convert = True
-
-                item = StudentBatchItem(parent_id=record.id,
-                                        existing_id=existing_record.id if existing_record is not None else None,
-                                        user_id=username,
-                                        first_name=first_name,
-                                        last_name=last_name,
-                                        email=email,
-                                        exam_number=registration_number,
-                                        cohort=cohort,
-                                        programme_id=programme.id if programme is not None else None,
-                                        foundation_year=foundation_year,
-                                        repeated_years=repeated_years,
-                                        intermitting=intermitting,
-                                        dont_convert=dont_convert)
-
-                interpreted_lines += 1
-                db.session.add(item)
+                            ignored_lines.append('{user}'.format(user=username))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 90, "Finalizing import...", autocommit=False)
 
-        if lines == interpreted_lines:
+        if current_line == interpreted_lines:
             user.post_message('Successfully imported batch list "{name}"'.format(name=record.name), 'success',
                               autocommit=False)
 
-        elif interpreted_lines < lines:
+        elif interpreted_lines < current_line:
             user.post_message('Imported batch list "{name}", but some records could not be read successfully '
                               'or were inconsistent with existing entries: '
                               '{ignored}'.format(name=record.name, ignored=', '.join(ignored_lines)),
@@ -291,10 +381,10 @@ def register_batch_create_tasks(celery):
             user.post_message('Batch list "{name}" was not correctly imported due to errors'.format(name=record.name),
                               'error', autocommit=False)
 
-        record.total_lines = lines
+        record.total_lines = current_line
         record.interpreted_lines = interpreted_lines
         record.celery_finished = True
-        record.success = (interpreted_lines <= lines)
+        record.success = (interpreted_lines <= current_line)
         db.session.commit()
 
 

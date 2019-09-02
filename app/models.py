@@ -1990,6 +1990,15 @@ class StudentBatch(db.Model):
     # total lines that could be correctly interpreted
     interpreted_lines = db.Column(db.Integer())
 
+    # were we told to trust cohort data?
+    trust_cohort = db.Column(db.Boolean(), default=False)
+
+    # were we told to trust exam numbers?
+    trust_exams = db.Column(db.Boolean(), default=False)
+
+    # what was the reference academic year (the one used to calculate all student years)
+    academic_year = db.Column(db.Integer())
+
 
     @property
     def number_items(self):
@@ -2064,31 +2073,31 @@ class StudentBatchItem(db.Model):
             return w
 
         if self.existing_record.user.first_name != self.first_name:
-            w.append('Mismatching first name')
+            w.append('Mismatching first name "{name}"'.format(name=self.existing_record.user.first_name))
 
         if self.existing_record.user.last_name != self.last_name:
-            w.append('Mismatching last name')
+            w.append('Mismatching last name "{name}"'.format(name=self.existing_record.user.last_name))
 
         if self.existing_record.user.username != self.user_id:
-            w.append('Mismatching user id')
+            w.append('Mismatching user id "{user}"'.format(user=self.existing_record.user.username))
 
         if self.existing_record.user.email != self.email:
-            w.append('Mismatching email')
+            w.append('Mismatching email "{email}"'.format(email=self.existing_record.user.email))
 
         if self.existing_record.exam_number != self.exam_number:
-            w.append('Mismatching exam number')
+            w.append('Mismatching exam number "{num}"'.format(num=self.existing_record.exam_number))
 
         if self.existing_record.cohort != self.cohort:
-            w.append('Mismatching cohort')
+            w.append('Mismatching cohort {cohort}'.format(cohort=self.existing_record.cohort))
 
         if self.existing_record.foundation_year != self.foundation_year:
-            w.append('Mismatching foundation year flag')
+            w.append('Mismatching foundation year flag ({flag})'.format(flag=str(self.existing_record.foundation_year)))
 
         if self.existing_record.repeated_years != self.repeated_years:
-            w.append('Mismatching repeated years')
+            w.append('Mismatching repeated years ({num})'.format(num=self.existing_record.repeated_years))
 
         if self.existing_record.programme_id != self.programme_id:
-            w.append('Mismatching degree programme')
+            w.append('Mismatching degree programme "{prog}"'.format(num=self.existing_record.full_name))
 
         return w
 

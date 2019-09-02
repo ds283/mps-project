@@ -18,7 +18,7 @@ from sqlalchemy.event import listens_for
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
-    MatchingAttempt, MatchingRecord, ProjectDescription, WorkflowMixin
+    MatchingAttempt, ProjectDescription, WorkflowMixin
 from ..models import project_assessors
 from ..cache import cache
 

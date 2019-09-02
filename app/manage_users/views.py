@@ -509,6 +509,10 @@ def batch_create_users():
         if 'batch_list' in request.files:
             batch_file = request.files['batch_list']
 
+            trust_cohort = form.trust_cohort.data
+            trust_exams = form.trust_exams.data
+            current_year = form.current_year.data
+
             # generate new filename for upload
             incoming_filename = Path(batch_file.filename)
             extension = incoming_filename.suffix.lower()
@@ -522,7 +526,7 @@ def batch_create_users():
                                       filename=filename)
                 asset.access_control_list.append(current_user)
 
-                tk_name = 'Process batch user list "{name}"'.format(name=incoming_filename)
+                tk_name = "Process batch user list '{name}'".format(name=incoming_filename)
                 tk_description = 'Batch create students from a CSV file'
                 uuid = register_task(tk_name, owner=current_user, description=tk_description)
 
@@ -533,7 +537,10 @@ def batch_create_users():
                                       converted=False,
                                       timestamp=datetime.now(),
                                       total_lines=None,
-                                      interpreted_lines=None)
+                                      interpreted_lines=None,
+                                      trust_cohort=trust_cohort,
+                                      trust_exams=trust_exams,
+                                      academic_year=current_year)
 
                 db.session.add(asset)
                 db.session.add(record)
@@ -547,7 +554,7 @@ def batch_create_users():
 
                 batch_task = celery.tasks['app.tasks.batch_create.students']
 
-                work = batch_task.si(record.id, asset.id, current_user.id, get_current_year())
+                work = batch_task.si(record.id, asset.id, current_user.id, record.academic_year)
 
                 seq = chain(init.si(uuid, tk_name), work,
                             final.si(uuid, tk_name, current_user.id)).on_error(error.si(uuid, tk_name, current_user.id))
@@ -557,6 +564,12 @@ def batch_create_users():
 
             else:
                 flash('Expected batch list to have extension .csv', 'error')
+
+    else:
+        if request.method == 'GET':
+            form.trust_cohort.data = False
+            form.trust_exams.data = False
+            form.current_year.data = get_current_year()
 
     batches = db.session.query(StudentBatch).all()
 

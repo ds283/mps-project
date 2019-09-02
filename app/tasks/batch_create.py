@@ -36,6 +36,10 @@ OUTCOME_IGNORED = 4
 BATCH_IMPORT_LIFETIME_SECONDS = 24*60*60
 
 
+class SkipRow(Exception):
+    """Report an exception associated with processing a single row"""
+
+
 def _overwrite_record(item):
     if item.existing_record.user.first_name != item.first_name:
         item.existing_record.user.first_name = item.first_name
@@ -90,10 +94,6 @@ def _create_record(item, user_id):
     db.session.add(data)
 
     return OUTCOME_CREATED
-
-
-class SkipRow(Exception):
-    """Report an exception associated with processing a single row"""
 
 
 def _get_name(row, current_line):
@@ -212,57 +212,93 @@ def _get_cohort(row, current_line):
 
 
 def _get_course_code(row, current_line):
+    course_map = {'bsc physics': 'F3003U',
+                  'bsc physics (with an industrial placement year)': 'M3045U',
+                  'bsc physics (ip)': 'M3045U',
+                  'bsc physics with astrophysics': 'F3055U',
+                  'bsc theoretical physics': 'F3016U',
+                  'bsc phys and astro (fdn)': 'F3002U',
+                  'mphys astrophysics': 'F3029U',
+                  'mphys physics': 'F3028U',
+                  'mphys physics (rp)': 'F3011U',
+                  'mphys physics (research placement)': 'F3011U',
+                  'mphys physics (with an industrial placement year)': 'M3044U',
+                  'mphys physics with astrophysics': 'F3056U',
+                  'mphys theoretical physics': 'F3044U',
+                  'mphys astrophysics (research placement)': 'F3010U',
+                  'mphys physics with astrophysics (research placement)': 'F3046U',
+                  'mphys theoretical physics (research placement)': 'F3062U',
+                  'mphys physics (with a study abroad year)': 'F3027U',
+                  'mphys physics with astrophysics (with a study abroad year)': 'F3069U'}
+
     programme = None
 
     if 'course code' in row:
-        course_code = row['Course Code']
+        course_code = row['course code']
         programme = db.session.query(DegreeProgramme).filter_by(course_code=course_code).first()
 
     elif 'course' in row:
+        course_name = row['course'].lower()
+
+        if course_name in course_map:
+            course_code = course_map[course_name]
+            programme = db.session.query(DegreeProgramme).filter_by(course_code=course_code).first()
+        else:
+            print('## course name "{name}" not found in look-up table at row {row}'.format(name=course_name,
+                                                                                           row=current_line))
 
     # ignore lines where we cannot determine the programme -- they're probably V&E students
     if programme is not None:
         return programme
 
-    print('## skipping row {row} because cannot identify degree programme'.format(user=current_line))
+    print('## skipping row {row} because cannot identify degree programme'.format(row=current_line))
     raise SkipRow
 
 
-def _guess_year_data(cohort, year_of_course, current_year):
-    estimated_year_of_course = current_year - cohort + 1
+def _guess_year_data(cohort, year_of_course, current_year, fyear=None):
+    # try to guess whether a given student has done foundation year or some number of
+    # repeat years
+    # of course, we don't really have enough information to work this out; what's here
+    # is a simple minded guess
+    #
+    # return value: foundation_year(bool), repeat_years(int)
+    fyear_shift = 1 if fyear is True else 0
+
+    estimated_year_of_course = current_year - cohort + 1 - fyear_shift
+    if estimated_year_of_course < 0:
+        estimated_year_of_course = 0
 
     difference = estimated_year_of_course - year_of_course
 
-    if difference == 1:
-        return True, 0
+    if difference >= 1:
+        if fyear is None:
+            return True, difference - 1
+        else:
+            return fyear, difference - fyear_shift
 
-    elif difference > 1:
-        return True, difference-1
-
-    return False, 0
+    return (fyear if fyear is not None else False), 0
 
 
-def _match_existing_student(username, email):
+def _match_existing_student(username, email, current_line):
     # test whether we can find an existing student record with this email address.
     # if we can, check whether it is a student account.
     # If not, there's not much we can do
     dont_convert = False
 
     existing_record = db.session.query(User) \
-        .join(StudentData, StudentData.id == User.id) \
         .filter(or_(func.lower(User.email) == func.lower(email),
                     func.lower(User.username) == func.lower(username))).first()
 
     if existing_record is not None:
         if not existing_record.has_role('student'):
-            print('## skipping row "{user}" because matched to existing user that is '
-                  'not a student'.format(user=username))
+            print('## skipping row {row} because matched to existing user that is '
+                  'not a student'.format(row=current_line))
             raise SkipRow
 
         if existing_record.email.lower() != email.lower():
             dont_convert = True
 
-    return dont_convert, existing_record
+    return dont_convert, existing_record.student_data if existing_record is not None else None
 
 
 def register_batch_create_tasks(celery):
@@ -301,7 +337,7 @@ def register_batch_create_tasks(celery):
 
             progress_update(record.celery_id, TaskRecord.RUNNING, 50, "Reading uploaded user list...", autocommit=True)
 
-            current_line = 0
+            current_line = 1
             interpreted_lines = 0
 
             ignored_lines = []
@@ -334,7 +370,16 @@ def register_batch_create_tasks(celery):
 
                     programme = _get_course_code(row, current_line)
 
-                    dont_convert, existing_record = _match_existing_student(email, username)
+                    dont_convert, existing_record = _match_existing_student(username, email, current_line)
+
+                    if existing_record is not None and not record.trust_cohort:
+                        # recalculate data derived from academic year
+                        cohort = existing_record.cohort
+                        foundation_year, repeated_years = _guess_year_data(cohort, year_of_course, current_year,
+                                                                           fyear=existing_record.foundation_year)
+
+                    if existing_record is not None and not record.trust_exams and existing_record.exam_number is not None:
+                        registration_number = existing_record.exam_number
 
                     item = StudentBatchItem(parent_id=record.id,
                                             existing_id=existing_record.id if existing_record is not None else None,
@@ -354,7 +399,6 @@ def register_batch_create_tasks(celery):
                     db.session.add(item)
 
                 except SkipRow:
-
                     if username is None:
                         ignored_lines.append('<line #{no}>'.format(no=current_line))
 

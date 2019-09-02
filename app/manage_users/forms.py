@@ -175,6 +175,13 @@ class ResearchGroupMixin():
 
 class UploadBatchCreateForm(Form):
 
+    trust_cohort = BooleanField('Trust imported cohort information')
+
+    trust_exams = BooleanField('Trust imported exam numbers')
+
+    current_year = IntegerField('Academic year data is valid for year commencing in',
+                                validators=[InputRequired('An reference academic year is required')])
+
     submit = SubmitField('Upload user list')
 
 

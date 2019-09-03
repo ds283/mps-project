@@ -65,8 +65,8 @@ def _overwrite_record(item):
     if item.existing_record.repeated_years != item.repeated_years:
         item.existing_record.repeated_years = item.repeated_years
 
-    if item.existing_record.repeated_years != item.repeated_years:
-        item.existing_record.repeated_years = item.repeated_years
+    if item.existing_record.programme_id != item.programme_id:
+        item.existing_record.programme_id = item.programme_id
 
     return OUTCOME_MERGED
 

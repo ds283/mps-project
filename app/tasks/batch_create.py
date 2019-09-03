@@ -262,6 +262,11 @@ def _guess_year_data(cohort, year_of_course, current_year, fyear=None):
     # is a simple minded guess
     #
     # return value: foundation_year(bool), repeat_years(int)
+    if fyear is not None:
+        if not isinstance(fyear, bool):
+            print('!! ERROR: expected fyear to be a bool')
+            raise SkipRow
+
     fyear_shift = 1 if fyear is True else 0
 
     estimated_year_of_course = current_year - cohort + 1 - fyear_shift
@@ -269,14 +274,17 @@ def _guess_year_data(cohort, year_of_course, current_year, fyear=None):
         estimated_year_of_course = 0
 
     difference = estimated_year_of_course - year_of_course
+    if difference < 0:
+        print('!! ERROR: estimated course year was earlier than imported value')
+        raise SkipRow
 
-    if difference >= 1:
-        if fyear is None:
-            return True, difference - 1
-        else:
-            return fyear, difference - fyear_shift
+    # if a foundation year has not been specified, split the difference between a foundation year
+    # and some number of repeated years
+    if fyear is None:
+        return True, difference - 1
 
-    return (fyear if fyear is not None else False), 0
+    # can assume fyear is a bool
+    return fyear, difference
 
 
 def _match_existing_student(username, email, current_line):
@@ -397,6 +405,12 @@ def register_batch_create_tasks(celery):
 
                     interpreted_lines += 1
                     db.session.add(item)
+
+                    if item.academic_year != year_of_course:
+                        print('!! ERROR: computed academic year {yr} for {first} {last} does not match imported '
+                              'value {imp}'.format(yr=item.academic_year, first=first_name, last=last_name,
+                                                   imp=year_of_course))
+                        raise SkipRow
 
                 except SkipRow:
                     if username is None:

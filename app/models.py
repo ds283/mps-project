@@ -2067,15 +2067,28 @@ class StudentBatchItem(db.Model):
 
     @property
     def academic_year(self):
-        base_year = self.parent.academic_year - self.cohort + 1 - self.repeated_years
+        parent_year = None
+
+        if self.parent is not None:
+            parent_year = self.parent.academic_year
+
+        elif self.parent_id is not None:
+            parent = db.session.query(StudentBatch).filter_by(id=self.parent_id).first()
+            if parent is not None:
+                parent_year = parent.academic_year
+
+        if parent_year is None:
+            return None
+
+        current_year = parent_year - self.cohort + 1 - self.repeated_years
 
         if self.foundation_year:
-            base_year -= 1
+            current_year -= 1
 
-        if base_year < 0:
-            base_year = 0
+        if current_year < 0:
+            current_year = 0
 
-        return base_year
+        return current_year
 
 
     def academic_year_label(self, show_details=False):

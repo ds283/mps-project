@@ -274,7 +274,7 @@ def _guess_year_data(cohort, year_of_course, current_year, fyear=None):
         if fyear is None:
             return True, difference - 1
         else:
-            return fyear, difference - fyear_shift
+            return fyear, difference
 
     return (fyear if fyear is not None else False), 0
 

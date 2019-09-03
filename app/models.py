@@ -2097,7 +2097,7 @@ class StudentBatchItem(db.Model):
             w.append('Mismatching repeated years ({num})'.format(num=self.existing_record.repeated_years))
 
         if self.existing_record.programme_id != self.programme_id:
-            w.append('Mismatching degree programme "{prog}"'.format(prog=self.existing_record.full_name))
+            w.append('Mismatching degree programme "{prog}"'.format(prog=self.existing_record.programme.full_name))
 
         return w
 

@@ -31,7 +31,11 @@ _name = \
     {% elif w_length > 1 %}
         <span class="label label-warning">{{ w_length }} warnings</span>
     {% else %}
-        <span class="label label-success"><i class="fa fa-check"></i> Safe to import</span>
+        {% if item.existing_record is none %}
+            <span class="label label-success"><i class="fa fa-plus-circle"></i> New</span>
+        {% else %}
+            <span class="label label-success"><i class="fa fa-check"></i> Safe to import</span>
+        {% endif %}
     {% endif %}
 </div>
 <div>
@@ -148,6 +152,6 @@ def _StudentBatchItem_delete_handler(mapping, connection, target):
 
 
 def build_view_batch_data(items):
-    data = [_element(i[0]) for i in items]
+    data = [_element(i) for i in items]
 
     return jsonify(data)

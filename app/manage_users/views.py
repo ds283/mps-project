@@ -705,7 +705,19 @@ def perform_delete_batch(batch_id):
 def view_batch_data(batch_id):
     record = StudentBatch.query.get_or_404(batch_id)
 
-    return render_template('manage_users/users_dashboard/view_batch.html', record=record, batch_id=batch_id)
+    filter = request.args.get('filter')
+
+    if filter is None and session.get('manage_users_batch_view_filter'):
+        filter = session['manage_users_batch_view_filter']
+
+    if filter not in ['all', 'new', 'modified', 'both']:
+        filter = 'all'
+
+    if filter is not None:
+        session['manage_users_batch_view_filter'] = filter
+
+    return render_template('manage_users/users_dashboard/view_batch.html', record=record, batch_id=batch_id,
+                           filter=filter)
 
 
 @manage_users.route('/view_batch_data_ajax/<int:batch_id>')
@@ -713,7 +725,19 @@ def view_batch_data(batch_id):
 def view_batch_data_ajax(batch_id):
     record = StudentBatch.query.get_or_404(batch_id)
 
-    items = db.session.query(StudentBatchItem.id).filter_by(parent_id=record.id).all()
+    filter = request.args.get('filter')
+
+    items = db.session.query(StudentBatchItem).filter_by(parent_id=record.id).all()
+
+    if filter == 'new':
+        items = [x.id for x in items if x.existing_record is None]
+    elif filter == 'modified':
+        items = [x.id for x in items if len(x.warnings) > 0 and x.existing_record is not None]
+    elif filter == 'both':
+        items = [x.id for x in items if (len(x.warnings) > 0 and x.existing_record is not None)
+                 or x.existing_record is None]
+    else:
+        items = [x.id for x in items]
 
     return ajax.users.build_view_batch_data(items)
 

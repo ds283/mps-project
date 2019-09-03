@@ -7760,8 +7760,8 @@ def _MatchingAttempt_is_valid(id):
     for record in obj.records:
         # check whether each matching record validates independently
         if not record.is_valid:
-            record_errors = record.errors
-            record_warnings = record.warnings
+            record_errors = record.filter_errors(omit=['overassigned'])
+            record_warnings = record.filter_warnings(omit=['overassigned'])
 
             if len(record_errors) == 0 and len(record_warnings) == 0:
                 current_app.logger.info('** Internal inconsistency in response from _MatchingRecord_is_valid: '
@@ -8753,6 +8753,32 @@ class MatchingRecord(db.Model):
         if not self._validated:
             check = self.is_valid
         return self._warnings.values()
+
+
+    def _filter(self, base, include, omit):
+        if include is not None:
+            filtered = [base[key] for key in base if key[0] in include]
+            return filtered
+
+        if omit is not None:
+            filtered = [base[key] for key in base if key[0] not in omit]
+            return filtered
+
+        return base.values()
+
+
+    def filter_errors(self, include=None, omit=None):
+        if not self._validated:
+            check = self.is_valid
+
+        return self._filter(self._errors, include, omit)
+
+
+    def filter_warnings(self, include=None, omit=None):
+        if not self._validated:
+            check = self.is_valid
+
+        return self._filter(self._warnings, include, omit)
 
 
     @property

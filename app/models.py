@@ -2122,31 +2122,31 @@ class StudentBatchItem(db.Model):
             return w
 
         if self.existing_record.user.first_name != self.first_name:
-            w.append('Mismatching first name "{name}"'.format(name=self.existing_record.user.first_name))
+            w.append('Current first name "{name}"'.format(name=self.existing_record.user.first_name))
 
         if self.existing_record.user.last_name != self.last_name:
-            w.append('Mismatching last name "{name}"'.format(name=self.existing_record.user.last_name))
+            w.append('Current last name "{name}"'.format(name=self.existing_record.user.last_name))
 
         if self.existing_record.user.username != self.user_id:
-            w.append('Mismatching user id "{user}"'.format(user=self.existing_record.user.username))
+            w.append('Current user id "{user}"'.format(user=self.existing_record.user.username))
 
         if self.existing_record.user.email != self.email:
-            w.append('Mismatching email "{email}"'.format(email=self.existing_record.user.email))
+            w.append('Current email "{email}"'.format(email=self.existing_record.user.email))
 
         if self.existing_record.exam_number != self.exam_number:
-            w.append('Mismatching exam number "{num}"'.format(num=self.existing_record.exam_number))
+            w.append('Current exam number "{num}"'.format(num=self.existing_record.exam_number))
 
         if self.existing_record.cohort != self.cohort:
-            w.append('Mismatching cohort {cohort}'.format(cohort=self.existing_record.cohort))
+            w.append('Current cohort {cohort}'.format(cohort=self.existing_record.cohort))
 
         if self.existing_record.foundation_year != self.foundation_year:
-            w.append('Mismatching foundation year flag ({flag})'.format(flag=str(self.existing_record.foundation_year)))
+            w.append('Current foundation year flag ({flag})'.format(flag=str(self.existing_record.foundation_year)))
 
         if self.existing_record.repeated_years != self.repeated_years:
-            w.append('Mismatching repeated years ({num})'.format(num=self.existing_record.repeated_years))
+            w.append('Current repeated years ({num})'.format(num=self.existing_record.repeated_years))
 
         if self.existing_record.programme_id != self.programme_id:
-            w.append('Mismatching degree programme "{prog}"'.format(prog=self.existing_record.programme.full_name))
+            w.append('Current degree programme "{prog}"'.format(prog=self.existing_record.programme.full_name))
 
         return w
 

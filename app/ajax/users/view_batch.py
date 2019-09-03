@@ -11,7 +11,7 @@
 from flask import render_template_string, jsonify
 
 from ...database import db
-from ...models import StudentBatchItem
+from ...models import StudentBatchItem, StudentBatch, User, StudentData
 from ...cache import cache
 
 from sqlalchemy.event import listens_for
@@ -152,6 +152,28 @@ def _StudentBatchItem_update_handler(mapping, connection, target):
 def _StudentBatchItem_delete_handler(mapping, connection, target):
     with db.session.no_autoflush:
         _delete_StudentBatchItem_cache(target.id)
+
+
+@listens_for(StudentBatch, 'before_update')
+def _StudentBatch_update_handler(mapping, connection, target):
+    with db.session.no_autoflush:
+        for rec in target.items:
+            _delete_StudentBatchItem_cache(rec.id)
+
+
+@listens_for(User, 'before_update')
+def _User_update_handler(mapping, connection, target):
+    with db.session.no_autoflush:
+        if target.student_data is not None:
+            for rec in target.student_data.counterparts:
+                _delete_StudentBatchItem_cache(rec.id)
+
+
+@listens_for(StudentData, 'before_update')
+def _StudentData_update_handler(mapping, connection, target):
+    with db.session.no_autoflush:
+        for rec in target.counterparts:
+            _delete_StudentBatchItem_cache(rec.id)
 
 
 def build_view_batch_data(items):

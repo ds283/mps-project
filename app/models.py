@@ -1942,7 +1942,7 @@ class StudentData(db.Model, WorkflowMixin):
             text = 'Graduated'
             type = 'primary'
         else:
-            text = 'Y{y}'.format(y=self.academic_year(current_year))
+            text = 'Y{y}'.format(y=academic_year)
             type = 'info'
 
         if show_details:
@@ -2063,6 +2063,42 @@ class StudentBatchItem(db.Model):
 
     # flag as "don't convert to user"
     dont_convert = db.Column(db.Boolean(), default=False)
+
+
+    @property
+    def academic_year(self):
+        base_year = self.parent.academic_year - self.cohort + 1 - self.repeated_years
+
+        if self.foundation_year:
+            base_year -= 1
+
+        if base_year < 0:
+            base_year = 0
+
+        return base_year
+
+
+    def academic_year_label(self, show_details=False):
+        academic_year = self.academic_year
+
+        if academic_year < 0:
+            text = 'Error(<0)'
+            type = 'danger'
+        elif academic_year > 4:
+            text = 'Graduated'
+            type = 'primary'
+        else:
+            text = 'Y{y}'.format(y=academic_year)
+            type = 'info'
+
+        if show_details:
+            if self.foundation_year:
+                text += ' +F'
+
+            if self.repeated_years > 0:
+                text += ' +{n}'.format(n=self.repeated_years)
+
+        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
 
 
     @property

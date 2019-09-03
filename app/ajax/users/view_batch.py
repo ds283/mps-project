@@ -71,7 +71,10 @@ _programme = \
 
 _cohort = \
 """
-{{ item.cohort }}
+<div>
+    {{ item.cohort }}
+    {{ item.academic_year_label()|safe }}
+</div>
 {% if item.foundation_year %}
     <span class="label label-info">Foundation year</span>
 {% endif %}

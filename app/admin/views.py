@@ -1659,7 +1659,7 @@ def confirm_global_rollover():
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
         return redirect(request.referrer)
 
-    if not data['rollover_in_progress']:
+    if data['rollover_in_progress']:
         flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
         return redirect(request.referrer)
 
@@ -1698,13 +1698,30 @@ def perform_global_rollover():
         flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
         return redirect(request.referrer)
 
-    next_year = get_current_year() + 1
+    current_year = get_current_year()
+    next_year = current_year + 1
 
     try:
         new_year = MainConfig(year=next_year)
         db.session.add(new_year)
 
-        db.session.query(MatchingAttempt).filter_by(selected=False).delete()
+        unused_attempts = db.session.query(MatchingAttempt).filter_by(year=current_year, selected=False).all()
+        for attempt in unused_attempts:
+            # null any references to this attempt as a base
+            descendants = db.session.query(MatchingAttempt).filter_by(year=current_year, base_id=attempt.id).all()
+            for item in descendants:
+                item.base_id = None
+
+            attempt.config_members = []
+            attempt.include_matches = []
+
+            attempt.supervisors = []
+            attempt.markers = []
+            attempt.projects = []
+
+            db.session.flush()
+            db.session.delete(attempt)
+
         db.session.commit()
 
     except SQLAlchemyError as e:

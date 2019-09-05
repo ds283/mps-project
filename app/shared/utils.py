@@ -73,16 +73,17 @@ def get_rollover_data(configs=None, current_year=None):
 
     # loop through all active project classes
     for config in configs:
-        # if MainConfig year has already been advanced, then we shouldn't offer
-        # matching or rollover options on the dashboard
-        if config.year < current_year:
-            rollover_in_progress = True
+        if config.project_class.publish:
+            # if MainConfig year has already been advanced, then we shouldn't offer
+            # matching or rollover options on the dashboard
+            if config.year < current_year:
+                rollover_in_progress = True
 
-        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
-            rollover_ready = False
+            if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
+                rollover_ready = False
 
-        if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-            rollover_ready = False
+            if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+                rollover_ready = False
 
     return {'rollover_ready': rollover_ready,
             'rollover_in_progress': rollover_in_progress}

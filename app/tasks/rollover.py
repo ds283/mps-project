@@ -35,8 +35,11 @@ from dateutil.relativedelta import relativedelta
 def register_rollover_tasks(celery):
 
     @celery.task(bind=True)
-    def pclass_rollover(self, task_id, current_id, convenor_id):
+    def pclass_rollover(self, task_id, use_markers, current_id, convenor_id):
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to rollover...', autocommit=True)
+
+        if not isinstance(use_markers, bool):
+            use_markers = bool(int(use_markers))
 
         # get new academic year
         year = get_current_year()
@@ -89,8 +92,9 @@ def register_rollover_tasks(celery):
 
         # build group of tasks to convert SelectingStudent instances from the current config into
         # SubmittingStudent instances for next year's config
-        convert_selectors = group(convert_selector.s(current_id, s.id, match.id if match is not None else None) for s in
-                                  config.selecting_students)
+        convert_selectors = group(convert_selector.s(current_id, s.id,
+                                                     match.id if match is not None else None, use_markers)
+                                  for s in config.selecting_students)
 
         # build group of tasks to perform attachment of new records;
         # these will attach all new SelectingStudent instances, and mop up any eligible
@@ -119,8 +123,9 @@ def register_rollover_tasks(celery):
             .filter(EnrollmentRecord.pclass_id == config.pclass_id)
         maintenance_group = group(enrollment_maintenance.s(rec.id) for rec in maintenance_query.all())
 
-        project_descs = set()
         # build group of project descriptions attached to this project class
+        project_descs = set()
+
         projects = db.session.query(Project) \
             .filter(Project.project_classes.any(id=config.pclass_id)).all()
 
@@ -128,8 +133,10 @@ def register_rollover_tasks(celery):
         # associated with having a default
         for p in projects:
             desc = p.get_description(config.pclass_id)
-            project_descs.add(desc.id)
-        descs_group = group(reset_project_description.s(desc.id))
+            if desc is not None:
+                project_descs.add(desc.id)
+
+        descs_group = group(reset_project_description.s(d_id) for d_id in project_descs)
 
         # remove ConfirmRequest items that were never actioned
         confirm_request_query = db.session.query(ConfirmRequest) \
@@ -137,14 +144,11 @@ def register_rollover_tasks(celery):
             .join(ProjectClassConfig, ProjectClassConfig.id == SelectingStudent.config_id) \
             .filter(ProjectClassConfig.pclass_id == config.pclass_id,
                     ConfirmRequest.state == ConfirmRequest.REQUESTED).all()
-        confirm_request_group = group(remove_confirm_request.s(rec.id) for rec in confirm_request_query.all())
+        confirm_request_group = group(remove_confirm_request.s(rec.id) for rec in confirm_request_query)
 
         # get backup task from Celery instance
         celery = current_app.extensions['celery']
         backup = celery.tasks['app.tasks.backup.backup']
-
-        # omit re-enroll group if it has length zero, otherwise we get an empty list passed into
-        # rollover_finalize()
 
         seq = chain(rollover_initialize_msg.si(task_id),
                     backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
@@ -162,6 +166,8 @@ def register_rollover_tasks(celery):
         if len(retire_group) > 0:
             seq = seq | rollover_retire_msg.s(task_id) | retire_group
 
+        # omit re-enroll group if it has length zero, otherwise we get an empty list passed into
+        # rollover_finalize()
         if len(reenroll_group) > 0:
             seq = seq | rollover_reenroll_msg.s(task_id) | reenroll_group
 
@@ -485,7 +491,10 @@ def register_rollover_tasks(celery):
 
 
     @celery.task(bind=True)
-    def convert_selector(self, new_config_id, old_config_id, sel_id, match_id):
+    def convert_selector(self, new_config_id, old_config_id, sel_id, match_id, use_markers):
+        if not isinstance(use_markers, bool):
+            use_markers = bool(int(use_markers))
+
         match = None
 
         # get current configuration records
@@ -548,7 +557,7 @@ def register_rollover_tasks(celery):
                                                   retired=False,
                                                   owner_id=student_record.id,
                                                   project_id=rec.project_id,
-                                                  marker_id=rec.marker_id,
+                                                  marker_id=rec.marker_id if use_markers else None,
                                                   selection_config_id=old_config_id,
                                                   matching_record_id=rec.id,
                                                   student_engaged=False,

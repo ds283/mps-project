@@ -4127,9 +4127,9 @@ def student_clear_bookmarks(sid):
     return redirect(request.referrer)
 
 
-@convenor.route('/confirm_rollover/<int:id>')
+@convenor.route('/confirm_rollover/<int:id>/<int:markers>')
 @roles_accepted('faculty', 'admin', 'root')
-def confirm_rollover(id):
+def confirm_rollover(id, markers):
     # pid is a ProjectClass
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -4137,22 +4137,28 @@ def confirm_rollover(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
+    use_markers = bool(markers)
+
     year = get_current_year()
 
     title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
-    action_url = url_for('convenor.rollover', id=id, url=request.referrer)
+    action_url = url_for('convenor.rollover', id=id, url=request.referrer, markers=int(use_markers))
     message = '<p>Please confirm that you wish to rollover project class "{proj}" to ' \
               '{yeara}&ndash;{yearb}</p>' \
               '<p>This action cannot be undone.</p>'.format(proj=config.name, yeara=year, yearb=year + 1)
-    submit_label = 'Rollover to {yr}'.format(yr=year)
+
+    if use_markers:
+        submit_label = 'Rollover to {yr}'.format(yr=year)
+    else:
+        submit_label = 'Rollover to {yr} and drop markers'.format(yr=year)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
                            message=message, submit_label=submit_label)
 
 
-@convenor.route('/rollover/<int:id>')
+@convenor.route('/rollover/<int:id>/<int:markers>')
 @roles_accepted('faculty', 'admin', 'root')
-def rollover(id):
+def rollover(id, markers):
     # pid is a ProjectClass
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -4161,6 +4167,8 @@ def rollover(id):
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(url) if url is not None else home_dashboard()
+
+    use_markers = bool(markers)
 
     year = get_current_year()
     if config.year == year:
@@ -4181,7 +4189,7 @@ def rollover(id):
     task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year+1),
                             owner=current_user,
                             description='Perform rollover of "{proj}" to new academic year'.format(proj=config.name))
-    rollover.apply_async(args=(task_id, id, current_user.id), task_id=task_id,
+    rollover.apply_async(args=(task_id, use_markers, id, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 
     return redirect(url) if url is not None else home_dashboard()

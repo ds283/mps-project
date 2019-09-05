@@ -7943,16 +7943,9 @@ class MatchingAttempt(db.Model, PuLPMixin):
     selected = db.Column(db.Boolean())
 
     # is this match based on another one?
-    base_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
-
-    # can't see to configure a SQLalchemy relationship correctly for a table reference to itself,
-    # so we roll our own
-    @property
-    def base_match(self):
-        if self.base_id is None:
-            return None
-
-        return db.session.query(MatchingAttempt).filter_by(id=self.base_id).first()
+    base_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'), nullable=True)
+    base = db.relationship('MatchingAttempt', foreign_keys=[base_id], uselist=False,
+                           remote_side=[id], backref=db.backref('descendants', lazy='dynamic', passive_deletes=True))
 
     # bias towards base match
     base_bias = db.Column(db.Numeric(8, 3))

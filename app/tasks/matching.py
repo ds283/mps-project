@@ -1282,11 +1282,11 @@ def _build_old_XY(record, sel_to_number, lp_to_number, mark_to_number, cstr):
 
     force = record.force_base
 
-    if record.base_match is None:
+    if record.base is None:
         print('-- no base in use for this match (record.base_id={base_id})'.format(base_id=record.base_id))
         return old_X, old_Y, has_base_match
 
-    for record in record.base_match.records:
+    for record in record.base.records:
         if record.selector_id not in sel_to_number:
             raise RuntimeError('Missing SelectingStudent when reconstructing X and Y maps')
 

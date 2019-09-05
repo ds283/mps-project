@@ -387,11 +387,11 @@ _name = \
     <span class="label label-info">{{ m.markers.count() }} markers</span>
     <span class="label label-info">{{ m.projects.count() }} projects</span>
 {% endif %}
-{% set has_extra_matches = m.include_matches.first() is not none or m.base_match is not none %}
+{% set has_extra_matches = m.include_matches.first() is not none or m.base is not none %}
 {% if has_extra_matches %}
     <p></p>
-    {% if m.base_match is not none %}
-        <span class="label label-success"><i class="fa fa-plus-circle"></i> Base: {{ m.base_match.name }}</span>
+    {% if m.base is not none %}
+        <span class="label label-success"><i class="fa fa-plus-circle"></i> Base: {{ m.base.name }}</span>
         {% if m.force_base %}
             <span class="label label-info">Force match</span>
         {% else %}

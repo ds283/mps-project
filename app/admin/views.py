@@ -4237,6 +4237,14 @@ def unpublish_match(id):
 def select_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
+    force = request.args.get('force', False)
+    if not isinstance(force, bool):
+        force = bool(int(force))
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
@@ -4260,10 +4268,19 @@ def select_match(id):
               'and is not available for use during rollover.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
-    if not record.is_valid:
-        flash('Match "{name}" cannot be selected because it is not '
-              'in a valid state.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+    if not record.is_valid and not force:
+        title = 'Select match "{name}"'.format(name=record.name)
+        panel_title = 'Select match "{name}"'.format(name=record.name)
+
+        action_url = url_for('admin.select_match', id=id, force=1, url=url)
+        message = '<p>Match "{name}" has validation errors.</p>' \
+                  '<p>Please confirm that you wish to select it for use during rollover of the ' \
+                  'academic year.</p>'.format(name=record.name)
+        submit_label = 'Force selection'
+
+        return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                               message=message, submit_label=submit_label)
+
 
     # determine whether any already-selected projects have allocations for a pclass we own
     our_pclasses = set()
@@ -4286,7 +4303,7 @@ def select_match(id):
     record.selected = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(url)
 
 
 @admin.route('/deselect_match/<int:id>')

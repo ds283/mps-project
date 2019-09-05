@@ -337,7 +337,7 @@ _menu = \
                     </li>
                 {% else %}
                     <li>
-                        <a href="{{ url_for('admin.select_match', id=m.id) }}">
+                        <a href="{{ url_for('admin.select_match', id=m.id, force=0) }}">
                             <i class="fa fa-check"></i> Select
                         </a>
                     </li>

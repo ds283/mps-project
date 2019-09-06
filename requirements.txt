@@ -52,7 +52,7 @@ holidays==0.9.11
 html5lib==1.0.1
 htmlmin==0.1.12
 idna==2.8
-importlib-metadata==0.19
+importlib-metadata==0.20
 infinity==1.4
 intervals==0.8.1
 ipython==7.7.0
@@ -112,7 +112,7 @@ wcwidth==0.1.7
 webassets==0.12.1
 webencodings==0.5.1
 WebOb==1.8.5
-Werkzeug==0.15.5
+Werkzeug==0.15.6
 WTForms==2.2.1
 WTForms-Alchemy==0.16.9
 WTForms-Components==0.10.4

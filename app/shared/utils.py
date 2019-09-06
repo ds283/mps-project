@@ -371,7 +371,12 @@ def _approvals_ProjectClass_delete_handler(mapper, connection, target):
 @listens_for(ProjectClassConfig, 'before_insert')
 def _approvals_ProjectClassConfig_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        _approvals_delete_ProjectClass_cache(target.project_class)
+        if target.project_class is not None:
+            _approvals_delete_ProjectClass_cache(target.project_class)
+        elif target.pclass_id is not None:
+            pclass = db.session.query(ProjectClass).filter_by(id=target.pclass_id).first()
+            if pclass is not None:
+                _approvals_delete_ProjectClass_cache(pclass)
 
 
 @listens_for(ProjectClassConfig, 'before_update')

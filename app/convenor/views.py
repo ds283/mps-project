@@ -20,7 +20,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, MatchingAttempt
+    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -4180,15 +4180,31 @@ def rollover(id, markers):
         flash('{name} is not an active project class'.format(name=config.name), 'error')
         return redirect(url) if url is not None else home_dashboard()
 
-    # get rollover task instance
+    # build task chains
     celery = current_app.extensions['celery']
     rollover = celery.tasks['app.tasks.rollover.pclass_rollover']
+    backup_msg = celery.tasks['app.tasks.rollover.rollover_backup_msg']
+    backup = celery.tasks['app.tasks.backup.backup']
     rollover_fail = celery.tasks['app.tasks.rollover.rollover_fail']
+
+    # originally, everything was put into a single chain. But this just led to an indefinite hang,
+    # perhaps similar to the issue reported here:
+    # https://stackoverflow.com/questions/53507677/group-of-chains-hanging-forever-in-celery
+
+    # So, instead, we effectively implement our own version of the chain logic.
 
     # register rollover as a new background task and push it to the celery scheduler
     task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year+1),
                             owner=current_user,
                             description='Perform rollover of "{proj}" to new academic year'.format(proj=config.name))
+
+    backup_chain = chain(backup_msg.si(task_id),
+                         backup.si(current_user.id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
+                                   description='Rollback snapshot for {proj} rollover to '
+                                               '{yr}'.format(proj=config.name, yr=year)))
+    backup_task = backup_chain.apply_async()
+    backup_result = backup_task.wait(timeout=None, interval=0.5)
+
     rollover.apply_async(args=(task_id, use_markers, id, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 

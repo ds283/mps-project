@@ -146,46 +146,39 @@ def register_rollover_tasks(celery):
                     ConfirmRequest.state == ConfirmRequest.REQUESTED).all()
         confirm_request_group = group(remove_confirm_request.s(rec.id) for rec in confirm_request_query)
 
-        # get backup task from Celery instance
-        celery = current_app.extensions['celery']
-        backup = celery.tasks['app.tasks.backup.backup']
-
-        seq = chain(rollover_initialize_msg.si(task_id),
-                    backup.si(convenor_id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
-                              description='Rollback snapshot for {proj} rollover to '
-                                          '{yr}'.format(proj=config.name, yr=year)),
-                    rollover_new_config_msg.si(task_id),
-                    build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id))
+        rollover_chain = chain(rollover_new_config_msg.si(task_id),
+                               build_new_pclass_config.si(task_id, config.pclass_id, convenor_id, current_id))
 
         if len(convert_selectors) > 0:
-            seq = seq | rollover_convert_msg.s(task_id) | convert_selectors
+            rollover_chain = rollover_chain | rollover_convert_msg.s(task_id) | convert_selectors
 
         if len(attach_group) > 0:
-            seq = seq | rollover_attach_msg.s(task_id) | attach_group
+            rollover_chain = rollover_chain | rollover_attach_msg.s(task_id) | attach_group
 
         if len(retire_group) > 0:
-            seq = seq | rollover_retire_msg.s(task_id) | retire_group
+            rollover_chain = rollover_chain | rollover_retire_msg.s(task_id) | retire_group
 
         # omit re-enroll group if it has length zero, otherwise we get an empty list passed into
         # rollover_finalize()
         if len(reenroll_group) > 0:
-            seq = seq | rollover_reenroll_msg.s(task_id) | reenroll_group
+            rollover_chain = rollover_chain | rollover_reenroll_msg.s(task_id) | reenroll_group
 
         if len(maintenance_group) > 0:
-            seq = seq | rollover_maintenance_msg.s(task_id) | maintenance_group
+            rollover_chain = rollover_chain | rollover_maintenance_msg.s(task_id) | maintenance_group
 
         if len(project_descs) > 0:
-            seq = seq | reset_descriptions_msg.s(task_id) | descs_group
+            rollover_chain = rollover_chain | reset_descriptions_msg.s(task_id) | descs_group
 
         if len(confirm_request_group) > 0:
-            seq = seq | confirm_request_msg.s(task_id) | confirm_request_group
+            rollover_chain = rollover_chain | confirm_request_msg.s(task_id) | confirm_request_group
 
-        seq = (seq | rollover_finalize.s(task_id, convenor_id)).on_error(rollover_fail.si(task_id, convenor_id))
-        raise self.replace(seq)
+        rollover_chain = rollover_chain | rollover_finalize.s(task_id, convenor_id)
+
+        return self.replace(rollover_chain)
 
 
     @celery.task()
-    def rollover_initialize_msg(task_id):
+    def rollover_backup_msg(task_id):
         progress_update(task_id, TaskRecord.RUNNING, 5, 'Building rollback snapshot...', autocommit=True)
 
 
@@ -204,7 +197,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 20, 'Converting selector records into submitter records...', autocommit=True)
@@ -218,7 +211,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 30, 'Attaching new student records...', autocommit=True)
@@ -232,7 +225,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 40, 'Retiring current student records...', autocommit=True)
@@ -246,7 +239,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 50, 'Checking for faculty re-enrollments...', autocommit=True)
@@ -260,7 +253,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 60, 'Performing routine maintenance...', autocommit=True)
@@ -274,7 +267,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 70, 'Reset project description lifecycles...', autocommit=True)
@@ -288,7 +281,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.RUNNING, 80, 'Remove unused confirmation requests...', autocommit=True)
@@ -302,7 +295,7 @@ def register_rollover_tasks(celery):
         elif isinstance(results, list):
             new_config_id = results[0]
         else:
-            self.update('FAILURE', 'Unexpected type forwarded in rollover chain')
+            self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Rollover complete', autocommit=False)
@@ -315,7 +308,7 @@ def register_rollover_tasks(celery):
             raise self.retry()
 
         if config is None:
-            self.update('FAILURE', 'Could not load new ProjectClassConfig')
+            self.update_state('FAILURE', 'Could not load new ProjectClassConfig')
             return
 
         self.update_state(state='SUCCESS')
@@ -360,7 +353,7 @@ def register_rollover_tasks(celery):
         if item is None:
             self.update_state(state='FAILED',
                               meta='Could not read SelectingStudent record for sid={id}'.format(id=sid))
-            return
+            return new_config_id
 
         item.retired = True
 
@@ -387,7 +380,7 @@ def register_rollover_tasks(celery):
         if item is None:
             self.update_state(state='FAILED',
                               meta='Could not read SubmittingStudent record for sid={id}'.format(id=sid))
-            return
+            return new_config_id
 
         item.retired = True
 
@@ -510,27 +503,27 @@ def register_rollover_tasks(celery):
         if config is None:
             self.update_state('FAILURE', meta='Could not load rolled-over ProjectClassConfig record '
                                               'while converting selector records')
-            return
+            return new_config_id
 
         if selector is None:
             self.update_state('FAILURE', meta='Could not load SelectingStudent record while converting selector records')
-            return
+            return new_config_id
 
         if not selector.convert_to_submitter:
-            return
+            return new_config_id
 
         if match_id is not None and match is None:
             self.update_state('FAILURE', meta='Could not load MatchingAttempt record while converting selector records')
-            return
+            return new_config_id
 
         if match is not None:
             if selector.config.project_class not in match.available_pclasses:
                 self.update_state('FAILURE', meta='Supplied match is not appropriate for the SelectingStudent')
-                return
+                return new_config_id
 
         if int(selector.config.year) != int(config.year)-int(1):
             self.update_state('FAILURE', meta='Inconsistent arrangement of years in configuration records')
-            return
+            return new_config_id
 
         # get list of match records, if one exists
         match_records = None
@@ -596,7 +589,7 @@ def register_rollover_tasks(celery):
                             add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
                         else:
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
-                            return
+                            return new_config_id
 
                 elif selector.academic_year >= config.start_year:
                     if config.supervisor_carryover:
@@ -650,11 +643,11 @@ def register_rollover_tasks(celery):
                             add_blank_submitter(selector.student, old_config_id, new_config_id, autocommit=False)
                         else:
                             self.update_state('FAILURE', meta='Unexpected missing selector allocation')
-                            return
+                            return new_config_id
 
                 else:
                     self.update_state('FAILURE', meta='Unexpected academic year')
-                    return
+                    return new_config_id
 
             except SQLAlchemyError as e:
                 db.session.rollback()
@@ -678,11 +671,11 @@ def register_rollover_tasks(celery):
         if config is None:
             self.update_state('FAILURE', meta='Could not load rolled-over ProjectClassConfig record '
                                               'while attaching student records')
-            return
+            return new_config_id
 
         if student is None:
             self.update_state('FAILURE', meta='Could not load StudentData record while attaching student records')
-            return
+            return new_config_id
 
         # compute current academic year for this student
         academic_year = student.academic_year(current_year)
@@ -739,7 +732,7 @@ def register_rollover_tasks(celery):
 
         if record is None:
             self.update_state('FAILURE', meta='Could not load EnrollmentRecord')
-            raise Ignore()
+            return new_config_id
 
         record.CATS_supervision = None
         record.CATS_marking = None
@@ -767,7 +760,7 @@ def register_rollover_tasks(celery):
 
         if record is None:
             self.update_state('FAILURE', meta='Could not load EnrollmentRecord')
-            raise Ignore()
+            return new_config_id
 
         # supervisors re-enroll in the year *before* they come off sabbatical, so they can offer
         # projects during the selection cycle
@@ -816,7 +809,7 @@ def register_rollover_tasks(celery):
 
         if record is None:
             self.update_state('FAILURE', 'Could not load ProjectDescription')
-            raise Ignore()
+            return new_config_id
 
         record.confirmed = False
 
@@ -830,6 +823,7 @@ def register_rollover_tasks(celery):
         self.update_state(state='SUCCESS')
         return new_config_id
 
+
     @celery.task(bind=True)
     def remove_confirm_request(self, new_config_id, request_id):
         # get ConfirmRequest corresponding to request_id
@@ -841,7 +835,7 @@ def register_rollover_tasks(celery):
 
         if record is None:
             self.update_state('FAILURE', 'Could not not ConfirmRequest')
-            raise Ignore()
+            return new_config_id
 
         db.session.delete(record)
 

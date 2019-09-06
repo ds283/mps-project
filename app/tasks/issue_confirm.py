@@ -432,7 +432,7 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if record is None or current_user is None:
-            self.update('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta='Could not load database records')
             raise Ignore()
 
         project = record.parent
@@ -468,7 +468,7 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if user is None or user.faculty_data is None:
-            self.update('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta='Could not load database records')
             raise Ignore()
 
         fac_data = user.faculty_data
@@ -503,7 +503,7 @@ def register_issue_confirm_tasks(celery):
             raise self.retry()
 
         if comment is None or project_approver is None:
-            self.update('FAILURE', meta='Could not load database records')
+            self.update_state('FAILURE', meta='Could not load database records')
             raise Ignore()
 
         approvals_team = set()

@@ -687,7 +687,9 @@ def _create_slots(self, record):
 
     try:
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
 
@@ -725,7 +727,8 @@ def _initialize(self, record, read_serialized=False):
             B = _build_student_availability_matrix(number_talks, talk_dict, number_slots, slot_dict)
         print(' -- computed submitter availabilities in time {s}'.format(s=sub_avail_timer.interval))
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
     return number_talks, number_assessors, number_slots, number_periods, \
@@ -837,9 +840,11 @@ def _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_
                                  talk_dict, assessor_dict, slot_dict)
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
+
     elif state == 'Not Solved':
         record.outcome = ScheduleAttempt.OUTCOME_NOT_SOLVED
     elif state == 'Infeasible':
@@ -858,8 +863,9 @@ def _process_PuLP_solution(self, record, prob, status, solve_time, X, Y, create_
         record.celery_finished = True
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         raise self.retry()
 
     return record.score
@@ -936,7 +942,8 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -978,7 +985,8 @@ def register_scheduling_tasks(celery):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=new_id).first()
             old_record = db.session.query(ScheduleAttempt).filter_by(id=old_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None or old_record is None:
@@ -1024,7 +1032,8 @@ def register_scheduling_tasks(celery):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -1058,7 +1067,8 @@ def register_scheduling_tasks(celery):
 
         try:
             lp_asset, mps_asset = _write_LP_MPS_files(record, prob, user)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         _send_offline_email(celery, record, user, lp_asset, mps_asset)
@@ -1068,7 +1078,8 @@ def register_scheduling_tasks(celery):
 
         try:
             _store_enumeration_details(record, number_to_talk, number_to_assessor, number_to_slot, number_to_period)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
@@ -1087,7 +1098,8 @@ def register_scheduling_tasks(celery):
             user = db.session.query(User).filter_by(id=user_id).first()
             asset = db.session.query(UploadedAsset).filter_by(id=asset_id).first()
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -1134,7 +1146,8 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleSlot).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1146,8 +1159,9 @@ def register_scheduling_tasks(celery):
             record.assessors = record.original_assessors
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return None
@@ -1160,7 +1174,8 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1172,8 +1187,9 @@ def register_scheduling_tasks(celery):
             record.last_edit_timestamp = None
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return None
@@ -1186,7 +1202,8 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1206,7 +1223,8 @@ def register_scheduling_tasks(celery):
 
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1265,8 +1283,9 @@ def register_scheduling_tasks(celery):
 
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return None
@@ -1276,7 +1295,8 @@ def register_scheduling_tasks(celery):
     def publish_to_submitters(self, id, user_id, task_id):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1303,7 +1323,9 @@ def register_scheduling_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         raise self.replace(task)
@@ -1322,7 +1344,8 @@ def register_scheduling_tasks(celery):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
             attend_data = db.session.query(SubmitterAttendanceData).filter_by(id=attend_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1366,7 +1389,8 @@ def register_scheduling_tasks(celery):
     def publish_to_assessors(self, id, user_id, task_id):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -1388,7 +1412,9 @@ def register_scheduling_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         raise self.replace(task)
@@ -1407,7 +1433,8 @@ def register_scheduling_tasks(celery):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
             attend_data = db.session.query(AssessorAttendanceData).filter_by(id=attend_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:

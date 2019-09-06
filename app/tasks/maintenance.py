@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import current_app
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from celery import group
@@ -47,7 +49,8 @@ def register_maintenance_tasks(celery):
                 .join(PresentationAssessment, PresentationAssessment.id == SubmitterAttendanceData.assessment_id) \
                 .filter(PresentationAssessment.year == current_year).all()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(submitter_attendance_record_maintenance.s(r.id) for r in records)
@@ -61,7 +64,8 @@ def register_maintenance_tasks(celery):
                 .join(PresentationAssessment, PresentationAssessment.id == AssessorAttendanceData.assessment_id) \
                 .filter(PresentationAssessment.year == current_year).all()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(assessor_attendance_record_maintenance.s(r.id) for r in records)
@@ -71,7 +75,8 @@ def register_maintenance_tasks(celery):
     def projects_maintenance(self):
         try:
             records = db.session.query(Project).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(project_record_maintenance.s(p.id) for p in records)
@@ -81,7 +86,8 @@ def register_maintenance_tasks(celery):
     def schedule_enumeration_maintenance(self):
         try:
             records = db.session.query(ScheduleEnumeration).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(schedule_enumeration_record_maintenance.s(r.id) for r in records)
@@ -91,7 +97,8 @@ def register_maintenance_tasks(celery):
     def matching_enumeration_maintenance(self):
         try:
             records = db.session.query(MatchingEnumeration).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(matching_enumeration_record_maintenance.s(r.id) for r in records)
@@ -102,7 +109,8 @@ def register_maintenance_tasks(celery):
     def project_record_maintenance(self, pid):
         try:
             project = db.session.query(Project).filter_by(id=pid).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if project is None:
@@ -111,8 +119,9 @@ def register_maintenance_tasks(celery):
         if project.maintenance():
             try:
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -121,7 +130,8 @@ def register_maintenance_tasks(celery):
     def project_descriptions_maintenance(self):
         try:
             records = db.session.query(ProjectDescription).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(project_description_record_maintenance.s(pd.id) for pd in records)
@@ -132,7 +142,8 @@ def register_maintenance_tasks(celery):
     def project_description_record_maintenance(self, pd_id):
         try:
             desc = db.session.query(ProjectDescription).filter_by(id=pd_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if desc is None:
@@ -141,8 +152,9 @@ def register_maintenance_tasks(celery):
         if desc.maintenance():
             try:
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -152,7 +164,8 @@ def register_maintenance_tasks(celery):
     def assessor_attendance_record_maintenance(self, id):
         try:
             record = db.session.query(AssessorAttendanceData).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -161,8 +174,9 @@ def register_maintenance_tasks(celery):
         if record.maintenance():
             try:
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -172,7 +186,8 @@ def register_maintenance_tasks(celery):
     def submitter_attendance_record_maintenance(self, id):
         try:
             record = db.session.query(SubmitterAttendanceData).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -181,8 +196,9 @@ def register_maintenance_tasks(celery):
         if record.maintenance():
             try:
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -192,7 +208,8 @@ def register_maintenance_tasks(celery):
     def schedule_enumeration_record_maintenance(self, id):
         try:
             record = db.session.query(ScheduleEnumeration).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -203,8 +220,9 @@ def register_maintenance_tasks(celery):
             try:
                 db.session.delete(record)
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -214,7 +232,8 @@ def register_maintenance_tasks(celery):
     def matching_enumeration_record_maintenance(self, id):
         try:
             record = db.session.query(MatchingEnumeration).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -225,8 +244,9 @@ def register_maintenance_tasks(celery):
             try:
                 db.session.delete(record)
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()
 
         self.update_state(state='SUCCESS')
@@ -241,7 +261,8 @@ def register_maintenance_tasks(celery):
     def collect_generated_garbage(self):
         try:
             records = db.session.query(GeneratedAsset).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         expiry = group(asset_check_expiry.si(r.id, GeneratedAsset, canonical_generated_asset_filename) for r in records)
@@ -254,7 +275,8 @@ def register_maintenance_tasks(celery):
     def collect_uploaded_garbage(self):
         try:
             records = db.session.query(UploadedAsset).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         expiry = group(asset_check_expiry.si(r.id, UploadedAsset, canonical_uploaded_asset_filename) for r in records)
@@ -268,7 +290,8 @@ def register_maintenance_tasks(celery):
     def asset_check_expiry(self, id, RecordType, canonicalizer):
         try:
             record = db.session.query(RecordType).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -289,7 +312,8 @@ def register_maintenance_tasks(celery):
                 try:
                     db.session.delete(record)
                     db.session.commit()
-                except SQLAlchemyError:
+                except SQLAlchemyError as e:
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                     raise self.retry()
 
 
@@ -297,7 +321,8 @@ def register_maintenance_tasks(celery):
     def asset_check_orphan(self, id, RecordType, canonicalizer):
         try:
             record = db.session.query(RecordType).filter_by(id=id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -308,5 +333,6 @@ def register_maintenance_tasks(celery):
             try:
                 db.session.delete(record)
                 db.session.commit()
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
                 raise self.retry()

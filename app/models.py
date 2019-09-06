@@ -366,11 +366,6 @@ description_to_modules = db.Table('description_to_modules',
 # PROJECT ASSOCIATIONS (LIVE)
 
 
-# association table giving association between projects and project classes
-live_project_classes = db.Table('live_project_to_classes',
-                                db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
-                                db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
-
 # association table giving association between projects and transferable skills
 live_project_skills = db.Table('live_project_to_skills',
                                db.Column('project_id', db.Integer(), db.ForeignKey('live_projects.id'), primary_key=True),
@@ -1947,7 +1942,7 @@ class StudentData(db.Model, WorkflowMixin):
             text = 'Graduated'
             type = 'primary'
         else:
-            text = 'Y{y}'.format(y=self.academic_year(current_year))
+            text = 'Y{y}'.format(y=academic_year)
             type = 'info'
 
         if show_details:
@@ -1994,6 +1989,15 @@ class StudentBatch(db.Model):
 
     # total lines that could be correctly interpreted
     interpreted_lines = db.Column(db.Integer())
+
+    # were we told to trust cohort data?
+    trust_cohort = db.Column(db.Boolean(), default=False)
+
+    # were we told to trust exam numbers?
+    trust_exams = db.Column(db.Boolean(), default=False)
+
+    # what was the reference academic year (the one used to calculate all student years)
+    academic_year = db.Column(db.Integer())
 
 
     @property
@@ -2062,6 +2066,55 @@ class StudentBatchItem(db.Model):
 
 
     @property
+    def academic_year(self):
+        parent_year = None
+
+        if self.parent is not None:
+            parent_year = self.parent.academic_year
+
+        elif self.parent_id is not None:
+            parent = db.session.query(StudentBatch).filter_by(id=self.parent_id).first()
+            if parent is not None:
+                parent_year = parent.academic_year
+
+        if parent_year is None:
+            return None
+
+        current_year = parent_year - self.cohort + 1 - self.repeated_years
+
+        if self.foundation_year:
+            current_year -= 1
+
+        if current_year < 0:
+            current_year = 0
+
+        return current_year
+
+
+    def academic_year_label(self, show_details=False):
+        academic_year = self.academic_year
+
+        if academic_year < 0:
+            text = 'Error(<0)'
+            type = 'danger'
+        elif academic_year > 4:
+            text = 'Graduated'
+            type = 'primary'
+        else:
+            text = 'Y{y}'.format(y=academic_year)
+            type = 'info'
+
+        if show_details:
+            if self.foundation_year:
+                text += ' +F'
+
+            if self.repeated_years > 0:
+                text += ' +{n}'.format(n=self.repeated_years)
+
+        return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+
+
+    @property
     def warnings(self):
         w = []
 
@@ -2069,31 +2122,31 @@ class StudentBatchItem(db.Model):
             return w
 
         if self.existing_record.user.first_name != self.first_name:
-            w.append('Mismatching first name')
+            w.append('Current first name "{name}"'.format(name=self.existing_record.user.first_name))
 
         if self.existing_record.user.last_name != self.last_name:
-            w.append('Mismatching last name')
+            w.append('Current last name "{name}"'.format(name=self.existing_record.user.last_name))
 
         if self.existing_record.user.username != self.user_id:
-            w.append('Mismatching user id')
+            w.append('Current user id "{user}"'.format(user=self.existing_record.user.username))
 
         if self.existing_record.user.email != self.email:
-            w.append('Mismatching email')
+            w.append('Current email "{email}"'.format(email=self.existing_record.user.email))
 
         if self.existing_record.exam_number != self.exam_number:
-            w.append('Mismatching exam number')
+            w.append('Current exam number "{num}"'.format(num=self.existing_record.exam_number))
 
         if self.existing_record.cohort != self.cohort:
-            w.append('Mismatching cohort')
+            w.append('Current cohort {cohort}'.format(cohort=self.existing_record.cohort))
 
         if self.existing_record.foundation_year != self.foundation_year:
-            w.append('Mismatching foundation year flag')
+            w.append('Current foundation year flag ({flag})'.format(flag=str(self.existing_record.foundation_year)))
 
         if self.existing_record.repeated_years != self.repeated_years:
-            w.append('Mismatching repeated years')
+            w.append('Current repeated years ({num})'.format(num=self.existing_record.repeated_years))
 
         if self.existing_record.programme_id != self.programme_id:
-            w.append('Mismatching degree programme')
+            w.append('Current degree programme "{prog}"'.format(prog=self.existing_record.programme.full_name))
 
         return w
 
@@ -6320,6 +6373,13 @@ class SelectingStudent(db.Model):
         return True
 
 
+@listens_for(SelectingStudent, 'before_update')
+def _SelectingStudent_update_handler(mapper, connection, target):
+    with db.session.no_autoflush:
+        for record in target.matching_records:
+            _delete_MatchingRecord_cache(record.id, record.matching_id)
+
+
 class SubmittingStudent(db.Model):
     """
     Model a student who is submitting work for evaluation in the current cycle
@@ -7713,8 +7773,8 @@ def _MatchingAttempt_is_valid(id):
     for record in obj.records:
         # check whether each matching record validates independently
         if not record.is_valid:
-            record_errors = record.errors
-            record_warnings = record.warnings
+            record_errors = record.filter_errors(omit=['overassigned'])
+            record_warnings = record.filter_warnings(omit=['overassigned'])
 
             if len(record_errors) == 0 and len(record_warnings) == 0:
                 current_app.logger.info('** Internal inconsistency in response from _MatchingRecord_is_valid: '
@@ -7883,16 +7943,9 @@ class MatchingAttempt(db.Model, PuLPMixin):
     selected = db.Column(db.Boolean())
 
     # is this match based on another one?
-    base_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'))
-
-    # can't see to configure a SQLalchemy relationship correctly for a table reference to itself,
-    # so we roll our own
-    @property
-    def base_match(self):
-        if self.base_id is None:
-            return None
-
-        return db.session.query(MatchingAttempt).filter_by(id=self.base_id).first()
+    base_id = db.Column(db.Integer(), db.ForeignKey('matching_attempts.id'), nullable=True)
+    base = db.relationship('MatchingAttempt', foreign_keys=[base_id], uselist=False,
+                           remote_side=[id], backref=db.backref('descendants', lazy='dynamic', passive_deletes=True))
 
     # bias towards base match
     base_bias = db.Column(db.Numeric(8, 3))
@@ -8449,6 +8502,19 @@ class MatchingAttempt(db.Model, PuLPMixin):
         return self.last_edit_timestamp is not None
 
 
+    @property
+    def can_clean_up(self):
+        # check whether any MatchingRecords are associated with selectors who are not converting
+        no_convert_query = self.records \
+            .join(SelectingStudent, MatchingRecord.selector_id == SelectingStudent.id) \
+            .filter(SelectingStudent.convert_to_submitter == False)
+
+        if get_count(no_convert_query) > 0:
+            return True
+
+        return False
+
+
 def _delete_MatchingAttempt_cache(target_id):
     cache.delete_memoized(_MatchingAttempt_current_score, target_id)
     cache.delete_memoized(_MatchingAttempt_prefer_programme_status, target_id)
@@ -8598,6 +8664,16 @@ def _MatchingRecord_is_valid(id):
     if flag:
         errors[('overassigned', 0)] = msg
 
+    # 8. SELECTOR SHOULD BE MARKED FOR CONVERSION
+    if not obj.selector.convert_to_submitter:
+        # only refuse to validate if we are the first member of the multiplet
+        lo_rec = attempt.records \
+            .filter_by(selector_id=obj.selector_id).order_by(MatchingRecord.submission_period.asc()).first()
+
+        if lo_rec is not None and lo_rec.id == obj.id:
+            warnings[('conversion', 1)] = 'Selector "{name}" is not marked for conversion to submitter, ' \
+                                          'but is included in this matching'.format(name=obj.selector.student.user.name)
+
     is_valid = (len(errors) == 0 and len(warnings) == 0)
     return is_valid, errors, warnings
 
@@ -8620,7 +8696,8 @@ class MatchingRecord(db.Model):
 
     # owning SelectingStudent
     selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))
-    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False)
+    selector = db.relationship('SelectingStudent', foreign_keys=[selector_id], uselist=False,
+                               backref=db.backref('matching_records', lazy='dynamic'))
 
     # submission period
     submission_period = db.Column(db.Integer())
@@ -8682,6 +8759,32 @@ class MatchingRecord(db.Model):
         if not self._validated:
             check = self.is_valid
         return self._warnings.values()
+
+
+    def _filter(self, base, include, omit):
+        if include is not None:
+            filtered = [base[key] for key in base if key[0] in include]
+            return filtered
+
+        if omit is not None:
+            filtered = [base[key] for key in base if key[0] not in omit]
+            return filtered
+
+        return base.values()
+
+
+    def filter_errors(self, include=None, omit=None):
+        if not self._validated:
+            check = self.is_valid
+
+        return self._filter(self._errors, include, omit)
+
+
+    def filter_warnings(self, include=None, omit=None):
+        if not self._validated:
+            check = self.is_valid
+
+        return self._filter(self._warnings, include, omit)
 
 
     @property

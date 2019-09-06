@@ -18,7 +18,7 @@ from sqlalchemy.event import listens_for
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
     EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
-    MatchingAttempt, MatchingRecord, ProjectDescription, WorkflowMixin
+    MatchingAttempt, ProjectDescription, WorkflowMixin
 from ..models import project_assessors
 from ..cache import cache
 
@@ -73,16 +73,17 @@ def get_rollover_data(configs=None, current_year=None):
 
     # loop through all active project classes
     for config in configs:
-        # if MainConfig year has already been advanced, then we shouldn't offer
-        # matching or rollover options on the dashboard
-        if config.year < current_year:
-            rollover_in_progress = True
+        if config.project_class.publish:
+            # if MainConfig year has already been advanced, then we shouldn't offer
+            # matching or rollover options on the dashboard
+            if config.year < current_year:
+                rollover_in_progress = True
 
-        if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
-            rollover_ready = False
+            if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
+                rollover_ready = False
 
-        if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-            rollover_ready = False
+            if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+                rollover_ready = False
 
     return {'rollover_ready': rollover_ready,
             'rollover_in_progress': rollover_in_progress}
@@ -370,7 +371,12 @@ def _approvals_ProjectClass_delete_handler(mapper, connection, target):
 @listens_for(ProjectClassConfig, 'before_insert')
 def _approvals_ProjectClassConfig_insert_handler(mapper, connection, target):
     with db.session.no_autoflush:
-        _approvals_delete_ProjectClass_cache(target.project_class)
+        if target.project_class is not None:
+            _approvals_delete_ProjectClass_cache(target.project_class)
+        elif target.pclass_id is not None:
+            pclass = db.session.query(ProjectClass).filter_by(id=target.pclass_id).first()
+            if pclass is not None:
+                _approvals_delete_ProjectClass_cache(pclass)
 
 
 @listens_for(ProjectClassConfig, 'before_update')

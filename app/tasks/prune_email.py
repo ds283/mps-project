@@ -9,6 +9,8 @@
 #
 
 
+from flask import current_app
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -29,8 +31,10 @@ def register_prune_email(celery):
         try:
             EmailLog.query.filter(EmailLog.send_date < limit).delete()
             db.session.commit()
-        except SQLAlchemyError:
+
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -40,6 +44,8 @@ def register_prune_email(celery):
         try:
             EmailLog.query.delete()
             db.session.commit()
-        except SQLAlchemyError:
+
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

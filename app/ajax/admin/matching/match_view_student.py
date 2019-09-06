@@ -17,7 +17,18 @@ _student = \
 {% if not valid %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
-
+{% if not sel.convert_to_submitter %}
+    <div class="has-error">
+        <p class="help-block">
+            Conversion of this student is disabled.
+        </p>
+    <div>
+    <div>
+        <a class="btn btn-sm btn-danger" href="{{ url_for('admin.delete_match_record', record_id=record_id) }}">
+            Delete
+        </a>
+    </div>
+{% endif %}
 """
 
 
@@ -223,7 +234,7 @@ def student_view_data(selector_data):
                 'sortvalue': total}
 
     data = [{'student': {
-                'display': render_template_string(_student, sel=r[0].selector,
+                'display': render_template_string(_student, sel=r[0].selector, record_id=r[0].id,
                                                   valid=all([rc.is_valid and
                                                              not rc.is_project_overassigned for rc in r])),
                 'sortvalue': r[0].selector.student.user.last_name + r[0].selector.student.user.first_name

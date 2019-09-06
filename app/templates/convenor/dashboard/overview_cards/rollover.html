@@ -3,13 +3,15 @@
         <div class="panel-heading"><strong>Rollover of academic year available</strong></div>
         <div class="panel-body">
             <div class="row vertical-align">
-                <div class="col-xs-9">
+                <div class="col-xs-6">
                     Rollover of the academic year to {{ current_year }} is now available.
                 </div>
-                <div class="col-xs-3">
+                <div class="col-xs-6">
                     <div class="pull-right">
-                        <a href="{{ url_for('convenor.confirm_rollover', id=config.id) }}"
-                           class="btn btn-danger">Rollover</a>
+                        <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=0) }}"
+                           class="btn btn-danger">Drop markers</a>
+                        <a href="{{ url_for('convenor.confirm_rollover', id=config.id, markers=1) }}"
+                           class="btn btn-danger">Full rollover</a>
                     </div>
                 </div>
             </div>

@@ -20,7 +20,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, MatchingAttempt
+    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -960,10 +960,11 @@ def enroll_all_selectors(configid):
         db.session.commit()
         flash('Added {count} selectors to project "{proj}"'.format(count=len(candidates),
                                                                     proj=config.project_class.name), 'info')
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Could not add selectors because a database error occurred. Please check the logs '
               'for further information.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -1016,10 +1017,11 @@ def delete_selector(sid):
     try:
         db.session.delete(sel)      # delete should cascade to Bookmark and SelectionRecord items
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Could not delete selector due to a database error. Please contact a system administrator.',
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -1594,10 +1596,11 @@ def enroll_all_submitters(configid):
         db.session.commit()
         flash('Added {count} submitters to project "{proj}"'.format(count=len(candidates),
                                                                     proj=config.project_class.name), 'info')
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Could not add submitters because a database error occurred. Please check the logs '
               'for further information.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -2590,10 +2593,11 @@ def move_description(did, pclass_id):
                 db.session.commit()
                 flash('Description "{name}" successfully moved to project '
                       '"{pname}"'.format(name=desc.label, pname=new_project.name), 'info')
-            except SQLAlchemyError:
+            except SQLAlchemyError as e:
                 db.session.rollback()
                 flash('Description "{name}" could not be moved due to a database error'.format(name=desc.label),
                       'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         else:
             flash('Description "{name}" could not be moved because its parent project is '
                   'missing'.format(name=desc.label), 'error')
@@ -3670,9 +3674,10 @@ def submit_student_selection(sel_id):
               "A confirmation email has been sent to the selector's registered email address "
               "and cc'd to you.", "info")
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('A database error occurred during submission. Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -4122,9 +4127,9 @@ def student_clear_bookmarks(sid):
     return redirect(request.referrer)
 
 
-@convenor.route('/confirm_rollover/<int:id>')
+@convenor.route('/confirm_rollover/<int:id>/<int:markers>')
 @roles_accepted('faculty', 'admin', 'root')
-def confirm_rollover(id):
+def confirm_rollover(id, markers):
     # pid is a ProjectClass
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -4132,22 +4137,28 @@ def confirm_rollover(id):
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
+    use_markers = bool(markers)
+
     year = get_current_year()
 
     title = 'Rollover of "{proj}" to {yeara}&ndash;{yearb}'.format(proj=config.name, yeara=year, yearb=year + 1)
-    action_url = url_for('convenor.rollover', id=id, url=request.referrer)
+    action_url = url_for('convenor.rollover', id=id, url=request.referrer, markers=int(use_markers))
     message = '<p>Please confirm that you wish to rollover project class "{proj}" to ' \
               '{yeara}&ndash;{yearb}</p>' \
               '<p>This action cannot be undone.</p>'.format(proj=config.name, yeara=year, yearb=year + 1)
-    submit_label = 'Rollover to {yr}'.format(yr=year)
+
+    if use_markers:
+        submit_label = 'Rollover to {yr}'.format(yr=year)
+    else:
+        submit_label = 'Rollover to {yr} and drop markers'.format(yr=year)
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
                            message=message, submit_label=submit_label)
 
 
-@convenor.route('/rollover/<int:id>')
+@convenor.route('/rollover/<int:id>/<int:markers>')
 @roles_accepted('faculty', 'admin', 'root')
-def rollover(id):
+def rollover(id, markers):
     # pid is a ProjectClass
     config = ProjectClassConfig.query.get_or_404(id)
 
@@ -4156,6 +4167,8 @@ def rollover(id):
     # validate that logged-in user is a convenor or suitable admin for this project class
     if not validate_is_convenor(config.project_class):
         return redirect(url) if url is not None else home_dashboard()
+
+    use_markers = bool(markers)
 
     year = get_current_year()
     if config.year == year:
@@ -4167,16 +4180,32 @@ def rollover(id):
         flash('{name} is not an active project class'.format(name=config.name), 'error')
         return redirect(url) if url is not None else home_dashboard()
 
-    # get rollover task instance
+    # build task chains
     celery = current_app.extensions['celery']
     rollover = celery.tasks['app.tasks.rollover.pclass_rollover']
+    backup_msg = celery.tasks['app.tasks.rollover.rollover_backup_msg']
+    backup = celery.tasks['app.tasks.backup.backup']
     rollover_fail = celery.tasks['app.tasks.rollover.rollover_fail']
+
+    # originally, everything was put into a single chain. But this just led to an indefinite hang,
+    # perhaps similar to the issue reported here:
+    # https://stackoverflow.com/questions/53507677/group-of-chains-hanging-forever-in-celery
+
+    # So, instead, we effectively implement our own version of the chain logic.
 
     # register rollover as a new background task and push it to the celery scheduler
     task_id = register_task('Rollover "{proj}" to {yra}-{yrb}'.format(proj=config.name, yra=year, yrb=year+1),
                             owner=current_user,
                             description='Perform rollover of "{proj}" to new academic year'.format(proj=config.name))
-    rollover.apply_async(args=(task_id, id, current_user.id), task_id=task_id,
+
+    backup_chain = chain(backup_msg.si(task_id),
+                         backup.si(current_user.id, type=BackupRecord.PROJECT_ROLLOVER_FALLBACK, tag='rollover',
+                                   description='Rollback snapshot for {proj} rollover to '
+                                               '{yr}'.format(proj=config.name, yr=year)))
+    backup_task = backup_chain.apply_async()
+    backup_result = backup_task.wait(timeout=None, interval=0.5)
+
+    rollover.apply_async(args=(task_id, use_markers, id, current_user.id), task_id=task_id,
                          link_error=rollover_fail.si(task_id, current_user.id))
 
     return redirect(url) if url is not None else home_dashboard()
@@ -4443,8 +4472,10 @@ def create_new_offer(sel_id, proj_id):
     try:
         db.session.add(offer)
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not create custom offer due to a database error. Please contact a system administrator', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(url)
 
@@ -6000,9 +6031,11 @@ def force_convert_bookmarks(sel_id):
 
     try:
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not force conversion of bookmarks for selector "{name}" because of a database error. '
               'Please contact a system administrator.'.format(name=sel.student.user.name), 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -6028,9 +6061,11 @@ def custom_CATS_limits(record_id):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             flash('Could not update custom CATS values due to a database error. '
                   'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('convenor.faculty', id=record.pclass.id))
 

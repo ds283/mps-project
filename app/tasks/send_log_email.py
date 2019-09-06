@@ -70,7 +70,8 @@ def register_send_log_email(celery, mail):
             db.session.add(log)
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 

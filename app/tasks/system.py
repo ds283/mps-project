@@ -32,7 +32,8 @@ def register_system_tasks(celery):
             in_progress_matching = db.session.query(MatchingAttempt.id).filter_by(celery_finished=False).all()
             in_progress_scheduling = db.session.query(ScheduleAttempt.id).filter_by(celery_finished=False).all()
             in_progress_batches = db.session.query(StudentBatch.id).filter_by(celery_finished=False).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = chain(group(reset_background_tasks.si(), reset_notifications.si()),
@@ -50,8 +51,9 @@ def register_system_tasks(celery):
         try:
             db.session.query(TaskRecord).delete()
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return True
@@ -63,8 +65,9 @@ def register_system_tasks(celery):
         try:
             db.session.query(Notification).delete()
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return True
@@ -74,7 +77,8 @@ def register_system_tasks(celery):
     def reset_matching(self, ident):
         try:
             record = db.session.query(MatchingAttempt).filter_by(id=ident).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -87,8 +91,9 @@ def register_system_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return True
@@ -98,7 +103,8 @@ def register_system_tasks(celery):
     def reset_scheduling(self, ident):
         try:
             record = db.session.query(ScheduleAttempt).filter_by(id=ident).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -111,8 +117,9 @@ def register_system_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return True
@@ -122,7 +129,8 @@ def register_system_tasks(celery):
     def reset_batch(self, ident):
         try:
             record = db.session.query(StudentBatch).filter_by(id=ident).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:
@@ -134,8 +142,9 @@ def register_system_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return True
@@ -145,7 +154,8 @@ def register_system_tasks(celery):
     def reset_tasks_notify(self, user_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -154,7 +164,8 @@ def register_system_tasks(celery):
 
         try:
             user.post_message('All background tasks have been reset successfully.', 'success', autocommit=True)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -162,7 +173,8 @@ def register_system_tasks(celery):
     def reset_tasks_fail(self, user_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -172,7 +184,8 @@ def register_system_tasks(celery):
         try:
             user.post_message('An error occurred while attempting to reset background tasks. '
                               'Please check the appropriate server logs.', 'error', autocommit=True)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -180,7 +193,8 @@ def register_system_tasks(celery):
     def reset_precompute_times(self, user_id):
         try:
             users = db.session.query(User.id).filter_by(active=True).all()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         work = chain(group(reset_precompute_time.si(ident[0]) for ident in users),
@@ -193,15 +207,17 @@ def register_system_tasks(celery):
     def reset_precompute_time(self, ident):
         try:
             user = db.session.query(User).filter_by(id=ident).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         user.last_precompute = None
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         return True
@@ -211,7 +227,8 @@ def register_system_tasks(celery):
     def reset_precompute_notify(self, user_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -220,7 +237,8 @@ def register_system_tasks(celery):
 
         try:
             user.post_message('All user precompute times have been reset successfully.', 'success', autocommit=True)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -228,7 +246,8 @@ def register_system_tasks(celery):
     def reset_precompute_fail(self, user_id):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -238,7 +257,8 @@ def register_system_tasks(celery):
         try:
             user.post_message('An error occurred while attempting to reset user precompute times. '
                               'Please check the appropriate server logs.', 'error', autocommit=True)
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
 
@@ -309,7 +329,8 @@ def register_system_tasks(celery):
     def handle_ping(self, user_id, timestamp, since):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:
@@ -371,6 +392,7 @@ def register_system_tasks(celery):
 
         try:
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

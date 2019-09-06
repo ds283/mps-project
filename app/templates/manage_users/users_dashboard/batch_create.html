@@ -8,9 +8,33 @@
     <div class="row">
         <div class="col-xs-2"></div>
         <div class="col-xs-8">
+            <div class="panel panel-primary panel-primary-bg">
+                <div class="panel-heading">
+                    Upload student list for batch user creation
+                </div>
+                <div class="panel-body">
+                    <form action="{{ url_for('manage_users.batch_create_users') }}" method="POST" enctype="multipart/form-data" name="batch_create_form">
+                        {{ form.hidden_tag() }}
+
+                        <label class="btn btn-default" for="file-selector">
+                            <input id="file-selector" type="file" name="batch_list" style="display: none;"
+                                   onchange="$('#filename-data').html(this.files[0].name)">
+                            Select file...
+                        </label>
+                        <span class="label label-info" id="filename-data"></span>
+
+                        <hr class="intro-divider">
+                        {{ wtf.form_field(form.current_year) }}
+                        {{ wtf.form_field(form.trust_cohort) }}
+                        {{ wtf.form_field(form.trust_exams) }}
+                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+
             <div class="well">
                 {% for batch in batches %}
-                    <div class="row vertical-align" style="margin-bottom: 10px;">
+                    <div class="row vertical-top" style="margin-bottom: 10px;">
                         <div class="col-xs-4">
                             <div>
                                 <strong>{{ batch.name }}</strong>
@@ -33,18 +57,33 @@
                             </div>
                         </div>
                         <div class="col-xs-4">
-                            {% if batch.timestamp %}
-                                <span class="label label-info">Timestamp {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
-                            {% endif %}
-                            {% if batch.success %}
-                                <span class="label label-info">Total lines: {{ batch.total_lines }}</span>
-                                {% if batch.interpreted_lines < batch.total_lines %}
-                                    <span class="label label-warning">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
-                                {% else %}
-                                    <span class="label label-default">No ignored lines</span>
+                            <div>
+                                {% if batch.timestamp %}
+                                    <span class="label label-info">Timestamp {{ batch.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                                 {% endif %}
-                            {% endif %}
-                            <span class="label label-info">{{ batch.number_items }} items</span>
+                                {% if batch.success %}
+                                    <span class="label label-info">Total lines: {{ batch.total_lines }}</span>
+                                    {% if batch.interpreted_lines < batch.total_lines %}
+                                        <span class="label label-warning">Ignored lines: {{ batch.total_lines - batch.interpreted_lines }}</span>
+                                    {% else %}
+                                        <span class="label label-default">No ignored lines</span>
+                                    {% endif %}
+                                {% endif %}
+                                <span class="label label-info">{{ batch.number_items }} items</span>
+                            </div>
+                            <div>
+                                <span class="label label-info">Reference academic year {{ batch.academic_year }}</span>
+                                {% if batch.trust_cohort %}
+                                    <span class="label label-info"><i class="fa fa-check"></i> Trust cohort data</span>
+                                {% else %}
+                                    <span class="label label-info"><i class="fa fa-times"></i> Do not trust cohort data</span>
+                                {% endif %}
+                                {% if batch.trust_exams %}
+                                    <span class="label label-info"><i class="fa fa-check"></i> Trust exam numbers</span>
+                                {% else %}
+                                    <span class="label label-info"><i class="fa fa-times"></i> Do not trust exam numbers </span>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="col-xs-4">
                             <div class="pull-right">
@@ -67,7 +106,7 @@
                                         <a href="{{ url_for('manage_users.import_batch', batch_id=batch.id) }}" class="btn btn-sm btn-primary btn-table-block">
                                             Import
                                         </a>
-                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-warning btn-table-block">
+                                        <a href="{{ url_for('manage_users.delete_batch', batch_id=batch.id) }}" class="btn btn-sm btn-danger btn-table-block">
                                             Delete
                                         </a>
                                     {% else %}
@@ -89,27 +128,6 @@
                         </div>
                     </div>
                 {% endfor %}
-            </div>
-
-            <div class="panel panel-primary panel-primary-bg">
-                <div class="panel-heading">
-                    Upload student list for batch user creation
-                </div>
-                <div class="panel-body">
-                    <form action="{{ url_for('manage_users.batch_create_users') }}" method="POST" enctype="multipart/form-data" name="batch_create_form">
-                        {{ form.hidden_tag() }}
-
-                        <label class="btn btn-default" for="file-selector">
-                            <input id="file-selector" type="file" name="batch_list" style="display: none;"
-                                   onchange="$('#filename-data').html(this.files[0].name)">
-                            Select file...
-                        </label>
-                        <span class="label label-info" id="filename-data"></span>
-
-                        <hr class="intro-divider">
-                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
-                    </form>
-                </div>
             </div>
         </div>
         <div class="col-xs-2"></div>

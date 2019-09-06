@@ -62,7 +62,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset
+    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset, SelectingStudent
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
@@ -1659,7 +1659,7 @@ def confirm_global_rollover():
         flash('Can not initiate a rollover of the academic year because not all project classes are ready', 'info')
         return redirect(request.referrer)
 
-    if not data['rollover_in_progress']:
+    if data['rollover_in_progress']:
         flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
         return redirect(request.referrer)
 
@@ -1698,17 +1698,35 @@ def perform_global_rollover():
         flash('Can not initiate a rollover of the academic year because one is already in progress', 'info')
         return redirect(request.referrer)
 
-    next_year = get_current_year() + 1
+    current_year = get_current_year()
+    next_year = current_year + 1
 
     try:
         new_year = MainConfig(year=next_year)
         db.session.add(new_year)
 
-        db.session.query(MatchingAttempt).filter_by(selected=False).delete()
+        unused_attempts = db.session.query(MatchingAttempt).filter_by(year=current_year, selected=False).all()
+        for attempt in unused_attempts:
+            # null any references to this attempt as a base
+            descendants = db.session.query(MatchingAttempt).filter_by(year=current_year, base_id=attempt.id).all()
+            for item in descendants:
+                item.base_id = None
+
+            attempt.config_members = []
+            attempt.include_matches = []
+
+            attempt.supervisors = []
+            attempt.markers = []
+            attempt.projects = []
+
+            db.session.flush()
+            db.session.delete(attempt)
+
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('Could not complete rollover due to database error. Please check the logs.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
         db.session.rollback()
 
     return home_dashboard()
@@ -2803,10 +2821,11 @@ def terminate_background_task(id):
         # remove task from database
         db.session.delete(record)
         db.session.commit()
-    except SQLAlchemyError:
-        db.session.rollback()
+    except SQLAlchemyError as e:
         flash('Could not terminate task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name), 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(request.referrer)
 
@@ -2825,11 +2844,12 @@ def delete_background_task(id):
         # remove task from database
         db.session.delete(record)
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Could not delete match "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -3172,11 +3192,12 @@ def perform_terminate_match(id):
 
         db.session.delete(record)
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not terminate matching task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -3184,30 +3205,29 @@ def perform_terminate_match(id):
 @admin.route('/delete_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def delete_match(id):
+    attempt = MatchingAttempt.query.get_or_404(id)
 
-    record = MatchingAttempt.query.get_or_404(id)
-
-    if not validate_match_inspector(record):
+    if not validate_match_inspector(attempt):
         return redirect(request.referrer)
 
     year = get_current_year()
-    if record.year != year:
+    if attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(request.referrer)
 
-    if not record.finished:
-        flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
+    if not attempt.finished:
+        flash('Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
         return redirect(request.referrer)
 
     title = 'Delete match'
-    panel_title = 'Delete match <strong>{name}</strong>'.format(name=record.name)
+    panel_title = 'Delete match <strong>{name}</strong>'.format(name=attempt.name)
 
     action_url = url_for('admin.perform_delete_match', id=id, url=request.referrer)
     message = '<p>Please confirm that you wish to delete the matching ' \
               '<strong>{name}</strong>.</p>' \
               '<p>This action cannot be undone.</p>' \
-        .format(name=record.name)
+        .format(name=attempt.name)
     submit_label = 'Delete match'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
@@ -3217,40 +3237,119 @@ def delete_match(id):
 @admin.route('/perform_delete_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_delete_match(id):
-    record = MatchingAttempt.query.get_or_404(id)
+    attempt = MatchingAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
         url = url_for('admin.manage_matching')
 
-    if not validate_match_inspector(record):
+    if not validate_match_inspector(attempt):
         return redirect(url)
 
     year = get_current_year()
-    if record.year != year:
+    if attempt.year != year:
         flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
         return redirect(url)
 
-    if not record.finished:
-        flash('Can not delete match "{name}" because it has not terminated.'.format(name=record.name),
+    if not attempt.finished:
+        flash('Can not delete match "{name}" because it has not terminated.'.format(name=attempt.name),
               'error')
         return redirect(url)
 
-    if not current_user.has_role('root') and current_user.id != record.creator_id:
+    if not current_user.has_role('root') and current_user.id != attempt.creator_id:
         flash('Match "{name}" cannot be deleted because it belongs to another user')
         return redirect(url)
 
     try:
         # delete all MatchingRecords associated with this MatchingAttempt
-        db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
+        db.session.query(MatchingRecord).filter_by(matching_id=attempt.id).delete()
 
-        db.session.delete(record)
+        db.session.delete(attempt)
         db.session.commit()
-    except SQLAlchemyError:
+        flash('Match "{name}" was successfully deleted.'.format(name=attempt.name), 'success')
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not delete match "{name}" due to a database error. '
-              'Please contact a system administrator.'.format(name=record.name),
+              'Please contact a system administrator.'.format(name=attempt.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url)
+
+
+@admin.route('/clean_up_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def clean_up_match(id):
+    attempt = MatchingAttempt.query.get_or_404(id)
+
+    if not validate_match_inspector(attempt):
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if attempt.year != year:
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
+        return redirect(request.referrer)
+
+    if not attempt.finished:
+        flash('Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name),
+              'error')
+        return redirect(request.referrer)
+
+    title = 'Clean up match'
+    panel_title = 'Clean up match <strong>{name}</strong>'.format(name=attempt.name)
+
+    action_url = url_for('admin.perform_clean_up_match', id=id, url=request.referrer)
+    message = '<p>Please confirm that you wish to clean up the matching ' \
+              '<strong>{name}</strong>.</p>' \
+              '<p>Some selectors may be removed if they are no longer available for conversion.</p>' \
+              '<p>This action cannot be undone.</p>' \
+        .format(name=attempt.name)
+    submit_label = 'Clean up match'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@admin.route('/perform_clean_up_match/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_clean_up_match(id):
+    attempt = MatchingAttempt.query.get_or_404(id)
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = url_for('admin.manage_matching')
+
+    if not validate_match_inspector(attempt):
+        return redirect(url)
+
+    year = get_current_year()
+    if attempt.year != year:
+        flash('Match "{name}" can no longer be modified because it belongs to a previous year', 'info')
+        return redirect(url)
+
+    if not attempt.finished:
+        flash('Can not clean up match "{name}" because it has not terminated.'.format(name=attempt.name),
+              'error')
+        return redirect(url)
+
+    if not current_user.has_role('root') and current_user.id != attempt.creator_id:
+        flash('Match "{name}" cannot be cleaned up because it belongs to another user')
+        return redirect(url)
+
+    try:
+        # delete all MatchingRecords associated with selectors who are not converting
+        for rec in attempt.records:
+            if not rec.selector.convert_to_submitter:
+                db.session.delete(rec)
+
+        db.session.commit()
+        flash('Match "{name}" was successfully cleaned up.'.format(name=attempt.name), 'success')
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        flash('Can not clean up match "{name}" due to a database error. '
+              'Please contact a system administrator.'.format(name=attempt.name),
+              'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -3434,10 +3533,11 @@ def rename_match(id):
         try:
             record.name = form.name.data
             db.session.commit()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
             flash('Could not rename match "{name}" due to a database error. '
                   'Please contact a system administrator.'.format(name=record.name), 'error')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
@@ -3662,10 +3762,11 @@ def merge_replace_records(src_id, dest_id):
         dest.matching_attempt.last_edit_timestamp = datetime.now()
 
         db.session.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not merge matching records due to a database error. '
               'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(request.referrer)
 
@@ -3874,6 +3975,41 @@ def match_faculty_view_ajax(id):
 
     return ajax.admin.faculty_view_data(record.faculty, record, pclass_value if flag else None,
                                         show_includes == 'true')
+
+
+@admin.route('/delete_match_record/<int:record_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_match_record(record_id):
+    record = MatchingRecord.query.get_or_404(record_id)
+
+    if not validate_match_inspector(record.matching_attempt):
+        return redirect(request.referrer)
+
+    if record.matching_attempt.selected:
+        flash('Match "{name}" cannot be edited because an administrative user has marked it as '
+              '"selected" for use during rollover of the academic year.'.format(name=record.matching_attempt.name),
+              'info')
+        return redirect(request.referrer)
+
+    year = get_current_year()
+    if record.matching_attempt.year != year:
+        flash('Match "{name}" can no longer be modified because '
+              'it belongs to a previous year'.format(name=record.name), 'info')
+        return redirect(request.referrer)
+
+    attempt = record.matching_attempt
+
+    try:
+        # remove all matching records associated with this selector
+        db.session.query(MatchingRecord).filter_by(matching_id=attempt.id, selector_id=record.selector_id).delete()
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        flash('Could not delete matching records for this selector because a database error was encountered.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(request.referrer)
 
 
 @admin.route('/reassign_match_project/<int:id>/<int:pid>')
@@ -4118,6 +4254,14 @@ def unpublish_match(id):
 def select_match(id):
     record = MatchingAttempt.query.get_or_404(id)
 
+    force = request.args.get('force', False)
+    if not isinstance(force, bool):
+        force = bool(int(force))
+
+    url = request.args.get('url', None)
+    if url is None:
+        url = request.referrer
+
     if not validate_match_inspector(record):
         return redirect(request.referrer)
 
@@ -4141,10 +4285,19 @@ def select_match(id):
               'and is not available for use during rollover.'.format(name=record.name), 'info')
         return redirect(request.referrer)
 
-    if not record.is_valid:
-        flash('Match "{name}" cannot be selected because it is not '
-              'in a valid state.'.format(name=record.name), 'error')
-        return redirect(request.referrer)
+    if not record.is_valid and not force:
+        title = 'Select match "{name}"'.format(name=record.name)
+        panel_title = 'Select match "{name}"'.format(name=record.name)
+
+        action_url = url_for('admin.select_match', id=id, force=1, url=url)
+        message = '<p>Match "{name}" has validation errors.</p>' \
+                  '<p>Please confirm that you wish to select it for use during rollover of the ' \
+                  'academic year.</p>'.format(name=record.name)
+        submit_label = 'Force selection'
+
+        return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                               message=message, submit_label=submit_label)
+
 
     # determine whether any already-selected projects have allocations for a pclass we own
     our_pclasses = set()
@@ -4167,7 +4320,7 @@ def select_match(id):
     record.selected = True
     db.session.commit()
 
-    return redirect(request.referrer)
+    return redirect(url)
 
 
 @admin.route('/deselect_match/<int:id>')
@@ -5506,9 +5659,11 @@ def perform_adjust_assessment_schedule(id):
         db.session.add(new_schedule)
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         flash('A database error was encountered. Please check that the supplied name and tag are unique.', 'error')
         db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
         return redirect(request.referrer)
 
     celery = current_app.extensions['celery']
@@ -5572,11 +5727,12 @@ def perform_terminate_schedule(id):
         db.session.delete(record)
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not terminate scheduling task "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -5665,11 +5821,12 @@ def perform_delete_schedule(id):
         db.session.delete(record)
         db.session.commit()
 
-    except SQLAlchemyError:
+    except SQLAlchemyError as e:
         db.session.rollback()
         flash('Can not delete schedule "{name}" due to a database error. '
               'Please contact a system administrator.'.format(name=record.name),
               'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
     return redirect(url)
 
@@ -5849,10 +6006,11 @@ def rename_schedule(id):
             record.tag = form.tag.data
             db.session.commit()
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             db.session.rollback()
             flash('Could not rename schedule "{name}" due to a database error. '
                   'Please contact a system administrator.'.format(name=record.name), 'error')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url)
 
@@ -7763,5 +7921,7 @@ def reset_precompute():
 @roles_accepted('root')
 def clear_redis_cache():
     cache.clear()
+
+    flash('The Redis cache has been successfully cleared.', 'success')
 
     return redirect(request.referrer)

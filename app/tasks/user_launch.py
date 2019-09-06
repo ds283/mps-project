@@ -9,6 +9,8 @@
 #
 
 
+from flask import current_app
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
@@ -31,8 +33,8 @@ def register_user_launch_tasks(celery):
 
         try:
             owner = User.query.filter_by(id=user_id).first()
-        except SQLAlchemyError:
-            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if notify:
@@ -45,8 +47,8 @@ def register_user_launch_tasks(celery):
 
         try:
             owner = User.query.filter_by(id=user_id).first()
-        except SQLAlchemyError:
-            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         owner.post_message('Task "{name}" failed to complete'.format(name=name), 'danger', autocommit=True)

@@ -32,7 +32,8 @@ def register_push_feedback_tasks(celery):
     def push_period(self, period_id, user_id):
         try:
             period = db.session.query(SubmissionPeriodRecord).filter_by(id=period_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if period is None:
@@ -57,7 +58,8 @@ def register_push_feedback_tasks(celery):
     def send_notification_email(self, record_id, user_id):
         try:
             record = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if record is None:

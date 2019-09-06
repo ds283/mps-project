@@ -8,6 +8,8 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+from flask import current_app
+
 from celery.exceptions import Ignore
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -21,7 +23,8 @@ def register_utility_tasks(celery):
     def email_notification(self, sent_data, user_id, message, priority):
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if user is None:

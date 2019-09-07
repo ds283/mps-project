@@ -47,4 +47,6 @@ def get_count(q):
     if disable_group_by:
         count_q = count_q.group_by(None)
 
-    return q.session.execute(count_q).scalar()
+    value = q.session.execute(count_q).scalar()
+
+    return value if value is not None else 0

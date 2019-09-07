@@ -4215,7 +4215,8 @@ def _Project_is_offerable(pid):
     # CONSTRAINT 3. For each attached project class, we should have enough assessors.
     # Also, there should be a project description
     for pclass in project.project_classes:
-        if pclass.uses_marker and project.num_assessors(pclass) < pclass.number_assessors:
+        if pclass.uses_marker and pclass.number_assessors is not None \
+                and project.num_assessors(pclass) < pclass.number_assessors:
             errors[('pclass-assessors', pclass.id)] = "Too few assessors assigned for '{name}'".format(name=pclass.name)
 
         desc = project.get_description(pclass)

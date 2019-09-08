@@ -436,7 +436,9 @@ def users_students_ajax():
     valid_filter = request.args.get('valid_filter')
 
     data = db.session.query(StudentData.id, User) \
-        .join(User, User.id == StudentData.id)
+        .join(User, User.id == StudentData.id) \
+        .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id)
 
     flag, prog_value = is_integer(prog_filter)
     if flag:
@@ -466,9 +468,9 @@ def users_students_ajax():
     elif year_filter == 'grad':
         current_year = get_current_year()
         nonf = data.filter(StudentData.foundation_year == False,
-                           current_year - StudentData.cohort + 1 - StudentData.repeated_years > 4)
+                           current_year - StudentData.cohort + 1 - StudentData.repeated_years > DegreeType.duration)
         foun = data.filter(StudentData.foundation_year == True,
-                           current_year - StudentData.cohort - StudentData.repeated_years > 4)
+                           current_year - StudentData.cohort - StudentData.repeated_years > DegreeType.duration)
 
         data = nonf.union(foun)
 

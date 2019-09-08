@@ -1938,7 +1938,7 @@ class StudentData(db.Model, WorkflowMixin):
         if academic_year < 0:
             text = 'Error(<0)'
             type = 'danger'
-        elif academic_year > 4:
+        elif academic_year > self.programme.degree_type.duration:
             text = 'Graduated'
             type = 'primary'
         else:
@@ -2097,7 +2097,7 @@ class StudentBatchItem(db.Model):
         if academic_year < 0:
             text = 'Error(<0)'
             type = 'danger'
-        elif academic_year > 4:
+        elif academic_year > self.programme.degree_type.duration:
             text = 'Graduated'
             type = 'primary'
         else:
@@ -3643,7 +3643,7 @@ class ProjectClassConfig(db.Model):
 
     def get_period(self, n):
         # note submission periods start at 1
-        if n <= 0 or n > self.submissions:
+        if n is None or n <= 0 or n > self.submissions:
             return None
 
         return self.periods.filter_by(submission_period=n).one()

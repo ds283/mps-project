@@ -55,9 +55,17 @@ _name = \
 """
 
 
+_duration = \
+"""
+{% set pl = 's' %}{% if t.duration == 1 %}{% set pl = '' %}{% endif %}
+{{ t.duration }} year{{ pl }}
+"""
+
+
 def degree_types_data(types):
 
     data = [{'name': render_template_string(_name, t=t),
+             'duration': render_template_string(_duration, t=t),
              'active': render_template_string(_active, t=t),
              'colour': t.make_label(t.colour),
              'menu': render_template_string(_types_menu, type=t)} for t in types]

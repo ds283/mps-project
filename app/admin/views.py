@@ -297,6 +297,7 @@ def add_degree_type():
         degree_type = DegreeType(name=form.name.data,
                                  abbreviation=form.abbreviation.data,
                                  colour=form.colour.data,
+                                 duration=form.duration.data,
                                  active=True,
                                  creator_id=current_user.id,
                                  creation_timestamp=datetime.now())
@@ -325,6 +326,7 @@ def edit_degree_type(id):
         type.name = form.name.data
         type.abbreviation = form.abbreviation.data
         type.colour = form.colour.data
+        type.duration = form.duration.data
         type.last_edit_id = current_user.id
         type.last_edit_timestamp = datetime.now()
 

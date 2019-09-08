@@ -87,6 +87,9 @@ class DegreeTypeMixin():
     colour = StringField('Colour', description='Assign a colour to help identify this degree type.',
                          validators=[Length(max=DEFAULT_STRING_LENGTH)])
 
+    duration = IntegerField('Duration', description='Enter the number of years study before a student graduates.',
+                            validators=[InputRequired(message='Degree duration is required')])
+
 
 class AddDegreeTypeForm(Form, DegreeTypeMixin):
 

@@ -79,10 +79,12 @@ def validate_ajax():
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
-    records = db.session.query(StudentData.id). \
-        filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
-               or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
-                   and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id)))
+    records = db.session.query(StudentData.id) \
+        .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
+                or_(and_(StudentData.last_edit_id == None, StudentData.creator_id != current_user.id),
+                    and_(StudentData.last_edit_id != None, StudentData.last_edit_id != current_user.id)))
 
     flag, prog_value = is_integer(prog_filter)
     if flag:
@@ -101,9 +103,9 @@ def validate_ajax():
     elif year_filter == 'grad':
         current_year = get_current_year()
         nonf = records.filter(StudentData.foundation_year == False,
-                              current_year - StudentData.cohort + 1 - StudentData.repeated_years > 4)
+                              current_year - StudentData.cohort + 1 - StudentData.repeated_years > DegreeType.duration)
         foun = records.filter(StudentData.foundation_year == True,
-                              current_year - StudentData.cohort - StudentData.repeated_years > 4)
+                              current_year - StudentData.cohort - StudentData.repeated_years > DegreeType.duration)
 
         records = nonf.union(foun)
 
@@ -195,10 +197,12 @@ def correct_ajax():
     prog_filter = request.args.get('prog_filter')
     year_filter = request.args.get('year_filter')
 
-    records = db.session.query(StudentData.id). \
-        filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
-               or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
-                   and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id)))
+    records = db.session.query(StudentData.id) \
+        .join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .filter(StudentData.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED,
+                or_(and_(StudentData.last_edit_id == None, StudentData.creator_id == current_user.id),
+                    and_(StudentData.last_edit_id != None, StudentData.last_edit_id == current_user.id)))
 
     flag, prog_value = is_integer(prog_filter)
     if flag:
@@ -217,9 +221,9 @@ def correct_ajax():
     elif year_filter == 'grad':
         current_year = get_current_year()
         nonf = records.filter(StudentData.foundation_year == False,
-                              current_year - StudentData.cohort + 1 - StudentData.repeated_years > 4)
+                              current_year - StudentData.cohort + 1 - StudentData.repeated_years > DegreeType.duration)
         foun = records.filter(StudentData.foundation_year == True,
-                              current_year - StudentData.cohort - StudentData.repeated_years > 4)
+                              current_year - StudentData.cohort - StudentData.repeated_years > DegreeType.duration)
 
         records = nonf.union(foun)
 

@@ -2167,6 +2167,9 @@ class DegreeType(db.Model, ColouredLabelMixin):
     # degree type abbreviation
     abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True, unique=True)
 
+    # number of years before graduation
+    duration = db.Column(db.Integer())
+
     # active flag
     active = db.Column(db.Boolean())
 

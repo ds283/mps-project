@@ -451,9 +451,11 @@ def _get_pclass_config_list(pcs=None):
     if pcs is None:
         pcs = _get_pclass_list()
 
+    current_year = get_current_year()
+
     cs = [db.session.query(ProjectClassConfig). \
               filter_by(pclass_id=pclass.id). \
-              order_by(ProjectClassConfig.year.desc()).first() for pclass in pcs]
+              order_by(ProjectClassConfig.year == current_year).first() for pclass in pcs]
 
     # strip out 'None' entries before returning
     return [x for x in cs if x is not None]

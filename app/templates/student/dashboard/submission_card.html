@@ -48,7 +48,7 @@
                 {# show assignments #}
                 {% set record = sub.get_assignment(period) %}
                 {% if record %}
-                    {% if sub.published %}
+                    {% if sub.published and record.project is not none %}
                         <div class="dashboard-subtitle" style="padding-bottom: 8px;">Project assignment</div>
                         <div class="row vertical-top">
                             <div class="col-xs-3">

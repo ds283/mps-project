@@ -1571,7 +1571,7 @@ def cancel_confirm(sid, pid):
 
 
 @faculty.route('/live_project/<int:pid>')
-@roles_accepted('faculty', 'admin', 'root')
+@roles_accepted('student', 'faculty', 'admin', 'root')
 def live_project(pid):
     """
     View a specific project on the live system

@@ -25,23 +25,21 @@
 
             {% for year in years %}
                 <div class="well well-lg">
-                    <p><span class="timeline-title">{{ year }}&ndash;{{ year+1 }}</span></p>
+                    <p><span class="timeline-title">Records for {{ year }}&ndash;{{ year+1 }}</span></p>
                     <hr class="intro-divider">
                     {% set selectors = selector_records[year] %}
                     {% if selectors is not none and selectors|length > 0 %}
                         {% for rec in selectors %}
                             {% set pclass = rec.config.project_class %}
                             <div class="panel panel-primary">
-                                <div class="panel-heading">Selecting for <b>{{ pclass.name }}</b></div>
+                                <div class="panel-heading">Selecting for <strong>{{ pclass.name }}</strong></div>
                                 <div class="panel-body">
                                     <div>
-                                        Convenor for this year was:
+                                        Convenor for {{ year }}&ndash;{{ year+1 }}:
                                         <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
                                             {{ pclass.convenor_name }}
                                         </a>
                                     </div>
-                                    {% set pl = 's' %}{% if rec.number_bookmarks == 1 %}{% set pl = '' %}{% endif %}
-                                    <p><strong>{{ rec.number_bookmarks }}</strong> bookmark{{ pl }}</p>
                                     {% if rec.has_submitted %}
                                         <div>
                                             {% if rec.submission_time is not none %}
@@ -49,10 +47,11 @@
                                                 {% if rec.submission_IP is not none %}
                                                     from IP address {{ rec.submission_IP }}
                                                 {% endif %}
+                                                <hr class="intro-divider">
                                             {% endif %}
                                             {% if rec.has_submission_list %}
                                                 <p><strong>Project selection</strong></p>
-                                                {{ ranked_selection(rec, rec.ordered_selections, false) }}
+                                                {{ ranked_selection(rec, rec.ordered_selections, false, 'student timeline', url_for('student.timeline', student_id=data.id)) }}
                                             {% endif %}
                                             {% if rec.number_custom_offers > 0%}
                                                 <p><strong>Custom offers</strong></p>
@@ -74,18 +73,24 @@
                         {% for rec in submitters %}
                             {% set pclass = rec.config.project_class %}
                             <div class="panel panel-primary">
-                                <div class="panel-heading">Submitting for <b>{{ pclass.name }}</b></div>
+                                <div class="panel-heading">Submitting for <strong>{{ pclass.name }}</strong></div>
                                 <div class="panel-body">
                                     <div>
-                                        Convenor for this year was:
+                                        Convenor for {{ year }}&ndash;{{ year+1 }}:
                                         <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
                                             {{ pclass.convenor_name }}
                                         </a>
+                                        <hr class="intro-divider">
                                     </div>
                                     {% if rec.published %}
+                                        {% set ns = namespace(count=0) %}
                                         {% for record in rec.ordered_assignments %}
                                             {% if record.retired %}
-                                                <div class="dashboard-subtitle" style="padding-bottom: 8px;">Project assignment</div>
+                                                {% set ns.count = ns.count + 1 %}
+                                                {% if ns.count > 1 %}
+                                                    <hr class="intro-divider">
+                                                {% endif %}
+                                                <div class="dashboard-subtitle" style="padding-bottom: 8px;">{{ record.period.display_name }}</div>
                                                 <div class="row vertical-top">
                                                     <div class="col-xs-3">
                                                         <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
@@ -111,11 +116,11 @@
                                                                 {% if record.id in roles %}
                                                                     {% set role = roles[record.id] %}
                                                                     {% if role == 'student' %}
-                                                                        <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='my timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
+                                                                        <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='my timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                     {% elif role == 'faculty' %}
-                                                                        <a href="{{ url_for('faculty.view_feedback', id=record.id, preview=1, text='student timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
+                                                                        <a href="{{ url_for('faculty.view_feedback', id=record.id, preview=1, text='student timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                     {% elif role == 'convenor' %}
-                                                                        <a href="{{ url_for('convenor.view_feedback', id=record.id, text='student timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
+                                                                        <a href="{{ url_for('convenor.view_feedback', id=record.id, text='student timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                     {% else %}
                                                                         <span class="label label-danger">Unknown role</span>
                                                                     {% endif %}
@@ -132,7 +137,7 @@
                                                 {% if period.has_presentation %}
                                                     {% if period.has_deployed_schedule %}
                                                         {% set schedule = period.deployed_schedule %}
-                                                        {% set slot = period.get_student_presentation_slot(record.id) %}
+                                                        {% set slot = period.get_student_presentation_slot(rec.id) %}
                                                         <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
                                                         {% if slot is not none %}
                                                             <span class="label label-primary">{{ slot.date_as_string }}</span>
@@ -144,7 +149,7 @@
                                                                 <span class="label label-danger">Assessor information missing</span>
                                                             {% endfor %}
                                                         {% else %}
-                                                            <span class="label label-warning">Not attending</span>
+                                                            <span class="label label-warning">Did not attend</span>
                                                         {% endif %}
                                                     {% else %}
                                                         <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>

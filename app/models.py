@@ -7151,9 +7151,8 @@ class SelectionRecord(db.Model):
         return record is not None and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
 
 
-    @property
-    def format_project(self):
-        if self.hint in self._icons:
+    def format_project(self, show_hint=True):
+        if show_hint and self.hint in self._icons:
             tag = self._icons[self.hint]
         else:
             tag = ''

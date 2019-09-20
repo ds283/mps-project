@@ -167,7 +167,7 @@
                                             <div class="col-xs-6">
                                                 <span class="label label-success">#{{ item.rank }}</span>
                                                 <a href="{{ url_for('faculty.live_project', pid=item.liveproject_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
-                                                    {{ item.format_project }}
+                                                    {{ item.format_project()|safe }}
                                                 </a>
                                                 {% if item.converted_from_bookmark %}
                                                     <span class="label label-warning">Bookmark</span>

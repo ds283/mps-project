@@ -12,6 +12,7 @@
 from flask import render_template
 
 from ..database import db
+from ..shared.utils import get_current_year
 
 import re
 
@@ -26,11 +27,15 @@ def render_project(data, desc, form=None, text=None, url=None, show_selector=Tru
     else:
         keywords = []
 
+    current_year = get_current_year()
+    archived = data.config is None or (current_year != data.config.year)
+
     # without the sel variable, won't render any of the student-specific items
     return render_template('student/show_project.html', title=data.name, project=data, desc=desc, keywords=keywords,
                            form=form, text=text, url=url, show_selector=show_selector, allow_approval=allow_approval,
                            show_comments=show_comments, comments=comments, all_comments=all_comments,
-                           all_workflow=all_workflow, pclass_id=pclass_id, workflow_history=workflow_history)
+                           all_workflow=all_workflow, pclass_id=pclass_id, workflow_history=workflow_history,
+                           archived=archived)
 
 
 

@@ -329,7 +329,7 @@
             <div class="collapse navbar-collapse" id="mpsp-navbar-collapsed">
                 <ul class="nav navbar-nav navbar-right">
 
-                    <!-- add 'my projects' if user is a faculty member -->
+                    <!-- add faculty version of 'my projects' if user is a faculty member -->
                     {% if is_faculty %}
                         <li class="dropdown">
                             <a class="dropdown-toggle" data-toggle="dropdown" href="#">
@@ -350,6 +350,21 @@
                                 </a></li>
                                 <li><a href="#">
                                     <i class="fa fa-archive"></i> Students...
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% endif %}
+
+                    <!-- add student version of 'my projects' if user is a stident -->
+                    {% if is_student %}
+                        <li class="dropdown">
+                            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                                My projects
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="{{ url_for('student.timeline', student_id=current_user.id) }}">
+                                    <i class="fa fa-archive"></i> View timeline...
                                 </a></li>
                             </ul>
                         </li>

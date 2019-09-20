@@ -1,0 +1,179 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "convenor/macros.html" import ranked_selection %}
+{% from "student/macros.html" import custom_offers_table %}
+
+{% block title %}
+    Timeline for {{ data.user.name }}
+{% endblock %}
+
+{% set is_student = current_user.has_role('student') %}
+
+{% block bodyblock %}
+    {% if text and url %}
+        <div class="top-return-link">
+            <a href="{{ url }}">
+                <i class="fa fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-xs-1"></div>
+        <div class="col-xs-10">
+
+            {% for year in years %}
+                <div class="well well-lg">
+                    <p><span class="timeline-title">{{ year }}&ndash;{{ year+1 }}</span></p>
+                    <hr class="intro-divider">
+                    {% set selectors = selector_records[year] %}
+                    {% if selectors is not none and selectors|length > 0 %}
+                        {% for rec in selectors %}
+                            {% set pclass = rec.config.project_class %}
+                            <div class="panel panel-primary">
+                                <div class="panel-heading">Selecting for <b>{{ pclass.name }}</b></div>
+                                <div class="panel-body">
+                                    <div>
+                                        Convenor for this year was:
+                                        <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
+                                            {{ pclass.convenor_name }}
+                                        </a>
+                                    </div>
+                                    {% set pl = 's' %}{% if rec.number_bookmarks == 1 %}{% set pl = '' %}{% endif %}
+                                    <p><strong>{{ rec.number_bookmarks }}</strong> bookmark{{ pl }}</p>
+                                    {% if rec.has_submitted %}
+                                        <div>
+                                            {% if rec.submission_time is not none %}
+                                                Submission received at {{ rec.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}
+                                                {% if rec.submission_IP is not none %}
+                                                    from IP address {{ rec.submission_IP }}
+                                                {% endif %}
+                                            {% endif %}
+                                            {% if rec.has_submission_list %}
+                                                <p><strong>Project selection</strong></p>
+                                                {{ ranked_selection(rec, rec.ordered_selections, false) }}
+                                            {% endif %}
+                                            {% if rec.number_custom_offers > 0%}
+                                                <p><strong>Custom offers</strong></p>
+                                                {{ custom_offers_table(sel, sel.ordered_custom_offers, true) }}
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <div>
+                                            No submission list was received for this project class.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% set submitters = submitter_records[year] %}
+                    {% if submitters is not none and submitters|length > 0 %}
+                        {% for rec in submitters %}
+                            {% set pclass = rec.config.project_class %}
+                            <div class="panel panel-primary">
+                                <div class="panel-heading">Submitting for <b>{{ pclass.name }}</b></div>
+                                <div class="panel-body">
+                                    <div>
+                                        Convenor for this year was:
+                                        <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
+                                            {{ pclass.convenor_name }}
+                                        </a>
+                                    </div>
+                                    {% if rec.published %}
+                                        {% for record in rec.ordered_assignments %}
+                                            {% if record.retired %}
+                                                <div class="dashboard-subtitle" style="padding-bottom: 8px;">Project assignment</div>
+                                                <div class="row vertical-top">
+                                                    <div class="col-xs-3">
+                                                        <a href="mailto:{{ record.project.owner.user.email }}">{{ record.project.owner.user.name }}</a>
+                                                    </div>
+                                                    <div class="col-xs-5">
+                                                        {{ record.project.name }} (No. {{ record.project.number }})
+                                                        <div>
+                                                            {% if record.student_feedback_submitted and record.acknowledge_feedback %}
+                                                                {% if is_student %}
+                                                                    <span class="label label-success"><i class="fa fa-check"></i> Your feedback acknowledged</span>
+                                                                {% else %}
+                                                                    <span class="label label-success"><i class="fa fa-check"></i> Student feedback acknowledged</span>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                            {% if record.faculty_response_submitted %}
+                                                                <span class="label label-success"><i class="fa fa-check"></i> Supervisor response</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-xs-4">
+                                                        <div style="text-align: right;" class="pull-right">
+                                                            {% if record.has_feedback %}
+                                                                {% if record.id in roles %}
+                                                                    {% set role = roles[record.id] %}
+                                                                    {% if role == 'student' %}
+                                                                        <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='my timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
+                                                                    {% elif role == 'faculty' %}
+                                                                        <a href="{{ url_for('faculty.view_feedback', id=record.id, preview=1, text='student timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
+                                                                    {% elif role == 'convenor' %}
+                                                                        <a href="{{ url_for('convenor.view_feedback', id=record.id, text='student timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
+                                                                    {% else %}
+                                                                        <span class="label label-danger">Unknown role</span>
+                                                                    {% endif %}
+                                                                {% else %}
+                                                                    <span class="label label-default">Feedback locked</span>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {# deal with presentation if this period has one #}
+                                                {% set period = record.period %}
+                                                {% if period.has_presentation %}
+                                                    {% if period.has_deployed_schedule %}
+                                                        {% set schedule = period.deployed_schedule %}
+                                                        {% set slot = period.get_student_presentation_slot(record.id) %}
+                                                        <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</div>
+                                                        {% if slot is not none %}
+                                                            <span class="label label-primary">{{ slot.date_as_string }}</span>
+                                                            <span class="label label-info">{{ slot.session_type_string }}</span>
+                                                            <span class="label label-info">{{ slot.room_full_name }}</span>
+                                                            {% for assessor in slot.assessors %}
+                                                                <span class="label label-default">{{ assessor.user.name }}</span>
+                                                            {% else %}
+                                                                <span class="label label-danger">Assessor information missing</span>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <span class="label label-warning">Not attending</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <div class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">Presentation assessment</div>
+                                                        <p>Schedule information is not available</p>
+                                                    {% endif %}
+                                                {% endif %}
+
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <div>This record was not published.</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+        </div>
+        <div class="col-xs-1"></div>
+
+    </div>
+
+    {% if text and url %}
+        <div>
+            <a href="{{ url }}">
+                <i class="fa fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+{% endblock %}

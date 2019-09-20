@@ -62,6 +62,11 @@ p.copyright {
     font-weight: lighter;
 }
 
+.timeline-title {
+    font-size: 24px;
+    font-weight: lighter;
+}
+
 .dashboard-subtitle {
     font-size: 22px;
     font-weight: lighter;

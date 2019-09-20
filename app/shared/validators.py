@@ -31,7 +31,7 @@ def validate_is_administrator():
     return True
 
 
-def validate_is_convenor(pclass):
+def validate_is_convenor(pclass, message=True):
     """
     Validate that the logged-in user is privileged to view a convenor dashboard or use other convenor functions
     :param pclass: Project class model instance
@@ -43,10 +43,33 @@ def validate_is_convenor(pclass):
             and not current_user.has_role('admin') \
             and not current_user.has_role('root'):
 
-        flash('Convenor actions are available only to project convenors and administrative users.')
+        if message:
+            flash('Convenor actions are available only to project convenors and administrative users.')
         return False
 
     return True
+
+
+def validate_is_admin_or_convenor(*roles):
+    """
+    Validate that the logged-in user is an administrator or is a convenor for any project class
+    :return:
+    """
+    # any user with an admin role is ok
+    if current_user.has_role('admin') or current_user.has_role('root'):
+        return True
+
+    # faculty users who are also convenors are ok
+    if current_user.has_role('faculty') and current_user.faculty_data.is_convenor:
+        return True
+
+    # otherwise, check whether this user has any role in the supplied list of roles
+    for role in roles:
+        if current_user.has_role(role):
+            return True
+
+    flash('This operation is available only to administrative users and project convenors.', 'error')
+    return False
 
 
 def validate_edit_project(project, *roles):
@@ -99,28 +122,6 @@ def validate_project_class(pclass):
         return False
 
     return True
-
-
-def validate_is_admin_or_convenor(*roles):
-    """
-    Validate that the logged-in user is an administrator or is a convenor for any project class
-    :return:
-    """
-    # any user with an admin role is ok
-    if current_user.has_role('admin') or current_user.has_role('root'):
-        return True
-
-    # faculty users who are also convenors are ok
-    if current_user.has_role('faculty') and current_user.faculty_data.is_convenor:
-        return True
-
-    # otherwise, check whether this user has any role in the supplied list of roles
-    for role in roles:
-        if current_user.has_role(role):
-            return True
-
-    flash('This operation is available only to administrative users and project convenors.', 'error')
-    return False
 
 
 def validate_is_project_owner(project):
@@ -188,7 +189,7 @@ def validate_submission_marker(record):
     return False
 
 
-def validate_submission_viewable(record):
+def validate_submission_viewable(record, message=True):
     """
     Validate that the logged-in user is entitled to view a SubmissionRecord instance
     :param record:
@@ -205,7 +206,8 @@ def validate_submission_viewable(record):
             if count > 0:
                 return True
 
-    flash('Only supervisors, 2nd markers and presentation assessors can perform this operation', 'error')
+    if message:
+        flash('Only supervisors, 2nd markers and presentation assessors can perform this operation', 'error')
     return False
 
 

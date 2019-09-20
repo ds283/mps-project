@@ -1,5 +1,7 @@
 {% extends "base_app.html" %}
 
+{% from "student/macros.html" import custom_offers_table %}
+
 {% set config = sel.config %}
 
 {% block title %}
@@ -15,52 +17,7 @@
                     Manage custom offers for <strong>{{ config.project_class.name }}</strong>
                 </div>
                 <div class="panel-body">
-                    <div class="row vertical-align offers-table">
-                        <div class="col-xs-4"><strong>Project</strong></div>
-                        <div class="col-xs-4"><strong>Supervisor</strong></div>
-                        <div class="col-xs-1"><strong>Status</strong></div>
-                        <div class="col-xs-3"><strong>Actions</strong></div>
-                    </div>
-                    {% for offer in sel.ordered_custom_offers %}
-                        <div class="row vertical-align offers-table">
-                            <div class="col-xs-4">
-                                {{ offer.liveproject.name }}
-                            </div>
-                            <div class="col-xs-4">
-                                <a href="mailto:{{ offer.liveproject.owner.user.email }}">
-                                    {{ offer.liveproject.owner.user.name }}
-                                </a>
-                            </div>
-                            <div class="col-xs-1">
-                                {% set status = offer.status %}
-                                {% if status == offer.OFFERED %}
-                                    <span class="label label-primary">Offered</span>
-                                {% elif status == offer.DECLINED %}
-                                    <span class="label label-danger">Declined</span>
-                                {% elif status == offer.ACCEPTED %}
-                                    <span class="label label-success">Accepted</span>
-                                {% else %}
-                                    <span class="label label-danger">Unknown status</span>
-                                {% endif %}
-                            </div>
-                            <div class="col-xs-3">
-                                {% if status == offer.OFFERED %}
-                                    {% if not sel.has_submitted %}
-                                        <a href="{{ url_for('student.accept_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-default">Accept</a>
-                                    {% endif %}
-                                    <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-default">Decline</a>
-                                {% elif status == offer.ACCEPTED %}
-                                    <a href="{{ url_for('student.decline_custom_offer', offer_id=offer.id) }}" class="btn btn-sm btn-default">Decline</a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="row vertical-align offers-table">
-                            <div class="col-xs-12">
-                                <div style="text-align: center; padding-top: 4px; padding-bottom: 4px; background-color: #e9ecef;">Nothing to display</div>
-                            </div>
-                        </div>
-                    {% endfor %}
+                    {{ custom_offers_table(sel, sel.ordered_custom_offers, true) }}
                 </div>
             </div>
 

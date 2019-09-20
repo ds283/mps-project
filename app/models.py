@@ -1955,6 +1955,33 @@ class StudentData(db.Model, WorkflowMixin):
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
 
 
+    def collect_student_records(self):
+        selector_records = {}
+        submitter_records = {}
+
+        years = set()
+
+        for rec in self.selecting.filter_by(retired=True):
+            if rec.config is not None and rec.config.year is not None:
+                year = rec.config.year
+                years.add(year)
+
+                if year not in selector_records:
+                    selector_records[year] = []
+                selector_records[year].append(rec)
+
+        for rec in self.submitting.filter_by(retired=True):
+            if rec.config is not None and rec.config.year is not None:
+                year = rec.config.year
+                years.add(year)
+
+                if year not in submitter_records:
+                    submitter_records[year] = []
+                submitter_records[year].append(rec)
+
+        return years, selector_records, submitter_records
+
+
 class StudentBatch(db.Model):
     """
     Model a batch import of student accounts

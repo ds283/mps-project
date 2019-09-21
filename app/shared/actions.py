@@ -28,7 +28,12 @@ def render_project(data, desc, form=None, text=None, url=None, show_selector=Tru
         keywords = []
 
     current_year = get_current_year()
-    archived = data.config is None or (current_year != data.config.year)
+
+    if hasattr(data, 'config'):
+        archived = data.config is None or (current_year != data.config.year)
+    else:
+        # if config attribute is missing, most likely reason is that data is a Project rather than a LiveProject
+        archived = False
 
     # without the sel variable, won't render any of the student-specific items
     return render_template('student/show_project.html', title=data.name, project=data, desc=desc, keywords=keywords,

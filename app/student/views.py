@@ -955,6 +955,19 @@ def timeline(student_id):
 
     data = user.student_data
 
+    if not data.has_timeline:
+        if current_user.has_role('student'):
+            flash('You do not yet have a timeline because you have not completed any projects. '
+                  'This option will become available once you have one or more completed '
+                  'submissions in the database.', 'info')
+
+        else:
+            flash('This student does not yet have any completed submissions. The timeline option '
+                  'will become available once one or more retired submissions have been entered '
+                  'in the database.', 'info')
+
+        return redirect(request.referrer)
+
     # collate retired selector and submitter records for this student
     years, selector_records, submitter_records = data.collect_student_records()
 

@@ -1955,6 +1955,17 @@ class StudentData(db.Model, WorkflowMixin):
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
 
 
+    @property
+    def has_timeline(self):
+        return get_count(self.selecting.filter_by(retired=True)) > 0 or \
+                get_count(self.submitting.filter_by(retired=True)) > 0
+    
+    
+    @property
+    def has_previous_submissions(self):
+        return get_count(self.submitting.filter_by(retired=True)) > 0
+
+
     def collect_student_records(self):
         selector_records = {}
         submitter_records = {}

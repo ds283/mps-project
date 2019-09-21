@@ -9,6 +9,8 @@
     {% set is_sabbatical = record.supervisor_state == record.SUPERVISOR_SABBATICAL %}
     {% set is_exempt = record.supervisor_state == record.SUPERVISOR_EXEMPT %}
 
+    {% set confirm_required = config.is_confirmation_required(current_user.faculty_data) %}
+
     {% set offered_projects = current_user.faculty_data.projects_offered(pclass) %}
     {% set nproj = offered_projects|length %}
     {% if nproj == 1 %}
@@ -26,7 +28,7 @@
                 panel-success
             {% elif sel_state >= config.SELECTOR_LIFECYCLE_READY_MATCHING %} {# implies closed #}
                 panel-default
-            {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.is_confirmation_required(current_user.faculty_data) %}
+            {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
                 panel-warning
             {% else %}
                 panel-info
@@ -44,7 +46,7 @@
                     {% if sel_state == config.SELECTOR_LIFECYCLE_CONFIRMATIONS_NOT_ISSUED %}
                         Selections: Waiting to begin lifecycle for this year
                     {% elif sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS %}
-                        {% if config.is_confirmation_required(current_user.faculty_data) %}
+                        {% if confirm_required %}
                             Selections: Confirmation of projects required
                         {% else %}
                             Selections: Project confirmations underway &mdash; thanks for your response
@@ -62,7 +64,7 @@
 
         <div class="panel-body">
             {# show confirmation request if one is active #}
-            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.is_confirmation_required(current_user.faculty_data) %}
+            {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and confirm_required %}
                 <p>Please review your projects to ensure the descriptions are up-to-date,
                 and those you wish to offer next year are active and attached to
                 the correct project classes.</p>
@@ -143,10 +145,12 @@
                         <div class="col-xs-4">
                             <div class="pull-right">
                                 {% if desc %}
-                                    {% if desc.confirmed %}
-                                        <a class="btn btn-sm btn-success btn-table-block disabled">Confirmed</a>
-                                    {% else %}
-                                        <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-danger btn-table-block">Confirm</a>
+                                    {% if sel_state == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and config.project_class.require_confirm %}
+                                        {% if desc.confirmed %}
+                                            <a class="btn btn-sm btn-success btn-table-block disabled">Confirmed</a>
+                                        {% else %}
+                                            <a href="{{ url_for('faculty.confirm_description', did=desc.id, pclass_id=pclass.id) }}" class="btn btn-sm btn-danger btn-table-block">Confirm</a>
+                                        {% endif %}
                                     {% endif %}
                                 {% else %}
                                     <span class="label label-warning">Unknown description</span>

@@ -11,17 +11,16 @@
 {% set is_student = current_user.has_role('student') %}
 
 {% block bodyblock %}
-    {% if text and url %}
-        <div class="top-return-link">
-            <a href="{{ url }}">
-                <i class="fa fa-backward"></i> Return to {{ text }}
-            </a>
-        </div>
-    {% endif %}
-
     <div class="row">
         <div class="col-xs-1"></div>
         <div class="col-xs-10">
+            {% if text and url %}
+                <div class="top-return-link">
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
 
             {% for year in years %}
                 <div class="well well-lg">
@@ -51,7 +50,7 @@
                                             {% endif %}
                                             {% if rec.has_submission_list %}
                                                 <p><strong>Project selection</strong></p>
-                                                {{ ranked_selection(rec, rec.ordered_selections, false, 'student timeline', url_for('student.timeline', student_id=data.id)) }}
+                                                {{ ranked_selection(rec, rec.ordered_selections, false, 'student timeline', url_for('student.timeline', student_id=data.id, text=text, url=url)) }}
                                             {% endif %}
                                             {% if rec.number_custom_offers > 0%}
                                                 <p><strong>Custom offers</strong></p>
@@ -116,11 +115,11 @@
                                                                 {% if record.id in roles %}
                                                                     {% set role = roles[record.id] %}
                                                                     {% if role == 'student' %}
-                                                                        <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='my timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
+                                                                        <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='my timeline', url=url_for('student.timeline', student_id=data.id, text=text, url=url)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                     {% elif role == 'faculty' %}
-                                                                        <a href="{{ url_for('faculty.view_feedback', id=record.id, preview=1, text='student timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
+                                                                        <a href="{{ url_for('faculty.view_feedback', id=record.id, preview=1, text='student timeline', url=url_for('student.timeline', student_id=data.id, text=text, url=url)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                     {% elif role == 'convenor' %}
-                                                                        <a href="{{ url_for('convenor.view_feedback', id=record.id, text='student timeline', url=url_for('student.timeline', student_id=data.id)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
+                                                                        <a href="{{ url_for('convenor.view_feedback', id=record.id, text='student timeline', url=url_for('student.timeline', student_id=data.id, text=text, url=url)) }}" class="btn btn-sm btn-primary btn-table-block">View feedback</a>
                                                                     {% else %}
                                                                         <span class="label label-danger">Unknown role</span>
                                                                     {% endif %}
@@ -169,16 +168,15 @@
                 </div>
             {% endfor %}
 
+            {% if text and url %}
+                <div>
+                    <a href="{{ url }}">
+                        <i class="fa fa-backward"></i> Return to {{ text }}
+                    </a>
+                </div>
+            {% endif %}
         </div>
         <div class="col-xs-1"></div>
 
     </div>
-
-    {% if text and url %}
-        <div>
-            <a href="{{ url }}">
-                <i class="fa fa-backward"></i> Return to {{ text }}
-            </a>
-        </div>
-    {% endif %}
 {% endblock %}

@@ -30,7 +30,7 @@
                     {% if selectors is not none and selectors|length > 0 %}
                         {% for rec in selectors %}
                             {% set pclass = rec.config.project_class %}
-                            <div class="panel panel-primary">
+                            <div class="panel {% if rec.has_submitted %}panel-primary{% else %}panel-danger{% endif %}">
                                 <div class="panel-heading">Selecting for <strong>{{ pclass.name }}</strong></div>
                                 <div class="panel-body">
                                     <div>

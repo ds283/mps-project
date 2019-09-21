@@ -968,6 +968,9 @@ def timeline(student_id):
 
         return redirect(request.referrer)
 
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
     # collate retired selector and submitter records for this student
     years, selector_records, submitter_records = data.collect_student_records()
 
@@ -986,4 +989,4 @@ def timeline(student_id):
 
     return render_template('student/timeline.html', data=data, years=years,
                            selector_records=selector_records, submitter_records=submitter_records,
-                           roles=roles)
+                           roles=roles, text=text, url=url)

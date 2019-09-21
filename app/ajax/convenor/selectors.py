@@ -23,8 +23,15 @@ _menu = \
     <ul class="dropdown-menu dropdown-menu-right">
         {% if current_user.has_role('admin') or current_user.has_role('root') %}
             <li>
-                <a href="{{ url_for('manage_users.edit_student', id=student.student.id, url=url_for('convenor.submitters', id=pclass.id)) }}">
+                <a href="{{ url_for('manage_users.edit_student', id=student.student.id, url=url_for('convenor.selectors', id=pclass.id)) }}">
                     <i class="fa fa-pencil"></i> Edit student...
+                </a>
+            </li>
+        {% endif %}
+        {% if student.student.has_timeline %}
+            <li>
+                <a href="{{ url_for('student.timeline', student_id=student.student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
+                    <i class="fa fa-clock-o"></i> View timeline... 
                 </a>
             </li>
         {% endif %}
@@ -176,11 +183,15 @@ _submitted = \
         </div>
     {% endif %}
 {% else %}
-    <span class="label label-default">No</span>
-    {% if sel.is_valid_selection %}
-        <span class="label label-success">Valid selection</span>
+    {% if state >= config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+        <span class="label label-default">No</span>
+        {% if sel.is_valid_selection %}
+            <span class="label label-success">Valid selection</span>
+        {% else %}
+            <span class="label label-danger">Invalid selection</span>
+        {% endif %}
     {% else %}
-        <span class="label label-danger">Invalid selection</span>
+        <span class="label label-default">Not yet open</span>
     {% endif %}
 {% endif %}
 """
@@ -245,7 +256,7 @@ def selectors_data(students, config):
                  'display': render_template_string(_confirmations, sel=s),
                  'value': s.number_pending + s.number_confirmed
              },
-             'submitted': render_template_string(_submitted, sel=s),
+             'submitted': render_template_string(_submitted, sel=s, config=config, state=state),
              'menu': render_template_string(_menu, student=s, config=config, state=state)} for s in students]
 
     return jsonify(data)

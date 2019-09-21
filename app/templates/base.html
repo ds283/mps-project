@@ -365,11 +365,11 @@
                             <ul class="dropdown-menu">
                                 {% if current_user.student_data.has_timeline %}
                                     <li><a href="{{ url_for('student.timeline', student_id=current_user.id) }}">
-                                        <i class="fa fa-archive"></i> View timeline...
+                                        <i class="fa fa-clock-o"></i> View timeline...
                                     </a></li>
                                 {% else %}
                                     <li class="disabled"><a>
-                                        <i class="fa fa-archive"></i> View timeline...
+                                        <i class="fa fa-clock-o"></i> View timeline...
                                     </a></li>
                                 {% endif %}
                             </ul>

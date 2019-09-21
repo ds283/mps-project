@@ -294,9 +294,9 @@ _menu = \
                 </a>
             </li>
         {% endif %}
-        {% if student.student.has_timeline %}
+        {% if sub.student.has_timeline %}
             <li>
-                <a href="{{ url_for('student.timeline', student_id=student.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                <a href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
                     <i class="fa fa-clock-o"></i> View timeline... 
                 </a>
             </li>

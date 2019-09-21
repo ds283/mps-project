@@ -25,6 +25,11 @@
                                     <span class="label label-warning">Not published</span>
                                 {% endif %}
                             </div>
+                            {% if rec.owner.student.has_timeline %}
+                                <div style="padding-top: 6px;">
+                                    <a href="{{ url_for('student.timeline', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View previous feedback...</a>
+                                </div>
+                            {% endif %}
                         </td>
                         <td>
                             {% if rec.period.config.uses_marker %}

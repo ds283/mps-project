@@ -987,6 +987,11 @@ def timeline(student_id):
                 elif user.id == current_user.id and current_user.has_role('student'):
                     roles[record.id] = 'student'
 
+    student_text = 'my timeline'
+    generic_text = 'student timeline'
+    return_url = url_for('student.timeline', student_id=data.id, text=text, url=url)
+
     return render_template('student/timeline.html', data=data, years=years,
                            selector_records=selector_records, submitter_records=submitter_records,
-                           roles=roles, text=text, url=url)
+                           roles=roles, text=text, url=url,
+                           student_text=student_text, generic_text=generic_text, return_url=return_url)

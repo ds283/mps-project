@@ -14,7 +14,9 @@ from flask_login import current_user
 
 from .utils import get_current_year, get_assessment_data
 from ..shared.utils import get_count
-from ..models import ProjectClassConfig
+
+from ..database import db
+from ..models import ProjectClassConfig, SubmittingStudent, SubmissionRecord, LiveProject
 
 
 def validate_is_administrator():
@@ -196,9 +198,25 @@ def validate_submission_viewable(record, message=True):
     :return:
     """
 
-    if record.project.owner_id == current_user.id or record.marker_id == current_user.id:
+    # find supervisors currently running active projects associated with this student
+    owner_query = db.session.query(SubmissionRecord) \
+        .filter(SubmissionRecord.retired == False) \
+        .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
+        .filter(LiveProject.owner_id == current_user.id) \
+        .join(SubmittingStudent, SubmittingStudent.id == SubmissionRecord.owner_id) \
+        .filter(SubmittingStudent.student_id == record.owner.student_id)
+
+    # find markers associated with active projects associated with this student
+    marker_query = db.session.query(SubmissionRecord) \
+        .filter(SubmissionRecord.retired == False,
+                SubmissionRecord.marker_id == current_user.id) \
+        .join(SubmittingStudent.student_id == SubmissionRecord.owner_id) \
+        .filter(SubmittingStudent.student_id == record.owner.student_id)
+
+    if get_count(owner_query) > 0 or get_current_year(marker_query) > 0:
         return True
 
+    # viewable if this submission period has a presentation, and the logged-in user is one of the assessors
     if record.period.has_presentation:
         slot = record.schedule_slot
         if slot is not None:
@@ -207,7 +225,8 @@ def validate_submission_viewable(record, message=True):
                 return True
 
     if message:
-        flash('Only supervisors, 2nd markers and presentation assessors can perform this operation', 'error')
+        flash('Only current supervisors, 2nd markers and presentation assessors can perform this operation', 'error')
+
     return False
 
 

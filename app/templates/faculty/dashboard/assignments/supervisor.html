@@ -25,9 +25,9 @@
                                     <span class="label label-warning">Not published</span>
                                 {% endif %}
                             </div>
-                            {% if rec.owner.student.has_timeline %}
+                            {% if rec.owner.student.has_previous_submissions %}
                                 <div style="padding-top: 6px;">
-                                    <a href="{{ url_for('student.timeline', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View previous feedback...</a>
+                                    <a href="{{ url_for('faculty.past_feedback', student_id=rec.owner.student.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">View previous feedback...</a>
                                 </div>
                             {% endif %}
                         </td>

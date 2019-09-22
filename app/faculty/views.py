@@ -33,7 +33,8 @@ from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboar
     get_current_year, get_count, get_approvals_data, allow_approvals
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
-    validate_assessment, validate_using_assessment, validate_presentation_assessor
+    validate_assessment, validate_using_assessment, validate_presentation_assessor, \
+    validate_is_convenor
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
@@ -2430,3 +2431,56 @@ def settings():
                 form.mask_roles.data = user.mask_roles
 
     return render_template('faculty/settings.html', settings_form=form, data=data)
+
+
+@faculty.route('/past_feedback/<int:student_id>')
+@roles_accepted('faculty', 'admin', 'root')
+def past_feedback(student_id):
+    """
+    Show past feedback associated with this student
+    :param student_id:
+    :return:
+    """
+    user = User.query.get_or_404(student_id)
+
+    if not user.has_role('student'):
+        flash('It is only possible to view past feedback for a student account.', 'info')
+        return redirect(request.referrer)
+
+    if user.student_data is None:
+        flash('Cannot display past feedback for this student account because the corresponding '
+              'StudentData record is missing.', 'error')
+        return redirect(request.referrer)
+
+    data = user.student_data
+
+    if not data.has_previous_submissions:
+        flash('This student does not yet have any past feedback. Feedback will be available to view once '
+              'the student has made one or more project submissions.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    # collate retired selector and submitter records for this student
+    years, selector_records, submitter_records = data.collect_student_records()
+
+    # check roles for logged-in user, to determine whether they are permitted to view the student's feedback
+    roles = {}
+    for year in submitter_records:
+        submissions = submitter_records[year]
+        for sub in submissions:
+            for record in sub.ordered_assignments:
+                if validate_is_convenor(sub.config.project_class, message=False):
+                    roles[record.id] = 'convenor'
+                elif validate_submission_viewable(record, message=False):
+                    roles[record.id] = 'faculty'
+
+    student_text = 'student feedback'
+    generic_text = 'student feedback'
+    return_url = url_for('faculty.past_feedback', student_id=data.id, text=text, url=url)
+
+    return render_template('student/timeline.html', data=data, years=years,
+                           selector_records={}, submitter_records=submitter_records,
+                           roles=roles, text=text, url=url,
+                           student_text=student_text, generic_text=generic_text, return_url=return_url)

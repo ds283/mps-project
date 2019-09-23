@@ -210,7 +210,7 @@ def validate_submission_viewable(record, message=True):
     marker_query = db.session.query(SubmissionRecord) \
         .filter(SubmissionRecord.retired == False,
                 SubmissionRecord.marker_id == current_user.id) \
-        .join(SubmittingStudent.student_id == SubmissionRecord.owner_id) \
+        .join(SubmittingStudent, SubmittingStudent.student_id == SubmissionRecord.owner_id) \
         .filter(SubmittingStudent.student_id == record.owner.student_id)
 
     if get_count(owner_query) > 0 or get_current_year(marker_query) > 0:

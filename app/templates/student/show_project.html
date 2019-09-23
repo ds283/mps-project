@@ -29,7 +29,7 @@
     {% set selections_open = (lifecycle == sel.config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN) if lifecycle is defined and lifecycle is not none else false %}
     <div class="container-fluid bg-project">
         <br/>
-        {% if form %}
+        {% if form and not archived %}
             <form action="{{ url_for('faculty.project_preview', id=project.id, text=text, url=url, pclass=pclass_id, show_selector=show_selector|int, all_comments=all_comments|int) }}" method="POST"
                   name="selector_form">
                 {{ form.hidden_tag() }}
@@ -89,6 +89,20 @@
                     </div>
                 </div>
                 <hr class="intro-divider">
+
+                {% if archived %}
+                    <div class="alert alert-warning">
+                        This is an <strong>archived description</strong> that refers to a project offered
+                        in
+                        {% if project.config is not none %}
+                            <strong>academic year {{ project.config.year }}&ndash;{{ project.config.year+1 }}</strong>.
+                        {% else %}
+                            a <strong>previous academic year</strong>.
+                        {% endif %}
+                        In the current academic year the project might no longer be offered,
+                        or its description and content may have changed.
+                    </div>
+                {% endif %}
 
                 <div class="panel panel-primary panel-primary-bg">
                     <div class="panel-heading">Project details</div>

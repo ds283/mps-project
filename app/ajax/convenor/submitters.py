@@ -294,6 +294,13 @@ _menu = \
                 </a>
             </li>
         {% endif %}
+        {% if sub.student.has_timeline %}
+            <li>
+                <a href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
+                    <i class="fa fa-clock-o"></i> View timeline... 
+                </a>
+            </li>
+        {% endif %}
         {% if allow_delete %}
             <li>
                 <a href="{{ url_for('convenor.delete_submitter', sid=sub.id) }}">

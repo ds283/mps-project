@@ -28,6 +28,7 @@ from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LivePro
 from ..task_queue import register_task
 
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count
+from ..shared.validators import validate_is_convenor, validate_submission_viewable
 
 import app.ajax as ajax
 
@@ -821,6 +822,11 @@ def edit_feedback(id):
     if not _verify_submitter(record):
         return redirect(request.referrer)
 
+    if record.retired:
+        flash('It is no longer possible to submit feedback for this submission because it belongs to a '
+              'previous academic year.', 'info')
+        return redirect(request.referrer)
+
     config = record.owner.config
     period = config.get_period(record.submission_period)
 
@@ -857,18 +863,22 @@ def edit_feedback(id):
 @student.route('/submit_feedback/<int:id>')
 @roles_accepted('student')
 def submit_feedback(id):
-
     # id identifies a SubmissionRecord
     record = SubmissionRecord.query.get_or_404(id)
 
     if not _verify_submitter(record):
         return redirect(request.referrer)
 
-    config = record.owner.config
-    period = config.get_period(record.submission_period)
-
     if record.student_feedback_submitted:
         return redirect(request.referrer)
+
+    if record.retired:
+        flash('It is no longer possible to submit feedback for this submission because it belongs to a '
+              'previous academic year.', 'info')
+        return redirect(request.referrer)
+
+    config = record.owner.config
+    period = config.get_period(record.submission_period)
 
     if not period.closed:
         flash('It is only possible to give feedback to your supervisor once your own marks and feedback are available. '
@@ -918,3 +928,70 @@ def settings():
             form.summary_frequency.data = user.summary_frequency
 
     return render_template('student/settings.html', settings_form=form, user=user)
+
+
+@student.route('/timeline/<int:student_id>')
+@roles_accepted('student', 'admin', 'root', 'faculty')
+def timeline(student_id):
+    """
+    Show student timeline
+    :return:
+    """
+
+    if current_user.has_role('student') and student_id != current_user.id:
+        flash('It is only possible to view the project timeline for your own account.', 'info')
+        return redirect(request.referrer)
+
+    user = User.query.get_or_404(student_id)
+
+    if not user.has_role('student'):
+        flash('It is only possible to view project timelines for a student account.', 'info')
+        return redirect(request.referrer)
+
+    if user.student_data is None:
+        flash('Cannot display project timeline for this student account because the corresponding '
+              'StudentData record is missing.', 'error')
+        return redirect(request.referrer)
+
+    data = user.student_data
+
+    if not data.has_timeline:
+        if current_user.has_role('student'):
+            flash('You do not yet have a timeline because you have not completed any projects. '
+                  'This option will become available once you have one or more completed '
+                  'submissions in the database.', 'info')
+
+        else:
+            flash('This student does not yet have any completed submissions. The timeline option '
+                  'will become available once one or more retired submissions have been entered '
+                  'in the database.', 'info')
+
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    # collate retired selector and submitter records for this student
+    years, selector_records, submitter_records = data.collect_student_records()
+
+    # check roles for logged-in user, to determine whether they are permitted to view the student's feedback
+    roles = {}
+    for year in submitter_records:
+        submissions = submitter_records[year]
+        for sub in submissions:
+            for record in sub.ordered_assignments:
+                if validate_is_convenor(sub.config.project_class, message=False):
+                    roles[record.id] = 'convenor'
+                elif validate_submission_viewable(record, message=False):
+                    roles[record.id] = 'faculty'
+                elif user.id == current_user.id and current_user.has_role('student'):
+                    roles[record.id] = 'student'
+
+    student_text = 'my timeline'
+    generic_text = 'student timeline'
+    return_url = url_for('student.timeline', student_id=data.id, text=text, url=url)
+
+    return render_template('student/timeline.html', data=data, years=years,
+                           selector_records=selector_records, submitter_records=submitter_records,
+                           roles=roles, text=text, url=url,
+                           student_text=student_text, generic_text=generic_text, return_url=return_url)

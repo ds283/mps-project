@@ -1,4 +1,4 @@
-{% macro bookmark_projects(sel, list) %}
+{% macro bookmark_projects(sel, list, nav_text, nav_url) %}
     <div class="container-fluid">
         <div class="row vertical-top bookmark-table">
             <div class="col-xs-1"><strong>Rank</strong></div>
@@ -13,8 +13,8 @@
                     <span class="label label-primary">#{{ item.rank }}</span>
                 </div>
                 <div class="col-xs-5">
-                    <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector bookmarks view', url=url_for('convenor.selector_bookmarks', id=sel.id)) }}">
-                        {{ item.format_project|safe }}
+                    <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
+                        {{ item.format_project()|safe }}
                     </a>
                     {% if project.is_available(sel) %}
                         <span class="label label-success"><i class="fa fa-check"></i> Available</span>
@@ -135,7 +135,7 @@
     </div>
 {% endmacro %}
 
-{% macro ranked_selection(sel, list, show_hint) %}
+{% macro ranked_selection(sel, list, show_hint, nav_text, nav_url) %}
     <div class="container-fluid">
         <div class="row vertical-align final-selection-table">
             <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}><strong>Rank</strong></div>
@@ -177,8 +177,8 @@
                     {% endif %}
                 </div>
                 <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
-                    <a href="{{ url_for('faculty.live_project', pid=project.id, text='selector submission view', url=url_for('convenor.selector_choices', id=sel.id)) }}">
-                        {{ item.format_project|safe }}
+                    <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
+                        {{ item.format_project(show_hint=show_hint)|safe }}
                     </a>
                 </div>
                 <div class="col-xs-3">

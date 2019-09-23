@@ -88,7 +88,7 @@
                                 {% endif %}
                             </div>
                             <div class="col-xs-6">
-                                {% set num = data.num_assessors(pclass) %}
+                                {% set num = data.number_assessors(pclass) %}
                                 {% if pclass.uses_markers or pclass.uses_presentations %}
                                     {% if num >= pclass.number_assessors %}
                                         <span class="label label-success">{{ num }}</span>

@@ -34,7 +34,7 @@ _selections = \
             <div class="dropdown">
                 {% set style = project.group.make_CSS_style() %}
                 <a class="label label-info dropdown-toggle" {% if style %}style="{{ style }}"{% endif %} type="button" data-toggle="dropdown">#{{ item.rank }}
-                    {{ item.format_project|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}
+                    {{ item.format_project()|safe }} (No. {{ project.number }}) &ndash; {{ project.owner.user.name }}
                 <span class="caret"></span></a>
                 <ul class="dropdown-menu">
                     {% set menu_items = item.menu_order %}

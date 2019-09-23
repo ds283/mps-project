@@ -15,7 +15,7 @@
                     View bookmarks for <strong>{{ sel.student.user.name }}</strong>
                 </div>
                 <div class="panel-body">
-                    {{ bookmark_projects(sel, sel.ordered_bookmarks) }}
+                    {{ bookmark_projects(sel, sel.ordered_bookmarks, 'selector bookmarks view', url_for('convenor.selector_bookmarks', id=sel.id)) }}
                 </div>
             </div>
 

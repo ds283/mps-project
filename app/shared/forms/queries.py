@@ -17,7 +17,7 @@ from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
     Building, Room, PresentationFeedback, FHEQ_Level, ScheduleSlot, PresentationSession, \
     ScheduleAttempt
-from ...models import project_classes, description_pclasses, roles_to_users
+from ...models import project_pclasses, description_pclasses, roles_to_users
 
 from ..utils import get_current_year
 
@@ -126,8 +126,8 @@ def GetSkillGroups():
 
 def AvailableProjectDescriptionClasses(project_id, desc_id):
     # query for pclass identifiers available from project_id
-    pclass_ids = db.session.query(project_classes.c.project_class_id) \
-        .filter(project_classes.c.project_id == project_id).subquery()
+    pclass_ids = db.session.query(project_pclasses.c.project_class_id) \
+        .filter(project_pclasses.c.project_id == project_id).subquery()
 
     # query for pclass identifiers used by descriptions associated with project_id, except (possibly) for desc_id
     # if it is not None

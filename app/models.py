@@ -243,6 +243,248 @@ class ProjectDescriptionWorkflowHistory(db.Model, WorkflowHistoryMixin):
                             backref=db.backref('workflow_history', lazy='dynamic'))
 
 
+def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping_table, skills_mapped_column,
+                                     skills_self_column, allow_edit_skills, programmes_mapping_table,
+                                     programme_mapped_column, programme_self_column, allow_edit_programmes,
+                                     assessor_mapping_table, assessor_mapped_column, assessor_self_column,
+                                     assessor_backref_label, allow_edit_assessors):
+
+    class ProjectConfigurationMixin():
+        # project name
+        name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'),
+                         unique=(unique_names=='unique'), index=True)
+
+        # which faculty member owns this project?
+        @declared_attr
+        def owner_id(cls):
+            return db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
+
+        @declared_attr
+        def owner(cls):
+            return db.relationship('FacultyData', primaryjoin=lambda: FacultyData.id == cls.owner_id,
+                                   backref=db.backref(backref_label, lazy='dynamic'))
+
+
+        # TAGS AND METADATA
+
+        # free keywords describing scientific area
+        keywords = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
+
+        # which research group is associated with this project?
+        @declared_attr
+        def group_id(cls):
+            return db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
+
+        @declared_attr
+        def group(cls):
+            return db.relationship('ResearchGroup', primaryjoin=lambda: ResearchGroup.id == cls.group_id,
+                                   backref=db.backref(backref_label, lazy='dynamic'))
+
+        # which transferable skills are associated with this project?
+        @declared_attr
+        def skills(cls):
+            return db.relationship('TransferableSkill', secondary=skills_mapping_table, lazy='dynamic',
+                                   backref=db.backref(backref_label, lazy='dynamic'))
+
+        if allow_edit_skills == 'allow':
+            def add_skill(self, skill):
+                self.skills.append(skill)
+
+            def remove_skill(self, skill):
+                self.skills.remove(skill)
+
+        @property
+        def ordered_skills(self):
+            query = db.session.query(skills_mapped_column.label('skill_id')) \
+                .filter(skills_self_column == self.id).subquery()
+
+            return db.session.query(TransferableSkill) \
+                .join(query, query.c.skill_id == TransferableSkill.id) \
+                .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
+                .order_by(SkillGroup.name.asc(),
+                          TransferableSkill.name.asc())
+
+        # which degree programmes are preferred for this project?
+        @declared_attr
+        def programmes(cls):
+            return db.relationship('DegreeProgramme', secondary=programmes_mapping_table, lazy='dynamic',
+                                   backref=db.backref(backref_label, lazy='dynamic'))
+
+        if allow_edit_programmes == 'allow':
+            def add_programme(self, prog):
+                self.programmes.append(prog)
+
+            def remove_programme(self, prog):
+                self.programmes.remove(prog)
+
+        @property
+        def ordered_programmes(self):
+            query = db.session.query(programme_mapped_column.label('programme_id')) \
+                .filter(programme_self_column == self.id).subquery()
+
+            return db.session.query(DegreeProgramme) \
+                .join(query, query.c.programme_id == DegreeProgramme.id) \
+                .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+                .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
+
+
+        # SELECTION
+
+        # is a meeting required before selecting this project?
+        MEETING_REQUIRED = 1
+        MEETING_OPTIONAL = 2
+        MEETING_NONE = 3
+        meeting_reqd = db.Column(db.Integer())
+
+
+        # MATCHING
+
+        # impose limitation on capacity
+        enforce_capacity = db.Column(db.Boolean())
+
+        # table of allowed assessors
+        @declared_attr
+        def assessors(cls):
+            return db.relationship('FacultyData', secondary=assessor_mapping_table, lazy='dynamic',
+                                   backref=db.backref(assessor_backref_label, lazy='dynamic'))
+
+        if allow_edit_assessors:
+            def add_assessor(self, faculty, autocommit=False):
+                """
+                Add a FacultyData instance as a 2nd marker
+                :param faculty:
+                :return:
+                """
+                if not self.can_enroll_assessor(faculty):
+                    return
+
+                self.assessors.append(faculty)
+
+                if autocommit:
+                    db.session.commit()
+
+            def remove_assessor(self, faculty, autocommit=False):
+                """
+                Remove a FacultyData instance as a 2nd marker
+                :param faculty:
+                :return:
+                """
+                if not self.is_assessor(faculty.id):
+                    return
+
+                self.assessors.remove(faculty)
+
+                if autocommit:
+                    db.session.commit()
+
+        def _assessor_list_query(self, pclass):
+            if isinstance(pclass, int):
+                pclass_id = pclass
+            else:
+                pclass_id = pclass.id
+
+            fac_ids = db.session.query(assessor_mapped_column.label('faculty_id')) \
+                .filter(assessor_self_column == self.id).subquery()
+
+            query = db.session.query(FacultyData) \
+                .join(fac_ids, fac_ids.c.faculty_id == FacultyData.id) \
+                .join(User, User.id == FacultyData.id) \
+                .filter(User.active == True) \
+                .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
+                .filter(EnrollmentRecord.pclass_id == pclass_id) \
+                .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id) \
+                .filter(or_(and_(ProjectClass.uses_marker == True,
+                                 EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED),
+                            and_(ProjectClass.uses_presentations == True,
+                                 EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED))) \
+                .order_by(User.last_name.asc(), User.first_name.asc())
+
+            return query
+
+
+        # PRESENTATIONS
+
+        # don't schedule with other submitters doing the same project
+        dont_clash_presentations = db.Column(db.Boolean(), default=True)
+
+
+        # POPULARITY DISPLAY
+
+        # show popularity estimate
+        show_popularity = db.Column(db.Boolean())
+
+        # show number of selections
+        show_selections = db.Column(db.Boolean())
+
+        # show number of bookmarks
+        show_bookmarks = db.Column(db.Boolean())
+
+    return ProjectConfigurationMixin
+
+
+def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapping_table, module_backref,
+                                   module_mapped_column, module_self_column):
+
+    class ProjectDescriptionMixin():
+        # text description of the project
+        description = db.Column(db.Text())
+
+        # recommended reading/resources
+        reading = db.Column(db.Text())
+
+        # supervisory roles
+        @declared_attr
+        def team(self):
+            return db.relationship('Supervisor', secondary=team_mapping_table, lazy='dynamic',
+                                   backref=db.backref(team_backref, lazy='dynamic'))
+
+        # maximum number of students
+        capacity = db.Column(db.Integer())
+
+        # tagged recommended modules
+        @declared_attr
+        def modules(self):
+            return db.relationship('Module', secondary=module_mapping_table, lazy='dynamic',
+                                   backref=db.backref(module_backref, lazy='dynamic'))
+
+
+        def _level_modules_query(self, level_id):
+            query = db.session.query(module_mapped_column.label('module_id')) \
+                .filter(module_self_column == self.id).subquery()
+
+            return db.session.query(Module) \
+                .join(query, query.c.module_id == Module.id) \
+                .filter(Module.level_id == level_id) \
+                .order_by(Module.semester.asc(), Module.name.asc())
+
+
+        def number_level_modules(self, level_id):
+            return get_count(self._level_modules_query(level_id))
+
+
+        def get_level_modules(self, level_id):
+            return self._level_modules_query(level_id).all()
+
+
+        @property
+        def has_modules(self):
+            return get_count(self.modules) > 0
+
+
+        @property
+        def ordered_modules(self):
+            query = db.session.query(module_mapped_column.label('module_id')) \
+                .filter(module_self_column == self.id).subquery()
+
+            return db.session.query(Module) \
+                .join(query, query.c.module_id == Module.id) \
+                .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
+                .order_by(FHEQ_Level.academic_year.asc(),
+                          Module.semester.asc(), Module.name.asc())
+
+    return ProjectDescriptionMixin
+
+
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
 def _get_main_config():
     return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
@@ -328,9 +570,9 @@ golive_confirmation = db.Table('go_live_confirmation',
 
 
 # association table giving association between projects and project classes
-project_classes = db.Table('project_to_classes',
-                           db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
-                           db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
+project_pclasses = db.Table('project_to_classes',
+                            db.Column('project_id', db.Integer(), db.ForeignKey('projects.id'), primary_key=True),
+                            db.Column('project_class_id', db.Integer(), db.ForeignKey('project_classes.id'), primary_key=True))
 
 # association table giving association between projects and transferable skills
 project_skills = db.Table('project_to_skills',
@@ -1953,6 +2195,47 @@ class StudentData(db.Model, WorkflowMixin):
                 text += ' +{n}'.format(n=self.repeated_years)
 
         return '<span class="label label-{type}">{label}</span>'.format(label=text, type=type)
+
+
+    @property
+    def has_timeline(self):
+        # we allow published or unpublished records in the timeline
+        return get_count(self.selecting.filter_by(retired=True)) > 0 or \
+                get_count(self.submitting.filter_by(retired=True)) > 0
+    
+    
+    @property
+    def has_previous_submissions(self):
+        # this is intended to count "real" submissions, so we drop any records that
+        # have not been published
+        return get_count(self.submitting.filter_by(retired=True, published=True)) > 0
+
+
+    def collect_student_records(self):
+        selector_records = {}
+        submitter_records = {}
+
+        years = set()
+
+        for rec in self.selecting.filter_by(retired=True):
+            if rec.config is not None and rec.config.year is not None:
+                year = rec.config.year
+                years.add(year)
+
+                if year not in selector_records:
+                    selector_records[year] = []
+                selector_records[year].append(rec)
+
+        for rec in self.submitting.filter_by(retired=True):
+            if rec.config is not None and rec.config.year is not None:
+                year = rec.config.year
+                years.add(year)
+
+                if year not in submitter_records:
+                    submitter_records[year] = []
+                submitter_records[year].append(rec)
+
+        return years, selector_records, submitter_records
 
 
 class StudentBatch(db.Model):
@@ -4219,7 +4502,7 @@ def _Project_is_offerable(pid):
     # Also, there should be a project description
     for pclass in project.project_classes:
         if pclass.uses_marker and pclass.number_assessors is not None \
-                and project.num_assessors(pclass) < pclass.number_assessors:
+                and project.number_assessors(pclass) < pclass.number_assessors:
             errors[('pclass-assessors', pclass.id)] = "Too few assessors assigned for '{name}'".format(name=pclass.name)
 
         desc = project.get_description(pclass)
@@ -4244,7 +4527,12 @@ def _Project_num_assessors(pid, pclass_id):
     return get_count(project.assessor_list_query(pclass_id))
 
 
-class Project(db.Model):
+class Project(db.Model,
+              ProjectConfigurationMixinFactory('projects', 'unique', project_skills, project_skills.c.skill_id,
+                                               project_skills.c.project_id, 'allow', project_programmes,
+                                               project_programmes.c.programme_id, project_programmes.c.project_id,
+                                               'allow', project_assessors, project_assessors.c.faculty_id,
+                                               project_assessors.c.project_id, 'assessor_for', 'allow')):
     """
     Model a project
     """
@@ -4255,39 +4543,14 @@ class Project(db.Model):
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
-    # project name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), unique=True, index=True)
-
     # active flag
     active = db.Column(db.Boolean())
 
-    # which faculty member owns this project?
-    owner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
-    owner = db.relationship('FacultyData', foreign_keys=[owner_id], backref=db.backref('projects', lazy='dynamic'))
-
-
-    # TAGS AND METADATA
-
-    # free keywords describing scientific area
-    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
-
-    # which research group is associated with this project?
-    group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
-    group = db.relationship('ResearchGroup', backref=db.backref('projects', lazy='dynamic'))
-
-    # which project classes are associated with this project?
-    project_classes = db.relationship('ProjectClass', secondary=project_classes, lazy='dynamic',
+    # which project classes are associated with this description?
+    project_classes = db.relationship('ProjectClass', secondary=project_pclasses, lazy='dynamic',
                                       backref=db.backref('projects', lazy='dynamic'))
 
-    # which transferable skills are associated with this project?
-    skills = db.relationship('TransferableSkill', secondary=project_skills, lazy='dynamic',
-                             backref=db.backref('projects', lazy='dynamic'))
-
-    # which degree programmes are preferred for this project?
-    programmes = db.relationship('DegreeProgramme', secondary=project_programmes, lazy='dynamic',
-                                 backref=db.backref('projects', lazy='dynamic'))
-
-
+    # keywords, group_id and skills inherited from ProjectConfigurationMixin
     @validates('keywords', 'group_id', 'skills', include_removes=True)
     def _tags_validate(self, key, value, is_remove):
         with db.session.no_autoflush:
@@ -4297,16 +4560,7 @@ class Project(db.Model):
 
         return value
 
-
-
-    # SELECTION
-
-    # is a meeting required before selecting this project?
-    MEETING_REQUIRED = 1
-    MEETING_OPTIONAL = 2
-    MEETING_NONE = 3
-    meeting_reqd = db.Column(db.Integer())
-
+    # meeting_reqd inherited from ProjectConfigurationMixin
     @validates('meeting_reqd')
     def _selection_validate(self, key, value):
         with db.session.no_autoflush:
@@ -4316,17 +4570,7 @@ class Project(db.Model):
 
         return value
 
-
-    # MATCHING
-
-    # impose limitation on capacity
-    enforce_capacity = db.Column(db.Boolean())
-
-    # table of allowed assessors
-    assessors = db.relationship('FacultyData', secondary=project_assessors, lazy='dynamic',
-                                backref=db.backref('assessor_for', lazy='dynamic'))
-
-
+    # enforce_capacity and assessors inherited from ProjectConfigurationMixin
     @validates('enforce_capacity', 'assessors', include_removes=True)
     def _matching_validate(self, key, value, is_remove):
         with db.session.no_autoflush:
@@ -4336,13 +4580,7 @@ class Project(db.Model):
 
         return value
 
-
-    # PRESENTATION SETTINGS
-
-    # don't schedule with other submitters doing the same project
-    dont_clash_presentations = db.Column(db.Boolean(), default=True)
-
-
+    # dont_clash_presentations inherited from ProjectConfigurationMixin
     @validates('dont_clash_presentations')
     def _settings_validate(self, key, value):
         with db.session.no_autoflush:
@@ -4363,18 +4601,6 @@ class Project(db.Model):
     default_id = db.Column(db.Integer(), db.ForeignKey('descriptions.id'))
     default = db.relationship('ProjectDescription', foreign_keys=[default_id], uselist=False, post_update=True,
                               backref=db.backref('default', uselist=False))
-
-
-    # POPULARITY DISPLAY
-
-    # show popularity estimate?
-    show_popularity = db.Column(db.Boolean())
-
-    # show number of selections?
-    show_selections = db.Column(db.Boolean())
-
-    # show number of bookmarks?
-    show_bookmarks = db.Column(db.Boolean())
 
 
     # EDITING METADATA
@@ -4485,43 +4711,6 @@ class Project(db.Model):
         return get_count(self.live_projects) == 0
 
 
-    def add_skill(self, skill):
-        self.skills.append(skill)
-
-
-    def remove_skill(self, skill):
-        self.skills.remove(skill)
-
-
-    @property
-    def ordered_skills(self):
-        query = db.session.query(project_skills.c.skill_id).filter(project_skills.c.project_id==self.id).subquery()
-
-        return db.session.query(TransferableSkill) \
-            .join(query, query.c.skill_id == TransferableSkill.id) \
-            .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
-            .order_by(SkillGroup.name.asc(),
-                      TransferableSkill.name.asc())
-
-
-    def add_programme(self, prog):
-        self.programmes.append(prog)
-
-
-    def remove_programme(self, prog):
-        self.programmes.remove(prog)
-
-
-    @property
-    def ordered_programmes(self):
-        query = db.session.query(project_programmes.c.programme_id).filter(project_programmes.c.project_id==self.id).subquery()
-
-        return db.session.query(DegreeProgramme) \
-            .join(query, query.c.programme_id == DegreeProgramme.id) \
-            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-            .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
-
-
     @property
     def available_degree_programmes(data):
         """
@@ -4564,6 +4753,10 @@ class Project(db.Model):
                 self.remove_programme(prog)
 
 
+    def assessor_list_query(self, pclass):
+        return super()._assessor_list_query(pclass)
+
+
     def is_assessor(self, faculty_id):
         """
         Determine whether a given FacultyData instance is an assessor for this project
@@ -4574,37 +4767,13 @@ class Project(db.Model):
             self._is_assessor_for_at_least_one_pclass(faculty_id)
 
 
-    def num_assessors(self, pclass):
+    def number_assessors(self, pclass):
         """
         Determine the number of assessors enrolled who are available for a given project class
         :param pclass:
         :return:
         """
         return _Project_num_assessors(self.id, pclass.id)
-
-
-    def assessor_list_query(self, pclass):
-        if isinstance(pclass, int):
-            pclass_id = pclass
-        else:
-            pclass_id = pclass.id
-
-        fac_ids = db.session.query(project_assessors.c.faculty_id).filter(project_assessors.c.project_id==self.id).subquery()
-
-        query = db.session.query(FacultyData) \
-            .join(fac_ids, fac_ids.c.faculty_id == FacultyData.id) \
-            .join(User, User.id == FacultyData.id) \
-            .filter(User.active == True) \
-            .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
-            .filter(EnrollmentRecord.pclass_id == pclass_id) \
-            .join(ProjectClass, ProjectClass.id == EnrollmentRecord.pclass_id) \
-            .filter(or_(and_(ProjectClass.uses_marker == True,
-                             EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED),
-                        and_(ProjectClass.uses_presentations == True,
-                             EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED))) \
-            .order_by(User.last_name.asc(), User.first_name.asc())
-
-        return query
 
 
     def get_assessor_list(self, pclass):
@@ -4650,36 +4819,6 @@ class Project(db.Model):
         # determine whether this faculty member is enrolled as a second marker for any project
         # class we are attached to
         return self._is_assessor_for_at_least_one_pclass(faculty)
-
-
-    def add_assessor(self, faculty, autocommit=False):
-        """
-        Add a FacultyData instance as a 2nd marker
-        :param faculty:
-        :return:
-        """
-        if not self.can_enroll_assessor(faculty):
-            return
-
-        self.assessors.append(faculty)
-
-        if autocommit:
-            db.session.commit()
-
-
-    def remove_assessor(self, faculty, autocommit=False):
-        """
-        Remove a FacultyData instance as a 2nd marker
-        :param faculty:
-        :return:
-        """
-        if not self.is_assessor(faculty.id):
-            return
-
-        self.assessors.remove(faculty)
-
-        if autocommit:
-            db.session.commit()
 
 
     def get_description(self, pclass):
@@ -4902,7 +5041,11 @@ def _ProjectDescription_is_valid(id):
     return True, errors, warnings
 
 
-class ProjectDescription(db.Model, WorkflowMixin):
+class ProjectDescription(db.Model,
+                         ProjectDescriptionMixinFactory(description_supervisors, 'descriptions', description_to_modules,
+                                                        'tagged_descriptions', description_to_modules.c.module_id,
+                                                        description_to_modules.c.description_id),
+                         WorkflowMixin):
     """
     Capture a project description. Projects can have multiple descriptions, each
     attached to a set of project classes
@@ -4940,26 +5083,6 @@ class ProjectDescription(db.Model, WorkflowMixin):
             self.confirmed = False
 
         return value
-
-
-    # DESCRIPTION
-
-    # description
-    description = db.Column(db.Text())
-
-    # recommended reading/resources
-    reading = db.Column(db.Text())
-
-    # supervisory roles
-    team = db.relationship('Supervisor', secondary=description_supervisors, lazy='dynamic',
-                           backref=db.backref('descriptions', lazy='dynamic'))
-
-    # maximum number of students
-    capacity = db.Column(db.Integer())
-
-    # tagged recommended modules
-    modules = db.relationship('Module', secondary=description_to_modules, lazy='dynamic',
-                              backref=db.backref('tagged_descriptions', lazy='dynamic'))
 
 
     # APPROVALS WORKFLOW
@@ -5071,25 +5194,13 @@ class ProjectDescription(db.Model, WorkflowMixin):
         self.project_classes.remove(pclass)
 
 
-    def _level_modules_query(self, level_id):
-        query = db.session.query(description_to_modules.c.module_id) \
-            .filter(description_to_modules.c.description_id == self.id).subquery()
-
-        return db.session.query(Module) \
-            .join(query, query.c.module_id == Module.id) \
-            .filter(Module.level_id == level_id) \
-            .order_by(Module.semester.asc(), Module.name.asc())
-
-
-    def number_level_modules(self, level_id):
-        return get_count(self._level_modules_query(level_id))
-
-
-    def get_level_modules(self, level_id):
-        return self._level_modules_query(level_id).all()
-
-
     def module_available(self, module_id):
+        """
+        Determine whether a given module can be applied as a pre-requisite for this project;
+        that depends whether it's available for all possible project classes
+        :param module_id:
+        :return:
+        """
         for pclass in self.project_classes:
             if not pclass.module_available(module_id):
                 return False
@@ -5098,28 +5209,17 @@ class ProjectDescription(db.Model, WorkflowMixin):
 
 
     def get_available_modules(self, level_id=None):
+        """
+        Return a list of all modules that can be applied as pre-requisites for this project
+        :param level_id:
+        :return:
+        """
         query = db.session.query(Module).filter_by(active=True)
         if level_id is not None:
             query = query.filter_by(level_id=level_id)
         modules = query.all()
 
         return [m for m in modules if self.module_available(m.id)]
-
-
-    @property
-    def has_modules(self):
-        return get_count(self.modules) > 0
-
-
-    @property
-    def ordered_modules(self):
-        query = db.session.query(description_to_modules.c.module_id).filter(description_to_modules.c.description_id==self.id).subquery()
-
-        return db.session.query(Module) \
-            .join(query, query.c.module_id == Module.id) \
-            .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-            .order_by(FHEQ_Level.academic_year.asc(),
-                      Module.semester.asc(), Module.name.asc())
 
 
     def validate_modules(self):
@@ -5334,7 +5434,17 @@ class LastViewingTime(db.Model):
     last_viewed = db.Column(db.DateTime(), index=True)
 
 
-class LiveProject(db.Model):
+class LiveProject(db.Model,
+                  ProjectConfigurationMixinFactory('live_projects', 'arbitrary', live_project_skills,
+                                                   live_project_skills.c.skill_id, live_project_skills.c.project_id,
+                                                   'disallow', live_project_programmes,
+                                                   live_project_programmes.c.programme_id,
+                                                   live_project_programmes.c.project_id, 'disallow', live_assessors,
+                                                   live_assessors.c.faculty_id, live_assessors.c.project_id,
+                                                   'assessor_for_live', 'disallow'),
+                  ProjectDescriptionMixinFactory(live_project_supervision, 'live_projects', live_project_to_modules,
+                                                 'tagged_live_projects', description_to_modules.c.module_id,
+                                                 live_project_to_modules.c.project_id)):
     """
     The definitive live project table
     """
@@ -5357,89 +5467,6 @@ class LiveProject(db.Model):
 
     # definitive project number in this year
     number = db.Column(db.Integer())
-
-    # project name
-    name = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'), index=True)
-
-    # which faculty member owns this project?
-    owner_id = db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
-    owner = db.relationship('FacultyData', foreign_keys=[owner_id],
-                            backref=db.backref('live_projects', lazy='dynamic'))
-
-
-    # TAGS AND METADATA
-
-    # free keywords describing scientific area
-    keywords = db.Column(db.String(DEFAULT_STRING_LENGTH, collation='utf8_bin'))
-
-    # which research group is associated with this project?
-    group_id = db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
-    group = db.relationship('ResearchGroup', backref=db.backref('live_projects', lazy='dynamic'))
-
-    # which transferable skills are associated with this project?
-    skills = db.relationship('TransferableSkill', secondary=live_project_skills, lazy='dynamic',
-                             backref=db.backref('live_projects', lazy='dynamic'))
-
-    # which degree programmes are preferred for this project?
-    programmes = db.relationship('DegreeProgramme', secondary=live_project_programmes, lazy='dynamic',
-                                 backref=db.backref('live_projects', lazy='dynamic'))
-
-    # tagged recommended modules
-    modules = db.relationship('Module', secondary=live_project_to_modules, lazy='dynamic',
-                              backref=db.backref('tagged_live_projects', lazy='dynamic'))
-
-
-    # SELECTION
-
-    # is a meeting required before selecting this project?
-    MEETING_REQUIRED = 1
-    MEETING_OPTIONAL = 2
-    MEETING_NONE = 3
-    meeting_reqd = db.Column(db.Integer())
-
-
-    # MATCHING
-
-    # impose limitation on capacity
-    enforce_capacity = db.Column(db.Boolean())
-
-    # maximum number of students
-    capacity = db.Column(db.Integer())
-
-    # table of allowed assessors
-    assessors = db.relationship('FacultyData', secondary=live_assessors, lazy='dynamic',
-                                backref=db.backref('assessor_for_live', lazy='dynamic'))
-
-
-    # PRESENTATIONS
-
-    # avoid scheduling multiple copies of presentations on this project in the same session?
-    dont_clash_presentations = db.Column(db.Boolean(), default=True)
-
-
-    # PROJECT DESCRIPTION
-
-    # project description
-    description = db.Column(db.Text())
-
-    # recommended reading/resources
-    reading = db.Column(db.Text())
-
-    # supervisor roles
-    team = db.relationship('Supervisor', secondary=live_project_supervision, lazy='dynamic',
-                           backref=db.backref('live_projects', lazy='dynamic'))
-
-
-    # POPULARITY DISPLAY
-
-    # show popularity estimate
-    show_popularity = db.Column(db.Boolean())
-
-    # show number of selections
-    show_selections = db.Column(db.Boolean())
-
-    # show number of bookmarks
-    show_bookmarks = db.Column(db.Boolean())
 
 
     # METADATA
@@ -5503,38 +5530,6 @@ class LiveProject(db.Model):
                              viewed=False,
                              request_timestamp=datetime.now())
         return req
-
-
-    @property
-    def ordered_skills(self):
-        query = db.session.query(live_project_skills.c.skill_id).filter(live_project_skills.c.project_id==self.id).subquery()
-
-        return db.session.query(TransferableSkill) \
-            .join(query, query.c.skill_id == TransferableSkill.id) \
-            .join(SkillGroup, SkillGroup.id == TransferableSkill.group_id) \
-            .order_by(SkillGroup.name.asc(),
-                      TransferableSkill.name.asc())
-
-
-    @property
-    def ordered_modules(self):
-        query = db.session.query(live_project_to_modules.c.module_id).filter(live_project_to_modules.c.project_id==self.id).subquery()
-
-        return db.session.query(Module) \
-            .join(query, query.c.module_id == Module.id) \
-            .join(FHEQ_Level, FHEQ_Level.id == Module.level_id) \
-            .order_by(FHEQ_Level.academic_year.asc(),
-                      Module.semester.asc(), Module.name.asc())
-
-
-    @property
-    def ordered_programmes(self):
-        query = db.session.query(live_project_programmes.c.programme_id).filter(live_project_programmes.c.project_id==self.id).subquery()
-
-        return db.session.query(DegreeProgramme) \
-            .join(query, query.c.programme_id == DegreeProgramme.id) \
-            .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-            .order_by(DegreeType.name.asc(), DegreeProgramme.name.asc())
 
 
     @property
@@ -5857,18 +5852,7 @@ class LiveProject(db.Model):
 
     @property
     def assessor_list_query(self):
-        fac_ids = self.assessors.subquery()
-
-        # restrict attention to markers who are correctly enrolled, so that we always serve a valid
-        # and up-to-date list
-        return db.session.query(FacultyData) \
-            .join(fac_ids, fac_ids.c.id == FacultyData.id) \
-            .join(EnrollmentRecord, and_(EnrollmentRecord.owner_id == FacultyData.id,
-                                         EnrollmentRecord.pclass_id == self.config.pclass_id)) \
-            .filter(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED) \
-            .join(User, User.id == FacultyData.id) \
-            .filter(User.active == True) \
-            .order_by(User.last_name.asc(), User.first_name.asc())
+        return super()._assessor_list_query(self.config.pclass_id)
 
 
     @property
@@ -7124,9 +7108,8 @@ class SelectionRecord(db.Model):
         return record is not None and record.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED
 
 
-    @property
-    def format_project(self):
-        if self.hint in self._icons:
+    def format_project(self, show_hint=True):
+        if show_hint and self.hint in self._icons:
             tag = self._icons[self.hint]
         else:
             tag = ''

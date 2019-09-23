@@ -106,7 +106,7 @@
                                     {% else %}
                                         <span class="label label-default">Not yet acknowledged</span>
                                     {% endif %}
-                                    {% if record.period.closed and not record.student_feedback_submitted %}
+                                    {% if record.period.closed and not record.retired and not record.student_feedback_submitted %}
                                         <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
                                         {% if record.is_student_valid %}
                                             <a href="{{ url_for('student.submit_feedback', id=record.id) }}" class="btn btn-sm btn-success btn-table-block">Submit</a>
@@ -134,7 +134,7 @@
                             </div>
                             <div class="col-xs-6">
                                 <div class="pull-right">
-                                    {% if record.period.closed and not record.student_feedback_submitted %}
+                                    {% if record.period.closed and not record.retired and not record.student_feedback_submitted %}
                                         <a href="{{ url_for('student.edit_feedback', id=record.id, url=url_for('student.view_feedback', id=record.id, url=url, text=text, preview=preview)) }}" class="btn btn-sm btn-default btn-table-block">Edit my feedback</a>
                                     {% endif %}
                                 </div>

@@ -126,7 +126,7 @@ def DescriptionMixinFactory(query_factory):
         team = CheckboxQuerySelectMultipleField('Supervisory team',
                                                 query_factory=GetSupervisorRoles, get_label='name')
 
-        description = TextAreaField('Project description', render_kw={"rows": 15},
+        description = TextAreaField('Text description of project', render_kw={"rows": 15},
                                     description=r'Enter a description of your project. '
                                                 r'The LaTeX mathematics environments are supported, as are common LaTeX commands. '
                                                 r'The amsmath, amsthm, and amssymb packages are included. '
@@ -135,9 +135,19 @@ def DescriptionMixinFactory(query_factory):
                                                 r'<strong>Please preview your project to check it renders correctly.</strong>',
                                     validators=[InputRequired(message='A project description is required')])
 
-        reading = TextAreaField('Recommended resources', render_kw={"rows": 7},
+        reading = TextAreaField('Suggested resources', render_kw={"rows": 7},
                                 description='Optional. The same styling and LaTeX options are available. '
-                                            'To embed internet links, use the Markdown syntax [link text](URL).')
+                                            'To embed internet links, use the Markdown syntax [link text](URL).',
+                                validators=[Optional()])
+
+        aims = TextAreaField('Aims', render_kw={'rows': 7},
+                             description='Optional, but strongly recommended. Enter a concise summary of what should '
+                                         'be achieved during the project. This information is not visible to students, '
+                                         'but will be provided to the project marker to help them interpret the '
+                                         "candidates' report.",
+                             validators=[Optional()])
+
+        review_only = BooleanField('This project is a literature review')
 
     return DescriptionMixin
 

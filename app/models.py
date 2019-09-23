@@ -334,6 +334,8 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
         MEETING_REQUIRED = 1
         MEETING_OPTIONAL = 2
         MEETING_NONE = 3
+
+        # store status flag
         meeting_reqd = db.Column(db.Integer())
 
 
@@ -446,6 +448,17 @@ def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapp
         def modules(self):
             return db.relationship('Module', secondary=module_mapping_table, lazy='dynamic',
                                    backref=db.backref(module_backref, lazy='dynamic'))
+
+        # what are the aims of this project?
+        # this data is provided to markers so that they have clear criteria to mark against.
+        # SHOULD NOT BE EXPOSED TO STUDENTS
+        aims = db.Column(db.Text())
+
+        # is this project review-only?
+        review_only = db.Column(db.Boolean(), default=False)
+
+
+        # METHODS
 
 
         def _level_modules_query(self, level_id):
@@ -5123,7 +5136,7 @@ class ProjectDescription(db.Model,
             return value
 
 
-    @validates('description', 'reading', 'team', 'capacity', 'modules', include_removes=True)
+    @validates('description', 'reading', 'aims', 'team', 'capacity', 'modules', 'review_only', include_removes=True)
     def _description_enqueue(self, key, value, is_remove):
         with db.session.no_autoflush:
             self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED

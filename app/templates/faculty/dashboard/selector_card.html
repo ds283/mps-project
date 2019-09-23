@@ -131,7 +131,7 @@
                                 {% else %}
                                     <span class="label label-warning">Missing research group</span>
                                 {% endif %}
-                                <span class="label label-info">{{ project.num_assessors(pclass) }} assessors</span>
+                                <span class="label label-info">{{ project.number_assessors(pclass) }} assessors</span>
                             </div>
                             {% if not available %}
                                 <div class="has-error">

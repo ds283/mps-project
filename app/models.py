@@ -247,7 +247,7 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
                                      skills_self_column, allow_edit_skills, programmes_mapping_table,
                                      programme_mapped_column, programme_self_column, allow_edit_programmes,
                                      assessor_mapping_table, assessor_mapped_column, assessor_self_column,
-                                     allow_edit_assessors):
+                                     assessor_backref_label, allow_edit_assessors):
 
     class ProjectConfigurationMixin():
         # project name
@@ -346,7 +346,7 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
         @declared_attr
         def assessors(cls):
             return db.relationship('FacultyData', secondary=assessor_mapping_table, lazy='dynamic',
-                                   backref=db.backref('assessor_for', lazy='dynamic'))
+                                   backref=db.backref(assessor_backref_label, lazy='dynamic'))
 
         if allow_edit_assessors:
             def add_assessor(self, faculty, autocommit=False):
@@ -4532,7 +4532,7 @@ class Project(db.Model,
                                                project_skills.c.project_id, 'allow', project_programmes,
                                                project_programmes.c.programme_id, project_programmes.c.project_id,
                                                'allow', project_assessors, project_assessors.c.faculty_id,
-                                               project_assessors.c.project_id, 'allow')):
+                                               project_assessors.c.project_id, 'assessor_for', 'allow')):
     """
     Model a project
     """
@@ -4547,8 +4547,8 @@ class Project(db.Model,
     active = db.Column(db.Boolean())
 
     # which project classes are associated with this description?
-    project_classes = db.relationship('ProjectClass', secondary=description_pclasses, lazy='dynamic',
-                                      backref=db.backref('descriptions', lazy='dynamic'))
+    project_classes = db.relationship('ProjectClass', secondary=project_pclasses, lazy='dynamic',
+                                      backref=db.backref('projects', lazy='dynamic'))
 
     # keywords, group_id and skills inherited from ProjectConfigurationMixin
     @validates('keywords', 'group_id', 'skills', include_removes=True)
@@ -5441,7 +5441,7 @@ class LiveProject(db.Model,
                                                    live_project_programmes.c.programme_id,
                                                    live_project_programmes.c.project_id, 'disallow', live_assessors,
                                                    live_assessors.c.faculty_id, live_assessors.c.project_id,
-                                                   'disallow'),
+                                                   'assessor_for_live', 'disallow'),
                   ProjectDescriptionMixinFactory(live_project_supervision, 'live_projects', live_project_to_modules,
                                                  'tagged_live_projects', description_to_modules.c.module_id,
                                                  live_project_to_modules.c.project_id)):

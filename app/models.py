@@ -1957,13 +1957,16 @@ class StudentData(db.Model, WorkflowMixin):
 
     @property
     def has_timeline(self):
+        # we allow published or unpublished records in the timeline
         return get_count(self.selecting.filter_by(retired=True)) > 0 or \
                 get_count(self.submitting.filter_by(retired=True)) > 0
     
     
     @property
     def has_previous_submissions(self):
-        return get_count(self.submitting.filter_by(retired=True)) > 0
+        # this is intended to count "real" submissions, so we drop any records that
+        # have not been published
+        return get_count(self.submitting.filter_by(retired=True, published=True)) > 0
 
 
     def collect_student_records(self):

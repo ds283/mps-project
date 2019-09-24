@@ -1925,27 +1925,21 @@ class FacultyData(db.Model):
         if pclass.uses_supervisor:
             supv = self.supervisor_assignments(pclass.id)
             supv_CATS = [x.supervising_CATS for x in supv]
-            supv_CATS_clean = [x for x in supv_CATS if x is not None]
-
-            supv_total = sum(supv_CATS_clean)
+            supv_total = sum([x for x in supv_CATS if x is not None])
         else:
             supv_total = 0
 
         if pclass.uses_marker:
             mark = self.marker_assignments(pclass.id)
             mark_CATS = [x.marking_CATS for x in mark]
-            mark_CATS_clean = [x for x in mark_CATS if x is not None]
-
-            mark_total = sum(mark_CATS_clean)
+            mark_total = sum([x for x in mark_CATS if x is not None])
         else:
             mark_total = 0
 
         if pclass.uses_presentations:
             pres = self.presentation_assignments(pclass.id)
             pres_CATS = [x.assessor_CATS for x in pres]
-            pres_CATS_clean = [x for x in pres_CATS if x is not None]
-
-            pres_total = sum(pres_CATS_clean)
+            pres_total = sum([x for x in pres_CATS if x is not None])
         else:
             pres_total = 0
 
@@ -3698,6 +3692,10 @@ class ProjectClassConfig(db.Model):
 
     @property
     def selector_lifecycle(self):
+        # an unpublished project class is always ready for rollover
+        if not self.project_class.publish:
+            return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
+
         # if gone live and closed, then either we are ready to match or we are read to rollover
         if self.live and self.selection_closed:
             if self.do_matching:
@@ -3738,6 +3736,10 @@ class ProjectClassConfig(db.Model):
 
     @property
     def submitter_lifecycle(self):
+        # an unpublished project class is always ready for rollover
+        if not self.project_class.publish:
+            return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+
         if self.submission_period > self.submissions:
             return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 

@@ -1952,6 +1952,21 @@ class FacultyData(db.Model):
         return supv_total, mark_total, pres_total
 
 
+    def total_CATS_assignment(self):
+        supv = 0
+        mark = 0
+        pres = 0
+
+        for record in self.enrollments:
+            s, m, p = self.CATS_assignment(record.pclass)
+
+            supv += s
+            mark += m
+            pres += p
+
+        return supv, mark, pres
+
+
     def has_late_feedback(self, pclass_id, faculty_id):
         supervisor_late = [x.supervisor_feedback_state == SubmissionRecord.FEEDBACK_LATE
                            for x in self.supervisor_assignments(pclass_id)]
@@ -2215,8 +2230,8 @@ class StudentData(db.Model, WorkflowMixin):
         # we allow published or unpublished records in the timeline
         return get_count(self.selecting.filter_by(retired=True)) > 0 or \
                 get_count(self.submitting.filter_by(retired=True)) > 0
-    
-    
+
+
     @property
     def has_previous_submissions(self):
         # this is intended to count "real" submissions, so we drop any records that

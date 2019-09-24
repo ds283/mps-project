@@ -31,7 +31,8 @@
                     { data: 'workload',
                       render: {
                         _: 'display',
-                        sort: 'sortvalue' }
+                        sort: 'sortvalue',
+                        type: 'sortvalue'}
                     },
                     { data: 'menu' }
                 ],
@@ -48,7 +49,7 @@
 {% macro faculty_data(fac) %}
     {% if fac is not none %}
         <a href="mailto:{{ fac.user.email }}">{{ fac.user.name }}</a>
-        {% set CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(config.project_class) %}
+        {% set CATS_supv, CATS_mark, CATS_pres = fac.total_CATS_assignment() %}
         <div>
             {% if config.uses_supervisor %}
                 <span class="label label-info">S {{ CATS_supv }}</span>

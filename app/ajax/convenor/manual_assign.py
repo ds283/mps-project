@@ -20,16 +20,13 @@ _name = \
 
 _workload = \
 """
-{% macro faculty_data(fac) %}
-    {% set CATS_supv, CATS_mark, CATS_pres = fac.CATS_assignment(config.project_class) %}
-    <div>
-        <span class="label label-info">S {{ CATS_supv }}</span>
-        <span class="label label-info">M {{ CATS_mark }}</span>
-        <span class="label label-info">P {{ CATS_pres }}</span>
-        <span class="label label-primary">Total {{ CATS_supv+CATS_mark+CATS_pres }}</span>
-    </div>
-{% endmacro %}
-{{ faculty_data(owner) }}
+{% set s, m, p = data %}
+<div>
+    <span class="label label-info">S {{ s }}</span>
+    <span class="label label-info">M {{ m }}</span>
+    <span class="label label-info">P {{ p }}</span>
+    <span class="label label-primary">Total {{ s+m+p }}</span>
+</div>
 """
 
 _action = \
@@ -41,13 +38,25 @@ _action = \
 </div>
 """
 
+def _compute_total_workload(fac):
+    supv = 0
+    mark = 0
+    pres = 0
+    for record in fac.enrollments:
+        s, m, p = fac.CATS_assignment(record.pclass)
+        supv += s
+        mark += m
+        pres += p
+
+    return supv, mark, pres, (supv+mark+pres)
+
 def manual_assign_data(liveprojects, rec):
     data = [{'project': render_template_string(_name, p=p, r=rec),
              'supervisor': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=p.owner.user.email,
                                                                                     name=p.owner.user.name),
                             'sortstring': p.owner.user.last_name + p.owner.user.first_name},
-             'workload': {'display': render_template_string(_workload, owner=p.owner, config=p.config),
-                          'sortvalue': sum(p.owner.CATS_assignment(p.config.project_class))},
+             'workload': {'display': render_template_string(_workload, data=p.owner.total_CATS_assignment()),
+                          'sortvalue': sum(p.owner.total_CATS_assignment())},
              'menu': render_template_string(_action, rec=rec, p=p)} for p in liveprojects]
 
     return jsonify(data)

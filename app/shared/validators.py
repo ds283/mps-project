@@ -213,7 +213,7 @@ def validate_submission_viewable(record, message=True):
         .join(SubmittingStudent, SubmittingStudent.student_id == SubmissionRecord.owner_id) \
         .filter(SubmittingStudent.student_id == record.owner.student_id)
 
-    if get_count(owner_query) > 0 or get_current_year(marker_query) > 0:
+    if get_count(owner_query) > 0 or get_count(marker_query) > 0:
         return True
 
     # viewable if this submission period has a presentation, and the logged-in user is one of the assessors

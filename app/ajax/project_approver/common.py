@@ -19,7 +19,7 @@ title = \
 {% if not project.is_offerable %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
     <div>
-        This project has validation errors that will prevent it being published.
+        This project has validation errors that will prevent it from being published.
     </div>
 {% endif %}
 <div>

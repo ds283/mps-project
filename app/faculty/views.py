@@ -1300,7 +1300,7 @@ def dashboard():
     unofferable = current_user.faculty_data.projects_unofferable
     if unofferable > 0:
         plural = '' if unofferable == 1 else 's'
-        isare = '' if unofferable == 1 else 'are'
+        isare = 'is' if unofferable == 1 else 'are'
 
         flash('You have {n} project{plural} that {isare} active but cannot be offered to students. '
               'Please check your project list.'.format(n=unofferable, plural=plural, isare=isare),

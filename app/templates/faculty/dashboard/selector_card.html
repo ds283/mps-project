@@ -131,13 +131,18 @@
                                 {% else %}
                                     <span class="label label-warning">Missing research group</span>
                                 {% endif %}
-                                <span class="label label-info">{{ project.number_assessors(pclass) }} assessors</span>
+                                {% set num_assessors = project.number_assessors(pclass) %}
+                                {% if num_assessors > 0 %}
+                                    <span class="label label-info" data-toggle="tooltip" data-html="true" title="{% for assessor in project.get_assessor_list(pclass) %}<div>{{ assessor.user.name }}</div>{% endfor %}">{{ num_assessors }} assessors</span>
+                                {% else %}
+                                    <span class="label label-danger">No assessors assigned</span>
+                                {% endif %}
                             </div>
                             {% if not available %}
                                 <div class="has-error">
                                     <p class="help-block">
                                         <i class="fa fa-exclamation-triangle" style="color:red;"></i>
-                                        This project has validation errors that will prevent it being published.
+                                        This project has validation errors that will prevent it from being published.
                                     </p>
                                 </div>
                             {% endif %}

@@ -89,19 +89,8 @@
                     {% set pclass = config.project_class %}
                     <div class="well">
                         <div class="row vertical-top">
-                            <div class="col-xs-6">
+                            <div class="col-xs-12">
                                 <span class="dashboard-project-title">{{ pclass.name }}</span>
-                            </div>
-                            <div class="col-xs-6">
-                                {# suspect text-align is a hack here, but has desired effect and #}
-                                {# I'm unclear what the 'official' method would be #}
-                                <div class="pull-right" style="text-align: right;">
-                                    {% if pclass.programmes %}
-                                        {% for programme in pclass.ordered_programmes %}
-                                            {{ programme.label|safe }}
-                                        {% endfor %}
-                                    {% endif %}
-                                </div>
                             </div>
                         </div>
                         <div class="row vertical-top">

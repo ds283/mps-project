@@ -117,26 +117,30 @@
                 {% endif %}
                 <div class="row">
                     <div class="col-xs-6">
-                        <p>Filter by status</p>
+                        <p>Filter by state</p>
                         <a class="btn btn-sm filter-btn {% if state_filter is none or state_filter == 'all' %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='all', data_display=data_display) }}">
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='all', data_display=data_display) }}">
                             All
                         </a>
-                        <a class="btn btn-sm filter-btn {% if state_filter == 'submitted' %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='submitted', data_display=data_display) }}">
-                            Submitted
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'published' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='published', data_display=data_display) }}">
+                            Published
                         </a>
-                        <a class="btn btn-sm filter-btn {% if state_filter == 'bookmarks' %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='bookmarks', data_display=data_display) }}">
-                            Bookmarks only
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'unpublished' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='unpublished', data_display=data_display) }}">
+                            Unpublished
                         </a>
-                        <a class="btn btn-sm filter-btn {% if state_filter == 'none' %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='none', data_display=data_display) }}">
-                            No bookmarks
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='late-feedback', data_display=data_display) }}">
+                            Has late feedback
                         </a>
-                        <a class="btn btn-sm filter-btn {% if state_filter == 'confirmations' %}btn-primary{% else %}btn-default{% endif %}"
-                            href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='confirmations', data_display=data_display) }}">
-                            Confirmations outstanding
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'no-late-feedback' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='no-late-feedback', data_display=data_display) }}">
+                            Has no late feedback
+                        </a>
+                        <a class="btn btn-sm filter-btn {% if state_filter == 'not-started' %}btn-primary{% else %}btn-default{% endif %}"
+                           href="{{ url_for('convenor.submitters', id=pclass.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter='not-started', data_display=data_display) }}">
+                            Not started
                         </a>
                     </div>
                     <div class="col-xs-6">

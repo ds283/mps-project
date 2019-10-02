@@ -110,17 +110,10 @@
                                 <div class="row vertical-top final-selection-table">
                                     <div class="col-xs-6">
                                         {% if item.project is not none %}
-                                            <div class="row vertical-top">
-                                                <div class="col-xs-9">
-                                                    {{ record_label(item, text, url) }}
-                                                    <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
-                                                        {{ item.project.name }}
-                                                    </a>
-                                                </div>
-                                                <div class="col-xs-3">
-                                                    <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Remove</a>
-                                                </div>
-                                            </div>
+                                            {{ record_label(item, text, url) }}
+                                            <a href="{{ url_for('faculty.live_project', pid=item.project_id, text='manual reassignment view', url=url_for('convenor.manual_assign', id=rec.id)) }}">
+                                                {{ item.project.name }}
+                                            </a>
                                         {% else %}
                                             {{ record_label(item, text, url) }}
                                             <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=item.id, text=text, url=url) }}">No project allocated</a>
@@ -128,7 +121,16 @@
                                     </div>
                                     <div class="col-xs-3">
                                         {% if item.project is not none %}
-                                            {{ faculty_data(item.project.owner) }}
+                                            <div class="row vertical-top">
+                                                <div class="col-xs-12">
+                                                    {{ faculty_data(item.project.owner) }}
+                                                </div>
+                                            </div>
+                                            <div class="row vertical-top" style="padding-top: 5px;">
+                                                <div class="col-xs-12">
+                                                    <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Remove</a>
+                                                </div>
+                                            </div>
                                         {% else %}
                                             <span class="label label-danger">Not allocated</span>
                                         {% endif %}
@@ -137,11 +139,13 @@
                                         {% if config.uses_marker %}
                                             {% if item.marker is not none %}
                                                 <div class="row vertical-top">
-                                                    <div class="col-xs-8">
+                                                    <div class="col-xs-12">
                                                         {{ faculty_data(item.marker) }}
                                                     </div>
-                                                    <div class="col-xs-4">
-                                                        <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.deassign_marker', id=item.id) }}">Remove</a>
+                                                </div>
+                                                <div class="row vertical-top" style="padding-top: 5px;">
+                                                    <div class="col-xs-12">
+                                                        <a class="btn btn-sm btn-danger" href="{{ url_for('convenor.deassign_project', id=item.id) }}">Remove</a>
                                                     </div>
                                                 </div>
                                             {% else %}

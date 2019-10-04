@@ -12,5 +12,10 @@
                 Workload summary
             </a>
         </li>
+        <li {% if subpane=='groups' %}class="active"{% endif %}>
+            <a href="{{ url_for('convenor.teaching_groups', id=pclass.id) }}">
+                Teaching groups
+            </a>
+        </li>
     </ul>
 {% endblock %}

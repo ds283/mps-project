@@ -1860,38 +1860,54 @@ class FacultyData(db.Model):
         return '<span class="label label-success"><i class="fa fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
-    def supervisor_assignments(self, pclass_id):
+    def supervisor_assignments(self, pclass_id, period=None):
         """
         Return a list of current SubmissionRecord instances for which we are supervisor
         :return:
         """
         lp_query = self.live_projects.subquery()
 
-        return db.session.query(SubmissionRecord) \
+        query = db.session.query(SubmissionRecord) \
             .join(lp_query, lp_query.c.id == SubmissionRecord.project_id) \
             .filter(SubmissionRecord.retired == False) \
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
             .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
             .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id) \
-            .filter(ProjectClassConfig.pclass_id == pclass_id) \
-            .order_by(SubmissionPeriodRecord.submission_period.asc())
+            .filter(ProjectClassConfig.pclass_id == pclass_id)
+
+        if period is None:
+            query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
+        elif isinstance(period, int):
+            query = query.filter(SubmissionPeriodRecord.submission_period == period)
+        else:
+            raise ValueError('Expected period identifier to be an integer')
+
+        return query
 
 
-    def marker_assignments(self, pclass_id):
+    def marker_assignments(self, pclass_id, period=None):
         """
         Return a list of current SubmissionRecord instances for which we are 2nd marker
         :return:
         """
-        return db.session.query(SubmissionRecord) \
+        query = db.session.query(SubmissionRecord) \
             .filter_by(retired=False, marker_id=self.id) \
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
             .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
             .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id) \
-            .filter(ProjectClassConfig.pclass_id == pclass_id) \
-            .order_by(SubmissionPeriodRecord.submission_period.asc())
+            .filter(ProjectClassConfig.pclass_id == pclass_id)
+
+        if period is None:
+            query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
+        elif isinstance(period, int):
+            query = query.filter(SubmissionPeriodRecord.submission_period == period)
+        else:
+            raise ValueError('Expected period identifier to be an integer')
+
+        return query
 
 
-    def presentation_assignments(self, pclass_id):
+    def presentation_assignments(self, pclass_id, period=None):
         query = db.session.query(faculty_to_slots.c.slot_id).filter(faculty_to_slots.c.faculty_id == self.id).subquery()
 
         slot_query = db.session.query(ScheduleSlot) \
@@ -1906,8 +1922,14 @@ class FacultyData(db.Model):
             .join(submitter_to_slots, submitter_to_slots.c.slot_id == slot_ids.c.id) \
             .join(SubmissionRecord, SubmissionRecord.id == submitter_to_slots.c.submitter_id) \
             .filter(SubmissionRecord.retired == False) \
-            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
-            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
+            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+
+        if isinstance(period, int):
+            filtered_ids = filtered_ids.filter(SubmissionPeriodRecord.submission_period == period)
+        elif period is not None:
+            raise ValueError('Expected period identifier to be an integer')
+
+        filtered_ids = filtered_ids.join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
             .filter(ProjectClassConfig.pclass_id == pclass_id).distinct().subquery()
 
         return db.session.query(ScheduleSlot) \
@@ -3960,6 +3982,11 @@ class ProjectClassConfig(db.Model):
             return None
 
         return self.periods.filter_by(submission_period=n).one()
+
+
+    @property
+    def ordered_periods(self):
+        return self.periods.order_by(SubmissionPeriodRecord.submission_period.asc())
 
 
     @property
@@ -6444,7 +6471,15 @@ class SubmittingStudent(db.Model):
 
 
     def get_assignment(self, period):
-        records = self.records.filter_by(period_id=period.id).all()
+        if isinstance(period, SubmissionPeriodRecord):
+            period_number = period.submission_period
+        elif isinstance(period, int):
+            period_number = period
+        else:
+            raise TypeError('Expected period to be a SubmissionPeriodRecord or an integer')
+
+        records = self.records.join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
+            .filter(SubmissionPeriodRecord.submission_period == period_number).all()
 
         if len(records) == 0:
             return None

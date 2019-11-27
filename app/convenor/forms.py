@@ -71,7 +71,7 @@ def AssignMarkerFormFactory(live_project, pclass_id, uses_marker):
         if uses_marker:
             # 2nd marker
             marker = QuerySelectField('Assign 2nd marker', query_factory=partial(MarkerQuery, live_project),
-                                      get_label=partial(BuildMarkerLabel, pclass_id))
+                                      get_label=BuildMarkerLabel)
 
     return AssignMarkerForm
 

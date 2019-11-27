@@ -20,3 +20,4 @@ from .workload import faculty_workload_data
 from .manual_assign import manual_assign_data
 from .show_confirmations import show_confirmations
 from .custom_offers import project_offer_data, student_offer_data, project_offer_selectors, student_offer_projects
+from .teaching_groups import teaching_group_by_faculty, teaching_group_by_student

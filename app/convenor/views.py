@@ -84,6 +84,16 @@ _desc_label = \
 {% if not d.is_valid %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
+<div>
+    {% if d.review_only %}
+        <span class="label label-info">REVIEW</span>
+    {% endif %}
+    {% if d.aims is not none and d.aims|length > 0 %}
+        <span class="label label-success"><i class="fa fa-check"></i> Aims specified</span>
+    {% else %}
+        <span class="label label-warning"><i class="fa fa-times"></i> Aims not specified</span>
+    {% endif %}
+</div>
 {% set state = d.workflow_state %}
 <div>
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
@@ -2274,8 +2284,10 @@ def add_description(pid, pclass_id):
                                   project_classes=form.project_classes.data,
                                   description=form.description.data,
                                   reading=form.reading.data,
+                                  aims=form.aims.data,
                                   team=form.team.data,
                                   capacity=form.capacity.data,
+                                  review_only=form.review_only.data,
                                   confirmed=False,
                                   workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
                                   validator_id=None,
@@ -2322,8 +2334,10 @@ def edit_description(did, pclass_id):
         desc.project_classes = form.project_classes.data
         desc.description = form.description.data
         desc.reading = form.reading.data
+        desc.aims = form.aims.data
         desc.team = form.team.data
         desc.capacity = form.capacity.data
+        desc.review_only = form.review_only.data
         desc.last_edit_id = current_user.id
         desc.last_edit_timestamp = datetime.now()
 
@@ -5131,7 +5145,7 @@ def faculty_workload(id):
 
     return render_template('convenor/dashboard/workload.html', pane='faculty', subpane='workload',
                            pclass=pclass, config=config, current_year=current_year,
-                           faculty=faculty, convenor_data=data, enroll_filter=enroll_filter, state_filter=state_filter)
+                           convenor_data=data, enroll_filter=enroll_filter, state_filter=state_filter)
 
 
 @convenor.route('faculty_workload_ajax/<int:id>', methods=['GET', 'POST'])
@@ -5154,7 +5168,6 @@ def faculty_workload_ajax(id):
         return jsonify({})
 
     if enroll_filter == 'enrolled':
-
         # build a list of only enrolled faculty, together with their FacultyData records
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id).subquery()
@@ -5166,7 +5179,6 @@ def faculty_workload_ajax(id):
             .join(faculty_ids, User.id == faculty_ids.c.owner_id)
 
     elif enroll_filter == 'not-enrolled':
-
         # build a list of only enrolled faculty, together with their FacultyData records
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id).subquery()
@@ -5181,7 +5193,6 @@ def faculty_workload_ajax(id):
     elif ((enroll_filter == 'supv-active' or enroll_filter == 'supv-sabbatical' or enroll_filter == 'supv-exempt') and pclass.uses_supervisor) \
             or ((enroll_filter == 'mark-active' or enroll_filter == 'mark-sabbatical' or enroll_filter == 'mark-exempt') and pclass.uses_marker) \
             or ((enroll_filter == 'pres-active' or enroll_filter == 'pres-sabbatical' or enroll_filter == 'pres-exempt') and pclass.uses_presentations):
-
         faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
             .filter(EnrollmentRecord.pclass_id == id)
 
@@ -5213,7 +5224,6 @@ def faculty_workload_ajax(id):
             .join(faculty_ids_q, User.id == faculty_ids_q.c.owner_id)
 
     else:
-
         # build list of all active faculty, together with their FacultyData records
         faculty = db.session.query(User, FacultyData).filter(User.active).join(FacultyData, FacultyData.id==User.id)
 
@@ -5228,6 +5238,134 @@ def faculty_workload_ajax(id):
         data = faculty.all()
 
     return ajax.convenor.faculty_workload_data(data, config)
+
+
+@convenor.route('/teaching_groups/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def teaching_groups(id):
+    # id is a ProjectClass
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    # get current academic year
+    current_year = get_current_year()
+
+    organize_by = request.args.get('organize_by')
+
+    if organize_by is None and session.get('convenor_groups_organize_by'):
+        organize_by = session['convenor_groups_organize_by']
+
+    if organize_by not in ['student', 'faculty']:
+        organize_by = 'faculty'
+
+    if organize_by is not None:
+        session['convenor_groups_organize_by'] = organize_by
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    # build list of allowed submission periods
+    periods = set()
+    # TODO: replace period_names with set() if and when we transition to Python 3.7
+    #  In Python 3.7, set is guaranteed to retain insertion order without having to use OrderedSet.
+    #  Currently we have to use a list in order to guarantee that the labels are displayed in the correct order
+    period_names = []
+    for p in config.ordered_periods:
+        periods.add(p.submission_period)
+        period_names.append((p.submission_period, p.display_name))
+
+    if len(periods) == 0:
+        flash('Internal error: No submission periods have been set up for this ProjectClassConfig. '
+              'Please contact a system administator.', 'error')
+        return redirect(request.referrer)
+
+    show_period = request.args.get('show_period')
+    if show_period is not None and not isinstance(show_period, int):
+        show_period = int(show_period)
+
+    if show_period is None and session.get('convenor_groups_show_period'):
+        show_period = session['convenor_groups_show_period']
+
+    if show_period not in periods:
+        # get first allowed elmeent of periods
+        for x in periods:
+            break
+
+        show_period = x
+
+    if show_period is not None:
+        session['convenor_groups_show_period'] = show_period
+
+    data = get_convenor_dashboard_data(pclass, config)
+
+    return render_template('convenor/dashboard/teaching_groups.html', pane='faculty', subpane='groups',
+                           pclass=pclass, config=config, current_year=current_year, convenor_data=data,
+                           organize_by=organize_by, show_period=show_period, period_names=period_names)
+
+
+@convenor.route('/teaching_groups_ajax/<int:id>')
+@roles_accepted('faculty', 'admin', 'root')
+def teaching_groups_ajax(id):
+    # id is a ProjectClass
+    pclass = ProjectClass.query.get_or_404(id)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(pclass):
+        return jsonify({})
+
+    organize_by = request.args.get('organize_by')
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
+        return jsonify({})
+
+    if organize_by not in ['student', 'faculty']:
+        organize_by = 'faculty'
+
+    # build list of allowed submission periods
+    periods = set()
+    # TODO: replace period_names with set() if and when we transition to Python 3.7
+    #  In Python 3.7, set is guaranteed to retain insertion order without having to use OrderedSet.
+    #  Currently we have to use a list in order to guarantee that the labels are displayed in the correct order
+    period_names = []
+    for p in config.ordered_periods:
+        periods.add(p.submission_period)
+        period_names.append((p.submission_period, p.display_name))
+
+    if len(periods) == 0:
+        return jsonify({})
+
+    show_period = request.args.get('show_period')
+    if show_period is not None and not isinstance(show_period, int):
+        show_period = int(show_period)
+
+    if show_period not in periods:
+        # get first allowed element of periods
+        for x in periods:
+            break
+
+        show_period = x
+
+    if organize_by == 'faculty':
+        faculty_ids = db.session.query(EnrollmentRecord.owner_id) \
+            .filter(EnrollmentRecord.pclass_id == id).subquery()
+
+        faculty = db.session.query(FacultyData) \
+            .join(faculty_ids, FacultyData.id == faculty_ids.c.owner_id) \
+            .join(User, User.id == FacultyData.id) \
+            .filter(User.active).all()
+
+        return ajax.convenor.teaching_group_by_faculty(faculty, config, show_period)
+
+    return ajax.convenor.teaching_group_by_student(config.submitting_students, config, show_period)
 
 
 @convenor.route('/manual_assign/<int:id>', methods=['GET', 'POST'])

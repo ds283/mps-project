@@ -267,6 +267,28 @@
                             </div>
                         </div>
 
+                        {% if desc.review_only %}
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    This project is a <strong>literature review</strong>
+                                </div>
+                                <div class="panel-body">
+                                    <p>Literature reviews are marked in the same way as conventional projects.
+                                    An outstanding original literature review will attract the same credit
+                                    as any other outstanding project.</p>
+
+                                    <p>However,
+                                    depending on the technicality of the subject,
+                                    it may be more challenging to produce a review at the
+                                    required level.</p>
+
+                                    <p>Marks for literature
+                                    review projects are <strong>not capped</strong>
+                                    as a matter of principle.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+
                         <h4>Description</h4>
                         {% if desc %}
                             <div class="project-description">{{ desc.description|dealingwithdollars|markdown|bclean|blinkify|safe }}</div>

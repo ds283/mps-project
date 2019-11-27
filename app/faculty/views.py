@@ -69,6 +69,7 @@ _marker_menu = \
 """
 
 
+# label for project description list
 _desc_label = \
 """
 <a href="{{ url_for('faculty.project_preview', id=d.parent.id, pclass=desc_pclass_id,
@@ -79,6 +80,16 @@ _desc_label = \
 {% if not d.is_valid %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
+<div>
+    {% if d.review_only %}
+        <span class="label label-info">REVIEW</span>
+    {% endif %}
+    {% if d.aims is not none and d.aims|length > 0 %}
+        <span class="label label-success"><i class="fa fa-check"></i> Aims specified</span>
+    {% else %}
+        <span class="label label-warning"><i class="fa fa-times"></i> Aims not specified</span>
+    {% endif %}
+</div>
 {% set state = d.workflow_state %}
 <div>
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
@@ -575,12 +586,14 @@ def add_description(pid):
                                   project_classes=form.project_classes.data,
                                   description=form.description.data,
                                   reading=form.reading.data,
+                                  aims=form.aims.data,
                                   team=form.team.data,
                                   confirmed=False,
                                   workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
                                   validator_id=None,
                                   validated_timestamp=None,
                                   capacity=form.capacity.data,
+                                  review_only=form.review_only.data,
                                   creator_id=current_user.id,
                                   creation_timestamp=datetime.now())
 
@@ -618,8 +631,10 @@ def edit_description(did):
         desc.project_classes = form.project_classes.data
         desc.description = form.description.data
         desc.reading = form.reading.data
+        desc.aims = form.aims.data
         desc.team = form.team.data
         desc.capacity = form.capacity.data
+        desc.review_only = form.review_only.data
         desc.last_edit_id = current_user.id
         desc.last_edit_timestamp = datetime.now()
 
@@ -1285,7 +1300,7 @@ def dashboard():
     unofferable = current_user.faculty_data.projects_unofferable
     if unofferable > 0:
         plural = '' if unofferable == 1 else 's'
-        isare = '' if unofferable == 1 else 'are'
+        isare = 'is' if unofferable == 1 else 'are'
 
         flash('You have {n} project{plural} that {isare} active but cannot be offered to students. '
               'Please check your project list.'.format(n=unofferable, plural=plural, isare=isare),

@@ -17,8 +17,8 @@ from sqlalchemy.event import listens_for
 
 from ..database import db
 from ..models import MainConfig, ProjectClass, ProjectClassConfig, User, FacultyData, Project, \
-    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, LiveProject, FilterRecord, StudentData, \
-    MatchingAttempt, ProjectDescription, WorkflowMixin
+    EnrollmentRecord, ResearchGroup, SelectingStudent, SubmittingStudent, FilterRecord, StudentData, \
+    MatchingAttempt, ProjectDescription, WorkflowMixin, DegreeProgramme, DegreeType
 from ..models import project_assessors
 from ..cache import cache
 
@@ -930,6 +930,13 @@ def get_convenor_filter_record(config):
     return record
 
 
+def _detuple(x):
+    while isinstance(x, list) or isinstance(x, tuple):
+        x = x[0]
+
+    return x
+
+
 def build_enroll_selector_candidates(config):
     """
     Build a query that returns possible candidates for manual enrollment as selectors
@@ -938,31 +945,21 @@ def build_enroll_selector_candidates(config):
     """
 
     # which year does the project run in, and for how long?
-    year = config.start_year
+    start_year = config.start_year
     extent = config.extent
+    current_year = config.year
 
     # earliest year: academic year in which students can be selectors
-    first_selector_year = year - 1
+    first_allowed_year = start_year - 1
 
     # latest year: last academic year in which students can be a selector
-    last_selector_year = year + (extent - 1) - 1
+    last_allowed_year = start_year + (extent - 1) - 1
+
+    allowed_programmes = config.project_class.programmes.with_entities(DegreeProgramme.id).distinct().all()
+    allowed_programmes = [_detuple(x) for x in allowed_programmes]
 
     # build a list of eligible students who are not already attached as selectors
-    candidates = db.session.query(StudentData) \
-        .filter(StudentData.foundation_year == False,
-                config.year - StudentData.cohort + 1 - StudentData.repeated_years >= first_selector_year,
-                config.year - StudentData.cohort + 1 - StudentData.repeated_years <= last_selector_year) \
-        .join(User, StudentData.id == User.id) \
-        .filter(User.active == True)
-
-    fyear_candidates = db.session.query(StudentData) \
-        .filter(StudentData.foundation_year == True,
-                config.year - StudentData.cohort - StudentData.repeated_years >= first_selector_year,
-                config.year - StudentData.cohort - StudentData.repeated_years <= last_selector_year) \
-        .join(User, StudentData.id == User.id) \
-        .filter(User.active == True)
-
-    candidates = candidates.union(fyear_candidates)
+    candidates = _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year)
 
     # build a list of existing selecting students
     selectors = db.session.query(SelectingStudent.student_id) \
@@ -984,31 +981,21 @@ def build_enroll_submitter_candidates(config):
     """
 
     # which year does the project run in, and for how long?
-    year = config.start_year
+    start_year = config.start_year
     extent = config.extent
+    current_year = config.year
 
     # earliest year: academic year in which students can be submitter
-    first_submitter_year = year
+    first_allowed_year = start_year
 
     # latest year: last academic year in which students can be a submitter
-    last_submitter_year = year + (extent - 1)
+    last_allowed_year = start_year + (extent - 1)
+
+    allowed_programmes = config.project_class.programmes.with_entities(DegreeProgramme.id).distinct().all()
+    allowed_programmes = [_detuple(x) for x in allowed_programmes]
 
     # build a list of eligible students who are not already attached as submitters
-    candidates = db.session.query(StudentData) \
-        .filter(StudentData.foundation_year == False,
-                config.year - StudentData.cohort + 1 - StudentData.repeated_years >= first_submitter_year,
-                config.year - StudentData.cohort + 1 - StudentData.repeated_years <= last_submitter_year) \
-        .join(User, StudentData.id == User.id) \
-        .filter(User.active == True)
-
-    fyear_candidates = db.session.query(StudentData) \
-        .filter(StudentData.foundation_year == True,
-                config.year - StudentData.cohort - StudentData.repeated_years >= first_submitter_year,
-                config.year - StudentData.cohort - StudentData.repeated_years <= last_submitter_year) \
-        .join(User, StudentData.id == User.id) \
-        .filter(User.active == True)
-
-    candidates = candidates.union(fyear_candidates)
+    candidates = _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year)
 
     # build a list of existing selecting students
     submitters = db.session.query(SubmittingStudent.student_id) \
@@ -1020,6 +1007,39 @@ def build_enroll_submitter_candidates(config):
         .filter(submitters.c.student_id == None)
 
     return missing
+
+
+def _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year):
+    candidates = db.session.query(StudentData) \
+        .join(User, StudentData.id == User.id) \
+        .filter(User.active == True)
+
+    if allowed_programmes is not None and len(allowed_programmes) > 0:
+        candidates = candidates.filter(StudentData.programme_id.in_(allowed_programmes))
+
+    candidates = candidates.join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .filter(current_year - StudentData.cohort + 1 - StudentData.repeated_years <= DegreeType.duration) \
+        .filter(StudentData.foundation_year == False,
+                current_year - StudentData.cohort + 1 - StudentData.repeated_years >= first_allowed_year,
+                current_year - StudentData.cohort + 1 - StudentData.repeated_years <= last_allowed_year)
+
+    fyear_candidates = db.session.query(StudentData) \
+        .join(User, StudentData.id == User.id) \
+        .filter(User.active == True)
+
+    if allowed_programmes is not None and len(allowed_programmes) > 0:
+        fyear_candidates = fyear_candidates.filter(StudentData.programme_id.in_(allowed_programmes))
+
+    fyear_candidates = fyear_candidates.join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
+        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
+        .filter(current_year - StudentData.cohort - StudentData.repeated_years <= DegreeType.duration) \
+        .filter(StudentData.foundation_year == True,
+                current_year - StudentData.cohort - StudentData.repeated_years >= first_allowed_year,
+                current_year - StudentData.cohort - StudentData.repeated_years <= last_allowed_year)
+
+    candidates = candidates.union(fyear_candidates)
+    return candidates
 
 
 def get_automatch_pclasses():

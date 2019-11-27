@@ -334,6 +334,8 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
         MEETING_REQUIRED = 1
         MEETING_OPTIONAL = 2
         MEETING_NONE = 3
+
+        # store status flag
         meeting_reqd = db.Column(db.Integer())
 
 
@@ -446,6 +448,17 @@ def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapp
         def modules(self):
             return db.relationship('Module', secondary=module_mapping_table, lazy='dynamic',
                                    backref=db.backref(module_backref, lazy='dynamic'))
+
+        # what are the aims of this project?
+        # this data is provided to markers so that they have clear criteria to mark against.
+        # SHOULD NOT BE EXPOSED TO STUDENTS
+        aims = db.Column(db.Text())
+
+        # is this project review-only?
+        review_only = db.Column(db.Boolean(), default=False)
+
+
+        # METHODS
 
 
         def _level_modules_query(self, level_id):
@@ -1847,38 +1860,54 @@ class FacultyData(db.Model):
         return '<span class="label label-success"><i class="fa fa-check"></i> Assessor for {n}</span>'.format(n=num)
 
 
-    def supervisor_assignments(self, pclass_id):
+    def supervisor_assignments(self, pclass_id, period=None):
         """
         Return a list of current SubmissionRecord instances for which we are supervisor
         :return:
         """
         lp_query = self.live_projects.subquery()
 
-        return db.session.query(SubmissionRecord) \
+        query = db.session.query(SubmissionRecord) \
             .join(lp_query, lp_query.c.id == SubmissionRecord.project_id) \
             .filter(SubmissionRecord.retired == False) \
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
             .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
             .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id) \
-            .filter(ProjectClassConfig.pclass_id == pclass_id) \
-            .order_by(SubmissionPeriodRecord.submission_period.asc())
+            .filter(ProjectClassConfig.pclass_id == pclass_id)
+
+        if period is None:
+            query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
+        elif isinstance(period, int):
+            query = query.filter(SubmissionPeriodRecord.submission_period == period)
+        else:
+            raise ValueError('Expected period identifier to be an integer')
+
+        return query
 
 
-    def marker_assignments(self, pclass_id):
+    def marker_assignments(self, pclass_id, period=None):
         """
         Return a list of current SubmissionRecord instances for which we are 2nd marker
         :return:
         """
-        return db.session.query(SubmissionRecord) \
+        query = db.session.query(SubmissionRecord) \
             .filter_by(retired=False, marker_id=self.id) \
             .join(SubmittingStudent, SubmissionRecord.owner_id == SubmittingStudent.id) \
             .join(ProjectClassConfig, SubmittingStudent.config_id == ProjectClassConfig.id) \
             .join(SubmissionPeriodRecord, SubmissionRecord.period_id == SubmissionPeriodRecord.id) \
-            .filter(ProjectClassConfig.pclass_id == pclass_id) \
-            .order_by(SubmissionPeriodRecord.submission_period.asc())
+            .filter(ProjectClassConfig.pclass_id == pclass_id)
+
+        if period is None:
+            query = query.order_by(SubmissionPeriodRecord.submission_period.asc())
+        elif isinstance(period, int):
+            query = query.filter(SubmissionPeriodRecord.submission_period == period)
+        else:
+            raise ValueError('Expected period identifier to be an integer')
+
+        return query
 
 
-    def presentation_assignments(self, pclass_id):
+    def presentation_assignments(self, pclass_id, period=None):
         query = db.session.query(faculty_to_slots.c.slot_id).filter(faculty_to_slots.c.faculty_id == self.id).subquery()
 
         slot_query = db.session.query(ScheduleSlot) \
@@ -1893,8 +1922,14 @@ class FacultyData(db.Model):
             .join(submitter_to_slots, submitter_to_slots.c.slot_id == slot_ids.c.id) \
             .join(SubmissionRecord, SubmissionRecord.id == submitter_to_slots.c.submitter_id) \
             .filter(SubmissionRecord.retired == False) \
-            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
-            .join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
+            .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id)
+
+        if isinstance(period, int):
+            filtered_ids = filtered_ids.filter(SubmissionPeriodRecord.submission_period == period)
+        elif period is not None:
+            raise ValueError('Expected period identifier to be an integer')
+
+        filtered_ids = filtered_ids.join(ProjectClassConfig, ProjectClassConfig.id == SubmissionPeriodRecord.config_id) \
             .filter(ProjectClassConfig.pclass_id == pclass_id).distinct().subquery()
 
         return db.session.query(ScheduleSlot) \
@@ -1912,31 +1947,40 @@ class FacultyData(db.Model):
         if pclass.uses_supervisor:
             supv = self.supervisor_assignments(pclass.id)
             supv_CATS = [x.supervising_CATS for x in supv]
-            supv_CATS_clean = [x for x in supv_CATS if x is not None]
-
-            supv_total = sum(supv_CATS_clean)
+            supv_total = sum([x for x in supv_CATS if x is not None])
         else:
             supv_total = 0
 
         if pclass.uses_marker:
             mark = self.marker_assignments(pclass.id)
             mark_CATS = [x.marking_CATS for x in mark]
-            mark_CATS_clean = [x for x in mark_CATS if x is not None]
-
-            mark_total = sum(mark_CATS_clean)
+            mark_total = sum([x for x in mark_CATS if x is not None])
         else:
             mark_total = 0
 
         if pclass.uses_presentations:
             pres = self.presentation_assignments(pclass.id)
             pres_CATS = [x.assessor_CATS for x in pres]
-            pres_CATS_clean = [x for x in pres_CATS if x is not None]
-
-            pres_total = sum(pres_CATS_clean)
+            pres_total = sum([x for x in pres_CATS if x is not None])
         else:
             pres_total = 0
 
         return supv_total, mark_total, pres_total
+
+
+    def total_CATS_assignment(self):
+        supv = 0
+        mark = 0
+        pres = 0
+
+        for record in self.enrollments:
+            s, m, p = self.CATS_assignment(record.pclass)
+
+            supv += s
+            mark += m
+            pres += p
+
+        return supv, mark, pres
 
 
     def has_late_feedback(self, pclass_id, faculty_id):
@@ -2202,8 +2246,8 @@ class StudentData(db.Model, WorkflowMixin):
         # we allow published or unpublished records in the timeline
         return get_count(self.selecting.filter_by(retired=True)) > 0 or \
                 get_count(self.submitting.filter_by(retired=True)) > 0
-    
-    
+
+
     @property
     def has_previous_submissions(self):
         # this is intended to count "real" submissions, so we drop any records that
@@ -3670,6 +3714,10 @@ class ProjectClassConfig(db.Model):
 
     @property
     def selector_lifecycle(self):
+        # an unpublished project class is always ready for rollover
+        if not self.project_class.publish:
+            return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER
+
         # if gone live and closed, then either we are ready to match or we are read to rollover
         if self.live and self.selection_closed:
             if self.do_matching:
@@ -3710,6 +3758,10 @@ class ProjectClassConfig(db.Model):
 
     @property
     def submitter_lifecycle(self):
+        # an unpublished project class is always ready for rollover
+        if not self.project_class.publish:
+            return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
+
         if self.submission_period > self.submissions:
             return ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER
 
@@ -3930,6 +3982,11 @@ class ProjectClassConfig(db.Model):
             return None
 
         return self.periods.filter_by(submission_period=n).one()
+
+
+    @property
+    def ordered_periods(self):
+        return self.periods.order_by(SubmissionPeriodRecord.submission_period.asc())
 
 
     @property
@@ -5123,7 +5180,7 @@ class ProjectDescription(db.Model,
             return value
 
 
-    @validates('description', 'reading', 'team', 'capacity', 'modules', include_removes=True)
+    @validates('description', 'reading', 'aims', 'team', 'capacity', 'modules', 'review_only', include_removes=True)
     def _description_enqueue(self, key, value, is_remove):
         with db.session.no_autoflush:
             self.workflow_state = WorkflowMixin.WORKFLOW_APPROVAL_QUEUED
@@ -6414,7 +6471,15 @@ class SubmittingStudent(db.Model):
 
 
     def get_assignment(self, period):
-        records = self.records.filter_by(period_id=period.id).all()
+        if isinstance(period, SubmissionPeriodRecord):
+            period_number = period.submission_period
+        elif isinstance(period, int):
+            period_number = period
+        else:
+            raise TypeError('Expected period to be a SubmissionPeriodRecord or an integer')
+
+        records = self.records.join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
+            .filter(SubmissionPeriodRecord.submission_period == period_number).all()
 
         if len(records) == 0:
             return None

@@ -63,21 +63,25 @@ def register_rollover_tasks(celery):
             if convenor is None:
                 self.update_state('FAILURE', meta='Could not load convenor User record from database')
 
-            return rollover_fail.apply_async(args=(task_id, convenor_id))
+            raise self.replace(rollover_fail.s(task_id, convenor_id))
 
         if config.selector_lifecycle < ProjectClassConfig.SELECTOR_LIFECYCLE_READY_ROLLOVER:
-            convenor.post_message('Cannot yet rollover for {name} {yra}--{yrb} '
+            convenor.post_message('Cannot yet rollover for {name} {yra}-{yrb} '
                                   'because not all selector activities have been '
-                                  'finalised.'.format(name=config.name, yra=year, yrb=year + 1))
+                                  'finalised. (Lifecycle stage={l}.)'.format(name=config.name, yra=year, yrb=year + 1,
+                                                                             l=config.selector_lifecycle),
+                                  'info', autocommit=True)
             self.update_state('FAILURE', meta='Selector lifecycle state is not ready for rollover')
-            return rollover_fail.apply_async(args=(task_id, convenor_id))
+            raise self.replace(rollover_fail.s(task_id, convenor_id))
 
         if config.submitter_lifecycle < ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
-            convenor.post_message('Cannot yet rollover for {name} {yra}--{yrb} '
+            convenor.post_message('Cannot yet rollover for {name} {yra}-{yrb} '
                                   'because not all submitter activities have been '
-                                  'finalised.'.format(name=config.name, yra=year, yrb=year + 1))
+                                  'finalised. (Lifecycle stage={l}.)'.format(name=config.name, yra=year, yrb=year + 1,
+                                                                             l=config.submitter_lifecycle),
+                                  'info', autocommit=True)
             self.update_state('FAILURE', meta='Submitter lifecycle state is not ready for rollover')
-            return rollover_fail.apply_async(args=(task_id, convenor_id))
+            raise self.replace(rollover_fail.s(task_id, convenor_id))
 
         # find selected MatchingAttempt that contains allocations for this project class, if used
         match = None
@@ -86,9 +90,10 @@ def register_rollover_tasks(celery):
 
             if match is None:
                 convenor.post_message('Could not find allocated matches for {name} '
-                                      '{yra}--{yrb}'.format(name=config.name, yra=year, yrb=year + 1))
+                                      '{yra}-{yrb}'.format(name=config.name, yra=year, yrb=year + 1),
+                                      'info', autocommit=True)
                 self.update_state('FAILURE', meta='Could not find selected MatchingAttempt record')
-                return rollover_fail.apply_async(args=(task_id, convenor_id))
+                raise self.replace(rollover_fail.s(task_id, convenor_id))
 
         # build group of tasks to convert SelectingStudent instances from the current config into
         # SubmittingStudent instances for next year's config

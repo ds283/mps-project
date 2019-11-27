@@ -67,7 +67,25 @@
             {% endif %}
         </div>
 
+        <hr class="intro-divider">
+        {{ wtf.form_field(form.aims) }}
         {{ wtf.form_field(form.description) }}
+
+        <hr class="intro-divider">
+        {{ wtf.form_field(form.review_only) }}
+        <div class="help-block">
+            <p>Projects marked as literature reviews are not marked in the same way as conventional projects.
+            An outstanding original literature review should attract the same credit as any other
+            outstanding project.
+            However, it may be more challenging for students to attain the required level.
+            Note that marks for literature reviews are <strong>not capped</strong>
+            as a matter of principle.</p>
+
+            <p>This setting is visible to students in order to help them gauge their likelihood of
+            success with the project.</p>
+        </div>
+
+        <hr class="intro-divider">
         {{ wtf.form_field(form.reading) }}
 
         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}

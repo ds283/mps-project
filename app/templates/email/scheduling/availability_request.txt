@@ -13,7 +13,7 @@ between these dates.
 To do so, please log in to the project management web app at
 https:://mpsprojects.co.uk. Once logged in, the information request box should
 appear highlighted in red at the top of your dashboard. We would be very
-grateful if you could provide your reponse by {{ event.availability_deadline.strftime("%a %d %b %Y") }}
+grateful if you could provide your reponse by {{ deadline.strftime("%a %d %b %Y") }}
 at latest.
 
 This presentation event is being organized by {{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }}).

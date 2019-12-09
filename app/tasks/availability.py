@@ -21,13 +21,22 @@ from ..models import User, PresentationAssessment, TaskRecord, FacultyData, Enro
 from ..task_queue import progress_update, register_task
 from ..shared.sqlalchemy import get_count
 
+from datetime import datetime, date
+from dateutil import parser
+
 
 def register_availability_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
-    def issue(self, data_id, user_id, celery_id):
+    def issue(self, data_id, user_id, celery_id, deadline):
         self.update_state(state='STARTED',
                           meta='Looking up PresentationAssessment record for id={id}'.format(id=data_id))
+
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
 
         try:
             data = db.session.query(PresentationAssessment).filter_by(id=data_id).first()
@@ -56,7 +65,7 @@ def register_availability_tasks(celery):
                 if assessor.id not in assessor_ids:
                     assessor_ids.add(assessor.id)
 
-        assessor_tasks = group(attach_assessment_assessor.s(data_id, a_id) | issue_assessor_email.s() for a_id in assessor_ids)
+        assessor_tasks = group(attach_assessment_assessor.s(data_id, a_id) | issue_assessor_email.s(deadline) for a_id in assessor_ids)
 
         talk_ids = set()
 
@@ -69,7 +78,7 @@ def register_availability_tasks(celery):
 
         submitter_tasks = group(attach_assessment_submitter.s(data_id, s_id) for s_id in talk_ids)
 
-        task_chain = availability_finalize_msg.si(celery_id)
+        task_chain = availability_finalize_msg.si(celery_id, data_id, deadline)
 
         if len(submitter_tasks) > 0:
             task_chain = attach_submitter_pre_msg.si(celery_id) | submitter_tasks | \
@@ -137,13 +146,41 @@ def register_availability_tasks(celery):
         return num_attached
 
 
-    @celery.task()
-    def availability_finalize_msg(task_id):
+    @celery.task(bind=True)
+    def availability_finalize_msg(self, task_id, data_id, deadline):
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
+
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Availability requests issued', autocommit=False)
+
+        try:
+            data = db.session.query(PresentationAssessment).filter_by(id=data_id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if data is None:
+            self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
+            raise Ignore()
+
+        try:
+            data.requested_availability = True
+            data.availability_closed = False
+            data.availability_deadline = deadline
+
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        return True
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def attach_assessment_assessor(self, data_id, assessor_id):
+    def attach_assessment_assessor(self, _result_data, data_id, assessor_id):
         try:
             data = db.session.query(PresentationAssessment).filter_by(id=data_id).first()
         except SQLAlchemyError as e:
@@ -156,7 +193,7 @@ def register_availability_tasks(celery):
 
         try:
             a_record = AssessorAttendanceData(assessment_id=data.id,
-                                              faculty=assessor_id,
+                                              faculty_id=assessor_id,
                                               comment=None,
                                               confirmed=False,
                                               confirmed_timestamp=None)
@@ -178,7 +215,13 @@ def register_availability_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def issue_assessor_email(self, a_record_id):
+    def issue_assessor_email(self, a_record_id, deadline):
+        if isinstance(deadline, str):
+            deadline = parser.parse(deadline).date()
+        else:
+            if not isinstance(deadline, date):
+                raise RuntimeError('Could not interpret "deadline" argument')
+
         try:
             a_record = db.session.query(AssessorAttendanceData).filter_by(id=a_record_id).first()
         except SQLAlchemyError as e:
@@ -196,7 +239,7 @@ def register_availability_tasks(celery):
                       recipients=[a_record.faculty.user.email])
 
         msg.body = render_template('email/scheduling/availability_request.txt', event=a_record.assessment,
-                                   user=a_record.faculty.user)
+                                   deadline=deadline, user=a_record.faculty.user)
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send availability request email to {r}'.format(r=', '.join(msg.recipients)))
@@ -206,7 +249,7 @@ def register_availability_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def attach_assessment_submitter(self, data_id, submitter_id):
+    def attach_assessment_submitter(self, _result_data, data_id, submitter_id):
         try:
             data = db.session.query(PresentationAssessment).filter_by(id=data_id).first()
         except SQLAlchemyError as e:

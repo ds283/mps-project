@@ -3543,6 +3543,7 @@ def perform_go_live(id):
 
     if deadline is None:
         flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
+        return redirect(request.referrer)
 
     deadline = parser.parse(deadline).date()
 

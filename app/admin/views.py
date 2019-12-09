@@ -4402,8 +4402,6 @@ def add_assessment():
     AddPresentationAssessmentForm = AddPresentationAssessmentFormFactory(current_year)
     form = AddPresentationAssessmentForm(request.form)
 
-    print(form.name.validators)
-
     if form.validate_on_submit():
         data = PresentationAssessment(name=form.name.data,
                                       year=current_year,

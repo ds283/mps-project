@@ -1,0 +1,26 @@
+Dear {{ user.first_name }}
+
+This is an automated email from the Sussex Physics & Astronomy
+project management web app at https://mpsprojects.co.uk.
+It is sent from an address that is not monitored or answered;
+please direct any queries to the project convenor.
+
+A presentation assessment event is being scheduled between
+{{ event.earliest_date }} and {{ event.latest_date }}.
+In order to prepare a timetable we would like to ask for your availability
+between these dates.
+
+To do so, please log in to the project management web app at
+https:://mpsprojects.co.uk. Once logged in, the information request box should
+appear highlighted in red at the top of your dashboard. We would be very
+grateful if you could provide your reponse by {{ event.availability_deadline.strftime("%a %d %b %Y") }}
+at latest.
+
+This presentation event is being organized by {{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }}).
+Please direct queries to this address.
+
+Thank you for your help,
+{% for fac in event.convenor_list -%}
+{{ fac.user.first_name }} {{ fac.user.last_name }}
+{% endfor -%}
+(the project convenors)

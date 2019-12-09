@@ -189,7 +189,8 @@ def register_rollover_tasks(celery):
 
     @celery.task()
     def rollover_new_config_msg(task_id):
-        progress_update(task_id, TaskRecord.RUNNING, 10, 'Generating database records for new academic year...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 10, 'Generating database records for new academic year...',
+                        autocommit=True)
 
 
     @celery.task(bind=True)
@@ -205,7 +206,8 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', 'Unexpected type forwarded in rollover chain')
             raise RuntimeError('Unexpected type forwarded in rollover chain')
 
-        progress_update(task_id, TaskRecord.RUNNING, 20, 'Converting selector records into submitter records...', autocommit=True)
+        progress_update(task_id, TaskRecord.RUNNING, 20, 'Converting selector records into submitter records...',
+                        autocommit=True)
         return new_config_id
 
 

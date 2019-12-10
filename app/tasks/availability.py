@@ -191,6 +191,13 @@ def register_availability_tasks(celery):
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
             raise Ignore()
 
+        # search for an existing record with this assessment id and assessor id, to avoid entering duplicates
+        a_record = db.session.query(AssessorAttendanceData) \
+            .filter_by(assessment_id=data.id, faculty_id=assessor_id).first()
+
+        if a_record is not None:
+            return a_record.id
+
         try:
             a_record = AssessorAttendanceData(assessment_id=data.id,
                                               faculty_id=assessor_id,
@@ -237,6 +244,19 @@ def register_availability_tasks(celery):
             self.update_state('FAILURE', meta='Could not load AssessorAttendanceData record from database')
             raise Ignore()
 
+        # avoid sending duplicate emails
+        if a_record.request_email_sent:
+            return 0
+
+        try:
+            a_record.request_email_sent = True
+            a_record.request_email_timestamp = datetime.now()
+
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='Availability request for event {name}'.format(name=a_record.assessment.name),
                       sender=current_app.config['MAIL_DEFAULT_SENDER'],
@@ -264,6 +284,13 @@ def register_availability_tasks(celery):
         if data is None:
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
             raise Ignore()
+
+        # search for existing record with this assessment_id and submitted_id, to avoid adding duplicates
+        s_record = db.session.query(SubmitterAttendanceData) \
+            .filter_by(assessment_id=data.id, submitter_id=submitter_id).first()
+
+        if s_record is not None:
+            return s_record.id
 
         try:
             s_record = SubmitterAttendanceData(assessment_id=data.id,
@@ -517,6 +544,15 @@ def register_availability_tasks(celery):
         if assessor is None:
             self.update_status('FAILURE', meta='Could not load AssessorAttendanceData record from database')
             raise Ignore
+
+        try:
+            assessor.reminder_email_sent = True
+            assessor.last_reminder_timestamp = datetime.now()
+
+            db.session.commit()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
 
         send_log_email = celery.tasks['app.tasks.send_log_email.send_log_email']
         msg = Message(subject='Reminder: availability for event {name}'.format(name=assessor.assessment.name),

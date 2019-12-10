@@ -143,6 +143,9 @@ def get_matching_data(configs=None):
 
     # loop through all active project classes
     for config in configs:
+        if not config.project_class.publish:
+            continue
+
         if config.selector_lifecycle >= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_MATCHING:
             matching_ready = True
 

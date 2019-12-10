@@ -18,6 +18,8 @@
 {% set matching_ready = base_context_data['matching_ready'] %}
 {% set has_assessments = base_context_data['has_assessments'] %}
 
+{% set live_platform = get_live_platform() %}
+
 {% block scripts %}
     {{ super() }}
     <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
@@ -313,6 +315,11 @@
                     navbar-inverse
                 {% endif %}
                 navbar-fixed-top topnav" role="navigation">
+        {% if not live_platform %}
+            <div class="notify-bar hidden-sm container-fluid">
+                <div class="container">Not live platform &mdash; external email disabled</div>
+            </div>
+        {% endif %}
         <div class="container topnav">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"

@@ -5,7 +5,7 @@ project management web app at https://mpsprojects.co.uk.
 It is sent from an address that is not monitored or answered;
 please direct any queries to the project convenor.
 
-We would like to gently remind you that a presentation assessment event is
+We would like to remind you that a presentation assessment event is
 being scheduled between {{ event.earliest_date }} and {{ event.latest_date }}.
 In order to prepare a timetable we are collecting availability information
 from faculty members, but we do not yet appear to have received your details.
@@ -21,6 +21,7 @@ have clicked the 'Confirm' button at the bottom of the availability selector.
 This will ensure that you do not receive further unnecessary reminder emails.
 
 This presentation event is being organized by {{ event.created_by.first_name }} {{ event.created_by.last_name }} ({{ event.created_by.email }}).
+Please direct queries to this address.
 
 Thank you for your help,
 {% for fac in event.convenor_list -%}

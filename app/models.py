@@ -9554,6 +9554,18 @@ class AssessorAttendanceData(db.Model):
     # over-ride session limit on a per-faculty basis
     assigned_limit = db.Column(db.Integer(), default=None)
 
+    # has availability request email been sent?
+    request_email_sent = db.Column(db.Boolean(), default=False)
+
+    # availability request timestamp
+    request_timestamp = db.Column(db.DateTime())
+
+    # has a reminder email been sent?
+    reminder_email_sent = db.Column(db.Boolean(), default=False)
+
+    # when was last reminder email sent? NULL = no reminder yet issued
+    last_reminder_timestamp = db.Column(db.DateTime())
+
 
     @property
     def number_available(self):
@@ -10213,8 +10225,10 @@ def _PresentationSession_update_handler(mapper, connection, target):
         cache.delete_memoized(_PresentationSession_is_valid, target.id)
         cache.delete_memoized(_PresentationAssessment_is_valid, target.owner_id)
 
+        # Can't filter on session_type, since we don't know the session_type prior to the update.
+        # Instead, just uncache all sessions for this event on the same day.
         dups = db.session.query(PresentationSession) \
-            .filter_by(date=target.date, owner_id=target.owner_id, session_type=target.session_type).all()
+            .filter_by(date=target.date, owner_id=target.owner_id).all()
         for dup in dups:
             if dup.id != target.id:
                 cache.delete_memoized(_PresentationSession_is_valid, dup.id)

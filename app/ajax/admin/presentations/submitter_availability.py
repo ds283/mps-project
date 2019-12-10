@@ -75,11 +75,18 @@ _global_name = \
 
 _project_name = \
 """
-<a href="{{ dest_url }}">{{ p.name }}</a>
-&emsp;
-<a class="label label-info" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
-    {{ p.number_assessors }} assessors
-</a>
+{% if p is none %}
+    <span class="label label-default">No project assigned</span>
+{% else %}
+    <div>
+        <a href="{{ dest_url }}">{{ p.name }}</a>
+    </div>
+    <div>
+        <a class="label label-info" href="{{ url_for('convenor.attach_assessors', id=p.parent_id, pclass_id=p.config.pclass_id, url=url, text=text) }}">
+            {{ p.number_assessors }} assessors
+        </a>
+    </div>
+{% endif %}
 """
 
 
@@ -87,13 +94,14 @@ def submitter_session_availability_data(assessment, session, talks):
     data = [{'student': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=s.submitter.owner.student.user.email,
                                                                                  name=s.submitter.owner.student.user.name),
                          'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
-             'pclass': render_template_string(_pclass, pclass=s.submitter.project.config.project_class),
+             'pclass': render_template_string(_pclass, pclass=s.submitter.owner.config.project_class),
              'project': render_template_string(_project_name, p=s.submitter.project,
                                                dest_url=url_for('faculty.live_project',
                                                                 pid=s.submitter.project.id,
                                                                 text='session attendee list',
                                                                 url=url_for('admin.submitter_session_availability',
-                                                                            id=session.id)),
+                                                                            id=session.id))
+                                               if s.submitter.project is not None else None,
                                                url=url_for('admin.submitter_session_availability', id=session.id),
                                                text='submitter availability for session'),
              'menu': render_template_string(_session_actions, s=s.submitter, a=assessment, sess=session)} for s in talks]
@@ -104,12 +112,14 @@ def submitter_session_availability_data(assessment, session, talks):
 def presentation_attendees_data(assessment, talks):
     data = [{'student': {'display': render_template_string(_global_name, s=s, a=assessment),
                          'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
-             'pclass': render_template_string(_pclass, pclass=s.submitter.project.config.project_class),
+             'pclass': render_template_string(_pclass, pclass=s.submitter.owner.config.project_class),
              'project': render_template_string(_project_name, p=s.submitter.project,
-                                               dest_url=url_for('faculty.live_project', pid=s.submitter.project.id,
+                                               dest_url=url_for('faculty.live_project',
+                                                                pid=s.submitter.project.id,
                                                                 text='submitter management list',
                                                                 url=url_for('admin.assessment_manage_attendees',
-                                                                            id=assessment.id)),
+                                                                            id=assessment.id))
+                                               if s.submitter.project is not None else None,
                                                url=url_for('admin.assessment_manage_attendees', id=assessment.id),
                                                text='submitter management view'),
              'menu': render_template_string(_submitter_actions, s=s.submitter, a=assessment)} for s in talks]

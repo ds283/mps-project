@@ -15,7 +15,7 @@
         <div class="panel panel-info">
             <div class="panel-heading">Presentation assessments</div>
             <div class="panel-body">
-                <div class="row vertical-bottom">
+                <div class="row vertical-align">
                     <div class="col-xs-8">
                         Some active project classes use presentations.
                     </div>
@@ -35,7 +35,7 @@
         <div class="panel panel-warning">
             <div class="panel-heading">Perform automatic matching</div>
             <div class="panel-body">
-                <div class="row vertical-bottom">
+                <div class="row vertical-align">
                     <div class="col-xs-8">
                         Automatic matching can now be carried out for one or more project classes.
                     </div>
@@ -60,7 +60,7 @@
         <div class="panel panel-danger">
             <div class="panel-heading">Rollover academic year</div>
             <div class="panel-body">
-                <div class="row vertical-bottom">
+                <div class="row vertical-align">
                     <div class="col-xs-8">
                         All projects are now in a rollover state.
                     </div>
@@ -79,42 +79,38 @@
     <div class="panel panel-default">
         <div class="panel-heading">Manage website services</div>
         <div class="panel-body">
-            <div class="row">
-                <div class="col-xs-2"></div>
-                <div class="col-xs-8 vertical-align">
-                    <div class="col-xs-9">
-                        Clear contents of Redis cache.
-                    </div>
-                    <div class="col-xs-3">
-                        <div class="pull-right">
-                            <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-sm btn-danger services-btn">
-                                Clear
-                            </a>
+            <div class="container-fluid">
+                <div class="row vertical-top">
+                    <div class="col-xs-6">
+                        <div class="container-fluid">
+                            <div class="row vertical-align">
+                                <div class="col-xs-9">
+                                    Clear contents of Redis cache.
+                                </div>
+                                <div class="col-xs-3">
+                                    <div class="pull-right">
+                                        <a href="{{ url_for('admin.clear_redis_cache') }}" class="btn btn-sm btn-danger services-btn">Clear</a>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col-xs-2"></div>
-            </div>
-            <div class="row">
-                <div class="col-xs-2"></div>
-                <div class="col-xs-8 vertical-align" style="padding-top: 5px;">
-                    <div class="col-xs-9">
-                        Reset stored precompute time for all users.
-                    </div>
-                    <div class="col-xs-3">
-                        <div class="pull-right">
-                            <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-sm btn-warning services-btn">
-                                Reset
-                            </a>
-                        </div>
-                    </div>
+                     </div>
+                    <div class="col-xs-6">
+                        <div class="container-fluid">
+                            <div class="row vertical-align">
+                                <div class="col-xs-9">
+                                    Reset stored precompute time for all users.
+                                </div>
+                                <div class="col-xs-3">
+                                    <div class="pull-right">
+                                        <a href="{{ url_for('admin.reset_precompute') }}" class="btn btn-sm btn-warning services-btn">Reset</a>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-xs-2"></div>
             </div>
         </div>
     </div>
-
 {% endmacro %}

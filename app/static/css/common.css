@@ -260,3 +260,13 @@ p.copyright {
     height: 22px;
     margin-bottom: 0.375em
 }
+
+
+.notify-bar {
+    margin: 0px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    background-color: darkslategrey;
+    color: #c0a16b;
+    text-align: center;
+}

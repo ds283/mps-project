@@ -311,6 +311,13 @@ def create_app():
         return real_user
 
 
+    def _get_live_platform():
+        if not has_request_context():
+            return None
+
+        return current_app.config.get('EMAIL_IS_LIVE', False)
+
+
     # collect all global context functions together in an attempt to avoid function call overhead
     @app.context_processor
     def global_context():
@@ -321,7 +328,8 @@ def create_app():
                 'website_revision': site_revision,
                 'website_copyright_dates': site_copyright_dates,
                 'home_dashboard_url': home_dashboard_url(),
-                'get_base_context': get_global_context_data}
+                'get_base_context': get_global_context_data,
+                'get_live_platform': _get_live_platform}
 
 
     @app.errorhandler(404)

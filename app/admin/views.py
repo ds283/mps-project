@@ -4402,8 +4402,6 @@ def add_assessment():
     AddPresentationAssessmentForm = AddPresentationAssessmentFormFactory(current_year)
     form = AddPresentationAssessmentForm(request.form)
 
-    print(form.name.validators)
-
     if form.validate_on_submit():
         data = PresentationAssessment(name=form.name.data,
                                       year=current_year,
@@ -4641,12 +4639,8 @@ def assessment_availability(id):
                 celery = current_app.extensions['celery']
                 availability_task = celery.tasks['app.tasks.availability.issue']
 
-                availability_task.apply_async(args=(data.id, current_user.id, uuid), task_id=uuid)
-
-        data.requested_availability = True
-        data.availability_deadline = form.availability_deadline.data
-
-        db.session.commit()
+                availability_task.apply_async(args=(data.id, current_user.id, uuid, form.availability_deadline.data),
+                                              task_id=uuid)
 
         return redirect(url_for('admin.manage_assessments'))
 

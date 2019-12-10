@@ -196,7 +196,12 @@ def register_availability_tasks(celery):
                                               faculty_id=assessor_id,
                                               comment=None,
                                               confirmed=False,
-                                              confirmed_timestamp=None)
+                                              confirmed_timestamp=None,
+                                              assigned_limit=None,
+                                              request_email_sent=False,
+                                              request_timestamp=None,
+                                              reminder_email_sent=False,
+                                              last_reminder_timestamp=None)
 
             # assume available for all sessions by default
             for session in data.sessions:
@@ -354,11 +359,15 @@ def register_availability_tasks(celery):
                       'one'.format(name=record.owner.user.name))
                 new_record = AssessorAttendanceData(assessment_id=assessment.id,
                                                     faculty_id=record.owner_id,
-                                                    comment=None)
+                                                    comment=None,
+                                                    confirmed=False,                                              assigned_limit=None,
+                                                    request_email_sent=False,
+                                                    request_timestamp=None,
+                                                    reminder_email_sent=False,
+                                                    last_reminder_timestamp=None)
 
                 for session in assessment.sessions:
                     new_record.available.append(session)
-
 
                 db.session.add(new_record)
 

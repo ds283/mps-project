@@ -9554,6 +9554,18 @@ class AssessorAttendanceData(db.Model):
     # over-ride session limit on a per-faculty basis
     assigned_limit = db.Column(db.Integer(), default=None)
 
+    # has availability request email been sent?
+    request_email_sent = db.Column(db.Boolean(), default=False)
+
+    # availability request timestamp
+    request_timestamp = db.Column(db.DateTime())
+
+    # has a reminder email been sent?
+    reminder_email_sent = db.Column(db.Boolean(), default=False)
+
+    # when was last reminder email sent? NULL = no reminder yet issued
+    last_reminder_timestamp = db.Column(db.DateTime())
+
 
     @property
     def number_available(self):

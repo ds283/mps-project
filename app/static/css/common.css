@@ -264,8 +264,8 @@ p.copyright {
 
 .notify-bar {
     margin: 0px;
-    padding-top: 8px;
-    padding-bottom: 8px;
+    padding-top: 6px;
+    padding-bottom: 6px;
     background-color: darkslategrey;
     color: #c0a16b;
     text-align: center;

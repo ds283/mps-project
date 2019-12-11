@@ -250,7 +250,7 @@ def register_availability_tasks(celery):
 
         try:
             a_record.request_email_sent = True
-            a_record.request_email_timestamp = datetime.now()
+            a_record.request_timestamp = datetime.now()
 
             db.session.commit()
         except SQLAlchemyError as e:
@@ -387,7 +387,8 @@ def register_availability_tasks(celery):
                 new_record = AssessorAttendanceData(assessment_id=assessment.id,
                                                     faculty_id=record.owner_id,
                                                     comment=None,
-                                                    confirmed=False,                                              assigned_limit=None,
+                                                    confirmed=False,
+                                                    assigned_limit=None,
                                                     request_email_sent=False,
                                                     request_timestamp=None,
                                                     reminder_email_sent=False,

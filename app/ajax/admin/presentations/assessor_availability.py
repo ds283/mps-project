@@ -121,14 +121,27 @@ _availability = \
 _name = \
 """
 <a href="mailto:{{ rec.faculty.user.email }}">{{ rec.faculty.user.name }}</a>
-{% if rec.assigned_limit is not none or (rec.comment is not none and rec.comment|length > 0) %}
+{% set has_block = false %}
+{% if rec.assigned_limit is not none %}{% set has_block = true %}{% endif %}
+{% if rec.request_email_sent %}{% set has_block = true %}{% endif %}
+{% if rec.reminder_email_sent %}{% set has_block = true %}{% endif %}
+{% if has_block %}
     <div>
-    {% if rec.assigned_limit is not none %}
-        <span class="label label-primary">Assignment limit {{ rec.assigned_limit }}</span>
-    {% endif %}
-    {% if rec.comment is not none and rec.comment|length > 0 %}
-        <span class="label label-info" data-toggle="tooltip" title="{{ rec.comment }}">Comment</button>
-    {% endif %}
+        {% if rec.assigned_limit is not none %}
+            <span class="label label-primary">Assignment limit {{ rec.assigned_limit }}</span>
+        {% endif %}
+        {% if rec.request_email_sent %}
+            <span class="label label-info"><i class="fa fa-envelope-o"></i> Invite sent</span>
+            {% if rec.request_timestamp is not none %}
+                <span class="label label-default">{{ rec.request_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            {% endif %}
+        {% endif %}
+        {% if rec.reminder_email_sent %}
+            <span class="label label-info"><i class="fa fa-envelope-o"></i> Reminder sent</span>
+            {% if rec.last_reminder_timestamp is not none %}
+                <span class="label label-default">{{ rec.last_reminder_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+            {% endif %}
+        {% endif %}        
     </div>
 {% endif %}
 """

@@ -17,7 +17,7 @@ from flask_mail import Message
 
 from ..database import db
 from ..models import User, PresentationAssessment, TaskRecord, FacultyData, EnrollmentRecord, PresentationSession, \
-    AssessorAttendanceData, SubmitterAttendanceData
+    AssessorAttendanceData, SubmitterAttendanceData, SubmissionRecord
 from ..task_queue import progress_update, register_task
 from ..shared.sqlalchemy import get_count
 

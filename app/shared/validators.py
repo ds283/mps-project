@@ -80,22 +80,52 @@ def validate_edit_project(project, *roles):
     :param project: Project model instance
     :return: True/False
     """
-
-    # if project owner is not logged in user or a suitable convenor, or an administrator, object
+    # if project owner is currently logged-in user, all is ok
     if project.owner_id == current_user.id:
         return True
 
+    # admin and root users can always edit everything
     if current_user.has_role('admin') or current_user.has_role('root'):
         return True
 
+    # if the currently logged-in user has any of the specified roles, allow edit
     for role in roles:
         if current_user.has_role(role):
             return True
 
+    # if the current user is a convenor for any of the pclasses to which we're attached, allow edit
     if any([item.is_convenor(current_user.id) for item in project.project_classes]):
         return True
 
     flash('This project belongs to another user. To edit it, you must be a suitable convenor or an administrator.')
+    return False
+
+
+def validate_edit_description(description, *roles):
+    """
+    Validate that the logged-in user is privileged to edit a particular project description
+    """
+    # get parent project
+    project = description.parent
+
+    # if project owner is currently logged-in user, all is ok
+    if project.owner_id == current_user.id:
+        return True
+
+    # admin and root users can always edit everything
+    if current_user.has_role('admin') or current_user.has_role('root'):
+        return True
+
+    # if the currently logged-in user has any of the specified roles, allow edit
+    for role in roles:
+        if current_user.has_role(role):
+            return True
+
+    # if the current user is a convenor for any of the pclasses to which we're attached, allow edit
+    if any([item.is_convenor(current_user.id) for item in description.project_classes]):
+        return True
+
+    flash('This project description belongs to another user. To edit it, you must be a suitable convenor or an administrator.')
     return False
 
 

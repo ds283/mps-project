@@ -58,12 +58,14 @@ def _get_pclass(desc):
     return first.id
 
 
-def descriptions_data(descs, label, menu, pclass_id=None, create=None):
+def descriptions_data(descs, label, menu, pclass_id=None, create=None, config=None, desc_validator=None):
     data = [{'label': render_template_string(label, d=d, desc_pclass_id=_get_pclass(d),
-                                             pclass_id=pclass_id, create=create),
+                                             pclass_id=pclass_id, create=create, config=config,
+                                             desc_validator=desc_validator),
              'pclasses': render_template_string(_pclasses, d=d),
              'team': render_template_string(_team, d=d),
              'capacity': d.capacity,
-             'menu': render_template_string(menu, d=d, pclass_id=pclass_id, create=create)} for d in descs]
+             'menu': render_template_string(menu, d=d, pclass_id=pclass_id, create=create,
+                                            desc_validator=desc_validator)} for d in descs]
 
     return jsonify(data)

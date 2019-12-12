@@ -12,7 +12,6 @@ from flask import flash, current_app
 from flask_security import current_user, UserMixin, RoleMixin
 
 from sqlalchemy import orm, or_, and_
-from sqlalchemy.sql import functions
 from sqlalchemy.event import listens_for
 from sqlalchemy.orm import validates
 from sqlalchemy.ext.hybrid import hybrid_property

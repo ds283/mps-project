@@ -26,7 +26,7 @@ from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashbo
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
     build_enroll_submitter_candidates, build_submitters_data, get_count
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
-    validate_project_open, validate_assign_feedback, validate_project_class
+    validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
@@ -89,16 +89,23 @@ _desc_label = \
         <span class="label label-info">REVIEW</span>
     {% endif %}
     {% if d.aims is not none and d.aims|length > 0 %}
-        <span class="label label-success"><i class="fa fa-check"></i> Aims specified</span>
+        <span class="label label-success"><i class="fa fa-check"></i> Includes aims</span>
     {% else %}
         <span class="label label-warning"><i class="fa fa-times"></i> Aims not specified</span>
     {% endif %}
-</div>
-{% set state = d.workflow_state %}
-<div>
+    {% set state = d.workflow_state %}
     {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
     {% if not_confirmed %}
-        <span class="label label-default">Approval: Not confirmed</span>
+        {% if config is not none and config.selector_lifecycle == config.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS and desc_validator is not none and desc_validator(d) %}
+            <div class="dropdown" style="display: inline-block;">
+                <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}<i class="fa fa-check"></i> Confirm</a></li>
+                </ul>
+            </div>
+        {% else %}
+            <span class="label label-default">Approval: Not confirmed</span>
+        {% endif %}
     {% else %}
         {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
             <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
@@ -119,9 +126,7 @@ _desc_label = \
         {% endif %}
     {% endif %}
     {% if d.has_new_comments(current_user) %}
-        <div>
-            <span class="label label-warning">New comments</span>
-        </div>
+        <span class="label label-warning">New comments</span>
     {% endif %}
 </div>
 {% if not d.is_valid %}
@@ -185,33 +190,36 @@ _desc_menu = \
             </li>
 
             <li role="separator" class="divider"></li>
-            <li class="dropdown-header">Edit description</li>
-
-            <li>
-                <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-pencil"></i> Edit content...
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-cogs"></i> Recommended modules...
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
-                    <i class="fa fa-clone"></i> Duplicate
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
-                    <i class="fa fa-arrows"></i> Move to project...
-                </a>
-            </li>
-            <li>
-                <a href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
-                    <i class="fa fa-trash"></i> Delete
-                </a>
-            </li>    
+            {% if desc_validator and desc_validator(d) %}
+                <li role="separator" class="divider"></li>
+                <li class="dropdown-header">Edit description</li>
+    
+                <li>
+                    <a href="{{ url_for('convenor.edit_description', did=d.id, pclass_id=pclass_id, create=create) }}">
+                        <i class="fa fa-pencil"></i> Edit content...
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('convenor.description_modules', did=d.id, pclass_id=pclass_id, create=create) }}">
+                        <i class="fa fa-cogs"></i> Recommended modules...
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('convenor.duplicate_description', did=d.id, pclass_id=pclass_id) }}">
+                        <i class="fa fa-clone"></i> Duplicate
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('convenor.move_description', did=d.id, pclass_id=pclass_id, create=create) }}">
+                        <i class="fa fa-arrows"></i> Move to project...
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('convenor.delete_description', did=d.id, pclass_id=pclass_id) }}">
+                        <i class="fa fa-trash"></i> Delete
+                    </a>
+                </li>
+            {% endif %}
     
             <li role="separator" class="divider"></li>
 
@@ -1985,7 +1993,6 @@ def manual_attach_other_project(id, configid):
     :param configid:
     :return:
     """
-
     config = ProjectClassConfig.query.get_or_404(configid)
 
     # reject if project class is not live
@@ -2009,23 +2016,23 @@ def manual_attach_other_project(id, configid):
 @convenor.route('/edit_descriptions/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def edit_descriptions(id, pclass_id):
-
     # get project details
     project = Project.query.get_or_404(id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
+            return redirect(request.referrer)
+
+        if not validate_edit_project(project):
             return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -2036,36 +2043,41 @@ def edit_descriptions(id, pclass_id):
 @convenor.route('/descriptions_ajax/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def descriptions_ajax(id, pclass_id):
-
     # get project details
     project = Project.query.get_or_404(id)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
-            return redirect(request.referrer)
+            return jsonify({})
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
-            return redirect(request.referrer)
+            return jsonify({})
+
+        if not validate_edit_project(project):
+            return jsonify({})
+
+    # get current configuration record for this project class
+    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
+    if config is None:
+        return jsonify({})
 
     descs = project.descriptions.all()
 
     create = request.args.get('create', default=None)
 
-    return ajax.faculty.descriptions_data(descs, _desc_label, _desc_menu, pclass_id=pclass_id, create=create)
+    return ajax.faculty.descriptions_data(descs, _desc_label, _desc_menu, pclass_id=pclass_id, create=create,
+                                          config=config, desc_validator=validate_edit_description)
 
 
 @convenor.route('/add_project/<int:pclass_id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def add_project(pclass_id):
-
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
@@ -2330,11 +2342,7 @@ def edit_description(did, pclass_id):
             return redirect(request.referrer)
 
     else:
-        # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
-
-        # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_is_convenor(pclass):
+        if not validate_edit_description(desc):
             return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -2376,11 +2384,8 @@ def description_modules(did, pclass_id, level_id=None):
             return redirect(request.referrer)
 
     else:
-        # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
-
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_is_convenor(pclass):
+        if not validate_edit_description(desc):
             return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -2421,11 +2426,8 @@ def description_attach_module(did, pclass_id, mod_id, level_id):
             return redirect(request.referrer)
 
     else:
-        # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
-
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_is_convenor(pclass):
+        if not validate_edit_description(desc):
             return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -2450,11 +2452,8 @@ def description_detach_module(did, pclass_id, mod_id, level_id):
             return redirect(request.referrer)
 
     else:
-        # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
-
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_is_convenor(pclass):
+        if not validate_edit_description(desc):
             return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -2479,11 +2478,8 @@ def delete_description(did, pclass_id):
             return redirect(request.referrer)
 
     else:
-        # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
-
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_is_convenor(pclass):
+        if not validate_edit_description(desc):
             return redirect(request.referrer)
 
     db.session.delete(desc)
@@ -2503,11 +2499,8 @@ def duplicate_description(did, pclass_id):
             return redirect(request.referrer)
 
     else:
-        # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
-
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_is_convenor(pclass):
+        if not validate_edit_description(desc):
             return redirect(request.referrer)
 
     suffix = 2
@@ -2557,11 +2550,8 @@ def move_description(did, pclass_id):
             return redirect(request.referrer)
 
     else:
-        # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
-
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_is_convenor(pclass):
+        if not validate_edit_description(desc):
             return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -2647,13 +2637,11 @@ def make_default_description(pid, pclass_id, did=None):
     proj = Project.query.get_or_404(pid)
 
     if pclass_id == 0:
-
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
             return redirect(request.referrer)
 
     else:
-
         # get project class details
         pclass = ProjectClass.query.get_or_404(pclass_id)
 
@@ -3434,6 +3422,10 @@ def confirm_description(config_id, did):
         return redirect(request.referrer)
 
     desc = ProjectDescription.query.get_or_404(did)
+
+    # reject user if can't edit this description
+    if not validate_edit_description(desc):
+        return redirect(request.referrer)
 
     desc.confirmed = True
     db.session.commit()

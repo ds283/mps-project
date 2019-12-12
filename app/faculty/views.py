@@ -34,7 +34,7 @@ from ..shared.utils import home_dashboard, home_dashboard_url, get_root_dashboar
 from ..shared.validators import validate_edit_project, validate_project_open, validate_is_project_owner, \
     validate_submission_supervisor, validate_submission_marker, validate_submission_viewable, \
     validate_assessment, validate_using_assessment, validate_presentation_assessor, \
-    validate_is_convenor
+    validate_is_convenor, validate_edit_description
 from ..shared.actions import render_project, do_confirm, do_deconfirm, do_cancel_confirm, do_deconfirm_to_pending
 from ..shared.conversions import is_integer
 
@@ -616,7 +616,7 @@ def edit_description(did):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_is_project_owner(desc.parent):
+    if not validate_edit_description(desc):
         return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -655,7 +655,7 @@ def description_modules(did, level_id=None):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_is_project_owner(desc.parent):
+    if not validate_edit_description(desc):
         return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -691,7 +691,7 @@ def description_attach_module(did, mod_id, level_id):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_is_project_owner(desc.parent):
+    if not validate_edit_description(desc):
         return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -711,7 +711,7 @@ def description_detach_module(did, mod_id, level_id):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_is_project_owner(desc.parent):
+    if not validate_edit_description(desc):
         return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -731,7 +731,7 @@ def delete_description(did):
     desc = ProjectDescription.query.get_or_404(did)
 
     # if project owner is not logged-in user, object
-    if not validate_is_project_owner(desc.parent):
+    if not validate_edit_description(desc):
         return redirect(request.referrer)
 
     db.session.delete(desc)
@@ -791,7 +791,7 @@ def move_description(did):
     old_project = desc.parent
 
     # if project owner is not logged-in user, object
-    if not validate_is_project_owner(desc.parent):
+    if not validate_edit_description(desc):
         return redirect(request.referrer)
 
     create = request.args.get('create', default=None)
@@ -877,7 +877,7 @@ def make_default_description(pid, did=None):
     proj = Project.query.get_or_404(pid)
 
     # if project owner is not logged-in user, object
-    if not validate_is_project_owner(proj):
+    if not validate_edit_description(desc):
         return redirect(request.referrer)
 
     if did is not None:

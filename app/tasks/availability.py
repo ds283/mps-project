@@ -62,7 +62,7 @@ def register_availability_tasks(celery):
                         EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED).all()
 
             for assessor in assessors:
-                if assessor.id not in assessor_ids:
+                if assessor.user.active and assessor.id not in assessor_ids:
                     assessor_ids.add(assessor.id)
 
         assessor_tasks = group(attach_assessment_assessor.s(data_id, a_id) | issue_assessor_email.s(deadline) for a_id in assessor_ids)
@@ -73,7 +73,7 @@ def register_availability_tasks(celery):
         # and merge into talk_ids
         for period in data.submission_periods:
             for talk in period.submitter_list.all():
-                if talk.id not in talk_ids:
+                if talk.owner.student.user.active and talk.id not in talk_ids:
                     talk_ids.add(talk.id)
 
         submitter_tasks = group(attach_assessment_submitter.s(data_id, s_id) for s_id in talk_ids)
@@ -183,12 +183,20 @@ def register_availability_tasks(celery):
     def attach_assessment_assessor(self, _result_data, data_id, assessor_id):
         try:
             data = db.session.query(PresentationAssessment).filter_by(id=data_id).first()
+            fd = db.session.query(FacultyData).filter_by(id=assessor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None:
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
+            raise Ignore()
+
+        if fd is None:
+            self.update_state('FAILURE', meta='Could not load FacultyData record from database')
+            raise Ignore()
+
+        if not fd.active:
             raise Ignore()
 
         # search for an existing record with this assessment id and assessor id, to avoid entering duplicates
@@ -277,12 +285,20 @@ def register_availability_tasks(celery):
     def attach_assessment_submitter(self, _result_data, data_id, submitter_id):
         try:
             data = db.session.query(PresentationAssessment).filter_by(id=data_id).first()
+            sd = db.session.query(SubmissionRecord).filter_by(id=submitter_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         if data is None:
             self.update_state('FAILURE', meta='Could not load PresentationAssessment record from database')
+            raise Ignore()
+
+        if sd is None:
+            self.update_state('FAILURE', meta='Could not load SubmissionRecord record from database')
+            raise Ignore()
+
+        if not sd.owner.student.user.active:
             raise Ignore()
 
         # search for existing record with this assessment_id and submitted_id, to avoid adding duplicates

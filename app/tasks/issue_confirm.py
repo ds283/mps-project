@@ -68,7 +68,6 @@ def register_issue_confirm_tasks(celery):
             return issue_fail.apply_async(args=(task_id, convenor_id))
 
         config.confirmation_required = []
-        faculty = set()
 
         # issue confirmation requests if this project is set up to require them
         if not config.require_confirm:
@@ -79,12 +78,13 @@ def register_issue_confirm_tasks(celery):
         eq = db.session.query(EnrollmentRecord.id, EnrollmentRecord.owner_id) \
             .filter_by(pclass_id=config.pclass_id, supervisor_state=EnrollmentRecord.SUPERVISOR_ENROLLED).subquery()
 
-        fd = db.session.query(eq.c.owner_id, User, FacultyData) \
+        fd = db.session.query(FacultyData) \
             .join(User, User.id == eq.c.owner_id) \
             .join(FacultyData, FacultyData.id == eq.c.owner_id) \
             .filter(User.active == True)
 
-        for id, user, data in fd:
+        faculty = set()
+        for data in fd:
             if data.id not in faculty:
                 faculty.add(data.id)
 

@@ -51,8 +51,10 @@ _projects = \
                 {% set state = d.workflow_state %}
                 {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
                 {% if not_confirmed %}
-                    <span class="label label-default">Approval: Not confirmed</span>
-                    <a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}" class="label label-warning"><i class="fa fa-check"></i> Confirm now</a>
+                    <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></span>
+                    <ul class="dropdown-menu">
+                        <a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm now</a>
+                    </ul>
                 {% else %}
                     {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
                         <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
@@ -64,9 +66,9 @@ _projects = \
                         <span class="label label-danger">Unknown approval state</span>
                     {% endif %}
                     {% if current_user.has_role('project_approver') and d.validated_by %}
-                        <span class="label label-info">Signed-off by {{ d.validated_by.name }}</span>
+                        <span class="label label-info">Signed-off: {{ d.validated_by.name }}</span>
                         {% if d.validated_timestamp %}
-                            <span class="label label-info">Signed-off at {{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                            <span class="label label-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                         {% endif %}
                     {% endif %}
                 {% endif %}

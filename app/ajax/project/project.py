@@ -8,13 +8,13 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, current_app
+from flask import render_template_string, jsonify, current_app, url_for
 
 from sqlalchemy.event import listens_for
 
 from ...database import db
 from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, TransferableSkill, DegreeProgramme, \
-    DegreeType, ProjectDescription, User
+    DegreeType, ProjectDescription, User, ProjectClassConfig
 from ...cache import cache
 
 from urllib import parse
@@ -446,46 +446,107 @@ def _process(project_id, enrollment_id, current_user_id, menu_template, config, 
     status = record['status']
     menu = record['menu']
 
-    repenroll = ''
-    if e is not None:
-        repenroll = e.supervisor_label
-    status = status.replace('REPENROLLMENT', repenroll, 1)
-
     name = name.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
 
+    status = replace_enrollment_text(e, status)
+    name = replace_comment_notification(current_user_id, name, p)
+    status = replace_approval_tags(p, show_approvals, config, status)
+    menu = replace_menu_anchor(text_enc, url_enc, config, menu)
+
+    record.update({'name': name, 'status': status, 'menu': menu})
+    return record
+
+
+def replace_menu_anchor(text_enc, url_enc, config, menu):
+    menu = menu.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
+
+    if config is not None:
+        menu = menu.replace(_config_proxy_str, str(config.id), 1).replace(_pclass_proxy_str, str(config.pclass_id), 8)
+
+    return menu
+
+
+def replace_approval_tags(p, show_approvals, config, status):
+    repapprove = ''
+
+    if show_approvals:
+
+        # if no config supplied, we don't know which project class we are looking at and therefore which
+        # description is relevant. So we must describe the project as a whole
+        if config is None:
+            state = p.approval_state
+
+            if state == Project.DESCRIPTIONS_APPROVED:
+                repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approval: All approved</span>'
+            elif state == Project.SOME_DESCRIPTIONS_QUEUED:
+                repapprove = '<span class="label label-warning">Approval: Some queued</span>'
+            elif state == Project.SOME_DESCRIPTIONS_REJECTED:
+                repapprove = '<span class="label label-info">Approval: Some rejected</span>'
+            elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
+                repapprove = '<span class="label label-default">Approval: Some unconfirmed</span>'
+            elif state == Project.APPROVALS_NOT_ACTIVE:
+                repapprove = ''
+            elif state == Project.APPROVALS_NOT_OFFERABLE:
+                repapprove = '<span class="label label-danger">Approval: Not offerable/span>'
+            else:
+                repapprove = '<span class="label label-danger">Unknown approval state</span>'
+
+        else:
+            desc = p.get_description(config.pclass_id)
+            state = desc.workflow_state
+
+            if desc is None:
+                repapprove = '<span class="label label-default">Approval: No description</span>'
+            else:
+                if desc.requires_confirmation and not desc.confirmed:
+                    if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
+                        repapprove = """<div class="dropdown">
+                                            <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                                            <ul class="dropdown-menu">
+                                                <li><a href="{url}"><i class="fa fa-check"></i> Confirm now</a></li>
+                                            </ul>
+                                        </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
+                    else:
+                        repapprove = '<span class="label label-default">Approval: Not confirmed</span>'
+                else:
+                    if state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
+                        repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approval: Approved</span>'
+                    elif state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
+                        repapprove = '<span class="label label-warning">Approval: Queued</span>'
+                    elif state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
+                        repapprove = '<span class="label label-danger">Approval: Rejected</span>'
+                    else:
+                        repapprove = '<span class="label label-danger">Unknown approval state</span>'
+
+                    if desc.validated_by:
+                        repapprove += ' <span class="label label-info">Signed-off: ' + desc.validated_by.name + '</span>'
+                        if desc.validated_timestamp:
+                            repapprove += ' <span class="label label-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
+
+    status = status.replace('REPAPPROVAL', repapprove, 1)
+    return status
+
+
+def replace_comment_notification(current_user_id, name, p):
     repcomments = ''
+
     if current_user_id is not None:
         u = db.session.query(User).filter_by(id=current_user_id).one()
         if p.has_new_comments(u):
             repcomments = '<span class="label label-warning">New comments</span>'
+
     name = name.replace('REPNEWCOMMENTS', repcomments, 1)
+    return name
 
-    repapprove = ''
-    if show_approvals:
-        state = p.approval_state
 
-        if state == Project.DESCRIPTIONS_APPROVED:
-            repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approved</span>'
-        elif state == Project.SOME_DESCRIPTIONS_QUEUED:
-            repapprove = '<span class="label label-warning">Approval: Queued</span>'
-        elif state == Project.SOME_DESCRIPTIONS_REJECTED:
-            repapprove = '<span class="label label-info">Approval: In progress</span>'
-        elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
-            repapprove = '<span class="label label-default">Approval: Pending</span>'
-        elif state == Project.APPROVALS_NOT_ACTIVE:
-            repapprove = ''
-        elif state == Project.APPROVALS_NOT_OFFERABLE:
-            repapprove = '<span class="label label-danger">Approval: not offerable/span>'
-        else:
-            repapprove = '<span class="label label-danger">Unknown approval state</span>'
-    status = status.replace('REPAPPROVAL', repapprove, 1)
+def replace_enrollment_text(e, status):
+    repenroll = ''
 
-    menu = menu.replace('REPTEXT', text_enc, 1).replace('REPURL', url_enc, 1)
-    if config is not None:
-        menu = menu.replace(_config_proxy_str, str(config.id), 1).replace(_pclass_proxy_str, str(config.pclass_id), 8)
+    if e is not None:
+        repenroll = e.supervisor_label
 
-    record.update({'name': name, 'status': status, 'menu': menu})
-    return record
+    status = status.replace('REPENROLLMENT', repenroll, 1)
+    return status
 
 
 @listens_for(Project, 'before_update')

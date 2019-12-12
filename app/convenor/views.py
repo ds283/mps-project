@@ -111,9 +111,9 @@ _desc_label = \
         {% endif %}
         {% if current_user.has_role('project_approver') and d.validated_by %}
             <div>
-                <span class="label label-info">Signed-off by {{ d.validated_by.name }}</span>
+                <span class="label label-info">Signed-off: {{ d.validated_by.name }}</span>
                 {% if d.validated_timestamp %}
-                    <span class="label label-info">Signed-off at {{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
+                    <span class="label label-info">{{ d.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") }}</span>
                 {% endif %}
             </div>
         {% endif %}
@@ -374,24 +374,39 @@ def attached_ajax(id):
 
     valid_filter = request.args.get('valid_filter')
 
-    # build list of active projects attached to this project class
+    # build list of projects attached to this project class
     pq = db.session.query(Project.id, Project.owner_id) \
         .filter(Project.project_classes.any(id=id))
 
-    if pclass.require_confirm:
-        if valid_filter == 'valid' or valid_filter == 'not-valid' or valid_filter == 'reject':
-            pq = pq.filter(~Project.descriptions.any(confirmed=False))
-        elif valid_filter == 'pending':
-            pq = pq.filter(Project.descriptions.any(confirmed=False))
+    workflow_in_progress = (valid_filter == 'valid' or valid_filter == 'not-valid' or valid_filter == 'reject')
 
-    if valid_filter == 'valid':
-        pq = pq.filter(~Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED),
-                       ~Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
-    elif valid_filter == 'not-valid':
-        pq = pq.filter(Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_QUEUED))
-    elif valid_filter == 'reject':
-        pq = pq.filter(Project.descriptions.any(workflow_state=WorkflowMixin.WORKFLOW_APPROVAL_REJECTED))
+    if workflow_in_progress or valid_filter == 'pending':
+        desc_query = db.session.query(ProjectDescription.parent_id) \
+            .filter(ProjectDescription.project_classes.any(id=id))
 
+        if pclass.require_confirm:
+            if valid_filter == 'pending':
+                desc_query = desc_query.filter(ProjectDescription.confirmed == False)
+            else:
+                desc_query = desc_query.filter(ProjectDescription.confirmed == True)
+
+        if valid_filter == 'valid':
+            desc_query = desc_query \
+                .filter(ProjectDescription.workflow_state != WorkflowMixin.WORKFLOW_APPROVAL_QUEUED,
+                        ProjectDescription.workflow_state != WorkflowMixin.WORKFLOW_APPROVAL_REJECTED)
+        elif valid_filter == 'not-valid':
+            desc_query = desc_query \
+                .filter(ProjectDescription.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED)
+        elif valid_filter == 'reject':
+            desc_query = desc_query \
+                .filter(ProjectDescription.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED)
+
+        desc_query = desc_query.distinct().subquery()
+        pq = pq.join(desc_query, desc_query.c.parent_id == Project.id) \
+                .filter(desc_query.c.parent_id != None) \
+                .filter(Project.active == True)
+
+    # restrict query to projects owned by active users
     pq = pq \
         .join(User, User.id == Project.owner_id) \
         .filter(User.active == True).subquery()

@@ -503,7 +503,7 @@ def replace_approval_tags(p, show_approvals, config, status):
                         repapprove = """<div class="dropdown">
                                             <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
                                             <ul class="dropdown-menu">
-                                                <li><a href="{url}"><i class="fa fa-check"></i> Confirm now</a></li>
+                                                <li><a href="{url}"><i class="fa fa-check"></i> Confirm</a></li>
                                             </ul>
                                         </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
                     else:

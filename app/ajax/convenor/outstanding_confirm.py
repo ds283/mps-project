@@ -51,10 +51,12 @@ _projects = \
                 {% set state = d.workflow_state %}
                 {% set not_confirmed = d.requires_confirmation and not d.confirmed %}
                 {% if not_confirmed %}
-                    <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></span>
-                    <ul class="dropdown-menu">
-                        <a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm now</a>
-                    </ul>
+                    <div class="dropdown">
+                        <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="{{ url_for('convenor.confirm_description', config_id=config.id, did=d.id) }}"><i class="fa fa-check"></i> Confirm</a></li>
+                        </ul>
+                    </div>
                 {% else %}
                     {% if state == d.WORKFLOW_APPROVAL_VALIDATED %}
                         <span class="label label-success"><i class="fa fa-check"></i> Approved</span>

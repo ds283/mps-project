@@ -15,13 +15,13 @@ from flask_migrate import Migrate
 from flask_security import current_user, SQLAlchemyUserDatastore, Security
 from flask_login.signals import user_logged_in
 from .thirdparty.flask_bootstrap import Bootstrap
+from .thirdparty.flask_sessionstore import Session
 from flask_mail import Mail
 from flask_assets import Environment
 from app.flask_bleach import Bleach
 from flaskext.markdown import Markdown
 from flask_debugtoolbar import DebugToolbarExtension
 from flask_debug_api import DebugAPIExtension
-from flask_sessionstore import Session
 from flask_uploads import configure_uploads, patch_request_class
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix

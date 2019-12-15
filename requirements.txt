@@ -41,7 +41,6 @@ Flask-Principal==0.4.0
 flask-profiler==1.8.1
 flask-rollbar==1.0.1
 Flask-Security-Too==3.3.2
-Flask-Sessionstore==0.4.5
 Flask-SQLAlchemy==2.4.1
 Flask-Uploads==0.2.1
 Flask-WTF==0.14.2

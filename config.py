@@ -9,6 +9,7 @@
 #
 
 import os
+from datetime import timedelta
 
 # get absolute path of the directory containing this file;
 # used to locate a local database if we are using a backend
@@ -63,7 +64,8 @@ class Config(object):
     # Flask-Sessionstore
     # SESSION_MONGO_URL is set in instance/secrets.py
     SESSION_TYPE = 'mongodb'
-    SESSION_PERMANENT = False
+    SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
 
     # Flask-Caching

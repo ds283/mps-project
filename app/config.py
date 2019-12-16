@@ -18,7 +18,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 # website revision number
-site_revision = '2019.4'
+site_revision = '2019.5'
 
 # website copyright dates
 site_copyright_dates = '2018, 2019'

@@ -33,6 +33,7 @@ from flask_profiler import Profiler
 from flask_rollbar import Rollbar
 
 from .config import app_config, site_revision, site_copyright_dates
+from .build_data import git_tag
 from .database import db
 from .models import User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
@@ -333,6 +334,7 @@ def create_app():
         return {'get_previous_login': _get_previous_login,
                 'website_revision': site_revision,
                 'website_copyright_dates': site_copyright_dates,
+                'build_version': git_tag,
                 'home_dashboard_url': home_dashboard_url(),
                 'get_base_context': get_global_context_data,
                 'get_live_platform': _get_live_platform}

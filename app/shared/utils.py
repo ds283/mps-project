@@ -490,9 +490,13 @@ def get_root_dashboard_data():
     message_data = get_schedule_message_data(configs=configs)
     config_data = get_pclass_config_data(configs=configs)
 
+    session_collection = current_app.session_interface.store
+    sessions = session_collection.count_documents({})
+
     data = {'warning': (config_data['config_warning']
                         or rollover_data['rollover_ready']),
-            'current_year': current_year}
+            'current_year': current_year,
+            'number_sessions': sessions}
 
     data.update(rollover_data)
     data.update(message_data)

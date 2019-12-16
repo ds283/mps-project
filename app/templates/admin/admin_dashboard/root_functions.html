@@ -10,6 +10,7 @@
 {% macro root_functions(data, matching_ready, has_assessments) %}
     {% set rollover_ready = data['rollover_ready'] %}
     {% set rollover_in_progress = data['rollover_in_progress'] %}
+    {% set number_sessions = data['number_sessions'] %}
 
     {% if has_assessments %}
         <div class="panel panel-info">
@@ -80,7 +81,7 @@
         <div class="panel-heading">Manage website services</div>
         <div class="panel-body">
             <div class="container-fluid">
-                <div class="row vertical-top">
+                <div class="row vertical-top" style="height: 54px;">
                     <div class="col-xs-6">
                         <div class="container-fluid">
                             <div class="row vertical-align">
@@ -107,6 +108,17 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row vertical-top" style="height: 54px;">
+                    <div class="col-xs-6">
+                        <div class="container-fluid">
+                            {{ number_sessions }} session documents in MongoDB backend
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="container-fluid">
                         </div>
                     </div>
                 </div>

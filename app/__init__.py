@@ -32,7 +32,7 @@ from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 from flask_rollbar import Rollbar
 
-from config import app_config, site_revision, site_copyright_dates
+from .config import app_config, site_revision, site_copyright_dates
 from .database import db
 from .models import User, EmailLog, MessageOfTheDay, Notification
 from .task_queue import make_celery, register_task, background_task
@@ -55,12 +55,17 @@ import redis
 from werkzeug.contrib.profiler import ProfilerMiddleware
 from dozer import Dozer
 
+from pathlib import Path
+
 
 def create_app():
     # get current configuration, or default to 'production' for safety
     config_name = os.environ.get('FLASK_ENV') or 'production'
 
-    app = Flask(__name__, instance_relative_config=True)        # load configuration files from 'instance'
+    # load configuration files from 'instance' folder
+    instance_dir = (Path(__file__).parent / "instance").absolute()
+    app = Flask(__name__, instance_relative_config=True, instance_path=str(instance_dir))
+
     app.config.from_object(app_config[config_name])
     app.config.from_pyfile('secrets.py')
     app.config.from_pyfile('mail.py')
@@ -118,8 +123,8 @@ def create_app():
     env = Environment(app)
 
     if not app.debug:
-        from logging import ERROR, DEBUG, INFO, Formatter, basicConfig
-        from logging.handlers import SMTPHandler, RotatingFileHandler
+        from logging import INFO, Formatter, basicConfig
+        from logging.handlers import RotatingFileHandler
 
         basicConfig(level=INFO)
 
@@ -211,6 +216,7 @@ def create_app():
     tasks.register_system_tasks(celery)
     tasks.register_batch_create_tasks(celery)
     tasks.register_selecting_tasks(celery)
+    tasks.register_session_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

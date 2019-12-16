@@ -549,7 +549,8 @@ class ScheduledTaskMixin():
                        ('app.tasks.maintenance.asset_garbage_collection', 'Garbage collection for temporary assets'),
                        ('app.tasks.email_notifications.send_daily_notifications', 'Send daily email notifications'),
                        ('app.tasks.batch_create.garbage_collection', 'Garbage collection for batch student import'),
-                       ('app.tasks.system.process_pings', 'Process pings from front end instances')]
+                       ('app.tasks.system.process_pings', 'Process pings from front end instances'),
+                       ('app.tasks.sessions.sift_sessions', 'Perform MongoDB session maintenance')]
 
     task = SelectField('Task', choices=tasks_available)
 

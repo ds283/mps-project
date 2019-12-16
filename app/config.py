@@ -67,6 +67,10 @@ class Config(object):
     SESSION_PERMANENT = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
+    SESSION_MONGODB_DB = 'flask_sessionstore'
+    SESSION_MONGODB_COLLECT = 'sessions'
+    SESSION_KEY_PREFIX = 'session:'
+
 
     # Flask-Caching
     # CACHE_REDIS_URL is set in instance/secrets.py

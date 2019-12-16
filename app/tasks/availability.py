@@ -196,7 +196,7 @@ def register_availability_tasks(celery):
             self.update_state('FAILURE', meta='Could not load FacultyData record from database')
             raise Ignore()
 
-        if not fd.active:
+        if not fd.user.active:
             raise Ignore()
 
         # search for an existing record with this assessment id and assessor id, to avoid entering duplicates

@@ -497,6 +497,36 @@ def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapp
     return ProjectDescriptionMixin
 
 
+class AssetLifetimeMixin():
+    # lifetime in seconds (will be cleaned up by automatic garbage collector after this time)
+    lifetime= db.Column(db.Integer())
+
+
+class AssetDownloadDataMixin():
+    # optional mimetype
+    mimetype = db.Column(db.String(DEFAULT_STRING_LENGTH), default=None)
+
+    # target filename
+    target_name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+
+def AssetMixinFactory(acl_name):
+
+    class AssetMixin():
+        # timestamp
+        timestamp = db.Column(db.DateTime(), index=True)
+
+        # relative filename
+        filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+        # access control list: which users are authorized to view or download this file?
+        @declared_attr
+        def access_control_list(self):
+            return db.relationship('User', secondary=acl_name, lazy='dynamic')
+
+    return AssetMixin
+
+
 # roll our own get_main_config() and get_current_year(), which we cannot import because it creates a dependency cycle
 def _get_main_config():
     return db.session.query(MainConfig).order_by(MainConfig.year.desc()).first()
@@ -11503,7 +11533,7 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
         return self.make_label(text=self.short_name)
 
 
-class GeneratedAsset(db.Model):
+class GeneratedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin, AssetMixinFactory(generated_acl)):
     """
     Track generated assets
     """
@@ -11514,26 +11544,7 @@ class GeneratedAsset(db.Model):
     id = db.Column(db.Integer(), primary_key=True)
 
 
-    # timestamp
-    timestamp = db.Column(db.DateTime(), index=True)
-
-    # lifetime in seconds (will be cleaned up by automatic garbage collector after this time)
-    lifetime = db.Column(db.Integer())
-
-    # filename (assumed to live under ASSETS_FOLDER/generated
-    filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
-
-    # optional mimetype
-    mimetype = db.Column(db.String(DEFAULT_STRING_LENGTH), default=None)
-
-    # target filename
-    target_name = db.Column(db.String(DEFAULT_STRING_LENGTH))
-
-    # access control list
-    access_control_list = db.relationship('User', secondary=generated_acl, lazy='dynamic')
-
-
-class TemporaryAsset(db.Model):
+class TemporaryAsset(db.Model, AssetLifetimeMixin, AssetMixinFactory(temporary_acl)):
     """
     Track temporary uploaded assets
     """
@@ -11542,19 +11553,6 @@ class TemporaryAsset(db.Model):
 
     # primary key id
     id = db.Column(db.Integer(), primary_key=True)
-
-
-    # timestamp
-    timestamp = db.Column(db.DateTime(), index=True)
-
-    # lifetime in seconds (will be cleaned up by automatic garbage collector after this time)
-    lifetime = db.Column(db.Integer())
-
-    # filename (assumed to live under ASSETS_FOLDER/generated
-    filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
-
-    # access control list
-    access_control_list = db.relationship('User', secondary=temporary_acl, lazy='dynamic')
 
 
 class ScheduleEnumeration(db.Model):

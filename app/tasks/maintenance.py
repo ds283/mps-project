@@ -17,9 +17,10 @@ from celery.exceptions import Ignore
 
 from ..database import db
 from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, \
-    PresentationAssessment, GeneratedAsset, UploadedAsset, ScheduleEnumeration, ProjectDescription, \
+    PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
     MatchingEnumeration
-from ..shared.utils import get_current_year, canonical_generated_asset_filename, canonical_uploaded_asset_filename
+from ..shared.utils import get_current_year
+from ..shared.asset_tools import canonical_generated_asset_filename, canonical_temporary_asset_filename
 
 from datetime import datetime
 from os import path, remove
@@ -274,15 +275,15 @@ def register_maintenance_tasks(celery):
 
     def collect_uploaded_garbage(self):
         try:
-            records = db.session.query(UploadedAsset).all()
+            records = db.session.query(TemporaryAsset).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        expiry = group(asset_check_expiry.si(r.id, UploadedAsset, canonical_uploaded_asset_filename) for r in records)
+        expiry = group(asset_check_expiry.si(r.id, TemporaryAsset, canonical_temporary_asset_filename) for r in records)
         expiry.apply_async()
 
-        orphan = group(asset_check_orphan.si(r.id, UploadedAsset, canonical_uploaded_asset_filename) for r in records)
+        orphan = group(asset_check_orphan.si(r.id, TemporaryAsset, canonical_temporary_asset_filename) for r in records)
         orphan.apply_async()
 
 

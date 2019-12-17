@@ -62,7 +62,8 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, UploadedAsset, SelectingStudent
+    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset
+from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
@@ -70,8 +71,7 @@ from ..shared.forms.queries import ScheduleSessionQuery
 from ..shared.internal_redis import get_redis
 from ..shared.sqlalchemy import get_count
 from ..shared.utils import get_current_year, home_dashboard, get_matching_dashboard_data, \
-    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses, canonical_generated_asset_filename, \
-    make_uploaded_asset_filename
+    get_rollover_data, get_ready_to_match_data, get_automatch_pclasses
 from ..shared.validators import validate_is_admin_or_convenor, validate_match_inspector, \
     validate_using_assessment, validate_assessment, validate_schedule_inspector
 from ..task_queue import register_task, progress_update
@@ -7760,12 +7760,12 @@ def upload_schedule(schedule_id):
                     flash('Solution files for the CBC optimizer must be in .LP format', 'error')
 
                 else:
-                    filename, abs_path = make_uploaded_asset_filename(extension[1:])
+                    filename, abs_path = make_temporary_asset_filename(extension[1:])
                     solution_files.save(sol_file, name=filename)
 
-                    asset = UploadedAsset(timestamp=datetime.now(),
-                                          lifetime=24*60*60,
-                                          filename=filename)
+                    asset = TemporaryAsset(timestamp=datetime.now(),
+                                           lifetime=24*60*60,
+                                           filename=filename)
                     asset.access_control_list.append(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
@@ -7820,12 +7820,12 @@ def upload_match(match_id):
                     flash('Solution files for the CBC optimizer must be in .LP format', 'error')
 
                 else:
-                    filename, abs_path = make_uploaded_asset_filename(extension[1:])
+                    filename, abs_path = make_temporary_asset_filename(extension[1:])
                     solution_files.save(sol_file, name=filename)
 
-                    asset = UploadedAsset(timestamp=datetime.now(),
-                                          lifetime=24*60*60,
-                                          filename=filename)
+                    asset = TemporaryAsset(timestamp=datetime.now(),
+                                           lifetime=24*60*60,
+                                           filename=filename)
                     asset.access_control_list.append(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),

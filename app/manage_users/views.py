@@ -28,7 +28,7 @@ from .actions import register_user
 
 from ..database import db
 from ..models import User, FacultyData, StudentData, StudentBatch, StudentBatchItem, EnrollmentRecord, \
-    DegreeProgramme, DegreeType, ProjectClass, ResearchGroup, Role, UploadedAsset, TaskRecord, BackupRecord, \
+    DegreeProgramme, DegreeType, ProjectClass, ResearchGroup, Role, TemporaryAsset, TaskRecord, BackupRecord, \
     WorkflowMixin, faculty_affiliations
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -41,8 +41,8 @@ from ..uploads import batch_user_files
 from ..task_queue import register_task, progress_update
 
 from ..shared.conversions import is_integer
-from ..shared.utils import get_current_year, get_main_config, home_dashboard_url, \
-    make_uploaded_asset_filename
+from ..shared.utils import get_current_year, get_main_config, home_dashboard_url
+from ..shared.asset_tools import make_temporary_asset_filename
 from ..shared.validators import validate_is_convenor
 from ..shared.sqlalchemy import func
 
@@ -520,12 +520,12 @@ def batch_create_users():
             extension = incoming_filename.suffix.lower()
 
             if extension in ('.csv'):
-                filename, abs_path = make_uploaded_asset_filename(extension[1:])
+                filename, abs_path = make_temporary_asset_filename(extension[1:])
                 batch_user_files.save(batch_file, name=filename)
 
-                asset = UploadedAsset(timestamp=datetime.now(),
-                                      lifetime=24*60*60,
-                                      filename=filename)
+                asset = TemporaryAsset(timestamp=datetime.now(),
+                                       lifetime=24*60*60,
+                                       filename=filename)
                 asset.access_control_list.append(current_user)
 
                 tk_name = "Process batch user list '{name}'".format(name=incoming_filename)

@@ -767,8 +767,8 @@ generated_acl = db.Table('acl_generated',
 
 
 # uploaded assets
-uploaded_acl = db.Table('acl_uploaded',
-                        db.Column('asset_id', db.Integer(), db.ForeignKey('uploaded_assets.id'), primary_key=True),
+temporary_acl = db.Table('acl_temporary',
+                        db.Column('asset_id', db.Integer(), db.ForeignKey('temporary_assets.id'), primary_key=True),
                         db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
 
@@ -6587,7 +6587,6 @@ class SubmissionRecord(db.Model):
     """
     Collect details for a student submission
     """
-
     __tablename__ = "submission_records"
 
 
@@ -11508,7 +11507,6 @@ class GeneratedAsset(db.Model):
     """
     Track generated assets
     """
-
     __tablename__ = 'generated_assets'
 
 
@@ -11535,12 +11533,11 @@ class GeneratedAsset(db.Model):
     access_control_list = db.relationship('User', secondary=generated_acl, lazy='dynamic')
 
 
-class UploadedAsset(db.Model):
+class TemporaryAsset(db.Model):
     """
-    Track uploaded assets
+    Track temporary uploaded assets
     """
-
-    __tablename__ = 'uploaded_assets'
+    __tablename__ = 'temporary_assets'
 
 
     # primary key id
@@ -11557,7 +11554,7 @@ class UploadedAsset(db.Model):
     filename = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     # access control list
-    access_control_list = db.relationship('User', secondary=uploaded_acl, lazy='dynamic')
+    access_control_list = db.relationship('User', secondary=temporary_acl, lazy='dynamic')
 
 
 class ScheduleEnumeration(db.Model):

@@ -9,7 +9,7 @@
 #
 
 from ..database import db
-from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, UploadedAsset, User, \
+from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, TemporaryAsset, User, \
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
     EnrollmentRecord, SubmitterAttendanceData
 
@@ -26,7 +26,7 @@ import itertools
 from functools import partial
 
 from ..shared.timer import Timer
-from ..shared.utils import make_generated_asset_filename, canonical_uploaded_asset_filename
+from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename
 from ..shared.sqlalchemy import get_count
 
 from flask import current_app, render_template, url_for
@@ -1092,11 +1092,11 @@ def register_scheduling_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, schedule_id, asset_id, user_id):
         self.update_state(state='STARTED',
-                          meta='Looking up UploadedAsset record for id={id}'.format(id=asset_id))
+                          meta='Looking up TemporaryAsset record for id={id}'.format(id=asset_id))
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-            asset = db.session.query(UploadedAsset).filter_by(id=asset_id).first()
+            asset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
             record = db.session.query(ScheduleAttempt).filter_by(id=schedule_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1107,7 +1107,7 @@ def register_scheduling_tasks(celery):
             raise Ignore()
 
         if asset is None:
-            self.update_state(state='FAILURE', meta='Could not load UploadedAsset record')
+            self.update_state(state='FAILURE', meta='Could not load TemporaryAsset record')
             raise Ignore()
 
         if record is None:
@@ -1134,7 +1134,7 @@ def register_scheduling_tasks(celery):
         # ScheduleEnumeration records will be purged during normal database maintenance cycle,
         # so there is no need to delete them explicitly here
 
-        return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename), record,
+        return _execute_from_solution(self, canonical_temporary_asset_filename(asset.filename), record,
                                       prob, X, Y, create_time, number_talks, number_assessors, number_slots,
                                       talk_dict, assessor_dict, slot_dict)
 

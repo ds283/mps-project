@@ -17,9 +17,9 @@ from sqlalchemy import or_
 from sqlalchemy.sql.functions import func
 
 from ..database import db
-from ..models import UploadedAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData
+from ..models import TemporaryAsset, TaskRecord, User, StudentBatch, StudentBatchItem, DegreeProgramme, StudentData
 from ..task_queue import progress_update
-from ..shared.utils import canonical_uploaded_asset_filename
+from ..shared.asset_tools import canonical_temporary_asset_filename
 
 from app.manage_users.actions import register_user
 
@@ -315,7 +315,7 @@ def register_batch_create_tasks(celery):
     def students(self, record_id, asset_id, current_user_id, current_year):
         try:
             record = db.session.query(StudentBatch).filter_by(id=record_id).first()
-            asset = db.session.query(UploadedAsset).filter_by(id=asset_id).first()
+            asset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
             user = db.session.query(User).filter_by(id=current_user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -337,7 +337,7 @@ def register_batch_create_tasks(celery):
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 10, "Inspecting uploaded user list...", autocommit=True)
 
-        with open(canonical_uploaded_asset_filename(asset.filename), 'r', encoding='utf-8') as f:
+        with open(canonical_temporary_asset_filename(asset.filename), 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
 
             # force column headers to lower case

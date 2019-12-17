@@ -11,7 +11,7 @@
 from ..database import db
 from ..models import MatchingAttempt, TaskRecord, LiveProject, SelectingStudent, \
     User, EnrollmentRecord, MatchingRecord, SelectionRecord, ProjectClass, GeneratedAsset, MatchingEnumeration, \
-    UploadedAsset, FacultyData, ProjectClassConfig
+    TemporaryAsset, FacultyData, ProjectClassConfig
 
 from ..task_queue import progress_update, register_task
 
@@ -26,7 +26,7 @@ import pulp.solvers as solvers
 import itertools
 
 from ..shared.timer import Timer
-from ..shared.utils import make_generated_asset_filename, canonical_uploaded_asset_filename
+from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename
 from ..shared.sqlalchemy import get_count
 
 from flask import current_app, render_template, url_for
@@ -1689,11 +1689,11 @@ def register_matching_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def process_offline_solution(self, matching_id, asset_id, user_id):
         self.update_state(state='STARTED',
-                          meta='Looking up UploadedAsset record for id={id}'.format(id=asset_id))
+                          meta='Looking up TemporaryAsset record for id={id}'.format(id=asset_id))
 
         try:
             user = db.session.query(User).filter_by(id=user_id).first()
-            asset = db.session.query(UploadedAsset).filter_by(id=asset_id).first()
+            asset = db.session.query(TemporaryAsset).filter_by(id=asset_id).first()
             record = db.session.query(MatchingAttempt).filter_by(id=matching_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -1704,7 +1704,7 @@ def register_matching_tasks(celery):
             raise Ignore()
 
         if asset is None:
-            self.update_state(state='FAILURE', meta='Could not load UploadedAsset record')
+            self.update_state(state='FAILURE', meta='Could not load TemporaryAsset record')
             raise Ignore()
 
         if record is None:
@@ -1735,7 +1735,7 @@ def register_matching_tasks(celery):
 
         print(' -- creation complete in time {t}'.format(t=create_time.interval))
 
-        return _execute_from_solution(self, canonical_uploaded_asset_filename(asset.filename),
+        return _execute_from_solution(self, canonical_temporary_asset_filename(asset.filename),
                                       record, prob, X, Y, W, R, create_time,
                                       number_sel, number_lp, number_mark, number_to_sel, number_to_lp, number_to_mark,
                                       sel_dict, lp_dict, sup_dict, mark_dict, multiplicity, mean_CATS_per_project)

@@ -795,11 +795,16 @@ generated_acl = db.Table('acl_generated',
                          db.Column('asset_id', db.Integer(), db.ForeignKey('generated_assets.id'), primary_key=True),
                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
-
 # uploaded assets
 temporary_acl = db.Table('acl_temporary',
-                        db.Column('asset_id', db.Integer(), db.ForeignKey('temporary_assets.id'), primary_key=True),
-                        db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
+                         db.Column('asset_id', db.Integer(), db.ForeignKey('temporary_assets.id'), primary_key=True),
+                         db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
+
+
+# submitted assets
+submitted_acl = db.Table('acl_submitted',
+                         db.Column('asset_id', db.Integer(), db.ForeignKey('temporary_assets.id'), primary_key=True),
+                         db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
 
 class MainConfig(db.Model):
@@ -6617,7 +6622,7 @@ class SubmissionRecord(db.Model):
     """
     Collect details for a student submission
     """
-    __tablename__ = "submission_records"
+    __tablename__ = 'submission_records'
 
 
     # unique ID for this record
@@ -6657,10 +6662,31 @@ class SubmissionRecord(db.Model):
                                       backref=db.backref('submission_record', uselist=False))
 
 
+    # SUBMITTED FILES
+
+    # main report
+    report_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
+    report = db.relationship('SubmittedAsset', foreign_keys=[report_id], uselist=False,
+                             backref=db.backref('submission_record', uselist=False))
+
+    # timestamp of report upload
+    report_timestamp = db.Column(db.DateTime())
+
+    # report uploaded by
+    report_uploaded_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
+    report_uploaded_by = db.relationship('Users', foreign_keys=[report_uploaded_id], uselist=False,
+                                         backref=db.backref('uploaded_reports', lazy='dynamic'))
+
+    # is this report marked as an exemplar?
+    report_exemplar = db.Column(db.Boolean(), default=False)
+
+    # attachments incorporated via back-reference under 'attachments' data member
+
+
     # LIFECYCLE DATA
 
     # has the project started? Helpful for convenor and senior tutor reports
-    student_engaged = db.Column(db.Boolean())
+    student_engaged = db.Column(db.Boolean(), default=False)
 
 
     # MARKER FEEDBACK TO STUDENT
@@ -7089,12 +7115,43 @@ class SubmissionRecord(db.Model):
         return get_count(self.project.assessors.filter_by(id=fac_id)) > 0
 
 
+class SubmissionAttachment(db.Model):
+    """
+    Model an attachment to a submission
+    """
+    __tablename__ = 'submission_attachments'
+
+
+    # unique ID
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent submission record, ie. what submission is this attached to?
+    parent_id = db.Column(db.Integer(), db.ForeignKey('submission_records.id'), nullable=False)
+    parent = db.relationship('SubmissionRecord', foreign_keys=[parent_id], uselist=False,
+                             backref=db.backref('attachments', lazy='dynamic'))
+
+    # attached file
+    attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), nullable=None)
+    attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
+                                 backref=db.backref('attachment_record', uselist=False))
+
+    # timestamp of report upload
+    timestamp = db.Column(db.DateTime())
+
+    # report uploaded by
+    uploaded_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
+    uploaded_by = db.relationship('Users', foreign_keys=[uploaded_id], uselist=False,
+                                         backref=db.backref('uploaded_reports', lazy='dynamic'))
+
+    # textual description of attachment
+    description = db.Column(db.Text())
+
+
 class Bookmark(db.Model):
     """
     Model an (orderable) bookmark
     """
-
-    __tablename__ = "bookmarks"
+    __tablename__ = 'bookmarks'
 
 
     # unique ID for this bookmark
@@ -11549,6 +11606,18 @@ class TemporaryAsset(db.Model, AssetLifetimeMixin, AssetMixinFactory(temporary_a
     Track temporary uploaded assets
     """
     __tablename__ = 'temporary_assets'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+
+class SubmittedAsset(db.Model, AssetDownloadDataMixin, AssetMixinFactory(submitted_acl)):
+    """
+    Track submitted assets: usually these will be project reports, but they can be other things to
+    (eg. attachments)
+    """
+    __tablename__ = 'submitted_assets'
 
 
     # primary key id

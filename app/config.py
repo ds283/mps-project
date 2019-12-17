@@ -73,9 +73,12 @@ class Config(object):
 
 
     # Flask-Caching
+
     # CACHE_REDIS_URL is set in instance/secrets.py
     CACHE_TYPE = 'redis'
-    CACHE_DEFAULT_TIMEOUT = 86400                           # default timeout = 86400 seconds = 24 hours
+
+    # default timeout = 86400 seconds = 24 hours
+    CACHE_DEFAULT_TIMEOUT = 86400
 
 
     # logging
@@ -84,9 +87,12 @@ class Config(object):
 
     # MPS-Project configuration
     BACKUP_FOLDER = os.environ.get('BACKUP_FOLDER') or 'backups'
+
     ASSETS_FOLDER = os.environ.get('ASSETS_FOLDER') or 'assets'
+
     ASSETS_GENERATED_SUBFOLDER = os.environ.get('ASSETS_GENERATED_SUBFOLDER') or 'generated'
     ASSETS_UPLOADED_SUBFOLDER = os.environ.get('ASSETS_UPLOADED_SUBFOLDER') or 'uploaded'
+    ASSETS_SUBMITTED_SUBFOLDER = os.environ.get('ASSETS_SUBMITTED_SUBFOLDER') or 'submitted'
 
     # DATABASE_USER, DATABASE_PASSWORD, DATABASE_ROOT_PASSWORD and DATABASE_HOST are set in instance/secrets.py
 

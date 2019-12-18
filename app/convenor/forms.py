@@ -15,7 +15,7 @@ from wtforms_alchemy import QuerySelectField
 
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
     GetPresentationAssessorFaculty, BuildActiveFacultyName
-from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin
+from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin
 from functools import partial
 
 
@@ -62,6 +62,16 @@ class CustomCATSLimitForm(Form, SaveChangesMixin):
     # custom CATS limit for presentations
     CATS_presentation = IntegerField('Maximum CATS allocated for presentation assessment',
                                      validators=[Optional()])
+
+
+class SubmissionRecordMixin():
+
+    start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()])
+
+
+class EditSubmissionRecordForm(Form, SubmissionRecordMixin, SubmissionPeriodCommonMixin, SaveChangesMixin):
+
+    pass
 
 
 def AssignMarkerFormFactory(live_project, pclass_id, uses_marker):

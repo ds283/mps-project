@@ -44,7 +44,7 @@ from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, Skill
     AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
     PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
 from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory, \
-    AssignPresentationFeedbackFormFactory, CustomCATSLimitForm
+    AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, EditSubmissionRecordForm
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -4858,7 +4858,6 @@ def open_feedback(id):
 
     if feedback_form.is_submitted() and feedback_form.open_feedback.data is True:
         # set feedback deadline and mark feedback open
-
         period = config.periods.filter_by(submission_period=config.submission_period).first()
 
         period.feedback_open = True
@@ -4908,6 +4907,60 @@ def close_feedback(id):
     db.session.commit()
 
     return redirect(request.referrer)
+
+
+@convenor.route('/edit_submission_record/<int:pid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'route')
+def edit_submission_record(pid):
+    # pid is a SubmissionPeriodRecord
+    record = SubmissionPeriodRecord.query.get_or_404(pid)
+    config = record.config
+
+    # reject is user is not a convenor for the associated project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject is project class is not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if this submission period is in the past
+    if config.submission_period > record.submission_period:
+        flash('It is no longer possible to edit this submission period because it has been closed.', 'info')
+        return redirect(request.referrer)
+
+    # reject if period is retired
+    if record.retired:
+        flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
+        return redirect(request.referrer)
+
+    # reject if lifecycle stage is marking or later
+
+    state = config.submitter_lifecycle
+    if state >= ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('It is no longer possible to edit this submission period because it is being marked, '
+              'or is ready to rollover.', 'info')
+        return redirect(request.referrer)
+
+    edit_form = EditSubmissionRecordForm(obj=record)
+
+    if edit_form.validate_on_submit():
+        record.has_presentation = edit_form.has_presentation.data
+
+        if record.has_presentation:
+            record.lecture_capture = edit_form.lecture_capture.data
+            record.collect_presentation_feedback = edit_form.collect_presentation_feedback.data
+            record.number_assessors = edit_form.number_assessors.data
+            record.max_group_size = edit_form.max_group_size.data
+            record.morning_session = edit_form.morning_session.data
+            record.afternoon_session = edit_form.afternoon_session.data
+            record.talk_format = edit_form.talk_format.data
+
+        db.session.commit()
+
+        return redirect(url_for('convenor.overview', id=config.project_class.id))
+
+    return render_template('convenor/dashboard/edit_submission_record.html', form=edit_form, period=record)
 
 
 @convenor.route('/publish_assignment/<int:id>')

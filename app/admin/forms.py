@@ -14,7 +14,8 @@ from wtforms import StringField, IntegerField, SelectField, BooleanField, Submit
 from wtforms.validators import InputRequired, Optional, Length
 from wtforms_alchemy.fields import QuerySelectField, QuerySelectMultipleField
 
-from app.manage_users.forms import ResearchGroupMixin
+from ..manage_users.forms import ResearchGroupMixin
+
 from ..shared.forms.wtf_validators import globally_unique_group_name, unique_or_original_group_name, \
     globally_unique_group_abbreviation, unique_or_original_group_abbreviation, \
     globally_unique_degree_type, unique_or_original_degree_type,\
@@ -46,12 +47,12 @@ from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgramm
     ScheduleSessionQuery, BuildScheduleSessionLabel, GetComparatorSchedules, \
     BuildPossibleOfficeContacts, BuildOfficeContactName
 
+from ..shared.forms.fields import CheckboxQuerySelectMultipleField
+from ..shared.forms.mixins import SaveChangesMixin, SubmissionPeriodCommonMixin
+
 from ..models import BackupConfiguration, ScheduleAttempt, extent_choices, \
     matching_history_choices, solver_choices, session_choices, semester_choices, auto_enroll_year_choices, \
     DEFAULT_STRING_LENGTH
-
-from ..shared.forms.fields import CheckboxQuerySelectMultipleField
-from ..shared.forms.mixins import SaveChangesMixin
 
 from functools import partial
 
@@ -372,42 +373,13 @@ class SubmissionPeriodMixin():
     start_date = DateField('Period start date', format='%d/%m/%Y', validators=[Optional()],
                            description='The year will increment when a rollover takes place')
 
-    has_presentation = BooleanField('This submission period includes a presentation assessment')
 
-    number_assessors = IntegerField('Number of assessors per group', default=2,
-                                    description='Enter the number of faculty assessors scheduled per group during '
-                                                'the presentation assessment',
-                                    validators=[NotOptionalIf('has_presentation')])
-
-    lecture_capture = BooleanField('The presentation assessment requires a venue with lecture capture')
-
-    max_group_size = IntegerField('Maximum group size', default=5,
-                                  description='Enter the desired maximum group size. Some groups may be smaller '
-                                              'if this is required.',
-                                  validators=[NotOptionalIf('has_presentation')])
-
-    morning_session = StringField('Times for morning session',
-                                  description='e.g. 10am-12pm', validators=[NotOptionalIf('has_presentation'),
-                                                                            Length(max=DEFAULT_STRING_LENGTH)])
-
-    afternoon_session = StringField('Times for afternoon session',
-                                    description='e.g. 2pm-4pm', validators=[NotOptionalIf('has_presentation'),
-                                                                            Length(max=DEFAULT_STRING_LENGTH)])
-
-    talk_format = StringField('Specify talk format',
-                              description='e.g. 15 mins + 3 mins for questions',
-                              validators=[NotOptionalIf('has_presentation'),
-                                          Length(max=DEFAULT_STRING_LENGTH)])
-
-    collect_presentation_feedback = BooleanField('Collect presentation feedback online')
-
-
-class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin):
+class AddSubmissionPeriodForm(Form, SubmissionPeriodMixin, SubmissionPeriodCommonMixin):
 
     submit = SubmitField('Add new submission period')
 
 
-class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, SaveChangesMixin):
+class EditSubmissionPeriodForm(Form, SubmissionPeriodMixin, SubmissionPeriodCommonMixin, SaveChangesMixin):
 
     pass
 

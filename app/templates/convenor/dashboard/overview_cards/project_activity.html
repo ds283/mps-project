@@ -5,15 +5,16 @@
     {% if period.start_date and period.start_date > today %}
         <p>This period will begin on {{ period.start_date.strftime("%a %d %b %Y") }}</p>
     {% else %}
-        Normal project activity is underway.
+        <p>Normal project activity is underway.</p>
     {% endif %}
     <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
         <hr class="intro-divider">
         {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline) }}
-        <div class="row">
+        <div class="row vertical-top">
             <div class="col-xs-12">
                 <div class="pull-right">
+                    <a class="btn btn-default" href="{{ url_for('convenor.edit_submission_record', pid=period.id) }}">Configure period...</a>
                     {{ wtf.form_field(feedback_form.open_feedback, button_map={'open_feedback': 'danger'}) }}
                 </div>
             </div>

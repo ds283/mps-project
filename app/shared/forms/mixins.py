@@ -9,9 +9,9 @@
 #
 
 from wtforms import SubmitField, StringField, SelectField, BooleanField, IntegerField, TextAreaField
-from wtforms.validators import InputRequired, Optional
+from wtforms.validators import InputRequired, Optional, Length
 
-from ...models import theme_choices, academic_titles, email_freq_choices
+from ...models import theme_choices, academic_titles, email_freq_choices, DEFAULT_STRING_LENGTH
 from .wtf_validators import valid_username, unique_or_original_username, NotOptionalIf
 
 
@@ -105,3 +105,35 @@ class FeedbackMixin():
     negative = TextAreaField('Negative aspects', render_kw={"rows": 10})
 
     save_feedback = SubmitField('Save changes')
+
+
+class SubmissionPeriodCommonMixin():
+
+    has_presentation = BooleanField('This submission period includes a presentation assessment')
+
+    number_assessors = IntegerField('Number of assessors per group', default=2,
+                                    description='Enter the number of faculty assessors scheduled per group during '
+                                                'the presentation assessment',
+                                    validators=[NotOptionalIf('has_presentation')])
+
+    lecture_capture = BooleanField('The presentation assessment requires a venue with lecture capture')
+
+    max_group_size = IntegerField('Maximum group size', default=5,
+                                  description='Enter the desired maximum group size. Some groups may be smaller '
+                                              'if this is required.',
+                                  validators=[NotOptionalIf('has_presentation')])
+
+    morning_session = StringField('Times for morning session',
+                                  description='e.g. 10am-12pm', validators=[NotOptionalIf('has_presentation'),
+                                                                            Length(max=DEFAULT_STRING_LENGTH)])
+
+    afternoon_session = StringField('Times for afternoon session',
+                                    description='e.g. 2pm-4pm', validators=[NotOptionalIf('has_presentation'),
+                                                                            Length(max=DEFAULT_STRING_LENGTH)])
+
+    talk_format = StringField('Specify talk format',
+                              description='e.g. 15 mins + 3 mins for questions',
+                              validators=[NotOptionalIf('has_presentation'),
+                                          Length(max=DEFAULT_STRING_LENGTH)])
+
+    collect_presentation_feedback = BooleanField('Collect presentation feedback online')

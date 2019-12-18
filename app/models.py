@@ -4032,7 +4032,6 @@ class SubmissionPeriodRecord(db.Model):
     """
     Capture details about a submission period
     """
-
     __tablename__ = 'submission_periods'
 
     id = db.Column(db.Integer(), primary_key=True)

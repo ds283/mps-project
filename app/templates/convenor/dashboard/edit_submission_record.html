@@ -31,15 +31,7 @@
 {% endblock %}
 
 {% block formtitle %}
-    {% if period %}
-        {% if period.name and period.name is not none and period.name|length > 0 %}
-            Edit submission period <strong>{{ period.name }}</strong>
-        {% else %}
-            Edit <strong>Submission period #{{ period.period }}</strong>
-        {% endif %}
-    {% else %}
-        {{ title }}
-    {% endif %}
+    Edit submission period <strong>{{ period.display_name }}</strong>
 {% endblock %}
 
 {% block form_content %}

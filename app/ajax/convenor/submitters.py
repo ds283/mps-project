@@ -52,7 +52,7 @@ _projects = \
                     {% else %}
                         {{ r.project.name[0:35] }}...
                     {% endif %}
-                    ({{r.supervisor.user.last_name}})
+                    ({{ r.supervisor.user.last_name }})
                 <span class="caret"></span></a>
                 <ul class="dropdown-menu">
                     {% set disabled = r.period.feedback_open or r.student_engaged %}
@@ -96,6 +96,12 @@ _projects = \
                         {% endif %}
                     </ul>
                 </div>
+                {% if r.report is not none %}
+                    <span class="label label-success"><i class="fa fa-check"></i> Report</span>
+                {% endif %}
+                {% if r.number_attachments > 0 %}
+                    <span class="label label-success"><i class="fa fa-check"></i> Attachments</span>
+                {% endif %}
             {% endif %}
         {% else %}
             <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">No project allocated</a>

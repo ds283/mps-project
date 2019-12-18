@@ -803,7 +803,7 @@ temporary_acl = db.Table('acl_temporary',
 
 # submitted assets
 submitted_acl = db.Table('acl_submitted',
-                         db.Column('asset_id', db.Integer(), db.ForeignKey('temporary_assets.id'), primary_key=True),
+                         db.Column('asset_id', db.Integer(), db.ForeignKey('submitted_assets.id'), primary_key=True),
                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
 
@@ -6674,7 +6674,7 @@ class SubmissionRecord(db.Model):
 
     # report uploaded by
     report_uploaded_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
-    report_uploaded_by = db.relationship('Users', foreign_keys=[report_uploaded_id], uselist=False,
+    report_uploaded_by = db.relationship('User', foreign_keys=[report_uploaded_id], uselist=False,
                                          backref=db.backref('uploaded_reports', lazy='dynamic'))
 
     # is this report marked as an exemplar?
@@ -7115,6 +7115,11 @@ class SubmissionRecord(db.Model):
         return get_count(self.project.assessors.filter_by(id=fac_id)) > 0
 
 
+    @property
+    def number_attachments(self):
+        return get_count(self.attachments)
+
+
 class SubmissionAttachment(db.Model):
     """
     Model an attachment to a submission
@@ -7140,8 +7145,8 @@ class SubmissionAttachment(db.Model):
 
     # report uploaded by
     uploaded_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
-    uploaded_by = db.relationship('Users', foreign_keys=[uploaded_id], uselist=False,
-                                         backref=db.backref('uploaded_reports', lazy='dynamic'))
+    uploaded_by = db.relationship('User', foreign_keys=[uploaded_id], uselist=False,
+                                         backref=db.backref('uploaded_attachments', lazy='dynamic'))
 
     # textual description of attachment
     description = db.Column(db.Text())

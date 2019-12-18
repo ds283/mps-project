@@ -40,6 +40,34 @@
                     {% elif period.feedback_open %}
                         {{ feedback_marking(config, period, feedback_form) }}
                     {% endif %}
+                    {% if period.has_presentation %}
+                        <hr class="intro-divider">
+                        <span class="label label-info">Presentation assessment</span>
+                        {% if period.lecture_capture %}
+                            <span class="label label-default">Requires lecture capture</span>
+                        {% endif %}
+                        {% if period.number_assessors %}
+                            <span class="label label-default">{{ period.number_assessors }} assessors</span>
+                        {% endif %}
+                        {% if period.max_group_size %}
+                            <span class="label label-default">Max group {{ period.max_group_size }}</span>
+                        {% endif %}
+                        {% if period.collect_presentation_feedback %}
+                            <span class="label label-default">Collect feedback</span>
+                        {% endif %}
+                        <div>
+                            <span class="label label-info">Morning session</span>
+                            <span class="label label-default">{% if period.morning_session and period.morning_session|length > 0 %}{{ period.morning_session }}{% else %}Not set{% endif %}</span>
+                        </div>
+                        <div>
+                            <span class="label label-info">Afternoon session</span>
+                            <span class="label label-default">{% if period.afternoon_session and period.afternoon_session|length > 0 %}{{ period.afternoon_session }}{% else %}Not set{% endif %}</span>
+                        </div>
+                        <div>
+                            <span class="label label-info">Format</span>
+                            <span class="label label-default">{% if period.talk_format and period.talk_format|length > 0 %}{{ period.talk_format }}{% else %}Not set{% endif %}</span>
+                        </div>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>

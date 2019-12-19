@@ -67,6 +67,11 @@ p.copyright {
     font-weight: lighter;
 }
 
+.document-group-title {
+    font-size: 26px;
+    font-weight: lighter;
+}
+
 .dashboard-subtitle {
     font-size: 22px;
     font-weight: lighter;

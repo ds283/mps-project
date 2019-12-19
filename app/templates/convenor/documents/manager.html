@@ -1,0 +1,65 @@
+{% extends "base_app.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    Manage documents for {{ record.owner.student.user.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    {% if url and text %}
+        <div class="top-return-link">
+            <a href="{{ url }}">
+                <i class="fa fa-backward"></i> Return to {{ text }}
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="panel panel-primary panel-primary-bg">
+        <div class="panel-heading">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}</div>
+        <div class="panel-body">
+            <div class="well">
+                {% if record.report %}
+                    {% set asset = record.report %}
+                    <span class="document-group-title">Report</span>
+                    <hr class="intro-divider">
+                    <div class="row">
+                        <div class="col-xs-9">
+                            {% if asset.target_name %}
+                                <strong>{{ asset.target_name }}</strong>
+                            {% else %}
+                                <strong>{{ asset.filename }}</strong>
+                            {% endif %}
+                            {% if asset.timestamp %}
+                                uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                            {% endif %}
+                            {% if asset.uploaded_by %}
+                                <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
+                            {% endif %}
+                        </div>
+                        <div class="col-xs-3">
+                            <div class="pull-right">
+                                {% if asset.has_access(current_user.id) %}
+                                    <a href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}" class="btn btn-default">Download</a>
+                                    <a href="{{ url_for('convenor.delete_submitter_report', sid=record.id) }}" class="btn btn-danger">Remove</a>
+                                {% else %}
+                                    <a class="btn btn-default disabled">Download</a>
+                                    <a class="btn btn-danger disabled">Remove</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <strong>No report attached.</strong>
+                    <a href="{{ url_for('convenor.upload_submitter_report', sid=record.id, url=url, text=text) }}">Upload...</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if url and text %}
+        <a href="{{ url }}">
+            <i class="fa fa-backward"></i> Return to {{ text }}
+        </a>
+    {% endif %}
+{% endblock %}

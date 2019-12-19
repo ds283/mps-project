@@ -20,7 +20,7 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord
+    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -30,6 +30,7 @@ from ..shared.validators import validate_is_convenor, validate_is_administrator,
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
 from ..shared.conversions import is_integer
+from ..shared.asset_tools import make_submitted_asset_filename
 
 from ..student.actions import store_selection
 
@@ -44,7 +45,9 @@ from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, Skill
     AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
     PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
 from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory, \
-    AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, EditSubmissionRecordForm
+    AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, EditSubmissionRecordForm, UploadReportForm
+
+from ..uploads import submitted_files
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -52,6 +55,7 @@ from sqlalchemy.orm.exc import StaleDataError
 
 from datetime import date, datetime, timedelta
 from dateutil import parser
+from pathlib import Path
 
 
 _marker_menu = \
@@ -5110,6 +5114,41 @@ def mark_started(id):
     return redirect(request.referrer)
 
 
+@convenor.route('/mark_all_started/<int:id>')
+@roles_accepted('faculty', 'admin', 'route')
+def mark_all_started(id):
+    # id is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(id)
+
+    # reject if logged-in user is not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    if config.submitter_lifecycle >= ProjectClassConfig.SUBMITTER_LIFECYCLE_READY_ROLLOVER:
+        flash('It is now too late to mark students as started.', 'error')
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+    year_filter = request.args.get('year_filter')
+
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+
+    for sel in data:
+        record = sel.get_assignment(config.submission_period)
+        if record is not None:
+            record.student_engaged = True
+
+    db.session.commit()
+
+    return redirect(request.referrer)
+
+
 @convenor.route('/mark_waiting/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def mark_waiting(id):
@@ -6270,3 +6309,178 @@ def custom_CATS_limits(record_id):
 
     return render_template('convenor/dashboard/custom_CATS_limits.html', record=record, form=form,
                            user=record.owner.user)
+
+
+@convenor.route('/submitter_documents/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def submitter_documents(sid):
+    # sid is a SubmissionRecord id
+    record = SubmissionRecord.query.get_or_404(sid)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    return render_template('convenor/documents/manager.html', record=record, url=url, text=text)
+
+
+@convenor.route('/delete_submitter_report/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_submitter_report(sid):
+    # sid is a SubmissionRecord id
+    record = SubmissionRecord.query.get_or_404(sid)
+
+    if record.report is None:
+        flash('Could not delete report for this submitter because no file has been attached.', 'info')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        return redirect(request.referrer)
+
+    # check has privileges to handle the asset
+    if not record.report.has_access(current_user.id):
+        flash('Could not delete report for this submitted because you do not have privileges to access it.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    title = 'Delete project report'
+    action_url = url_for('convenor.perform_delete_submitter_report', sid=sid, url=url, text=text)
+
+    message = '<p>Please confirm that you wish to remove the project report for ' \
+              '<i class="fa fa-user"></i> {student} {period}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(student=record.owner.student.user.name,
+                                                            period=record.period.display_name)
+    submit_label = 'Remove report'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/perform_delete_submitter_report/<int:sid>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_delete_submitter_report(sid):
+    # sid is a SubmissionRecord id
+    record = SubmissionRecord.query.get_or_404(sid)
+
+    if record.report is None:
+        flash('Could not delete report for this submitter because no file has been attached.', 'info')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    if not validate_is_convenor(record.project.config.project_class):
+        return redirect(request.referrer)
+
+    # check has privileges to handle the asset
+    if not record.report.has_access(current_user.id):
+        flash('Could not delete report for this submitted because you do not have privileges to access it.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    try:
+        # set lifetime of uploaded asset to 30 days, after which it will be deleted by the garbage collection.
+        # also, unlink asset record from this SubmissionRecord.
+        # notice we have to adjust the timestamp, since together with the lifetime this determines the expiry date
+        record.report.timestamp = datetime.now()
+        record.report.lifetime = 30*24*60*60
+        record.report_id = None
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        flash('Could not remove report from the submission record because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url_for('convenor.submitter_documents', sid=sid, url=url, text=text))
+
+
+@convenor.route('/upload_submitter_report/<int:sid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def upload_submitter_report(sid):
+    # sid is a SubmissionRecord id
+    record = SubmissionRecord.query.get_or_404(sid)
+
+    if record.report is not None:
+        flash('Can not upload a report for this submitter because an existing report is already attached.', 'info')
+        return redirect(request.referrer)
+
+    # check is convenor for the project's class
+    config = record.owner.config
+    pclass = config.project_class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    form = UploadReportForm(request.form)
+
+    if form.validate_on_submit():
+        if 'report' in request.files:
+            report_file = request.files['report']
+
+            # generate unique filename for upload
+            incoming_filename = Path(report_file.filename)
+            extension = incoming_filename.suffix.lower()
+
+            root_subfolder = current_app.config.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
+
+            year_string = str(config.year)
+            pclass_string = pclass.abbreviation
+
+            subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
+
+            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
+            submitted_files.save(report_file, folder=str(subfolder), name=str(filename))
+
+            # generate asset record
+            asset = SubmittedAsset(timestamp=datetime.now(),
+                                   uploaded_id=current_user.id,
+                                   lifetime=None,
+                                   filename=str(subfolder/filename),
+                                   target_name=str(incoming_filename),
+                                   mimetype=str(report_file.content_type))
+
+            try:
+                db.session.add(asset)
+                db.session.flush()
+            except SQLAlchemyError as e:
+                flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return redirect(url_for('convenor.submitter_documents', sid=record.sid))
+
+            # attach this asset as the uploaded report
+            record.report_id = asset.id
+
+            # uploading user has access
+            asset.access_control_list.append(current_user)
+
+            # project convenor has access
+            if pclass.convenor is not None and pclass.convenor.user not in asset.access_control_list:
+                asset.access_control_list.append(pclass.convenor.user)
+
+            # project supervisor has access
+            if record.project is not None and record.project.owner is not None and \
+                    record.project.owner.user not in asset.access_control_list:
+                asset.access_control_list.append(record.project.owner.user)
+
+            # project examiner has access
+            if record.marker is not None and record.marker not in asset.access_control_list:
+                asset.access_control_list.append(record.marker.user)
+
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+            flash('Report "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
+
+            return redirect(url_for('convenor.submitter_documents', sid=record.id))
+
+    return render_template('convenor/documents/upload_report.html', record=record, form=form)

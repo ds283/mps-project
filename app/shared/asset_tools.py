@@ -13,29 +13,63 @@ from uuid import uuid4
 
 from flask import current_app
 
+from pathlib import Path
+
+
+def _make_asset_filename(asset_folder=None, subfolder=None, ext=None):
+    """
+    Generate a unique filename for an asset
+    """
+    if asset_folder is None:
+        raise RuntimeError('asset folder not specified in _make_asset_filename')
+    if subfolder is None:
+        raise RuntimeError('subfolder not specified in _make_asset_filename')
+
+    if ext is not None:
+        if not ext.startswith('.'):
+            ext = "." + ext
+        filename = Path(str(uuid4())).with_suffix(ext)
+    else:
+        filename = Path(str(uuid4()))
+
+    if not isinstance(asset_folder, Path):
+        asset_folder = Path(asset_folder)
+    if not isinstance(subfolder, Path):
+        subfolder = Path(subfolder)
+
+    # make sure destination folder exists
+    destination = asset_folder / subfolder
+    destination.mkdir(parents=True, exist_ok=True)
+
+    return filename, destination/filename
+
+
+def _make_canonical_asset_filename(filename, asset_folder=None, subfolder=None):
+    """
+    Turn a relative asset filename into an absolute path
+    """
+    if asset_folder is None:
+        raise RuntimeError('asset folder not specified in _make_canonical_asset_filename')
+    if subfolder is None:
+        raise RuntimeError('subfolder not specified in _make_canonical_asset_filename')
+
+    if not isinstance(filename, Path):
+        filename = Path(filename)
+    if not isinstance(asset_folder, Path):
+        asset_folder = Path(asset_folder)
+    if not isinstance(subfolder, Path):
+        subfolder = Path(subfolder)
+
+    return asset_folder / subfolder / filename
+
 
 def make_generated_asset_filename(ext=None):
     """
     Generate a unique filename for a newly-generated asset
     :return:
     """
-    asset_folder = current_app.config.get('ASSETS_FOLDER')
-    generated_subfolder = current_app.config.get('ASSETS_GENERATED_SUBFOLDER')
-
-    if asset_folder is None:
-        raise RuntimeError('ASSETS_FOLDER configuration variable is not set')
-    if generated_subfolder is None:
-        raise RuntimeError('ASSETS_GENERATED_SUBFOLDER configuration variable is not set')
-
-    if ext is not None:
-        filename = '{leaf}.{ext}'.format(leaf=uuid4(), ext=ext)
-    else:
-        filename = '{leaf}'.format(leaf=uuid4())
-
-    abs_generated_path = path.join(asset_folder, generated_subfolder)
-    makedirs(abs_generated_path, exist_ok=True)
-
-    return filename, path.join(abs_generated_path, filename)
+    return _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
+                                subfolder=current_app.config.get('ASSETS_GENERATED_SUBFOLDER'), ext=ext)
 
 
 def canonical_generated_asset_filename(filename):
@@ -44,16 +78,8 @@ def canonical_generated_asset_filename(filename):
     :param filename:
     :return:
     """
-    asset_folder = current_app.config.get('ASSETS_FOLDER')
-    generated_subfolder = current_app.config.get('ASSETS_GENERATED_SUBFOLDER')
-
-    if asset_folder is None:
-        raise RuntimeError('ASSETS_FOLDER configuration variable is not set')
-    if generated_subfolder is None:
-        raise RuntimeError('ASSETS_GENERATED_SUBFOLDER configuration variable is not set')
-
-    abs_generated_path = path.join(asset_folder, generated_subfolder)
-    return path.join(abs_generated_path, filename)
+    return _make_canonical_asset_filename(filename, asset_folder=current_app.config.get('ASSETS_FOLDER'),
+                                          subfolder=current_app.config.get('ASSETS_GENERATED_SUBFOLDER'))
 
 
 def make_temporary_asset_filename(ext=None):
@@ -61,23 +87,8 @@ def make_temporary_asset_filename(ext=None):
     Generate a unique filename for an uploaded asset
     :return:
     """
-    asset_folder = current_app.config.get('ASSETS_FOLDER')
-    uploaded_subfolder = current_app.config.get('ASSETS_UPLOADED_SUBFOLDER')
-
-    if asset_folder is None:
-        raise RuntimeError('ASSETS_FOLDER configuration variable is not set')
-    if uploaded_subfolder is None:
-        raise RuntimeError('ASSETS_UPLOADED_SUBFOLDER configuration variable is not set')
-
-    if ext is not None:
-        filename = '{leaf}.{ext}'.format(leaf=uuid4(), ext=ext)
-    else:
-        filename = '{leaf}'.format(leaf=uuid4())
-
-    abs_generated_path = path.join(asset_folder, uploaded_subfolder)
-    makedirs(abs_generated_path, exist_ok=True)
-
-    return filename, path.join(abs_generated_path, filename)
+    return _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
+                                subfolder=current_app.config.get('ASSETS_UPLOADED_SUBFOLDER'), ext=ext)
 
 
 def canonical_temporary_asset_filename(filename):
@@ -86,13 +97,27 @@ def canonical_temporary_asset_filename(filename):
     :param filename:
     :return:
     """
-    asset_folder = current_app.config.get('ASSETS_FOLDER')
-    uploaded_subfolder = current_app.config.get('ASSETS_UPLOADED_SUBFOLDER')
+    return _make_canonical_asset_filename(filename, asset_folder=current_app.config.get('ASSETS_FOLDER'),
+                                          subfolder=current_app.config.get('ASSETS_UPLOADED_SUBFOLDER'))
 
-    if asset_folder is None:
-        raise RuntimeError('ASSETS_FOLDER configuration variable is not set')
-    if uploaded_subfolder is None:
-        raise RuntimeError('ASSETS_UPLOADED_SUBFOLDER configuration variable is not set')
 
-    abs_generated_path = path.join(asset_folder, uploaded_subfolder)
-    return path.join(abs_generated_path, filename)
+def make_submitted_asset_filename(ext=None, subpath=None):
+    """
+    Generate a unique filename for a submitted asset
+    """
+    if not isinstance(subpath, Path):
+        subpath = Path(subpath)
+
+    name, path = _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
+                                      subfolder=Path(current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER') / subpath),
+                                      ext=ext)
+
+    return name, path
+
+
+def canonical_submitted_asset_filename(filename):
+    """
+    Turn a unique filename for a submitted asset into an absolute path
+    """
+    return _make_canonical_asset_filename(filename, asset_folder=current_app.config.get('ASSETS_FOLDER'),
+                                          subfolder=current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))

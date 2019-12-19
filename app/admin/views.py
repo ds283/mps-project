@@ -62,8 +62,9 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset
-from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename
+    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset
+from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
+    canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
 from ..shared.conversions import is_integer
 from ..shared.formatters import format_size
@@ -7729,13 +7730,29 @@ def download_generated_asset(asset_id):
     # asset_is is a GeneratedAsset
     asset = GeneratedAsset.query.get_or_404(asset_id)
 
-    if get_count(asset.access_control_list.filter_by(id=current_user.id)) == 0:
+    if not asset.has_access(current_user.id):
         flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
               'a system administrator.', 'info')
         return redirect(request.referrer)
 
     abs_path = canonical_generated_asset_filename(asset.filename)
     return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name)
+
+
+@admin.route('/download_submitted_asset/<int:asset_id>')
+@login_required
+def download_submitted_asset(asset_id):
+    # asset_is is a SubmittedAsset
+    asset = SubmittedAsset.query.get_or_404(asset_id)
+
+    if not asset.has_access(current_user.id):
+        flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
+              'a system administrator.', 'info')
+        return redirect(request.referrer)
+
+    abs_path = canonical_submitted_asset_filename(asset.filename)
+    return send_file(abs_path, as_attachment=True, attachment_filename=asset.target_name,
+                     mimetype=asset.mimetype)
 
 
 @admin.route('/upload_schedule/<int:schedule_id>', methods=['GET', 'POST'])
@@ -7760,12 +7777,12 @@ def upload_schedule(schedule_id):
                     flash('Solution files for the CBC optimizer must be in .LP format', 'error')
 
                 else:
-                    filename, abs_path = make_temporary_asset_filename(extension[1:])
+                    filename, abs_path = make_temporary_asset_filename(ext=extension)
                     solution_files.save(sol_file, name=filename)
 
                     asset = TemporaryAsset(timestamp=datetime.now(),
                                            lifetime=24*60*60,
-                                           filename=filename)
+                                           filename=str(filename))
                     asset.access_control_list.append(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
@@ -7778,8 +7795,14 @@ def upload_schedule(schedule_id):
                     record.celery_finished = False
                     record.celery_id = uuid
 
-                    db.session.add(asset)
-                    db.session.commit()
+                    try:
+                        db.session.add(asset)
+                        db.session.commit()
+                    except SQLAlchemyError as e:
+                        flash('Could not upload offline solution due to a database issue. '
+                              'Please contact an administrator.', 'error')
+                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                        return redirect(url_for('admin.assessment_schedules', id=record.owner_id))
 
                     celery = current_app.extensions['celery']
                     schedule_task = celery.tasks['app.tasks.scheduling.process_offline_solution']
@@ -7820,12 +7843,12 @@ def upload_match(match_id):
                     flash('Solution files for the CBC optimizer must be in .LP format', 'error')
 
                 else:
-                    filename, abs_path = make_temporary_asset_filename(extension[1:])
+                    filename, abs_path = make_temporary_asset_filename(ext=extension)
                     solution_files.save(sol_file, name=filename)
 
                     asset = TemporaryAsset(timestamp=datetime.now(),
                                            lifetime=24*60*60,
-                                           filename=filename)
+                                           filename=str(filename))
                     asset.access_control_list.append(current_user)
 
                     uuid = register_task('Process offline solution for "{name}"'.format(name=record.name),
@@ -7838,8 +7861,14 @@ def upload_match(match_id):
                     record.celery_finished = False
                     record.celery_id = uuid
 
-                    db.session.add(asset)
-                    db.session.commit()
+                    try:
+                        db.session.add(asset)
+                        db.session.commit()
+                    except SQLAlchemyError as e:
+                        flash('Could not upload offline solution due to a database issue. '
+                              'Please contact an administrator.', 'error')
+                        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                        return redirect(url_for('admin.manage_matching'))
 
                     celery = current_app.extensions['celery']
                     schedule_task = celery.tasks['app.tasks.matching.process_offline_solution']

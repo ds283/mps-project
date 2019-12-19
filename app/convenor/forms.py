@@ -101,3 +101,8 @@ def AssignPresentationFeedbackFormFactory(record_id, slot_id):
                                     get_label=BuildActiveFacultyName)
 
     return AssignPresentationFeedbackForm
+
+
+class UploadReportForm(Form):
+
+    submit = SubmitField('Upload report')

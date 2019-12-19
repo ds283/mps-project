@@ -27,7 +27,7 @@ from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 from .cache import cache
 from .limiter import limiter
-from .uploads import solution_files, batch_user_files
+from .uploads import solution_files, batch_user_files, submitted_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 from flask_rollbar import Rollbar
@@ -156,14 +156,20 @@ def create_app():
         app.logger.info('Profiling to disk enabled')
 
     # configure behaviour for uploaded files
-    asset_folder = app.config.get('ASSETS_FOLDER')
-    uploaded_subfolder = app.config.get('ASSETS_UPLOADED_SUBFOLDER')
-    abs_uploaded_path = path.join(asset_folder, uploaded_subfolder)
-    makedirs(abs_uploaded_path, exist_ok=True)
+    asset_folder = Path(app.config.get('ASSETS_FOLDER'))
+    uploaded_subfolder = Path(app.config.get('ASSETS_UPLOADED_SUBFOLDER'))
+    submitted_subfolder = Path(app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))
+
+    abs_uploaded_path = asset_folder / uploaded_subfolder
+    abs_uploaded_path.mkdir(parents=True, exist_ok=True)
+
+    abs_submissions_path = asset_folder / submitted_subfolder
+    abs_submissions_path.mkdir(parents=True, exist_ok=True)
 
     app.config['UPLOADED_SOLUTIONS_DEST'] = abs_uploaded_path
     app.config['UPLOADED_BATCHUSERLIST_DEST'] = abs_uploaded_path
-    configure_uploads(app, [solution_files, batch_user_files])
+    app.config['UPLOADED_SUBMISSIONS_DEST'] = abs_submissions_path
+    configure_uploads(app, [solution_files, batch_user_files, submitted_files])
 
     # set max upload size = 64 Mb, optimizer solution files shouldn't be larger than this
     # (though MPS files can be quite large if those are being used)

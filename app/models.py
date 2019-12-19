@@ -499,7 +499,7 @@ def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapp
 
 class AssetLifetimeMixin():
     # lifetime in seconds (will be cleaned up by automatic garbage collector after this time)
-    lifetime= db.Column(db.Integer())
+    lifetime= db.Column(db.Integer(), nullable=True, default=None)
 
 
 class AssetDownloadDataMixin():
@@ -523,6 +523,21 @@ def AssetMixinFactory(acl_name):
         @declared_attr
         def access_control_list(self):
             return db.relationship('User', secondary=acl_name, lazy='dynamic')
+
+
+        def has_access(self, user):
+            if isinstance(user, int):
+                user_id = user
+            elif isinstance(user, User):
+                user_id = user.id
+            else:
+                raise RuntimeError('Unrecongnized object "current_user" passed to AssetMixin.has_access()')
+
+            # admin and root users always have access
+            if current_user.has_role('root') or current_user.has_role('admin'):
+                return True
+
+            return get_count(self.access_control_list.filter_by(id=user_id)) > 0
 
     return AssetMixin
 
@@ -6668,14 +6683,6 @@ class SubmissionRecord(db.Model):
     report = db.relationship('SubmittedAsset', foreign_keys=[report_id], uselist=False,
                              backref=db.backref('submission_record', uselist=False))
 
-    # timestamp of report upload
-    report_timestamp = db.Column(db.DateTime())
-
-    # report uploaded by
-    report_uploaded_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
-    report_uploaded_by = db.relationship('User', foreign_keys=[report_uploaded_id], uselist=False,
-                                         backref=db.backref('uploaded_reports', lazy='dynamic'))
-
     # is this report marked as an exemplar?
     report_exemplar = db.Column(db.Boolean(), default=False)
 
@@ -7138,14 +7145,6 @@ class SubmissionAttachment(db.Model):
     attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), nullable=None)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
                                  backref=db.backref('attachment_record', uselist=False))
-
-    # timestamp of report upload
-    timestamp = db.Column(db.DateTime())
-
-    # report uploaded by
-    uploaded_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
-    uploaded_by = db.relationship('User', foreign_keys=[uploaded_id], uselist=False,
-                                         backref=db.backref('uploaded_attachments', lazy='dynamic'))
 
     # textual description of attachment
     description = db.Column(db.Text())
@@ -11616,7 +11615,7 @@ class TemporaryAsset(db.Model, AssetLifetimeMixin, AssetMixinFactory(temporary_a
     id = db.Column(db.Integer(), primary_key=True)
 
 
-class SubmittedAsset(db.Model, AssetDownloadDataMixin, AssetMixinFactory(submitted_acl)):
+class SubmittedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin, AssetMixinFactory(submitted_acl)):
     """
     Track submitted assets: usually these will be project reports, but they can be other things to
     (eg. attachments)
@@ -11626,6 +11625,11 @@ class SubmittedAsset(db.Model, AssetDownloadDataMixin, AssetMixinFactory(submitt
 
     # primary key id
     id = db.Column(db.Integer(), primary_key=True)
+
+    # report uploaded by
+    uploaded_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
+    uploaded_by = db.relationship('User', foreign_keys=[uploaded_id], uselist=False,
+                                  backref=db.backref('uploaded_assets', lazy='dynamic'))
 
 
 class ScheduleEnumeration(db.Model):

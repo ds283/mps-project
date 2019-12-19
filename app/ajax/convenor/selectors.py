@@ -31,7 +31,7 @@ _menu = \
         {% if student.student.has_timeline %}
             <li>
                 <a href="{{ url_for('student.timeline', student_id=student.student.id, text='selectors view', url=url_for('convenor.selectors', id=pclass.id)) }}">
-                    <i class="fa fa-clock-o"></i> View timeline... 
+                    <i class="fa fa-clock-o"></i> Show history... 
                 </a>
             </li>
         {% endif %}

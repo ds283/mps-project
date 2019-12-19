@@ -11,5 +11,5 @@
 from flask_uploads import UploadSet
 
 solution_files = UploadSet(name='solutions', extensions=('lp', 'sol', 'mps'))
-
 batch_user_files = UploadSet(name='batchuserlist', extensions=('csv'))
+submitted_files = UploadSet(name='submissions', extensions=('pdf', 'doc', 'docx'))

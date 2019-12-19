@@ -18,12 +18,13 @@ from celery.exceptions import Ignore
 from ..database import db
 from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
-    MatchingEnumeration
+    MatchingEnumeration, SubmittedAsset
 from ..shared.utils import get_current_year
-from ..shared.asset_tools import canonical_generated_asset_filename, canonical_temporary_asset_filename
+from ..shared.asset_tools import canonical_generated_asset_filename, canonical_temporary_asset_filename, \
+    canonical_submitted_asset_filename
 
 from datetime import datetime
-from os import path, remove
+from pathlib import Path
 
 
 def register_maintenance_tasks(celery):
@@ -257,11 +258,13 @@ def register_maintenance_tasks(celery):
     def asset_garbage_collection(self):
         collect_generated_garbage(self)
         collect_uploaded_garbage(self)
+        collect_submitted_garbage(self)
 
 
     def collect_generated_garbage(self):
         try:
-            records = db.session.query(GeneratedAsset).all()
+            # only filter out records that have a finite lifetime set
+            records = db.session.query(GeneratedAsset).filter(GeneratedAsset.lifetime != None).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -275,7 +278,8 @@ def register_maintenance_tasks(celery):
 
     def collect_uploaded_garbage(self):
         try:
-            records = db.session.query(TemporaryAsset).all()
+            # only filter out records that have a finite lifetime set
+            records = db.session.query(TemporaryAsset).filter(TemporaryAsset.lifetime != None).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -285,6 +289,31 @@ def register_maintenance_tasks(celery):
 
         orphan = group(asset_check_orphan.si(r.id, TemporaryAsset, canonical_temporary_asset_filename) for r in records)
         orphan.apply_async()
+
+
+    def collect_submitted_garbage(self):
+        try:
+            # only filter out records that have a finite lifetime set
+            records = db.session.query(SubmittedAsset).filter(SubmittedAsset.lifetime != None).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        expiry = group(asset_check_expiry.si(r.id, SubmittedAsset, canonical_submitted_asset_filename) for r in records)
+        expiry.apply_async()
+
+        orphan = group(asset_check_orphan.si(r.id, SubmittedAsset, canonical_submitted_asset_filename) for r in records)
+        orphan.apply_async()
+
+        try:
+            # this time check all records that have no lifetime, to ensure they are attached
+            records = db.session.query(SubmittedAsset).filter(SubmittedAsset.lifetime == None).all()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        unattached = group(asset_check_attached.si(r.id, SubmittedAsset) for r in records)
+        unattached.apply_async()
 
 
     @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
@@ -302,13 +331,17 @@ def register_maintenance_tasks(celery):
         age = now - record.timestamp
 
         if age.total_seconds() > record.lifetime:
-            abs_asset_path = canonicalizer(record.filename)
+            # canonicalizer is expected to return an object of type Path, or a class interoperable with it
+            asset: Path = canonicalizer(record.filename)
 
-            if path.exists(abs_asset_path) and path.isfile(abs_asset_path):
+            if asset.exists() and asset.is_file():
                 try:
-                    remove(abs_asset_path)
-                except OSError:
+                    asset.unlink()
+                except FileNotFoundError as e:
+                    print('** Garbage collection failed to remove file "{file}"'.format(file=asset))
                     raise Ignore()
+
+                print('** Garbage collection removed file "{file}"'.format(file=asset))
 
                 try:
                     db.session.delete(record)
@@ -329,10 +362,37 @@ def register_maintenance_tasks(celery):
         if record is None:
             raise Ignore()
 
-        abs_asset_path = canonicalizer(record.filename)
-        if not path.exists(abs_asset_path):
+        asset: Path = canonicalizer(record.filename)
+
+        # check if asset exists on disk; if not, remove the database record
+        if not asset.exists():
             try:
                 db.session.delete(record)
+                db.session.commit()
+            except SQLAlchemyError as e:
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+
+    @celery.task(bind=True, default_retry_delay=30, serializer='pickle')
+    def asset_check_attached(self, id, RecordType):
+        try:
+            record = db.session.query(RecordType).filter_by(id=id).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if record is None:
+            raise Ignore()
+
+        # check if attached
+        if record.submission_record is None and record.attachment_record is None:
+            print('** Garbage collection detected unattached SubmittedAsset record, id = {id}'.format(id=record.id))
+
+            try:
+                record.timestamp = datetime.now()
+                record.lifetime = 30*24*60*60
+
                 db.session.commit()
             except SQLAlchemyError as e:
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

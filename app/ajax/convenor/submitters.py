@@ -303,7 +303,7 @@ _menu = \
         {% if sub.student.has_timeline %}
             <li>
                 <a href="{{ url_for('student.timeline', student_id=sub.student.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                    <i class="fa fa-clock-o"></i> View timeline... 
+                    <i class="fa fa-clock-o"></i> Show history... 
                 </a>
             </li>
         {% endif %}
@@ -342,6 +342,21 @@ _menu = \
         {% endif %}
 
         {% set recs = sub.ordered_assignments.all() %}
+        
+        <li role="separator" class="divider"></li>
+        <li class="dropdown-header">Manage documents</li>
+        {% for r in recs %}
+            {% set disabled = not pclass.publish or r.period.closed %}
+            <li {% if disabled %}class="disabled"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('convenor.submitter_documents', sid=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                    <i class="fa fa-file-text"></i> Period #{{ r.submission_period }}
+                </a>
+            </li>
+        {% else %}
+            <li class="disabled">
+                <a>No periods</a>
+            </li>
+        {% endfor %}
         
         <li role="separator" class="divider"></li>
         <li class="dropdown-header">View feedback</li>

@@ -520,7 +520,7 @@ def batch_create_users():
             extension = incoming_filename.suffix.lower()
 
             if extension in ('.csv'):
-                filename, abs_path = make_temporary_asset_filename(extension[1:])
+                filename, abs_path = make_temporary_asset_filename(ext=extension)
                 batch_user_files.save(batch_file, name=filename)
 
                 asset = TemporaryAsset(timestamp=datetime.now(),
@@ -544,9 +544,15 @@ def batch_create_users():
                                       trust_exams=trust_exams,
                                       academic_year=current_year)
 
-                db.session.add(asset)
-                db.session.add(record)
-                db.session.commit()
+                try:
+                    db.session.add(asset)
+                    db.session.add(record)
+                    db.session.commit()
+                except SQLAlchemyError as e:
+                    flash('Could not upload batch user list due to a database issue. '
+                          'Please contact an administrator.', 'error')
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    return redirect(url_for('manage_users.batch_create_users'))
 
                 celery = current_app.extensions['celery']
 

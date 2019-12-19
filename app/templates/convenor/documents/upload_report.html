@@ -1,0 +1,42 @@
+{% extends "security/index.html" %}
+
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+    Upload report for {{ record.owner.student.user.name }}
+{% endblock %}
+
+{% block bodyblock %}
+    <div class="row">
+        <div class="col-xs-2"></div>
+        <div class="col-xs-8">
+            <div class="panel panel-primary panel-primary-bg">
+                <div class="panel-heading">
+                    Upload report for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}
+                </div>
+                <div class="panel-body">
+                    <form action="{{ url_for('convenor.upload_submitter_report', sid=record.id) }}" method="POST" enctype="multipart/form-data" name="report_form">
+                        {{ form.hidden_tag() }}
+
+                        <label class="btn btn-default" for="file-selector">
+                            <input id="file-selector" type="file" name="report" style="display: none;"
+                                   onchange="$('#filename-data').html(this.files[0].name)">
+                            Select file...
+                        </label>
+                        <span class="label label-info" id="filename-data"></span>
+
+                        <hr class="intro-divider">
+                        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+                    </form>
+                </div>
+            </div>
+
+            <div>
+                <a href="{{ url_for('convenor.submitter_documents', sid=record.id) }}">
+                    <i class="fa fa-backward"></i> Return to document manager for <i class="fa fa-user"></i> {{ record.owner.student.user.name }}
+                </a>
+            </div>
+        </div>
+        <div class="col-xs-2"></div>
+    </div>
+{% endblock %}

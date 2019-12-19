@@ -6324,7 +6324,7 @@ def submitter_documents(sid):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    return render_template('convenor/documents/manager.html', record=record, url=url, text=text)
+    return render_template('convenor/documents/submitter_manager.html', record=record, url=url, text=text)
 
 
 @convenor.route('/delete_submitter_report/<int:sid>')
@@ -6472,6 +6472,10 @@ def upload_submitter_report(sid):
             # project examiner has access
             if record.marker is not None and record.marker not in asset.access_control_list:
                 asset.access_control_list.append(record.marker.user)
+
+            # student can download their own report
+            if record.owner.student.user not in asset.access_control_list:
+                asset.access_control_list.append(record.owner.student.user)
 
             try:
                 db.session.commit()

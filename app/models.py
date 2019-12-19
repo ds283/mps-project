@@ -7150,6 +7150,30 @@ class SubmissionAttachment(db.Model):
     description = db.Column(db.Text())
 
 
+class PeriodAttachment(db.Model):
+    """
+    Model an attachment to a SubmissionPeriodRecord (eg. mark scheme)
+    """
+    __tablename__ = 'period_attachments'
+
+
+    # unique ID
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # parent SubmissionPeriodRecord
+    parent_id = db.Column(db.Integer(), db.ForeignKey('submission_periods.id'), nullable=False)
+    parent = db.relationship('SubmissionPeriodRecord', foreign_keys=[parent_id], uselist=False,
+                             backref=db.backref('attachments', lazy='dynamic'))
+
+    # attached file
+    attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), nullable=False)
+    attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
+                                 backref=db.backref('period_attachments', uselist=False))
+
+    # textual description of attachment
+    description = db.Column(db.Text())
+
+
 class Bookmark(db.Model):
     """
     Model an (orderable) bookmark

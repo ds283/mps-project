@@ -6,6 +6,35 @@
     Manage documents for {{ record.owner.student.user.name }}
 {% endblock %}
 
+{% macro asset_line(asset, download_url, delete_url) %}
+    <div class="row" style="padding-bottom: 5px;">
+        <div class="col-xs-9">
+            {% if asset.target_name %}
+                <strong>{{ asset.target_name }}</strong>
+            {% else %}
+                <strong>{{ asset.filename }}</strong>
+            {% endif %}
+            {% if asset.timestamp %}
+                uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+            {% endif %}
+            {% if asset.uploaded_by %}
+                <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
+            {% endif %}
+        </div>
+        <div class="col-xs-3">
+            <div class="pull-right">
+                {% if asset.has_access(current_user.id) %}
+                    <a href="{{ download_url }}" class="btn btn-sm btn-default">Download</a>
+                    <a href="{{ delete_url }}" class="btn btn-sm btn-danger">Remove</a>
+                {% else %}
+                    <a class="btn btn-default btn-sm disabled">Download</a>
+                    <a class="btn btn-danger btn-sm disabled">Remove</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
 {% block bodyblock %}
     {% if url and text %}
         <div class="top-return-link">
@@ -23,35 +52,35 @@
                     {% set asset = record.report %}
                     <span class="document-group-title">Report</span>
                     <hr class="intro-divider">
-                    <div class="row">
-                        <div class="col-xs-9">
-                            {% if asset.target_name %}
-                                <strong>{{ asset.target_name }}</strong>
-                            {% else %}
-                                <strong>{{ asset.filename }}</strong>
-                            {% endif %}
-                            {% if asset.timestamp %}
-                                uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-                            {% endif %}
-                            {% if asset.uploaded_by %}
-                                <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
-                            {% endif %}
-                        </div>
-                        <div class="col-xs-3">
-                            <div class="pull-right">
-                                {% if asset.has_access(current_user.id) %}
-                                    <a href="{{ url_for('admin.download_submitted_asset', asset_id=asset.id) }}" class="btn btn-default">Download</a>
-                                    <a href="{{ url_for('convenor.delete_submitter_report', sid=record.id) }}" class="btn btn-danger">Remove</a>
-                                {% else %}
-                                    <a class="btn btn-default disabled">Download</a>
-                                    <a class="btn btn-danger disabled">Remove</a>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
+                    {{ asset_line(asset, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('convenor.delete_submitter_report', sid=record.id)) }}
                 {% else %}
                     <strong>No report attached.</strong>
-                    <a href="{{ url_for('convenor.upload_submitter_report', sid=record.id, url=url, text=text) }}">Upload...</a>
+                    <hr class="into-divider">
+                    <div style="text-align: center;">
+                        <a href="{{ url_for('convenor.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                            <i class="fa fa-plus"></i>
+                            Upload report
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="well">
+                {% if record.attachments.first() %}
+                    <span class="document-group-title">Attachments</span>
+                    <hr class="intro-divider">
+                    {% for attachment in record.attachments %}
+                        {% set asset = attachment.attachment %}
+                        {{ asset_line(asset, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('convenor.delete_submitter_attachment', aid=attachment.id)) }}
+                    {% endfor %}
+                {% else %}
+                    <strong>No attachments.</strong>
+                    <hr class="into-divider">
+                    <div style="text-align: center;">
+                        <a href="{{ url_for('convenor.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                            <i class="fa fa-plus"></i>
+                            Upload new attachment
+                        </a>
+                    </div>
                 {% endif %}
             </div>
         </div>

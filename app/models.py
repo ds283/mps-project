@@ -510,7 +510,7 @@ class AssetDownloadDataMixin():
     target_name = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
 
-def AssetMixinFactory(acl_name):
+def AssetMixinFactory(acl_name, acr_name):
 
     class AssetMixin():
         # timestamp
@@ -525,6 +525,11 @@ def AssetMixinFactory(acl_name):
             return db.relationship('User', secondary=acl_name, lazy='dynamic')
 
 
+        @declared_attr
+        def access_control_roles(self):
+            return db.relationship('Role', secondary=acr_name, lazy='dynamic')
+
+
         def has_access(self, user):
             if isinstance(user, int):
                 user_id = user
@@ -537,6 +542,12 @@ def AssetMixinFactory(acl_name):
             if current_user.has_role('root') or current_user.has_role('admin'):
                 return True
 
+            # test whether current user has any other roles in access_control_roles
+            for role in self.access_control_roles:
+                if current_user.has_role(role):
+                    return True
+
+            # otherwise, check whether access is allowed at a per-user level via the ACL
             return get_count(self.access_control_list.filter_by(id=user_id)) > 0
 
     return AssetMixin
@@ -810,17 +821,27 @@ generated_acl = db.Table('acl_generated',
                          db.Column('asset_id', db.Integer(), db.ForeignKey('generated_assets.id'), primary_key=True),
                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
+generated_acr = db.Table('acr_generated',
+                         db.Column('asset_id', db.Integer(), db.ForeignKey('generated_assets.id'), primary_key=True),
+                         db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
+
 # uploaded assets
 temporary_acl = db.Table('acl_temporary',
                          db.Column('asset_id', db.Integer(), db.ForeignKey('temporary_assets.id'), primary_key=True),
                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
+temporary_acr = db.Table('acr_temporary',
+                         db.Column('asset_id', db.Integer(), db.ForeignKey('temporary_assets.id'), primary_key=True),
+                         db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
 
 # submitted assets
 submitted_acl = db.Table('acl_submitted',
                          db.Column('asset_id', db.Integer(), db.ForeignKey('submitted_assets.id'), primary_key=True),
                          db.Column('user_id', db.Integer(), db.ForeignKey('users.id'), primary_key=True))
 
+submitted_acr = db.Table('acr_submitted',
+                         db.Column('asset_id', db.Integer(), db.ForeignKey('submitted_assets.id'), primary_key=True),
+                         db.Column('role_id', db.Integer(), db.ForeignKey('roles.id'), primary_key=True))
 
 class MainConfig(db.Model):
     """
@@ -936,7 +957,14 @@ class User(db.Model, UserMixin):
     # override inherited has_role method
     def has_role(self, role, skip_mask=False):
         if not skip_mask:
-            if get_count(self.mask_roles.filter_by(name=role)) > 0:
+            if isinstance(role, str):
+                role_name = role
+            elif isinstance(role, Role):
+                role_name = role.name
+            else:
+                raise RuntimeError('Unknown role type passed to has_role()')
+
+            if get_count(self.mask_roles.filter_by(name=role_name)) > 0:
                 return False
 
         return super().has_role(role)
@@ -11617,7 +11645,8 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
         return self.make_label(text=self.short_name)
 
 
-class GeneratedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin, AssetMixinFactory(generated_acl)):
+class GeneratedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin,
+                     AssetMixinFactory(generated_acl, generated_acr)):
     """
     Track generated assets
     """
@@ -11628,7 +11657,7 @@ class GeneratedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin, Asset
     id = db.Column(db.Integer(), primary_key=True)
 
 
-class TemporaryAsset(db.Model, AssetLifetimeMixin, AssetMixinFactory(temporary_acl)):
+class TemporaryAsset(db.Model, AssetLifetimeMixin, AssetMixinFactory(temporary_acl, temporary_acr)):
     """
     Track temporary uploaded assets
     """
@@ -11639,7 +11668,8 @@ class TemporaryAsset(db.Model, AssetLifetimeMixin, AssetMixinFactory(temporary_a
     id = db.Column(db.Integer(), primary_key=True)
 
 
-class SubmittedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin, AssetMixinFactory(submitted_acl)):
+class SubmittedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin,
+                     AssetMixinFactory(submitted_acl, submitted_acr)):
     """
     Track submitted assets: usually these will be project reports, but they can be other things to
     (eg. attachments)

@@ -94,6 +94,7 @@ class Config(object):
     ASSETS_UPLOADED_SUBFOLDER = os.environ.get('ASSETS_UPLOADED_SUBFOLDER') or 'uploaded'
     ASSETS_SUBMITTED_SUBFOLDER = os.environ.get('ASSETS_SUBMITTED_SUBFOLDER') or 'submitted'
     ASSETS_REPORTS_SUBFOLDER = os.environ.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
+    ASSETS_ATTACHMENTS_SUBFOLDER = os.environ.get('ASSETS_ATTACHMENTS_SUBFOLDER') or 'attachments'
 
     # DATABASE_USER, DATABASE_PASSWORD, DATABASE_ROOT_PASSWORD and DATABASE_HOST are set in instance/secrets.py
 

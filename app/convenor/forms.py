@@ -9,7 +9,7 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, DateField, IntegerField
+from wtforms import SubmitField, DateField, IntegerField, StringField
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy import QuerySelectField
 
@@ -106,3 +106,10 @@ def AssignPresentationFeedbackFormFactory(record_id, slot_id):
 class UploadReportForm(Form):
 
     submit = SubmitField('Upload report')
+
+
+class UploadAttachmentForm(Form):
+
+    description = StringField('Comment', description='Give a short description of the attachment')
+
+    submit = SubmitField('Upload attachment')

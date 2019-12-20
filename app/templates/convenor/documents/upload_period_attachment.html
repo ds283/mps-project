@@ -3,7 +3,7 @@
 {% import "bootstrap/wtf.html" as wtf %}
 
 {% block title %}
-    Upload new attachment for {{ record.owner.student.user.name }}
+    Upload new attachment for {{ record.display_name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -12,10 +12,10 @@
         <div class="col-xs-8">
             <div class="panel panel-primary panel-primary-bg">
                 <div class="panel-heading">
-                    Upload new attachment for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}
+                    Upload new attachment for <strong>{{ record.display_name }}</strong>
                 </div>
                 <div class="panel-body">
-                    <form action="{{ url_for('convenor.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
+                    <form action="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
                         {{ form.hidden_tag() }}
 
                         <label class="btn btn-default" for="file-selector">
@@ -27,14 +27,16 @@
 
                         <hr class="intro-divider">
                         {{ wtf.form_field(form.description) }}
+                        {{ wtf.form_field(form.publish_to_students) }}
+                        {{ wtf.form_field(form.include_marking_emails) }}
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>
             </div>
 
             <div>
-                <a href="{{ url_for('convenor.submitter_documents', sid=record.id, url=url, text=text) }}">
-                    <i class="fa fa-backward"></i> Return to document manager for <i class="fa fa-user"></i> {{ record.owner.student.user.name }}
+                <a href="{{ url_for('convenor.submission_record_documents', pid=record.id, url=url, text=text) }}">
+                    <i class="fa fa-backward"></i> Return to document manager for {{ record.display_name }}
                 </a>
             </div>
         </div>

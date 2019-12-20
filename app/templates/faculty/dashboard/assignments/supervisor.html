@@ -1,6 +1,7 @@
 {% from "faculty/dashboard/assignments/status.html" import no_assignment %}
 
-{% macro supervisor_assignments(period, id, is_sabbatical, is_exempt, reenroll_date) %}
+{% macro supervisor_assignments(period, current_user, is_sabbatical, is_exempt, reenroll_date) %}
+    {% set id = current_user.faculty_data.id %}
     {% set records = period.get_supervisor_records(id) %}
     {% if records|length > 0 %}
         <table class="table table-striped">
@@ -46,6 +47,9 @@
                             <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
+                            {% if rec.report %}
+                                <span class="label label-success"><i class="fa fa-check"></i> Report uploaded</span>
+                            {% endif %}
                             <div>
                                 {% if rec.supervisor_submitted %}
                                     <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
@@ -67,6 +71,13 @@
                         </td>
                         <td>
                             <div style="text-align: right;" class="pull-right">
+                                {% if rec.report %}
+                                    {% if rec.report.has_access(current_user) %}
+                                        <a href="{{ url_for('admin.download_submitted_asset', asset_id=rec.report.id) }}" class="btn btn-sm btn-default btn-table-block">Download report</a>
+                                    {% else %}
+                                        <a class="btn btn-sm btn-default btn-table-block disabled">Download report</a>
+                                    {% endif %}
+                                {% endif %}
                                 {% if not period.feedback_open and not rec.student_engaged and rec.owner.published %}
                                     {% if rec.submission_period <= rec.owner.config.submission_period %}
                                         <a href="{{ url_for('faculty.mark_started', id=rec.id) }}" class="btn btn-sm btn-table-block btn-primary">Mark as started</a>

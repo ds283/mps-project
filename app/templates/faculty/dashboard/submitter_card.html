@@ -80,17 +80,17 @@
                 {# show supervisor assignments #}
                 {% if config.uses_supervisor %}
                     <span class="dashboard-subtitle">Supervising</span>
-                    {{ supervisor_assignments(period, current_user.faculty_data.id, supv_sabbatical, supv_exempt, record.supervisor_reenroll) }}
+                    {{ supervisor_assignments(period, current_user, supv_sabbatical, supv_exempt, record.supervisor_reenroll) }}
                 {% endif %}
 
                 {# show marker assignments #}
                 {% if config.uses_marker %}
                     <span class="dashboard-subtitle">2nd marking</span>
-                    {{ marker_assignments(period, current_user.faculty_data.id, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
+                    {{ marker_assignments(period, current_user, mark_sabbatical, mark_exempt, record.marker_reenroll) }}
                 {% endif %}
 
                 {% if period.has_presentation %}
-                    {{ presentation_assignments(period, current_user.faculty_data.id, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
+                    {{ presentation_assignments(period, current_user, pres_sabbatical, pres_exempt, record.presentations_reenroll) }}
                 {% endif %}
             </div>
         </div>

@@ -20,7 +20,8 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, SubmissionAttachment
+    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, SubmissionAttachment, \
+    PeriodAttachment, Role
 
 from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
@@ -46,9 +47,9 @@ from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, Skill
     PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
 from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory, \
     AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, EditSubmissionRecordForm, UploadReportForm, \
-    UploadAttachmentForm
+    UploadSubmitterAttachmentForm, UploadPeriodAttachmentForm, EditPeriodAttachmentForm
 
-from ..uploads import submitted_files
+from ..uploads import submitted_files, period_files
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -4965,7 +4966,42 @@ def edit_submission_record(pid):
 
         return redirect(url_for('convenor.overview', id=config.project_class.id))
 
-    return render_template('convenor/dashboard/edit_submission_record.html', form=edit_form, period=record)
+    return render_template('convenor/dashboard/edit_submission_record.html', form=edit_form, record=record)
+
+
+@convenor.route('/submission_record_documents/<int:pid>')
+@roles_accepted('faculty', 'admin', 'route')
+def submission_record_documents(pid):
+    # id is a SubmissionPeriodRecord
+    record = SubmissionPeriodRecord.query.get_or_404(pid)
+    config = record.config
+
+    # reject is user is not a convenor for the associated project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if this submission period is in the past
+    if config.submission_period > record.submission_period:
+        flash('It is no longer possible to edit this submission period because it has been closed.', 'info')
+        return redirect(request.referrer)
+
+    # reject if period is retired
+    if record.retired:
+        flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
+        return redirect(request.referrer)
+
+    # reject if lifecycle stage is marking or later
+
+    state = config.submitter_lifecycle
+    if state >= ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('It is no longer possible to edit this submission period because it is being marked, '
+              'or is ready to rollover.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    return render_template('convenor/documents/period_manager.html', record=record, url=url, text=text)
 
 
 @convenor.route('/publish_assignment/<int:id>')
@@ -6481,6 +6517,11 @@ def upload_submitter_report(sid):
             if record.owner.student.user not in asset.access_control_list:
                 asset.access_control_list.append(record.owner.student.user)
 
+            # office staff can download everything
+            office_role = db.session.query(Role).filter_by(name='office').first()
+            if office_role and office_role not in asset.access_control_roles:
+                asset.access_control_roles.append(office_role)
+
             # TODO: in future, possible add 'moderator', 'exam_board' or 'external_examiner'
             #  roles which should have access to all reports
 
@@ -6530,7 +6571,7 @@ def delete_submitter_attachment(aid):
 
     name = attachment.attachment.target_name if attachment.attachment.target_name is not None else \
         attachment.attachment.filename
-    message = '<p>Please confirm that you wish to remove the attachment {name} for ' \
+    message = '<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for ' \
               '<i class="fa fa-user"></i> {student} {period}.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=name, student=record.owner.student.user.name,
                                                             period=record.period.display_name)
@@ -6603,7 +6644,7 @@ def upload_submitter_attachment(sid):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    form = UploadAttachmentForm(request.form)
+    form = UploadSubmitterAttachmentForm(request.form)
 
     if form.validate_on_submit():
         if 'attachment' in request.files:
@@ -6635,9 +6676,9 @@ def upload_submitter_attachment(sid):
                 db.session.add(asset)
                 db.session.flush()
             except SQLAlchemyError as e:
-                flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
+                flash('Could not upload attachment due to a database issue. Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                return redirect(url_for('convenor.submitter_documents', sid=record.sid))
+                return redirect(url_for('convenor.submitter_documents', sid=sid, url=url, text=text))
 
             # generate attachment record
             attachment = SubmissionAttachment(parent_id=record.id,
@@ -6660,12 +6701,15 @@ def upload_submitter_attachment(sid):
             if record.marker is not None and record.marker not in asset.access_control_list:
                 asset.access_control_list.append(record.marker.user)
 
-            # student can download their own report
-            if record.owner.student.user not in asset.access_control_list:
-                asset.access_control_list.append(record.owner.student.user)
+            # students can't ordinarily download unless explicit permission is given
+
+            # office staff can download everything
+            office_role = db.session.query(Role).filter_by(name='office').first()
+            if office_role and office_role not in asset.access_control_roles:
+                asset.access_control_roles.append(office_role)
 
             # TODO: in future, possible add 'moderator', 'exam_board' or 'external_examiner'
-            #  roles which should have access to all reports
+            #  roles which should have access to all attachments (eg. marking reports)
 
             try:
                 db.session.add(attachment)
@@ -6680,3 +6724,249 @@ def upload_submitter_attachment(sid):
             return redirect(url_for('convenor.submitter_documents', sid=sid, url=url, text=text))
 
     return render_template('convenor/documents/upload_attachment.html', record=record, form=form, url=url, text=text)
+
+
+@convenor.route('/delete_period_attachment/<int:aid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_period_attachment(aid):
+    # aid is a PeriodAttachment id
+    attachment = PeriodAttachment.query.get_or_404(aid)
+
+    if attachment.attachment is None:
+        flash('Could not delete attachment because of a database error. '
+              'Please contact a system administrator.', 'info')
+        return redirect(request.referrer)
+
+    # check user is convenor the project class this attachment belongs to, or has admin/root privileges
+    record = attachment.parent
+    if record is None:
+        flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(record.config.project_class):
+        return redirect(request.referrer)
+
+    # check has privileges to handle the asset
+    if not attachment.attachment.has_access(current_user.id):
+        flash('Could not delete attachment because you do not have privileges to access it.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    title = 'Delete submission period attachment'
+    action_url = url_for('convenor.perform_delete_period_attachment', aid=aid, pid=record.id, url=url, text=text)
+
+    name = attachment.attachment.target_name if attachment.attachment.target_name is not None else \
+        attachment.attachment.filename
+    message = '<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for ' \
+              '<i class="fa fa-user"></i> {student} {period}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=name, student=record.owner.student.user.name,
+                                                            period=record.period.display_name)
+    submit_label = 'Remove attachment'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/perform_delete_period_attachment/<int:aid>/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_delete_period_attachment(aid, pid):
+    # aid is a PeriodAttachment id
+    attachment = PeriodAttachment.query.get_or_404(aid)
+
+    if attachment.attachment is None:
+        flash('Could not delete attachment because of a database error. '
+              'Please contact a system administrator.', 'info')
+        return redirect(request.referrer)
+
+    # check user is convenor the project class this attachment belongs to, or has admin/root privileges
+    record = attachment.parent
+    if record is None:
+        flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
+        return redirect(request.referrer)
+
+    if not validate_is_convenor(record.config.project_class):
+        return redirect(request.referrer)
+
+    # check has privileges to handle the asset
+    if not attachment.attachment.has_access(current_user.id):
+        flash('Could not delete attachment because you do not have privileges to access it.', 'info')
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    try:
+        attachment.attachment.timestamp = datetime.now()
+        attachment.attachment.lifetime = 30*24*60*60
+        attachment.attachment_id = None
+
+        db.session.flush()
+
+        db.session.delete(attachment)
+        db.session.comit()
+
+    except SQLAlchemyError as e:
+        flash('Could not remove attachment from the submission period because of a database error. '
+              'Please contact a system administrator.', 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url_for('convenor.submission_record_documents', pid=pid, url=url, text=text))
+
+
+@convenor.route('/upload_period_attachment/<int:pid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def upload_period_attachment(pid):
+    # pid is a SubmissionPeriodRecord id
+    record = SubmissionPeriodRecord.query.get_or_404(pid)
+
+    # check user is convenor for the project's class, or has suitable admin/root privileges
+    config = record.config
+    pclass = config.project_class
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    form = UploadPeriodAttachmentForm(request.form)
+
+    if form.validate_on_submit():
+        if 'attachment' in request.files:
+            attachment_file = request.files['attachment']
+
+            # generate unique filename for upload
+            incoming_filename = Path(attachment_file.filename)
+            extension = incoming_filename.suffix.lower()
+
+            year_string = str(config.year)
+            pclass_string = pclass.abbreviation
+
+            subfolder = Path(pclass_string) / Path(year_string)
+
+            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
+            period_files.save(attachment_file, folder=str(subfolder), name=str(filename))
+
+            # generate asset record
+            asset = SubmittedAsset(timestamp=datetime.now(),
+                                   uploaded_id=current_user.id,
+                                   lifetime=None,
+                                   filename=str(subfolder/filename),
+                                   target_name=str(incoming_filename),
+                                   mimetype=str(attachment_file.content_type))
+
+            try:
+                db.session.add(asset)
+                db.session.flush()
+            except SQLAlchemyError as e:
+                flash('Could not upload attachment due to a database issue. Please contact an administrator.', 'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                return redirect(url_for('convenor.submission_record_documents', pid=pid, url=url, text=text))
+
+            # generate attachment record
+            attachment = PeriodAttachment(parent_id=record.id,
+                                          attachment_id=asset.id,
+                                          publish_to_students=form.publish_to_students.data,
+                                          include_marking_emails=form.include_marking_emails.data,
+                                          description=form.description.data)
+
+            # uploading user has access
+            asset.access_control_list.append(current_user)
+
+            # project convenor has access
+            if pclass.convenor is not None and pclass.convenor.user not in asset.access_control_list:
+                asset.access_control_list.append(pclass.convenor.user)
+
+            # if available to students, any student can download
+            if form.publish_to_students.data:
+                student_role = db.session.query(Role).filter_by(name='student').first()
+                if student_role and student_role not in asset.access_control_roles:
+                    asset.access_control_roles.append(student_role)
+
+            if form.include_marking_emails:
+                faculty_role = db.session.query(Role).filter_by(name='faculty').first()
+                office_role = db.session.query(Role).filter_by(name='office').first()
+                if faculty_role and faculty_role not in asset.access_control_roles:
+                    asset.access_control_roles.append(faculty_role)
+                if office_role and office_role not in asset.access_control_roles:
+                    asset.access_control_roles.append(office_role)
+
+            # TODO: in future, possible add 'moderator', 'exam_board' or 'external_examiner'
+            #  roles which should have access to all attached documents
+
+            try:
+                db.session.add(attachment)
+                db.session.commit()
+            except SQLAlchemyError as e:
+                flash('Could not upload attachment due to a database issue. '
+                      'Please contact an administrator.', 'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+            flash('Attachment "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
+
+            return redirect(url_for('convenor.submission_record_documents', pid=pid, url=url, text=text))
+
+    return render_template('convenor/documents/upload_period_attachment.html', record=record, form=form, url=url, text=text)
+
+
+@convenor.route('/edit_period_attachment/<int:aid>', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def edit_period_attachment(aid):
+    # pid is a PeriodAttachment id
+    attachment = PeriodAttachment.query.get_or_404(aid)
+
+    # check user is convenor for the project's class, or has suitable admin/root privileges
+    record = attachment.parent
+    config = record.config
+    pclass = config.project_class
+
+    if not validate_is_convenor(pclass):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    form = EditPeriodAttachmentForm(obj=attachment)
+
+    if form.validate_on_submit():
+        attachment.publish_to_students = form.publish_to_students.data
+        attachment.include_marking_emails = form.include_marking_emails.data
+        attachment.description = form.description.data
+
+        student_role = db.session.query(Role).filter_by(name='student').first()
+        faculty_role = db.session.query(Role).filter_by(name='faculty').first()
+        office_role = db.session.query(Role).filter_by(name='office').first()
+
+        asset = attachment.attachment
+        if asset is not None:
+            if form.publish_to_students.data:
+                if student_role not in asset.access_control_roles:
+                    asset.access_control_roles.append(student_role)
+            else:
+                if student_role in asset.access_control_roles:
+                    asset.access_control_roles.remove(student_role)
+
+            if form.include_marking_emails:
+                if faculty_role not in asset.access_control_roles:
+                    asset.access_control_roles.append(faculty_role)
+                if office_role not in asset.access_control_roles:
+                    asset.access_control_roles.append(office_role)
+            else:
+                if faculty_role in asset.access_control_roles:
+                    asset.access_control_roles.remove(faculty_role)
+                if office_role in asset.access_control_roles:
+                    asset.access_control_roles.remove(office_role)
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not commit edits due to a database issue. '
+                  'Please contact an administrator.', 'error')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for('convenor.submission_record_documents', pid=record.id, url=url, text=text))
+
+    return render_template('convenor/documents/edit_period_attachment.html', attachment=attachment, record=record,
+                           form=form, url=url, text=text)

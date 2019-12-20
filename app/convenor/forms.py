@@ -9,7 +9,7 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, DateField, IntegerField, StringField
+from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanField
 from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy import QuerySelectField
 
@@ -108,8 +108,29 @@ class UploadReportForm(Form):
     submit = SubmitField('Upload report')
 
 
-class UploadAttachmentForm(Form):
+class UploadSubmitterAttachmentForm(Form):
 
     description = StringField('Comment', description='Give a short description of the attachment')
 
     submit = SubmitField('Upload attachment')
+
+
+class PeriodAttachmentMixin():
+
+    description = StringField('Comment', description='Give a short description of the attachment. This will be '
+                                                     'included as an explanation if the document is published to '
+                                                     'end-users.')
+
+    publish_to_students = BooleanField('Publish this document to students')
+
+    include_marking_emails = BooleanField('Attach this document to marking emails')
+
+
+class UploadPeriodAttachmentForm(Form, PeriodAttachmentMixin):
+
+    submit = SubmitField('Upload attachment')
+
+
+class EditPeriodAttachmentForm(Form, PeriodAttachmentMixin, SaveChangesMixin):
+
+    pass

@@ -6717,6 +6717,15 @@ class SubmissionRecord(db.Model):
     # attachments incorporated via back-reference under 'attachments' data member
 
 
+    # MARKING EMAILS
+
+    # marking email sent to supervisor
+    email_to_supervisor = db.Column(db.Boolean(), default=False)
+
+    # marking email sent to marker
+    email_to_marker = db.Column(db.Boolean(), default=False)
+
+
     # LIFECYCLE DATA
 
     # has the project started? Helpful for convenor and senior tutor reports
@@ -7197,6 +7206,12 @@ class PeriodAttachment(db.Model):
     attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), nullable=False)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
                                  backref=db.backref('period_attachments', uselist=False))
+
+    # publish to students
+    publish_to_students = db.Column(db.Boolean(), default=False)
+
+    # include in marking emails
+    include_marking_emails = db.Column(db.Boolean(), default=False)
 
     # textual description of attachment
     description = db.Column(db.Text())

@@ -91,10 +91,15 @@ class Config(object):
     ASSETS_FOLDER = os.environ.get('ASSETS_FOLDER') or 'assets'
 
     ASSETS_GENERATED_SUBFOLDER = os.environ.get('ASSETS_GENERATED_SUBFOLDER') or 'generated'
+
     ASSETS_UPLOADED_SUBFOLDER = os.environ.get('ASSETS_UPLOADED_SUBFOLDER') or 'uploaded'
+
     ASSETS_SUBMITTED_SUBFOLDER = os.environ.get('ASSETS_SUBMITTED_SUBFOLDER') or 'submitted'
     ASSETS_REPORTS_SUBFOLDER = os.environ.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
     ASSETS_ATTACHMENTS_SUBFOLDER = os.environ.get('ASSETS_ATTACHMENTS_SUBFOLDER') or 'attachments'
+
+    ASSETS_PERIODS_SUBFOLDER = os.environ.get('ASSETS_PERIODS_SUBFOLDER') or 'periods'
+
 
     # DATABASE_USER, DATABASE_PASSWORD, DATABASE_ROOT_PASSWORD and DATABASE_HOST are set in instance/secrets.py
 

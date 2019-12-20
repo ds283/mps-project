@@ -44,17 +44,17 @@
                             <div class="col-xs-7">
                                 <div class="pull-right">
                                 {% if session.faculty_available(assessor.id) %}
-                                    <a class="btn btn-success btn-sm"><i class="fa fa-check"></i> Available</a>
-                                    <a href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm">If needed</a>
-                                    <a href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
+                                    <a class="btn btn-success btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
+                                    <a href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block">If needed</a>
+                                    <a href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
                                 {% elif session.faculty_ifneeded(assessor.id) %}
-                                    <a href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
-                                    <a class="btn btn-warning btn-sm">If needed</a>
-                                    <a href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
+                                    <a href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
+                                    <a class="btn btn-warning btn-sm btn-table-block">If needed</a>
+                                    <a href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
                                 {% else %}
-                                    <a href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
-                                    <a href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm">If needed</a>
-                                    <a class="btn btn-danger btn-sm"><i class="fa fa-times"></i> Not available</a>
+                                    <a href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
+                                    <a href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block">If needed</a>
+                                    <a class="btn btn-danger btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
                                 {% endif %}
                                 </div>
                             </div>

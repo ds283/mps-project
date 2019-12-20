@@ -3,10 +3,10 @@
 {% import "bootstrap/wtf.html" as wtf %}
 
 {% block title %}
-    Manage documents for {{ record.owner.student.user.name }}
+    Manage documents for {{ record.display_name }}
 {% endblock %}
 
-{% macro asset_line(asset, attachment, download_url, delete_url) %}
+{% macro asset_line(asset, attachment, download_url, delete_url, edit_url) %}
     <tr>
         <td>
             <div>
@@ -23,19 +23,31 @@
             {% endif %}
         </td>
         <td>
-            {% if asset.timestamp %}
-                uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
-            {% endif %}
-            {% if asset.uploaded_by %}
-                <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
-            {% endif %}
+            <div>
+                {% if asset.timestamp %}
+                    uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                {% endif %}
+                {% if asset.uploaded_by %}
+                    <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
+                {% endif %}
+            </div>
+            <div>
+                {% if attachment.publish_to_students %}
+                    <span class="label label-success"><i class="fa fa-check"></i> Publish to students</span>
+                {% endif %}
+                {% if attachment.include_marking_emails %}
+                    <span class="label label-success"><i class="fa fa-check"></i> Include in marking emails</span>
+                {% endif %}
+            </div>
         </td>
         <td>
             <div style="text-align: right;" class="pull-right">
                 {% if asset.has_access(current_user.id) %}
+                    <a href="{{ edit_url }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
                     <a href="{{ download_url }}" class="btn btn-sm btn-default btn-table-block">Download</a>
                     <a href="{{ delete_url }}" class="btn btn-sm btn-danger btn-table-block">Remove</a>
                 {% else %}
+                    <a class="btn btn-default btn-sm disabled btn-table-block">Edit</a>
                     <a class="btn btn-default btn-sm disabled btn-table-block">Download</a>
                     <a class="btn btn-danger btn-sm disabled btn-table-block">Remove</a>
                 {% endif %}
@@ -54,36 +66,8 @@
     {% endif %}
 
     <div class="panel panel-primary panel-primary-bg">
-        <div class="panel-heading">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}</div>
+        <div class="panel-heading">Manage documents for <strong>{{ record.display_name }}</strong></div>
         <div class="panel-body">
-            <div class="well">
-                {% if record.report %}
-                    <span class="document-group-title">Report</span>
-                    <hr class="intro-divider">
-                    {% set asset = record.report %}
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th width="40%">Document</th>
-                                <th width="40%">Attributes</th>
-                                <th width="20%"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{ asset_line(asset, none, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('convenor.delete_submitter_report', sid=record.id)) }}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <strong>No report attached.</strong>
-                    <hr class="into-divider">
-                    <div style="text-align: center;">
-                        <a href="{{ url_for('convenor.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
-                            <i class="fa fa-plus"></i>
-                            Upload report
-                        </a>
-                    </div>
-                {% endif %}
-            </div>
             <div class="well">
                 {% if record.attachments.first() %}
                     <span class="document-group-title">Attachments</span>
@@ -92,14 +76,16 @@
                         <thead>
                             <tr>
                                 <th width="40%">Document</th>
-                                <th width="40%">Attributes</th>
-                                <th width="20%"></th>
+                                <th width="30%">Attributes</th>
+                                <th width="30%"></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for attachment in record.attachments %}
                                 {% set asset = attachment.attachment %}
-                                {{ asset_line(asset, attachment, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('convenor.delete_submitter_attachment', aid=attachment.id)) }}
+                                {{ asset_line(asset, attachment, url_for('admin.download_submitted_asset', asset_id=asset.id),
+                                              url_for('convenor.delete_period_attachment', aid=attachment.id),
+                                              url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text)) }}
                             {% endfor %}
                         </tbody>
                     </table>
@@ -108,7 +94,7 @@
                 {% endif %}
                 <hr class="into-divider">
                 <div style="text-align: center;">
-                    <a href="{{ url_for('convenor.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
                         <i class="fa fa-plus"></i>
                         Upload new attachment
                     </a>

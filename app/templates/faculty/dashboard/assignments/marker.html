@@ -1,6 +1,7 @@
 {% from "faculty/dashboard/assignments/status.html" import no_assignment %}
 
-{% macro marker_assignments(period, id, is_sabbatical, is_exempt, reenroll_date) %}
+{% macro marker_assignments(period, current_user, is_sabbatical, is_exempt, reenroll_date) %}
+    {% set id = current_user.faculty_data.id %}
     {% set records = period.get_marker_records(id) %}
     {% if records|length > 0 %}
         <table class="table table-striped">
@@ -26,6 +27,9 @@
                             <a href="{{ url_for('faculty.live_project', pid=rec.project_id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}">
                                 {{ rec.project.name }} (No. {{ rec.project.number }})
                             </a>
+                            {% if rec.report %}
+                                <span class="label label-success"><i class="fa fa-check"></i> Report uploaded</span>
+                            {% endif %}
                             <div>
                                 {% if rec.marker_submitted %}
                                     <span class="label label-success"><i class="fa fa-check"></i> Feedback submitted</span>
@@ -36,6 +40,13 @@
                         </td>
                         <td>
                             <div style="text-align: right;" class="pull-right">
+                                {% if rec.report %}
+                                    {% if rec.report.has_access(current_user) %}
+                                        <a href="{{ url_for('admin.download_submitted_asset', asset_id=rec.report.id) }}" class="btn btn-sm btn-default btn-table-block">Download report</a>
+                                    {% else %}
+                                        <a class="btn btn-sm btn-default btn-table-block disabled">Download report</a>
+                                    {% endif %}
+                                {% endif %}
                                 {% if (period.feedback_open and not period.closed) or (period.closed and not rec.marker_submitted) %}
                                     {% if valid %}
                                         <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>

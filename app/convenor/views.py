@@ -4864,7 +4864,7 @@ def open_feedback(id):
 
     if feedback_form.is_submitted() and feedback_form.open_feedback.data is True:
         # set feedback deadline and mark feedback open
-        period = config.periods.filter_by(submission_period=config.submission_period).first()
+        period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
 
         period.feedback_open = True
         period.feedback_deadline = feedback_form.feedback_deadline.data
@@ -4876,6 +4876,61 @@ def open_feedback(id):
             period.feedback_timestamp = datetime.now()
 
         db.session.commit()
+
+        celery = current_app.extensions['celery']
+        marking_email = celery.tasks['app.tasks.marking.send_marking_emails']
+
+        tk_name = 'Dispatch marking notifications'
+        tk_description = 'Dispatch emails with reports and marking instructions'
+        task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+        init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+        final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+        error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+        seq = chain(init.si(task_id, tk_name),
+                    marking_email.si(period.id, current_user.id),
+                    final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+        seq.apply_async(task_id=task_id)
+
+    return redirect(request.referrer)
+
+
+@convenor.route('/resend_marking_emails/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def resend_marking_emails(pid):
+    # id is a ProjectClassConfig
+    period = SubmissionPeriodRecord.query.get_or_404(pid)
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(period.config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(period.config.project_class):
+        return redirect(request.referrer)
+
+    state = period.config.submitter_lifecycle
+    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
+            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+        flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
+        return redirect(request.referrer)
+
+    celery = current_app.extensions['celery']
+    marking_email = celery.tasks['app.tasks.marking.send_marking_emails']
+
+    tk_name = 'Dispatch marking notifications'
+    tk_description = 'Dispatch emails with reports and marking instructions'
+    task_id = register_task(tk_name, owner=current_user, description=tk_description)
+
+    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
+    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
+    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
+
+    seq = chain(init.si(task_id, tk_name),
+                marking_email.si(period.id, current_user.id),
+                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+    seq.apply_async(task_id=task_id)
 
     return redirect(request.referrer)
 
@@ -4904,7 +4959,7 @@ def close_feedback(id):
               'info')
         return request.referrer
 
-    period = config.periods.filter_by(submission_period=config.submission_period).first()
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
 
     period.closed = True
     period.closed_id = current_user.id
@@ -6760,9 +6815,8 @@ def delete_period_attachment(aid):
     name = attachment.attachment.target_name if attachment.attachment.target_name is not None else \
         attachment.attachment.filename
     message = '<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for ' \
-              '<i class="fa fa-user"></i> {student} {period}.</p>' \
-              '<p>This action cannot be undone.</p>'.format(name=name, student=record.owner.student.user.name,
-                                                            period=record.period.display_name)
+              '{period}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=name, period=record.display_name)
     submit_label = 'Remove attachment'
 
     return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
@@ -6805,7 +6859,7 @@ def perform_delete_period_attachment(aid, pid):
         db.session.flush()
 
         db.session.delete(attachment)
-        db.session.comit()
+        db.session.commit()
 
     except SQLAlchemyError as e:
         flash('Could not remove attachment from the submission period because of a database error. '
@@ -6846,7 +6900,8 @@ def upload_period_attachment(pid):
 
             subfolder = Path(pclass_string) / Path(year_string)
 
-            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder)
+            filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder,
+                                                               root_folder='ASSETS_PERIODS_SUBFOLDER')
             period_files.save(attachment_file, folder=str(subfolder), name=str(filename))
 
             # generate asset record

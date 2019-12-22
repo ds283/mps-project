@@ -1,0 +1,59 @@
+Dear {{ marker.user.first_name }}
+
+You have been assigned as examiner for a {{ pclass.abbrevation }} student
+(candidate number {{ student.user.exam_number }}).
+
+Title: {{ project.name }}
+Supervisor: {{ supervisor.user.first_name }}
+
+{% if project.aims and project.aims|length > 0 -%}
+For this project, the supervisor has given the following statement of aims,
+which you may wish to bear in mind when forming your opinion of the report.
+
+AIMS:
+{{ project.aims|wordwrap(79) }}
+
+{% else -%}
+The supervisor has not yet given a statement of aims for this project.
+
+{% endif -%}
+{% if project.review_only -%}
+You may also wish to be aware that the project supervisor has marked
+this project as "review only", which usually means that the project
+is a literature review and does not contain a component of original
+work.
+
+The marks for "review only" projects are *not* capped, and a very good
+review (for example, synthesizing a subject area which has not yet
+been reviewed in the literature) should attract the same credit as any
+other good report.
+
+{% endif -%}
+The submitted report is attached to this email. Alternatively, you can
+download the report from your dashboard on https://mpsprojects.co.uk.
+The convenor has requested that marking and feedback be completed by
+{{ record.period.feedback_deadline.strftime("%a %d %b %Y") }}.
+
+When you have formed your opinion of the report, please complete
+the attached marksheet and return it to the project convenor.
+Please also enter your feedback for the student online at
+https://mpsporojects.co.uk: by capturing your feedback electronically
+we can ensure that it is pushed to the student by email.
+
+If you have any questions, please direct these to the project convenor:
+{{ config.convenor_name }} <{{ config.convenor_email }}>
+This email is automated. Please do not reply to it directly, because
+email to this address is not monitored.
+
+ATTACHMENT MANIFEST
+1. {{ report_filename }}
+   submitted report
+{%- set ns = namespace(count=2) -%}
+{% for attachment in record.attachments -%}
+{%- if attachment.include_marking_emails -%}
+{{ ns.count }}. {{ attachment.attachment.target_name if attachment.attachment.target_name else attachment.attachment.filename }}
+{%- if attachment.attachment.description and attachment.attachment.description|length > 0 %}
+   {{ attachment.attachment.description|wordwrap(75) }}
+{%- endif -%}
+{%- endif %}
+{%- endfor %}

@@ -101,7 +101,7 @@ def canonical_temporary_asset_filename(filename):
                                           subfolder=current_app.config.get('ASSETS_UPLOADED_SUBFOLDER'))
 
 
-def make_submitted_asset_filename(ext=None, subpath=None):
+def make_submitted_asset_filename(ext=None, subpath=None, root_folder='ASSETS_SUBMITTED_SUBFOLDER'):
     """
     Generate a unique filename for a submitted asset
     """
@@ -109,15 +109,15 @@ def make_submitted_asset_filename(ext=None, subpath=None):
         subpath = Path(subpath)
 
     name, path = _make_asset_filename(asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                      subfolder=Path(current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER') / subpath),
+                                      subfolder=Path(current_app.config.get(root_folder) / subpath),
                                       ext=ext)
 
     return name, path
 
 
-def canonical_submitted_asset_filename(filename):
+def canonical_submitted_asset_filename(filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER'):
     """
     Turn a unique filename for a submitted asset into an absolute path
     """
     return _make_canonical_asset_filename(filename, asset_folder=current_app.config.get('ASSETS_FOLDER'),
-                                          subfolder=current_app.config.get('ASSETS_SUBMITTED_SUBFOLDER'))
+                                          subfolder=current_app.config.get(root_folder))

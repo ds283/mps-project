@@ -7179,7 +7179,7 @@ class SubmissionAttachment(db.Model):
                              backref=db.backref('attachments', lazy='dynamic'))
 
     # attached file
-    attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), nullable=None)
+    attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
                                  backref=db.backref('attachment_record', uselist=False))
 
@@ -7203,7 +7203,7 @@ class PeriodAttachment(db.Model):
                              backref=db.backref('attachments', lazy='dynamic'))
 
     # attached file
-    attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), nullable=False)
+    attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=False)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
                                  backref=db.backref('period_attachments', uselist=False))
 

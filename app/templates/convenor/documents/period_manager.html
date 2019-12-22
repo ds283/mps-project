@@ -83,7 +83,7 @@
                         <tbody>
                             {% for attachment in record.attachments %}
                                 {% set asset = attachment.attachment %}
-                                {{ asset_line(asset, attachment, url_for('admin.download_submitted_asset', asset_id=asset.id),
+                                {{ asset_line(asset, attachment, url_for('admin.download_period_asset', asset_id=asset.id),
                                               url_for('convenor.delete_period_attachment', aid=attachment.id),
                                               url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text)) }}
                             {% endfor %}

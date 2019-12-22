@@ -229,6 +229,7 @@ def create_app():
     tasks.register_batch_create_tasks(celery)
     tasks.register_selecting_tasks(celery)
     tasks.register_session_tasks(celery)
+    tasks.register_marking_tasks(celery)
     tasks.register_test_tasks(celery)
 
 

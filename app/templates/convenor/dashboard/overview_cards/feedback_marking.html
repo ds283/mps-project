@@ -27,6 +27,7 @@
         <div class="row">
             <div class="col-xs-12">
                 <div class="pull-right">
+                    <a href="{{ url_for('convenor.resend_marking_emails', pid=period.id) }}" class="btn btn-default">Send notifications</a>
                     {{ wtf.form_field(feedback_form.open_feedback, button_map={'open_feedback': 'default'}) }}
                 </div>
             </div>

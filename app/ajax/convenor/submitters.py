@@ -178,13 +178,7 @@ _markers = \
                 </ul>
             </div>
         {% else %}
-            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">
-                {% if r.project is none %}
-                    No project allocated
-                {% else %}
-                    No marker allocated
-                {% endif %}
-            </a>
+            <a class="label label-danger" href="{{ url_for('convenor.manual_assign', id=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}">{% if r.project is none %}No project allocated{% else %}No marker allocated{% endif %}</a>
         {% endif %}
         {{ feedback_state_tag(r, r.marker_feedback_state, 'Feedback') }}
     </div>

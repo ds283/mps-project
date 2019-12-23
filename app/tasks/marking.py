@@ -149,7 +149,7 @@ def register_marking_tasks(celery):
                                        project=record.project, student=student, record=record,
                                        report_filename=str(supervisor_filename))
 
-            # _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, supervisor_filename)
+            _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, supervisor_filename)
 
             # register a new task in the database
             task_id = register_task(msg.subject,
@@ -172,7 +172,7 @@ def register_marking_tasks(celery):
                                        project=record.project, student=student, record=record,
                                        report_filename=str(marker_filename))
 
-            # _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, marker_filename)
+            _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, marker_filename)
 
             # register a new task in the database
             task_id = register_task(msg.subject,

@@ -59,18 +59,22 @@ def register_marking_tasks(celery):
         mark_sent = 0
 
         if result_data is not None:
-            for group_result in result_data:
-                if isinstance(group_result, list):
-                    for result in group_result:
-                        if isinstance(result, dict):
-                            if 'supervisor' in result:
-                                supv_sent += result['supervisor']
-                            if 'marker' in result:
-                                mark_sent += result['marker']
+            if isinstance(result_data, list):
+                for group_result in result_data:
+                    if group_result is not None:
+                        if isinstance(group_result, list):
+                            for result in group_result:
+                                if isinstance(result, dict):
+                                    if 'supervisor' in result:
+                                        supv_sent += result['supervisor']
+                                    if 'marker' in result:
+                                        mark_sent += result['marker']
+                                else:
+                                    raise RuntimeError('Expected individual group results to be dictionaries')
                         else:
-                            raise RuntimeError('Expected individual group results to be dictionaries')
-                else:
-                    raise RuntimeError('Expected group result data to be a list')
+                            raise RuntimeError('Expected record result data to be a list')
+            else:
+                raise RuntimeError('Expected group result data to be a list')
 
         supv_plural = 's'
         mark_plural = 's'
@@ -79,11 +83,10 @@ def register_marking_tasks(celery):
         if mark_sent == 1:
             mark_plural = ''
 
-        user.post_message('Dispatched {supv} notification{{ supv_pl} to project supervisors, '
-                          'and {mark} notification{{ mark_pl }} to project examiners.'.format(supv=supv_sent,
-                                                                                              supv_pl=supv_plural,
-                                                                                              mark=mark_sent,
-                                                                                              mark_pl=mark_plural),
+        user.post_message('Dispatched {supv} notification{supv_pl} to project supervisors, '
+                          'and {mark} notification{mark_pl} to project '
+                          'examiners.'.format(supv=supv_sent, supv_pl=supv_plural, mark=mark_sent,
+                                              mark_pl=mark_plural),
                           'info', autocommit=True)
 
 
@@ -110,7 +113,8 @@ def register_marking_tasks(celery):
         periods_subfolder = Path(current_app.config.get('ASSETS_PERIODS_SUBFOLDER'))
 
         asset = record.report
-        config = record.project.config
+        period = record.period
+        config = period.config
         pclass = config.project_class
         supervisor = record.project.owner
         marker = record.marker
@@ -120,9 +124,13 @@ def register_marking_tasks(celery):
         filename_path = Path(asset.filename)
         extension = filename_path.suffix.lower()
 
-        supervisor_filename = Path('{last}{first}'.format(last=student.user.last_name,
-                                                           first=student.user.first_name)).with_suffix(extension)
-        marker_filename = Path('candidate_{number}'.format(number=student.exam_number)).with_suffix(extension)
+        supervisor_filename = \
+            Path('{year}_{abbv}_{last}{first}'.format(year=config.year, abbv=pclass.abbreviation,
+                                                      last=student.user.last_name,
+                                                      first=student.user.first_name)).with_suffix(extension)
+        marker_filename = \
+            Path('{year}_{abbv}_candidate_{number}'.format(year=config.year, abbv=pclass.abbreviation,
+                                                           number=student.exam_number)).with_suffix(extension)
 
         report_path = asset_folder / submitted_subfolder / asset.filename
 
@@ -134,13 +142,14 @@ def register_marking_tasks(celery):
                           sender=current_app.config['MAIL_DEFAULT_SENDER'],
                           reply_to=pclass.convenor_email,
                           recipients=[supervisor.user.email],
-                          cc=config.convenor_email)
+                          cc=[config.convenor_email])
 
             msg.body = render_template('email/marking/supervisor.txt', config=config, pclass=pclass,
-                                       supervisor=supervisor, submitter=submitter, project=record.project,
-                                       student=student, record=record)
+                                       period=period, marker=marker, supervisor=supervisor, submitter=submitter,
+                                       project=record.project, student=student, record=record,
+                                       report_filename=str(supervisor_filename))
 
-            _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, supervisor_filename)
+            # _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, supervisor_filename)
 
             # register a new task in the database
             task_id = register_task(msg.subject,
@@ -156,13 +165,14 @@ def register_marking_tasks(celery):
                           sender=current_app.config['MAIL_DEFAULT_SENDER'],
                           reply_to=pclass.convenor_email,
                           recipients=[marker.user.email],
-                          cc=config.convenor_email)
+                          cc=[config.convenor_email])
 
             msg.body = render_template('email/marking/marker.txt', config=config, pclass=pclass,
-                                       marker=marker, supervisor=supervisor, submitter=submitter,
-                                       project=record.project, student=student, record=record)
+                                       period=period, marker=marker, supervisor=supervisor, submitter=submitter,
+                                       project=record.project, student=student, record=record,
+                                       report_filename=str(marker_filename))
 
-            _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, marker_filename)
+            # _attach_document(msg, asset, asset_folder, record, report_path, periods_subfolder, marker_filename)
 
             # register a new task in the database
             task_id = register_task(msg.subject,

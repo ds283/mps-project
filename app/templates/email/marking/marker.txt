@@ -1,10 +1,10 @@
 Dear {{ marker.user.first_name }}
 
-You have been assigned as examiner for a {{ pclass.abbrevation }} student
-(candidate number {{ student.user.exam_number }}).
+You have been assigned as second marker for a {{ pclass.abbreviation }} student
+(candidate number {{ student.exam_number }}).
 
 Title: {{ project.name }}
-Supervisor: {{ supervisor.user.first_name }}
+Supervisor: {{ supervisor.user.name }} <{{ supervisor.user.email }}>
 
 {% if project.aims and project.aims|length > 0 -%}
 For this project, the supervisor has given the following statement of aims,
@@ -32,28 +32,50 @@ other good report.
 The submitted report is attached to this email. Alternatively, you can
 download the report from your dashboard on https://mpsprojects.co.uk.
 The convenor has requested that marking and feedback be completed by
-{{ record.period.feedback_deadline.strftime("%a %d %b %Y") }}.
+{{ period.feedback_deadline.strftime("%a %d %b %Y") }}.
 
 When you have formed your opinion of the report, please complete
-the attached marksheet and return it to the project convenor.
+the attached marksheet. Please do not forget that the exam board requires
+a short justification of the mark you assign in each category.
+When the sheet is complete you will need to agree a final mark with
+the second marker. This can be done by email, or in person if you prefer.
+Your mark schemes are different and there is no expectation that your
+marks will agree, or be simply related to each other. However, if your
+marks are more than 10% different, you should record a brief rationale
+for the relative weighting you adopt in order to assist the exam board
+with their work.
+
+Both supervisor and marker sheets should be returned to the project
+convenor ({{ config.convenor_email }}), together with the agreed
+mark and its rationale. (Only one copy of this is needed.)
+
 Please also enter your feedback for the student online at
-https://mpsporojects.co.uk: by capturing your feedback electronically
-we can ensure that it is pushed to the student by email.
+https://mpsprojects.co.uk using the 'Edit feedback' button for this
+project visible on your dashboard. By capturing your feedback electronically
+we ensure that it is pushed directly to the student by email.
+
+If you have been assigned further projects to mark, they will be delivered
+in separate emails to help with identifying the required marking materials
+via search.
 
 If you have any questions, please direct these to the project convenor:
 {{ config.convenor_name }} <{{ config.convenor_email }}>
+
 This email is automated. Please do not reply to it directly, because
-email to this address is not monitored.
+email to the sending address is not monitored.
 
 ATTACHMENT MANIFEST
 1. {{ report_filename }}
    submitted report
-{%- set ns = namespace(count=2) -%}
-{% for attachment in record.attachments -%}
+{%- set ns = namespace(count=2) %}
+{% for attachment in period.attachments -%}
 {%- if attachment.include_marking_emails -%}
 {{ ns.count }}. {{ attachment.attachment.target_name if attachment.attachment.target_name else attachment.attachment.filename }}
-{%- if attachment.attachment.description and attachment.attachment.description|length > 0 %}
-   {{ attachment.attachment.description|wordwrap(75) }}
-{%- endif -%}
+{%- if attachment.description and attachment.description|length > 0 %}
+   {{ attachment.description|wordwrap(75) }}
+{% endif -%}
+{%- set ns.count = ns.count + 1 -%}
 {%- endif %}
+{%- else -%}
+<No documents were supplied by the project convenor>
 {%- endfor %}

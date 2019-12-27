@@ -883,6 +883,10 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
                                lp_url=url_for('admin.download_generated_asset', asset_id=lp_asset.id),
                                mps_url=url_for('admin.download_generated_asset', asset_id=mps_asset.id))
 
+    # register a new task in the database
+    task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
+    send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
+
 
 def _write_LP_MPS_files(record, prob, user):
     lp_name, lp_abs_path = make_generated_asset_filename('lp')

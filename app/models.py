@@ -9457,7 +9457,7 @@ class PresentationAssessment(db.Model):
     @property
     def schedulable_talks(self):
         talks = self.available_talks.all()
-        return [t for t in talks if not self.not_attending(t.id)]
+        return [t for t in talks if not self.not_attending(t.id) and t.project is not None]
 
 
     @property

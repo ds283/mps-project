@@ -521,7 +521,7 @@ def batch_create_users():
 
             if extension in ('.csv'):
                 filename, abs_path = make_temporary_asset_filename(ext=extension)
-                batch_user_files.save(batch_file, name=filename)
+                batch_user_files.save(batch_file, name=str(filename))
 
                 asset = TemporaryAsset(timestamp=datetime.now(),
                                        lifetime=24*60*60,

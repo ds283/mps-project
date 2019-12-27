@@ -7798,7 +7798,7 @@ def upload_schedule(schedule_id):
 
                 else:
                     filename, abs_path = make_temporary_asset_filename(ext=extension)
-                    solution_files.save(sol_file, name=filename)
+                    solution_files.save(sol_file, name=str(filename))
 
                     asset = TemporaryAsset(timestamp=datetime.now(),
                                            lifetime=24*60*60,
@@ -7864,7 +7864,7 @@ def upload_match(match_id):
 
                 else:
                     filename, abs_path = make_temporary_asset_filename(ext=extension)
-                    solution_files.save(sol_file, name=filename)
+                    solution_files.save(sol_file, name=str(filename))
 
                     asset = TemporaryAsset(timestamp=datetime.now(),
                                            lifetime=24*60*60,

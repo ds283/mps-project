@@ -933,7 +933,7 @@ def _store_enumeration_details(record, number_to_talk, number_to_assessor, numbe
     write_out(ScheduleEnumeration.SLOT, number_to_slot)
     write_out(ScheduleEnumeration.PERIOD, number_to_period)
 
-    # allow exception to propgate up to calling function
+    # allow exceptions produced by SQLAlchemy to propagate up to calling function
     db.session.commit()
 
 
@@ -1266,6 +1266,7 @@ def register_scheduling_tasks(celery):
             data.tag = 'schedule_{n}'.format(n=data.id)
 
             # duplicate all slots
+            slot_map = {}
             for slot in record.slots:
                 rec = ScheduleSlot(owner_id=data.id,
                                    session_id=slot.session_id,
@@ -1275,13 +1276,25 @@ def register_scheduling_tasks(celery):
                                    original_assessors=slot.assessors,
                                    original_talks=slot.original_talks)
                 db.session.add(rec)
+                db.session.flush()
+
+                # remember the mapping from old slot to new slot
+                slot_map[slot.id] = rec.id
 
             # duplicate all enumerations
             if data.awaiting_upload:
                 for item in record.enumerations:
+                    if item.category != ScheduleEnumeration.SLOT:
+                        new_key = item.key
+                    else:
+                        if item.key in slot_map:
+                            new_key = slot_map[item.key]
+                        else:
+                            raise RuntimeError('Could not map from old to new ScheduleSlot ids')
+
                     en = ScheduleEnumeration(category=item.category,
                                              enumeration=item.enumeration,
-                                             key=item.key,
+                                             key=new_key,
                                              schedule_id=data.id)
                     db.session.add(en)
 

@@ -13,7 +13,12 @@ from flask import render_template_string, jsonify
 
 _name = \
 """
-<a href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">{{ a.name }}</a>
+{% set state = a.availability_lifecycle %}
+{% if state >= a.AVAILABILITY_CLOSED %}
+    <a href="{{ url_for('admin.assessment_schedules', id=a.id) }}">{{ a.name }}</a>
+{% else %}
+    <a href="{{ url_for('admin.assessment_manage_sessions', id=a.id) }}">{{ a.name }}</a>
+{% endif %}
 {% if not a.is_valid %}
     <i class="fa fa-exclamation-triangle" style="color:red;"></i>
 {% endif %}
@@ -24,7 +29,6 @@ _name = \
 {% if not a.feedback_open %}
     <span class="label label-success">Feedback closed</span>
 {% endif %}
-{% set state = a.availability_lifecycle %}
 {% if state == a.AVAILABILITY_NOT_REQUESTED %}
     <span class="label label-default">Availability not requested</span>
 {% elif state == a.AVAILABILITY_REQUESTED %}

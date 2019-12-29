@@ -19,7 +19,7 @@ from ..database import db
 from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
     MatchingEnumeration, SubmittedAsset
-from ..shared.utils import get_current_year
+from ..shared.utils import get_current_year, get_count
 from ..shared.asset_tools import canonical_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_submitted_asset_filename
 
@@ -386,7 +386,8 @@ def register_maintenance_tasks(celery):
             raise Ignore()
 
         # check if attached
-        if record.submission_record is None and record.attachment_record is None:
+        if get_count(record.submission_attachments) == 0 \
+                and get_count(record.period_attachments) == 0:
             print('** Garbage collection detected unattached SubmittedAsset record, id = {id}'.format(id=record.id))
 
             try:

@@ -7181,7 +7181,7 @@ class SubmissionAttachment(db.Model):
     # attached file
     attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
-                                 backref=db.backref('attachment_record', uselist=False))
+                                 backref=db.backref('submission_attachments', uselist=False))
 
     # textual description of attachment
     description = db.Column(db.Text())

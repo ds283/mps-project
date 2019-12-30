@@ -277,7 +277,7 @@ def overview(id):
     # change labels and text depending on current lifecycle state
     if config.requests_issued:
         IssueFacultyConfirmRequestForm = \
-            IssueFacultyConfirmRequestFormFactory(submit_label='Save changes',
+            IssueFacultyConfirmRequestFormFactory(submit_label='Change deadline',
                                                   datebox_label='The current deadline for responses is')
     else:
         IssueFacultyConfirmRequestForm = \
@@ -287,7 +287,7 @@ def overview(id):
     issue_form = IssueFacultyConfirmRequestForm(request.form)
 
     if period is not None and period.feedback_open:
-        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Save changes',
+        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Change deadline',
                                                    datebox_label='The current deadline for feedback is',
                                                    include_send_button=True)
     else:
@@ -305,7 +305,7 @@ def overview(id):
 
         if config.live_deadline is not None:
             golive_form.live_deadline.data = config.live_deadline
-            golive_form.live.label.text = 'Save changes'
+            golive_form.live.label.text = 'Change deadline'
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
@@ -5053,18 +5053,13 @@ def submission_record_documents(pid):
         flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
         return redirect(request.referrer)
 
-    # reject if lifecycle stage is marking or later
-
-    state = config.submitter_lifecycle
-    if state >= ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash('It is no longer possible to edit this submission period because it is being marked, '
-              'or is ready to rollover.', 'info')
-        return redirect(request.referrer)
-
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    return render_template('convenor/documents/period_manager.html', record=record, url=url, text=text)
+    state = config.submitter_lifecycle
+    editable = (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
+    return render_template('convenor/documents/period_manager.html', record=record, url=url, text=text, state=state,
+                           config=config, editable=editable)
 
 
 @convenor.route('/publish_assignment/<int:id>')
@@ -6806,12 +6801,21 @@ def delete_period_attachment(aid):
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
         return redirect(request.referrer)
 
-    if not validate_is_convenor(record.config.project_class):
+    config = record.config
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     # check has privileges to handle the asset
     if not attachment.attachment.has_access(current_user.id):
         flash('Could not delete attachment because you do not have privileges to access it.', 'info')
+        return redirect(request.referrer)
+
+    state = config.submitter_lifecycle
+    editable = (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
+
+    if not editable:
+        flash('Cannot edit settings for this submission period because marking is already underway, or has '
+              'been completed.', 'error')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -6848,12 +6852,21 @@ def perform_delete_period_attachment(aid, pid):
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
         return redirect(request.referrer)
 
-    if not validate_is_convenor(record.config.project_class):
+    config = record.config
+    if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
     # check has privileges to handle the asset
     if not attachment.attachment.has_access(current_user.id):
         flash('Could not delete attachment because you do not have privileges to access it.', 'info')
+        return redirect(request.referrer)
+
+    state = config.submitter_lifecycle
+    editable = (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
+
+    if not editable:
+        flash('Cannot edit settings for this submission period because marking is already underway, or has '
+              'been completed.', 'error')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -6990,6 +7003,14 @@ def edit_period_attachment(aid):
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
+
+    state = config.submitter_lifecycle
+    editable = (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
+
+    if not editable:
+        flash('Cannot edit settings for this submission period because marking is already underway, or has '
+              'been completed.', 'error')
+        return redirect(request.referrer)
 
     form = EditPeriodAttachmentForm(obj=attachment)
 

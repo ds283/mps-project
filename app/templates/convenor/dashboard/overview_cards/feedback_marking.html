@@ -28,6 +28,7 @@
         <div class="row">
             <div class="col-xs-12">
                 <div class="pull-right">
+                    <a class="btn btn-default" href="{{ url_for('convenor.submission_record_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">View documents ({{ period.number_attachments }})...</a>
                     {{ wtf.form_field(feedback_form.send_notifications, button_map={'send_notifications': 'default'}) }}
                     {{ wtf.form_field(feedback_form.submit_button, button_map={'submit_button': 'default'}) }}
                 </div>

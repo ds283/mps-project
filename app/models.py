@@ -4167,6 +4167,11 @@ class SubmissionPeriodRecord(db.Model):
         return format_readable_time(delta)
 
 
+    @property
+    def number_attachments(self):
+        return get_count(self.attachments)
+
+
     def get_supervisor_records(self, fac_id):
         return self.submissions \
             .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \

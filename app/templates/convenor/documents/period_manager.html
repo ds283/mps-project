@@ -6,7 +6,7 @@
     Manage documents for {{ record.display_name }}
 {% endblock %}
 
-{% macro asset_line(asset, attachment, download_url, delete_url, edit_url) %}
+{% macro asset_line(asset, attachment, download_url, delete_url, edit_url, editable=true) %}
     <tr>
         <td>
             <div>
@@ -43,9 +43,13 @@
         <td>
             <div style="text-align: right;" class="pull-right">
                 {% if asset.has_access(current_user.id) %}
-                    <a href="{{ edit_url }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
+                    {% if editable %}
+                        <a href="{{ edit_url }}" class="btn btn-sm btn-default btn-table-block">Edit</a>
+                    {% endif %}
                     <a href="{{ download_url }}" class="btn btn-sm btn-default btn-table-block">Download</a>
-                    <a href="{{ delete_url }}" class="btn btn-sm btn-danger btn-table-block">Remove</a>
+                    {% if editable %}
+                        <a href="{{ delete_url }}" class="btn btn-sm btn-danger btn-table-block">Remove</a>
+                    {% endif %}
                 {% else %}
                     <a class="btn btn-default btn-sm disabled btn-table-block">Edit</a>
                     <a class="btn btn-default btn-sm disabled btn-table-block">Download</a>
@@ -85,20 +89,23 @@
                                 {% set asset = attachment.attachment %}
                                 {{ asset_line(asset, attachment, url_for('admin.download_period_asset', asset_id=asset.id),
                                               url_for('convenor.delete_period_attachment', aid=attachment.id),
-                                              url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text)) }}
+                                              url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text),
+                                              editable=editable) }}
                             {% endfor %}
                         </tbody>
                     </table>
                 {% else %}
                     <strong>No attachments.</strong>
                 {% endif %}
-                <hr class="into-divider">
-                <div style="text-align: center;">
-                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
-                        <i class="fa fa-plus"></i>
-                        Upload new attachment
-                    </a>
-                </div>
+                {% if editable %}
+                    <hr class="into-divider">
+                    <div style="text-align: center;">
+                        <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                            <i class="fa fa-plus"></i>
+                            Upload new attachment
+                        </a>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>

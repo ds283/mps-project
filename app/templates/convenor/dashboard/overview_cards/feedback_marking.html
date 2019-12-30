@@ -24,11 +24,12 @@
     <form action="{{ url_for('convenor.open_feedback', id=config.id) }}" method="POST" name="feedback-form">
         {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline) }}
+        {{ wtf.form_field(feedback_form.cc_me) }}
         <div class="row">
             <div class="col-xs-12">
                 <div class="pull-right">
-                    <a href="{{ url_for('convenor.resend_marking_emails', pid=period.id) }}" class="btn btn-default">Send notifications</a>
-                    {{ wtf.form_field(feedback_form.open_feedback, button_map={'open_feedback': 'default'}) }}
+                    {{ wtf.form_field(feedback_form.send_notifications, button_map={'send_notifications': 'default'}) }}
+                    {{ wtf.form_field(feedback_form.submit_button, button_map={'submit_button': 'default'}) }}
                 </div>
             </div>
         </div>

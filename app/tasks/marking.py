@@ -26,7 +26,7 @@ from pathlib import Path
 def register_marking_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_marking_emails(self, record_id, convenor_id):
+    def send_marking_emails(self, record_id, cc_convenor, convenor_id):
         try:
             record = db.session.query(SubmissionPeriodRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
@@ -37,7 +37,7 @@ def register_marking_tasks(celery):
             self.update_state('FAILURE', meta='Could not load SubmissionPeriodRecord from database')
             raise Ignore()
 
-        email_group = group(dispatch_emails.s(s.id) for s in record.submissions) | notify_dispatch.s(convenor_id)
+        email_group = group(dispatch_emails.s(s.id, cc_convenor) for s in record.submissions) | notify_dispatch.s(convenor_id)
 
         raise self.replace(email_group)
 
@@ -91,7 +91,7 @@ def register_marking_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def dispatch_emails(self, record_id):
+    def dispatch_emails(self, record_id, cc_convenor):
         try:
             record = db.session.query(SubmissionRecord).filter_by(id=record_id).first()
         except SQLAlchemyError as e:
@@ -141,8 +141,10 @@ def register_marking_tasks(celery):
                                                                                     stu=student.user.name),
                           sender=current_app.config['MAIL_DEFAULT_SENDER'],
                           reply_to=pclass.convenor_email,
-                          recipients=[supervisor.user.email],
-                          cc=[config.convenor_email])
+                          recipients=[supervisor.user.email])
+
+            if cc_convenor:
+                msg.cc([config.convenor_email])
 
             msg.body = render_template('email/marking/supervisor.txt', config=config, pclass=pclass,
                                        period=period, marker=marker, supervisor=supervisor, submitter=submitter,

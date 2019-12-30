@@ -45,9 +45,10 @@ from ..admin.forms import LevelSelectorForm
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
     PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
-from .forms import GoLiveForm, IssueFacultyConfirmRequestForm, OpenFeedbackForm, AssignMarkerFormFactory, \
-    AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, EditSubmissionRecordForm, UploadReportForm, \
-    UploadSubmitterAttachmentForm, UploadPeriodAttachmentForm, EditPeriodAttachmentForm
+from .forms import GoLiveForm, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory,\
+    AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
+    EditSubmissionRecordForm, UploadReportForm, UploadSubmitterAttachmentForm, UploadPeriodAttachmentForm, \
+    EditPeriodAttachmentForm
 
 from ..uploads import submitted_files, period_files
 
@@ -272,17 +273,29 @@ def overview(id):
 
     # build forms
     golive_form = GoLiveForm(request.form)
-    issue_form = IssueFacultyConfirmRequestForm(request.form)
-    feedback_form = OpenFeedbackForm(request.form)
 
     # change labels and text depending on current lifecycle state
     if config.requests_issued:
-        issue_form.request_deadline.label.text = 'The current deadline for responses is'
-        issue_form.issue_requests.label.text = 'Save changes'
+        IssueFacultyConfirmRequestForm = \
+            IssueFacultyConfirmRequestFormFactory(submit_label='Save changes',
+                                                  datebox_label='The current deadline for responses is')
+    else:
+        IssueFacultyConfirmRequestForm = \
+            IssueFacultyConfirmRequestFormFactory(submit_label='Issue confirmation requests',
+                                                  datebox_label='Deadline')
+
+    issue_form = IssueFacultyConfirmRequestForm(request.form)
 
     if period is not None and period.feedback_open:
-        feedback_form.feedback_deadline.label.text = 'The current deadline for feedback is'
-        feedback_form.open_feedback.label.text = 'Save changes'
+        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Save changes',
+                                                   datebox_label='The current deadline for feedback is',
+                                                   include_send_button=True)
+    else:
+        OpenFeedbackForm = OpenFeedbackFormFactory(submit_label='Open feedback period',
+                                                   datebox_label='Deadline',
+                                                   include_send_button=False)
+
+    feedback_form = OpenFeedbackForm(request.form)
 
     if request.method == 'GET':
         if config.request_deadline is not None:
@@ -3147,9 +3160,11 @@ def issue_confirm_requests(id):
         return redirect(request.referrer)
 
     year = get_current_year()
+
+    IssueFacultyConfirmRequestForm = IssueFacultyConfirmRequestFormFactory()
     form = IssueFacultyConfirmRequestForm(request.form)
 
-    if form.is_submitted() and form.issue_requests.data is True:
+    if form.is_submitted() and form.submit_button.data is True:
         now = date.today()
 
         if config.requests_issued:
@@ -4860,77 +4875,64 @@ def open_feedback(id):
         flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
         return redirect(request.referrer)
 
+    # get record for current submission period
+    period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
+    if period is None and config.submissions > 0:
+        flash('Internal error: could not locate SubmissionPeriodRecord. Please contact a system administrator.', 'error')
+        return redirect(request.referrer)
+
+    if period is not None and period.feedback_open:
+        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=True)
+    else:
+        OpenFeedbackForm = OpenFeedbackFormFactory(include_send_button=False)
+
     feedback_form = OpenFeedbackForm(request.form)
 
-    if feedback_form.is_submitted() and feedback_form.open_feedback.data is True:
-        # set feedback deadline and mark feedback open
-        period: SubmissionPeriodRecord = config.periods.filter_by(submission_period=config.submission_period).first()
-
-        period.feedback_open = True
-        period.feedback_deadline = feedback_form.feedback_deadline.data
-
-        if period.feedback_id is None:
-            period.feedback_id = current_user.id
-
-        if period.feedback_timestamp is None:
-            period.feedback_timestamp = datetime.now()
-
-        db.session.commit()
-
+    if feedback_form.is_submitted():
         celery = current_app.extensions['celery']
         marking_email = celery.tasks['app.tasks.marking.send_marking_emails']
 
         tk_name = 'Dispatch marking notifications'
         tk_description = 'Dispatch emails with reports and marking instructions'
-        task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
         init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
         final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
         error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
 
-        seq = chain(init.si(task_id, tk_name),
-                    marking_email.si(period.id, current_user.id),
-                    final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-        seq.apply_async(task_id=task_id)
+        if feedback_form.submit_button.data:
+            # set feedback deadline and mark feedback open
+            period.feedback_open = True
+            period.feedback_deadline = feedback_form.feedback_deadline.data
 
-    return redirect(request.referrer)
+            if period.feedback_id is None:
+                period.feedback_id = current_user.id
 
+            if period.feedback_timestamp is None:
+                period.feedback_timestamp = datetime.now()
 
-@convenor.route('/resend_marking_emails/<int:pid>')
-@roles_accepted('faculty', 'admin', 'root')
-def resend_marking_emails(pid):
-    # id is a ProjectClassConfig
-    period = SubmissionPeriodRecord.query.get_or_404(pid)
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                flash('Could not modify feedback status due to a database error. '
+                      'Please contact a system administrator.', 'error')
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                db.session.rollback()
+                return redirect(request.referrer)
 
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(period.config.project_class):
-        return redirect(request.referrer)
+            task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
-    # reject if project class not published
-    if not validate_project_class(period.config.project_class):
-        return redirect(request.referrer)
+            seq = chain(init.si(task_id, tk_name),
+                        marking_email.si(period.id, bool(feedback_form.cc_me.data), current_user.id),
+                        final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+            seq.apply_async(task_id=task_id)
 
-    state = period.config.submitter_lifecycle
-    if state != ProjectClassConfig.SUBMITTER_LIFECYCLE_PROJECT_ACTIVITY and \
-            state != ProjectClassConfig.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
-        flash('Feedback cannot be opened at this stage in the project lifecycle.', 'info')
-        return redirect(request.referrer)
+        elif hasattr(feedback_form, 'send_notifications') and feedback_form.send_notifications.data:
+            task_id = register_task(tk_name, owner=current_user, description=tk_description)
 
-    celery = current_app.extensions['celery']
-    marking_email = celery.tasks['app.tasks.marking.send_marking_emails']
-
-    tk_name = 'Dispatch marking notifications'
-    tk_description = 'Dispatch emails with reports and marking instructions'
-    task_id = register_task(tk_name, owner=current_user, description=tk_description)
-
-    init = celery.tasks['app.tasks.user_launch.mark_user_task_started']
-    final = celery.tasks['app.tasks.user_launch.mark_user_task_ended']
-    error = celery.tasks['app.tasks.user_launch.mark_user_task_failed']
-
-    seq = chain(init.si(task_id, tk_name),
-                marking_email.si(period.id, current_user.id),
-                final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
-    seq.apply_async(task_id=task_id)
+            seq = chain(init.si(task_id, tk_name),
+                        marking_email.si(period.id, bool(feedback_form.cc_me.data), current_user.id),
+                        final.si(task_id, tk_name, current_user.id)).on_error(error.si(task_id, tk_name, current_user.id))
+            seq.apply_async(task_id=task_id)
 
     return redirect(request.referrer)
 
@@ -4965,7 +4967,13 @@ def close_feedback(id):
     period.closed_id = current_user.id
     period.closed_timestamp = datetime.now()
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        flash('Could not modify feedback status due to a database error. '
+              'Please contact a system administrator.', 'error')
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        db.session.rollback()
 
     return redirect(request.referrer)
 

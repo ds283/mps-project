@@ -11,12 +11,13 @@
         <hr class="intro-divider">
         {{ feedback_form.hidden_tag() }}
         {{ date_field(feedback_form.feedback_deadline) }}
+        {{ wtf.form_field(feedback_form.cc_me) }}
         <div class="row vertical-top">
             <div class="col-xs-12">
                 <div class="pull-right">
                     <a class="btn btn-default" href="{{ url_for('convenor.submission_record_documents', pid=period.id, url=url_for('convenor.overview', id=config.project_class.id), text='overview') }}">Manage documents...</a>
                     <a class="btn btn-default" href="{{ url_for('convenor.edit_submission_record', pid=period.id) }}">Configure period...</a>
-                    {{ wtf.form_field(feedback_form.open_feedback, button_map={'open_feedback': 'danger'}) }}
+                    {{ wtf.form_field(feedback_form.submit_button, button_map={'submit_button': 'danger'}) }}
                 </div>
             </div>
         </div>

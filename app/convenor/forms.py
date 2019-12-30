@@ -31,22 +31,40 @@ class GoLiveForm(Form):
     live_deadline = DateField('Deadline for student submissions', format='%d/%m/%Y', validators=[InputRequired()])
 
 
-class IssueFacultyConfirmRequestForm(Form):
+def IssueFacultyConfirmRequestFormFactory(submit_label='Issue confirmation requests',
+                                          datebox_label='Deadline'):
 
-    # deadline for confirmation responses
-    request_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+    class IssueFacultyConfirmRequestForm(Form):
 
-    # submit button: issue requests
-    issue_requests = SubmitField('Issue confirmation requests')
+        # deadline for confirmation responses
+        request_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+
+        # submit button: issue requests
+        submit_button = SubmitField(submit_label)
+
+    return IssueFacultyConfirmRequestForm
 
 
-class OpenFeedbackForm(Form):
+def OpenFeedbackFormFactory(submit_label='Open feedback period',
+                            datebox_label='Deadline',
+                            include_send_button=False):
 
-    # deadline for feedback
-    feedback_deadline = DateField('Deadline', format='%d/%m/%Y', validators=[InputRequired()])
+    class OpenFeedbackForm(Form):
 
-    # submit button: open feedback
-    open_feedback = SubmitField('Open feedback period')
+        # deadline for feedback
+        feedback_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+
+        # CC emails to convenor?
+        cc_me = BooleanField('CC myself in notification emails')
+
+        # submit button: open feedback
+        submit_button = SubmitField(submit_label)
+
+        # if already open, include a 'send notifications' button
+        if include_send_button:
+            send_notifications = SubmitField('Send notifications')
+
+    return OpenFeedbackForm
 
 
 class CustomCATSLimitForm(Form, SaveChangesMixin):

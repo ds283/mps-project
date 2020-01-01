@@ -88,6 +88,7 @@ auto_enroll_year_choices = [(0, 'The year before students join the project'),
 
 class ColouredLabelMixin():
 
+    # colour
     colour = db.Column(db.String(DEFAULT_STRING_LENGTH))
 
     def make_CSS_style(self):
@@ -11704,6 +11705,88 @@ class SubmittedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin,
     uploaded_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
     uploaded_by = db.relationship('User', foreign_keys=[uploaded_id], uselist=False,
                                   backref=db.backref('uploaded_assets', lazy='dynamic'))
+
+
+class AssetLicense(db.Model, ColouredLabelMixin):
+    """
+    Model a license for distributing content
+    """
+    __tablename__ = 'asset_licenses'
+
+
+    # primary key ids
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # license name
+    name = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # abbreviation
+    abbreviation = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # short description
+    description = db.Column(db.Text())
+
+    # active flag
+    active = db.Column(db.Boolean())
+
+    # license version
+    version = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # license URL
+    url = db.Column(db.String(DEFAULT_STRING_LENGTH))
+
+    # LICENSE PROPERTIES
+
+    # license allows redistribution?
+    allows_redistribution = db.Column(db.Boolean(), default=False)
+
+
+    # EDITING DATA
+
+    # created by
+    creator_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    created_by = db.relationship('User', foreign_keys=[creator_id], uselist=False)
+
+    # creation timestamp
+    creation_timestamp = db.Column(db.DateTime())
+
+    # last editor
+    last_edit_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    last_edited_by = db.relationship('User', foreign_keys=[last_edit_id], uselist=False)
+
+    # last edited timestamp
+    last_edit_timestamp = db.Column(db.DateTime())
+
+
+    def make_label(self, text=None, user_classes=None):
+        """
+        Make appropriately coloured label
+        :param text:
+        :return:
+        """
+        if text is None:
+            text = self.abbreviation
+
+        return self._make_label(text, user_classes)
+
+
+    def enable(self):
+        """
+        Activate this license
+        :return:
+        """
+        self.active = True
+
+
+    def disable(self):
+        """
+        Disactivate this license
+        :return:
+        """
+        self.active = False
+
+        # TODO: eventually will need to iterate through all assets licensed under this license and set them
+        #  all to the "unset" condition
 
 
 class ScheduleEnumeration(db.Model):

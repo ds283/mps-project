@@ -17,7 +17,7 @@ from zxcvbn import zxcvbn
 
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
     Supervisor, Role, StudentData, MatchingAttempt, PresentationAssessment, Building, Room, \
-    ScheduleAttempt, Module, Project, ProjectDescription, FHEQ_Level, StudentBatchItem
+    ScheduleAttempt, Module, Project, ProjectDescription, FHEQ_Level, StudentBatchItem, AssetLicense
 
 from flask import current_app
 from werkzeug.local import LocalProxy
@@ -398,6 +398,44 @@ def unique_or_original_FHEQ_year(form, field):
     return globally_unique_FHEQ_year(form, field)
 
 
+def globally_unique_license_name(form, field):
+    if AssetLicense.query.filter_by(name=field.data).first():
+        raise ValidationError('A license with the name "{name}" already exists'.format(name=field.data))
+
+
+def unique_or_original_license_name(form, field):
+    if field.data == form.license.name:
+        return
+
+    return globally_unique_license_name(form, field)
+
+
+def globally_unique_license_abbreviation(form, field):
+    if AssetLicense.query.filter_by(abbreviation=field.data).first():
+        raise ValidationError('A license with the abbreviation "{abbv}" already exists'.format(abbv=field.data))
+
+
+def unique_or_original_license_abbreviation(form, field):
+    if field.data == form.license.abbreviation:
+        return
+
+    return unique_or_original_license_abbreviation(form, field)
+
+
+def per_license_unique_version(form, field):
+    name = form.name.data
+    if AssetLicense.query.filter_by(name=name, version=form.version.data).first():
+        raise ValidationError('A license of type "{name}" with version '
+                              '"{ver}" already exists'.form(name=name, ver=form.version.data))
+
+
+def per_license_unique_or_original_version(form, field):
+    if field.data == form.license.version and form.name.data == form.license.name:
+        return
+
+    return per_license_unique_version(form, field)
+
+
 def globally_unique_batch_item_userid(batch_id, form, field):
     if StudentBatchItem.query.filter_by(parent_id=batch_id, user_id=field.data).first():
         raise ValidationError('{name} is already in use as a user id for this batch import'.format(name=field.data))
@@ -425,7 +463,7 @@ def unique_or_original_batch_item_email(batch_id, form, field):
 
 def globally_unique_batch_item_exam_number(batch_id, form, field):
     if StudentBatchItem.query.filter_by(parent_id=batch_id, exam_number=field.data).first():
-        raise ValidationError('{name} is already in use as an exam nynbmer for this batch '
+        raise ValidationError('{name} is already in use as an exam number for this batch '
                               'import'.format(name=field.data))
 
 

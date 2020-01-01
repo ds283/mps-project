@@ -37,6 +37,9 @@ from ..shared.forms.wtf_validators import globally_unique_group_name, unique_or_
     globally_unique_FHEQ_level_name, unique_or_original_FHEQ_level_name, \
     globally_unique_FHEQ_short_name, unique_or_original_FHEQ_short_name, \
     globally_unique_FHEQ_year, unique_or_original_FHEQ_year, \
+    globally_unique_license_name, unique_or_original_license_name, \
+    globally_unique_license_abbreviation, unique_or_original_license_abbreviation, \
+    per_license_unique_version, per_license_unique_or_original_version, \
     valid_json, NotOptionalIf
 
 from ..shared.forms.queries import GetActiveDegreeTypes, GetActiveDegreeProgrammes, GetActiveSkillGroups, \
@@ -957,6 +960,71 @@ class EditRoomForm(Form, RoomMixin, SaveChangesMixin):
     @staticmethod
     def validate_name(form, field):
         return unique_or_original_room_name(form, field)
+
+
+class AssetLicenseMixin():
+
+    name = StringField('Name',
+                       description='Enter a name to identify this license',
+                       validators=[InputRequired(message='Please supply a unique name'),
+                                   Length(max=DEFAULT_STRING_LENGTH)])
+
+    colour = StringField('Colour', validators=[Length(max=DEFAULT_STRING_LENGTH)],
+                         description='Assign a colour to identify assets tagged with this license')
+
+    abbreviation = StringField('Abbreviation',
+                               description='Enter a short name used to visually tag content provided '
+                                           'under this license',
+                               validators=[InputRequired(message='Please supply a unique abbreviation'),
+                                           Length(max=DEFAULT_STRING_LENGTH)])
+
+    description = TextAreaField('Description', render_kw={"rows": 5},
+                                validators=[InputRequired(message='Please supply a brief description of the '
+                                                                  'license conditions')])
+
+    version = StringField('Version',
+                          description='Please enter a version number or identifier '
+                                      'for this license',
+                          validators=[InputRequired(message='Please supply a valid version string'),
+                                      Length(max=DEFAULT_STRING_LENGTH)])
+
+    url = StringField('Web address',
+                      description='Optional. Enter a web address for this license.')
+
+    allows_redistribution = BooleanField('License allows content to be redistributed')
+
+
+class AddAssetLicenseForm(Form, AssetLicenseMixin):
+
+    @staticmethod
+    def validate_name(form, field):
+        return globally_unique_license_name(form, field)
+
+    @staticmethod
+    def validate_abbreviation(form, field):
+        return globally_unique_license_abbreviation(form, field)
+
+    @staticmethod
+    def validate_version(form, field):
+        return per_license_unique_version(form, field)
+
+
+    submit = SubmitField('Add new license')
+
+
+class EditAssetLicenseForm(Form, AssetLicenseMixin, SaveChangesMixin):
+
+    @staticmethod
+    def validate_name(form, field):
+        return unique_or_original_license_name(form, field)
+
+    @staticmethod
+    def validate_abbreviation(form, field):
+        return unique_or_original_license_abbreviation(form, field)
+
+    @staticmethod
+    def validatE_version(form, field):
+        return per_license_unique_or_original_version(form, field)
 
 
 class AvailabilityForm(Form):

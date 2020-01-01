@@ -1,0 +1,75 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data, colour_field %}
+
+{% extends "security/index.html" %}
+
+{% block scripts %}
+    {{ super() }}
+
+    {% assets filters="cssmin", output="gen/bootstrap-colorpicker-min.css", "css/bootstrap-colorpicker.css" -%}
+        <link rel="stylesheet" type="text/css" href="{{ ASSET_URL }}"/>
+    {% endassets %}
+
+    {% assets filters="jsmin", output="gen/bootstrap-colorpicker-min.js", "js/bootstrap-colorpicker.js" -%}
+        <script src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+    <script>
+        $(function () {
+            $('#colour-group').colorpicker({
+                format: 'hex',
+                useAlpha: false
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block title %}
+    {{ title }}
+{% endblock %}
+
+{% block formtitle %}
+    {% if license %}
+        {% if license.name and license.name|length > 0 %}
+            Edit license <strong>{{ license.name }}</strong>
+        {% else %}
+            {{ title }}
+        {% endif %}
+    {% else %}
+        {{ title }}
+    {% endif %}
+{% endblock %}
+
+{% block form_content %}
+    {% if license %}
+        <form action="{{ url_for('admin.edit_license', lid=license.id) }}" method="POST" name="license_form">
+    {% else %}
+        <form action="{{ url_for('admin.add_license') }}" method="POST" name="license_form">
+    {% endif %}
+
+        {{ form.hidden_tag() }}
+
+        <div class="well">
+            {{ wtf.form_field(form.name) }}
+            {{ wtf.form_field(form.abbreviation) }}
+            {{ wtf.form_field(form.version) }}
+            {{ colour_field(form.colour, 'colour-group') }}
+        </div>
+
+        <div class="well">
+            {{ wtf.form_field(form.description) }}
+            {{ wtf.form_field(form.url) }}
+        </div>
+
+        <div class="well">
+            {{ wtf.form_field(form.allows_redistribution) }}
+        </div>
+
+        {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
+
+    </form>
+{% endblock %}
+
+{% block footer %}
+    {{ edit_data(license) }}
+{% endblock %}

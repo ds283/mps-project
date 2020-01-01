@@ -52,7 +52,8 @@ from .forms import AddResearchGroupForm, EditResearchGroupForm, \
     NewScheduleFormFactory, RenameScheduleFormFactory, UploadScheduleForm, AssignmentLimitForm, \
     ImposeConstraintsScheduleFormFactory, \
     LevelSelectorForm, AddFHEQLevelForm, EditFHEQLevelForm, \
-    PublicScheduleFormFactory, CompareScheduleFormFactory
+    PublicScheduleFormFactory, CompareScheduleFormFactory, \
+    AddAssetLicenseForm, EditAssetLicenseForm
 from ..cache import cache
 from ..database import db
 from ..limiter import limiter
@@ -62,7 +63,8 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     BackupRecord, TaskRecord, Notification, EnrollmentRecord, MatchingAttempt, MatchingRecord, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
-    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset
+    Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
+    AssetLicense
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -971,6 +973,144 @@ def deactivate_skill_group(id):
     return redirect(request.referrer)
 
 
+@admin.route('/edit_licenses')
+@roles_required('root')
+def edit_licenses():
+    """
+    Provide list and edit view for content licneses
+    :return:
+    """
+    return render_template('admin/edit_licenses.html')
+
+
+@admin.route('/licenses_ajax')
+@roles_required('root')
+def licenses_ajax():
+    """
+    AJAX data entry point for content licenses table
+    :return:
+    """
+    licenses = db.session.query(AssetLicense).all()
+    return ajax.admin.licenses_data(licenses)
+
+
+@admin.route('/add_license', methods=['GET', 'POST'])
+@roles_required('root')
+def add_license():
+    """
+    Create a new license
+    :return:
+    """
+    form = AddAssetLicenseForm(request.form)
+
+    if form.validate_on_submit():
+        data = AssetLicense(name=form.name.data,
+                            abbreviation=form.abbreviation.data,
+                            colour=form.colour.data,
+                            description=form.description.data,
+                            version=form.version.data,
+                            url=form.url.data,
+                            allows_redistribution=form.allows_redistribution.data,
+                            active=True,
+                            creator_id=current_user.id,
+                            creation_timestamp=datetime.now())
+
+        try:
+            db.session.add(data)
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not add new license because of a database error. '
+                  'Please contact a system administrator', 'error')
+
+        return redirect(url_for('admin.edit_licenses'))
+
+    return render_template('admin/edit_license.html', form=form, title='Add new content license')
+
+
+@admin.route('/edit_license/<int:lid>', methods=['GET', 'POST'])
+@roles_required('root')
+def edit_license(lid):
+    """
+    Edit an existing license
+    :param lid:
+    :return:
+    """
+    license = AssetLicense.query.get_or_404(lid)
+    form = EditAssetLicenseForm(obj=license)
+
+    form.license = license
+
+    if form.validate_on_submit():
+        license.name = form.name.data
+        license.abbreviation = form.abbreviation.data
+        license.colour = form.colour.data
+        license.description = form.description.data
+        license.version = form.version.data
+        license.url = form.url.data
+        license.allows_redistribution = form.allows_redistribution.data
+
+        license.last_edit_id = current_user.id
+        license.last_edit_timestamp = datetime.now()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            flash('Could not edit license "{name}" because of a database error. '
+                  'Please contact a system administrator'.format(name=license.name),
+                  'error')
+
+        return redirect(url_for('admin.edit_licenses'))
+
+    return render_template('admin/edit_license.html', form=form, title='Edit content license',
+                           license=license)
+
+
+@admin.route('/activate_license/<int:lid>')
+@roles_required('root')
+def activate_license(lid):
+    """
+    Make a license active
+    :param lid:
+    :return:
+    """
+    license = AssetLicense.query.get_or_404(lid)
+    license.enable()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not activate license "{name}" due to a database error. '
+              'Please contact a system administrator'.format(name=license.name), 'error')
+
+    return redirect(request.referrer)
+
+
+@admin.route('/activate_license/<int:lid>')
+@roles_required('root')
+def deactivate_license(lid):
+    """
+    Make a license active
+    :param lid:
+    :return:
+    """
+    license = AssetLicense.query.get_or_404(lid)
+    license.disable()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not deactivate license "{name}" due to a database error. '
+              'Please contact a system administrator'.format(name=license.name), 'error')
+
+    return redirect(request.referrer)
+
+
 @admin.route('/edit_project_classes')
 @roles_required('root')
 def edit_project_classes():
@@ -981,7 +1121,7 @@ def edit_project_classes():
     return render_template('admin/edit_project_classes.html')
 
 
-@admin.route('/pclasses_ajax', methods=['GET', 'POST'])
+@admin.route('/pclasses_ajax')
 @roles_required('root')
 def pclasses_ajax():
     """

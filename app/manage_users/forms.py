@@ -20,7 +20,7 @@ from wtforms_alchemy import QuerySelectField
 
 from app.models import DEFAULT_STRING_LENGTH, EnrollmentRecord
 from app.shared.forms.mixins import ThemeMixin, FirstLastNameMixin, FacultyDataMixinFactory, SaveChangesMixin, \
-    EditUserNameMixin
+    EditUserNameMixin, DefaultLicenseMixin
 from app.shared.forms.queries import GetActiveDegreeProgrammes, BuildDegreeProgrammeName
 from app.shared.forms.wtf_validators import valid_username, globally_unique_username, unique_or_original_email, \
     OptionalIf, password_strength, value_is_nonnegative, globally_unique_exam_number, unique_or_original_exam_number, \
@@ -102,7 +102,7 @@ class StudentDataMixin():
 
 
 class RegisterOfficeForm(Form, RegisterFormMixin, UniqueUserNameMixin, AskConfirmAddFormMixin, ThemeMixin,
-                         UniqueEmailFormMixin, NewPasswordFormMixin, FirstLastNameMixin):
+                         UniqueEmailFormMixin, NewPasswordFormMixin, FirstLastNameMixin, DefaultLicenseMixin):
 
     pass
 
@@ -149,7 +149,7 @@ class ConfirmRegisterStudentForm(ConfirmRegisterOfficeForm, StudentDataMixin):
 
 
 class EditOfficeForm(Form, SaveChangesMixin, EditUserNameMixin, AskConfirmEditFormMixin, ThemeMixin,
-                     EditEmailFormMixin, FirstLastNameMixin):
+                     EditEmailFormMixin, FirstLastNameMixin, DefaultLicenseMixin):
 
     pass
 

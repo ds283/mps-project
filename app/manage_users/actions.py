@@ -45,8 +45,8 @@ def register_user(**kwargs):
     kwargs['roles'] = roles_step2
 
     user = User(**kwargs)
-    db.session.add(user)
 
+    db.session.add(user)
     db.session.commit()
 
     # send confirmation email if we have been asked to

@@ -101,6 +101,12 @@ class Config(object):
     ASSETS_PERIODS_SUBFOLDER = os.environ.get('ASSETS_PERIODS_SUBFOLDER') or 'periods'
 
 
+    # DEFAULT ASSET LICENSES
+    FACULTY_DEFAULT_LICENSE = "Work"
+    STUDENT_DEFAULT_LICENSE = "Exam"
+    OFFICE_DEFAULT_LICENSE = "Work"
+
+
     # DATABASE_USER, DATABASE_PASSWORD, DATABASE_ROOT_PASSWORD and DATABASE_HOST are set in instance/secrets.py
 
     # Bleach configuration

@@ -46,15 +46,21 @@
             {{ wtf.form_field(user_form.theme) }}
         </div>
 
-        {% if user_form.password or user_form.password_confirm or user_form.random_password %}
+        {% if user_form.default_license is defined %}
             <div class="well">
-                {% if user_form.password %}
+                {{ wtf.form_field(user_form.default_license) }}
+            </div>
+        {% endif %}
+
+        {% if user_form.password is defined or user_form.password_confirm is defined or user_form.random_password is defined %}
+            <div class="well">
+                {% if user_form.password is defined %}
                     {{ wtf.form_field(user_form.password) }}
                 {% endif %}
-                {% if user_form.password_confirm %}
+                {% if user_form.password_confirm is defined %}
                     {{ wtf.form_field(user_form.password_confirm) }}
                 {% endif %}
-                {% if user_form.random_password %}
+                {% if user_form.random_password is defined %}
                     {{ wtf.form_field(user_form.random_password) }}
                 {% endif %}
             </div>
@@ -67,24 +73,24 @@
 
         {# STUDENT FIELDS #}
 
-        {% if user_form.foundation_year or user_form.exam_number or user_form.cohort or user_form.repeated_years or user_form.programme %}
+        {% if user_form.foundation_year is defined or user_form.exam_number is defined or user_form.cohort is defined or user_form.repeated_years is defined or user_form.programme is defined %}
             <div class="well">
-                {% if user_form.exam_number %}
+                {% if user_form.exam_number is defined %}
                     {{ wtf.form_field(user_form.exam_number) }}
                 {% endif %}
-                {% if user_form.cohort %}
+                {% if user_form.cohort is defined %}
                     {{ wtf.form_field(user_form.cohort) }}
                 {% endif %}
-                {%  if user_form.repeated_years %}
+                {%  if user_form.repeated_years is defined %}
                     {{ wtf.form_field(user_form.repeated_years) }}
                 {% endif %}
-                {% if user_form.foundation_year %}
+                {% if user_form.foundation_year is defined %}
                     {{ wtf.form_field(user_form.foundation_year) }}
                 {% endif %}
-                {% if user_form.intermitting %}
+                {% if user_form.intermitting is defined %}
                     {{ wtf.form_field(user_form.intermitting) }}
                 {% endif %}
-                {% if user_form.programme %}
+                {% if user_form.programme is defined %}
                     {{ wtf.form_field(user_form.programme) }}
                 {% endif %}
             </div>
@@ -93,58 +99,58 @@
 
         {# FACULTY FIELDS #}
 
-        {% if user_form.academic_title or user_form.use_academic_title %}
+        {% if user_form.academic_title is defined or user_form.use_academic_title is defined %}
             <div class="well">
-                {% if user_form.office %}
+                {% if user_form.office is defined %}
                     {{ wtf.form_field(user_form.office) }}
                 {% endif %}
-                {% if user_form.academic_title %}
+                {% if user_form.academic_title is defined %}
                     {{ wtf.form_field(user_form.academic_title) }}
                 {% endif %}
-                {% if user_form.use_academic_title %}
+                {% if user_form.use_academic_title is defined %}
                     {{ wtf.form_field(user_form.use_academic_title) }}
                 {% endif %}
             </div>
         {% endif %}
 
-        {% if user_form.sign_off_students or user_form.project_capacity or user_form.enforce_capacity or user_form.show_popularity %}
+        {% if user_form.sign_off_students is defined or user_form.project_capacity is defined or user_form.enforce_capacity is defined or user_form.show_popularity is defined %}
             <div class="well">
                 <p>Default settings for new projects</p>
-                {% if user_form.sign_off_students %}
+                {% if user_form.sign_off_students is defined %}
                     {{ wtf.form_field(user_form.sign_off_students) }}
                 {% endif %}
-                {% if user_form.project_capacity %}
+                {% if user_form.project_capacity is defined %}
                     {{ wtf.form_field(user_form.project_capacity) }}
                 {% endif %}
-                {% if user_form.enforce_capacity %}
+                {% if user_form.enforce_capacity is defined %}
                     {{ wtf.form_field(user_form.enforce_capacity) }}
                 {% endif %}
-                {% if user_form.show_popularity %}
+                {% if user_form.show_popularity is defined %}
                     {{ wtf.form_field(user_form.show_popularity) }}
                 {% endif %}
-                {% if user_form.dont_clash_presentations %}
+                {% if user_form.dont_clash_presentations is defined %}
                     {{ wtf.form_field(user_form.dont_clash_presentations) }}
                 {% endif %}
             </div>
         {% endif %}
 
-        {% if user_form.CATS_supervision or user_form.CATS_marking %}
+        {% if user_form.CATS_supervision is defined or user_form.CATS_marking is defined %}
             <div class="well">
                 <p>Workload model</p>
-                {% if user_form.CATS_supervision %}
+                {% if user_form.CATS_supervision is defined %}
                     {{ wtf.form_field(user_form.CATS_supervision) }}
                 {% endif %}
-                {% if user_form.CATS_marking %}
+                {% if user_form.CATS_marking is defined %}
                     {{ wtf.form_field(user_form.CATS_marking) }}
                 {% endif %}
-                {% if user_form.CATS_presentation %}
+                {% if user_form.CATS_presentation is defined %}
                     {{ wtf.form_field(user_form.CATS_presentation) }}
                 {% endif %}
             </div>
         {% endif %}
 
         {{ wtf.form_field(user_form.submit, button_map={'submit': 'primary'}) }}
-        {% if user_form.save_and_exit %}
+        {% if user_form.save_and_exit is defined %}
             {{ wtf.form_field(user_form.save_and_exit, button_map={'save_and_exit': 'default'}) }}
         {% endif %}
 

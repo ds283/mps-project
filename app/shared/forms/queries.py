@@ -16,7 +16,7 @@ from ...models import User, DegreeType, DegreeProgramme, SkillGroup, FacultyData
     ResearchGroup, EnrollmentRecord, Supervisor, Project, ProjectDescription, \
     MatchingAttempt, SubmissionPeriodRecord, assessment_to_periods, PresentationAssessment, ProjectClassConfig, \
     Building, Room, PresentationFeedback, FHEQ_Level, ScheduleSlot, PresentationSession, \
-    ScheduleAttempt
+    ScheduleAttempt, AssetLicense
 from ...models import project_pclasses, description_pclasses, roles_to_users
 
 from ..utils import get_current_year
@@ -369,3 +369,8 @@ def GetDestinationProjectsPClass(user_id, project_id, pclass_id):
                                             Project.id != project_id,
                                             Project.project_classes.any(id=pclass_id)) \
         .order_by(Project.name.asc())
+
+
+def GetActiveAssetLicenses():
+    return db.session.query(AssetLicense).filter_by(active=True) \
+        .order_by(AssetLicense.name.asc(), AssetLicense.version.asc())

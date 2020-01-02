@@ -10,9 +10,12 @@
 
 from wtforms import SubmitField, StringField, SelectField, BooleanField, IntegerField, TextAreaField
 from wtforms.validators import InputRequired, Optional, Length
+from wtforms_alchemy import QuerySelectField
 
 from ...models import theme_choices, academic_titles, email_freq_choices, DEFAULT_STRING_LENGTH
 from .wtf_validators import valid_username, unique_or_original_username, NotOptionalIf
+
+from .queries import GetActiveAssetLicenses
 
 
 class SaveChangesMixin():
@@ -36,6 +39,13 @@ class FirstLastNameMixin():
 class ThemeMixin():
 
     theme = SelectField('Theme', choices=theme_choices, coerce=int)
+
+
+class DefaultLicenseMixin():
+
+    default_license = QuerySelectField('Default license for content I upload',
+                                       query_factory=GetActiveAssetLicenses, get_label='name',
+                                       allow_blank=True, blank_text='Unset (no license specified)')
 
 
 class EmailSettingsMixin():

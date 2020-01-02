@@ -946,6 +946,14 @@ class User(db.Model, UserMixin):
     summary_frequency = db.Column(db.Integer(), default=1, nullable=False)
 
 
+    # DEFAULT CONTENT LICENSE
+
+    # default license id
+    default_license_id = db.Column(db.Integer(), db.ForeignKey('asset_licenses.id'))
+    default_license = db.relationship('AssetLicense', foreign_keys=[default_license_id], uselist=False,
+                                      backref=db.backref('users', lazy='dynamic'))
+
+
     # KEEP-ALIVE AND PRECOMPUTE
 
     # keep track of when this user was last active on the site

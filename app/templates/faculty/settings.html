@@ -28,6 +28,10 @@
     </div>
 
     <div class="well">
+        {{ wtf.form_field(settings_form.default_license) }}
+    </div>
+
+    <div class="well">
         <p>Titles</p>
         {{ wtf.form_field(settings_form.academic_title) }}
         {{ wtf.form_field(settings_form.use_academic_title) }}

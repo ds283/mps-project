@@ -57,6 +57,7 @@ def settings():
 
     if form.validate_on_submit():
         user.theme = form.theme.data
+        user.default_license = form.default_license.data
 
         user.group_summaries = form.group_summaries.data
         user.summary_frequency = form.summary_frequency.data
@@ -65,13 +66,5 @@ def settings():
         db.session.commit()
 
         return home_dashboard()
-
-    else:
-        # fill in fields that need data from 'User' and won't have been initialized from obj=data
-        if request.method == 'GET':
-            form.theme.data = user.theme
-
-            form.group_summaries.data = user.group_summaries
-            form.summary_frequency.data = user.summary_frequency
 
     return render_template('office/settings.html', settings_form=form, user=user)

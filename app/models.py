@@ -11714,6 +11714,35 @@ class SubmittedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin,
     uploaded_by = db.relationship('User', foreign_keys=[uploaded_id], uselist=False,
                                   backref=db.backref('uploaded_assets', lazy='dynamic'))
 
+    # (optional) license applied to this asset
+    license_id = db.Column(db.Integer(), db.ForeignKey('asset_licenses.id'), default=None)
+    license = db.relationship('AssetLicense', foreign_keys=[license_id], uselist=False,
+                              backref=db.backref('assets', lazy='dynamic'))
+
+
+class DownloadRecord(db.Model):
+    """
+    Serves as a log of downloads for a particular SubmittedAsset
+    """
+    __tablename__ = 'submitted_downloads'
+
+
+    # primary key id
+    id = db.Column(db.Integer(), primary_key=True)
+
+    # asset downloaded
+    asset_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
+    asset = db.relationship('SubmittedAsset', foreign_keys=[asset_id], uselist=False,
+                            backref=db.backref('downloads', lazy='dynamic'))
+
+    # downloaded by
+    downloader_id = db.Column(db.Integer(), db.ForeignKey('users.id'), default=None)
+    downloader = db.relationship('User', foreign_keys=[downloader_id], uselist=False,
+                                 backref=db.backref('downloads', lazy='dynamic'))
+
+    # download time
+    timestamp = db.Column(db.DateTime(), index=True)
+
 
 class AssetLicense(db.Model, ColouredLabelMixin):
     """

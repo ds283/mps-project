@@ -12,7 +12,8 @@ from app import create_app, db
 from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAssessment, \
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
     SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, ProjectClassConfig, \
-    StudentDataWorkflowHistory, ProjectDescriptionWorkflowHistory, MainConfig, StudentBatch
+    StudentDataWorkflowHistory, ProjectDescriptionWorkflowHistory, MainConfig, StudentBatch, \
+    AssetLicense
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime
@@ -52,6 +53,8 @@ def migrate_availability_data():
                     new_record.unavailable.append(session)
 
             db.session.add(new_record)
+
+    db.session.commit()
 
 
 def migrate_confirmation_data():
@@ -227,22 +230,82 @@ def populate_workflow_history():
     db.session.commit()
 
 
+def populate_default_licenses(app):
+    users = db.session.query(User).all()
+
+    faculty_lic = app.config['FACULTY_DEFAULT_LICENSE']
+    student_lic = app.config['STUDENT_DEFAULT_LICENSE']
+    office_lic = app.config['OFFICE_DEFAULT_LICENSE']
+
+    if faculty_lic is None:
+        print('!! Default faculty license is unset')
+    else:
+        print('== Default faculty license is "{name}"'.format(name=faculty_lic))
+
+    if student_lic is None:
+        print('!! Default student license is unset')
+    else:
+        print('== Default student license is "{name}"'.format(name=student_lic))
+
+    if office_lic is None:
+        print('!! Default office license is unset')
+    else:
+        print('== Default office license is "{name}"'.format(name=office_lic))
+
+    faculty_default = db.session.query(AssetLicense) \
+        .filter_by(abbreviation=faculty_lic).first()
+    student_default = db.session.query(AssetLicense) \
+        .filter_by(abbreviation=student_lic).first()
+    office_default = db.session.query(AssetLicense) \
+        .filter_by(abbreviation=office_lic).first()
+
+    for user in users:
+        if user.has_role('faculty'):
+            user.default_license = faculty_default
+            if faculty_default is not None:
+                print('== Set faculty user "{name}" to have default license '
+                      '"{lic}"'.format(name=user.name, lic=faculty_default.name))
+            else:
+                print('!! Set faculty user "{name}" to have unset default '
+                      'license'.format(name=user.name))
+        elif user.has_role('student'):
+            user.default_license = student_default
+            if student_default is not None:
+                print('== Set student user "{name}" to have default license '
+                      '"{lic}"'.format(name=user.name, lic=student_default.name))
+            else:
+                print('!! Set student user "{name}" to have unset default '
+                      'license'.format(name=user.name))
+        elif user.has_role('office'):
+            user.default_license = office_default
+            if office_default is not None:
+                print('== Set office user "{name}" to have default license '
+                      '"{lic}"'.format(name=user.name, lic=office_default.name))
+            else:
+                print('!! Set office user "{name}" to have unset default '
+                      'license'.format(name=user.name))
+        else:
+            print('!! Did not set default license for user "{name}"'.format(name=user.name))
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
 # with app.app_context():
-#     migrate_availability_data()
-#     migrate_confirmation_data()
-#     populate_email_options()
-#     populate_schedule_tags()
-#     populate_new_fields()
-#     attach_JRA_projects()
-#     populate_student_validation_data()
-#     populate_project_validation_data()
-#     migrate_description_confirmations()
-#     populate_workflow_history()
-#
-#     db.session.commit()
+    # migrate_availability_data()
+    # migrate_confirmation_data()
+    # populate_email_options()
+    # populate_schedule_tags()
+    # populate_new_fields()
+    # attach_JRA_projects()
+    # populate_student_validation_data()
+    # populate_project_validation_data()
+    # migrate_description_confirmations()
+    # populate_workflow_history()
+    # populate_default_licenses(app)
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':
+
     app.run()

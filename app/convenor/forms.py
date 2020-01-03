@@ -14,7 +14,7 @@ from wtforms.validators import InputRequired, Optional
 from wtforms_alchemy import QuerySelectField
 
 from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
-    GetPresentationAssessorFaculty, BuildActiveFacultyName
+    GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses
 from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin
 from functools import partial
 
@@ -142,6 +142,9 @@ class PeriodAttachmentMixin():
     publish_to_students = BooleanField('Publish this document to students')
 
     include_marking_emails = BooleanField('Attach this document to marking emails')
+
+    license = QuerySelectField('License', query_factory=GetActiveAssetLicenses, get_label='name',
+                               allow_blank=True, blank_text='Unset (no license specified)')
 
 
 class UploadPeriodAttachmentForm(Form, PeriodAttachmentMixin):

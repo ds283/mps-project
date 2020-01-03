@@ -6931,7 +6931,8 @@ def upload_period_attachment(pid):
                                    lifetime=None,
                                    filename=str(subfolder/filename),
                                    target_name=str(incoming_filename),
-                                   mimetype=str(attachment_file.content_type))
+                                   mimetype=str(attachment_file.content_type),
+                                   license=form.license.data)
 
             try:
                 db.session.add(asset)
@@ -6984,7 +6985,12 @@ def upload_period_attachment(pid):
 
             return redirect(url_for('convenor.submission_record_documents', pid=pid, url=url, text=text))
 
-    return render_template('convenor/documents/upload_period_attachment.html', record=record, form=form, url=url, text=text)
+    else:
+        if request.method == 'GET':
+            form.license.data = current_user.default_license
+
+    return render_template('convenor/documents/upload_period_attachment.html', record=record, form=form,
+                           url=url, text=text)
 
 
 @convenor.route('/edit_period_attachment/<int:aid>', methods=['GET', 'POST'])
@@ -7013,6 +7019,7 @@ def edit_period_attachment(aid):
         return redirect(request.referrer)
 
     form = EditPeriodAttachmentForm(obj=attachment)
+    asset = attachment.attachment
 
     if form.validate_on_submit():
         attachment.publish_to_students = form.publish_to_students.data
@@ -7023,8 +7030,9 @@ def edit_period_attachment(aid):
         faculty_role = db.session.query(Role).filter_by(name='faculty').first()
         office_role = db.session.query(Role).filter_by(name='office').first()
 
-        asset = attachment.attachment
         if asset is not None:
+            asset.license = form.license.data
+
             if form.publish_to_students.data:
                 if student_role not in asset.access_control_roles:
                     asset.access_control_roles.append(student_role)
@@ -7051,6 +7059,10 @@ def edit_period_attachment(aid):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
         return redirect(url_for('convenor.submission_record_documents', pid=record.id, url=url, text=text))
+
+    else:
+        if request.method == 'GET':
+            form.license.data = asset.license if asset is not None else None
 
     return render_template('convenor/documents/edit_period_attachment.html', attachment=attachment, record=record,
                            form=form, url=url, text=text)

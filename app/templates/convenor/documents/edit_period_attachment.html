@@ -20,6 +20,8 @@
                         {{ form.hidden_tag() }}
 
                         {{ wtf.form_field(form.description) }}
+                        {{ wtf.form_field(form.license) }}
+                        <hr class="intro-divider" role="separator">
                         {{ wtf.form_field(form.publish_to_students) }}
                         {{ wtf.form_field(form.include_marking_emails) }}
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}

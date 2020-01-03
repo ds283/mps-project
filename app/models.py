@@ -11720,6 +11720,11 @@ class SubmittedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin,
                               backref=db.backref('assets', lazy='dynamic'))
 
 
+    @property
+    def number_downloads(self):
+        return get_count(self.downloads)
+
+
 class DownloadRecord(db.Model):
     """
     Serves as a log of downloads for a particular SubmittedAsset

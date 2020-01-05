@@ -121,18 +121,6 @@ def AssignPresentationFeedbackFormFactory(record_id, slot_id):
     return AssignPresentationFeedbackForm
 
 
-class UploadReportForm(Form):
-
-    submit = SubmitField('Upload report')
-
-
-class UploadSubmitterAttachmentForm(Form):
-
-    description = StringField('Comment', description='Give a short description of the attachment')
-
-    submit = SubmitField('Upload attachment')
-
-
 class PeriodAttachmentMixin():
 
     description = StringField('Comment', description='Give a short description of the attachment. This will be '

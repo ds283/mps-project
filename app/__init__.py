@@ -452,5 +452,7 @@ def create_app():
     from .manage_users import manage_users as manage_users_blueprint
     app.register_blueprint(manage_users_blueprint, url_prefix='/manage_users')
 
-    return app, celery
+    from .documents import documents as documents_blueprint
+    app.register_blueprint(documents_blueprint, url_prefix='/documents')
 
+    return app, celery

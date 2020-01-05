@@ -15,7 +15,7 @@
                     Upload new attachment for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}
                 </div>
                 <div class="panel-body">
-                    <form action="{{ url_for('convenor.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
+                    <form action="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
                         {{ form.hidden_tag() }}
 
                         <label class="btn btn-default" for="file-selector">
@@ -33,7 +33,7 @@
             </div>
 
             <div>
-                <a href="{{ url_for('convenor.submitter_documents', sid=record.id, url=url, text=text) }}">
+                <a href="{{ url_for('documents.submitter_documents', sid=record.id, url=url, text=text) }}">
                     <i class="fa fa-backward"></i> Return to document manager for <i class="fa fa-user"></i> {{ record.owner.student.user.name }}
                 </a>
             </div>

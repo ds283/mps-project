@@ -70,14 +70,14 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {{ asset_line(asset, none, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('convenor.delete_submitter_report', sid=record.id)) }}
+                            {{ asset_line(asset, none, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('documents.delete_submitter_report', sid=record.id)) }}
                         </tbody>
                     </table>
                 {% else %}
                     <strong>No report attached.</strong>
                     <hr class="into-divider">
                     <div style="text-align: center;">
-                        <a href="{{ url_for('convenor.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                        <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
                             <i class="fa fa-plus"></i>
                             Upload report
                         </a>
@@ -99,7 +99,7 @@
                         <tbody>
                             {% for attachment in record.attachments %}
                                 {% set asset = attachment.attachment %}
-                                {{ asset_line(asset, attachment, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('convenor.delete_submitter_attachment', aid=attachment.id)) }}
+                                {{ asset_line(asset, attachment, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('documents.delete_submitter_attachment', aid=attachment.id)) }}
                             {% endfor %}
                         </tbody>
                     </table>
@@ -108,7 +108,7 @@
                 {% endif %}
                 <hr class="into-divider">
                 <div style="text-align: center;">
-                    <a href="{{ url_for('convenor.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                    <a href="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
                         <i class="fa fa-plus"></i>
                         Upload new attachment
                     </a>

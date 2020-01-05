@@ -342,7 +342,7 @@ _menu = \
         {% for r in recs %}
             {% set disabled = not pclass.publish or r.period.closed %}
             <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('convenor.submitter_documents', sid=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
+                <a {% if not disabled %}href="{{ url_for('documents.submitter_documents', sid=r.id, text='submitters view', url=url_for('convenor.submitters', id=pclass.id)) }}"{% endif %}>
                     <i class="fa fa-file-text"></i> Period #{{ r.submission_period }}
                 </a>
             </li>

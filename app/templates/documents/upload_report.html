@@ -26,6 +26,7 @@
                         <span class="label label-info" id="filename-data" style="height: 24px;"></span>
 
                         <hr class="intro-divider">
+                        {{ wtf.form_field(form.license) }}
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>

@@ -9,22 +9,24 @@
 #
 
 from flask_security.forms import Form
-from wtforms import SubmitField, DateField, IntegerField, StringField, BooleanField
-from wtforms.validators import InputRequired, Optional
+from wtforms import SubmitField, StringField
 from wtforms_alchemy import QuerySelectField
 
-from ..shared.forms.queries import MarkerQuery, BuildMarkerLabel, GetPresentationFeedbackFaculty, \
-    GetPresentationAssessorFaculty, BuildActiveFacultyName, GetActiveAssetLicenses
-from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPeriodCommonMixin
-from functools import partial
+from ..shared.forms.queries import GetActiveAssetLicenses
 
 
-class UploadReportForm(Form):
+class UploadMixin():
+
+    license = QuerySelectField('License', query_factory=GetActiveAssetLicenses, get_label='name',
+                               allow_blank=True, blank_text='Unset (no license specified)')
+
+
+class UploadReportForm(Form, UploadMixin):
 
     submit = SubmitField('Upload report')
 
 
-class UploadSubmitterAttachmentForm(Form):
+class UploadSubmitterAttachmentForm(Form, UploadMixin):
 
     description = StringField('Comment', description='Give a short description of the attachment')
 

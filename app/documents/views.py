@@ -161,7 +161,8 @@ def upload_submitter_report(sid):
                                    lifetime=None,
                                    filename=str(subfolder/filename),
                                    target_name=str(incoming_filename),
-                                   mimetype=str(report_file.content_type))
+                                   mimetype=str(report_file.content_type),
+                                   license=form.license.data)
 
             try:
                 db.session.add(asset)
@@ -211,6 +212,10 @@ def upload_submitter_report(sid):
             flash('Report "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
 
             return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
+
+    else:
+        if request.method == 'GET':
+            form.license.data = current_user.default_license
 
     return render_template('documents/upload_report.html', record=record, form=form, url=url, text=text)
 
@@ -346,7 +351,8 @@ def upload_submitter_attachment(sid):
                                    lifetime=None,
                                    filename=str(subfolder/filename),
                                    target_name=str(incoming_filename),
-                                   mimetype=str(attachment_file.content_type))
+                                   mimetype=str(attachment_file.content_type),
+                                   license=form.license.data)
 
             try:
                 db.session.add(asset)
@@ -398,5 +404,9 @@ def upload_submitter_attachment(sid):
             flash('Attachment "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
 
             return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
+
+    else:
+        if request.method == 'GET':
+            form.license.data = current_user.default_license
 
     return render_template('documents/upload_attachment.html', record=record, form=form, url=url, text=text)

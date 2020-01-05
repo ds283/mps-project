@@ -64,7 +64,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
     LiveProject, SubmissionPeriodRecord, SubmissionPeriodDefinition, PresentationAssessment, \
     PresentationSession, Room, Building, ScheduleAttempt, ScheduleSlot, SubmissionRecord, \
     Module, FHEQ_Level, AssessorAttendanceData, GeneratedAsset, TemporaryAsset, SubmittedAsset, \
-    AssetLicense
+    AssetLicense, DownloadRecord
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
@@ -7892,6 +7892,22 @@ def download_submitted_asset(asset_id):
     if not asset.has_access(current_user.id):
         flash('You do not have permissions to download this asset. If you think this is a mistake, please contact '
               'a system administrator.', 'info')
+        return redirect(request.referrer)
+
+    # store download details
+    record = DownloadRecord(asset_id=asset.id,
+                            downloader_id=current_user.id,
+                            timestamp=datetime.now())
+
+    try:
+        db.session.add(record)
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        flash('Could not serve download request for asset_id={number} because of a database error. '
+              'Please contact a system administrator'.format(number=asset_id),
+              'error')
         return redirect(request.referrer)
 
     abs_path = canonical_submitted_asset_filename(asset.filename, root_folder='ASSETS_SUBMITTED_SUBFOLDER')

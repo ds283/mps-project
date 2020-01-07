@@ -10,54 +10,65 @@
 
 from datetime import datetime
 from pathlib import Path
+from functools import partial
 
 from flask import render_template, redirect, url_for, flash, request, current_app
-from flask_security import roles_accepted, current_user
+from flask_security import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
 
 from . import documents
-from .forms import UploadReportForm, UploadSubmitterAttachmentForm
+from .forms import UploadReportForm, UploadSubmitterAttachmentForm, EditReportForm, EditSubmitterAttachmentForm
+from .utils import is_editable, is_deletable, is_listable, is_uploadable
+
 from ..database import db
-from ..models import SubmissionRecord, SubmittedAsset, SubmissionAttachment, Role
+from ..models import SubmissionRecord, SubmittedAsset, SubmissionAttachment, Role, SubmissionPeriodRecord, \
+    ProjectClassConfig, ProjectClass
 
 from ..shared.asset_tools import make_submitted_asset_filename
-from ..shared.validators import validate_is_convenor
 from ..uploads import submitted_files
 
 
 @documents.route('/submitter_documents/<int:sid>')
-@roles_accepted('faculty', 'admin', 'root')
+@login_required
 def submitter_documents(sid):
     # sid is a SubmissionRecord id
-    record = SubmissionRecord.query.get_or_404(sid)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
 
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
+    period: SubmissionPeriodRecord = record.period
+    config: ProjectClassConfig = period.config
+    pclass: ProjectClass = config.project_class
+
+    # editable if marking has not yet commenced (otherwise we are changing the asset after it has already
+    # been sent to markers)
+    if not is_listable(record, message=True):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    return render_template('documents/submitter_manager.html', record=record, url=url, text=text)
+    is_admin = current_user.has_role('admin') or current_user.has_role('root') \
+        or pclass.is_convenor(current_user.id)
+
+    return render_template('documents/submitter_manager.html', record=record, period=period, url=url, text=text,
+                           is_editable=partial(is_editable, record, period=period, config=config, message=False),
+                           deletable=is_deletable(record, period, config, message=False), is_admin=is_admin,
+                           report_uploadable=is_uploadable(record, message=False, allow_student=False),
+                           attachment_uploadable=is_uploadable(record, message=False, allow_student=True))
 
 
 @documents.route('/delete_submitter_report/<int:sid>')
-@roles_accepted('faculty', 'admin', 'root')
+@login_required
 def delete_submitter_report(sid):
     # sid is a SubmissionRecord id
-    record = SubmissionRecord.query.get_or_404(sid)
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
 
+    # nothing to do if no report attached
     if record.report is None:
         flash('Could not delete report for this submitter because no file has been attached.', 'info')
         return redirect(request.referrer)
 
-    # check user is convenor for the project's class, or has admin/root privileges
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
-
-    # check has privileges to handle the asset
-    if not record.report.has_access(current_user.id):
-        flash('Could not delete report for this submitted because you do not have privileges to access it.', 'info')
+    # validate user has permission to carry out deletions
+    if not is_deletable(record, message=True):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -77,22 +88,18 @@ def delete_submitter_report(sid):
 
 
 @documents.route('/perform_delete_submitter_report/<int:sid>')
-@roles_accepted('faculty', 'admin', 'root')
+@login_required
 def perform_delete_submitter_report(sid):
     # sid is a SubmissionRecord id
     record = SubmissionRecord.query.get_or_404(sid)
 
+    # nothing to do if no report attached
     if record.report is None:
         flash('Could not delete report for this submitter because no file has been attached.', 'info')
         return redirect(request.referrer)
 
-    # check is convenor for the project's class
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
-
-    # check has privileges to handle the asset
-    if not record.report.has_access(current_user.id):
-        flash('Could not delete report for this submitted because you do not have privileges to access it.', 'info')
+    # validate user has permission to carry out deletions
+    if not is_deletable(record, message=True):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -102,7 +109,7 @@ def perform_delete_submitter_report(sid):
         # set lifetime of uploaded asset to 30 days, after which it will be deleted by the garbage collection.
         # also, unlink asset record from this SubmissionRecord.
         # notice we have to adjust the timestamp, since together with the lifetime this determines the expiry date
-        record.report.timestamp = datetime.now()
+        record.report.timestamp = datetime.now()    # TODO: has side-effect of erasing initial upload time - FIXME?
         record.report.lifetime = 30*24*60*60
         record.report_id = None
         db.session.commit()
@@ -117,7 +124,7 @@ def perform_delete_submitter_report(sid):
 
 
 @documents.route('/upload_submitter_report/<int:sid>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
+@login_required
 def upload_submitter_report(sid):
     # sid is a SubmissionRecord id
     record = SubmissionRecord.query.get_or_404(sid)
@@ -129,7 +136,7 @@ def upload_submitter_report(sid):
     # check is convenor for the project's class, or has suitable admin/root privileges
     config = record.owner.config
     pclass = config.project_class
-    if not validate_is_convenor(pclass):
+    if not is_uploadable(record, message=True, allow_student=False):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -208,8 +215,8 @@ def upload_submitter_report(sid):
             except SQLAlchemyError as e:
                 flash('Could not upload report due to a database issue. Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-            flash('Report "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
+            else:
+                flash('Report "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
 
             return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
 
@@ -220,29 +227,111 @@ def upload_submitter_report(sid):
     return render_template('documents/upload_report.html', record=record, form=form, url=url, text=text)
 
 
+@documents.route('/edit_submitter_report/<int:sid>', methods=['GET', 'POST'])
+@login_required
+def edit_submitter_report(sid):
+    # sid is a SubmissionRecord id
+    record: SubmissionRecord = SubmissionRecord.query.get_or_404(sid)
+
+    # get report asset; if none, nothing to do
+    asset: SubmittedAsset = record.report
+    if asset is None:
+        flash('Could not edit the report for this submission record because it has not yet been attached.', 'info')
+        return redirect(request.referrer)
+
+    # verify current user has privileges to edit the report
+    if not is_editable(record, asset=asset, message=True, allow_student=False):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    form = EditReportForm(obj=asset)
+
+    if form.validate_on_submit():
+        asset.license = form.license.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not save changes to this asset record due to a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for('documents.submitter_documents', sid=record.id, url=url, text=text))
+
+    action_url = url_for('documents.edit_submitter_report', sid=record.id, url=url, text=text)
+    return render_template('documents/edit_attachment.html', form=form, record=record,
+                           asset=asset, action_url=action_url)
+
+
+@documents.route('/edit_submitter_attachment/<int:aid>', methods=['GET', 'POST'])
+@login_required
+def edit_submitter_attachment(aid):
+    # aid is a SubmissionAttachment
+    attachment: SubmissionAttachment = SubmissionAttachment.query.get_or_404(aid)
+
+    # get attached asset
+    asset: SubmittedAsset = attachment.attachment
+    if asset is None:
+        flash('Could not edit this attachment because of a database error. '
+              'Please contact a system administrator.', 'info')
+        return redirect(request.referrer)
+
+    # extract SubmissionRecord and ensure that current user has sufficient privileges to perform edits
+    record: SubmissionRecord = attachment.parent
+    if not is_editable(record, asset=asset, message=True, allow_student=True):
+        return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
+    form = EditSubmitterAttachmentForm(obj=attachment)
+
+    if form.validate_on_submit():
+        attachment.description = form.description.data
+        asset.license = form.license.data
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not save changes to this asset record due to a database error. '
+                  'Please contact a system administrator.', 'error')
+            db.session.rollback()
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+        return redirect(url_for('documents.submitter_documents', sid=record.id, url=url, text=text))
+
+    else:
+        if request.method == 'GET':
+            form.license.data = asset.license
+
+    action_url = url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text)
+    return render_template('documents/edit_attachment.html', form=form, record=record, attachment=attachment,
+                           asset=asset, action_url=action_url)
+
+
 @documents.route('/delete_submitter_attachment/<int:aid>')
-@roles_accepted('faculty', 'admin', 'root')
+@login_required
 def delete_submitter_attachment(aid):
     # aid is a SubmissionAttachment id
-    attachment = SubmissionAttachment.query.get_or_404(aid)
+    attachment: SubmissionAttachment = SubmissionAttachment.query.get_or_404(aid)
 
-    if attachment.attachment is None:
+    # if asset is missing, nothing to do
+    asset = attachment.attachment
+    if asset is None:
         flash('Could not delete attachment because of a database error. '
               'Please contact a system administrator.', 'info')
         return redirect(request.referrer)
 
-    # check user is convenor the project class this attachment belongs to, or has admin/root privileges
     record = attachment.parent
     if record is None:
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
         return redirect(request.referrer)
 
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
-
-    # check has privileges to handle the asset
-    if not attachment.attachment.has_access(current_user.id):
-        flash('Could not delete attachment because you do not have privileges to access it.', 'info')
+    # check user has sufficient privileges to perform the deletion
+    if not is_deletable(record, message=True):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -251,8 +340,7 @@ def delete_submitter_attachment(aid):
     title = 'Delete project attachment'
     action_url = url_for('documents.perform_delete_submitter_attachment', aid=aid, sid=record.id, url=url, text=text)
 
-    name = attachment.attachment.target_name if attachment.attachment.target_name is not None else \
-        attachment.attachment.filename
+    name = asset.target_name if asset.target_name is not None else asset.filename
     message = '<p>Please confirm that you wish to remove the attachment <strong>{name}</strong> for ' \
               '<i class="fa fa-user"></i> {student} {period}.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=name, student=record.owner.student.user.name,
@@ -264,36 +352,33 @@ def delete_submitter_attachment(aid):
 
 
 @documents.route('/perform_delete_submitter_attachment/<int:aid>/<int:sid>')
-@roles_accepted('faculty', 'admin', 'root')
+@login_required
 def perform_delete_submitter_attachment(aid, sid):
     # aid is a SubmissionAttachment id
     attachment = SubmissionAttachment.query.get_or_404(aid)
 
-    if attachment.attachment is None:
+    # if asset is missing, nothing to do
+    asset = attachment.attachment
+    if asset is None:
         flash('Could not delete attachment because of a database error. '
               'Please contact a system administrator.', 'info')
         return redirect(request.referrer)
 
-    # check user is convenor the project class this attachment belongs to, or has admin/root privileges
     record = attachment.parent
     if record is None:
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
         return redirect(request.referrer)
 
-    if not validate_is_convenor(record.project.config.project_class):
-        return redirect(request.referrer)
-
-    # check has privileges to handle the asset
-    if not attachment.attachment.has_access(current_user.id):
-        flash('Could not delete attachment because you do not have privileges to access it.', 'info')
+    # check user has sufficient privileges to perform the deletion
+    if not is_deletable(record, message=True):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
     try:
-        attachment.attachment.timestamp = datetime.now()
-        attachment.attachment.lifetime = 30*24*60*60
+        asset.timestamp = datetime.now()
+        asset.lifetime = 30 * 24 * 60 * 60
         attachment.attachment_id = None
 
         db.session.flush()
@@ -311,7 +396,7 @@ def perform_delete_submitter_attachment(aid, sid):
 
 
 @documents.route('/upload_submitter_attachment/<int:sid>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
+@login_required
 def upload_submitter_attachment(sid):
     # sid is a SubmissionRecord id
     record = SubmissionRecord.query.get_or_404(sid)
@@ -319,7 +404,7 @@ def upload_submitter_attachment(sid):
     # check is convenor for the project's class, or has suitable admin/root privileges
     config = record.owner.config
     pclass = config.project_class
-    if not validate_is_convenor(pclass):
+    if not is_uploadable(record, message=True, allow_student=True):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -400,8 +485,8 @@ def upload_submitter_attachment(sid):
                 flash('Could not upload attachment due to a database issue. '
                       'Please contact an administrator.', 'error')
                 current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-
-            flash('Attachment "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
+            else:
+                flash('Attachment "{file}" was successfully uploaded.'.format(file=incoming_filename), 'info')
 
             return redirect(url_for('documents.submitter_documents', sid=sid, url=url, text=text))
 

@@ -12,6 +12,7 @@ from flask_security.forms import Form
 from wtforms import SubmitField, StringField
 from wtforms_alchemy import QuerySelectField
 
+from ..shared.forms.mixins import SaveChangesMixin
 from ..shared.forms.queries import GetActiveAssetLicenses
 
 
@@ -26,8 +27,21 @@ class UploadReportForm(Form, UploadMixin):
     submit = SubmitField('Upload report')
 
 
-class UploadSubmitterAttachmentForm(Form, UploadMixin):
+class EditReportForm(Form, UploadMixin, SaveChangesMixin):
+
+    pass
+
+
+class AttachmentMixin(UploadMixin):
 
     description = StringField('Comment', description='Give a short description of the attachment')
 
+
+class UploadSubmitterAttachmentForm(Form, AttachmentMixin):
+
     submit = SubmitField('Upload attachment')
+
+
+class EditSubmitterAttachmentForm(Form, AttachmentMixin, SaveChangesMixin):
+
+    pass

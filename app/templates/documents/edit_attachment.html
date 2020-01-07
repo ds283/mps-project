@@ -2,8 +2,13 @@
 
 {% import "bootstrap/wtf.html" as wtf %}
 
+{% set label = 'attachement' %}
+{% if attachment is not defined %}
+    {% set label = 'report' %}
+{% endif %}
+
 {% block title %}
-    Edit attachment for {{ record.display_name }}
+    Edit {{ label }} for {{ record.owner.student.user.name }}
 {% endblock %}
 
 {% block bodyblock %}
@@ -12,18 +17,17 @@
         <div class="col-xs-8">
             <div class="panel panel-primary panel-primary-bg">
                 <div class="panel-heading">
-                    Edit attachment <strong>{{ asset.target_name if asset.target_name else asset.filename }}</strong>
-                    for <strong>{{ record.display_name }}</strong>
+                    Edit {{ label }} <strong>{{ asset.target_name if asset.target_name else asset.filename }}</strong>
+                    for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}
                 </div>
                 <div class="panel-body">
-                    <form action="{{ url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text) }}" method="POST" enctype="multipart/form-data" name="attachment_form">
+                    <form action="{{ action_url }}" method="POST" enctype="multipart/form-data" name="attachment_form">
                         {{ form.hidden_tag() }}
 
-                        {{ wtf.form_field(form.description) }}
+                        {% if form.description is defined %}
+                            {{ wtf.form_field(form.description) }}
+                        {% endif %}
                         {{ wtf.form_field(form.license) }}
-                        <hr class="intro-divider" role="separator">
-                        {{ wtf.form_field(form.publish_to_students) }}
-                        {{ wtf.form_field(form.include_marking_emails) }}
                         {{ wtf.form_field(form.submit, button_map={'submit': 'primary'}) }}
                     </form>
                 </div>

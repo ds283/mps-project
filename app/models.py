@@ -7174,7 +7174,7 @@ class SubmissionRecord(db.Model):
 
     @property
     def number_attachments(self):
-        return get_count(self.attachments)
+        return get_count(self.attachments) + get_count(self.period.attachments) + (1 if self.report is not None else 0)
 
 
 class SubmissionAttachment(db.Model):
@@ -7195,7 +7195,7 @@ class SubmissionAttachment(db.Model):
     # attached file
     attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=None)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
-                                 backref=db.backref('submission_attachments', uselist=False))
+                                 backref=db.backref('submission_attachment', uselist=False))
 
     # textual description of attachment
     description = db.Column(db.Text())
@@ -7219,7 +7219,7 @@ class PeriodAttachment(db.Model):
     # attached file
     attachment_id = db.Column(db.Integer(), db.ForeignKey('submitted_assets.id'), default=False)
     attachment = db.relationship('SubmittedAsset', foreign_keys=[attachment_id], uselist=False,
-                                 backref=db.backref('period_attachments', uselist=False))
+                                 backref=db.backref('period_attachment', uselist=False))
 
     # publish to students
     publish_to_students = db.Column(db.Boolean(), default=False)

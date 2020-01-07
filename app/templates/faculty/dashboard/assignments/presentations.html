@@ -55,6 +55,7 @@
                                         </td>
                                         <td>
                                             <div style="text-align: right;" class="pull-right">
+                                                <a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ rec.number_attachments }})...</a>
                                                 {% if slot.feedback_state(id) > slot.FEEDBACK_NOT_YET %}
                                                     {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
                                                         {% if valid %}

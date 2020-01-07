@@ -5031,36 +5031,6 @@ def edit_submission_record(pid):
     return render_template('convenor/dashboard/edit_submission_record.html', form=edit_form, record=record)
 
 
-@convenor.route('/submission_record_documents/<int:pid>')
-@roles_accepted('faculty', 'admin', 'route')
-def submission_record_documents(pid):
-    # id is a SubmissionPeriodRecord
-    record = SubmissionPeriodRecord.query.get_or_404(pid)
-    config = record.config
-
-    # reject is user is not a convenor for the associated project class
-    if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
-
-    # reject if this submission period is in the past
-    if config.submission_period > record.submission_period:
-        flash('It is no longer possible to edit this submission period because it has been closed.', 'info')
-        return redirect(request.referrer)
-
-    # reject if period is retired
-    if record.retired:
-        flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
-        return redirect(request.referrer)
-
-    url = request.args.get('url', None)
-    text = request.args.get('text', None)
-
-    state = config.submitter_lifecycle
-    editable = (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
-    return render_template('convenor/documents/period_manager.html', record=record, url=url, text=text, state=state,
-                           config=config, editable=editable)
-
-
 @convenor.route('/publish_assignment/<int:id>')
 @roles_accepted('faculty', 'admin', 'route')
 def publish_assignment(id):
@@ -6405,45 +6375,79 @@ def custom_CATS_limits(record_id):
                            user=record.owner.user)
 
 
-@convenor.route('/delete_period_attachment/<int:aid>')
-@roles_accepted('faculty', 'admin', 'root')
-def delete_period_attachment(aid):
-    # aid is a PeriodAttachment id
-    attachment = PeriodAttachment.query.get_or_404(aid)
+@convenor.route('/submission_record_documents/<int:pid>')
+@roles_accepted('faculty', 'admin', 'route')
+def submission_record_documents(pid):
+    # id is a SubmissionPeriodRecord
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
+    config: ProjectClassConfig = record.config
 
-    if attachment.attachment is None:
-        flash('Could not delete attachment because of a database error. '
-              'Please contact a system administrator.', 'info')
-        return redirect(request.referrer)
-
-    # check user is convenor the project class this attachment belongs to, or has admin/root privileges
-    record = attachment.parent
-    if record is None:
-        flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
-        return redirect(request.referrer)
-
-    config = record.config
+    # reject is user is not a convenor for the associated project class
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    # check has privileges to handle the asset
-    if not attachment.attachment.has_access(current_user.id):
-        flash('Could not delete attachment because you do not have privileges to access it.', 'info')
+    # reject if this submission period is in the past
+    if config.submission_period > record.submission_period:
+        flash('It is no longer possible to edit this submission period because it has been closed.', 'info')
         return redirect(request.referrer)
 
-    state = config.submitter_lifecycle
-    editable = (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
-
-    if not editable:
-        flash('Cannot edit settings for this submission period because marking is already underway, or has '
-              'been completed.', 'error')
+    # reject if period is retired
+    if record.retired:
+        flash('It is no longer possible to edit this submission period because it has been retired.', 'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
+    state = config.submitter_lifecycle
+    deletable = (current_user.has_role('root') or current_user.has_role('admin')) \
+                 or (not record.closed and (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY))
+    return render_template('convenor/documents/period_manager.html', record=record, url=url, text=text, state=state,
+                           config=config, deletable=deletable)
+
+
+@convenor.route('/delete_period_attachment/<int:aid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_period_attachment(aid):
+    # aid is a PeriodAttachment id
+    attachment: PeriodAttachment = PeriodAttachment.query.get_or_404(aid)
+    asset: SubmittedAsset = attachment.attachment
+
+    if asset is None:
+        flash('Could not delete attachment because of a database error. '
+              'Please contact a system administrator.', 'info')
+        return redirect(request.referrer)
+
+    # check user is convenor the project class this attachment belongs to, or has admin/root privileges
+    record: SubmissionPeriodRecord = attachment.parent
+    if record is None:
+        flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
+        return redirect(request.referrer)
+
+    config: ProjectClassConfig = record.config
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # admin or root users can always delete; otherwise, check that we are not marking
+    if not (current_user.has_role('root') or current_user.has_role('admin')):
+        if record.closed:
+            flash('It is no longer possible to delete documents attached to this submission period, '
+                  'because it has been closed. A user with admin '
+                  'privileges can still remove attachments if this is necessary.', 'info')
+            return redirect(request.referrer)
+
+        state = config.submitter_lifecycle
+        if state >= config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+            flash('It is no longer possible to delete documents attached to this submission period, '
+                  'because its marking and feedback phase is now underway. A user with admin privileges '
+                  'can still remove attachments if this is necessary.', 'info')
+            return redirect(request.referrer)
+
+    url = request.args.get('url', None)
+    text = request.args.get('text', None)
+
     title = 'Delete submission period attachment'
-    action_url = url_for('convenor.perform_delete_period_attachment', aid=aid, pid=record.id, url=url, text=text)
+    action_url = url_for('convenor.perform_delete_period_attachment', aid=aid, url=url, text=text)
 
     name = attachment.attachment.target_name if attachment.attachment.target_name is not None else \
         attachment.attachment.filename
@@ -6456,51 +6460,54 @@ def delete_period_attachment(aid):
                            message=message, submit_label=submit_label)
 
 
-@convenor.route('/perform_delete_period_attachment/<int:aid>/<int:pid>')
+@convenor.route('/perform_delete_period_attachment/<int:aid>')
 @roles_accepted('faculty', 'admin', 'root')
-def perform_delete_period_attachment(aid, pid):
+def perform_delete_period_attachment(aid):
     # aid is a PeriodAttachment id
-    attachment = PeriodAttachment.query.get_or_404(aid)
+    attachment: PeriodAttachment = PeriodAttachment.query.get_or_404(aid)
+    asset: SubmittedAsset = attachment.attachment
 
-    if attachment.attachment is None:
+    if asset is None:
         flash('Could not delete attachment because of a database error. '
               'Please contact a system administrator.', 'info')
         return redirect(request.referrer)
 
     # check user is convenor the project class this attachment belongs to, or has admin/root privileges
-    record = attachment.parent
+    record: SubmissionPeriodRecord = attachment.parent
     if record is None:
         flash('Can not delete this attachment because it is not attached to a submitter.', 'info')
         return redirect(request.referrer)
 
-    config = record.config
+    config: ProjectClassConfig = record.config
     if not validate_is_convenor(config.project_class):
         return redirect(request.referrer)
 
-    # check has privileges to handle the asset
-    if not attachment.attachment.has_access(current_user.id):
-        flash('Could not delete attachment because you do not have privileges to access it.', 'info')
-        return redirect(request.referrer)
+    # admin or root users can always delete; otherwise, check that we are not marking
+    if not (current_user.has_role('root') or current_user.has_role('admin')):
+        if record.closed:
+            flash('It is no longer possible to delete documents attached to this submission period, '
+                  'because it has been closed. A user with admin '
+                  'privileges can still remove attachments if this is necessary.', 'info')
+            return redirect(request.referrer)
 
-    state = config.submitter_lifecycle
-    editable = (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
-
-    if not editable:
-        flash('Cannot edit settings for this submission period because marking is already underway, or has '
-              'been completed.', 'error')
-        return redirect(request.referrer)
+        state = config.submitter_lifecycle
+        if state >= config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY:
+            flash('It is no longer possible to delete documents attached to this submission period, '
+                  'because its marking and feedback phase is now underway. A user with admin privileges '
+                  'can still remove attachments if this is necessary.', 'info')
+            return redirect(request.referrer)
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
+    asset.timestamp = datetime.now()
+    asset.lifetime = 30 * 24 * 60 * 60
+    attachment.attachment_id = None
+
     try:
-        attachment.attachment.timestamp = datetime.now()
-        attachment.attachment.lifetime = 30*24*60*60
-        attachment.attachment_id = None
-
         db.session.flush()
-
         db.session.delete(attachment)
+
         db.session.commit()
 
     except SQLAlchemyError as e:
@@ -6516,11 +6523,11 @@ def perform_delete_period_attachment(aid, pid):
 @roles_accepted('faculty', 'admin', 'root')
 def upload_period_attachment(pid):
     # pid is a SubmissionPeriodRecord id
-    record = SubmissionPeriodRecord.query.get_or_404(pid)
+    record: SubmissionPeriodRecord = SubmissionPeriodRecord.query.get_or_404(pid)
 
     # check user is convenor for the project's class, or has suitable admin/root privileges
-    config = record.config
-    pclass = config.project_class
+    config: ProjectClassConfig = record.config
+    pclass: ProjectClass = config.project_class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
@@ -6618,34 +6625,31 @@ def upload_period_attachment(pid):
 @roles_accepted('faculty', 'admin', 'root')
 def edit_period_attachment(aid):
     # pid is a PeriodAttachment id
-    attachment = PeriodAttachment.query.get_or_404(aid)
+    record: PeriodAttachment = PeriodAttachment.query.get_or_404(aid)
 
     # check user is convenor for the project's class, or has suitable admin/root privileges
-    record = attachment.parent
-    config = record.config
-    pclass = config.project_class
+    period: SubmissionPeriodRecord = record.parent
+    config: ProjectClassConfig = period.config
+    pclass: ProjectClass = config.project_class
 
+    asset = record.attachment
+    if asset is None:
+        flash('Cannot edit this attachment due to a database error. Please contact a system administrator.', 'info')
+        return redirect(request.referrer)
+
+    # ensure logged-in user has edit privileges
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    state = config.submitter_lifecycle
-    editable = (state < config.SUBMITTER_LIFECYCLE_FEEDBACK_MARKING_ACTIVITY)
-
-    if not editable:
-        flash('Cannot edit settings for this submission period because marking is already underway, or has '
-              'been completed.', 'error')
-        return redirect(request.referrer)
-
-    form = EditPeriodAttachmentForm(obj=attachment)
-    asset = attachment.attachment
+    form = EditPeriodAttachmentForm(obj=record)
 
     if form.validate_on_submit():
-        attachment.publish_to_students = form.publish_to_students.data
-        attachment.include_marking_emails = form.include_marking_emails.data
-        attachment.description = form.description.data
+        record.publish_to_students = form.publish_to_students.data
+        record.include_marking_emails = form.include_marking_emails.data
+        record.description = form.description.data
 
         student_role = db.session.query(Role).filter_by(name='student').first()
         faculty_role = db.session.query(Role).filter_by(name='faculty').first()
@@ -6679,11 +6683,11 @@ def edit_period_attachment(aid):
                   'Please contact an administrator.', 'error')
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
 
-        return redirect(url_for('convenor.submission_record_documents', pid=record.id, url=url, text=text))
+        return redirect(url_for('convenor.submission_record_documents', pid=period.id, url=url, text=text))
 
     else:
         if request.method == 'GET':
             form.license.data = asset.license if asset is not None else None
 
-    return render_template('convenor/documents/edit_period_attachment.html', attachment=attachment, record=record,
-                           form=form, url=url, text=text)
+    return render_template('convenor/documents/edit_period_attachment.html', attachment=record, record=period,
+                           asset=asset, form=form, url=url, text=text)

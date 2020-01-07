@@ -67,6 +67,7 @@
                             </div>
                             <div class="col-xs-4">
                                 <div style="text-align: right;" class="pull-right">
+                                    <a href="{{ url_for('documents.submitter_documents', sid=record.id, url=url_for('student.dashboard'), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ record.number_attachments }})...</a>
                                     {% if record.has_feedback %}
                                         <a href="{{ url_for('student.view_feedback', id=record.id, preview=1, text='home dashboard', url=url_for('student.dashboard')) }}" class="btn btn-sm btn-primary btn-table-block">Feedback available</a>
                                     {% endif %}

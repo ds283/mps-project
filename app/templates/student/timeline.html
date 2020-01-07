@@ -111,6 +111,7 @@
                                                     </div>
                                                     <div class="col-xs-4">
                                                         <div style="text-align: right;" class="pull-right">
+                                                            <a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ rec.number_attachments }})...</a>
                                                             {% if record.has_feedback %}
                                                                 {% if record.id in roles %}
                                                                     {% set role = roles[record.id] %}

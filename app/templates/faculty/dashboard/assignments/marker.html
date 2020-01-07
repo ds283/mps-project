@@ -40,13 +40,7 @@
                         </td>
                         <td>
                             <div style="text-align: right;" class="pull-right">
-                                {% if rec.report %}
-                                    {% if rec.report.has_access(current_user) %}
-                                        <a href="{{ url_for('admin.download_submitted_asset', asset_id=rec.report.id) }}" class="btn btn-sm btn-default btn-table-block">Download report</a>
-                                    {% else %}
-                                        <a class="btn btn-sm btn-default btn-table-block disabled">Download report</a>
-                                    {% endif %}
-                                {% endif %}
+                                <a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ rec.number_attachments }})...</a>
                                 {% if (period.feedback_open and not period.closed) or (period.closed and not rec.marker_submitted) %}
                                     {% if valid %}
                                         <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>

@@ -6,7 +6,8 @@
     Manage documents for {{ record.owner.student.user.name }}
 {% endblock %}
 
-{% macro asset_line(asset, attachment, download_url, delete_url) %}
+{% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none,
+                    deletable=false, allow_student=false, is_editable=none, is_admin=false) %}
     <tr>
         <td>
             <div>
@@ -23,26 +24,69 @@
             {% endif %}
         </td>
         <td>
-            {% if asset.timestamp %}
-                uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+            <div>
+                {% if asset.timestamp %}
+                    uploaded at {{ asset.timestamp.strftime("%a %d %b %Y %H:%M:%S") }}
+                {% endif %}
+                {% if asset.uploaded_by %}
+                    <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
+                {% endif %}
+            </div>
+            {% if is_admin %}
+                <div>
+                    <span class="label label-default">Downloads: {{ asset.number_downloads }}</span>
+                </div>
             {% endif %}
-            {% if asset.uploaded_by %}
-                <i class="fa fa-user"></i> {{ asset.uploaded_by.name }}
+        </td>
+        <td>
+            {% if asset.license %}
+                {{ asset.license.make_label()|safe }}
+                <span class="label label-info">{{ asset.license.version }}</span>
+            {% else %}
+                <strong>Unset</strong>
             {% endif %}
         </td>
         <td>
             <div style="text-align: right;" class="pull-right">
-                {% if asset.has_access(current_user.id) %}
-                    <a href="{{ download_url }}" class="btn btn-sm btn-default btn-table-block">Download</a>
-                    <a href="{{ delete_url }}" class="btn btn-sm btn-danger btn-table-block">Remove</a>
-                {% else %}
-                    <a class="btn btn-default btn-sm disabled btn-table-block">Download</a>
-                    <a class="btn btn-danger btn-sm disabled btn-table-block">Remove</a>
-                {% endif %}
+                <div class="dropdown">
+                    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                        Actions
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-right">
+                        {% set has_access = asset.has_access(current_user.id) %}
+                        {% if is_editable is none %}
+                            {% set editable = false %}
+                        {% else %}
+                            {% set editable = is_editable(asset=asset, allow_student=allow_student) %}
+                        {% endif %}
+                        {% if has_access or editable or deletable %}
+                            {% if editable and edit_url is not none %}
+                                <li><a href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a></li>
+                            {% else %}
+                                <li class="disabled"><a><i class="fa fa-pencil"></i> Edit</a></li>
+                            {% endif %}
+                            {% if has_access and download_url is not none %}
+                                <li><a href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a></li>
+                            {% else %}
+                                <li class="disabled"><a><i class="fa fa-cloud-download"></i> Download</a></li>
+                            {% endif %}
+                            {% if deletable and delete_url is not none %}
+                                <li><a href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a></li>
+                            {% else %}
+                                <li class="disabled"><a><i class="fa fa-trash"></i> Remove</a></li>
+                            {% endif %}
+                        {% else %}
+                            <li><a class="disabled"><i class="fa fa-times"></i> No access</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
             </div>
         </td>
     </tr>
 {% endmacro %}
+
+{% set is_student = current_user.has_role('student') %}
 
 {% block bodyblock %}
     {% if url and text %}
@@ -65,23 +109,31 @@
                         <thead>
                             <tr>
                                 <th width="40%">Document</th>
-                                <th width="40%">Attributes</th>
-                                <th width="20%"></th>
+                                <th width="30%">Attributes</th>
+                                <th width="15%">License</th>
+                                <th width="15%"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {{ asset_line(asset, none, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('documents.delete_submitter_report', sid=record.id)) }}
+                            {{ asset_line(asset, none,
+                                          download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
+                                          delete_url=url_for('documents.delete_submitter_report', sid=record.id),
+                                          edit_url=url_for('documents.edit_submitter_report', sid=record.id, url=url, text=text),
+                                          deletable=deletable, allow_student=false, is_editable=is_editable,
+                                          is_admin=is_admin) }}
                         </tbody>
                     </table>
                 {% else %}
                     <strong>No report attached.</strong>
-                    <hr class="into-divider">
-                    <div style="text-align: center;">
-                        <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
-                            <i class="fa fa-plus"></i>
-                            Upload report
-                        </a>
-                    </div>
+                    {% if report_uploadable %}
+                        <hr class="into-divider">
+                        <div style="text-align: center;">
+                            <a href="{{ url_for('documents.upload_submitter_report', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                                <i class="fa fa-plus"></i>
+                                Upload report
+                            </a>
+                        </div>
+                    {% endif %}
                 {% endif %}
             </div>
             <div class="well">
@@ -92,28 +144,67 @@
                         <thead>
                             <tr>
                                 <th width="40%">Document</th>
-                                <th width="40%">Attributes</th>
-                                <th width="20%"></th>
+                                <th width="30%">Attributes</th>
+                                <th width="15%">License</th>
+                                <th width="15%"></th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for attachment in record.attachments %}
                                 {% set asset = attachment.attachment %}
-                                {{ asset_line(asset, attachment, url_for('admin.download_submitted_asset', asset_id=asset.id), url_for('documents.delete_submitter_attachment', aid=attachment.id)) }}
+                                {# students can only see attachments they have uploaded themselves #}
+                                {% if not is_student or current_user.id == attachment.uploaded_id %}
+                                    {{ asset_line(asset, attachment,
+                                                  download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
+                                                  delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id),
+                                                  edit_url=url_for('documents.edit_submitter_attachment', aid=attachment.id, url=url, text=text),
+                                                  deletable=deletable, allow_student=true, is_editable=is_editable,
+                                                  is_admin=is_admin) }}
+                                {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
                 {% else %}
                     <strong>No attachments.</strong>
                 {% endif %}
-                <hr class="into-divider">
-                <div style="text-align: center;">
-                    <a href="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
-                        <i class="fa fa-plus"></i>
-                        Upload new attachment
-                    </a>
-                </div>
+                {% if attachment_uploadable %}
+                    <hr class="into-divider">
+                    <div style="text-align: center;">
+                        <a href="{{ url_for('documents.upload_submitter_attachment', sid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                            <i class="fa fa-plus"></i>
+                            Upload new attachment
+                        </a>
+                    </div>
+                {% endif %}
             </div>
+            {% if period.attachments.first() %}
+                <div class="well">
+                    <span class="document-group-title">Documents provided by the convenor</span>
+                    <hr class="intro-divider">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th width="40%">Document</th>
+                                <th width="30%">Attributes</th>
+                                <th width="15%">License</th>
+                                <th width="15%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attachment in period.attachments %}
+                                {% set asset = attachment.attachment %}
+                                {# students can only see assets that are published to them #}
+                                {% if not is_student or attachment.publish_to_students %}
+                                    {{ asset_line(asset, attachment,
+                                                  download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
+                                                  delete_url=none, edit_url=none, deletable=false, allow_student=false,
+                                                  is_editable=none, is_admin=is_admin) }}
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
         </div>
     </div>
 

@@ -6,7 +6,7 @@
     Manage documents for {{ record.display_name }}
 {% endblock %}
 
-{% macro asset_line(asset, attachment, download_url, delete_url, edit_url, editable=true) %}
+{% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none, deletable=true) %}
     <tr>
         <td>
             <div>
@@ -59,16 +59,21 @@
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-right">
-                        {% if asset.has_access(current_user.id) %}
-                            {% if editable %}
-                                <li><a href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a></li>
-                            {% endif %}
-                            <li><a href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a></li>
-                            {% if editable %}
-                                <li><a href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a></li>
-                            {% endif %}
+                        {% set has_access = asset.has_access(current_user.id) %}
+                        {% if edit_url is not none %}
+                            <li><a href="{{ edit_url }}"><i class="fa fa-pencil"></i> Edit</a></li>
                         {% else %}
-                            <li><a class="disabled"><i class="fa fa-times"></i> No access</a></li>
+                            <li class="disabled"><a><i class="fa fa-pencil"></i> Edit</a></li>
+                        {% endif %}
+                        {% if has_access and download_url is not none %}
+                            <li><a href="{{ download_url }}"><i class="fa fa-cloud-download"></i> Download</a></li>
+                        {% else %}
+                            <li class="disabled"><a><i class="fa fa-cloud-download"></i> Download</a></li>
+                        {% endif %}
+                        {% if deletable and delete_url is not none %}
+                            <li><a href="{{ delete_url }}"><i class="fa fa-trash"></i> Remove</a></li>
+                        {% else %}
+                            <li class="disabled"><a><i class="fa fa-trash"></i> Remove</a></li>
                         {% endif %}
                     </ul>
                 </div>
@@ -105,10 +110,11 @@
                         <tbody>
                             {% for attachment in record.attachments %}
                                 {% set asset = attachment.attachment %}
-                                {{ asset_line(asset, attachment, url_for('admin.download_period_asset', asset_id=asset.id),
-                                              url_for('convenor.delete_period_attachment', aid=attachment.id),
-                                              url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text),
-                                              editable=editable) }}
+                                {{ asset_line(asset, attachment,
+                                              download_url=url_for('admin.download_period_asset', asset_id=asset.id),
+                                              delete_url=url_for('convenor.delete_period_attachment', aid=attachment.id),
+                                              edit_url=url_for('convenor.edit_period_attachment', aid=attachment.id, url=url, text=text),
+                                              deletable=deletable) }}
                             {% endfor %}
                         </tbody>
                     </table>
@@ -117,14 +123,10 @@
                 {% endif %}
                 <hr class="into-divider">
                 <div style="text-align: center;">
-                    {% if editable %}
-                        <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
-                            <i class="fa fa-plus"></i>
-                            Upload new attachment
-                        </a>
-                    {% else %}
-                        <strong>Marking and feedback underway: Uploads currently disabled</strong>
-                    {% endif %}
+                    <a href="{{ url_for('convenor.upload_period_attachment', pid=record.id, url=url, text=text) }}" class="btn btn-default btn-lg">
+                        <i class="fa fa-plus"></i>
+                        Upload new attachment
+                    </a>
                 </div>
             </div>
         </div>

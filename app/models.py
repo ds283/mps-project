@@ -7174,7 +7174,14 @@ class SubmissionRecord(db.Model):
 
     @property
     def number_attachments(self):
-        return get_count(self.attachments) + get_count(self.period.attachments) + (1 if self.report is not None else 0)
+        return get_count(self.attachments) + get_count(self.period.attachments) \
+               + (1 if self.report is not None else 0)
+
+
+    @property
+    def number_attachments_student(self):
+        return get_count(self.attachments) + get_count(self.period.attachments.filter_by(publish_to_students=True)) \
+               + (1 if self.report is not None else 0)
 
 
 class SubmissionAttachment(db.Model):

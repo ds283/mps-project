@@ -34,8 +34,8 @@ project, or create a new one.
 You currently have {{ number_projects }} project{{ pl }} eligible for this project type:
 {% for p in projects -%}
 - {{ p.name }}
-{%- endfor %}
-{%- endif %}
+{% endfor %}
+{% endif -%}
 
 When you are satisfied that your project descriptions are up-to-date,
 return to your dashboard and select the "{{ pclass.name }}" tab.

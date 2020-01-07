@@ -534,7 +534,7 @@ def batch_create_users():
 
                 asset = TemporaryAsset(timestamp=datetime.now(),
                                        lifetime=24*60*60,
-                                       filename=filename)
+                                       filename=str(filename))
                 asset.access_control_list.append(current_user)
 
                 tk_name = "Process batch user list '{name}'".format(name=incoming_filename)

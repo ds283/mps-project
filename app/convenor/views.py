@@ -49,7 +49,7 @@ from .forms import GoLiveForm, IssueFacultyConfirmRequestFormFactory, OpenFeedba
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm
 
-from ..uploads import period_files
+from ..uploads import submitted_files
 
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -6544,14 +6544,16 @@ def upload_period_attachment(pid):
             incoming_filename = Path(attachment_file.filename)
             extension = incoming_filename.suffix.lower()
 
+            root_subfolder = current_app.config.get('ASSETS_PERIODS_SUBFOLDER') or 'periods'
+
             year_string = str(config.year)
             pclass_string = pclass.abbreviation
 
-            subfolder = Path(pclass_string) / Path(year_string)
+            subfolder = Path(root_subfolder) / Path(pclass_string) / Path(year_string)
 
             filename, abs_path = make_submitted_asset_filename(ext=extension, subpath=subfolder,
                                                                root_folder='ASSETS_PERIODS_SUBFOLDER')
-            period_files.save(attachment_file, folder=str(subfolder), name=str(filename))
+            submitted_files.save(attachment_file, folder=str(subfolder), name=str(filename))
 
             # generate asset record
             asset = SubmittedAsset(timestamp=datetime.now(),

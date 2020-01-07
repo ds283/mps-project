@@ -97,8 +97,8 @@ class Config(object):
     ASSETS_SUBMITTED_SUBFOLDER = os.environ.get('ASSETS_SUBMITTED_SUBFOLDER') or 'submitted'
     ASSETS_REPORTS_SUBFOLDER = os.environ.get('ASSETS_REPORTS_SUBFOLDER') or 'reports'
     ASSETS_ATTACHMENTS_SUBFOLDER = os.environ.get('ASSETS_ATTACHMENTS_SUBFOLDER') or 'attachments'
-
     ASSETS_PERIODS_SUBFOLDER = os.environ.get('ASSETS_PERIODS_SUBFOLDER') or 'periods'
+
 
 
     # DEFAULT ASSET LICENSES

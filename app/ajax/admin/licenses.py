@@ -17,7 +17,7 @@ _name = \
     <strong>{{ l.name }}</strong>
 </div>
 <div>
-    {{ l.make_label()|safe }}
+    {{ l.make_label(popover=false)|safe }}
     {% if l.version and l.version|length > 0 %}
         <span class="label label-info">{{ l.version }}</span>
     {% endif %}

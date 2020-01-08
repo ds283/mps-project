@@ -7210,7 +7210,11 @@ class SubmissionRecord(db.Model):
 
     @property
     def number_attachments(self):
-        return get_count(self.attachments) + get_count(self.period.attachments) \
+        return get_count(self.attachments.join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id) \
+                         .filter(or_(SubmittedAsset.uploaded_id == current_user.id,
+                                     SubmittedAsset.access_control_list.any(id=current_user.id),
+                                     SubmittedAsset.access_control_roles.any(name='student')))) \
+               + get_count(self.period.attachments) \
                + (1 if self.report is not None else 0)
 
 

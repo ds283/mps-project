@@ -100,6 +100,8 @@
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}</div>
         <div class="panel-body">
+
+            {# REPORT #}
             <div class="well">
                 {% if record.report %}
                     <span class="document-group-title">Report</span>
@@ -136,6 +138,8 @@
                     {% endif %}
                 {% endif %}
             </div>
+
+            {# SUBMISSION ATTACHMENTS #}
             <div class="well">
                 {% if record.attachments.first() %}
                     <span class="document-group-title">Attachments</span>
@@ -152,8 +156,9 @@
                         <tbody>
                             {% for attachment in record.attachments %}
                                 {% set asset = attachment.attachment %}
-                                {# students can only see attachments they have uploaded themselves #}
-                                {% if not is_student or current_user.id == attachment.uploaded_id %}
+                                {# students can only see attachments they have uploaded themselves, #}
+                                {# or which they are able to download #}
+                                {% if not is_student or (current_user.id == attachment.uploaded_id or asset.has_access(current_user.id))%}
                                     {{ asset_line(asset, attachment,
                                                   download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
                                                   delete_url=url_for('documents.delete_submitter_attachment', aid=attachment.id),
@@ -177,6 +182,8 @@
                     </div>
                 {% endif %}
             </div>
+
+            {# PERIOD ATTACHMENTS #}
             {% if period.attachments.first() %}
                 <div class="well">
                     <span class="document-group-title">Documents provided by the convenor</span>

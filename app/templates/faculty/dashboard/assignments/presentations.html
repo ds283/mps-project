@@ -1,13 +1,13 @@
 {% from "faculty/dashboard/assignments/status.html" import no_assignment %}
 
-{% macro presentation_assignments(period, id, is_sabbatical, is_exempt, reenroll_date) %}
+{% macro presentation_assignments(period, faculty_id, is_sabbatical, is_exempt, reenroll_date) %}
     {% if period.has_deployed_schedule %}
         {% set schedule = period.deployed_schedule %}
         <div>
             <span class="dashboard-subtitle" style="padding-bottom: 8px; padding-top: 12px;">{{ schedule.event_name }}</span>
             (<a href="{{ url_for('admin.view_schedule', tag=schedule.tag) }}">view full schedule</a>)
         </div>
-        {% set records = period.get_faculty_presentation_slots(id) %}
+        {% set records = period.get_faculty_presentation_slots(faculty_id) %}
         {% if records|length > 0 %}
             {% set ns=namespace(count=0) %}
             {% for slot in records %}
@@ -32,8 +32,8 @@
                         <tbody>
                             {% for talk in slot.talks %}
                                 {% if talk.belongs_to(period) %}
-                                    {% set valid = talk.is_presentation_assessor_valid(id) %}
-                                    {% set submitted = talk.presentation_assessor_submitted(id) %}
+                                    {% set valid = talk.is_presentation_assessor_valid(faculty_id) %}
+                                    {% set submitted = talk.presentation_assessor_submitted(faculty_id) %}
                                     <tr>
                                         <td>
                                             <a href="mailto:{{ talk.owner.student.user.email }}">{{ talk.owner.student.user.name }}</a>
@@ -55,8 +55,8 @@
                                         </td>
                                         <td>
                                             <div style="text-align: right;" class="pull-right">
-                                                <a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ rec.number_attachments }})...</a>
-                                                {% if slot.feedback_state(id) > slot.FEEDBACK_NOT_YET %}
+                                                <a href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ talk.number_attachments }})...</a>
+                                                {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}
                                                     {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
                                                         {% if valid %}
                                                             <a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>

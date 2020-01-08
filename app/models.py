@@ -4183,7 +4183,14 @@ class SubmissionPeriodRecord(db.Model):
         return get_count(self.attachments)
 
 
-    def get_supervisor_records(self, fac_id):
+    def get_supervisor_records(self, fac):
+        if isinstance(fac, int):
+            fac_id = fac
+        elif isinstance(fac, FacultyData) or isinstance(fac, User):
+            fac_id = fac.id
+        else:
+            raise RuntimeError('Unknown faculty id type passed to get_supervisor_records()')
+
         return self.submissions \
             .join(LiveProject, LiveProject.id == SubmissionRecord.project_id) \
             .filter(LiveProject.owner_id == fac_id) \
@@ -4194,7 +4201,14 @@ class SubmissionPeriodRecord(db.Model):
                       User.last_name.asc(), User.first_name.asc()).all()
 
 
-    def get_marker_records(self, fac_id):
+    def get_marker_records(self, fac):
+        if isinstance(fac, int):
+            fac_id = fac
+        elif isinstance(fac, FacultyData) or isinstance(fac, User):
+            fac_id = fac.id
+        else:
+            raise RuntimeError('Unknown faculty id type passed to get_marker_records()')
+
         return self.submissions \
             .filter_by(marker_id=fac_id) \
             .join(SubmissionPeriodRecord, SubmissionPeriodRecord.id == SubmissionRecord.period_id) \
@@ -4203,14 +4217,14 @@ class SubmissionPeriodRecord(db.Model):
             .order_by(SubmissionPeriodRecord.submission_period.asc(), StudentData.exam_number.asc()).all()
 
 
-    def get_faculty_presentation_slots(self, fac_id):
+    def get_faculty_presentation_slots(self, fac):
         schedule = self.deployed_schedule
-        return schedule.get_faculty_slots(fac_id).all()
+        return schedule.get_faculty_slots(fac).all()
 
 
-    def get_student_presentation_slot(self, student_id):
+    def get_student_presentation_slot(self, student):
         schedule = self.deployed_schedule
-        return schedule.get_student_slot(student_id).first()
+        return schedule.get_student_slot(student).first()
 
 
     @property
@@ -6857,13 +6871,20 @@ class SubmissionRecord(db.Model):
         return True
 
 
-    def is_presentation_assessor_valid(self, faculty_id):
+    def is_presentation_assessor_valid(self, fac):
         # find ScheduleSlot to check that current user is actually required to submit feedback
+        if isinstance(fac, int):
+            fac_id = fac
+        elif isinstance(fac, FacultyData) or isinstance(fac, User):
+            fac_id = fac.id
+        else:
+            raise RuntimeError('Unknown faculty id type passed to get_supervisor_records()')
+
         slot = self.schedule_slot
-        if get_count(slot.assessors.filter_by(id=faculty_id)) == 0:
+        if get_count(slot.assessors.filter_by(id=fac_id)) == 0:
             return None
 
-        feedback = self.presentation_feedback.filter_by(assessor_id=faculty_id).first()
+        feedback = self.presentation_feedback.filter_by(assessor_id=fac_id).first()
 
         if feedback is None:
             return False
@@ -6877,13 +6898,20 @@ class SubmissionRecord(db.Model):
         return True
 
 
-    def presentation_assessor_submitted(self, faculty_id):
+    def presentation_assessor_submitted(self, fac):
+        if isinstance(fac, int):
+            fac_id = fac
+        elif isinstance(fac, FacultyData) or isinstance(fac, User):
+            fac_id = fac.id
+        else:
+            raise RuntimeError('Unknown faculty id type passed to get_supervisor_records()')
+
         # find ScheduleSlot to check that current user is actually required to submit feedback
         slot = self.schedule_slot
-        if get_count(slot.assessors.filter_by(id=faculty_id)) == 0:
+        if get_count(slot.assessors.filter_by(id=fac_id)) == 0:
             return None
 
-        feedback = self.presentation_feedback.filter_by(assessor_id=faculty_id).first()
+        feedback = self.presentation_feedback.filter_by(assessor_id=fac_id).first()
         if feedback is None:
             return False
 
@@ -8397,7 +8425,7 @@ class MatchingAttempt(db.Model, PuLPMixin):
         """
         if isinstance(fac, int):
             fac_id = fac
-        elif isinstance(fac, FacultyData):
+        elif isinstance(fac, FacultyData) or isinstance(fac, User):
             fac_id = fac.id
         else:
             raise RuntimeError('Cannot interpret parameter fac of type {n} in get_faculty_CATS()'.format(n=type(fac)))
@@ -10851,24 +10879,35 @@ class ScheduleAttempt(db.Model, PuLPMixin):
         return self._warnings.values()
 
 
-    def get_faculty_slots(self, fac_id):
+    def get_faculty_slots(self, fac):
+        if isinstance(fac, int):
+            fac_id = fac
+        elif isinstance(fac, FacultyData) or isinstance(fac, User):
+            fac_id = fac.id
+        else:
+            raise RuntimeError('Unknown faculty id type passed to get_faculty_slots()')
+
         # fac_id is a FacultyData identifier
         return self.slots.filter(ScheduleSlot.assessors.any(id=fac_id))
 
 
-    def get_number_faculty_slots(self, fac_id):
-        # fac_id is a FacultyData identifier
-        return get_count(self.get_faculty_slots(fac_id))
+    def get_number_faculty_slots(self, fac):
+        return get_count(self.get_faculty_slots(fac))
 
 
-    def get_student_slot(self, sub_id):
-        # sub_id is a SubmittingStudent identifier
+    def get_student_slot(self, student):
+        if isinstance(student, int):
+            sub_id = student
+        elif isinstance(student, SubmittingStudent):
+            sub_id = student.id
+        else:
+            raise RuntimeError('Unknown submitter id type passed to get_student_slot()')
+
         return self.slots.filter(ScheduleSlot.talks.any(owner_id=sub_id))
 
 
-    def get_original_student_slot(self, sub_id):
-        # sub_id is a SubmittingStudent identifier
-        return self.slots.filter(ScheduleSlot.original_talks.any(owner_id=sub_id))
+    def get_original_student_slot(self, student):
+        return self.slots.filter(ScheduleSlot.original_talks.any(owner_id=student))
 
 
     @property

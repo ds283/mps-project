@@ -386,8 +386,7 @@ def register_maintenance_tasks(celery):
             raise Ignore()
 
         # check if attached
-        if get_count(record.submission_attachment) == 0 \
-                and get_count(record.period_attachments) == 0:
+        if record.submission_attachment is None and record.period_attachment is None:
             print('** Garbage collection detected unattached SubmittedAsset record, id = {id}'.format(id=record.id))
 
             try:

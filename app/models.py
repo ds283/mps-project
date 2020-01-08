@@ -98,7 +98,7 @@ class ColouredLabelMixin():
         return "background-color:{bg}; color:{fg};".format(bg=self.colour, fg=get_text_colour(self.colour))
 
 
-    def _make_label(self, text, user_classes=None):
+    def _make_label(self, text, user_classes=None, popover_text=None):
         """
         Make appropriately coloured label
         :param text:
@@ -110,10 +110,16 @@ class ColouredLabelMixin():
             classes = 'label label-default {cls}'.format(cls=user_classes)
 
         style = self.make_CSS_style()
-        if style is None:
-                return '<span class="{cls}">{msg}</span>'.format(msg=text, cls=classes)
 
-        return '<span class="{cls}" style="{sty}">{msg}</span>'.format(msg=text, cls=classes, sty=style)
+        element = '<span class="{cls}"'.format(cls=classes)
+        if style is not None:
+            element += ' style="{sty}"'.format(sty=style)
+
+        if popover_text is not None:
+            element += ' data-toggle="tooltip" title="{text}"'.format(text=popover_text)
+
+        element += '>{msg}</span>'.format(msg=text)
+        return element
 
 
 class WorkflowMixin():
@@ -11857,7 +11863,10 @@ class AssetLicense(db.Model, ColouredLabelMixin):
         if text is None:
             text = self.abbreviation
 
-        return self._make_label(text, user_classes)
+        popover_text = self.description if (popover and self.description is not None and len(self.description) > 0) \
+            else None
+
+        return self._make_label(text, user_classes, popover_text=popover_text)
 
 
     def enable(self):

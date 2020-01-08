@@ -4051,7 +4051,7 @@ class ProjectClassConfig(db.Model):
             if not period.has_presentation:
                 continue
 
-            assessment = period.presentation_assessment.first()
+            assessment = period.presentation_assessments.first()
             if assessment is None:
                 continue
 

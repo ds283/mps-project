@@ -4049,15 +4049,17 @@ class ProjectClassConfig(db.Model):
         # auditable schedules are published schedules for a PresentationAssessment that isn't deployed
         for period in self.periods:
             if not period.has_presentation:
-                break
+                continue
 
             assessment = period.presentation_assessment.first()
-            if assessment is not None:
-                if assessment.is_deployed:
-                    break
+            if assessment is None:
+                continue
 
-                if assessment.has_published_schedules:
-                    return True
+            if assessment.is_deployed:
+                continue
+
+            if assessment.has_published_schedules:
+                return True
 
         return False
 
@@ -11807,7 +11809,7 @@ class AssetLicense(db.Model, ColouredLabelMixin):
     last_edit_timestamp = db.Column(db.DateTime())
 
 
-    def make_label(self, text=None, user_classes=None):
+    def make_label(self, text=None, user_classes=None, popover=True):
         """
         Make appropriately coloured label
         :param text:

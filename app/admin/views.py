@@ -5570,7 +5570,7 @@ def create_assessment_schedule(id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
@@ -5584,6 +5584,11 @@ def create_assessment_schedule(id):
     if not data.is_valid and len(data.errors) > 0:
         flash('It is not possible to generate a schedule for an assessment that contains validation errors. '
               'Correct any indicated errors before attempting to try again.', 'info')
+        return redirect(request.referrer)
+
+    if data.number_slots <= 0:
+        flash('It is not possible to generate a schedule for this assessment, because it does not yet have any '
+              'defined session slots.', 'info')
         return redirect(request.referrer)
 
     NewScheduleForm = NewScheduleFormFactory(data)

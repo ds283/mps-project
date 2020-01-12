@@ -505,8 +505,8 @@ def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapp
 
 
 class AssetLifetimeMixin():
-    # lifetime in seconds (will be cleaned up by automatic garbage collector after this time)
-    lifetime= db.Column(db.Integer(), nullable=True, default=None)
+    # expiry time: asset will be cleaned up by automatic garbage collector after this
+    expiry = db.Column(db.DateTime(), nullable=True, default=None)
 
 
 class AssetDownloadDataMixin():

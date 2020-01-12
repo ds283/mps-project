@@ -8,7 +8,7 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from functools import partial
 
@@ -109,8 +109,7 @@ def perform_delete_submitter_report(sid):
         # set lifetime of uploaded asset to 30 days, after which it will be deleted by the garbage collection.
         # also, unlink asset record from this SubmissionRecord.
         # notice we have to adjust the timestamp, since together with the lifetime this determines the expiry date
-        record.report.timestamp = datetime.now()    # TODO: has side-effect of erasing initial upload time - FIXME?
-        record.report.lifetime = 30*24*60*60
+        record.report.expiry = datetime.now() + timedelta(days=30)
         record.report_id = None
         db.session.commit()
 
@@ -165,7 +164,7 @@ def upload_submitter_report(sid):
             # generate asset record
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
-                                   lifetime=None,
+                                   expiry=None,
                                    filename=str(subfolder/filename),
                                    target_name=str(incoming_filename),
                                    mimetype=str(report_file.content_type),
@@ -377,8 +376,8 @@ def perform_delete_submitter_attachment(aid, sid):
     text = request.args.get('text', None)
 
     try:
-        asset.timestamp = datetime.now()
-        asset.lifetime = 30 * 24 * 60 * 60
+        # set to delete in 30 days
+        asset.expiry = datetime.now() + timedelta(days=30)
         attachment.attachment_id = None
 
         db.session.flush()
@@ -433,7 +432,7 @@ def upload_submitter_attachment(sid):
             # generate asset record
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
-                                   lifetime=None,
+                                   expiry=None,
                                    filename=str(subfolder/filename),
                                    target_name=str(incoming_filename),
                                    mimetype=str(attachment_file.content_type),

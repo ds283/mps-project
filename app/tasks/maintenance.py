@@ -8,23 +8,21 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import current_app
-
-from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime, timedelta
+from pathlib import Path
 
 from celery import group
 from celery.exceptions import Ignore
+from flask import current_app
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
     MatchingEnumeration, SubmittedAsset, SubmissionRecord
-from ..shared.utils import get_current_year, get_count
 from ..shared.asset_tools import canonical_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_submitted_asset_filename
-
-from datetime import datetime
-from pathlib import Path
+from ..shared.utils import get_current_year, get_count
 
 
 def register_maintenance_tasks(celery):
@@ -264,7 +262,7 @@ def register_maintenance_tasks(celery):
     def collect_generated_garbage(self):
         try:
             # only filter out records that have a finite lifetime set
-            records = db.session.query(GeneratedAsset).filter(GeneratedAsset.lifetime != None).all()
+            records = db.session.query(GeneratedAsset).filter(GeneratedAsset.expiry != None).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -279,7 +277,7 @@ def register_maintenance_tasks(celery):
     def collect_uploaded_garbage(self):
         try:
             # only filter out records that have a finite lifetime set
-            records = db.session.query(TemporaryAsset).filter(TemporaryAsset.lifetime != None).all()
+            records = db.session.query(TemporaryAsset).filter(TemporaryAsset.expiry != None).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -294,7 +292,7 @@ def register_maintenance_tasks(celery):
     def collect_submitted_garbage(self):
         try:
             # only filter out records that have a finite lifetime set
-            records = db.session.query(SubmittedAsset).filter(SubmittedAsset.lifetime != None).all()
+            records = db.session.query(SubmittedAsset).filter(SubmittedAsset.expiry != None).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -307,7 +305,7 @@ def register_maintenance_tasks(celery):
 
         try:
             # this time check all records that have no lifetime, to ensure they are attached
-            records = db.session.query(SubmittedAsset).filter(SubmittedAsset.lifetime == None).all()
+            records = db.session.query(SubmittedAsset).filter(SubmittedAsset.expiry == None).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -327,10 +325,7 @@ def register_maintenance_tasks(celery):
         if record is None:
             raise Ignore()
 
-        now = datetime.now()
-        age = now - record.timestamp
-
-        if age.total_seconds() > record.lifetime:
+        if record.expiry < datetime.now():
             # canonicalizer is expected to return an object of type Path, or a class interoperable with it
             asset: Path = canonicalizer(record.filename)
 
@@ -391,8 +386,7 @@ def register_maintenance_tasks(celery):
             print('** Garbage collection detected unattached SubmittedAsset record, id = {id}'.format(id=record.id))
 
             try:
-                record.timestamp = datetime.now()
-                record.lifetime = 30*24*60*60
+                record.expiry = datetime.now() + timedelta(days=30)
 
                 db.session.commit()
             except SQLAlchemyError as e:

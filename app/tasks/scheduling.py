@@ -8,33 +8,28 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
+import itertools
+from datetime import datetime, timedelta
+from distutils.util import strtobool
+from functools import partial
+from os import path
+
+import pulp
+import pulp.solvers as solvers
+from celery import group, chain
+from celery.exceptions import Ignore
+from flask import current_app, render_template, url_for
+from flask_mail import Message
+from sqlalchemy.exc import SQLAlchemyError
+
 from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, TemporaryAsset, User, \
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
     EnrollmentRecord, SubmitterAttendanceData
-
-from ..task_queue import progress_update, register_task
-
-from celery import group, chain
-from celery.exceptions import Ignore
-
-from sqlalchemy.exc import SQLAlchemyError
-
-import pulp
-import pulp.solvers as solvers
-import itertools
-from functools import partial
-
-from ..shared.timer import Timer
 from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename
 from ..shared.sqlalchemy import get_count
-
-from flask import current_app, render_template, url_for
-from flask_mail import Message
-
-from datetime import datetime
-from os import path
-from distutils.util import strtobool
+from ..shared.timer import Timer
+from ..task_queue import progress_update, register_task
 
 
 def _enumerate_talks(schedule, read_serialized=False):
@@ -897,10 +892,11 @@ def _write_LP_MPS_files(record, prob, user):
     AssetLifetime = 24 * 60 * 60  # time to live is 24 hours
 
     now = datetime.now()
+    expiry = now + timedelta(days=1)
 
     def make_asset(name, target):
         asset = GeneratedAsset(timestamp=now,
-                               lifetime=AssetLifetime,
+                               lifetime=expiry,
                                filename=str(name),
                                mimetype=None,
                                target_name=target)

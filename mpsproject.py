@@ -13,10 +13,10 @@ from app.models import TaskRecord, Notification, MatchingAttempt, PresentationAs
     AssessorAttendanceData, SubmitterAttendanceData, ScheduleAttempt, StudentData, User, ProjectClass, \
     SelectingStudent, ProjectDescription, Project, WorkflowMixin, EnrollmentRecord, ProjectClassConfig, \
     StudentDataWorkflowHistory, ProjectDescriptionWorkflowHistory, MainConfig, StudentBatch, \
-    AssetLicense
+    AssetLicense, GeneratedAsset, TemporaryAsset, SubmittedAsset
 from sqlalchemy.exc import SQLAlchemyError
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def migrate_availability_data():
@@ -290,6 +290,18 @@ def populate_default_licenses(app):
     db.session.commit()
 
 
+def migrate_lifetime_data(AssetRecord):
+    records = db.session.query(AssetRecord).all()
+
+    for record in records:
+        if record.lifetime is None or record.timestamp is None:
+            record.expiry = None
+        else:
+            record.expiry = record.lifetime + timedelta(seconds=record.lifetime)
+
+    db.session.commit()
+
+
 app, celery = create_app()
 
 # with app.app_context():
@@ -304,6 +316,9 @@ app, celery = create_app()
     # migrate_description_confirmations()
     # populate_workflow_history()
     # populate_default_licenses(app)
+    # migrate_lifetime_data(GeneratedAsset)
+    # migrate_lifetime_data(TemporaryAsset)
+    # migrate_lifetime_data(SubmittedAsset)
 
 # pass control to application entry point if we are the controlling script
 if __name__ == '__main__':

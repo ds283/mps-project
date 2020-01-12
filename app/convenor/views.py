@@ -6500,8 +6500,8 @@ def perform_delete_period_attachment(aid):
     url = request.args.get('url', None)
     text = request.args.get('text', None)
 
-    asset.timestamp = datetime.now()
-    asset.lifetime = 30 * 24 * 60 * 60
+    # set to expire in 30 days
+    asset.expiry = datetime.now() + timedelta(days=30)
     attachment.attachment_id = None
 
     try:
@@ -6558,7 +6558,7 @@ def upload_period_attachment(pid):
             # generate asset record
             asset = SubmittedAsset(timestamp=datetime.now(),
                                    uploaded_id=current_user.id,
-                                   lifetime=None,
+                                   expiry=None,
                                    filename=str(subfolder/filename),
                                    target_name=str(incoming_filename),
                                    mimetype=str(attachment_file.content_type),

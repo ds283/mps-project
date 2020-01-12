@@ -9,47 +9,38 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, current_app, session
-from flask_security import current_user, roles_required, roles_accepted
-from flask_security.utils import config_value, get_message, do_flash, send_mail
-from flask_security.confirmable import generate_confirmation_link
-from flask_security.signals import user_registered
-from werkzeug.local import LocalProxy
+from datetime import datetime, date, timedelta
+from pathlib import Path
 
 from celery import chain, group
+from flask import render_template, redirect, url_for, flash, request, current_app, session
+from flask_security import current_user, roles_required, roles_accepted
+from flask_security.confirmable import generate_confirmation_link
+from flask_security.signals import user_registered
+from flask_security.utils import config_value, get_message, do_flash, send_mail
+from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.local import LocalProxy
 
+import app.ajax as ajax
 from . import manage_users
-
+from .actions import register_user
 from .forms import UserTypeSelectForm, ConfirmRegisterOfficeForm, ConfirmRegisterFacultyForm, \
     ConfirmRegisterStudentForm, EditOfficeForm, EditFacultyForm, EditStudentForm, \
     UploadBatchCreateForm, EditStudentBatchItemFormFactory, EnrollmentRecordForm, \
     AddRoleForm, EditRoleForm
-from .actions import register_user
-
 from ..database import db
+from ..limiter import limiter
 from ..models import User, FacultyData, StudentData, StudentBatch, StudentBatchItem, EnrollmentRecord, \
     DegreeProgramme, DegreeType, ProjectClass, ResearchGroup, Role, TemporaryAsset, TaskRecord, BackupRecord, \
     AssetLicense, WorkflowMixin, faculty_affiliations
-
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import or_
-
-from ..limiter import limiter
-
-from ..uploads import batch_user_files
-
-from ..task_queue import register_task, progress_update
-
-from ..shared.conversions import is_integer
-from ..shared.utils import get_current_year, get_main_config, home_dashboard_url
 from ..shared.asset_tools import make_temporary_asset_filename
-from ..shared.validators import validate_is_convenor
+from ..shared.conversions import is_integer
 from ..shared.sqlalchemy import func
-
-import app.ajax as ajax
-
-from datetime import datetime, date
-from pathlib import Path
+from ..shared.utils import get_current_year, get_main_config, home_dashboard_url
+from ..shared.validators import validate_is_convenor
+from ..task_queue import register_task, progress_update
+from ..uploads import batch_user_files
 
 _security = LocalProxy(lambda: current_app.extensions['security'])
 _datastore = LocalProxy(lambda: _security.datastore)
@@ -532,8 +523,9 @@ def batch_create_users():
                 filename, abs_path = make_temporary_asset_filename(ext=extension)
                 batch_user_files.save(batch_file, name=str(filename))
 
-                asset = TemporaryAsset(timestamp=datetime.now(),
-                                       lifetime=24*60*60,
+                now = datetime.now()
+                asset = TemporaryAsset(timestamp=now,
+                                       expiry=now + timedelta(days=1),
                                        filename=str(filename))
                 asset.access_control_list.append(current_user)
 

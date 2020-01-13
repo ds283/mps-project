@@ -665,7 +665,7 @@ class PuLPSolverMixin():
 
     solver = SelectField('Solver', choices=solver_choices, coerce=int,
                          description='The optimizer can use a number of different solvers. If in doubt, use the '
-                                     'packaged CBC solver. Alternatively, download a version if the optimization '
+                                     'packaged CBC solver. Alternatively, download a version of the optimization '
                                      'problem as a .LP or .MPS file and perform the optimization offline.')
 
 

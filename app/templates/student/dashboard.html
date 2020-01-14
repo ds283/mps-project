@@ -49,7 +49,7 @@
                             }
 
                             // update numerical rankings
-                            rspan = $(items[i]).find('#ranking')
+                            rspan = $(items[i]).find('#ranking');
                             rspan.html("#" + (i+1));
                             if (i < {{ sel.number_choices }}) {
                                 rspan.addClass('label-success');

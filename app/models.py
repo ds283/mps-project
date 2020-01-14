@@ -504,7 +504,7 @@ def ProjectDescriptionMixinFactory(team_mapping_table, team_backref, module_mapp
     return ProjectDescriptionMixin
 
 
-class AssetLifetimeMixin():
+class AssetExpiryMixin():
     # expiry time: asset will be cleaned up by automatic garbage collector after this
     expiry = db.Column(db.DateTime(), nullable=True, default=None)
 
@@ -11732,7 +11732,7 @@ class FHEQ_Level(db.Model, ColouredLabelMixin):
         return self.make_label(text=self.short_name)
 
 
-class GeneratedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin,
+class GeneratedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
                      AssetMixinFactory(generated_acl, generated_acr)):
     """
     Track generated assets
@@ -11744,7 +11744,7 @@ class GeneratedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin,
     id = db.Column(db.Integer(), primary_key=True)
 
 
-class TemporaryAsset(db.Model, AssetLifetimeMixin, AssetMixinFactory(temporary_acl, temporary_acr)):
+class TemporaryAsset(db.Model, AssetExpiryMixin, AssetMixinFactory(temporary_acl, temporary_acr)):
     """
     Track temporary uploaded assets
     """
@@ -11755,7 +11755,7 @@ class TemporaryAsset(db.Model, AssetLifetimeMixin, AssetMixinFactory(temporary_a
     id = db.Column(db.Integer(), primary_key=True)
 
 
-class SubmittedAsset(db.Model, AssetLifetimeMixin, AssetDownloadDataMixin,
+class SubmittedAsset(db.Model, AssetExpiryMixin, AssetDownloadDataMixin,
                      AssetMixinFactory(submitted_acl, submitted_acr)):
     """
     Track submitted assets: usually these will be project reports, but they can be other things to

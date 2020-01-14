@@ -1500,7 +1500,7 @@ def _write_LP_MPS_files(record, prob, user):
 
     def make_asset(name, target):
         asset = GeneratedAsset(timestamp=now,
-                               lifetime=expiry,
+                               expiry=expiry,
                                filename=str(name),
                                mimetype=None,
                                target_name=target)

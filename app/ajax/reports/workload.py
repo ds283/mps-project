@@ -8,16 +8,14 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import render_template_string, jsonify, url_for
-
-from ...database import db
-from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject, ScheduleAttempt
-from ...cache import cache
-from ...shared.sqlalchemy import get_count
-from ...shared.utils import get_current_year
-
+from flask import render_template_string, jsonify
 from sqlalchemy.event import listens_for
 
+from ...cache import cache
+from ...database import db
+from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject, ScheduleAttempt
+from ...shared.sqlalchemy import get_count
+from ...shared.utils import get_current_year
 
 
 _name = \

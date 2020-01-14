@@ -11,7 +11,7 @@
 from flask import render_template_string, jsonify, url_for
 
 from ...database import db
-from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject
+from ...models import FacultyData, EnrollmentRecord, SubmissionRecord, ScheduleSlot, LiveProject, ScheduleAttempt
 from ...cache import cache
 from ...shared.sqlalchemy import get_count
 from ...shared.utils import get_current_year
@@ -245,21 +245,28 @@ def _SubmissionRecord_project_set_receiver(target, value, oldvalue, initiator):
             _delete_cache_entry(value.id)
 
 
-def _ScheduleSlot_assessors_delete_cache(target, value):
-    if target.owner.deployed:
-        current_year = get_current_year()
-        if target.owner.owner.year == current_year:
+def _ScheduleSlot_assessors_delete_cache(target: ScheduleSlot, value):
+    if target.owner is not None:
+        owner = target.owner
+    else:
+        owner = db.session.query(ScheduleAttempt).filter_by(id=target.owner_id).first()
+
+    if owner is None:
+        return
+
+    if owner.deployed and owner.owner is not None:
+        if owner.owner.year == get_current_year():
             _delete_cache_entry(value.id)
 
 
 @listens_for(ScheduleSlot.assessors, 'append')
-def _ScheduleSlot_assessors_append_handler(target, value, initiator):
+def _ScheduleSlot_assessors_append_handler(target: ScheduleSlot, value, initiator):
     with db.session.no_autoflush:
         _ScheduleSlot_assessors_delete_cache(target, value)
 
 
 @listens_for(ScheduleSlot.assessors, 'remove')
-def _ScheduleSlot_assessors_remove_handler(target, value, initiator):
+def _ScheduleSlot_assessors_remove_handler(target: ScheduleSlot, value, initiator):
     with db.session.no_autoflush:
         _ScheduleSlot_assessors_delete_cache(target, value)
 

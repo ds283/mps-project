@@ -115,8 +115,9 @@ def create_office(role):
         if request.method == 'GET':
             form.random_password.data = True
 
-            license = db.session.query(AssetLicense).filter_by(abbreviation=current_app.config['OFFICE_DEFAULT_LICENSE']).first()
-            form.default_license = license
+            license = db.session.query(AssetLicense).filter_by(
+                abbreviation=current_app.config['OFFICE_DEFAULT_LICENSE']).first()
+            form.default_license.data = license
 
     return render_template('security/register_user.html', user_form=form, role=role,
                            title='Register a new {r} user account'.format(r=role))
@@ -198,8 +199,9 @@ def create_faculty(role):
 
             form.random_password.data = True
 
-            license = db.session.query(AssetLicense).filter_by(abbreviation=current_app.config['FACULTY_DEFAULT_LICENSE']).first()
-            form.default_license = license
+            license = db.session.query(AssetLicense).filter_by(
+                abbreviation=current_app.config['FACULTY_DEFAULT_LICENSE']).first()
+            form.default_license.data = license
 
     return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
                            title='Register a new {r} user account'.format(r=role))
@@ -265,8 +267,9 @@ def create_student(role):
 
             form.random_password.data = True
 
-            license = db.session.query(AssetLicense).filter_by(abbreviation=current_app.config['STUDENT_DEFAULT_LICENSE']).first()
-            form.default_license = license
+            license = db.session.query(AssetLicense).filter_by(
+                abbreviation=current_app.config['STUDENT_DEFAULT_LICENSE']).first()
+            form.default_license.data = license
 
     return render_template('security/register_user.html', user_form=form, role=role, pane=pane,
                            title='Register a new {r} user account'.format(r=role))

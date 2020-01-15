@@ -7210,17 +7210,29 @@ class SubmissionRecord(db.Model):
 
     @property
     def number_attachments(self):
-        return get_count(self.attachments.join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id) \
-                         .filter(or_(SubmittedAsset.uploaded_id == current_user.id,
-                                     SubmittedAsset.access_control_list.any(id=current_user.id),
-                                     SubmittedAsset.access_control_roles.any(name='student')))) \
+        """
+        Get total number of attachments for this record, including documents provided by the convenor
+        and any uploaded report
+        :return:
+        """
+        return get_count(self.attachments) \
                + get_count(self.period.attachments) \
                + (1 if self.report is not None else 0)
 
 
     @property
     def number_attachments_student(self):
-        return get_count(self.attachments) + get_count(self.period.attachments.filter_by(publish_to_students=True)) \
+        """
+        Get total number of attachments for this record that are visible to the student.
+        Students can only see documents they uploaded, or which have been made available to them.
+        They can only see convenor-provided attachments that have been marked as 'publish to students'
+        :return:
+        """
+        return get_count(self.attachments.join(SubmittedAsset, SubmittedAsset.id == SubmissionAttachment.attachment_id) \
+                         .filter(or_(SubmittedAsset.uploaded_id == current_user.id,
+                                     SubmittedAsset.access_control_list.any(id=current_user.id),
+                                     SubmittedAsset.access_control_roles.any(name='student')))) \
+               + get_count(self.period.attachments.filter_by(publish_to_students=True)) \
                + (1 if self.report is not None else 0)
 
 

@@ -20,7 +20,7 @@
                     <div class="col-xs-3">
                         {% if assessment.availability_deadline is not none %}
                             {{ assessment.availability_deadline.strftime("%a %d %b %Y") }}
-                            &ndash; {{ assessment.time_to_availability_deadline }} from now
+                            &mdash; {{ assessment.time_to_availability_deadline }} from now
                         {% endif %}
                     </div>
                     <div class="col-xs-1">

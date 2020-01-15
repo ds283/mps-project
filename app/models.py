@@ -8,30 +8,26 @@
 # Contributors: David Seery <D.Seery@sussex.ac.uk>
 #
 
-from flask import flash, current_app
-from flask_security import current_user, UserMixin, RoleMixin
-
-from sqlalchemy import orm, or_, and_
-from sqlalchemy.event import listens_for
-from sqlalchemy.orm import validates
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.ext.declarative import declared_attr
-
-from celery import schedules
-
-from .database import db
-from .cache import cache
-
-from .shared.formatters import format_size, format_time, format_readable_time
-from .shared.colours import get_text_colour
-from .shared.sqlalchemy import get_count
-
-from datetime import date, datetime, timedelta
 import json
+from datetime import date, datetime, timedelta
 from os import path
 from time import time
 from uuid import uuid4
 
+from celery import schedules
+from flask import flash, current_app
+from flask_security import current_user, UserMixin, RoleMixin
+from sqlalchemy import orm, or_, and_
+from sqlalchemy.event import listens_for
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import validates
+
+from .cache import cache
+from .database import db
+from .shared.colours import get_text_colour
+from .shared.formatters import format_size, format_time, format_readable_time
+from .shared.sqlalchemy import get_count
 
 # length of database string for typical fields, if used
 DEFAULT_STRING_LENGTH = 255
@@ -8150,15 +8146,29 @@ class PuLPMixin():
     SOLVER_GUROBI_CMD = 4
     SOLVER_SCIP_CMD = 5
 
-    # which solver we are using
+    # which solver are we using?
     solver = db.Column(db.Integer())
+
+    # solver names
+    _solvers = {SOLVER_CBC_PACKAGED: 'PuLP-packaged CBC',
+                SOLVER_CBC_CMD: 'CBC external',
+                SOLVER_GLPK_CMD: 'GLPK external',
+                SOLVER_CPLEX_CMD: 'CPLEX external (requires license)',
+                SOLVER_GUROBI_CMD: 'Gurobi external (requires license)',
+                SOLVER_SCIP_CMD: 'SCIP external (requires license)'}
+
+    @property
+    def solver_name(self):
+        if self.solver in self._solvers:
+            return self._solvers[self.solver]
+
+        return None
 
     # time taken to construct the PuLP problem
     construct_time = db.Column(db.Numeric(8, 3))
 
     # time taken by PulP to compute the solution
     compute_time = db.Column(db.Numeric(8, 3))
-
 
     # TASK DETAILS
 
@@ -8181,28 +8191,37 @@ class PuLPMixin():
     # value of objective function, if match was successful
     score = db.Column(db.Numeric(10, 2))
 
+    # FILES FOR OFFLINE SCHEDULING
 
-    _solvers = {0: 'PuLP-packaged CBC', 1: 'CBC external', 2: 'GLPK external', 3: 'CPLEX external (requires license)',
-                4: 'Gurobi external (requires license)', 5: 'SCIP external (requires license)'}
+    # .LP file id
+    @declared_attr
+    def lp_file_id(cls):
+        return db.Column(db.Integer(), db.ForeignKey('generated_assets.id'), nullable=True, default=None)
 
+    # .LP file asset object
+    @declared_attr
+    def lp_file(cls):
+        return db.relationship('GeneratedAsset', primaryjoin=lambda: GeneratedAsset.id == cls.lp_file_id,
+                               uselist=False)
 
-    @property
-    def solver_name(self):
-        if self.solver in self._solvers:
-            return self._solvers[self.solver]
+    # .MPS file id
+    @declared_attr
+    def mps_file_id(cls):
+        return db.Column(db.Integer(), db.ForeignKey('generated_assets.id'), nullable=True, default=True)
 
-        return None
-
+    # .MPS file asset object
+    @declared_attr
+    def mps_file(cls):
+        return db.relationship('GeneratedAsset', primaryjoin=lambda: GeneratedAsset.id == cls.mps_file_id,
+                               uselist=False)
 
     @property
     def formatted_construct_time(self):
         return format_time(self.construct_time)
 
-
     @property
     def formatted_compute_time(self):
         return format_time(self.compute_time)
-
 
     @property
     def solution_usable(self):
@@ -10720,7 +10739,6 @@ class ScheduleAttempt(db.Model, PuLPMixin):
                         (1, 'Each assessor should belong to the assessor pool for every talk')]
     all_assessors_in_pool = db.Column(db.Boolean())
 
-
     # CIRCULATION STATUS
 
     # draft circulated to submitters?
@@ -10729,12 +10747,11 @@ class ScheduleAttempt(db.Model, PuLPMixin):
     # draft circulated to assessors?
     draft_to_assessors = db.Column(db.DateTime())
 
-    # final verison circulated to submitters?
+    # final version circulated to submitters?
     final_to_submitters = db.Column(db.DateTime())
 
     # final version circulated to assessors?
     final_to_assessors = db.Column(db.DateTime())
-
 
     # EDITING METADATA
 

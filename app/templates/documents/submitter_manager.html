@@ -100,6 +100,39 @@
     <div class="panel panel-primary panel-primary-bg">
         <div class="panel-heading">Manage documents for <i class="fa fa-user"></i> <strong>{{ record.owner.student.user.name }}</strong> {{ record.period.display_name }}</div>
         <div class="panel-body">
+            {# PERIOD ATTACHMENTS #}
+            {% if period.attachments.first() %}
+                <div class="well">
+                    <div><span class="document-group-title">Documents provided by the convenor</span></div>
+                    {% if is_student %}
+                        <div>The following documents have been provided by the convenor and may include mark schemes
+                        or other general information. Please ensure that you review them.</div>
+                    {% endif %}
+                    <hr class="intro-divider">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th width="40%">Document</th>
+                                <th width="30%">Attributes</th>
+                                <th width="15%">License</th>
+                                <th width="15%"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attachment in period.attachments %}
+                                {% set asset = attachment.attachment %}
+                                {# students can only see assets that are published to them #}
+                                {% if not is_student or attachment.publish_to_students %}
+                                    {{ asset_line(asset, attachment,
+                                                  download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
+                                                  delete_url=none, edit_url=none, deletable=false, allow_student=false,
+                                                  is_editable=none, is_admin=is_admin) }}
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
 
             {# REPORT #}
             <div class="well">
@@ -182,36 +215,6 @@
                     </div>
                 {% endif %}
             </div>
-
-            {# PERIOD ATTACHMENTS #}
-            {% if period.attachments.first() %}
-                <div class="well">
-                    <span class="document-group-title">Documents provided by the convenor</span>
-                    <hr class="intro-divider">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th width="40%">Document</th>
-                                <th width="30%">Attributes</th>
-                                <th width="15%">License</th>
-                                <th width="15%"></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for attachment in period.attachments %}
-                                {% set asset = attachment.attachment %}
-                                {# students can only see assets that are published to them #}
-                                {% if not is_student or attachment.publish_to_students %}
-                                    {{ asset_line(asset, attachment,
-                                                  download_url=url_for('admin.download_submitted_asset', asset_id=asset.id),
-                                                  delete_url=none, edit_url=none, deletable=false, allow_student=false,
-                                                  is_editable=none, is_admin=is_admin) }}
-                                {% endif %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% endif %}
         </div>
     </div>
 

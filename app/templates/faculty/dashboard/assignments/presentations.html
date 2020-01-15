@@ -55,16 +55,24 @@
                                         </td>
                                         <td>
                                             <div style="text-align: right;" class="pull-right">
-                                                <a href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ talk.number_attachments }})...</a>
-                                                {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}
-                                                    {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
-                                                        {% if valid %}
-                                                            <a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
-                                                        {% else %}
-                                                            <a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-primary">Edit feedback</a>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                                        Actions
+                                                        <span class="caret"></span>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-right">
+                                                        <li><a href="{{ url_for('documents.submitter_documents', sid=talk.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Documents ({{ talk.number_attachments }})...</a></li>
+                                                        {% if slot.feedback_state(faculty_id) > slot.FEEDBACK_NOT_YET %}
+                                                            {% if slot.owner.owner.feedback_open or (not slot.owner.owner.feedback_open and not submitted) %}
+                                                                {% if valid %}
+                                                                    <li><a href="{{ url_for('faculty.view_feedback', id=talk.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback</a></li>
+                                                                {% else %}
+                                                                    <li><a href="{{ url_for('faculty.presentation_edit_feedback', slot_id=slot.id, talk_id=talk.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback</a></li>
+                                                                {% endif %}
+                                                            {% endif %}
                                                         {% endif %}
-                                                    {% endif %}
-                                                {% endif %}
+                                                    </ul>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>

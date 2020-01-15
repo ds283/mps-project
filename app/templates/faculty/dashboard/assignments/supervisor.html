@@ -71,26 +71,34 @@
                         </td>
                         <td>
                             <div style="text-align: right;" class="pull-right">
-                                <a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}" class="btn btn-sm btn-default btn-table-block">Documents ({{ rec.number_attachments }})...</a>
-                                {% if not period.feedback_open and not rec.student_engaged and rec.owner.published %}
-                                    {% if rec.submission_period <= rec.owner.config.submission_period %}
-                                        <a href="{{ url_for('faculty.mark_started', id=rec.id) }}" class="btn btn-sm btn-table-block btn-primary">Mark as started</a>
-                                    {% endif %}
-                                {% elif (period.feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
-                                    {% if valid %}
-                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">Preview feedback</a>
-                                    {% else %}
-                                        <a href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-primary">Edit feedback</a>
-                                    {% endif %}
-                                {% elif period.closed %}
-                                    {% if rec.student_feedback_submitted and not rec.acknowledge_feedback %}
-                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-warning">Respond to feedback</a>
-                                    {% elif rec.student_feedback_submitted and not rec.faculty_response_submitted %}
-                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-primary">Respond to feedback</a>
-                                    {% else %}
-                                        <a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}" class="btn btn-sm btn-table-block btn-default">View feedback</a>
-                                    {% endif %}
-                                {% endif %}
+                                <div class="dropdown">
+                                    <button class="btn btn-default btn-sm btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                                        Actions
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-right">
+                                        <li><a href="{{ url_for('documents.submitter_documents', sid=rec.id, url=url_for('faculty.dashboard', pane=period.config.id), text='home dashboard') }}"><i class="fa fa-file-text"></i> Documents ({{ rec.number_attachments }})...</a></li>
+                                        {% if not period.feedback_open and not rec.student_engaged and rec.owner.published %}
+                                            {% if rec.submission_period <= rec.owner.config.submission_period %}
+                                                <li><a href="{{ url_for('faculty.mark_started', id=rec.id) }}"><i class="fa fa-check"></i> Mark as started</a></li>
+                                            {% endif %}
+                                        {% elif (period.feedback_open and not period.closed) or (period.closed and not rec.supervisor_submitted) %}
+                                            {% if valid %}
+                                                <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, preview=1, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> Preview feedback</a></li>
+                                            {% else %}
+                                                <li><a href="{{ url_for('faculty.supervisor_edit_feedback', id=rec.id, url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Edit feedback</a></li>
+                                            {% endif %}
+                                        {% elif period.closed %}
+                                            {% if rec.student_feedback_submitted and not rec.acknowledge_feedback %}
+                                                <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Respond to feedback</a></li>
+                                            {% elif rec.student_feedback_submitted and not rec.faculty_response_submitted %}
+                                                <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-pencil"></i> Respond to feedback</a></li>
+                                            {% else %}
+                                                <li><a href="{{ url_for('faculty.view_feedback', id=rec.id, text='home dashboard', url=url_for('faculty.dashboard', pane=period.config.id)) }}"><i class="fa fa-search"></i> View feedback</a></li>
+                                            {% endif %}
+                                        {% endif %}
+                                    </ul>
+                                </div>
                             </div>
                         </td>
                     </tr>

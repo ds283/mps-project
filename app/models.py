@@ -7221,6 +7221,16 @@ class SubmissionRecord(db.Model):
 
 
     @property
+    def number_record_attachments(self):
+        """
+        Get total number of attachments only for this record. This excludes a report and any documents
+        provided by the convenor
+        :return:
+        """
+        return get_count(self.attachments)
+
+
+    @property
     def number_attachments_student(self):
         """
         Get total number of attachments for this record that are visible to the student.

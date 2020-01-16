@@ -3201,7 +3201,9 @@ def create_match():
                                   creator_id=current_user.id,
                                   last_edit_timestamp=None,
                                   last_edit_id=None,
-                                  score=None)
+                                  score=None,
+                                  lp_file_id=None,
+                                  mps_file_id=None)
 
         # check whether there is any work to do -- is there a current config entry for each
         # attached pclass?
@@ -3313,8 +3315,7 @@ def terminate_match(id):
 @admin.route('/perform_terminate_match/<int:id>')
 @roles_required('root')
 def perform_terminate_match(id):
-
-    record = MatchingAttempt.query.get_or_404(id)
+    record: MatchingRecord = MatchingAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -3337,6 +3338,15 @@ def perform_terminate_match(id):
         # is just to be sure
         db.session.query(MatchingRecord).filter_by(matching_id=record.id).delete()
 
+        expire_time = datetime.now() + timedelta(days=1)
+        if record.lp_file is not None:
+            record.lp_file.expiry = expire_time
+            record.lp_file = None
+
+        if record.mps_file is not None:
+            record.mps_file.expiry = expire_time
+            record.mps_file = None
+
         db.session.delete(record)
         db.session.commit()
     except SQLAlchemyError as e:
@@ -3352,7 +3362,7 @@ def perform_terminate_match(id):
 @admin.route('/delete_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def delete_match(id):
-    attempt = MatchingAttempt.query.get_or_404(id)
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
 
     if not validate_match_inspector(attempt):
         return redirect(request.referrer)
@@ -3384,7 +3394,7 @@ def delete_match(id):
 @admin.route('/perform_delete_match/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_delete_match(id):
-    attempt = MatchingAttempt.query.get_or_404(id)
+    attempt: MatchingAttempt = MatchingAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -3410,6 +3420,15 @@ def perform_delete_match(id):
     try:
         # delete all MatchingRecords associated with this MatchingAttempt
         db.session.query(MatchingRecord).filter_by(matching_id=attempt.id).delete()
+
+        expire_time = datetime.now() + timedelta(days=1)
+        if attempt.lp_file is not None:
+            attempt.lp_file.expiry = expire_time
+            attempt.lp_file = None
+
+        if attempt.mps_file is not None:
+            attempt.mps_file.expiry = expire_time
+            attempt.mps_file = None
 
         db.session.delete(attempt)
         db.session.commit()
@@ -5632,7 +5651,9 @@ def create_assessment_schedule(id):
                                    creator_id=current_user.id,
                                    last_edit_timestamp=None,
                                    last_edit_id=None,
-                                   score=None)
+                                   score=None,
+                                   lp_file_id=None,
+                                   mps_file_id=None)
 
         db.session.add(schedule)
         db.session.commit()
@@ -5736,7 +5757,7 @@ def adjust_assessment_schedule(id):
 @roles_required('root')
 def perform_adjust_assessment_schedule(id):
     """
-    Adjust an existing schedule to re-impost constraints
+    Adjust an existing schedule to re-impose constraints
     :param id:
     :return:
     """
@@ -5799,7 +5820,9 @@ def perform_adjust_assessment_schedule(id):
                                    creator_id=current_user.id,
                                    last_edit_timestamp=None,
                                    last_edit_id=None,
-                                   score=None)
+                                   score=None,
+                                   lp_file_id=None,
+                                   mps_file_id=None)
 
     try:
         db.session.add(new_schedule)
@@ -5847,7 +5870,7 @@ def terminate_schedule(id):
 @admin.route('/perform_terminate_schedule/<int:id>')
 @roles_required('root')
 def perform_terminate_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -5870,6 +5893,15 @@ def perform_terminate_schedule(id):
         # is just to be sure
         db.session.query(ScheduleSlot).filter_by(owner_id=record.id).delete()
 
+        expire_time = datetime.now() + timedelta(days=1)
+        if record.lp_file is not None:
+            record.lp_file.expiry = expire_time
+            record.lp_file = None
+
+        if record.mps_file is not None:
+            record.mps_file.expiry = expire_time
+            record.mps_file = None
+
         db.session.delete(record)
         db.session.commit()
 
@@ -5886,7 +5918,7 @@ def perform_terminate_schedule(id):
 @admin.route('/delete_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def delete_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: ScheduleAttempt = ScheduleAttempt.query.get_or_404(id)
 
     if not validate_schedule_inspector(record):
         return redirect(request.referrer)
@@ -5932,7 +5964,7 @@ def delete_schedule(id):
 @admin.route('/perform_delete_schedule/<int:id>')
 @roles_accepted('faculty', 'admin', 'root')
 def perform_delete_schedule(id):
-    record = ScheduleAttempt.query.get_or_404(id)
+    record: SchedueAttempt = ScheduleAttempt.query.get_or_404(id)
 
     url = request.args.get('url', None)
     if url is None:
@@ -5963,6 +5995,15 @@ def perform_delete_schedule(id):
             slot.talks = []
             db.session.delete(slot)
         db.session.flush()
+
+        expire_time = datetime.now() + timedelta(days=1)
+        if record.lp_file is not None:
+            record.lp_file.expiry = expire_time
+            record.lp_file = None
+
+        if record.mps_file is not None:
+            record.mps_file.expiry = expire_time
+            record.mps_file = None
 
         db.session.delete(record)
         db.session.commit()

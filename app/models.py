@@ -8207,7 +8207,7 @@ class PuLPMixin():
     # .MPS file id
     @declared_attr
     def mps_file_id(cls):
-        return db.Column(db.Integer(), db.ForeignKey('generated_assets.id'), nullable=True, default=True)
+        return db.Column(db.Integer(), db.ForeignKey('generated_assets.id'), nullable=True, default=None)
 
     # .MPS file asset object
     @declared_attr

@@ -4,14 +4,5 @@ This is an automated email from the Sussex Physics & Astronomy
 project management web app at https://mpsprojects.co.uk.
 
 The files needed for offline scheduling of '{{ name }}' are now ready
-for download. To obtain the .LP file, please follow this link:
-
-{{ lp_url }}
-
-To obtain the .MPS file, please follow this link:
-
-{{ mps_url }}
-
-These files will be available for 24 hours from the time of generation.
-After this time they will be automatically deleted, and you will need
-to repeat the process of creating a new schedule.
+and are attached to this email. Alternatively, you can download
+them from the schedule inspector.

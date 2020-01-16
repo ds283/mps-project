@@ -59,6 +59,12 @@ _status = \
 {% else %}
     {% if m.awaiting_upload %}
         <span class="label label-success">Awaiting upload</span>
+        {% if m.lp_file is not none %}
+            <a href="{{ url_for('admin.download_generated_asset', asset_id=m.lp_file.id) }}">LP</a>
+        {% endif %}
+        {% if m.mps_file is not none %}
+            <a href="{{ url_for('admin.download_generated_asset', asset_id=m.mps_file.id) }}">MPS</a>
+        {% endif %}
     {% else %}
         <span class="label label-success">In progress</span>
     {% endif %}

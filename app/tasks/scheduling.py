@@ -9,16 +9,17 @@
 #
 
 import itertools
-from datetime import datetime, timedelta
+from datetime import datetime
 from distutils.util import strtobool
 from functools import partial
 from os import path
+from shutil import copyfile
 
 import pulp
 import pulp.solvers as solvers
 from celery import group, chain
 from celery.exceptions import Ignore
-from flask import current_app, render_template, url_for
+from flask import current_app, render_template
 from flask_mail import Message
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -26,7 +27,8 @@ from ..database import db
 from ..models import TaskRecord, ScheduleAttempt, ScheduleSlot, GeneratedAsset, TemporaryAsset, User, \
     ScheduleEnumeration, SubmissionRecord, SubmissionPeriodRecord, AssessorAttendanceData, \
     EnrollmentRecord, SubmitterAttendanceData
-from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename
+from ..shared.asset_tools import make_generated_asset_filename, canonical_temporary_asset_filename, \
+    canonical_generated_asset_filename
 from ..shared.sqlalchemy import get_count
 from ..shared.timer import Timer
 from ..task_queue import progress_update, register_task
@@ -874,31 +876,34 @@ def _send_offline_email(celery, record, user, lp_asset, mps_asset):
                   reply_to=current_app.config['MAIL_REPLY_TO'],
                   recipients=[user.email])
 
-    msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user,
-                               lp_url=url_for('admin.download_generated_asset', asset_id=lp_asset.id),
-                               mps_url=url_for('admin.download_generated_asset', asset_id=mps_asset.id))
+    msg.body = render_template('email/scheduling/generated.txt', name=record.name, user=user)
+
+    lp_path = canonical_generated_asset_filename(lp_asset.filename)
+    with open(lp_path, 'rb') as fd:
+        msg.attach(filename=str('schedule.lp'), content_type=lp_asset.mimetype, data=fd.read())
+
+    mps_path = canonical_generated_asset_filename(mps_asset.filename)
+    with open(mps_path, 'rb') as fd:
+        msg.attach(filename=str('schedule.mps'), content_type=mps_asset.mimetype, data=fd.read())
 
     # register a new task in the database
     task_id = register_task(msg.subject, description='Email to {r}'.format(r=', '.join(msg.recipients)))
     send_log_email.apply_async(args=(task_id, msg), task_id=task_id)
 
 
-def _write_LP_MPS_files(record, prob, user):
+def _write_LP_MPS_files(record: ScheduleAttempt, prob, user):
     lp_name, lp_abs_path = make_generated_asset_filename('lp')
     mps_name, mps_abs_path = make_generated_asset_filename('mps')
     prob.writeLP(lp_abs_path)
     prob.writeMPS(mps_abs_path)
 
-    AssetLifetime = 24 * 60 * 60  # time to live is 24 hours
-
     now = datetime.now()
-    expiry = now + timedelta(days=1)
 
     def make_asset(name, target):
         asset = GeneratedAsset(timestamp=now,
-                               expiry=expiry,
+                               expiry=None,
                                filename=str(name),
-                               mimetype=None,
+                               mimetype='text/plain',
                                target_name=target)
         asset.access_control_list.append(user)
         db.session.add(asset)
@@ -907,6 +912,13 @@ def _write_LP_MPS_files(record, prob, user):
 
     lp_asset = make_asset(lp_name, 'schedule.lp')
     mps_asset = make_asset(mps_name, 'schedule.mps')
+
+    # write new assets to database, so they get a valid primary key
+    db.session.flush()
+
+    # add asset details to ScheduleAttempt record
+    record.lp_file = lp_asset
+    record.mps_file = mps_asset
 
     # allow exceptions to propagate up to calling function
     record.celery_finished = True
@@ -1084,9 +1096,8 @@ def register_scheduling_tasks(celery):
 
         progress_update(record.celery_id, TaskRecord.SUCCESS, 100,
                         'File generation for offline scheduling now complete', autocommit=True)
-        user.post_message('The files necessary to perform offline scheduling have been generated, and a '
-                          'set of download links has been emailed to you. The files will be available '
-                          'for the next 24 hours.', 'info', autocommit=True)
+        user.post_message('The files necessary to perform offline scheduling have been emailed to you',
+                          'info', autocommit=True)
 
 
     @celery.task(bind=True, default_retry_delay=30)
@@ -1222,7 +1233,7 @@ def register_scheduling_tasks(celery):
                           meta='Looking up ScheduleAttempt record for id={id}'.format(id=id))
 
         try:
-            record = db.session.query(ScheduleAttempt).filter_by(id=id).first()
+            record: ScheduleAttempt = db.session.query(ScheduleAttempt).filter_by(id=id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -1254,7 +1265,9 @@ def register_scheduling_tasks(celery):
                                    creator_id=current_id,
                                    creation_timestamp=datetime.now(),
                                    last_edit_id=None,
-                                   last_edit_timestamp=None)
+                                   last_edit_timestamp=None,
+                                   lp_file_id=None,
+                                   mps_file_id=None)
 
             db.session.add(data)
             db.session.flush()
@@ -1293,6 +1306,31 @@ def register_scheduling_tasks(celery):
                                              key=new_key,
                                              schedule_id=data.id)
                     db.session.add(en)
+
+                now = datetime.now()
+
+                def copy_asset(old_asset, target, ext=None):
+                    old_path = canonical_generated_asset_filename(old_asset.filename)
+                    new_name, new_abs_path = make_generated_asset_filename(ext=ext)
+
+                    copyfile(old_path, new_abs_path)
+
+                    new_asset = GeneratedAsset(timestamp=now,
+                                               expiry=None,
+                                               filename=str(new_name),
+                                               mimetype='text/plain',
+                                               target_name=target)
+                    new_asset.access_control_list = old_asset.access_control_list
+                    new_asset.access_control_roles = old_asset.access_control_roles
+                    db.session.add(new_asset)
+
+                    return new_asset
+
+                if record.lp_file is not None:
+                    data.lp_file = copy_asset(record.lp_file, 'schedule.lp', ext='lp')
+
+                if record.mps_file is not None:
+                    data.mps_file = copy_asset(record.mps_file, 'schedule.mps', ext='mps')
 
             db.session.commit()
 

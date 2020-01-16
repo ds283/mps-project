@@ -49,35 +49,74 @@ from .forms import GoLiveForm, IssueFacultyConfirmRequestFormFactory, OpenFeedba
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm
 
-from ..uploads import submitted_files
+ from ..uploads import submitted_files
 
-from sqlalchemy import and_, or_
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from sqlalchemy.orm.exc import StaleDataError
+ from sqlalchemy import and_, or_
+ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+ from sqlalchemy.orm.exc import StaleDataError
 
-from datetime import date, datetime, timedelta
-from dateutil import parser
-from pathlib import Path
+ from datetime import date, datetime, timedelta
+ from dateutil import parser
+ from pathlib import Path
+ from datetime import date, datetime, timedelta
+ from pathlib import Path
 
+ from celery import chain
+ from dateutil import parser
+ from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
+ from flask_mail import Message
+ from flask_security import roles_accepted, current_user
+ from sqlalchemy import and_, or_
+ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+ from sqlalchemy.orm.exc import StaleDataError
 
-_marker_menu = \
-"""
-{% if proj.is_assessor(f.id) %}
-    <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-       class="btn btn-sm btn-block btn-default">
-        <i class="fa fa-trash"></i> Remove
-    </a>
-{% elif proj.can_enroll_assessor(f) %}
-    <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
-       class="btn btn-sm btn-block btn-default">
-        <i class="fa fa-plus"></i> Attach
-    </a>
-{% else %}
-    <a class="btn btn-default btn-block btn-sm disabled">
-        <i class="fa fa-ban"></i> Can't attach
-    </a>
-{% endif %}
-"""
+ import app.ajax as ajax
+ from . import convenor
+ from .forms import GoLiveForm, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
+     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
+     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
+     EditPeriodAttachmentForm
+ from ..admin.forms import LevelSelectorForm
+ from ..database import db
+ from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
+     AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
+     PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
+ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
+     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
+     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
+     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
+     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role
+ from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
+ from ..shared.asset_tools import make_submitted_asset_filename
+ from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
+ from ..shared.conversions import is_integer
+ from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashboard_data, get_capacity_data, \
+     filter_projects, get_convenor_filter_record, filter_assessors, build_enroll_selector_candidates, \
+     build_enroll_submitter_candidates, build_submitters_data, get_count
+ from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
+     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
+ from ..student.actions import store_selection
+ from ..task_queue import register_task
+ from ..uploads import submitted_files
+
+ _marker_menu = \
+     """
+     {% if proj.is_assessor(f.id) %}
+         <a href="{{ url_for('convenor.remove_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
+            class="btn btn-sm btn-block btn-default">
+             <i class="fa fa-trash"></i> Remove
+         </a>
+     {% elif proj.can_enroll_assessor(f) %}
+         <a href="{{ url_for('convenor.add_assessor', proj_id=proj.id, pclass_id=pclass_id, mid=f.id) }}"
+            class="btn btn-sm btn-block btn-default">
+             <i class="fa fa-plus"></i> Attach
+         </a>
+     {% else %}
+         <a class="btn btn-default btn-block btn-sm disabled">
+             <i class="fa fa-ban"></i> Can't attach
+         </a>
+     {% endif %}
+     """
 
 
 _desc_label = \
@@ -195,7 +234,6 @@ _desc_menu = \
                 </a>
             </li>
 
-            <li role="separator" class="divider"></li>
             {% if desc_validator and desc_validator(d) %}
                 <li role="separator" class="divider"></li>
                 <li class="dropdown-header">Edit description</li>

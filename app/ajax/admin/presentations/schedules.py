@@ -291,19 +291,19 @@ _menu = \
                 {% if s.published %}
                     <li>
                         <a href="{{ url_for('admin.unpublish_schedule', id=s.id) }}">
-                            <i class="fa fa-stop-circle"></i> Unpublish
+                            <i class="fa fa-eject"></i> Unpublish
                         </a>
                     </li>
                 {% else %}
                     {% if not s.deployed %}
                         <li>
                             <a href="{{ url_for('admin.publish_schedule', id=s.id) }}">
-                                <i class="fa fa-share"></i> Publish to convenors
+                                <i class="fa fa-share-square-o"></i> Publish to convenors
                             </a>
                         </li>
                     {% else %}
                         <li class="disabled">
-                            <a><i class="fa fa-share"></i> Can't publish</a>
+                            <a><i class="fa fa-ban"></i> Can't publish</a>
                         </li>
                     {% endif %}
                 {% endif %}
@@ -311,18 +311,18 @@ _menu = \
                 {% if s.deployed and s.is_revokable %}
                     <li>
                         <a href="{{ url_for('admin.undeploy_schedule', id=s.id) }}">
-                            <i class="fa fa-stop-circle"></i> Revoke deployment
+                            <i class="fa fa-eject"></i> Revoke deployment
                         </a>
                     </li>
                 {% else %}
                     {% if s.owner.is_deployed %}
                         <li class="disabled">
-                            <a><i class="fa fa-upload"></i> Can't deploy</a>
+                            <a><i class="fa fa-ban"></i> Can't deploy</a>
                         </li>
                     {% else %}
                         <li>
                             <a href="{{ url_for('admin.deploy_schedule', id=s.id) }}">
-                                <i class="fa fa-upload"></i> Deploy
+                                <i class="fa fa-play"></i> Deploy
                             </a>
                         </li>
                     {% endif %}

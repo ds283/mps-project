@@ -39,6 +39,7 @@ Flask-Markdown==0.3
 Flask-Migrate==2.5.2
 Flask-Principal==0.4.0
 flask-profiler==1.8.1
+Flask-QRcode==3.0.0
 flask-rollbar==1.0.1
 Flask-Security-Too==3.3.2
 Flask-SQLAlchemy==2.4.1
@@ -91,6 +92,7 @@ python-editor==1.0.4
 python-usernames==0.2.3
 pytz==2019.3
 PyYAML==5.2
+qrcode==6.1
 redis==3.3.11
 requests==2.22.0
 rollbar==0.14.7

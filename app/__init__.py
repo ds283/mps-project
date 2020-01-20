@@ -31,6 +31,7 @@ from .uploads import solution_files, batch_user_files, submitted_files
 from flask_sqlalchemy import get_debug_queries
 from flask_profiler import Profiler
 from flask_rollbar import Rollbar
+from flask_qrcode import QRcode
 
 from .config import app_config, site_revision, site_copyright_dates
 from .build_data import git_tag
@@ -94,6 +95,7 @@ def create_app():
     bleach = Bleach(app)
     md = Markdown(app, extensions=[makeExtension(configs={'entities': 'named'})])
     rb = Rollbar(app)
+    qr = QRcode(app)
 
     session_store = Session(app)
 

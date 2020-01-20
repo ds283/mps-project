@@ -364,7 +364,7 @@ def view_project(sid, pid):
     if not _verify_view_project(sel, project):
         return redirect(url_for('student.dashboard'))
 
-    # verify prokect is open
+    # verify project is open
     if not _verify_open(sel.config):
         return redirect(url_for('student.dashboard'))
 

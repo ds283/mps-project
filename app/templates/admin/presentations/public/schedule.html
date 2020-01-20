@@ -28,12 +28,19 @@
                     <div class="well">
                         <div>
                             <div class="row vertical-top">
-                                <div class="col-xs-7 slot-title">
-                                    {{ slot.date_as_string }} {{ slot.session_type_string }}
+                                <div class="col-xs-7">
+                                    <div class="slot-title">
+                                        {{ slot.date_as_string }} {{ slot.session_type_string }}
+                                    </div>
+                                    <div>
+                                        {{ slot.session_details }}
+                                    </div>
                                 </div>
-                                <div class="col-xs-5 slot-title">
+                                <div class="col-xs-5">
                                     <div class="pull-right">
-                                        {{ slot.room_full_name }}
+                                        <div class="slot-title">
+                                            {{ slot.room_full_name }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -58,14 +65,16 @@
                             <table class="table table-striped table-bordered">
                                 <thead>
                                     <tr>
-                                        <th width="50%"> Name</th>
-                                        <th width="50%"> Supervisor</th>
+                                        <th width="25%"> Name</th>
+                                        <th width="50%"> Project</th>
+                                        <th width="25%"> Supervisor</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for talk in slot.talks %}
                                         <tr>
                                             <td>{{ talk.owner.student.user.name }}</td>
+                                            <td><a href="{{ url_for('faculty.live_project', pid=talk.project.id, url=url_for('admin.view_schedule', tag=schedule.tag), text='schedule overview') }}">{{ talk.project.name }}</a></td>
                                             <td>{{ talk.project.owner.user.name }}</td>
                                         </tr>
                                     {% endfor %}

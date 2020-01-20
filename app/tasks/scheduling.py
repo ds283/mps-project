@@ -1493,7 +1493,7 @@ def register_scheduling_tasks(celery):
             raise self.retry()
 
         if attend_data is None:
-            self.update_state('FAILIURE', meta='Could not load AssessorAttendanceData record from database')
+            self.update_state('FAILURE', meta='Could not load AssessorAttendanceData record from database')
             raise self.retry()
 
         faculty = attend_data.faculty

@@ -236,14 +236,12 @@ def _get_user_approvals_data():
 def build_project_approval_queues():
     # want to count number of ProjectDescriptions that are associated with project classes that are in the
     # confirmation phase.
-    # We ignore descriptions that have already been validated, or which belong to inactive projects,
-    # or which belong to unpublished project classes
+    # We ignore descriptions that have already been validated, or which belong to inactive projects
     descriptions = db.session.query(ProjectDescription) \
         .join(Project, Project.id == ProjectDescription.parent_id) \
         .join(ProjectClass, Project.project_classes.any(id=ProjectClass.id)) \
         .filter(ProjectDescription.workflow_state != WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED,
-                Project.active == True,
-                ProjectClass.publish == True).all()
+                Project.active == True).all()
 
     queued = []
     rejected = []

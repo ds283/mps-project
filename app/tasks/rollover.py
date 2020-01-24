@@ -817,7 +817,7 @@ def register_rollover_tasks(celery):
     def reset_project_description(self, new_config_id, desc_id):
         # get ProjectDescription
         try:
-            record = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
+            record: ProjectDescription = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -826,7 +826,15 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', 'Could not load ProjectDescription')
             return new_config_id
 
+        # mark description as not confirmed
         record.confirmed = False
+
+        # mark description as not validated
+        record.validated_id = None
+        record.validated_timestamp = None
+
+        # mark workflow as back in 'Queued' sate
+        record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
 
         try:
             db.session.commit()

@@ -473,7 +473,7 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
     # if the project is not active, there is no need to do anything with its approval tag;
     # just replace it by nothing. You can't approve an inactive project.
     # Also, check that at least one project class this project belongs to is published
-    published = p.project_classes.any(publish=True).first() is not None
+    published = p.project_classes.filter_by(publish=True).first() is not None
     if show_approvals:
         if p.active and published:
 

@@ -829,12 +829,17 @@ def register_rollover_tasks(celery):
         # mark description as not confirmed
         record.confirmed = False
 
-        # mark description as not validated
-        record.validated_id = None
-        record.validated_timestamp = None
+        # validation data can be carried through; there will be no need to re-validate this project in
+        # the new cycle unless it is edited.
+        # However we enforce that the fields are consistent.
+        if record.validator_id is None or record.validated_timestamp is None:
+            record.validated_id = None
+            record.validated_timestamp = None
 
-        # mark workflow as back in 'Queued' sate
-        record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+        # change projects marked as 'Rejected' back the 'Queued'
+        if record.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_QUEUED and \
+                record.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
+            record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
 
         try:
             db.session.commit()

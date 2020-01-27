@@ -7268,9 +7268,6 @@ def manage_attendees_ajax(id):
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
-    if data.is_deployed:
-        return jsonify({})
-
     if not validate_assessment(data):
         return jsonify({})
 
@@ -7584,9 +7581,6 @@ def manage_assessors_ajax(id):
         return jsonify({})
 
     data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
-
-    if data.is_deployed:
-        return jsonify({})
 
     state_filter = request.args.get('state_filter')
 

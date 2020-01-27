@@ -68,7 +68,7 @@ from ..models import MainConfig, User, FacultyData, ResearchGroup, \
 from ..shared.asset_tools import canonical_generated_asset_filename, make_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.backup import get_backup_config, set_backup_config, get_backup_count, get_backup_size, remove_backup
-from ..shared.conversions import is_integer
+from ..shared.conversions import is_integer, is_boolean
 from ..shared.formatters import format_size
 from ..shared.forms.queries import ScheduleSessionQuery
 from ..shared.internal_redis import get_redis
@@ -4972,7 +4972,7 @@ def force_confirm_availability(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(assessment_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
@@ -4983,7 +4983,11 @@ def force_confirm_availability(assessment_id, faculty_id):
               'info')
         return redirect(request.referrer)
 
-    faculty = FacultyData.query.get_or_404(faculty_id)
+    if data.is_deployed:
+        flash('Cannot force confirm availability for this assessment because it is currently deployed', 'info')
+        return redirect(request.referrer)
+
+    faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
 
     if not data.includes_faculty(faculty_id):
         flash('Cannot force confirm availability response for {name} because this faculty member is not attached '
@@ -5006,7 +5010,7 @@ def schedule_set_limit(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(assessment_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     url = request.args.get('url', None)
     text = request.args.get('text', None)
@@ -5023,7 +5027,11 @@ def schedule_set_limit(assessment_id, faculty_id):
         flash('Cannot remove assessors from this assessment because it has not yet been opened', 'info')
         return redirect(url)
 
-    faculty = FacultyData.query.get_or_404(faculty_id)
+    if data.is_deployed:
+        flash('Cannot adjust limits for this assessment because it is currently deployed', 'info')
+        return redirect(url)
+
+    faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
 
     if not data.includes_faculty(faculty_id):
         flash('Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
@@ -5053,7 +5061,7 @@ def remove_assessor(assessment_id, faculty_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(assessment_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(assessment_id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
@@ -5063,7 +5071,11 @@ def remove_assessor(assessment_id, faculty_id):
         flash('Cannot remove assessors from this assessment because it has not yet been opened', 'info')
         return redirect(request.referrer)
 
-    faculty = FacultyData.query.get_or_404(faculty_id)
+    if data.is_deployed:
+        flash('Cannot remove assessors from this assessment because it is currently deployed', 'info')
+        return redirect(request.referrer)
+
+    faculty: FacultyData = FacultyData.query.get_or_404(faculty_id)
 
     if not data.includes_faculty(faculty_id):
         flash('Cannot remove assessor "{name}" from "{assess_name}" because this faculty member is not attached '
@@ -5313,7 +5325,7 @@ def assessor_session_availability_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    sess = PresentationSession.query.get_or_404(id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
     if not validate_assessment(sess.owner):
         return jsonify({})
@@ -5338,7 +5350,7 @@ def assessor_session_availability_ajax(id):
     else:
         assessors = data.assessor_list.all()
 
-    return ajax.admin.assessor_session_availability_data(data, sess, assessors)
+    return ajax.admin.assessor_session_availability_data(data, sess, assessors, editable=not sess.owner.is_deployed)
 
 
 @admin.route('/session_available/<int:f_id>/<int:s_id>')
@@ -5347,7 +5359,7 @@ def session_available(f_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationSession.query.get_or_404(s_id)
+    data: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
@@ -5355,6 +5367,10 @@ def session_available(f_id, s_id):
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.owner.is_deployed:
+        flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)
@@ -5370,10 +5386,14 @@ def session_ifneeded(f_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationSession.query.get_or_404(s_id)
+    data: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
+        return redirect(request.referrer)
+
+    if data.owner.is_deployed:
+        flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
         return redirect(request.referrer)
 
     if not data.owner.requested_availability:
@@ -5393,7 +5413,7 @@ def session_unavailable(f_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationSession.query.get_or_404(s_id)
+    data: PresentationSession = PresentationSession.query.get_or_404(s_id)
 
     current_year = get_current_year()
     if not validate_assessment(data.owner, current_year=current_year):
@@ -5401,6 +5421,10 @@ def session_unavailable(f_id, s_id):
 
     if not data.owner.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.owner.is_deployed:
+        flash('Cannot modify attendance data for this assessor because the schedule is deployed', 'info')
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)
@@ -5416,7 +5440,7 @@ def session_all_available(f_id, a_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(a_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
@@ -5424,6 +5448,10 @@ def session_all_available(f_id, a_id):
 
     if not data.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Cannot set availability data for this session because it has already been published', 'info')
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)
@@ -5442,7 +5470,7 @@ def session_all_unavailable(f_id, a_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(a_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     current_year = get_current_year()
     if not validate_assessment(data, current_year=current_year):
@@ -5450,6 +5478,10 @@ def session_all_unavailable(f_id, a_id):
 
     if not data.requested_availability:
         flash('Cannot set availability for this session because its parent assessment has not yet been opened', 'info')
+        return redirect(request.referrer)
+
+    if data.is_deployed:
+        flash('Cannot set availability data for this session because it has already been published', 'info')
         return redirect(request.referrer)
 
     fac = FacultyData.query.get_or_404(f_id)
@@ -5508,7 +5540,7 @@ def submitter_session_availability_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    sess = PresentationSession.query.get_or_404(id)
+    sess: PresentationSession = PresentationSession.query.get_or_404(id)
 
     if sess.owner.is_deployed:
         return jsonify({})
@@ -5524,7 +5556,7 @@ def submitter_session_availability_ajax(id):
     if flag:
         talks = [t for t in talks if t.submitter.owner.config.pclass_id == pclass_value]
 
-    return ajax.admin.submitter_session_availability_data(data, sess, talks)
+    return ajax.admin.submitter_session_availability_data(data, sess, talks, editable=not sess.owner.is_deployed)
 
 
 @admin.route('/assessment_schedules/<int:id>')
@@ -7196,14 +7228,9 @@ def assessment_manage_attendees(id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
-
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
-              ' altered'.format(name=data.name), 'info')
         return redirect(request.referrer)
 
     pclass_filter = request.args.get('pclass_filter')
@@ -7239,7 +7266,7 @@ def manage_attendees_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    data = PresentationAssessment.query.get_or_404(id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     if data.is_deployed:
         return jsonify({})
@@ -7260,7 +7287,7 @@ def manage_attendees_ajax(id):
     elif attend_filter == 'not-attending':
         talks = [t for t in talks if not t.attending]
 
-    return ajax.admin.presentation_attendees_data(data, talks)
+    return ajax.admin.presentation_attendees_data(data, talks, editable=not data.is_deployed)
 
 
 @admin.route('/assessment_attending/<int:a_id>/<int:s_id>')
@@ -7274,7 +7301,7 @@ def assessment_attending(a_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(a_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
         return redirect(request.referrer)
@@ -7308,7 +7335,7 @@ def assessment_not_attending(a_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(a_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
         return redirect(request.referrer)
@@ -7346,17 +7373,12 @@ def assessment_submitter_availability(a_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(a_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
         return redirect(request.referrer)
 
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be '
-              'altered'.format(name=data.name), 'info')
-        return redirect(request.referrer)
-
-    submitter = SubmissionRecord.query.get_or_404(s_id)
+    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if not data.includes_submitter(s_id):
         flash('Cannot set availability for the specified presenter because they are not included in this '
@@ -7382,17 +7404,12 @@ def assessment_assessor_availability(a_id, f_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(a_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
         return redirect(request.referrer)
 
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its assessors can no longer be '
-              'altered'.format(name=data.name), 'info')
-        return redirect(request.referrer)
-
-    assessor = FacultyData.query.get_or_404(f_id)
+    assessor: FacultyData = FacultyData.query.get_or_404(f_id)
 
     if not data.includes_faculty(f_id):
         flash('Cannot set availability for the specified assessor because they are not included in this '
@@ -7442,7 +7459,7 @@ def submitter_unavailable(sess_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    session = PresentationSession.query.get_or_404(sess_id)
+    session: PresentationSession = PresentationSession.query.get_or_404(sess_id)
     data = session.owner
 
     if not validate_assessment(data):
@@ -7453,7 +7470,7 @@ def submitter_unavailable(sess_id, s_id):
               'altered'.format(name=data.name), 'info')
         return redirect(request.referrer)
 
-    submitter = SubmissionRecord.query.get_or_404(s_id)
+    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
         flash('Cannot specify availability for the specified presenter because they are not included in this '
@@ -7472,7 +7489,7 @@ def submitter_all_available(a_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(a_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
         return redirect(request.referrer)
@@ -7482,7 +7499,7 @@ def submitter_all_available(a_id, s_id):
               'altered'.format(name=data.name), 'info')
         return redirect(request.referrer)
 
-    submitter = SubmissionRecord.query.get_or_404(s_id)
+    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
         flash('Cannot specify availability for the specified presenter because they are not included in this '
@@ -7503,7 +7520,7 @@ def submitter_all_unavailable(a_id, s_id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(a_id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(a_id)
 
     if not validate_assessment(data):
         return redirect(request.referrer)
@@ -7513,7 +7530,7 @@ def submitter_all_unavailable(a_id, s_id):
               'altered'.format(name=data.name), 'info')
         return redirect(request.referrer)
 
-    submitter = SubmissionRecord.query.get_or_404(s_id)
+    submitter: SubmissionRecord = SubmissionRecord.query.get_or_404(s_id)
 
     if submitter not in data.available_talks:
         flash('Cannot specify availability for the specified presenter because they are not included in this '
@@ -7539,14 +7556,9 @@ def assessment_manage_assessors(id):
     if not validate_using_assessment():
         return redirect(request.referrer)
 
-    data = PresentationAssessment.query.get_or_404(id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     if not validate_assessment(data):
-        return redirect(request.referrer)
-
-    if data.is_deployed:
-        flash('Assessment "{name}" has a deployed schedule, and its attendees can no longer be'
-              ' altered'.format(name=data.name), 'info')
         return redirect(request.referrer)
 
     state_filter = request.args.get('state_filter')
@@ -7571,7 +7583,7 @@ def manage_assessors_ajax(id):
     if not validate_using_assessment():
         return jsonify({})
 
-    data = PresentationAssessment.query.get_or_404(id)
+    data: PresentationAssessment = PresentationAssessment.query.get_or_404(id)
 
     if data.is_deployed:
         return jsonify({})
@@ -7595,7 +7607,7 @@ def manage_assessors_ajax(id):
     else:
         assessors = data.assessor_list.all()
 
-    return ajax.admin.presentation_assessors_data(data, assessors)
+    return ajax.admin.presentation_assessors_data(data, assessors, editable=not data.is_deployed)
 
 
 @admin.route('/merge_change_schedule/<int:source_id>/<int:target_id>/<int:source_sched>/<int:target_sched>')

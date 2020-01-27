@@ -164,9 +164,14 @@ _menu = \
         
         <li role="separator" class="divider">
         <li class="dropdown-header">Edit assessment</li>
-        {% set disabled = a.requested_availability %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.edit_assessment', id=a.id) }}"{% endif %}>
+        {% set requested_availability = a.requested_availability %}
+        {% set deployed = a.is_deployed %}
+        {% set disable_settings = requested_availability %}
+        {% set disable_submitters = not requested_availability %}
+        {% set disable_assessors = not requested_availability %}
+        {% set disable_delete = deployed %}
+        <li {% if disable_settings %}class="disabled"{% endif %}>
+            <a {% if not disable_settings %}href="{{ url_for('admin.edit_assessment', id=a.id) }}"{% endif %}>
                 <i class="fa fa-cogs"></i> Settings...
             </a>
         </li>
@@ -175,20 +180,18 @@ _menu = \
                 <i class="fa fa-calendar"></i> Sessions...
             </a>
         </li>
-        {% set disabled = not a.requested_availability or a.is_deployed %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}"{% endif %}>
+        <li {% if disable_submitters %}class="disabled"{% endif %}>
+            <a {% if not disable_submitters %}href="{{ url_for('admin.assessment_manage_attendees', id=a.id) }}"{% endif %}>
                 <i class="fa fa-user"></i> Submitters...
             </a>
         </li>
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.assessment_manage_assessors', id=a.id) }}"{% endif %}>
+        <li {% if disable_assessors %}class="disabled"{% endif %}>
+            <a {% if not disable_assessors %}href="{{ url_for('admin.assessment_manage_assessors', id=a.id) }}"{% endif %}>
                 <i class="fa fa-user"></i> Assessors...
             </a>
         </li>
-        {% set disabled = a.is_deployed %}
-        <li {% if disabled %}class="disabled"{% endif %}>
-            <a {% if not disabled %}href="{{ url_for('admin.delete_assessment', id=a.id) }}"{% endif %}>
+        <li {% if disable_delete %}class="disabled"{% endif %}>
+            <a {% if not disable_delete %}href="{{ url_for('admin.delete_assessment', id=a.id) }}"{% endif %}>
                 <i class="fa fa-trash"></i> Delete
             </a>
         </li>

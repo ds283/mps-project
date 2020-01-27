@@ -308,12 +308,18 @@ _menu = \
                     {% endif %}
                 {% endif %}
                 
-                {% if s.deployed and s.is_revokable %}
-                    <li>
-                        <a href="{{ url_for('admin.undeploy_schedule', id=s.id) }}">
-                            <i class="fa fa-eject"></i> Revoke deployment
-                        </a>
-                    </li>
+                {% if s.deployed %}
+                    {% if s.is_revokable %}
+                        <li>
+                            <a href="{{ url_for('admin.undeploy_schedule', id=s.id) }}">
+                                <i class="fa fa-eject"></i> Revoke deployment
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="disabled">
+                            <a><i class="fa fa-ban"></i> Can't revoke</a>
+                        </li>
+                    {% endif %}
                 {% else %}
                     {% if s.owner.is_deployed %}
                         <li class="disabled">

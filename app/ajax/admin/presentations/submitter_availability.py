@@ -33,7 +33,7 @@ _submitter_actions = \
             <a class="btn btn-sm btn-success btn-table-block {% if not editable %}disabled{% endif %}">
                 Attending
             </a>
-            <a {% if editable %}href="{{ url_for('admin.assessment_not_attending', a_id=a.id, s_id=s.id){% endif %} }}" class="btn btn-sm btn-default btn-table-block {% if not editable %}disabled{% endif %}">
+            <a {% if editable %}href="{{ url_for('admin.assessment_not_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-default btn-table-block {% if not editable %}disabled{% endif %}">
                 Not attending
             </a>
         {% endif %}
@@ -54,7 +54,7 @@ _session_actions = \
             <a class="btn btn-success btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
             <a {% if editable %}href="{{ url_for('admin.submitter_unavailable', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-default btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
         {% else %}
-            <a {% if editable %}href="{{ url_for('admin.submitter_available', sess_id=sess.id, s_id=s.id) }}" {% endif %} class="btn btn-default btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+            <a {% if editable %}href="{{ url_for('admin.submitter_available', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-default btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
             <a class="btn btn-danger btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
         {% endif %}
     </div>

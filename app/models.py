@@ -220,20 +220,18 @@ class WorkflowHistoryMixin():
 
 
 class StudentDataWorkflowHistory(db.Model, WorkflowHistoryMixin):
-
     __tablename__ = 'workflow_studentdata'
 
     # primary key
     id = db.Column(db.Integer(), primary_key=True)
 
-    # owning studentdata instance
+    # owning StudentData instance
     owner_id = db.Column(db.Integer(), db.ForeignKey('student_data.id'))
     owner = db.relationship('StudentData', foreign_keys=[owner_id], uselist=False,
                             backref=db.backref('workflow_history', lazy='dynamic'))
 
 
 class ProjectDescriptionWorkflowHistory(db.Model, WorkflowHistoryMixin):
-
     __tablename__ = 'workflow_project'
 
     # primary key

@@ -5,6 +5,8 @@
     Set availability for {{ assessment.name }}
 {% endblock %}
 
+{% set editable = not assessment.is_deployed %}
+
 {% block bodyblock %}
     <div class="row">
         <div class="col-xs-1"></div>
@@ -25,8 +27,8 @@
                     <div class="row">
                         <div class="col-xs-12">
                             <div class="pull-right">
-                                <a class="btn btn-default" href="{{ url_for('admin.session_all_available', f_id=assessor.id, a_id=assessment.id) }}"><i class="fa fa-check"></i> Available for all</a>
-                                <a class="btn btn-default" href="{{ url_for('admin.session_all_unavailable', f_id=assessor.id, a_id=assessment.id) }}"><i class="fa fa-times"></i> Not available for all</a>
+                                <a class="btn btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_all_available', f_id=assessor.id, a_id=assessment.id) }}"{% endif %}><i class="fa fa-check"></i> Available for all</a>
+                                <a class="btn btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_all_unavailable', f_id=assessor.id, a_id=assessment.id) }}"{% endif %}><i class="fa fa-times"></i> Not available for all</a>
                             </div>
                         </div>
                     </div>
@@ -44,17 +46,17 @@
                             <div class="col-xs-7">
                                 <div class="pull-right">
                                 {% if session.faculty_available(assessor.id) %}
-                                    <a class="btn btn-success btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
-                                    <a href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block">If needed</a>
-                                    <a href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
+                                    <a class="btn btn-success btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-default btn-sm btn-table-block {% if not editable %}disabled{% endif %}">If needed</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-default btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
                                 {% elif session.faculty_ifneeded(assessor.id) %}
-                                    <a href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
-                                    <a class="btn btn-warning btn-sm btn-table-block">If needed</a>
-                                    <a href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-default btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+                                    <a class="btn btn-warning btn-sm btn-table-block {% if not editable %}disabled{% endif %}">If needed</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-default btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
                                 {% else %}
-                                    <a href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block"><i class="fa fa-check"></i> Available</a>
-                                    <a href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}" class="btn btn-default btn-sm btn-table-block">If needed</a>
-                                    <a class="btn btn-danger btn-sm btn-table-block"><i class="fa fa-times"></i> Not available</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_available', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-default btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+                                    <a {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=assessor.id, s_id=session.id) }}"{% endif %} class="btn btn-default btn-sm btn-table-block {% if not editable %}disabled{% endif %}">If needed</a>
+                                    <a class="btn btn-danger btn-sm btn-table-block {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
                                 {% endif %}
                                 </div>
                             </div>

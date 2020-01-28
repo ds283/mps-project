@@ -23,17 +23,17 @@ _submitter_actions = \
 <div style="text-align: right;">
     <div class="pull-right">
         {% if a.not_attending(s.id) %}
-            <a href="{{ url_for('admin.assessment_attending', a_id=a.id, s_id=s.id) }}" class="btn btn-sm btn-default btn-table-block">
+            <a {% if editable %}href="{{ url_for('admin.assessment_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-default btn-table-block {% if not editable %}disabled{% endif %}">
                 Attending
             </a>
-            <a class="btn btn-sm btn-danger btn-table-block">
+            <a class="btn btn-sm btn-danger btn-table-block {% if not editable %}disabled{% endif %}">
                 Not attending
             </a>
         {% else %}
-            <a class="btn btn-sm btn-success btn-table-block">
+            <a class="btn btn-sm btn-success btn-table-block {% if not editable %}disabled{% endif %}">
                 Attending
             </a>
-            <a href="{{ url_for('admin.assessment_not_attending', a_id=a.id, s_id=s.id) }}" class="btn btn-sm btn-default btn-table-block">
+            <a {% if editable %}href="{{ url_for('admin.assessment_not_attending', a_id=a.id, s_id=s.id) }}"{% endif %} class="btn btn-sm btn-default btn-table-block {% if not editable %}disabled{% endif %}">
                 Not attending
             </a>
         {% endif %}
@@ -51,11 +51,11 @@ _session_actions = \
 <div style="text-align: right;">
     <div class="pull-right">
         {% if sess.submitter_available(s.id) %}
-            <a class="btn btn-success btn-sm"><i class="fa fa-check"></i> Available</a>
-            <a href="{{ url_for('admin.submitter_unavailable', sess_id=sess.id, s_id=s.id) }}" class="btn btn-default btn-sm"><i class="fa fa-times"></i> Not available</a>
+            <a class="btn btn-success btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+            <a {% if editable %}href="{{ url_for('admin.submitter_unavailable', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-default btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
         {% else %}
-            <a href="{{ url_for('admin.submitter_available', sess_id=sess.id, s_id=s.id) }}" class="btn btn-default btn-sm"><i class="fa fa-check"></i> Available</a>
-            <a class="btn btn-danger btn-sm"><i class="fa fa-times"></i> Not available</a>
+            <a {% if editable %}href="{{ url_for('admin.submitter_available', sess_id=sess.id, s_id=s.id) }}"{% endif %} class="btn btn-default btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-check"></i> Available</a>
+            <a class="btn btn-danger btn-sm {% if not editable %}disabled{% endif %}"><i class="fa fa-times"></i> Not available</a>
         {% endif %}
     </div>
 </div>
@@ -90,7 +90,7 @@ _project_name = \
 """
 
 
-def submitter_session_availability_data(assessment, session, talks):
+def submitter_session_availability_data(assessment, session, talks, editable=False):
     data = [{'student': {'display': '<a href="mailto:{email}">{name}</a>'.format(email=s.submitter.owner.student.user.email,
                                                                                  name=s.submitter.owner.student.user.name),
                          'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
@@ -104,12 +104,13 @@ def submitter_session_availability_data(assessment, session, talks):
                                                if s.submitter.project is not None else None,
                                                url=url_for('admin.submitter_session_availability', id=session.id),
                                                text='submitter availability for session'),
-             'menu': render_template_string(_session_actions, s=s.submitter, a=assessment, sess=session)} for s in talks]
+             'menu': render_template_string(_session_actions, s=s.submitter, a=assessment, sess=session,
+                                            editable=editable)} for s in talks]
 
     return jsonify(data)
 
 
-def presentation_attendees_data(assessment, talks):
+def presentation_attendees_data(assessment, talks, editable=False):
     data = [{'student': {'display': render_template_string(_global_name, s=s, a=assessment),
                          'sortstring': s.submitter.owner.student.user.last_name + s.submitter.owner.student.user.first_name},
              'pclass': render_template_string(_pclass, pclass=s.submitter.owner.config.project_class),
@@ -122,6 +123,7 @@ def presentation_attendees_data(assessment, talks):
                                                if s.submitter.project is not None else None,
                                                url=url_for('admin.assessment_manage_attendees', id=assessment.id),
                                                text='submitter management view'),
-             'menu': render_template_string(_submitter_actions, s=s.submitter, a=assessment)} for s in talks]
+             'menu': render_template_string(_submitter_actions, s=s.submitter, a=assessment,
+                                            editable=editable)} for s in talks]
 
     return jsonify(data)

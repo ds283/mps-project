@@ -817,7 +817,7 @@ def register_rollover_tasks(celery):
     def reset_project_description(self, new_config_id, desc_id):
         # get ProjectDescription
         try:
-            record = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
+            record: ProjectDescription = db.session.query(ProjectDescription).filter_by(id=desc_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -826,7 +826,31 @@ def register_rollover_tasks(celery):
             self.update_state('FAILURE', 'Could not load ProjectDescription')
             return new_config_id
 
+        # mark description as not confirmed
         record.confirmed = False
+
+        if record.parent.active:
+            # if the parent project is active, then validation information can be carried through;
+            # there will be no need to re-validate this project in the new cycle unless it is edited.
+            # However we *do* enforce that the fields are consistent.
+            if record.validator_id is None or record.validated_timestamp is None \
+                    or record.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
+                record.validated_id = None
+                record.validated_timestamp = None
+
+            # change projects marked as 'Rejected' back the 'Queued', except that we
+            # test for the converse statement so that we pick up any stray meaningless values
+            # for workflow_state
+            if record.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_QUEUED and \
+                    record.workflow_state != ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
+                record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+
+        else:
+            # if the parent project is not active, force the description to be queued and with
+            # no validation data
+            record.workflow_state = ProjectDescription.WORKFLOW_APPROVAL_QUEUED
+            record.validated_id = None
+            record.validated_timestamp = None
 
         try:
             db.session.commit()

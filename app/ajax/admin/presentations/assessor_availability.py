@@ -18,33 +18,33 @@ _session_actions = \
 <div style="text-align: right;">
     <div class="pull-right">
         {% if available %}
-            <a class="btn btn-sm btn-success">
+            <a class="btn btn-sm btn-success {% if not editable %}disabled{% endif %}">
                 <i class="fa fa-check"></i> Available
             </a>
-            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}">
+            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 If needed
             </a>
-            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}">
+            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fa fa-times"></i> Not available
             </a>
         {% elif ifneeded %}
-            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}">
+            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fa fa-check"></i> Available
             </a>
-            <a class="btn btn-sm btn-warning">
+            <a class="btn btn-sm btn-warning {% if not editable %}disabled{% endif %}">
                 If needed
             </a>
-            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}">
+            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_unavailable', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fa fa-times"></i> Not available
             </a>
         {% else %}
-            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}">
+            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_available', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 <i class="fa fa-check"></i> Available
             </a>
-            <a class="btn btn-sm btn-default" href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}">
+            <a class="btn btn-sm btn-default {% if not editable %}disabled{% endif %}" {% if editable %}href="{{ url_for('admin.session_ifneeded', f_id=f.id, s_id=s.id) }}"{% endif %}>
                 If needed
             </a>
-            <a class="btn btn-sm btn-danger">
+            <a class="btn btn-sm btn-danger {% if not editable %}disabled{% endif %}">
                 <i class="fa fa-times"></i> Not available
             </a>
         {% endif %}
@@ -79,19 +79,20 @@ _assessor_actions = \
                 <i class="fa fa-calendar"></i> Sessions...
             </a>
         </li>
-        {% set disabled = not a.is_faculty_outstanding(f.id) %} 
+        {% set disabled = not editable or not a.is_faculty_outstanding(f.id) %} 
         <li {% if disabled %}class="disabled"{% endif %}>
             <a {% if not disabled %}href="{{ url_for('admin.force_confirm_availability', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
                 <i class="fa fa-check"></i> {% if not disabled %}Force confirm{% else %}Confirmed{% endif %}
             </a>
         </li>
-        <li>
-            <a href="{{ url_for('admin.schedule_set_limit', assessment_id=a.id, faculty_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}">
+        {% set disabled = not editable %}
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.schedule_set_limit', assessment_id=a.id, faculty_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}"{% endif %}>
                 <i class="fa fa-cogs"></i> Set assignment limit...
             </a>
         </li>
-        <li>
-            <a href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=f.id) }}">
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
                 <i class="fa fa-trash"></i> Remove
             </a>
         </li>
@@ -148,25 +149,27 @@ _name = \
 
 
 
-def assessor_session_availability_data(assessment, session, assessors):
+def assessor_session_availability_data(assessment, session, assessors, editable=False):
     data = [{'name': {'display': render_template_string(_name, rec=assessor),
                       'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
              'confirmed': render_template_string(_confirmed, a=assessment, rec=assessor),
              'comment': render_template_string(_comment, rec=assessor),
              'availability': {'display': render_template_string(_availability, rec=assessor),
                               'sortvalue': assessor.number_available},
-             'menu': render_template_string(_session_actions, s=session, f=assessor.faculty)} for assessor in assessors]
+             'menu': render_template_string(_session_actions, s=session, f=assessor.faculty,
+                                            editable=editable)} for assessor in assessors]
 
     return jsonify(data)
 
 
-def presentation_assessors_data(assessment, assessors):
+def presentation_assessors_data(assessment, assessors, editable=False):
     data = [{'name': {'display': render_template_string(_name, rec=assessor),
                       'sortstring': assessor.faculty.user.last_name + assessor.faculty.user.first_name},
              'confirmed': render_template_string(_confirmed, a=assessment, rec=assessor),
              'comment': render_template_string(_comment, rec=assessor),
              'availability': {'display': render_template_string(_availability, rec=assessor),
                               'sortvalue': assessor.number_available},
-             'menu': render_template_string(_assessor_actions, a=assessment, f=assessor.faculty)} for assessor in assessors]
+             'menu': render_template_string(_assessor_actions, a=assessment, f=assessor.faculty,
+                                            editable=editable)} for assessor in assessors]
 
     return jsonify(data)

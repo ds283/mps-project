@@ -235,8 +235,13 @@ def _get_user_approvals_data():
 
 def build_project_approval_queues():
     # want to count number of ProjectDescriptions that are associated with project classes that are in the
-    # confirmation phase, for faculty that have signed-off on their projects
-    descriptions = db.session.query(ProjectDescription).all()
+    # confirmation phase.
+    # We ignore descriptions that have already been validated, or which belong to inactive projects
+    descriptions = db.session.query(ProjectDescription) \
+        .join(Project, Project.id == ProjectDescription.parent_id) \
+        .join(ProjectClass, Project.project_classes.any(id=ProjectClass.id)) \
+        .filter(ProjectDescription.workflow_state != WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED,
+                Project.active == True).all()
 
     queued = []
     rejected = []
@@ -297,16 +302,19 @@ def allow_approvals(desc_id):
                 if record is None or record.supervisor_state != EnrollmentRecord.SUPERVISOR_ENROLLED:
                     continue
 
-                # don't include projects if confirmation is required and requests haven't been issued.
-                # don't include projects if requests have been issued, but project owner hasn't yet confirmed
+                # for project classes that require project confirmations:
                 if config.require_confirm:
+                    # don't include projects if confirmation is required and requests haven't been issued.
                     if not config.requests_issued:
                         continue
 
-                    if not desc.confirmed:
-                        continue
+                    # don't include projects if requests have been issued, but project owner hasn't yet confirmed
+                    # TODO: Why? This doesn't seem to make sense
+                    # if get_count(config.confirmation_required.filter_by(id=faculty.id)) > 0:
+                    #     continue
 
-                    if get_count(config.confirmation_required.filter_by(id=faculty.id)) > 0:
+                    # don't include descriptions that have not been confirmed by their owner
+                    if not desc.confirmed:
                         continue
 
                 return True

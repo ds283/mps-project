@@ -16,6 +16,7 @@ from ...database import db
 from ...models import Project, EnrollmentRecord, ResearchGroup, SkillGroup, TransferableSkill, DegreeProgramme, \
     DegreeType, ProjectDescription, User, ProjectClassConfig
 from ...cache import cache
+from ...shared.utils import get_count
 
 from urllib import parse
 
@@ -466,62 +467,70 @@ def replace_menu_anchor(text_enc, url_enc, config, menu):
     return menu
 
 
-def replace_approval_tags(p, show_approvals, config, status):
+def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClassConfig, status: str):
     repapprove = ''
 
+    # if the project is not active, there is no need to do anything with its approval tag;
+    # just replace it by nothing. You can't approve an inactive project.
+    # Also, check that at least one project class this project belongs to is published
+    published = p.project_classes.filter_by(publish=True).first() is not None
     if show_approvals:
+        if p.active and published:
 
-        # if no config supplied, we don't know which project class we are looking at and therefore which
-        # description is relevant. So we must describe the project as a whole
-        if config is None:
-            state = p.approval_state
+            # if no config supplied, we don't know which project class we are looking at and therefore which
+            # description is relevant. So we must describe the project as a whole
+            if config is None:
+                state = p.approval_state
 
-            if state == Project.DESCRIPTIONS_APPROVED:
-                repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approval: All approved</span>'
-            elif state == Project.SOME_DESCRIPTIONS_QUEUED:
-                repapprove = '<span class="label label-warning">Approval: Some queued</span>'
-            elif state == Project.SOME_DESCRIPTIONS_REJECTED:
-                repapprove = '<span class="label label-info">Approval: Some rejected</span>'
-            elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
-                repapprove = '<span class="label label-default">Approval: Some unconfirmed</span>'
-            elif state == Project.APPROVALS_NOT_ACTIVE:
-                repapprove = ''
-            elif state == Project.APPROVALS_NOT_OFFERABLE:
-                repapprove = '<span class="label label-danger">Approval: Not offerable/span>'
-            else:
-                repapprove = '<span class="label label-danger">Unknown approval state</span>'
-
-        else:
-            desc = p.get_description(config.pclass_id)
-            state = desc.workflow_state
-
-            if desc is None:
-                repapprove = '<span class="label label-default">Approval: No description</span>'
-            else:
-                if desc.requires_confirmation and not desc.confirmed:
-                    if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
-                        repapprove = """<div class="dropdown" style="display: inline-block;">
-                                            <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
-                                            <ul class="dropdown-menu">
-                                                <li><a href="{url}"><i class="fa fa-check"></i> Confirm</a></li>
-                                            </ul>
-                                        </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
-                    else:
-                        repapprove = '<span class="label label-default">Approval: Not confirmed</span>'
+                if state == Project.DESCRIPTIONS_APPROVED:
+                    repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approval: All approved</span>'
+                elif state == Project.SOME_DESCRIPTIONS_QUEUED:
+                    repapprove = '<span class="label label-warning">Approval: Some queued</span>'
+                elif state == Project.SOME_DESCRIPTIONS_REJECTED:
+                    repapprove = '<span class="label label-info">Approval: Some rejected</span>'
+                elif state == Project.SOME_DESCRIPTIONS_UNCONFIRMED:
+                    repapprove = '<span class="label label-default">Approval: Some unconfirmed</span>'
+                elif state == Project.APPROVALS_NOT_ACTIVE:
+                    repapprove = ''
+                elif state == Project.APPROVALS_NOT_OFFERABLE:
+                    repapprove = '<span class="label label-danger">Approval: Not offerable/span>'
                 else:
-                    if state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
-                        repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approval: Approved</span>'
-                    elif state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
-                        repapprove = '<span class="label label-warning">Approval: Queued</span>'
-                    elif state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
-                        repapprove = '<span class="label label-danger">Approval: Rejected</span>'
-                    else:
-                        repapprove = '<span class="label label-danger">Unknown approval state</span>'
+                    repapprove = '<span class="label label-danger">Unknown approval state</span>'
 
-                    if desc.validated_by:
-                        repapprove += ' <span class="label label-info">Signed-off: ' + desc.validated_by.name + '</span>'
-                        if desc.validated_timestamp:
-                            repapprove += ' <span class="label label-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
+            # otherwise, we can pick the correct description
+            else:
+                desc = p.get_description(config.pclass_id)
+                state = desc.workflow_state
+
+                if desc is None:
+                    repapprove = '<span class="label label-default">Approval: No description</span>'
+                else:
+                    if desc.requires_confirmation and not desc.confirmed:
+                        if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
+                            repapprove = """<div class="dropdown" style="display: inline-block;">
+                                                <a class="label label-default dropdown-toggle" type="button" data-toggle="dropdown">Approval: Not confirmed <span class="caret"></span></a>
+                                                <ul class="dropdown-menu">
+                                                    <li><a href="{url}"><i class="fa fa-check"></i> Confirm</a></li>
+                                                </ul>
+                                            </div>""".format(url=url_for('convenor.confirm_description', config_id=config.id, did=desc.id))
+                        else:
+                            repapprove = '<span class="label label-default">Approval: Not confirmed</span>'
+                    else:
+                        if state == ProjectDescription.WORKFLOW_APPROVAL_VALIDATED:
+                            repapprove = '<span class="label label-success"><i class="fa fa-check"></i> Approval: Approved</span>'
+                        elif state == ProjectDescription.WORKFLOW_APPROVAL_QUEUED:
+                            repapprove = '<span class="label label-warning">Approval: Queued</span>'
+                        elif state == ProjectDescription.WORKFLOW_APPROVAL_REJECTED:
+                            repapprove = '<span class="label label-danger">Approval: Rejected</span>'
+                        else:
+                            repapprove = '<span class="label label-danger">Unknown approval state</span>'
+
+                        if desc.validated_by:
+                            repapprove += ' <span class="label label-info">Signed-off: ' + desc.validated_by.name + '</span>'
+                            if desc.validated_timestamp:
+                                repapprove += ' <span class="label label-info">' + desc.validated_timestamp.strftime("%a %d %b %Y %H:%M:%S") + '</span>'
+        else:
+            repapprove = '<span class="label label-default"><i class="fa fa-ban"></i> Can\'t approve</span>'
 
     status = status.replace('REPAPPROVAL', repapprove, 1)
     return status

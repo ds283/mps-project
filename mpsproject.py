@@ -192,7 +192,7 @@ def migrate_description_confirmations():
 
             # any description with a nontrivial workflow state is automatically assumed to be confirmed
             if d.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_VALIDATED or \
-                d.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED:
+                    d.workflow_state == WorkflowMixin.WORKFLOW_APPROVAL_REJECTED:
                 d.confirmed = True
                 break
 

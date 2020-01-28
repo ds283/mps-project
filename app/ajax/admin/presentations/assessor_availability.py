@@ -86,17 +86,16 @@ _assessor_actions = \
             </a>
         </li>
         {% set disabled = not editable %}
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.schedule_set_limit', assessment_id=a.id, faculty_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}"{% endif %}>
-                    <i class="fa fa-cogs"></i> Set assignment limit...
-                </a>
-            </li>
-            <li {% if disabled %}class="disabled"{% endif %}>
-                <a {% if not disabled %}href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
-                    <i class="fa fa-trash"></i> Remove
-                </a>
-            </li>
-        {% endif %}
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.schedule_set_limit', assessment_id=a.id, faculty_id=f.id, text='assessment assessor list', url=url_for('admin.assessment_manage_assessors', id=a.id)) }}"{% endif %}>
+                <i class="fa fa-cogs"></i> Set assignment limit...
+            </a>
+        </li>
+        <li {% if disabled %}class="disabled"{% endif %}>
+            <a {% if not disabled %}href="{{ url_for('admin.remove_assessor', assessment_id=a.id, faculty_id=f.id) }}"{% endif %}>
+                <i class="fa fa-trash"></i> Remove
+            </a>
+        </li>
     </ul>
 </div>
 """

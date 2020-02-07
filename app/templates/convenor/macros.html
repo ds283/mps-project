@@ -14,7 +14,7 @@
                 </div>
                 <div class="col-xs-5">
                     <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
-                        {{ item.format_project()|safe }}
+                        {{ item.format_project|safe }}
                     </a>
                     {% if project.is_available(sel) %}
                         <span class="label label-success"><i class="fa fa-check"></i> Available</span>

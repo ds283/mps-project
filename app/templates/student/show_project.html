@@ -228,7 +228,7 @@
                                     {% endif %}
 
                                     {% if desc %}
-                                        {% set modules = desc.ordered_modules.all() if desc is not none else none%}
+                                        {% set modules = desc.ordered_modules.all() if desc is not none else none %}
                                         {% if modules and modules|length > 0 %}
                                             <div class="row sm-gap-below vertical-top">
                                                 <div class="col-xs-3">Recommended modules</div>

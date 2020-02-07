@@ -5606,7 +5606,7 @@ class LiveProject(db.Model,
                                                    live_assessors.c.faculty_id, live_assessors.c.project_id,
                                                    'assessor_for_live', 'disallow'),
                   ProjectDescriptionMixinFactory(live_project_supervision, 'live_projects', live_project_to_modules,
-                                                 'tagged_live_projects', description_to_modules.c.module_id,
+                                                 'tagged_live_projects', live_project_to_modules.c.module_id,
                                                  live_project_to_modules.c.project_id)):
     """
     The definitive live project table

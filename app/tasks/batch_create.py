@@ -293,7 +293,12 @@ def _guess_year_data(cohort, year_of_course, current_year, fyear=None) -> (bool,
               'estimated={es}, imported={im}, diff={df}'.format(cy=current_year, ch=cohort, fs=fyear_shift,
                                                                 es=estimated_year_of_course, im=year_of_course,
                                                                 df=difference))
-        raise SkipRow
+
+        if difference == -1 and fyear:
+            fyear = False
+            difference = 0
+        else:
+            raise SkipRow
 
     # if a foundation year has not been specified, split the difference between a foundation year
     # and some number of repeated years

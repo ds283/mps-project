@@ -975,8 +975,6 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType):
     :param StudentRecordType: Student model. Usually SubmittingStudent for submitters and SelectingStudent for selectors.
     :return:
     """
-    logger = current_app.logger
-
     # which year does the project run in, and for how long?
     start_year = config.start_year
     extent = config.extent
@@ -994,22 +992,13 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType):
     else:
         allowed_programmes = None
 
-    logger.info('## _build_generic_enroll_candidate')
-    logger.info('##   StudentRecordType = {t}'.format(t=StudentRecordType))
-    logger.info('##   year_offset = {yo}, start_year = {sy}, extent = {ex}, current_year = '
-                '{cy}'.format(yo=year_offset, sy=start_year, ex=extent, cy=current_year))
-    logger.info('##   first_allowed_year = {fa}, last_allowed_year = {la}'.format(fa=first_allowed_year,
-                                                                                  la=last_allowed_year))
-
     # build a list of eligible students who are not already attached as selectors
     candidate_students = _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year)
-    logger.info('##   number of candidate_students = {c}'.format(c=get_count(candidate_students)))
 
     # build a list of existing selecting students
     existing_students = db.session.query(StudentRecordType.student_id) \
         .filter(StudentRecordType.config_id == config.id,
                 ~StudentRecordType.retired)
-    logger.info('##   number of existing students = {c}'.format(c=get_count(existing_students)))
 
     existing_students = existing_students.subquery()
 
@@ -1019,7 +1008,6 @@ def _build_generic_enroll_candidate(config, year_offset, StudentRecordType):
     missing_students = candidate_students \
         .join(existing_students, existing_students.c.student_id == StudentData.id, isouter=True) \
         .filter(existing_students.c.student_id == None)
-    logger.info('##   number of missing students = {c}'.format(c=get_count(missing_students)))
 
     return missing_students
 

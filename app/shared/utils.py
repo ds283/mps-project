@@ -955,34 +955,7 @@ def build_enroll_selector_candidates(config):
     :param config:
     :return:
     """
-
-    # which year does the project run in, and for how long?
-    start_year = config.start_year
-    extent = config.extent
-    current_year = config.year
-
-    # earliest year: academic year in which students can be selectors
-    first_allowed_year = start_year - 1
-
-    # latest year: last academic year in which students can be a selector
-    last_allowed_year = start_year + (extent - 1) - 1
-
-    allowed_programmes = config.project_class.programmes.with_entities(DegreeProgramme.id).distinct().all()
-    allowed_programmes = [_detuple(x) for x in allowed_programmes]
-
-    # build a list of eligible students who are not already attached as selectors
-    candidates = _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year)
-
-    # build a list of existing selecting students
-    selectors = db.session.query(SelectingStudent.student_id) \
-        .filter(SelectingStudent.config_id == config.id,
-                ~SelectingStudent.retired).subquery()
-
-    # find students in candidates who are not also in selectors
-    missing = candidates.join(selectors, selectors.c.student_id == StudentData.id, isouter=True) \
-        .filter(selectors.c.student_id == None)
-
-    return missing
+    return _build_generic_enroll_candidate(config, -1, SelectingStudent)
 
 
 def build_enroll_submitter_candidates(config):
@@ -991,37 +964,81 @@ def build_enroll_submitter_candidates(config):
     :param config:
     :return:
     """
+    return _build_generic_enroll_candidate(config, 0, SubmittingStudent)
+
+
+def _build_generic_enroll_candidate(config, year_offset, StudentRecordType):
+    """
+    Build a query that returns missing candidates for manual enrollment
+    :param config: ProjectClassConfig instance to which we wish to add manually enrolled students
+    :param year_offset: offset in years to be applied to the year range. Should be -1 for selectors or 0 for submitters.
+    :param StudentRecordType: Student model. Usually SubmittingStudent for submitters and SelectingStudent for selectors.
+    :return:
+    """
+    logger = current_app.logger
 
     # which year does the project run in, and for how long?
     start_year = config.start_year
     extent = config.extent
     current_year = config.year
 
-    # earliest year: academic year in which students can be submitter
-    first_allowed_year = start_year
+    # earliest year: academic year in which students can be selectors
+    first_allowed_year = start_year + year_offset
 
-    # latest year: last academic year in which students can be a submitter
-    last_allowed_year = start_year + (extent - 1)
+    # latest year: last academic year in which students can be a selector
+    last_allowed_year = start_year + (extent - 1) + year_offset
 
-    allowed_programmes = config.project_class.programmes.with_entities(DegreeProgramme.id).distinct().all()
-    allowed_programmes = [_detuple(x) for x in allowed_programmes]
+    if not config.selection_open_to_all:
+        allowed_programmes = config.project_class.programmes.with_entities(DegreeProgramme.id).distinct().all()
+        allowed_programmes = [_detuple(x) for x in allowed_programmes]
+    else:
+        allowed_programmes = None
 
-    # build a list of eligible students who are not already attached as submitters
-    candidates = _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year)
+    logger.info('## _build_generic_enroll_candidate')
+    logger.info('##   StudentRecordType = {t}'.format(t=StudentRecordType))
+    logger.info('##   year_offset = {yo}, start_year = {sy}, extent = {ex}, current_year = '
+                '{cy}'.format(yo=year_offset, sy=start_year, ex=extent, cy=current_year))
+    logger.info('##   first_allowed_year = {fa}, last_allowed_year = {la}'.format(fa=first_allowed_year,
+                                                                                  la=last_allowed_year))
+
+    # build a list of eligible students who are not already attached as selectors
+    candidate_students = _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year)
+    logger.info('##   number of candidate_students = {c}'.format(c=get_count(candidate_students)))
 
     # build a list of existing selecting students
-    submitters = db.session.query(SubmittingStudent.student_id) \
-        .filter(SubmittingStudent.config_id == config.id,
-                ~SubmittingStudent.retired).subquery()
+    existing_students = db.session.query(StudentRecordType.student_id) \
+        .filter(StudentRecordType.config_id == config.id,
+                ~StudentRecordType.retired)
+    logger.info('##   number of existing students = {c}'.format(c=get_count(existing_students)))
+
+    existing_students = existing_students.subquery()
 
     # find students in candidates who are not also in selectors
-    missing = candidates.join(submitters, submitters.c.student_id == StudentData.id, isouter=True) \
-        .filter(submitters.c.student_id == None)
+    # StudentData model in this expression references the query candidate_students, which selects a list of
+    # StudentData instances
+    missing_students = candidate_students \
+        .join(existing_students, existing_students.c.student_id == StudentData.id, isouter=True) \
+        .filter(existing_students.c.student_id == None)
+    logger.info('##   number of missing students = {c}'.format(c=get_count(missing_students)))
 
-    return missing
+    return missing_students
 
 
 def _build_candidates(allowed_programmes, current_year, first_allowed_year, last_allowed_year):
+    nofyear_candidates = _build_candidate_basic(allowed_programmes, current_year, first_allowed_year,
+                                                last_allowed_year, False)
+    fyear_candidates = _build_candidate_basic(allowed_programmes, current_year, first_allowed_year+1,
+                                              last_allowed_year+1, True)
+
+    nofyear_candidates = nofyear_candidates.union(fyear_candidates)
+    return nofyear_candidates
+
+
+def _build_candidate_basic(allowed_programmes, current_year, first_allowed_year, last_allowed_year, fyear_status):
+    if not isinstance(fyear_status, bool):
+        raise RuntimeError('Unexpected type for fyear_status: expected bool, '
+                           'received {type}'.format(type=type(fyear_status)))
+
     candidates = db.session.query(StudentData) \
         .join(User, StudentData.id == User.id) \
         .filter(User.active == True)
@@ -1032,25 +1049,10 @@ def _build_candidates(allowed_programmes, current_year, first_allowed_year, last
     candidates = candidates.join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
         .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
         .filter(current_year - StudentData.cohort + 1 - StudentData.repeated_years <= DegreeType.duration) \
-        .filter(StudentData.foundation_year == False,
+        .filter(StudentData.foundation_year == fyear_status,
                 current_year - StudentData.cohort + 1 - StudentData.repeated_years >= first_allowed_year,
                 current_year - StudentData.cohort + 1 - StudentData.repeated_years <= last_allowed_year)
 
-    fyear_candidates = db.session.query(StudentData) \
-        .join(User, StudentData.id == User.id) \
-        .filter(User.active == True)
-
-    if allowed_programmes is not None and len(allowed_programmes) > 0:
-        fyear_candidates = fyear_candidates.filter(StudentData.programme_id.in_(allowed_programmes))
-
-    fyear_candidates = fyear_candidates.join(DegreeProgramme, DegreeProgramme.id == StudentData.programme_id) \
-        .join(DegreeType, DegreeType.id == DegreeProgramme.type_id) \
-        .filter(current_year - StudentData.cohort - StudentData.repeated_years <= DegreeType.duration) \
-        .filter(StudentData.foundation_year == True,
-                current_year - StudentData.cohort - StudentData.repeated_years >= first_allowed_year,
-                current_year - StudentData.cohort - StudentData.repeated_years <= last_allowed_year)
-
-    candidates = candidates.union(fyear_candidates)
     return candidates
 
 

@@ -41,45 +41,51 @@ class SkipRow(Exception):
 
 
 def _overwrite_record(item) -> int:
-    if item.existing_record.user.first_name != item.first_name:
-        item.existing_record.user.first_name = item.first_name
+    student_record: StudentData = item.existing_record
+    user_record: User = student_record.user
 
-    if item.existing_record.user.last_name != item.last_name:
-        item.existing_record.user.last_name = item.last_name
+    if user_record.first_name != item.first_name:
+        user_record.first_name = item.first_name
 
-    if item.existing_record.user.username != item.user_id:
-        item.existing_record.user.username = item.user_id
+    if user_record.last_name != item.last_name:
+        user_record.last_name = item.last_name
 
-    if item.existing_record.user.email != item.email:
-        item.existing_record.user.email = item.email
+    if user_record.username != item.user_id:
+        user_record.username = item.user_id
 
-    if item.existing_record.exam_number != item.exam_number:
-        item.existing_record.exam_number = item.exam_number
+    if user_record.email != item.email:
+        user_record.email = item.email
 
-    if item.existing_record.cohort != item.cohort:
-        item.existing_record.cohort = item.cohort
+    if student_record.exam_number != item.exam_number:
+        student_record.exam_number = item.exam_number
 
-    if item.existing_record.foundation_year != item.foundation_year:
-        item.existing_record.foundation_year = item.foundation_year
+    if student_record.cohort != item.cohort:
+        student_record.cohort = item.cohort
 
-    if item.existing_record.repeated_years != item.repeated_years:
-        item.existing_record.repeated_years = item.repeated_years
+    if student_record.foundation_year != item.foundation_year:
+        student_record.foundation_year = item.foundation_year
 
-    if item.existing_record.programme_id != item.programme_id:
-        item.existing_record.programme_id = item.programme_id
+    if student_record.repeated_years != item.repeated_years:
+        student_record.repeated_years = item.repeated_years
+
+    if student_record.programme_id != item.programme_id:
+        student_record.programme_id = item.programme_id
+
+    student_record.workflow_state = StudentData.WORKFLOW_APPROVAL_VALIDATED
 
     return OUTCOME_MERGED
 
 
 def _create_record(item, user_id) -> int:
-    user = register_user(first_name=item.first_name,
-                         last_name=item.last_name,
-                         username=item.user_id,
-                         email=item.email,
-                         roles=['student'],
-                         random_password=True,
-                         ask_confirm=False)
+    user: User = register_user(first_name=item.first_name,
+                               last_name=item.last_name,
+                               username=item.user_id,
+                               email=item.email,
+                               roles=['student'],
+                               random_password=True,
+                               ask_confirm=False)
 
+    # create new student record and mark it as automatically validated
     data = StudentData(id=user.id,
                        exam_number=item.exam_number,
                        intermitting=item.intermitting,
@@ -88,7 +94,8 @@ def _create_record(item, user_id) -> int:
                        foundation_year=item.foundation_year,
                        repeated_years=item.repeated_years,
                        creator_id=user_id,
-                       creation_timestamp=datetime.now())
+                       creation_timestamp=datetime.now(),
+                       workflow_state=StudentData.WORKFLOW_APPROVAL_VALIDATED)
 
     # exceptions will be caught in parent
     db.session.add(data)
@@ -499,6 +506,7 @@ def register_batch_create_tasks(celery):
                 result = _create_record(item, user_id)
 
             db.session.commit()
+
         except SQLAlchemyError as e:
             db.session.rollback()
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

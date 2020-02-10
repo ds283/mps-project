@@ -40,7 +40,7 @@ class SkipRow(Exception):
     """Report an exception associated with processing a single row"""
 
 
-def _overwrite_record(item):
+def _overwrite_record(item) -> int:
     if item.existing_record.user.first_name != item.first_name:
         item.existing_record.user.first_name = item.first_name
 
@@ -71,7 +71,7 @@ def _overwrite_record(item):
     return OUTCOME_MERGED
 
 
-def _create_record(item, user_id):
+def _create_record(item, user_id) -> int:
     user = register_user(first_name=item.first_name,
                          last_name=item.last_name,
                          username=item.user_id,
@@ -96,7 +96,7 @@ def _create_record(item, user_id):
     return OUTCOME_CREATED
 
 
-def _get_name(row, current_line):
+def _get_name(row, current_line) -> str:
     if 'name' not in row:
         print('## skipping row {row} because could not determine student name'.format(row=current_line))
         raise SkipRow
@@ -137,7 +137,7 @@ def _get_name(row, current_line):
     return first_name, last_name
 
 
-def _get_username(row, current_line):
+def _get_username(row, current_line) -> str:
     if 'username' in row:
         return row['username']
 
@@ -155,7 +155,7 @@ def _get_username(row, current_line):
     raise SkipRow
 
 
-def _get_intermitting(row, current_line):
+def _get_intermitting(row, current_line) -> bool:
     if 'student status' in row:
         return (row['student status'].lower() == 'intermitting')
 
@@ -166,7 +166,7 @@ def _get_intermitting(row, current_line):
     raise SkipRow
 
 
-def _get_registration_number(row, current_line):
+def _get_registration_number(row, current_line) -> int:
     if 'registration number' in row:
         return int(row['registration number'])
 
@@ -177,7 +177,7 @@ def _get_registration_number(row, current_line):
     raise SkipRow
 
 
-def _get_email(row, current_line):
+def _get_email(row, current_line) -> str:
     if 'email address' in row:
         return row['email address']
 
@@ -188,7 +188,7 @@ def _get_email(row, current_line):
     raise SkipRow
 
 
-def _get_course_year(row, current_line):
+def _get_course_year(row, current_line) -> int:
     if 'year of course' in row:
         return int(row['year of course'])
 
@@ -199,7 +199,7 @@ def _get_course_year(row, current_line):
     raise SkipRow
 
 
-def _get_cohort(row, current_line):
+def _get_cohort(row, current_line) -> int:
     # convert start date string into a Python date object
     if 'start date' in row:
         return parse(row['start date']).year
@@ -211,7 +211,7 @@ def _get_cohort(row, current_line):
     raise SkipRow
 
 
-def _get_course_code(row, current_line):
+def _get_course_code(row, current_line) -> DegreeProgramme:
     course_map = {'bsc physics': 'F3003U',
                   'bsc physics (with an industrial placement year)': 'M3045U',
                   'bsc physics (ip)': 'M3045U',
@@ -255,17 +255,29 @@ def _get_course_code(row, current_line):
     raise SkipRow
 
 
-def _guess_year_data(cohort, year_of_course, current_year, fyear=None):
+def _guess_year_data(cohort, year_of_course, current_year, fyear=None) -> (bool, int):
     # try to guess whether a given student has done foundation year or some number of
     # repeat years
     # of course, we don't really have enough information to work this out; what's here
     # is a simple minded guess
     #
     # return value: foundation_year(bool), repeat_years(int)
-    if fyear is not None:
-        if not isinstance(fyear, bool):
-            print('!! ERROR: expected fyear to be a bool')
-            raise SkipRow
+    if not isinstance(cohort, int):
+        print('!! ERROR: expected cohort to be an integer, but received {type}'.format(type=type(cohort)))
+        raise SkipRow
+
+    if not isinstance(year_of_course, int):
+        print('!! ERROR: expected year_of_course to be an integer, but received '
+              '{type}'.format(type=type(year_of_course)))
+        raise SkipRow
+
+    if not isinstance(current_year, int):
+        print('!! ERROR: expected current_year to be an integer, but received {type}'.format(type=type(current_year)))
+        raise SkipRow
+
+    if fyear is not None and not isinstance(fyear, bool):
+        print('!! ERROR: expected fyear to be a bool, but received {type}'.format(type=type(fyear)))
+        raise SkipRow
 
     fyear_shift = 1 if fyear is True else 0
 
@@ -274,20 +286,22 @@ def _guess_year_data(cohort, year_of_course, current_year, fyear=None):
         estimated_year_of_course = 0
 
     difference = estimated_year_of_course - year_of_course
+
     if difference < 0:
-        print('!! ERROR: estimated course year was earlier than imported value')
+        print('## estimated course year was earlier than imported value '
+              '(current_year={cy}, cohort={ch}, fyear_shift={fs}',format(cy=current_year, ch=cohort, fs=fyear_shift))
         raise SkipRow
 
     # if a foundation year has not been specified, split the difference between a foundation year
     # and some number of repeated years
     if fyear is None:
-        return True, difference - 1
+        return False, difference
 
     # can assume fyear is a bool
     return fyear, difference
 
 
-def _match_existing_student(username, email, current_line):
+def _match_existing_student(username, email, current_line) -> (bool, StudentData):
     # test whether we can find an existing student record with this email address.
     # if we can, check whether it is a student account.
     # If not, there's not much we can do
@@ -359,16 +373,8 @@ def register_batch_create_tasks(celery):
                 username = None
 
                 try:
-                    # get name and break into comma-separated parts
-                    first_name, last_name = _get_name(row, current_line)
+                    # username and email are first things to extract
                     username = _get_username(row, current_line)
-                    intermitting = _get_intermitting(row, current_line)
-                    registration_number = _get_registration_number(row, current_line)
-                    year_of_course = _get_course_year(row, current_line)
-
-                    cohort = _get_cohort(row, current_line)
-                    # attempt to deduce whether a foundation year or repeated years have been involved
-                    foundation_year, repeated_years = _guess_year_data(cohort, year_of_course, current_year)
 
                     email = _get_email(row, current_line)
                     # ignore cases where the email address is 'INTERMITTING' or 'RESITTING'
@@ -376,17 +382,31 @@ def register_batch_create_tasks(celery):
                         print('## skipping row "{user}" because email is "{email}"'.format(user=username, email=email))
                         raise SkipRow
 
-                    programme = _get_course_code(row, current_line)
-
+                    # try to match this data to an existing record
                     dont_convert, existing_record = _match_existing_student(username, email, current_line)
 
-                    if existing_record is not None and not record.trust_cohort:
-                        # recalculate data derived from academic year
-                        cohort = existing_record.cohort
+                    # get name and break into comma-separated parts
+                    first_name, last_name = _get_name(row, current_line)
+                    intermitting = _get_intermitting(row, current_line)
+                    registration_number = _get_registration_number(row, current_line)
+                    year_of_course = _get_course_year(row, current_line)
+
+                    # attempt to deduce whether a foundation year or repeated years have been involved
+                    if existing_record is None:
+                        cohort = _get_cohort(row, current_line)
+                        foundation_year, repeated_years = _guess_year_data(cohort, year_of_course, current_year)
+                    else:
+                        if not record.trust_cohort and existing_record.cohort is not None:
+                            cohort = existing_record.cohort
+                        else:
+                            cohort = _get_cohort(row, current_line)
                         foundation_year, repeated_years = _guess_year_data(cohort, year_of_course, current_year,
                                                                            fyear=existing_record.foundation_year)
 
-                    if existing_record is not None and not record.trust_exams and existing_record.exam_number is not None:
+                    programme = _get_course_code(row, current_line)
+
+                    if existing_record is not None and not record.trust_exams and \
+                            existing_record.exam_number is not None:
                         registration_number = existing_record.exam_number
 
                     item = StudentBatchItem(parent_id=record.id,
@@ -414,14 +434,17 @@ def register_batch_create_tasks(celery):
 
                 except SkipRow:
                     if username is None:
-                        ignored_lines.append('<line #{no}>'.format(no=current_line))
+                        skip_info = '<line #{no}>'.format(no=current_line)
 
                     else:
                         if first_name is not None and last_name is not None:
-                            ignored_lines.append('{user} ({first} {last})'.format(user=username, first=first_name,
-                                                                                  last=last_name))
+                            skip_info = '{user} ({first} {last})'.format(user=username, first=first_name,
+                                                                         last=last_name)
                         else:
-                            ignored_lines.append('{user}'.format(user=username))
+                            skip_info = '{user}'.format(user=username)
+
+                    ignored_lines.append(skip_info)
+                    print('>> SUMMARY: skipped line {info}'.format(info=skip_info))
 
         progress_update(record.celery_id, TaskRecord.RUNNING, 90, "Finalizing import...", autocommit=False)
 

@@ -289,7 +289,10 @@ def _guess_year_data(cohort, year_of_course, current_year, fyear=None) -> (bool,
 
     if difference < 0:
         print('## estimated course year was earlier than imported value '
-              '(current_year={cy}, cohort={ch}, fyear_shift={fs}',format(cy=current_year, ch=cohort, fs=fyear_shift))
+              '(current_year={cy}, cohort={ch}, fyear_shift={fs}, '
+              'estimated={es}, imported={im}, diff={df}'.format(cy=current_year, ch=cohort, fs=fyear_shift,
+                                                                es=estimated_year_of_course, im=year_of_course,
+                                                                df=difference))
         raise SkipRow
 
     # if a foundation year has not been specified, split the difference between a foundation year

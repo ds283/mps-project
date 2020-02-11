@@ -146,19 +146,26 @@ class WorkflowMixin():
     def _workflow_state_validator(self, key, value):
         with db.session.no_autoflush:
             if value == WorkflowMixin.WORKFLOW_APPROVAL_QUEUED:
-                self.validated_by = None
+                self.validator_id = None
                 self.validated_timestamp = None
 
             else:
                 now = datetime.now()
-
-                self.validator_id = current_user.id
                 self.validated_timestamp = now
+
+                # if we are called from inside a Celery task then current_user is not set, but
+                # because it is a proxy we can't just test whether it is None.
+                # instead, try to access the .id field, and if this raises an AttributeError then
+                # bail out by setting validator_id to None
+                try:
+                    self.validator_id = current_user.id
+                except AttributeError as e:
+                    self.validator_id = None
 
                 if self.workflow_state != value:
                     history = self.__history_model__(owner_id=self.id,
                                                      year=_get_current_year(),
-                                                     user_id=current_user.id if current_user is not None else None,
+                                                     user_id=self.validator_id,
                                                      timestamp=now,
                                                      event=WorkflowHistoryMixin.map[value])
                     db.session.add(history)
@@ -7514,7 +7521,8 @@ class CustomOffer(db.Model):
     # 'cascade' is set to delete-orphan, so the LiveProject record is the notional 'owner' of this one
     liveproject_id = db.Column(db.Integer(), db.ForeignKey('live_projects.id'))
     liveproject = db.relationship('LiveProject', foreign_keys=[liveproject_id], uselist=False,
-                                  backref=db.backref('custom_offers', lazy='dynamic', cascade='all, delete, delete-orphan'))
+                                  backref=db.backref('custom_offers', lazy='dynamic',
+                                                     cascade='all, delete, delete-orphan'))
 
     # id of SelectingStudent to whom this custom offer has been made
     selector_id = db.Column(db.Integer(), db.ForeignKey('selecting_students.id'))

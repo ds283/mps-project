@@ -500,11 +500,11 @@ def replace_approval_tags(p: Project, show_approvals: bool, config: ProjectClass
             # otherwise, we can pick the correct description
             else:
                 desc = p.get_description(config.pclass_id)
-                state = desc.workflow_state
 
                 if desc is None:
                     repapprove = '<span class="label label-default">Approval: No description</span>'
                 else:
+                    state = desc.workflow_state
                     if desc.requires_confirmation and not desc.confirmed:
                         if config.selector_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_WAITING_CONFIRMATIONS:
                             repapprove = """<div class="dropdown" style="display: inline-block;">

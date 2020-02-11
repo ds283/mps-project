@@ -1771,9 +1771,8 @@ def liveprojects_ajax(id):
     :param id:
     :return:
     """
-
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1782,7 +1781,8 @@ def liveprojects_ajax(id):
     state_filter = request.args.get('state_filter')
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = ProjectClassConfig.query.filter_by(pclass_id=id) \
+        .order_by(ProjectClassConfig.year.desc()).first()
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -1805,6 +1805,130 @@ def liveprojects_ajax(id):
         data = projects
 
     return ajax.convenor.liveprojects_data(config, data, url=url_for('convenor.liveprojects', id=id), text='convenor LiveProjects view')
+
+
+@convenor.route('/delete_live_project/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_live_project(pid):
+    """
+    User front-end to delete a live project that is still in the selection phase
+    :param pid:
+    :return:
+    """
+    project: LiveProject = LiveProject.query.get_or_404(pid)
+
+    # get ProjectClassConfig that this LiveProject belongs to
+    config: ProjectClassConfig = project.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project is not deletable
+    if not project.is_deletable:
+        flash('Cannot delete live project "{name}" because it is marked as undeletable.'.format(name=project.name),
+              'error')
+        return redirect(request.referrer)
+
+    # if this config has closed selections, we cannot delete any live projects
+    if config.selection_closed:
+        flash('Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
+              'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year+1),
+              'info')
+        return redirect(request.referrer)
+
+    title = 'Delete LiveProject "{name}" for project class "{cls}" in ' \
+            '{yra}&ndash;{yrb}'.format(name=project.name, cls=config.name, yra=config.year, yrb=config.year+1)
+    action_url = url_for('convenor.perform_delete_live_project', pid=pid)
+    message = '<p>Please confirm that you wish to delete the live project "{name}" belonging to ' \
+              'project class "{cls}" {yra}&ndash;{yrb}.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=project.name, cls=config.name, yra=config.year,
+                                                            yrb=config.year+1)
+    submit_label = 'Delete live project'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/perform_delete_live_project/<int:pid>')
+@roles_accepted('faculty', 'admin', 'root')
+def perform_delete_live_project(pid):
+    """
+    Delete a live project that is still in the selection phase
+    :param pid:
+    :return:
+    """
+    project: LiveProject = LiveProject.query.get_or_404(pid)
+
+    # get ProjectClassConfig that this LiveProject belongs to
+    config: ProjectClassConfig = project.config
+
+    # reject user if not a convenor for this project class
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project class not published
+    if not validate_project_class(config.project_class):
+        return redirect(request.referrer)
+
+    # reject if project is not deletable
+    if not project.is_deletable:
+        flash('Cannot delete live project "{name}" because it is marked as undeletable.'.format(name=project.name),
+              'error')
+        return redirect(request.referrer)
+
+    # if this config has closed selections, we cannot delete any live projects
+    if config.selection_closed:
+        flash('Cannot delete LiveProjects belonging to class "{cls}" in the {yra}-{yrb} cycle, '
+              'because selections have already closed'.format(cls=config.name, yra=config.year, yrb=config.year+1),
+              'info')
+        return redirect(request.referrer)
+
+    try:
+        # remove all collections associated with the liveproject
+        project.skills = []
+        project.programmes = []
+        project.team = []
+        project.assessors = []
+        project.modules = []
+        db.session.flush()
+
+        # remove all confirmation requests
+        for req in project.confirmation_requests:
+            db.session.delete(req)
+
+        # remove all bookmarks
+        for bkm in project.bookmarks:
+            db.session.delete(bkm)
+
+        # remove all selections
+        for sel in project.selections:
+            db.session.delete(sel)
+
+        # remove all custom offers
+        for cof in project.custom_offers:
+            db.session.delete(cof)
+
+        # remove all popularity data
+        for pdt in project.popularity_data:
+            db.session.delete(pdt)
+
+        db.session.flush()
+
+        db.session.delete(project)
+        db.session.commit()
+
+    except SQLAlchemyError as e:
+        flash('Could not delete live project "{name}" because of a database error. '
+              'Please contact a system administrator.'.format(name=project.name), 'error')
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+
+    return redirect(url_for('convenor.liveprojects', id=config.pclass_id))
 
 
 @convenor.route('/attach_liveproject/<int:id>')
@@ -3513,7 +3637,7 @@ def confirm_go_live(id):
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
               'live.'.format(name=config.project_class.name), 'error')
-        return request.referrer
+        return redirect(request.referrer)
 
     close = bool(int(request.args.get('close', 0)))
     deadline = request.args.get('deadline', None)

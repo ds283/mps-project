@@ -111,6 +111,11 @@ _menu = \
                 <i class="fa fa-wrench"></i> View analytics
             </a>
         </li>
+        <li>
+            <a href="{{ url_for('convenor.delete_live_project', pid=project.id) }}">
+                <i class="fa fa-trash"></i> Delete
+            </a>
+        </li>
         
         <li role="separator" class="divider">
 

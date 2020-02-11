@@ -6039,6 +6039,14 @@ class LiveProject(db.Model,
         return get_count(self.assessors.filter_by(id=fac_id)) > 0
 
 
+    @property
+    def is_deletable(self):
+        if get_count(self.submission_records) > 0:
+            return False
+
+        return True
+
+
 @listens_for(LiveProject.assessors, 'append')
 def _LiveProject_assessors_append_handler(target, value, initiator):
     with db.session.no_autoflush:

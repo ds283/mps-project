@@ -19,25 +19,36 @@ from ..shared.forms.mixins import FeedbackMixin, SaveChangesMixin, SubmissionPer
 from functools import partial
 
 
-class GoLiveForm(Form):
+def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and immediately close',
+                      datebox_label='Deadline'):
 
-    # normal Go Live option
-    live = SubmitField('Go live')
+    class GoLiveForm(Form):
 
-    # go live and close option
-    live_and_close = SubmitField('Go live and immediately close')
+        # normal Go Live option
+        live = SubmitField(submit_label)
 
-    # deadline field
-    live_deadline = DateField('Deadline for student submissions', format='%d/%m/%Y', validators=[InputRequired()])
+        # go live and close option
+        if live_and_close_label is not None:
+            live_and_close = SubmitField(live_and_close_label)
+
+        # deadline field
+        live_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+
+    return GoLiveForm
 
 
 def IssueFacultyConfirmRequestFormFactory(submit_label='Issue confirmation requests',
+                                          skip_label='Skip confirmation step',
                                           datebox_label='Deadline'):
 
     class IssueFacultyConfirmRequestForm(Form):
 
         # deadline for confirmation responses
         request_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+
+        # skip button, if used
+        if skip_label is not None:
+            skip_button = SubmitField(skip_label)
 
         # submit button: issue requests
         submit_button = SubmitField(submit_label)

@@ -25,7 +25,7 @@ import app.ajax as ajax
 from . import convenor
 from ..database import db
 
-from .forms import GoLiveForm, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
+from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm
@@ -265,16 +265,24 @@ def overview(id):
         return redirect(request.referrer)
 
     # build forms
+    if config.live_deadline is None:
+        GoLiveForm = GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and immediately close',
+                                       datebox_label='Deadline')
+    else:
+        GoLiveForm = GoLiveFormFactory(submit_label='Change deadline', live_and_close_label=None,
+                                       datebox_label='The current deadline is')
+
     golive_form = GoLiveForm(request.form)
 
     # change labels and text depending on current lifecycle state
     if config.requests_issued:
         IssueFacultyConfirmRequestForm = \
-            IssueFacultyConfirmRequestFormFactory(submit_label='Change deadline',
+            IssueFacultyConfirmRequestFormFactory(submit_label='Change deadline', skip_label=None,
                                                   datebox_label='The current deadline for responses is')
     else:
         IssueFacultyConfirmRequestForm = \
             IssueFacultyConfirmRequestFormFactory(submit_label='Issue confirmation requests',
+                                                  skip_label='Skip confirmation step',
                                                   datebox_label='Deadline')
 
     issue_form = IssueFacultyConfirmRequestForm(request.form)
@@ -290,6 +298,7 @@ def overview(id):
 
     feedback_form = OpenFeedbackForm(request.form)
 
+    # first time this page is displayed, populate the forms with sensible default data
     if request.method == 'GET':
         if config.request_deadline is not None:
             issue_form.request_deadline.data = config.request_deadline
@@ -298,7 +307,6 @@ def overview(id):
 
         if config.live_deadline is not None:
             golive_form.live_deadline.data = config.live_deadline
-            golive_form.live.label.text = 'Change deadline'
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
 
@@ -3025,7 +3033,7 @@ def attach_assessors(id, pclass_id):
         session['convenor_marker_group_filter'] = group_filter
 
     # get list of available research groups
-    groups = ResearchGroup.query.filter_by(active=True).all()
+    groups: ResearchGroup = ResearchGroup.query.filter_by(active=True).all()
 
     # get list of project classes to which this project is attached, and which require assignment of
     # second markers
@@ -3052,9 +3060,8 @@ def attach_assessors(id, pclass_id):
 @convenor.route('/attach_assessors_ajax/<int:id>/<int:pclass_id>')
 @roles_accepted('faculty', 'admin', 'root')
 def attach_assessors_ajax(id, pclass_id):
-
     # get project details
-    proj = Project.query.get_or_404(id)
+    proj: Project = Project.query.get_or_404(id)
 
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
@@ -3063,7 +3070,7 @@ def attach_assessors_ajax(id, pclass_id):
 
     else:
         # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
+        pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
@@ -3085,7 +3092,7 @@ def attach_assessors_ajax(id, pclass_id):
 @roles_accepted('faculty', 'admin', 'root')
 def add_assessor(proj_id, pclass_id, mid):
     # get project details
-    proj = Project.query.get_or_404(proj_id)
+    proj: Project = Project.query.get_or_404(proj_id)
 
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
@@ -3094,7 +3101,7 @@ def add_assessor(proj_id, pclass_id, mid):
 
     else:
         # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
+        pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
@@ -3111,7 +3118,7 @@ def add_assessor(proj_id, pclass_id, mid):
 @roles_accepted('faculty', 'admin', 'root')
 def remove_assessor(proj_id, pclass_id, mid):
     # get project details
-    proj = Project.query.get_or_404(proj_id)
+    proj: Project = Project.query.get_or_404(proj_id)
 
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
@@ -3120,7 +3127,7 @@ def remove_assessor(proj_id, pclass_id, mid):
 
     else:
         # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
+        pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
@@ -3137,7 +3144,7 @@ def remove_assessor(proj_id, pclass_id, mid):
 @roles_accepted('faculty', 'admin', 'root')
 def attach_all_assessors(proj_id, pclass_id):
     # get project details
-    proj = Project.query.get_or_404(proj_id)
+    proj: Project = Project.query.get_or_404(proj_id)
 
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
@@ -3146,7 +3153,7 @@ def attach_all_assessors(proj_id, pclass_id):
 
     else:
         # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
+        pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
@@ -3170,7 +3177,7 @@ def attach_all_assessors(proj_id, pclass_id):
 @roles_accepted('faculty', 'admin', 'root')
 def remove_all_assessors(proj_id, pclass_id):
     # get project details
-    proj = Project.query.get_or_404(proj_id)
+    proj: Project = Project.query.get_or_404(proj_id)
 
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
@@ -3179,7 +3186,7 @@ def remove_all_assessors(proj_id, pclass_id):
 
     else:
         # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
+        pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
         # if logged in user is not a suitable convenor, or an administrator, object
         if not validate_is_convenor(pclass):
@@ -3203,10 +3210,10 @@ def remove_all_assessors(proj_id, pclass_id):
 @roles_accepted('faculty', 'admin', 'root')
 def liveproject_sync_assessors(proj_id, live_id):
     # get library project
-    library_project = Project.query.get_or_404(proj_id)
+    library_project: Project = Project.query.get_or_404(proj_id)
 
     # get liveproject
-    live_project = LiveProject.query.get_or_404(live_id)
+    live_project: LiveProject = LiveProject.query.get_or_404(live_id)
     # get project class details
 
     # if logged in user is not a suitable convenor, or an administrator, object
@@ -3225,14 +3232,14 @@ def liveproject_sync_assessors(proj_id, live_id):
 def liveproject_attach_assessor(live_id, fac_id):
 
     # get liveproject
-    live_project = LiveProject.query.get_or_404(live_id)
+    live_project: LiveProject = LiveProject.query.get_or_404(live_id)
     # get project class details
 
     # if logged in user is not a suitable convenor, or an administrator, object
     if not validate_is_convenor(live_project.config.project_class):
         return redirect(request.referrer)
 
-    faculty = FacultyData.query.get_or_404(fac_id)
+    faculty: FacultyData = FacultyData.query.get_or_404(fac_id)
 
     if faculty not in live_project.assessors:
         live_project.assessors.append(faculty)
@@ -3246,7 +3253,7 @@ def liveproject_attach_assessor(live_id, fac_id):
 def liveproject_remove_assessor(live_id, fac_id):
 
     # get liveproject
-    live_project = LiveProject.query.get_or_404(live_id)
+    live_project: LiveProject = LiveProject.query.get_or_404(live_id)
     # get project class details
 
     # if logged in user is not a suitable convenor, or an administrator, object
@@ -3266,7 +3273,7 @@ def liveproject_remove_assessor(live_id, fac_id):
 @roles_accepted('faculty', 'admin', 'root')
 def issue_confirm_requests(id):
     # get details for project class
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -3278,41 +3285,68 @@ def issue_confirm_requests(id):
 
     year = get_current_year()
 
+    if not config.project_class.publish:
+        flash('A request to issue project confirmations was ignored. Project class "{name}" is not published '
+              'to students'.format(name=config.name), 'error')
+
     IssueFacultyConfirmRequestForm = IssueFacultyConfirmRequestFormFactory()
     form = IssueFacultyConfirmRequestForm(request.form)
 
-    if form.is_submitted() and form.submit_button.data is True:
-        now = date.today()
+    if form.is_submitted():
+        if form.submit_button.data is True:
+            now = date.today()
 
-        if config.requests_issued:
-            deadline = form.request_deadline.data
-            if deadline < now:
-                deadline = now + timedelta(days=1)
+            # if requests already issued, all we need do is adjust the deadline
+            if config.requests_issued:
+                deadline = form.request_deadline.data
+                if deadline < now:
+                    deadline = now + timedelta(days=1)
 
-            config.request_deadline = deadline
-            db.session.commit()
+                config.request_deadline = deadline
 
-        else:
-            # schedule an asynchronous task to issue the requests by email
+                try:
+                    db.session.commit()
+                except SQLAlchemyError as e:
+                    db.session.rollback()
+                    current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                    flash('Could not modify confirmation deadline due to a dataabase error. '
+                          'Please contact a system administrator', 'error')
 
-            # get issue task instance
-            celery = current_app.extensions['celery']
-            issue = celery.tasks['app.tasks.issue_confirm.pclass_issue']
-            issue_fail = celery.tasks['app.tasks.issue_confirm.issue_fail']
+            # otherwise we need to spawn a background task to issue the confirmation requests
+            else:
+                # schedule an asynchronous task to issue the requests by email
 
-            # register as a new background task and push it to the scheduler
-            task_id = register_task('Issue project confirmations for "{proj}" {yra}-{yrb}'.format(proj=config.name,
-                                                                                                  yra=year, yrb=year+1),
-                                    owner=current_user,
-                                    description='Issue project confirmations for "{proj}"'.format(proj=config.name))
+                # get issue task instance
+                celery = current_app.extensions['celery']
+                issue = celery.tasks['app.tasks.issue_confirm.pclass_issue']
+                issue_fail = celery.tasks['app.tasks.issue_confirm.issue_fail']
 
-            deadline = form.request_deadline.data
-            if deadline < now:
-                deadline = now + timedelta(weeks=2)
+                # register as a new background task and push it to the scheduler
+                task_id = register_task('Issue project confirmations for "{proj}" {yra}-{yrb}'.format(proj=config.name,
+                                                                                                      yra=year, yrb=year+1),
+                                        owner=current_user,
+                                        description='Issue project confirmations for "{proj}"'.format(proj=config.name))
 
-            issue.apply_async(args=(task_id, id, current_user.id, deadline),
-                              task_id=task_id,
-                              link_error=issue_fail.si(task_id, current_user.id))
+                deadline = form.request_deadline.data
+                if deadline < now:
+                    deadline = now + timedelta(weeks=2)
+
+                issue.apply_async(args=(task_id, id, current_user.id, deadline),
+                                  task_id=task_id,
+                                  link_error=issue_fail.si(task_id, current_user.id))
+
+        elif hasattr(form, 'skip_button') and form.skip_button.data is True:
+            now = date.today()
+            config.requests_issued = True
+            config.request_deadline = now
+
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash('Could not perform skip of confirmation requests due to a dataabase error. '
+                      'Please contact a system administrator', 'error')
 
     return redirect(request.referrer)
 
@@ -3321,7 +3355,7 @@ def issue_confirm_requests(id):
 @roles_accepted('faculty', 'admin', 'route')
 def outstanding_confirm(id):
     # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -3343,7 +3377,7 @@ def outstanding_confirm_ajax(id):
     :return:
     """
     # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -3361,7 +3395,7 @@ def outstanding_confirm_ajax(id):
 @roles_accepted('faculty', 'admin', 'root')
 def confirmation_reminder(id):
     # id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -3392,8 +3426,7 @@ def confirmation_reminder(id):
 @convenor.route('/confirmation_reminder_individual/<int:fac_id>/<int:config_id>')
 def confirmation_reminder_individual(fac_id, config_id):
     # id is a ProjectClassConfig
-    faculty = FacultyData.query.get_or_404(fac_id)
-    config = ProjectClassConfig.query.get_or_404(config_id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(config_id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -3604,18 +3637,29 @@ def go_live(id):
               'live.'.format(name=config.project_class.name), 'error')
         return request.referrer
 
+    if config.live_deadline is None:
+        GoLiveForm = GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and immediately close',
+                                       datebox_label='Deadline')
+    else:
+        GoLiveForm = GoLiveFormFactory(submit_label='Change deadline', live_and_close_label=None,
+                                       datebox_label='The current deadline is')
+
     form = GoLiveForm(request.form)
 
     if form.is_submitted():
         # schedule an asynchronous go-live task
         deadline = form.live_deadline.data
 
+        # are we going to close immediately after?
+        if hasattr(form, 'live_and_close'):
+            close = int(bool(form.live_and_close.data))
+        else:
+            close = False
+
         if deadline is None:
             flash('A request to Go Live was ignored because no deadline was entered.', 'error')
-
         else:
-            return redirect(url_for('convenor.confirm_go_live', id=id, close=int(bool(form.live_and_close.data)),
-                                    deadline=deadline.isoformat()))
+            return redirect(url_for('convenor.confirm_go_live', id=id, close=close, deadline=deadline.isoformat()))
 
     return redirect(request.referrer)
 
@@ -3680,7 +3724,7 @@ def perform_go_live(id):
 
     if config.live:
         flash('A request to Go Live was ignored, because project "{name}" is already '
-              'live.'.format(name=config.project_class.name))
+              'live.'.format(name=config.project_class.name), 'error')
         return request.referrer
 
     close = bool(int(request.args.get('close', 0)))

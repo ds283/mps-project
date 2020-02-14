@@ -37,8 +37,10 @@
                 <div class="row">
                     <div class="col-xs-12">
                         <div class="pull-right">
-                            {{ wtf.form_field(golive_form.live_and_close, button_map={'live_and_close': 'warning'}) }}
                             {% if total_projects > 0 %}
+                                {% if golive_form.live_and_close is defined %}
+                                    {{ wtf.form_field(golive_form.live_and_close, button_map={'live_and_close': 'warning'}) }}
+                                {% endif %}
                                 {{ wtf.form_field(golive_form.live, button_map={'live': 'primary'}) }}
                             {% endif %}
                         </div>

@@ -3435,7 +3435,7 @@ class ProjectClassConfig(db.Model):
     # SELECTOR LIFECYCLE MANAGEMENT
 
     # are faculty requests to confirm projects open?
-    requests_issued = db.Column(db.Boolean())
+    requests_issued = db.Column(db.Boolean(), default=False)
 
     # who issued confirmation requests?
     requests_issued_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -3446,6 +3446,16 @@ class ProjectClassConfig(db.Model):
 
     # deadline for confirmation requests
     request_deadline = db.Column(db.Date())
+
+    # have we skipped confirmation requests?
+    requests_skipped = db.Column(db.Boolean(), default=False)
+
+    # who skipped them
+    requests_skipped_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    requests_skipped_by = db.relationship('User', uselist=False, foreign_keys=[requests_skipped_id])
+
+    # requests skipped timestamp
+    requests_skipped_timestamp = db.Column(db.DateTime())
 
     # have we gone 'live' this year, ie. frozen a definitive 'live table' of projects and
     # made these available to students?
@@ -3562,6 +3572,13 @@ class ProjectClassConfig(db.Model):
 
 
     def has_confirmations_outstanding(self, faculty):
+        """
+        Accepts a faculty descriptor (possibly a FacultyData id, a User instance or a FacultyData instance)
+        and determines whether there are any project descriptions for this faculty member, attached to the
+        current project class, which do not have the .confirm flag set
+        :param faculty:
+        :return:
+        """
         # confirmation not required if project class doesn't use it
         if not self.project_class.require_confirm:
             return False
@@ -3576,6 +3593,16 @@ class ProjectClassConfig(db.Model):
 
 
     def is_confirmation_required(self, faculty):
+        """
+        Accepts a faculty descriptor (possibly a FacultyData id, a User instance or a FacultyData instance)
+        and determines whether we are still waiting for confirmation from this faculty member.
+        Returns True if either: the faculty member is present in the list of faculty who have not
+        given confirmation (self.confirmation_required), or if self.has_confirmations_outstanding(faculty)
+        returns True. self.has_confirmations_outstanding() will check for project descriptions that
+        do not have the .confirm flag set
+        :param faculty: proxy for FacultyData instance
+        :return:
+        """
         # confirmation not required if project class doesn't use it
         if not self.project_class.require_confirm:
             return False
@@ -3591,9 +3618,9 @@ class ProjectClassConfig(db.Model):
             raise RuntimeError('FacultyData object could not be loaded or interpreted')
 
         # confirmation required if there are outstanding project descriptions needing confirmation,
-        # or if this user hasn't yet given confirmation for ths configuration
+        # or if this user hasn't yet given confirmation for this ProjectClassConfig
         return self.has_confirmations_outstanding(fac_data.id) \
-               or get_count(self.confirmation_required.filter_by(id=fac_data.id)) > 0
+            or get_count(self.confirmation_required.filter_by(id=fac_data.id)) > 0
 
 
     def mark_confirmed(self, faculty, commit=False, message=False):
@@ -3625,6 +3652,7 @@ class ProjectClassConfig(db.Model):
 
     @property
     def _faculty_waiting_confirmation_generator(self):
+        # build a list of faculty members who are enrolled as active supervisors
         faculty = db.session.query(FacultyData) \
             .join(EnrollmentRecord, EnrollmentRecord.owner_id == FacultyData.id) \
             .filter(EnrollmentRecord.pclass_id == self.pclass_id,
@@ -3632,6 +3660,8 @@ class ProjectClassConfig(db.Model):
             .join(User, User.id == FacultyData.id) \
             .filter(User.active).all()
 
+        # return a generator that loops through all these faculty, if they satisfy the
+        # .is_confirmation_required() property
         return (f for f in faculty if f is not None and self.is_confirmation_required(f))
 
 

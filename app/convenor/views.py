@@ -3337,8 +3337,13 @@ def issue_confirm_requests(id):
 
         elif hasattr(form, 'skip_button') and form.skip_button.data is True:
             now = date.today()
-            config.requests_issued = True
-            config.request_deadline = now
+
+            # mark this configuration has having requests skipped
+            config.requests_skipped = True
+            config.requests_skipped_timestamp = now
+            config.requests_skipped_id = current_user.id
+
+            config.confirmation_required = []
 
             try:
                 db.session.commit()

@@ -3542,6 +3542,14 @@ class ProjectClassConfig(db.Model):
         if not self.project_class.require_confirm:
             return []
 
+        # confirmation not required until requests have been issued
+        if not self.requests_issued:
+            return []
+
+        # if we are already live, or requests are marked as skipped, then confirmation also not required
+        if self.live or self.requests_skipped:
+            return []
+
         if isinstance(faculty, User):
             fac_data = faculty.faculty_data
         elif isinstance(faculty, int):
@@ -3568,6 +3576,14 @@ class ProjectClassConfig(db.Model):
         if not self.project_class.require_confirm:
             return 0
 
+        # confirmation not required until requests have been issued
+        if not self.requests_issued:
+            return 0
+
+        # if we are already live, or requests are marked as skipped, then confirmation also not required
+        if self.live or self.requests_skipped:
+            return 0
+
         return len(set(self._outstanding_descriptions_generator(faculty)))
 
 
@@ -3581,6 +3597,14 @@ class ProjectClassConfig(db.Model):
         """
         # confirmation not required if project class doesn't use it
         if not self.project_class.require_confirm:
+            return False
+
+        # confirmation not required until requests have been issued
+        if not self.requests_issued:
+            return False
+
+        # if we are already live, or requests are marked as skipped, then confirmation also not required
+        if self.live or self.requests_skipped:
             return False
 
         gen = self._outstanding_descriptions_generator(faculty)
@@ -3605,6 +3629,14 @@ class ProjectClassConfig(db.Model):
         """
         # confirmation not required if project class doesn't use it
         if not self.project_class.require_confirm:
+            return False
+
+        # confirmation not required until requests have been issued
+        if not self.requests_issued:
+            return False
+
+        # if we are already live, or requests are marked as skipped, then confirmation also not required
+        if self.live or self.requests_skipped:
             return False
 
         if isinstance(faculty, User):
@@ -3862,6 +3894,9 @@ class ProjectClassConfig(db.Model):
 
         # if we get here, project is not open for selection
         if self.require_confirm:
+            if self.requests_skipped:
+                return ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE
+
             if self.requests_issued:
 
                 if self.has_pending_confirmations:

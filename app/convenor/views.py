@@ -309,6 +309,8 @@ def overview(id):
             golive_form.live_deadline.data = config.live_deadline
         else:
             golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
+        golive_form.notify_faculty.data = True
+        golive_form.notify_selectors.data = True
 
         if period is not None and period.feedback_deadline is not None:
             feedback_form.feedback_deadline.data = period.feedback_deadline
@@ -3657,14 +3659,18 @@ def go_live(id):
 
         # are we going to close immediately after?
         if hasattr(form, 'live_and_close'):
-            close = int(bool(form.live_and_close.data))
+            close = bool(form.live_and_close.data)
         else:
             close = False
+
+        notify_faculty = bool(form.notify_faculty.data)
+        notify_selectors = bool(form.notify_selectors.data)
 
         if deadline is None:
             flash('A request to Go Live was ignored because no deadline was entered.', 'error')
         else:
-            return redirect(url_for('convenor.confirm_go_live', id=id, close=close, deadline=deadline.isoformat()))
+            return redirect(url_for('convenor.confirm_go_live', id=id, close=int(close), deadline=deadline.isoformat(),
+                                    notify_faculty=int(notify_faculty), notify_selectors=int(notify_selectors)))
 
     return redirect(request.referrer)
 
@@ -3690,6 +3696,8 @@ def confirm_go_live(id):
 
     close = bool(int(request.args.get('close', 0)))
     deadline = request.args.get('deadline', None)
+    notify_faculty = bool(int(request.args.get('notify_faculty', 0)))
+    notify_selectors = bool(int(request.args.get('notify_selectors', 0)))
 
     if deadline is None:
         flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
@@ -3700,8 +3708,8 @@ def confirm_go_live(id):
 
     title = 'Go Live for "{name}" {yeara}&ndash;{yearb}'.format(name=config.project_class.name,
                                                                 yeara=year, yearb=year + 1)
-    action_url = url_for('convenor.perform_go_live', id=id, close=int(close),
-                         deadline=deadline.isoformat())
+    action_url = url_for('convenor.perform_go_live', id=id, close=int(close), notify_faculty=int(notify_faculty),
+                         notify_selectors=int(notify_selectors), deadline=deadline.isoformat())
     message = '<p>Please confirm that you wish to Go Live for project class "{name}" {yeara}&ndash;{yearb}, ' \
               'with deadline {deadline}.</p>' \
               '<p>This action cannot be undone.</p>'.format(name=config.project_class.name,
@@ -3734,6 +3742,8 @@ def perform_go_live(id):
 
     close = bool(int(request.args.get('close', 0)))
     deadline = request.args.get('deadline', None)
+    notify_faculty = bool(int(request.args.get('notify_faculty', 0)))
+    notify_selectors = bool(int(request.args.get('notify_selectors', 0)))
 
     if deadline is None:
         flash('A request to Go Live was ignored because the deadline was not correctly received', 'error')
@@ -3753,12 +3763,12 @@ def perform_go_live(id):
                             owner=current_user, description='Perform Go Live of "{proj}"'.format(proj=config.name))
 
     if close:
-        seq = chain(golive.si(task_id, id, current_user.id, deadline, True),
+        seq = chain(golive.si(task_id, id, current_user.id, deadline, True, notify_faculty, notify_selectors),
                     golive_close.si(id, current_user.id)).on_error(golive_fail.si(task_id, current_user.id))
         seq.apply_async()
 
     else:
-        golive.apply_async(args=(task_id, id, current_user.id, deadline, False),
+        golive.apply_async(args=(task_id, id, current_user.id, deadline, False, notify_faculty, notify_selectors),
                            task_id=task_id, link_error=golive_fail.si(task_id, current_user.id))
 
     return redirect(url_for('convenor.overview', id=config.pclass_id))

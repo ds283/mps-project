@@ -15,11 +15,11 @@
             {% set approved = capacity_data['approved'] %}
             {% set rejected = capacity_data['rejected'] %}
             {% if rejected > 0 %}
-                <p><strong>{{ rejected }} projects have been rejected and still require revision.</strong></p>
+                <p><strong>{{ rejected }} projects have been rejected and require revision.</strong></p>
             {% elif pending > 0 %}
-                <p>{{ pending }} projects are still waiting for resubmission to approvals.</p>
+                <p>{{ pending }} projects are still to be resubmitted for approval.</p>
             {% elif queued > 0 %}
-                <p>{{ queued }} projects are still waiting for approval.</p>
+                <p>{{ queued }} projects are waiting for approval.</p>
             {% else %}
                 <p><strong>All projects have passed approvals.</strong></p>
             {% endif %}
@@ -34,6 +34,8 @@
             <form action="{{ url_for('convenor.go_live', id=config.id) }}" method="POST" name="golive-form">
                 {{ golive_form.hidden_tag() }}
                 {{ date_field(golive_form.live_deadline) }}
+                {{ wtf.form_field(golive_form.notify_faculty) }}
+                {{ wtf.form_field(golive_form.notify_selectors) }}
                 <div class="row">
                     <div class="col-xs-12">
                         <div class="pull-right">

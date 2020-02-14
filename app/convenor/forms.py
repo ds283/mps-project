@@ -34,6 +34,13 @@ def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and 
         # deadline field
         live_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
 
+        # notify faculty checkbox
+        notify_faculty = BooleanField('Send e-mail notifications to faculty')
+
+        # notify selectors checkbox
+        notify_selectors = BooleanField('Send e-mail notifications to selectors')
+
+
     return GoLiveForm
 
 

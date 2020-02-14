@@ -32,19 +32,28 @@ from dateutil import parser
 def register_golive_tasks(celery):
 
     @celery.task(bind=True, serializer='pickle', default_retry_delay=30)
-    def pclass_golive(self, task_id, config_id, convenor_id, deadline, auto_close):
+    def pclass_golive(self, task_id, config_id, convenor_id, deadline, auto_close, notify_faculty, notify_selectors):
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to Go Live...', autocommit=True)
 
         if isinstance(deadline, str):
-            deadline = parser.parse(deadline).date()
+            deadline: date = parser.parse(deadline).date()
         else:
             if not isinstance(deadline, date):
                 raise RuntimeError('Could not interpret "deadline" argument')
 
+        if not isinstance(auto_close, bool):
+            auto_close = bool(auto_close)
+
+        if not isinstance(notify_faculty, bool):
+            notify_faculty = bool(notify_faculty)
+
+        if not isinstance(notify_selectors, bool):
+            notify_selectors = bool(notify_selectors)
+
         # get database records for this project class
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
-            convenor = User.query.filter_by(id=convenor_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
+            convenor: User = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -99,7 +108,7 @@ def register_golive_tasks(celery):
             .filter(EnrollmentRecord.supervisor_state == EnrollmentRecord.SUPERVISOR_ENROLLED) \
             .order_by(User.last_name, User.first_name).all()
 
-        # weed out projects that do not satisfy is_offerable
+        # weed out projects that do not satisfy is_offerable predicate
         attached_projects = [p for p in attached_projects if p.is_offerable]
 
         if len(attached_projects) == 0 and not auto_close:
@@ -125,14 +134,27 @@ def register_golive_tasks(celery):
                             golive_preprojects.si(task_id),
                             projects_group)
 
-        # if this is a go-live-then-close job, don't bother sending email notifications
+        # if this is a go-live-then-close job, don't bother sending email notifications;
+        # otherwise, check which email notifications were enabled
         if not auto_close:
-            front_chain = chain(front_chain,
-                                golive_notify_faculty.si(task_id, config_id, convenor_id, deadline),
-                                golive_notify_selectors.si(task_id, config_id, convenor_id, deadline))
+            if notify_faculty:
+                front_chain = front_chain | golive_notify_faculty.si(task_id, config_id, convenor_id, deadline)
+                print('## email notifications to faculty enabled')
+            else:
+                print('## email notifications to faculty disabled')
+
+            if notify_selectors:
+                front_chain = front_chain | golive_notify_selectors.si(task_id, config_id, convenor_id, deadline)
+                print('## email notifications to selectors enabled')
+            else:
+                print('## email notifications to selectors disabled')
+
+        else:
+            print('## email notifications disabled by auto-close mode')
 
         seq = chain(front_chain,
-                    golive_finalize.si(task_id, config_id, convenor_id, deadline)).on_error(golive_fail.si(task_id, convenor_id))
+                    golive_finalize.si(task_id, config_id, convenor_id, deadline)) \
+            .on_error(golive_fail.si(task_id, convenor_id))
 
         raise self.replace(seq)
 

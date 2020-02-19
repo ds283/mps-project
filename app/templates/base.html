@@ -13,6 +13,7 @@
 {%- set is_edit_tags = current_user.has_role('edit_tags') -%}
 {%- set is_view_email = current_user.has_role('view_email') -%}
 {%- set is_manage_users = current_user.has_role('manage_users') %}
+{%- set is_emailer = current_user.has_role('email') %}
 
 {% set base_context_data = get_base_context() %}
 {% set matching_ready = base_context_data['matching_ready'] %}

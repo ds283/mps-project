@@ -1,0 +1,9 @@
+The following email has been sent to one or more students via the
+online projects portal https://mpsprojects.co.uk. The email's author
+has indicated that a copy should be delivered to you for your
+records. Please note that if the email contained elements that were
+personalized for each recipient, then these may appear differently.
+
+====================================================================
+
+{{ body|wordwrap(79) }}

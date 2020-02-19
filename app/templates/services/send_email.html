@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block form_content %}
-    <form action="{{ url_for('services.send_email') }}" method="POST" name="email_form">
+    <form action="{{ url_for('services.send_email', url=url, text=text, to=to_list) }}" method="POST" name="email_form">
 
         {{ form.hidden_tag() }}
 
@@ -41,7 +41,7 @@
             {{ wtf.form_field(form.subject) }}
 
             <strong>Reply to</strong>
-            {{ current_user.name }} ({{ current_user.email }})
+            <span class="btn btn-sm btn-default btn-table-block">{{ current_user.name }} ({{ current_user.email }})</span>
         </div>
 
         {{ wtf.form_field(form.body) }}

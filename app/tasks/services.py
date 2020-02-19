@@ -12,7 +12,7 @@ from email.utils import formataddr
 
 from celery import group
 from celery.exceptions import Ignore
-from flask import current_app
+from flask import current_app, render_template_string, render_template
 from flask_mail import Message
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -25,10 +25,10 @@ def register_services_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_distribution_list(self, list_ids, notify_addresses, subject, body, reply_to, user_id):
-        work = group(send_user_record(x, subject, body, reply_to) for x in list_ids)
+        work = group(send_user_record.s(x, subject, body, reply_to) for x in list_ids)
 
-        if isinstance(list, notify_addresses) and len(notify_addresses) > 0:
-            notify = group(send_notify(x, subject, body, reply_to) for x in notify_addresses)
+        if isinstance(notify_addresses, list) and len(notify_addresses) > 0:
+            notify = group(send_notify.s(x, subject, body, reply_to) for x in notify_addresses)
             work = work | notify
 
         work = (work | email_success.s(subject, user_id)).on_error(email_failure.si(subject, user_id))
@@ -49,12 +49,14 @@ def register_services_tasks(celery):
             raise KeyError("User record corresponding to distribution list id={num} "
                            "is missing".format(num=user_id))
 
+        body_text = render_template_string(body, name=record.name, first_name=record.first_name,
+                                           last_name=record.last_name)
+
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=reply_to,
                       recipients=[formataddr((record.name, record.email))],
                       subject=subject,
-                      body=body.format(name=record.name, first_name=record.first_name,
-                                       last_name=record.last_name))
+                      body=render_template('email/services/send_email.txt', body=body_text))
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send direct email to '
@@ -67,17 +69,14 @@ def register_services_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=30)
-    def send_notify(self, pair, subject, body, reply_to):
+    def send_notify(self, prior_result, pair, subject, body, reply_to):
         to_addr = formataddr(pair)
-
-        body = "The following email has been sent to a student group. The author has requested that " \
-            "a copy be emailed to you for your records.\n\n=====================\n\n{body}".format(body=body)
 
         msg = Message(sender=current_app.config['MAIL_DEFAULT_SENDER'],
                       reply_to=reply_to,
                       recipients=[to_addr],
                       subject=subject,
-                      body=body)
+                      body=render_template('email/services/cc_email.txt', body=body))
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send copy of direct email to {addr}'.format(addr=pair[1]))
@@ -89,10 +88,10 @@ def register_services_tasks(celery):
 
     @celery.task(bind=True, default_retry_delay=30)
     def send_email_list(self, to_addresses, notify_addresses, subject, body, reply_to, user_id):
-        work = group(send_email_addr(x, subject, body, reply_to) for x in to_addresses)
+        work = group(send_email_addr.s(x, subject, body, reply_to) for x in to_addresses)
 
-        if isinstance(list, notify_addresses) and len(notify_addresses) > 0:
-            notify = group(send_notify(x, subject, body, reply_to) for x in notify_addresses)
+        if isinstance(notify_addresses, list) and len(notify_addresses) > 0:
+            notify = group(send_notify.s(x, subject, body, reply_to) for x in notify_addresses)
             work = work | notify
 
         work = (work | email_success.s(subject, user_id)).on_error(email_failure.si(subject, user_id))
@@ -108,7 +107,7 @@ def register_services_tasks(celery):
                       reply_to=reply_to,
                       recipients=[to_addr],
                       subject=subject,
-                      body=body)
+                      body=render_template('email/services/send_email.txt', body=body))
 
         # register a new task in the database
         task_id = register_task(msg.subject, description='Send direct email to {addr}'.format(addr=pair[1]))
@@ -119,7 +118,7 @@ def register_services_tasks(celery):
 
 
     @celery.task(bind=True, default_retry_delay=5)
-    def email_success(self, subject, user_id):
+    def email_success(self, prior_result, subject, user_id):
         try:
             record: User = db.session.query(User).filter_by(id=user_id).first()
         except SQLAlchemyError as e:

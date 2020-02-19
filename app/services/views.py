@@ -21,16 +21,16 @@ from ..shared.utils import home_dashboard
 
 
 @services.route('send_email', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'office', 'admin', 'root', 'email')
+@roles_accepted('admin', 'root', 'email')
 def send_email():
     # attempt to extract a distribution list from the session
-    distribution_list_ids = session.get('distribution_list', None)
+    to_list = request.args.getlist('to', None)
 
-    if distribution_list_ids is None:
+    if to_list is None:
         distribution_list = None
         length = 0
     else:
-        distribution_list = [db.session.query(User).filter_by(id=n).first() for n in distribution_list_ids]
+        distribution_list = [db.session.query(User).filter_by(id=n).first() for n in to_list]
         length = len(distribution_list)
 
     url = request.args.get('url', None)
@@ -40,7 +40,7 @@ def send_email():
     form = SendEmailForm(request.form)
 
     if form.is_submitted():
-        if form.send.data:
+        if form.send.data is True:
             if form.validate():
 
                 if distribution_list is None:
@@ -62,7 +62,7 @@ def send_email():
                 if distribution_list is not None:
                     send_mail = celery.tasks['app.tasks.services.send_distribution_list']
 
-                    task = send_mail.s(distribution_list_ids, notify_addresses, form.subject.data, form.body.data,
+                    task = send_mail.s(to_list, notify_addresses, form.subject.data, form.body.data,
                                        reply_to, current_user.id)
                     task.apply_async()
                     sent = True
@@ -81,10 +81,10 @@ def send_email():
 
                     return home_dashboard()
 
-        elif hasattr(form, 'clear_recipients') and form.clear_recipients.data:
+        elif hasattr(form, 'clear_recipients') and form.clear_recipients.data is True:
             distribution_list = None
+            to_list = None
             length = 0
-            session.clear('distribution_list')
 
     return render_template('services/send_email.html', form=form, distribution_list=distribution_list,
-                           length=length, url=url, text=text)
+                           to_list=to_list, length=length, url=url, text=text)

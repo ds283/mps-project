@@ -3624,7 +3624,6 @@ def confirm_description(config_id, did):
     return redirect(request.referrer)
 
 
-
 @convenor.route('/go_live/<int:id>', methods=['GET', 'POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def go_live(id):
@@ -4290,16 +4289,15 @@ def email_selectors(configid):
     data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
 
     if len(data) > 0:
-        distribution_list = []
+        to_list = []
         for s in data:
-            distribution_list.append(s.student_id)
+            to_list.append(s.student_id)
 
-        session['distribution_list'] = distribution_list
     else:
-        session.clear('distribution_list')
+        to_list = None
 
     return redirect(url_for('services.send_email', url=url_for('convenor.selectors', id=config.pclass_id),
-                            text='selectors view'))
+                            text='selectors view', to=to_list))
 
 
 @convenor.route('/convert_all/<int:configid>')

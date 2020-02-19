@@ -14,8 +14,7 @@ __version__ = '0.4.5'
 import os
 
 from .sessions import NullSessionInterface, RedisSessionInterface, \
-    MemcachedSessionInterface, FileSystemSessionInterface, \
-    MongoDBSessionInterface, SqlAlchemySessionInterface, \
+    MemcachedSessionInterface, MongoDBSessionInterface, SqlAlchemySessionInterface, \
     DynamoDBSessionInterface
 
 
@@ -93,11 +92,6 @@ class Session(object):
         elif config['SESSION_TYPE'] == 'memcached':
             session_interface = MemcachedSessionInterface(
                 config['SESSION_MEMCACHED'], config['SESSION_KEY_PREFIX'],
-                config['SESSION_USE_SIGNER'], config['SESSION_PERMANENT'])
-        elif config['SESSION_TYPE'] == 'filesystem':
-            session_interface = FileSystemSessionInterface(
-                config['SESSION_FILE_DIR'], config['SESSION_FILE_THRESHOLD'],
-                config['SESSION_FILE_MODE'], config['SESSION_KEY_PREFIX'],
                 config['SESSION_USE_SIGNER'], config['SESSION_PERMANENT'])
         elif config['SESSION_TYPE'] == 'mongodb':
             session_interface = MongoDBSessionInterface(

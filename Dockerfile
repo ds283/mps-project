@@ -1,6 +1,6 @@
 FROM pypy:3.6-slim-jessie
 
-RUN apt-get update && apt-get install -qq -y build-essential gcc mariadb-client mysqltuner libssl-dev libjpeg-dev zlib1g-dev libglpk-dev glpk-utils coinor-cbc --no-install-recommends
+RUN apt-get update && apt-get install -qq -y build-essential gcc mariadb-client mysqltuner libssl-dev libjpeg-dev zlib1g-dev libglpk-dev glpk-utils coinor-cbc git --no-install-recommends
 
 # uid = 500 needed for deployment on Amazon, where ecs-user has uid 500
 RUN adduser --disabled-password --shell /bin/bash --gecos '' --uid 500 mpsproject

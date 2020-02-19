@@ -8,9 +8,6 @@
 {% from "project_approver/dashboard_panel.html" import project_approver_panel %}
 {% from "macros.html" import message_card %}
 
-{%- set is_root = current_user.has_role('root') -%}
-{%- set is_admin = current_user.has_role('admin') -%}
-{%- set is_manage_users = current_user.has_role('manage_users') -%}
 {%- set is_user_approver = current_user.has_role('user_approver') -%}
 {%- set is_project_approver = current_user.has_role('project_approver') -%}
 

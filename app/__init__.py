@@ -54,7 +54,7 @@ from datetime import datetime
 from pymongo import MongoClient
 import redis
 
-from werkzeug.contrib.profiler import ProfilerMiddleware
+from werkzeug.middleware.profiler import ProfilerMiddleware
 from dozer import Dozer
 
 from pathlib import Path

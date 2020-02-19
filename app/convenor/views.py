@@ -1,4 +1,4 @@
- #
+#
 # Created by David Seery on 24/05/2018.
 # Copyright (c) 2018 University of Sussex. All rights reserved.
 #
@@ -4270,10 +4270,42 @@ def disable_conversion(sid):
     return redirect(request.referrer)
 
 
+@convenor.route('/email_selectors/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def email_selectors(configid):
+    # configid is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # validate that logged-in user is allowed to edit this SelectingStudent
+    if not validate_is_convenor(config.project_class):
+        return home_dashboard()
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+    year_filter = request.args.get('year_filter')
+    match_filter = request.args.get('match_filter')
+    match_show = request.args.get('match_show')
+
+    data = _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_filter, match_filter, match_show)
+
+    if len(data) > 0:
+        distribution_list = []
+        for s in data:
+            distribution_list.append(s.student_id)
+
+        session['distribution_list'] = distribution_list
+    else:
+        session.clear('distribution_list')
+
+    return redirect(url_for('services.send_email', url=url_for('convenor.selectors', id=config.pclass_id),
+                            text='selectors view'))
+
+
 @convenor.route('/convert_all/<int:configid>')
 @roles_accepted('faculty', 'admin', 'root')
 def convert_all(configid):
-    # sid is a SelectingStudent
+    # configid is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(configid)
 
     # validate that logged-in user is allowed to edit this SelectingStudent

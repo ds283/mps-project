@@ -227,6 +227,7 @@ def create_app():
     tasks.register_selecting_tasks(celery)
     tasks.register_session_tasks(celery)
     tasks.register_marking_tasks(celery)
+    tasks.register_services_tasks(celery)
     tasks.register_test_tasks(celery)
 
 
@@ -451,5 +452,8 @@ def create_app():
 
     from .documents import documents as documents_blueprint
     app.register_blueprint(documents_blueprint, url_prefix='/documents')
+
+    from .services import services as services_blueprint
+    app.register_blueprint(services_blueprint, url_prefix='/services')
 
     return app, celery

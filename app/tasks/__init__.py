@@ -32,5 +32,6 @@ from .batch_create import register_batch_create_tasks
 from .selecting import register_selecting_tasks
 from .sessions import register_session_tasks
 from .marking import register_marking_tasks
+from .services import register_services_tasks
 
 from .test import register_test_tasks

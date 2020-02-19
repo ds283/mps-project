@@ -1,0 +1,62 @@
+{% import "bootstrap/wtf.html" as wtf %}
+{% from "macros.html" import edit_data %}
+
+{% extends "security/index.html" %}
+
+{% block title %}
+    Send email
+{% endblock %}
+
+{% block formtitle %}
+    Send email
+{% endblock %}
+
+{% block form_content %}
+    <form action="{{ url_for('services.send_email') }}" method="POST" name="email_form">
+
+        {{ form.hidden_tag() }}
+
+        <div class="well">
+            {% if form.recipient is defined %}
+                {{ wtf.form_field(form.recipient) }}
+            {% else %}
+                <div style="margin-bottom: 5px;"><strong>Recipients ({{ length }})</strong></div>
+                <div>
+                    {% for user in distribution_list %}
+                        <span class="btn btn-sm btn-default btn-table-block">{{ user.name }} ({{ user.email }})</span>
+                    {% endfor %}
+                </div>
+                {% if form.clear_recipients is defined %}
+                    <div class="row" style="margin-bottom: 5px;">
+                        <div class="col-xs-12">
+                            <div class="pull-right">
+                                {{ wtf.form_field(form.clear_recipients, button_map={'clear_recipients': 'default'}) }}
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {{ wtf.form_field(form.notify_addrs) }}
+            {{ wtf.form_field(form.subject) }}
+
+            <strong>Reply to</strong>
+            {{ current_user.name }} ({{ current_user.email }})
+        </div>
+
+        {{ wtf.form_field(form.body) }}
+
+        {{ wtf.form_field(form.send, button_map={'send': 'primary'}) }}
+
+        <hr class="intro-divider" role="separator">
+
+        {% if url and text %}
+            <div class="top-return-link">
+                <a href="{{ url }}">
+                    <i class="fa fa-backward"></i> Return to {{ text }}
+                </a>
+            </div>
+        {% endif %}
+
+    </form>
+{% endblock %}

@@ -704,11 +704,11 @@ def register_rollover_tasks(celery):
             # generate selector records for students:
             #  - if student is an an appropriate academic year, either the year before the project first runs
             #    or any year for the extent of the project, depending what auto-enroll settings are in force
-            #  - the student is on an appropirate programme or selection is open to all
+            #  - the student is on an appropriate programme or selection is open to all
             if (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_PREVIOUS_YEAR
                     and academic_year == config.start_year - 1) \
                 or (config.auto_enroll_years == ProjectClass.AUTO_ENROLL_ANY_YEAR
-                        and config.start_year - 1 <= academic_year < config.start_year + config.extent - 1):
+                        and config.start_year <= academic_year <= config.start_year + config.extent - 1):
 
                 if config.selection_open_to_all or (student.programme in config.programmes):
                     # check whether a SelectingStudent has already been generated for this student

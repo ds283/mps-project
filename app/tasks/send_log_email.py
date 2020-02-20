@@ -20,6 +20,7 @@ from celery.exceptions import Ignore
 from sqlalchemy.exc import SQLAlchemyError
 
 from datetime import datetime
+from email.utils import parseaddr
 
 
 def register_send_log_email(celery, mail):
@@ -42,6 +43,7 @@ def register_send_log_email(celery, mail):
     def log_email(self, task_id, msg):
         progress_update(task_id, TaskRecord.RUNNING, 80, "Logging email in database...", autocommit=True)
 
+        # don't log if we are not on a live email platform
         if not current_app.config.get('EMAIL_IS_LIVE', False):
             raise Ignore()
 
@@ -50,7 +52,9 @@ def register_send_log_email(celery, mail):
 
             # store message in email log
             if len(msg.recipients) == 1:
-                user = User.query.filter_by(email=msg.recipients[0]).first()
+                # parse "to" field; email address is returned as second member of a 2-tuple
+                pair = parseaddr(msg.recipients[0])
+                user = User.query.filter_by(email=pair[1]).first()
                 if user is not None:
                     log = EmailLog(user_id=user.id,
                                    recipient=None,

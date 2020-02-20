@@ -21,11 +21,13 @@
                 {{ wtf.form_field(form.recipient) }}
             {% else %}
                 <div style="margin-bottom: 5px;"><strong>Recipients ({{ length }})</strong></div>
-                <div>
-                    {% for user in distribution_list %}
-                        <span class="btn btn-sm btn-default btn-table-block">{{ user.name }} ({{ user.email }})</span>
-                    {% endfor %}
-                </div>
+                {% if distribution_list is not none %}
+                    <div>
+                        {% for user in distribution_list %}
+                            <span class="btn btn-sm btn-default btn-table-block">{{ user.name }} ({{ user.email }})</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
                 {% if form.clear_recipients is defined %}
                     <div class="row" style="margin-bottom: 5px;">
                         <div class="col-xs-12">

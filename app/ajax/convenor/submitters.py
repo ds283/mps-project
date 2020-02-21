@@ -99,8 +99,9 @@ _projects = \
                 {% if r.report is not none %}
                     <span class="label label-success"><i class="fa fa-check"></i> Report</span>
                 {% endif %}
-                {% if r.number_record_attachments > 0 %}
-                    <span class="label label-success"><i class="fa fa-check"></i> Attachments</span>
+                {% set number_attachments = r.number_record_attachments %}
+                {% if number_attachments > 0 %}
+                    <span class="label label-success"><i class="fa fa-check"></i> Attachments ({{ number_attachments }})</span>
                 {% endif %}
             {% endif %}
         {% else %}

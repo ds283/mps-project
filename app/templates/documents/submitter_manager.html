@@ -8,13 +8,22 @@
 
 {% macro asset_line(asset, attachment, download_url=none, delete_url=none, edit_url=none,
                     deletable=false, allow_student=false, is_editable=none, is_admin=false) %}
+    {% set has_access = asset.has_access(current_user.id) %}
     <tr>
-        <td>
+        <td style="word-wrap: break-word;">
             <div>
-                {% if asset.target_name %}
-                    <strong>{{ asset.target_name }}</strong>
+                {% if has_access and download_url is not none %}
+                    {% if asset.target_name %}
+                        <strong><a href="{{ download_url }}">{{ asset.target_name }}</a></strong>
+                    {% else %}
+                        <strong><a href="{{ download_url }}">{{ asset.filename }}</a></strong>
+                    {% endif %}
                 {% else %}
-                    <strong>{{ asset.filename }}</strong>
+                    {% if asset.target_name %}
+                        <strong>{{ asset.target_name }}</strong>
+                    {% else %}
+                        <strong>{{ asset.filename }}</strong>
+                    {% endif %}
                 {% endif %}
             </div>
             {% if attachment and attachment.description and attachment.description|length > 0 %}
@@ -54,7 +63,6 @@
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-right">
-                        {% set has_access = asset.has_access(current_user.id) %}
                         {% if is_editable is none %}
                             {% set editable = false %}
                         {% else %}

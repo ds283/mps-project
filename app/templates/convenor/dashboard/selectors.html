@@ -195,16 +195,16 @@
                         <div class="pull-right">
                             {% if is_admin or is_root or is_emailer %}
                                 <a href="{{ url_for('convenor.email_selectors', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, match_filter=match_filter, match_show=match_show) }}"
-                                   class="btn btn-default">
+                                   class="btn btn-default top-row-button">
                                     <i class="fa fa-envelope-o"></i> Email
                                 </a>
                             {% endif %}
                             <a href="{{ url_for('convenor.convert_all', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, match_filter=match_filter, match_show=match_show) }}"
-                               class="btn btn-default">
+                               class="btn btn-default top-row-button">
                                 <i class="fa fa-check"></i> Convert all
                             </a>
                             <a href="{{ url_for('convenor.convert_none', configid=config.id, cohort_filter=cohort_filter, year_filter=year_filter, prog_filter=prog_filter, state_filter=state_filter, match_filter=match_filter, match_show=match_show) }}"
-                               class="btn btn-default">
+                               class="btn btn-default top-row-button">
                                 <i class="fa fa-times"></i> Don't convert all
                             </a>
                         </div>

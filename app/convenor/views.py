@@ -4275,9 +4275,9 @@ def email_selectors(configid):
     # configid is a ProjectClassConfig
     config = ProjectClassConfig.query.get_or_404(configid)
 
-    # validate that logged-in user is allowed to edit this SelectingStudent
+    # validate that logged-in user is a convenor for this project type
     if not validate_is_convenor(config.project_class):
-        return home_dashboard()
+        return redirect(request.referrer)
 
     cohort_filter = request.args.get('cohort_filter')
     prog_filter = request.args.get('prog_filter')
@@ -4296,8 +4296,44 @@ def email_selectors(configid):
     else:
         to_list = None
 
-    return redirect(url_for('services.send_email', url=url_for('convenor.selectors', id=config.pclass_id),
+    return redirect(url_for('services.send_email', url=url_for('convenor.selectors', id=config.pclass_id,
+                                                               cohort_filter=cohort_filter, prog_filter=prog_filter,
+                                                               state_filter=state_filter, year_filter=year_filter,
+                                                               match_filter=match_filter, match_show=match_show),
                             text='selectors view', to=to_list))
+
+
+@convenor.route('/email_submitters/<int:configid>')
+@roles_accepted('faculty', 'admin', 'root')
+def email_submitters(configid):
+    # configid is a ProjectClassConfig
+    config = ProjectClassConfig.query.get_or_404(configid)
+
+    # validate that logged-in user is a convenor for this project type
+    if not validate_is_convenor(config.project_class):
+        return redirect(request.referrer)
+
+    cohort_filter = request.args.get('cohort_filter')
+    prog_filter = request.args.get('prog_filter')
+    state_filter = request.args.get('state_filter')
+    year_filter = request.args.get('year_filter')
+    data_display = request.args.get('data_display')
+
+    data = build_submitters_data(config, cohort_filter, prog_filter, state_filter, year_filter)
+
+    if len(data) > 0:
+        to_list = []
+        for s in data:
+            to_list.append(s.student_id)
+
+    else:
+        to_list = None
+
+    return redirect(url_for('services.send_email', url=url_for('convenor.submitters', id=config.pclass_id,
+                                                               cohort_filter=cohort_filter, prog_filter=prog_filter,
+                                                               state_filter=state_filter, year_filter=year_filter,
+                                                               data_display=data_display),
+                            text='submitters view', to=to_list))
 
 
 @convenor.route('/convert_all/<int:configid>')

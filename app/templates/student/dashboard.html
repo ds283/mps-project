@@ -28,7 +28,7 @@
         }
 
         {% for config, sel, sub in enrollments %}
-            {% if sel is not none %}
+            {% if sel is not none and sel.has_bookmarks %}
                 Sortable.create(document.getElementById("P{{ config.id }}-bookmarks"), {
                     handle: '.drag-handle',
                     animation: 150,

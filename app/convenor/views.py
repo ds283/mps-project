@@ -3809,7 +3809,10 @@ def adjust_selection_deadline(configid):
     if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
+    GoLiveForm = GoLiveFormFactory(submit_label='Change deadline', live_and_close_label=None,
+                                   datebox_label='The current deadline is')
     form = GoLiveForm(request.form)
+
     if form.validate_on_submit():
         if form.live.data:
             config.live_deadline = form.live_deadline.data

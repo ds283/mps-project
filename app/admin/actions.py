@@ -35,11 +35,8 @@ def estimate_CATS_load():
     presentation_faculty = set()
 
     for pclass in pclasses:
-
         # get ProjectClassConfig for the current year
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pclass.id, year=year) \
-            .order_by(ProjectClassConfig.year.desc()).first()
+        config = db.session.query(ProjectClassConfig).filter_by(pclass_id=pclass.id, year=year).first()
 
         if config is None:
             raise RuntimeError('Configuration record for "{name}" '

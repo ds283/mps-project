@@ -17,9 +17,9 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
-from ..models import Project, AssessorAttendanceData, SubmitterAttendanceData, \
+from ..models import Project, LiveProject, AssessorAttendanceData, SubmitterAttendanceData, \
     PresentationAssessment, GeneratedAsset, TemporaryAsset, ScheduleEnumeration, ProjectDescription, \
-    MatchingEnumeration, SubmittedAsset, SubmissionRecord
+    MatchingEnumeration, SubmittedAsset, SubmissionRecord, ProjectClass, ProjectClassConfig
 from ..shared.asset_tools import canonical_generated_asset_filename, canonical_temporary_asset_filename, \
     canonical_submitted_asset_filename
 from ..shared.utils import get_current_year, get_count
@@ -30,6 +30,7 @@ def register_maintenance_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def maintenance(self):
         projects_maintenance(self)
+        liveprojects_maintenance(self)
 
         project_descriptions_maintenance(self)
 
@@ -74,13 +75,39 @@ def register_maintenance_tasks(celery):
 
     def projects_maintenance(self):
         try:
-            records = db.session.query(Project).all()
+            records = db.session.query(Project).filter_by(active=True).all()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         task = group(project_record_maintenance.s(p.id) for p in records)
         task.apply_async()
+
+
+    def liveprojects_maintenance(self):
+        task = None
+
+        try:
+            pclasses = db.session.query(ProjectClass).filter_by(active=True).all()
+
+            for pcl in pclasses:
+                config = db.session.query(ProjectClassConfig).filter_by(pclass_id=pcl.id) \
+                    .order_by(ProjectClassConfig.year.desc()).first()
+
+                if config is not None:
+                    records = db.session.query(LiveProject).filter_by(config_id=config.id).all()
+
+                    if task is None:
+                        task = [liveproject_record_maintenance.s(p.id) for p in records]
+                    else:
+                        task += [liveproject_record_maintenance.s(p.id) for p in records]
+
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        tk_group = group(*task)
+        tk_group.apply_async()
 
 
     def schedule_enumeration_maintenance(self):
@@ -109,6 +136,28 @@ def register_maintenance_tasks(celery):
     def project_record_maintenance(self, pid):
         try:
             project = db.session.query(Project).filter_by(id=pid).first()
+        except SQLAlchemyError as e:
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            raise self.retry()
+
+        if project is None:
+            raise Ignore()
+
+        if project.maintenance():
+            try:
+                db.session.commit()
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                raise self.retry()
+
+        self.update_state(state='SUCCESS')
+
+
+    @celery.task(bind=True, default_retry_delay=30)
+    def liveproject_record_maintenance(self, pid):
+        try:
+            project = db.session.query(LiveProject).filter_by(id=pid).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

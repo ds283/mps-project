@@ -266,6 +266,7 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
         def owner_id(cls):
             return db.Column(db.Integer(), db.ForeignKey('faculty_data.id'), index=True)
 
+
         @declared_attr
         def owner(cls):
             return db.relationship('FacultyData', primaryjoin=lambda: FacultyData.id == cls.owner_id,
@@ -282,10 +283,12 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
         def group_id(cls):
             return db.Column(db.Integer(), db.ForeignKey('research_groups.id'), index=True)
 
+
         @declared_attr
         def group(cls):
             return db.relationship('ResearchGroup', primaryjoin=lambda: ResearchGroup.id == cls.group_id,
                                    backref=db.backref(backref_label, lazy='dynamic'))
+
 
         # which transferable skills are associated with this project?
         @declared_attr
@@ -297,8 +300,10 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
             def add_skill(self, skill):
                 self.skills.append(skill)
 
+
             def remove_skill(self, skill):
                 self.skills.remove(skill)
+
 
         @property
         def ordered_skills(self):
@@ -311,18 +316,22 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
                 .order_by(SkillGroup.name.asc(),
                           TransferableSkill.name.asc())
 
+
         # which degree programmes are preferred for this project?
         @declared_attr
         def programmes(cls):
             return db.relationship('DegreeProgramme', secondary=programmes_mapping_table, lazy='dynamic',
                                    backref=db.backref(backref_label, lazy='dynamic'))
 
+
         if allow_edit_programmes == 'allow':
             def add_programme(self, prog):
                 self.programmes.append(prog)
 
+
             def remove_programme(self, prog):
                 self.programmes.remove(prog)
+
 
         @property
         def ordered_programmes(self):
@@ -357,6 +366,7 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
             return db.relationship('FacultyData', secondary=assessor_mapping_table, lazy='dynamic',
                                    backref=db.backref(assessor_backref_label, lazy='dynamic'))
 
+
         if allow_edit_assessors:
             def add_assessor(self, faculty, autocommit=False):
                 """
@@ -372,6 +382,7 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
                 if autocommit:
                     db.session.commit()
 
+
             def remove_assessor(self, faculty, autocommit=False):
                 """
                 Remove a FacultyData instance as a 2nd marker
@@ -385,6 +396,7 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
 
                 if autocommit:
                     db.session.commit()
+
 
         def _assessor_list_query(self, pclass):
             if isinstance(pclass, int):
@@ -409,6 +421,77 @@ def ProjectConfigurationMixinFactory(backref_label, unique_names, skills_mapping
                 .order_by(User.last_name.asc(), User.first_name.asc())
 
             return query
+
+
+        def _is_assessor_for_at_least_one_pclass(self, faculty):
+            """
+            Check whether a given faculty member is enrolled as an assessor for at least one
+            of the project classes associated with this project
+            :param faculty:
+            :return:
+            """
+            if not isinstance(faculty, FacultyData):
+                faculty = db.session.query(FacultyData).filter_by(id=faculty).one()
+
+            pclasses = self.project_classes.subquery()
+
+            query = faculty.enrollments \
+                .join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id) \
+                .filter(or_(and_(pclasses.c.uses_marker == True,
+                                 or_(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
+                                     EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)),
+                            and_(pclasses.c.uses_presentations == True,
+                                 or_(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
+                                     EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL))))
+
+            return get_count(query) > 0
+
+
+        def _maintenance_assessor_prune(self):
+            """
+            ensure that assessor list does not contain anyone who is no longer enrolled for those tasks
+            note that _is_assessor_for_at_least_one_pclass() allows faculty who are on sabbatical; we don't
+            want to strip these assessors off, because then they would have to be pointlessly re-added by hand
+            when they come back from sabbatical
+            :return:
+            """
+            removed = [f for f in self.assessors if not self._is_assessor_for_at_least_one_pclass(f)]
+            self.assessors = [f for f in self.assessors if self._is_assessor_for_at_least_one_pclass(f)]
+
+            for f in removed:
+                current_app.logger.info('Regular maintenance: pruned assessor "{name}" from project "{proj}" since '
+                                        'they no longer meet eligibility criteria'.format(name=f.user.name,
+                                                                                          proj=self.name))
+
+            return len(removed) > 0
+
+
+        def _maintenance_assessor_remove_duplicates(self):
+            """
+            remove any duplicates from assessor lists
+            :return:
+            """
+            removed = 0
+
+            faculty = set()
+            for assessor in self.assessors:
+                faculty.add(assessor.id)
+
+            for assessor_id in faculty:
+                count = get_count(self.assessors.filter_by(id=assessor_id))
+
+                if count > 1:
+                    f = self.assessors.filter_by(id=assessor_id).first()
+                    current_app.logger.info('Regular maintenance: assessor "{name}" from project "{proj}" occurs '
+                                            'multiple times (multiplicity = {count})'.format(name=f.user.name,
+                                                                                             proj=self.name,
+                                                                                             count=count))
+
+                    while get_count(self.assessors.filter_by(id=assessor_id)) > 1:
+                        self.assessors.remove(f)
+                        removed += 1
+
+            return removed > 0
 
 
         # PRESENTATIONS
@@ -5021,24 +5104,6 @@ class Project(db.Model,
         return self.assessor_list_query(pclass).all()
 
 
-    def _is_assessor_for_at_least_one_pclass(self, faculty):
-        if not isinstance(faculty, FacultyData):
-            faculty = db.session.query(FacultyData).filter_by(id=faculty).one()
-
-        pclasses = self.project_classes.subquery()
-
-        query = faculty.enrollments \
-            .join(pclasses, pclasses.c.id == EnrollmentRecord.pclass_id) \
-            .filter(or_(and_(pclasses.c.uses_marker == True,
-                             or_(EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_ENROLLED,
-                                 EnrollmentRecord.marker_state == EnrollmentRecord.MARKER_SABBATICAL)),
-                        and_(pclasses.c.uses_presentations == True,
-                             or_(EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_ENROLLED,
-                                 EnrollmentRecord.presentations_state == EnrollmentRecord.PRESENTATIONS_SABBATICAL))))
-
-        return get_count(query) > 0
-
-
     def can_enroll_assessor(self, faculty):
         """
         Determine whether a given FacultyData instance can be enrolled as an assessor for this project
@@ -5206,18 +5271,12 @@ class Project(db.Model,
         Perform regular basic maintenance, to ensure validity of the database
         :return:
         """
-        # ensure that assessor list does not contain anyone who is no longer enrolled for those tasks
-        # note that _is_assessor_for_at_least_one_pclass() allows faculty who are on sabbatical; we don't
-        # want to strip these assessors off, because then they would have to be pointlessly re-added by hand
-        # when they come back from sabbatical
-        removed = [f for f in self.assessors if not self._is_assessor_for_at_least_one_pclass(f)]
-        self.assessors = [f for f in self.assessors if self._is_assessor_for_at_least_one_pclass(f)]
+        modified = False
 
-        for f in removed:
-            current_app.logger.info('Regular maintenance: pruned assessor "{name}" from project "{proj}" since '
-                                    'they no longer meet eligibility criteria'.format(name=f.user.name, proj=self.name))
+        modified = super()._maintenance_assessor_prune() or modified
+        modified = super()._maintenance_assessor_remove_duplicates() or modified
 
-        return len(removed) > 0
+        return modified
 
 
 @listens_for(Project, 'before_update')
@@ -6110,6 +6169,18 @@ class LiveProject(db.Model,
             return False
 
         return True
+
+
+    def maintenance(self):
+        """
+        Perform regular basic maintenance, to ensure validity of the database
+        :return:
+        """
+        modified = False
+
+        modified = super()._maintenance_assessor_remove_duplicates() or modified
+
+        return modified
 
 
 @listens_for(LiveProject.assessors, 'append')

@@ -608,14 +608,18 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
     """
     M = {}
 
+    # scan through faculty who are available for marking
     for i in range(0, number_mark):
         fac = mark_dict[i]
 
+        # scan through available projects
         for j in range(0, number_projects):
             idx = (i, j)
             proj = project_dict[j]
 
+            # does the project class for this project use markers?
             if proj.config.uses_marker:
+                # check whether marker i is in the assessor list for project j
                 count = get_count(proj.assessor_list_query.filter_by(id=fac.id))
 
                 if count == 1:

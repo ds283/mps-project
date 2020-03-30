@@ -66,7 +66,7 @@
                                 Bookmarks <span class="badge">{{ project.number_bookmarks }}</span>
                             </div>
                             <div class="list-group-item">
-                                {% set R = project.bookmarks_rank(live=True) %}
+                                {% set R = project.bookmarks_rank(live=require_live) %}
                                 {% if R is not none %}
                                     {% set rank, total = R %}
                                     Bookmarks rank <span class="badge">{{ rank }}/{{ total }}</span>
@@ -82,7 +82,7 @@
                                 Selections <span class="badge">{{ project.number_selections }}</span>
                             </div>
                             <div class="list-group-item">
-                                {% set R = project.selections_rank(live=True) %}
+                                {% set R = project.selections_rank(live=require_live) %}
                                 {% if R is not none %}
                                     {% set rank, total = R %}
                                     Selections rank <span class="badge">{{ rank }}/{{ total }}</span>

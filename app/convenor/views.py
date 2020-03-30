@@ -3311,10 +3311,14 @@ def issue_confirm_requests(id):
 
                 try:
                     db.session.commit()
+                    flash('The project confirmation deadline for "{proj}" has been successfully changed '
+                          'to {deadline}.'.format(proj=config.name,
+                                                  deadline=config.request_deadline.strftime("%a %d %b %Y")),
+                          'success')
                 except SQLAlchemyError as e:
                     db.session.rollback()
                     current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
-                    flash('Could not modify confirmation deadline due to a dataabase error. '
+                    flash('Could not modify confirmation deadline due to a database error. '
                           'Please contact a system administrator', 'error')
 
             # otherwise we need to spawn a background task to issue the confirmation requests
@@ -5162,6 +5166,10 @@ def open_feedback(id):
 
             try:
                 db.session.commit()
+                flash('The feedback deadline for "{proj}" has been successfully changed '
+                      'to {deadline}.'.format(proj=config.name,
+                                              deadline=period.feedback_deadline.strftime("%a %d %b %Y")),
+                      'success')
             except SQLAlchemyError as e:
                 flash('Could not modify feedback status due to a database error. '
                       'Please contact a system administrator.', 'error')

@@ -12,10 +12,10 @@ from flask import render_template, redirect, url_for, flash, request, session
 from flask_security import login_required, roles_required, roles_accepted, current_user
 
 from ..database import db
-from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, Project, LiveProject
+from ..models import User, FacultyData, ResearchGroup, SkillGroup, ProjectClass, ProjectClassConfig,\
+    Project, LiveProject
 
 from ..shared.conversions import is_integer
-from ..shared.validators import validate_is_convenor
 
 import app.ajax as ajax
 
@@ -189,7 +189,11 @@ _analyse_colours = {'popularity': 'blue',
 @reports.route('/liveproject_popularity/<int:proj_id>')
 @roles_accepted('faculty', 'admin', 'root', 'reports')
 def liveproject_analytics(proj_id):
-    project = LiveProject.query.get_or_404(proj_id)
+    project: LiveProject = LiveProject.query.get_or_404(proj_id)
+    config: ProjectClassConfig = project.config
+
+    sel_lifecycle = config.selector_lifecycle
+    require_live = (sel_lifecycle == ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN)
 
     authorized = False
 
@@ -199,11 +203,12 @@ def liveproject_analytics(proj_id):
         authorized = True
 
     # if current user is convenor for the project class, then they are authorized
-    if project.config.project_class.is_convenor(current_user.id):
+    if config.project_class.is_convenor(current_user.id):
         authorized = True
 
     if not authorized:
-        flash('You are not authorized to view the analytics page for this project', 'info')
+        flash('You are not authorized to view the analytics page for the project "{proj}"'.format(proj=project.name),
+              'info')
         return redirect(request.referrer)
 
     url = request.args.get('url', None)
@@ -257,7 +262,8 @@ def liveproject_analytics(proj_id):
     if len(scores) > 0:
         score_div, score_script = _build_score_plot(score_dates, scores, labels[1], colour)
 
-    return render_template('reports/liveproject_analytics/graph.html', project=project, text=text, url=url,
+    return render_template('reports/liveproject_analytics/graph.html', project=project,
+                           config=config, require_live=require_live, text=text, url=url,
                            pane=pane, rank_script=rank_script, rank_div=rank_div,
                            score_script=score_script, score_div=score_div)
 

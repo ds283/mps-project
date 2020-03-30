@@ -10,6 +10,8 @@
 
 from flask import render_template_string, jsonify, url_for
 
+from ...models import ProjectClassConfig
+
 
 _bookmarks = \
 """
@@ -77,14 +79,14 @@ _confirmations = \
 
 _popularity = \
 """
-{% set R = project.popularity_rank(live=True) %}
+{% set R = project.popularity_rank(live=require_live) %}
 {% if R is not none %}
     {% set rank, total = R %}
     <a href="{{ url_for('reports.liveproject_analytics', pane='popularity', proj_id=project.id, url=url, text=text) }}" class="label label-primary">Popularity {{ rank }}/{{ total }}</a>
 {% else %}
     <span class="label label-default">Popularity updating...</span>
 {% endif %}
-{% set R = project.views_rank(live=True) %}
+{% set R = project.views_rank(live=require_live) %}
 {% if R is not none %}
     {% set rank, total = R %}
     <a href="{{ url_for('reports.liveproject_analytics', pane='views', proj_id=project.id, url=url, text=text) }}" class="label label-default">Views {{ rank }}/{{ total }}</a>
@@ -214,10 +216,13 @@ _menu = \
 """
 
 
-def liveprojects_data(config, projects, url=None, text=None):
+def liveprojects_data(config: ProjectClassConfig, projects, url=None, text=None):
+
+    lifecycle = config.selector_lifecycle
+    require_live = (lifecycle==ProjectClassConfig.SELECTOR_LIFECYCLE_SELECTIONS_OPEN)
 
     def get_popularity_rank(p):
-        data = p.popularity_rank(live=True)
+        data = p.popularity_rank(live=require_live)
 
         if data is None:
             return -1
@@ -246,7 +251,7 @@ def liveprojects_data(config, projects, url=None, text=None):
                  'value': p.number_pending + p.number_confirmed
              },
              'popularity': {
-                 'display': render_template_string(_popularity, project=p, url=url, text=text),
+                 'display': render_template_string(_popularity, project=p, require_live=require_live, url=url, text=text),
                  'value': get_popularity_rank(p)
              },
              'menu': render_template_string(_menu, project=p, config=config, url=url, text=text)} for p in projects]

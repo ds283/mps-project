@@ -5869,66 +5869,128 @@ class LiveProject(db.Model,
 
 
     def popularity_score(self, live=True):
+        """
+        Return popularity score
+        :param live: require a "live" estimate, ie. one that is sufficiently recent?
+        :return:
+        """
         return self._get_popularity_attr(lambda x: x.score, live=live)
 
 
     def popularity_rank(self, live=True):
+        """
+        Return popularity rank
+        :param live: require a "live" estimate, ie. one that is sufficiently recent?
+        :return:
+        """
         return self._get_popularity_attr(lambda x: (x.score_rank, x.total_number), live=live)
 
 
     @property
     def popularity_score_history(self):
+        """
+        Return time history of the popularity score
+        :return:
+        """
         return self._get_popularity_history(lambda x: x.score)
 
 
     @property
     def popularity_rank_history(self):
+        """
+        Return time history of the popularity rank
+        :return:
+        """
         return self._get_popularity_history(lambda x: (x.score_rank, x.total_number))
 
 
     def lowest_popularity_rank(self, live=True):
+        """
+        Return least popularity rank
+        :param live: require a "live" estimate, ie. one that is sufficiently recent?
+        :return:
+        """
         return self._get_popularity_attr(lambda x: x.lowest_score_rank, live=live)
 
 
     def views_rank(self, live=True):
+        """
+        Return views rank (there is no need for a views score -- the number of views is directly available)
+        :param live: require a "live" estimate, ie. one that is sufficiently recent?
+        :return:
+        """
         return self._get_popularity_attr(lambda x: (x.views_rank, x.total_number), live=live)
 
 
     @property
     def views_history(self):
+        """
+        Return time history of number of views
+        :return:
+        """
         return self._get_popularity_history(lambda x: x.views)
 
 
     @property
     def views_rank_history(self):
+        """
+        Return time history of views rank
+        :return:
+        """
         return self._get_popularity_history(lambda x: (x.views_rank, x.total_number))
 
 
     def bookmarks_rank(self, live=True):
+        """
+        Return bookmark rank (number of bookmarks can be read directly)
+        :param live: require a "live" estimate, ie. one that is sufficiently recent?
+        :return:
+        """
         return self._get_popularity_attr(lambda x: (x.bookmarks_rank, x.total_number), live=live)
 
 
     @property
     def bookmarks_history(self):
+        """
+        Return time history of number of bookmarks
+        :return:
+        """
         return self._get_popularity_history(lambda x: x.bookmarks)
 
 
     @property
     def bookmarks_rank_history(self):
+        """
+        Return time history of bookmarks rank
+        :return:
+        """
         return self._get_popularity_history(lambda x: (x.bookmarks_rank, x.total_number))
 
 
     def selections_rank(self, live=True):
+        """
+        Return selection rank
+        :param live: require a "live" estimate, ie. one that is sufficiently recent?
+        :return:
+        """
         return self._get_popularity_attr(lambda x: (x.selections_rank, x.total_number), live=live)
 
 
     @property
     def selections_history(self):
+        """
+        Return time history of number of selections
+        :return:
+        """
         return self._get_popularity_history(lambda x: x.selections)
 
 
     @property
     def selections_rank_history(self):
+        """
+        Return time history of selections rank
+        :return:
+        """
         return self._get_popularity_history(lambda x: (x.selections_rank, x.total_number))
 
 

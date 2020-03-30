@@ -26,15 +26,15 @@
         <div class="col-xs-10">
             <div class="well well-lg">
                 <p><span class="dashboard-project-title">{{ project.name }}</span></p>
-                <p>{{ project.config.year }}&ndash;{{ project.config.year+1 }} |
+                <p>{{ config.year }}&ndash;{{ config.year+1 }} |
                     <a href="mailto:{{ project.owner.user.email }}">{{ project.owner.user.name }}</a> |
-                    {{ project.config.project_class.name }}</p>
+                    {{ config.project_class.name }}</p>
                 <hr class="intro-divider">
                 <div class="row vertical-top">
                     <div class="col-xs-3">
                         <div class="list-group">
                             <div class="list-group-item list-group-item-info">
-                                {% set R = project.popularity_rank(live=True) %}
+                                {% set R = project.popularity_rank(live=require_live) %}
                                 {% if R is not none %}
                                     {% set rank, total = R %}
                                     Popularity rank <span class="badge">{{ rank }}/{{ total }}</span>
@@ -50,7 +50,7 @@
                                 Views <span class="badge">{{ project.page_views }}</span>
                             </div>
                             <div class="list-group-item">
-                                {% set R = project.views_rank(live=True) %}
+                                {% set R = project.views_rank(live=require_live) %}
                                 {% if R is not none %}
                                     {% set rank, total = R %}
                                     View rank <span class="badge">{{ rank }}/{{ total }}</span>

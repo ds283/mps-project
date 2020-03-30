@@ -56,7 +56,7 @@ def ChangeDeadlineFormFactory(submit_label='Close selections', change_label='Cha
         live_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
 
         # send email notifications to convenor and office contacts?
-        notify_convenor = BooleanField('On closure, Send e-mail notification to convenor and office staff')
+        notify_convenor = BooleanField('On closure, send e-mail notification to convenor and office staff')
 
     return ChangeDeadlineForm
 

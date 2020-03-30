@@ -180,7 +180,7 @@ def register_golive_tasks(celery):
                 raise RuntimeError('Could not interpret "deadline" argument')
 
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -224,7 +224,7 @@ def register_golive_tasks(celery):
                 raise RuntimeError('Could not interpret "deadline" argument')
 
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -251,7 +251,7 @@ def register_golive_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def set_notified(self, config_id, user_id):
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
             user = User.query.filter_by(id=user_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -281,7 +281,7 @@ def register_golive_tasks(celery):
 
         try:
             data = FacultyData.query.filter_by(id=faculty_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -332,7 +332,7 @@ def register_golive_tasks(celery):
 
         try:
             data = SelectingStudent.query.filter_by(id=selector_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -372,7 +372,7 @@ def register_golive_tasks(celery):
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -473,7 +473,7 @@ def register_golive_tasks(celery):
     def golive_close(self, config_id, convenor_id):
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

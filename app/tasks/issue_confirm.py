@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from ..database import db
 from ..models import User, TaskRecord, BackupRecord, ProjectClassConfig, FacultyData, EnrollmentRecord, \
-    ProjectDescription, DescriptionComment, Role
+    ProjectDescription, DescriptionComment, Role, ProjectClass
 
 from ..task_queue import progress_update, register_task
 
@@ -36,8 +36,8 @@ def register_issue_confirm_tasks(celery):
 
         # get database records for this project class
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
-            convenor = User.query.filter_by(id=convenor_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
+            convenor: User = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -116,7 +116,7 @@ def register_issue_confirm_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 80, 'Updating database records...', autocommit=False)
 
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -140,7 +140,7 @@ def register_issue_confirm_tasks(celery):
         progress_update(task_id, TaskRecord.RUNNING, 90, 'Sending email notifications...', autocommit=True)
 
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -162,8 +162,8 @@ def register_issue_confirm_tasks(celery):
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Issue confirmation requests complete', autocommit=False)
 
         try:
-            convenor = User.query.filter_by(id=convenor_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            convenor: User = User.query.filter_by(id=convenor_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -184,7 +184,7 @@ def register_issue_confirm_tasks(celery):
         progress_update(task_id, TaskRecord.FAILURE, 100, 'Encountered error when issuing confirmation requests', autocommit=False)
 
         try:
-            convenor = User.query.filter_by(id=convenor_id).first()
+            convenor: User = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -201,8 +201,8 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def issue_confirm(self, faculty_id, config_id):
         try:
-            data = FacultyData.query.filter_by(id=faculty_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -228,8 +228,8 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_notification_email(self, faculty_id, config_id):
         try:
-            data = FacultyData.query.filter_by(id=faculty_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -260,7 +260,7 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def reminder_email(self, config_id, convenor_id):
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -285,8 +285,8 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def send_reminder_email(self, faculty_id, config_id):
         try:
-            data = FacultyData.query.filter_by(id=faculty_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            data: FacultyData = FacultyData.query.filter_by(id=faculty_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -317,14 +317,13 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def enroll_adjust(self, enroll_id, old_supervisor_state, current_year):
         try:
-            record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
+            record: EnrollmentRecord = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # load current configuration record for this project
-        config = db.session.query(ProjectClassConfig) \
-            .filter(ProjectClassConfig.pclass_id == record.pclass_id, ProjectClassConfig.year == current_year).first()
+        config: ProjectClassConfig = record.get_config(current_year)
 
         if record is None or config is None:
             self.update_state('FAILURE', meta='Could not load database records')
@@ -358,14 +357,13 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def enrollment_created(self, enroll_id, current_year):
         try:
-            record = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
+            record: EnrollmentRecord = db.session.query(EnrollmentRecord).filter_by(id=enroll_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
         # load current configuration record for this project
-        config = db.session.query(ProjectClassConfig) \
-            .filter(ProjectClassConfig.pclass_id == record.pclass_id, ProjectClassConfig.year == current_year).first()
+        config: ProjectClassConfig = record.pclass.get_config(current_year)
 
         if record is None or config is None:
             self.update_state('FAILURE', meta='Could not load database records')
@@ -394,9 +392,9 @@ def register_issue_confirm_tasks(celery):
     @celery.task(bind=True, default_retry_delay=30)
     def enrollment_deleted(self, pclass_id, faculty_id, current_year):
         try:
-            faculty = db.session.query(FacultyData).filter_by(id=faculty_id).first()
-            config = db.session.query(ProjectClassConfig) \
-                .filter(ProjectClassConfig.pclass_id == pclass_id, ProjectClassConfig.year == current_year).first()
+            faculty: FacultyData = db.session.query(FacultyData).filter_by(id=faculty_id).first()
+            pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
+            config: ProjectClassConfig = pclass.get_config(current_year)
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
@@ -474,9 +472,7 @@ def register_issue_confirm_tasks(celery):
         fac_data = user.faculty_data
 
         for record in records:
-            config = db.session.query(ProjectClassConfig) \
-                .filter_by(pclass_id=record.pclass_id) \
-                .order_by(ProjectClassConfig.year.desc()).first()
+            config: ProjectClass = record.most_recent_config
 
             if config is not None:
                 if fac_data.number_projects_offered(config.pclass_id) > 0:

@@ -285,12 +285,9 @@ def allow_approvals(desc_id):
         return False
 
     for pcl in desc.project_classes:
-
         # ensure pcl is also in list of project classes for parent project
         if pcl in desc.parent.project_classes:
-            config = db.session.query(ProjectClassConfig) \
-                .filter_by(pclass_id=pcl.id) \
-                .order_by(ProjectClassConfig.year.desc()).first()
+            config = pcl.most_recent_config
 
             if config is not None and pcl.active and pcl.publish:
                 # don't include projects for project classes that have already gone live
@@ -463,9 +460,7 @@ def _get_pclass_config_list(pcs=None):
     if pcs is None:
         pcs = _get_pclass_list()
 
-    cs = [db.session.query(ProjectClassConfig) \
-              .filter_by(pclass_id=pclass.id) \
-              .order_by(ProjectClassConfig.year.desc()).first() for pclass in pcs]
+    cs = [pclass.most_recent_config for pclass in pcs]
 
     # strip out 'None' entries before returning
     return [x for x in cs if x is not None]

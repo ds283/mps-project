@@ -2237,8 +2237,7 @@ class FacultyData(db.Model):
             if pcl.id in config_cache:
                 config = config_cache[pcl.id]
             else:
-                config = db.session.query(ProjectClassConfig).filter_by(pclass_id=pcl.id) \
-                            .order_by(ProjectClassConfig.year.desc()).first()
+                config = pcl.most_recent_config
                 config_cache[pcl.id] = config
 
             if config is not None:
@@ -2252,8 +2251,7 @@ class FacultyData(db.Model):
                     if record.pclass_id in config_cache:
                         config = config_cache[record.pclass_id]
                     else:
-                        config = db.session.query(ProjectClassConfig).filter_by(pclass_id=record.pclass_id) \
-                            .order_by(ProjectClassConfig.year.desc()).first()
+                        config = record.pclass.most_recent_config
                         config_cache[record.pclass_id] = config
 
                     if config is not None:
@@ -3207,6 +3205,18 @@ class ProjectClass(db.Model, ColouredLabelMixin):
     @property
     def submissions(self):
         return get_count(self.periods)
+
+
+    @property
+    def most_recent_config(self):
+        return db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=self.id) \
+            .order_by(ProjectClassConfig.year.desc()).first()
+
+
+    def get_config(self, year):
+        return db.session.query(ProjectClassConfig) \
+            .filter_by(pclass_id=self.id, year=year).first()
 
 
     def disable(self):
@@ -5163,12 +5173,13 @@ class Project(db.Model,
         :param config_id: current ProjectClassConfig instance
         :return:
         """
-        current_config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+        current_config: ProjectClassConfig = db.session.query(ProjectClassConfig) \
+            .filter_by(id=config_id).first()
         if current_config is None:
             return None
 
-        previous_config = db.session.query(ProjectClassConfig).filter_by(year=current_config.year-1,
-                                                                         pclass_id=current_config.pclass_id).first()
+        previous_config: ProjectClassConfig = db.session.query(ProjectClassConfig) \
+            .filter_by(year=current_config.year-1, class_id=current_config.pclass_id).first()
         if previous_config is None:
             return None
 
@@ -7275,9 +7286,8 @@ class SubmissionRecord(db.Model):
         if self.selection_config:
             return self.selection_config
 
-        current_config = self.owner.config
-        config = ProjectClassConfig.query.filter_by(year=current_config.year-1,
-                                                    pclass_id=current_config.pclass_id).first()
+        current_config: ProjectClassConfig = self.owner.config
+        config: ProjectClassConfig = current_config.pclass.get_config(current_config.year-1)
 
         return config
 

@@ -575,7 +575,7 @@ def update_ranking():
     sid = data['sid']
     ranking = data['ranking']
 
-    config = ProjectClassConfig.query.filter_by(id=config_id).first()
+    config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
     sel = SelectingStudent.query.filter_by(id=sid).first()
 
     if config is None or sel is None:

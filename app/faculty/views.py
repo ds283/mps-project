@@ -1311,9 +1311,7 @@ def dashboard():
     valid_panes = []
     for record in current_user.faculty_data.ordered_enrollments:
         pclass = record.pclass
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pclass.id) \
-            .order_by(ProjectClassConfig.year.desc()).first()
+        config = pclass.most_recent_config
 
         if pclass.active and pclass.publish and config is not None:
             include = False
@@ -1422,7 +1420,8 @@ def confirm_pclass(id):
     :return:
     """
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=id).first()
+    config: ProjectClassConfig = pclass.most_recent_config
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} '
@@ -1458,7 +1457,8 @@ def confirm_description(did, pclass_id):
     desc = ProjectDescription.query.get_or_404(did)
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
+    pcl: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
+    config: ProjectClassConfig = pcl.most_recent_config
 
     if not config.requests_issued:
         flash('Confirmation requests have not yet been issued for {project} {yeara}-{yearb}'.format(

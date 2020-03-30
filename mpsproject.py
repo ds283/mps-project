@@ -197,9 +197,7 @@ def migrate_description_confirmations():
                 break
 
             # otherwise, check whether user is in confirmations_required list
-            config = db.session.query(ProjectClassConfig) \
-                .filter_by(pclass_id=p.id) \
-                .order_by(ProjectClassConfig.year.desc()).first()
+            config = p.most_recent_config
 
             if config is None:
                 continue

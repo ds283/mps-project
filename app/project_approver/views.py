@@ -125,9 +125,7 @@ def return_to_owner(id):
 
     # find project classes associated with this description
     for pcl in record.project_classes:
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pcl.id) \
-            .order_by(ProjectClassConfig.year.desc()).first()
+        config = pcl.most_recent_config
 
         if config is not None:
             if config.requests_issued and not config.live:

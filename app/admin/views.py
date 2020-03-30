@@ -1462,8 +1462,7 @@ def regenerate_period_records(id):
 
     # get current set of submission period records
     current_year = get_current_year()
-    config = db.session.query(ProjectClassConfig) \
-        .filter(ProjectClassConfig.pclass_id == data.id, ProjectClassConfig.year == current_year).first()
+    config = data.get_config(current_year)
 
     ts = config.template_periods.all()
     current = config.periods.order_by(SubmissionPeriodRecord.submission_period.asc()).all()
@@ -1564,7 +1563,7 @@ def add_period(id):
     :return:
     """
 
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
     form = AddSubmissionPeriodForm(form=request.form)
 
     if form.validate_on_submit():
@@ -3077,9 +3076,7 @@ def skip_matching():
 
     for pclass in pcs:
         # get current configuration record for this project class
-        config = db.session.query(ProjectClassConfig) \
-            .filter_by(pclass_id=pclass.id) \
-            .order_by(ProjectClassConfig.year.desc()).first()
+        config = pclass.most_recent_config
 
         if config is not None:
             config.skip_matching = True
@@ -3215,10 +3212,7 @@ def create_match():
         # attached pclass?
         count = 0
         for pclass in form.pclasses_to_include.data:
-
-            config = db.session.query(ProjectClassConfig) \
-                .filter(ProjectClassConfig.pclass_id == pclass.id,
-                        ProjectClassConfig.year == current_year).first()
+            config = pclass.get_config(current_year)
 
             if config is not None:
                 if config not in attempt.config_members:

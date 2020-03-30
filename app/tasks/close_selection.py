@@ -85,7 +85,7 @@ def register_close_selection_tasks(celery):
 
         try:
             convenor = User.query.filter_by(id=convenor_id).first()
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()

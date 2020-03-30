@@ -36,7 +36,7 @@ def estimate_CATS_load():
 
     for pclass in pclasses:
         # get ProjectClassConfig for the current year
-        config = db.session.query(ProjectClassConfig).filter_by(pclass_id=pclass.id, year=year).first()
+        config = pclass.get_config(year)
 
         if config is None:
             raise RuntimeError('Configuration record for "{name}" '

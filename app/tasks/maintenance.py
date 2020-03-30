@@ -91,8 +91,7 @@ def register_maintenance_tasks(celery):
             pclasses = db.session.query(ProjectClass).filter_by(active=True).all()
 
             for pcl in pclasses:
-                config = db.session.query(ProjectClassConfig).filter_by(pclass_id=pcl.id) \
-                    .order_by(ProjectClassConfig.year.desc()).first()
+                config: ProjectClassConfig = pcl.most_recent_config
 
                 if config is not None:
                     records = db.session.query(LiveProject).filter_by(config_id=config.id).all()

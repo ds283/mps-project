@@ -28,7 +28,7 @@ def compute_rank(self, num_live, rank_type, cid, query, accessor, writer):
 
     try:
         # get most recent configuration record for this project class
-        config = db.session.query(ProjectClassConfig).filter_by(id=cid).one()
+        config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=cid).one()
 
     except SQLAlchemyError as e:
         current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -230,9 +230,8 @@ def register_popularity_tasks(celery):
 
         try:
             # get most recent configuration record for this project class
-            config = db.session.query(ProjectClassConfig) \
-                .filter_by(pclass_id=pid) \
-                .order_by(ProjectClassConfig.year.desc()).first()
+            pcl: ProjectClass = db.session.query(ProjectClass).filter_by(id=pid).first()
+            config: ProjectClassConfig = pcl.most_recent_config
 
         except SQLAlchemyError as e:
             raise self.retry()
@@ -396,9 +395,8 @@ def register_popularity_tasks(celery):
 
         try:
             # get most recent configuration record for this project class
-            config = db.session.query(ProjectClassConfig) \
-                .filter_by(pclass_id=pid) \
-                .order_by(ProjectClassConfig.year.desc()).first()
+            pcl: ProjectClass = db.session.query(ProjectClass).filter_by(id=pid).first()
+            config: ProjectClassConfig = pcl.most_recent_config
 
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)

@@ -30,7 +30,7 @@ def add_liveproject(number, project, config_id, autocommit=False):
     if item is None:
         raise KeyError('Missing database record for Project id={id}'.format(id=project))
 
-    config = ProjectClassConfig.query.filter_by(id=config_id).first()
+    config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
     if config is None:
         raise KeyError('Missing database record for ProjectClassConfig id={id}'.format(id=config_id))
 

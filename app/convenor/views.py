@@ -243,7 +243,7 @@ _desc_menu = \
 @roles_accepted('faculty', 'admin', 'root')
 def overview(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -253,7 +253,7 @@ def overview(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -336,7 +336,7 @@ def attached(id):
         return redirect(url_for('convenor.show_unofferable'))
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -346,7 +346,7 @@ def attached(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -393,14 +393,14 @@ def attached_ajax(id):
     :return:
     """
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -483,7 +483,7 @@ def attached_ajax(id):
 @roles_accepted('faculty', 'admin', 'root')
 def faculty(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -511,7 +511,7 @@ def faculty(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -527,7 +527,7 @@ def faculty(id):
 @roles_accepted('faculty', 'admin', 'root')
 def faculty_ajax(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -537,7 +537,7 @@ def faculty_ajax(id):
     state_filter = request.args.get('state_filter')
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -633,7 +633,7 @@ def _has_custom_CATS(fac_data, pclass):
 @roles_accepted('faculty', 'admin', 'root')
 def selectors(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -650,7 +650,7 @@ def selectors(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -758,7 +758,7 @@ def selectors_ajax(id):
     :return:
     """
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -772,7 +772,7 @@ def selectors_ajax(id):
     match_show = request.args.get('match_show')
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -841,14 +841,14 @@ def _build_selector_data(config, cohort_filter, prog_filter, state_filter, year_
 @roles_accepted('faculty', 'admin', 'root')
 def enroll_selectors(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -927,7 +927,7 @@ def enroll_selectors_ajax(id):
     :return:
     """
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -938,7 +938,7 @@ def enroll_selectors_ajax(id):
     year_filter = request.args.get('year_filter')
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -1088,7 +1088,7 @@ def delete_selector(sid):
 @roles_accepted('faculty', 'admin', 'root')
 def selector_grid(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1104,7 +1104,7 @@ def selector_grid(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -1201,7 +1201,7 @@ def selector_grid(id):
 @roles_accepted('faculty', 'admin', 'root')
 def selector_grid_ajax(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1214,7 +1214,7 @@ def selector_grid_ajax(id):
     match_show = request.args.get('match_show')
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -1269,7 +1269,7 @@ def selector_grid_ajax(id):
 @roles_accepted('faculty', 'admin', 'root')
 def show_confirmations(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1279,7 +1279,7 @@ def show_confirmations(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -1303,14 +1303,14 @@ def show_confirmations(id):
 @roles_accepted('faculty', 'admin', 'root')
 def show_confirmations_ajax(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -1334,7 +1334,7 @@ def show_confirmations_ajax(id):
 @roles_accepted('faculty', 'admin', 'root')
 def submitters(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1350,7 +1350,7 @@ def submitters(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -1434,14 +1434,14 @@ def submitters_ajax(id):
     """
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -1475,7 +1475,7 @@ def submitters_ajax(id):
 @roles_accepted('faculty', 'admin', 'root')
 def enroll_submitters(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1485,7 +1485,7 @@ def enroll_submitters(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -1562,7 +1562,7 @@ def enroll_submitters_ajax(id):
     """
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1573,7 +1573,7 @@ def enroll_submitters_ajax(id):
     year_filter = request.args.get('year_filter')
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -1608,7 +1608,7 @@ def enroll_submitters_ajax(id):
 @convenor.route('/enroll_all_submitters/<int:configid>')
 @roles_accepted('faculty', 'admin', 'root')
 def enroll_all_submitters(configid):
-    config = ProjectClassConfig.query.get_or_404(configid)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -1627,7 +1627,7 @@ def enroll_all_submitters(configid):
 
     # get current year
     current_year = get_current_year()
-    old_config = ProjectClassConfig.query.filter_by(pclass_id=config.pclass_id, year=config.year-1).first()
+    old_config: ProjectClassConfig = config.pclass.get_config(config.year-1)
 
     candidates = build_enroll_submitter_candidates(config)
 
@@ -1685,7 +1685,7 @@ def enroll_submitter(sid, configid):
         flash('Manual enrollment of submitters is only possible during normal project activity', 'error')
         return redirect(request.referrer)
 
-    old_config = ProjectClassConfig.query.filter_by(pclass_id=config.pclass_id, year=config.year-1).first()
+    old_config: ProjectClassConfig = config.pclass.get_config(config.year-1)
 
     add_blank_submitter(sid, old_config.id if old_config is not None else None, configid, autocommit=True)
 
@@ -1727,7 +1727,7 @@ def delete_submitter(sid):
 @roles_accepted('faculty', 'admin', 'root')
 def liveprojects(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1745,7 +1745,7 @@ def liveprojects(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -1794,8 +1794,7 @@ def liveprojects_ajax(id):
     state_filter = request.args.get('state_filter')
 
     # get current configuration record for this project class
-    config: ProjectClassConfig = ProjectClassConfig.query.filter_by(pclass_id=id) \
-        .order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -1953,7 +1952,7 @@ def attach_liveproject(id):
     :return:
     """
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -1963,7 +1962,7 @@ def attach_liveproject(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -1993,14 +1992,14 @@ def attach_liveproject_ajax(id):
     """
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -2085,10 +2084,10 @@ def attach_liveproject_other_ajax(id):
     """
 
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -2195,6 +2194,10 @@ def descriptions_ajax(id, pclass_id):
     # get project details
     project = Project.query.get_or_404(id)
 
+    if not validate_edit_project(project):
+        return jsonify({})
+
+    pclass = None
     if pclass_id == 0:
         # got here from unattached projects view; reject if user is not administrator
         if not validate_is_administrator():
@@ -2202,19 +2205,16 @@ def descriptions_ajax(id, pclass_id):
 
     else:
         # get project class details
-        pclass = ProjectClass.query.get_or_404(pclass_id)
+        pclass: ProjectClass = db.session.query(ProjectClass).filter_by(id=pclass_id).first()
 
         # if logged in user is not a suitable convenor, or an administrator, object
-        if not validate_is_convenor(pclass):
-            return jsonify({})
-
-        if not validate_edit_project(project):
+        if pclass is not None and not validate_is_convenor(pclass):
             return jsonify({})
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
-    if config is None:
-        return jsonify({})
+    config = None
+    if pclass is not None:
+        config: ProjectClassConfig = pclass.most_recent_config
 
     descs = project.descriptions.all()
 
@@ -3049,7 +3049,7 @@ def attach_assessors(id, pclass_id):
     pcl_list = []
     for pcl in pclasses:
         # get current configuration record for this project class
-        config = ProjectClassConfig.query.filter_by(pclass_id=pcl.id).order_by(ProjectClassConfig.year.desc()).first()
+        config: ProjectClassConfig = pcl.most_recent_config
         if config is None:
             flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.',
                   'error')
@@ -5009,14 +5009,14 @@ def set_hint(id, hint):
 @roles_accepted('faculty', 'admin', 'root')
 def hints_list(id):
     # pid is a ProjectClass
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return redirect(request.referrer)
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -5051,14 +5051,14 @@ def audit_matches(pclass_id):
 @roles_accepted('faculty', 'admin', 'root')
 def audit_matches_ajax(pclass_id):
     # pclass_id labels a ProjectClass
-    pclass = ProjectClass.query.get_or_404(pclass_id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -5087,14 +5087,14 @@ def audit_schedules(pclass_id):
 @roles_accepted('faculty', 'admin', 'root')
 def audit_schedules_ajax(pclass_id):
     # pclass_id labels a ProjectClass
-    pclass = ProjectClass.query.get_or_404(pclass_id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(pclass_id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
         return jsonify({})
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=pclass_id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -5523,7 +5523,7 @@ def view_feedback(id):
 @roles_accepted('faculty', 'admin', 'route')
 def faculty_workload(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -5551,7 +5551,7 @@ def faculty_workload(id):
     current_year = get_current_year()
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -5567,7 +5567,7 @@ def faculty_workload(id):
 @roles_accepted('faculty', 'admin', 'root')
 def faculty_workload_ajax(id):
     # get details for project class
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -5577,7 +5577,7 @@ def faculty_workload_ajax(id):
     state_filter = request.args.get('state_filter')
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})
@@ -5659,7 +5659,7 @@ def faculty_workload_ajax(id):
 @roles_accepted('faculty', 'admin', 'root')
 def teaching_groups(id):
     # id is a ProjectClass
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -5680,7 +5680,7 @@ def teaching_groups(id):
         session['convenor_groups_organize_by'] = organize_by
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return redirect(request.referrer)
@@ -5728,7 +5728,7 @@ def teaching_groups(id):
 @roles_accepted('faculty', 'admin', 'root')
 def teaching_groups_ajax(id):
     # id is a ProjectClass
-    pclass = ProjectClass.query.get_or_404(id)
+    pclass: ProjectClass = ProjectClass.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(pclass):
@@ -5737,7 +5737,7 @@ def teaching_groups_ajax(id):
     organize_by = request.args.get('organize_by')
 
     # get current configuration record for this project class
-    config = ProjectClassConfig.query.filter_by(pclass_id=id).order_by(ProjectClassConfig.year.desc()).first()
+    config: ProjectClassConfig = pclass.most_recent_config
     if config is None:
         flash('Internal error: could not locate ProjectClassConfig. Please contact a system administrator.', 'error')
         return jsonify({})

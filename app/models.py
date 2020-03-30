@@ -9122,7 +9122,7 @@ def _MatchingRecord_is_valid(id):
 
     # 6. ASSIGNED MARKER SHOULD BE COMPATIBLE WITH ASSIGNED PROJECT
     if obj.selector.config.uses_marker:
-        count = get_count(project.assessor_list_query.filter_by(id=obj.marker_id))
+        count = get_count(project.assessor_list_query.filter(FacultyData.id == obj.marker_id))
 
         if count != 1:
             errors[('assignment', 3)] = 'Assigned 2nd marker is not compatible with assigned project'

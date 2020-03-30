@@ -610,26 +610,35 @@ def _build_marking_matrix(number_mark, mark_dict, number_projects, project_dict,
 
     # scan through faculty who are available for marking
     for i in range(0, number_mark):
-        fac = mark_dict[i]
+        fac: FacultyData = mark_dict[i]
 
         # scan through available projects
         for j in range(0, number_projects):
             idx = (i, j)
-            proj = project_dict[j]
+            proj: LiveProject = project_dict[j]
 
             # does the project class for this project use markers?
             if proj.config.uses_marker:
                 # check whether marker i is in the assessor list for project j
-                count = get_count(proj.assessor_list_query.filter_by(id=fac.id))
+                count = get_count(proj.assessor_list_query.filter(FacultyData.id == fac.id))
 
                 if count == 1:
                     M[idx] = max_multiplicity
                 elif count == 0:
                     M[idx] = 0
                 else:
-                    raise RuntimeError('Inconsistent number of second markers match to LiveProject: '
-                                       'fac={fname}, proj={pname}, '
-                                       'matches={c}'.format(fname=fac.user.name, pname=proj.name, c=count))
+                    errmsg = 'Inconsistent number of second markers match to LiveProject: ' \
+                             'fac={fname}, proj={pname}, matches={c}, ' \
+                             'LiveProject.id={lpid}, ' \
+                             'FacultyData.id={fid}'.format(fname=fac.user.name, pname=proj.name, c=count,
+                                                           lpid=proj.id, fid=fac.id)
+
+                    print('!! {msg}'.format(msg=errmsg))
+                    print('!! LiveProject Assessor List')
+                    for f in proj.assessor_list_query.all():
+                        print('!! - {name} id={fid}'.format(name=f.user.name, fid=f.id))
+
+                    raise RuntimeError(errmsg)
 
             else:
                 M[idx] = 0

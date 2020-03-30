@@ -1,7 +1,7 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% from "macros.html" import date_field %}
 
-{% macro selection_open(config, golive_form) %}
+{% macro selection_open(config, change_form) %}
     <div class="panel panel-success">
         <div class="panel-heading">
             <strong>Student selections are currently live</strong>
@@ -104,8 +104,9 @@
             </div>
             <hr class="intro-divider">
             <form action="{{ url_for('convenor.adjust_selection_deadline', configid=config.id) }}" method="POST" name="adjust_selection_deadline">
-                {{ golive_form.hidden_tag() }}
-                {{ date_field(golive_form.live_deadline) }}
+                {{ change_form.hidden_tag() }}
+                {{ date_field(change_form.live_deadline) }}
+                {{ wtf.form_field(change_form.notify_convenor) }}
                 <div class="row vertical-top">
                     <div class="col-xs-12">
                         <div class="pull-right">
@@ -113,11 +114,8 @@
                                class="btn btn-default grouped-button-margin">
                                 Reset popularity data
                             </a>
-                            {{ wtf.form_field(golive_form.live, button_map={'live': 'default'}) }}
-                            <a href="{{ url_for('convenor.close_selections', id=config.id) }}"
-                               class="btn btn-primary grouped-button-margin">
-                                Close selections
-                            </a>
+                            {{ wtf.form_field(change_form.change, button_map={'change': 'default'}) }}
+                            {{ wtf.form_field(change_form.close, button_map={'close': 'primary'}) }}
                         </div>
                     </div>
                 </div>

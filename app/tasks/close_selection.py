@@ -27,12 +27,12 @@ from datetime import datetime
 def register_close_selection_tasks(celery):
 
     @celery.task(bind=True)
-    def pclass_close(self, task_id, config_id, convenor_id):
+    def pclass_close(self, task_id, config_id, convenor_id, notify_convenor):
         progress_update(task_id, TaskRecord.RUNNING, 0, 'Preparing to close...', autocommit=True)
 
         # get database records for this project class
         try:
-            config = ProjectClassConfig.query.filter_by(id=config_id).first()
+            config = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
             convenor = User.query.filter_by(id=convenor_id).first()
         except SQLAlchemyError as e:
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
@@ -68,7 +68,8 @@ def register_close_selection_tasks(celery):
         if len(selectors_group) > 0:
             seq = seq | selectors_group
 
-        seq = (seq | close_finalize.si(task_id, config_id, convenor_id)).on_error(close_fail.si(task_id, convenor_id))
+        seq = (seq | close_finalize.si(task_id, config_id, convenor_id, notify_convenor)) \
+            .on_error(close_fail.si(task_id, convenor_id))
 
         raise self.replace(seq)
 
@@ -79,7 +80,7 @@ def register_close_selection_tasks(celery):
 
 
     @celery.task(bind=True)
-    def close_finalize(self, task_id, config_id, convenor_id):
+    def close_finalize(self, task_id, config_id, convenor_id, notify_convenor):
         progress_update(task_id, TaskRecord.SUCCESS, 100, 'Closure of selection complete', autocommit=False)
 
         try:
@@ -107,7 +108,7 @@ def register_close_selection_tasks(celery):
             current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
             raise self.retry()
 
-        if config is not None:
+        if notify_convenor and config is not None:
             recipients = set([config.project_class.convenor.user.email])
             if convenor is not None:
                 recipients.add(convenor.email)
@@ -163,14 +164,12 @@ def register_close_selection_tasks(celery):
         # if a submission already exists, sanitize it (check that all flags are correct)
         if sel.has_submitted:
             sanitize(sel)
-            return
 
         # if a submission does not exist, and this is not a 'submit to subscribe' type of project
         # (tagged by 'selection_open_to_all'), then convert bookmarks into a submission
         # provided they exist and are a valid selection. Otherwise treat as a non-submission.
-        if not sel.config.selection_open_to_all and sel.is_valid_selection:
+        elif not sel.config.selection_open_to_all and sel.is_valid_selection:
             convert_bookmarks(sel)
-            return
 
 
 def convert_bookmarks(sel):

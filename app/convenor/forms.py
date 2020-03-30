@@ -23,8 +23,7 @@ def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and 
                       datebox_label='Deadline'):
 
     class GoLiveForm(Form):
-
-        # normal Go Live option
+        # Go Live
         live = SubmitField(submit_label)
 
         # go live and close option
@@ -40,8 +39,26 @@ def GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and 
         # notify selectors checkbox
         notify_selectors = BooleanField('Send e-mail notifications to selectors')
 
-
     return GoLiveForm
+
+
+def ChangeDeadlineFormFactory(submit_label='Close selections', change_label='Change deadline',
+                              datebox_label='The current deadline is'):
+
+    class ChangeDeadlineForm(Form):
+        # Close selections
+        close = SubmitField(submit_label)
+
+        # Change deadline
+        change = SubmitField(change_label)
+
+        # deadline field
+        live_deadline = DateField(datebox_label, format='%d/%m/%Y', validators=[InputRequired()])
+
+        # send email notifications to convenor and office contacts?
+        notify_convenor = BooleanField('On closure, Send e-mail notification to convenor and office staff')
+
+    return ChangeDeadlineForm
 
 
 def IssueFacultyConfirmRequestFormFactory(submit_label='Issue confirmation requests',

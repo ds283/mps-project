@@ -28,7 +28,7 @@ from ..database import db
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
-    EditPeriodAttachmentForm
+    EditPeriodAttachmentForm, ChangeDeadlineFormFactory
 from ..admin.forms import LevelSelectorForm
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
@@ -265,16 +265,13 @@ def overview(id):
         return redirect(request.referrer)
 
     # build forms
-    if config.live_deadline is None:
-        GoLiveForm = GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and immediately close',
-                                       datebox_label='Deadline')
-    else:
-        GoLiveForm = GoLiveFormFactory(submit_label='Change deadline', live_and_close_label=None,
-                                       datebox_label='The current deadline is')
-
+    GoLiveForm = GoLiveFormFactory()
     golive_form = GoLiveForm(request.form)
 
-    # change labels and text depending on current lifecycle state
+    ChangeDeadlineForm = ChangeDeadlineFormFactory()
+    change_form = ChangeDeadlineForm(request.form)
+
+    # change labels and text for issuing confirmation requests depending on current lifecycle state
     if config.requests_issued:
         IssueFacultyConfirmRequestForm = \
             IssueFacultyConfirmRequestFormFactory(submit_label='Change deadline', skip_label=None,
@@ -300,17 +297,23 @@ def overview(id):
 
     # first time this page is displayed, populate the forms with sensible default data
     if request.method == 'GET':
+        predicted_deadline = date.today() + timedelta(weeks=6)
         if config.request_deadline is not None:
             issue_form.request_deadline.data = config.request_deadline
         else:
-            issue_form.request_deadline.data = date.today() + timedelta(weeks=6)
+            issue_form.request_deadline.data = predicted_deadline
 
         if config.live_deadline is not None:
             golive_form.live_deadline.data = config.live_deadline
+            change_form.live_deadline.data = config.live_deadline
         else:
-            golive_form.live_deadline.data = date.today() + timedelta(weeks=6)
+            golive_form.live_deadline.data = predicted_deadline
+            change_form.live_deadline.data = predicted_deadline
+
         golive_form.notify_faculty.data = True
         golive_form.notify_selectors.data = True
+
+        change_form.notify_convenor.data = True
 
         if period is not None and period.feedback_deadline is not None:
             feedback_form.feedback_deadline.data = period.feedback_deadline
@@ -321,9 +324,9 @@ def overview(id):
     capacity_data = get_capacity_data(pclass)
 
     return render_template('convenor/dashboard/overview.html', pane='overview',
-                           golive_form=golive_form, issue_form=issue_form, feedback_form=feedback_form,
-                           pclass=pclass, config=config, current_year=current_year, convenor_data=data,
-                           capacity_data=capacity_data, today=date.today())
+                           golive_form=golive_form, change_form=change_form, issue_form=issue_form,
+                           feedback_form=feedback_form, pclass=pclass, config=config, current_year=current_year,
+                           convenor_data=data, capacity_data=capacity_data, today=date.today())
 
 
 @convenor.route('/attached/<int:id>')
@@ -3628,7 +3631,7 @@ def confirm_description(config_id, did):
 @roles_accepted('faculty', 'admin', 'root')
 def go_live(id):
     # get details for current pclass configuration
-    config = ProjectClassConfig.query.get_or_404(id)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -3643,13 +3646,7 @@ def go_live(id):
               'live.'.format(name=config.project_class.name), 'error')
         return request.referrer
 
-    if config.live_deadline is None:
-        GoLiveForm = GoLiveFormFactory(submit_label='Go live', live_and_close_label='Go live and immediately close',
-                                       datebox_label='Deadline')
-    else:
-        GoLiveForm = GoLiveFormFactory(submit_label='Change deadline', live_and_close_label=None,
-                                       datebox_label='The current deadline is')
-
+    GoLiveForm = GoLiveFormFactory()
     form = GoLiveForm(request.form)
 
     if form.is_submitted():
@@ -3799,7 +3796,7 @@ def reverse_golive(config_id):
 @roles_accepted('faculty', 'admin', 'root')
 def adjust_selection_deadline(configid):
     # config id is a ProjectClassConfig
-    config = ProjectClassConfig.query.get_or_404(configid)
+    config: ProjectClassConfig = ProjectClassConfig.query.get_or_404(configid)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(config.project_class):
@@ -3809,49 +3806,57 @@ def adjust_selection_deadline(configid):
     if not validate_project_class(config.project_class):
         return redirect(request.referrer)
 
-    GoLiveForm = GoLiveFormFactory(submit_label='Change deadline', live_and_close_label=None,
-                                   datebox_label='The current deadline is')
-    form = GoLiveForm(request.form)
+    # reject if project class is not live
+    if not config.live:
+        flash('A request to adjust the selection deadline for "{proj}" was ignored, because '
+              'this project class is not yet live.'.format(proj=config.name), 'error')
+        return redirect(request.referrer)
+
+    if config.live_deadline is None:
+        flash('A request to adjust the selection deadline for "{proj}" was ignored, because '
+              'the deadline has not yet been set for this project class.'.format(proj=config.name), 'error')
+        return redirect(request.referrer)
+
+    ChangeDeadlineForm = ChangeDeadlineFormFactory()
+    form = ChangeDeadlineForm(request.form)
 
     if form.validate_on_submit():
-        if form.live.data:
+        if form.change.data:
             config.live_deadline = form.live_deadline.data
-            db.session.commit()
+
+            try:
+                db.session.commit()
+                flash('The deadline for student selections for "{proj}" has been successfully changed '
+                      'to {deadline}.'.format(proj=config.name, deadline=config.live_deadline.strftime("%a %d %b %Y")),
+                      'success')
+            except SQLAlchemyError as e:
+                db.session.rollback()
+                current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+                flash('Could not adjust selection deadline for "{proj}" due to database error. '
+                      'Please contact a system administrator'.format(proj=config.name), 'error')
+
+        elif form.close.data:
+            notify_convenor = form.notify_convenor.data
+
+            year = get_current_year()
+
+            celery = current_app.extensions['celery']
+            close = celery.tasks['app.tasks.close_selection.pclass_close']
+            close_fail = celery.tasks['app.tasks.close_selection.close_fail']
+
+            # register as new background task and push to celery scheduler
+            task_id = register_task('Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.name,
+                                                                                       yra=year, yrb=year + 1),
+                                    owner=current_user,
+                                    description='Close selections for "{proj}"'.format(proj=config.name))
+
+            close.apply_async(args=(task_id, config.id, current_user.id, notify_convenor),
+                              task_id=task_id,
+                              link_error=close_fail.si(task_id, current_user.id))
+
+            # pclass_close task posts a user message if the close logic proceeds correctly.
 
     return redirect(url_for('convenor.overview', id=config.pclass_id))
-
-
-@convenor.route('/close_selections/<int:id>', methods=['GET', 'POST'])
-@roles_accepted('faculty', 'admin', 'root')
-def close_selections(id):
-    # get details for current pclass configuration
-    config = ProjectClassConfig.query.get_or_404(id)
-
-    # reject user if not a convenor for this project class
-    if not validate_is_convenor(config.project_class):
-        return redirect(request.referrer)
-
-    # reject if project class not published
-    if not validate_project_class(config.project_class):
-        return redirect(request.referrer)
-
-    year = get_current_year()
-
-    celery = current_app.extensions['celery']
-    close = celery.tasks['app.tasks.close_selection.pclass_close']
-    close_fail = celery.tasks['app.tasks.close_selection.close_fail']
-
-    # register as new background task and push to celery scheduler
-    task_id = register_task('Close selections for "{proj}" {yra}-{yrb}'.format(proj=config.name,
-                                                                               yra=year, yrb=year+1),
-                            owner=current_user,
-                            description='Close selections for "{proj}"'.format(proj=config.name))
-
-    close.apply_async(args=(task_id, config.id, current_user.id),
-                      task_id=task_id,
-                      link_error=close_fail.si(task_id, current_user.id))
-
-    return redirect(request.referrer)
 
 
 @convenor.route('/submit_student_selection/<int:sel_id>')

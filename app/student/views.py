@@ -9,7 +9,7 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
 from flask_security import current_user, roles_required, roles_accepted
 from flask_mail import Message
 
@@ -106,17 +106,20 @@ def dashboard():
     Render dashboard for a student user
     :return:
     """
+    has_selections = False
+    has_submissions = False
+
     # build list of all project classes for which this student has roles
     pcs = set()
 
     if current_user.student_data is not None:
         for item in current_user.student_data.selecting.filter_by(retired=False).all():
-            pclass = item.config.project_class
+            pclass: ProjectClass = item.config.project_class
             if pclass.active and pclass.publish:
                 pcs.add(pclass)
 
         for item in current_user.student_data.submitting.filter_by(retired=False).all():
-            pclass = item.config.project_class
+            pclass: ProjectClass = item.config.project_class
             if pclass.active and pclass.publish:
                 pcs.add(pclass)
 
@@ -124,7 +127,7 @@ def dashboard():
     enrollments = []
     for item in pcs:
         # extract live configuration for this project class
-        config = item.configs.order_by(ProjectClassConfig.year.desc()).first()
+        config: ProjectClassConfig = item.most_recent_config
 
         # determine whether this student has a selector role for this project class
         select_q = config.selecting_students.filter_by(retired=False, student_id=current_user.id)
@@ -134,6 +137,8 @@ def dashboard():
                   'the system administrator'.format(pclass=item.name), 'error')
 
         sel = select_q.first()
+        if sel is not None:
+            has_selections = True
 
         # determine whether this student has a submitter role for this project class
         submit_q = config.submitting_students.filter_by(retired=False, student_id=current_user.id)
@@ -143,10 +148,30 @@ def dashboard():
                   'the system administrator'.format(pclass=item.name), 'error')
 
         sub = submit_q.first()
+        if sub is not None:
+            has_submissions = True
 
         enrollments.append((config, sel, sub))
 
     enrollments.sort(key=lambda x: x[0].project_class.name)
+
+    # can't disable both panes, so if neither is active then force selection pane to be active
+    if not has_selections and not has_submissions:
+        has_selections = True
+
+    pane = request.args.get('pane', None)
+    if pane is None and session.get('dashboard_pane'):
+        pane = session['dashboard_pane']
+
+    if pane not in ['select', 'submit']:
+        pane = 'select'
+
+    if pane == 'select' and not has_selections:
+        pane = 'submit'
+    if pane == 'submit' and not has_submissions:
+        pane = 'select'
+
+    session['dashboard_pane'] = pane
 
     # list of all (active, published) project classes used to generate a simple informational dashboard in the event
     # that this student doesn't have any live selector or submitter roles
@@ -168,7 +193,8 @@ def dashboard():
             messages.append(message)
 
     return render_template('student/dashboard.html', enrolled_classes=pcs, enrollments=enrollments, pclasses=pclasses,
-                           messages=messages, today=date.today())
+                           messages=messages, today=date.today(), pane=pane, has_selections=has_selections,
+                           has_submissions=has_submissions)
 
 
 @student.route('/browse_projects/<int:id>')

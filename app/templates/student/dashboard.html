@@ -71,6 +71,72 @@
     Student dashboard
 {% endblock %}
 
+{% block pillblock %}
+    <ul class="nav nav-pills dashboard-nav">
+        <li {% if pane=='select' %}class="active"{% elif not has_selections %}class="disabled"{% endif %}>
+            <a {% if has_selections %}href="{{ url_for('student.dashboard', pane='select') }}"{% endif %}>
+                Project selections for next year
+            </a>
+        </li>
+        <li {% if pane=='submit' %}class="active"{% elif not has_submissions %}class="disabled"{% endif %}>
+            <a {% if has_submissions %}href="{{ url_for('student.dashboard', pane='submit') }}"{% endif %}>
+                Projects running this year
+            </a>
+        </li>
+    </ul>
+{% endblock %}
+
+{% macro project_card(pclass, sdata) %}
+    <div class="row vertical-top">
+        <div class="col-xs-12">
+            <span class="dashboard-project-title">{{ pclass.name }}</span>
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-xs-6">
+            Convenor:
+            <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
+                {{ pclass.convenor_name }}
+            </a>
+        </div>
+        <div class="col-xs-6">
+            <div class="pull-right">
+                Commences
+                <span class="label label-info">Y{{ pclass.start_level.academic_year }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="row vertical-top">
+        <div class="col-xs-7">
+            {% if sdata %}
+                Your details:
+                {{ sdata.student.cohort_label|safe }}
+                {{ sdata.student.programme.label|safe }}
+                {{ sdata.academic_year_label(show_details=False)|safe }}
+            {% endif %}
+        </div>
+        <div class="col-xs-5">
+            {% if sdata and sdata.live_deadline is defined %}
+                {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
+                    <div class="pull-right">
+                        <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
+                        {% if config.live_deadline %}
+                            <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="pull-right">
+                        <span class="label label-default">Student selections not open</span>
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <hr class="intro-divider">
+{% endmacro %}
+
+
 {% block bodyblock %}
     <div class="row">
         <div class="col-xs-1"></div>
@@ -82,85 +148,43 @@
                 {% endfor %}
             {% endif %}
 
+            {% set ns = namespace(display=0) %}
+
             {% if enrollments and enrollments|length > 0 %}
-
                 {% for config, sel, sub in enrollments %}
-
                     {% set pclass = config.project_class %}
-                    <div class="well">
-                        <div class="row vertical-top">
-                            <div class="col-xs-12">
-                                <span class="dashboard-project-title">{{ pclass.name }}</span>
+                        {% if pane=='select' and sel %}
+                            <div class="well">
+                                {{ project_card(pclass, sel) }}
+                                {{ selection_card(config, sel) }}
                             </div>
-                        </div>
-                        <div class="row vertical-top">
-                            <div class="col-xs-6">
-                                Convenor:
-                                <a class="btn btn-link" href="mailto:{{ pclass.convenor_email }}">
-                                    {{ pclass.convenor_name }}
-                                </a>
-                            </div>
-                            <div class="col-xs-6">
-                                <div class="pull-right">
-                                    Commences
-                                    <span class="label label-info">Y{{ pclass.start_level.academic_year }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row vertical-top">
-                            <div class="col-xs-7">
-                                {% set sdata = none %}
-                                {% if sel %}
-                                    {% set sdata = sel %}
-                                {% elif sub %}
-                                    {% set sdata = sub %}
-                                {% endif %}
-                                {% if data is not none %}
-                                    Your details:
-                                    {{ sdata.student.cohort_label|safe }}
-                                    {{ sdata.student.programme.label|safe }}
-                                    {{ sdata.academic_year_label(show_details=False)|safe }}
-                                {% endif %}
-                            </div>
-                            <div class="col-xs-5">
-                                {% if sel %}
-                                    {% if config.selector_lifecycle == config.SELECTOR_LIFECYCLE_SELECTIONS_OPEN %}
-                                        <div class="pull-right">
-                                            <span class="label label-success">Choices for {{ config.year+1 }}&ndash;{{ config.year+2 }} open</span>
-                                            {% if config.live_deadline %}
-                                                <span class="label label-success">Selection closes <strong>{{ config.live_deadline.strftime("%a %d %b (%Y)") }}</strong></span>
-                                            {% endif %}
-                                        </div>
-                                    {% else %}
-                                        <div class="pull-right">
-                                            <span class="label label-default">Student selections not open</span>
-                                        </div>
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <hr class="intro-divider">
-
-                        {% if sel %}
-                            {{ selection_card(config, sel) }}
+                            {% set ns.display = ns.display+1 %}
                         {% endif %}
 
-                        {% if sub %}
-                            {% for n in range(config.submissions) %}
-                                {{ submission_card(config, sub, n, today) }}
-                            {% else %}
-                                <p>You are enrolled on this project class, but it does not have marked assessments.</p>
-                            {% endfor %}
+                        {% if pane=='submit' and sub %}
+                            <div class="well">
+                            {{ project_card(pclass, sub) }}
+                                {% for n in range(config.submissions) %}
+                                    {{ submission_card(config, sub, n, today) }}
+                                {% else %}
+                                    <p>You are enrolled on this project class, but it does not have marked assessments.</p>
+                                {% endfor %}
+                            </div>
+                            {% set ns.display = ns.display+1 %}
                         {% endif %}
-
-                        {% if sel is none and sub is none %}
-                            <p>No current activity.</p>
-                        {% endif %}
-
-                    </div>
-
                 {% endfor %}
+
+                {% if pane=='select' and ns.display==0 %}
+                    <div class="well">
+                        <p>You do not currently need to make any project selections.</p>
+                    </div>
+                {% endif %}
+
+                {% if pane=='submit' and ns.display==0 %}
+                    <div class="well">
+                        <p>You are not making submissions for any project this year.</p>
+                    </div>
+                {% endif %}
 
             {% else %}
 

@@ -3,80 +3,89 @@
         <div class="row vertical-top bookmark-table">
             <div class="col-xs-1"><strong>Rank</strong></div>
             <div class="col-xs-5"><strong>Project title</strong></div>
-            <div class="col-xs-3"><strong>Research group</strong></div>
-            <div class="col-xs-3"><strong>Supervisor</strong></div>
+            <div class="col-xs-5"><strong>Supervisor/Research group</strong></div>
+            <div class="col-xs-1"></div>
         </div>
-        {% for item in list %}
-            {% set project = item.liveproject %}
-            <div class="row vertical-top final-selection-table">
-                <div class="col-xs-1">
-                    <span class="label label-primary">#{{ item.rank }}</span>
+        <div class="list-group" id="project-bookmarks">
+            {% for item in list %}
+                {% set project = item.liveproject %}
+                <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
+                    <div class="col-xs-1">
+                        <i class="fa fa-bars drag-handle"></i>
+                        <span id="ranking" class="label label-primary">#{{ item.rank }}</span>
+                    </div>
+                    <div class="col-xs-5">
+                        <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
+                            {{ item.format_project|safe }}
+                        </a>
+                        {% if project.is_available(sel) %}
+                            <span class="label label-success"><i class="fa fa-check"></i> Available</span>
+                        {% else %}
+                            <span class="label label-danger"><i class="fa fa-times"></i> Not available</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-xs-5">
+                        <a href="mailto:{{ project.owner.user.email }}">
+                            {{ project.owner.user.name }}
+                        </a>
+                        {{ project.group.make_label(project.group.name)|safe }}
+                    </div>
+                   <div class="col-xs-1">
+                        <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                    </div>
                 </div>
-                <div class="col-xs-5">
-                    <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
-                        {{ item.format_project|safe }}
-                    </a>
-                    {% if project.is_available(sel) %}
-                        <span class="label label-success"><i class="fa fa-check"></i> Available</span>
-                    {% else %}
-                        <span class="label label-danger"><i class="fa fa-times"></i> Not available</span>
-                    {% endif %}
-                </div>
-                <div class="col-xs-3">
-                    {{ project.group.make_label(project.group.name)|safe }}
-                </div>
-                <div class="col-xs-3">
-                    <a href="mailto:{{ project.owner.user.email }}">
-                        {{ project.owner.user.name }}
-                    </a>
-                </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
     </div>
 {% endmacro %}
 
 {% macro bookmark_students(proj, list) %}
     <div class="container-fluid">
         <div class="row vertical-align bookmark-table">
-            <div class="col-xs-5"><strong>Student</strong></div>
+            <div class="col-xs-4"><strong>Student</strong></div>
             <div class="col-xs-1"><strong>Rank</strong></div>
             <div class="col-xs-3"><strong>Choices submitted</strong></div>
             <div class="col-xs-3"><strong>In submission</strong></div>
+            <div class="col-xs-1"></div>
         </div>
-
-        {% for item in list %}
-            <div class="row vertical-top bookmark-table">
-                <div class="col-xs-5">
-                    {{ item.format_name|safe }}
-                </div>
-                <div class="col-xs-1">
-                    <span class="label label-success">#{{ item.rank }}</span>
-                </div>
-                <div class="col-xs-3">
-                    {% if item.owner.has_submitted %}
-                        <span class="label label-success">Yes</span>
-                    {% else %}
-                        <span class="label label-default">No</span>
-                    {% endif %}
-                    {% if proj.is_available(item.owner) %}
-                        <span class="label label-success"><i class="fa fa-check"></i> Available</span>
-                    {% else %}
-                        <span class="label label-danger"><i class="fa fa-times"></i> Not available</span>
-                    {% endif %}
-                </div>
-                <div class="col-xs-3">
-                    {% if item.owner.has_submitted %}
-                        {% if item.owner.is_project_submitted(item.liveproject) %}
+        <div class="list-group" id="student-bookmarks">
+            {% for item in list %}
+                <div class="row vertical-top bookmark-table">
+                    <div class="col-xs-4">
+                        {{ item.format_name|safe }}
+                    </div>
+                    <div class="col-xs-1">
+                        <span class="label label-success">#{{ item.rank }}</span>
+                    </div>
+                    <div class="col-xs-3">
+                        {% if item.owner.has_submitted %}
                             <span class="label label-success">Yes</span>
                         {% else %}
                             <span class="label label-default">No</span>
                         {% endif %}
-                    {% else %}
-                        <span class="label label-default">n/a</span>
-                    {% endif %}
+                        {% if proj.is_available(item.owner) %}
+                            <span class="label label-success"><i class="fa fa-check"></i> Available</span>
+                        {% else %}
+                            <span class="label label-danger"><i class="fa fa-times"></i> Not available</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-xs-3">
+                        {% if item.owner.has_submitted %}
+                            {% if item.owner.is_project_submitted(item.liveproject) %}
+                                <span class="label label-success">Yes</span>
+                            {% else %}
+                                <span class="label label-default">No</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="label label-default">n/a</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-xs-1">
+                        <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                    </div>
                 </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
     </div>
 {% endmacro %}
 
@@ -85,53 +94,55 @@
         <div class="row vertical-align bookmark-table">
             <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}><strong>Student</strong></div>
             <div {% if show_hint %}class="col-xs-3"{% else %}class="col-xs-2"{% endif %}><strong>Rank</strong></div>
-            <div class="col-xs-3"><strong>Timestamp</strong></div>
-            <div class="col-xs-2"><strong>IP address</strong></div>
+            <div class="col-xs-4"><strong>Timestamp and IP</strong></div>
+            <div class="col-xs-1"></div>
         </div>
-
-        {% for item in list %}
-            <div class="row vertical-top bookmark-table">
-                <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
-                    {{ item.format_name|safe }}
+        <div class="list-group" id="student-selections">
+            {% for item in list %}
+                <div class="row vertical-top bookmark-table">
+                    <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
+                        {{ item.format_name|safe }}
+                    </div>
+                    <div {% if show_hint %}class="col-xs-3"{% else %}class="col-xs-2"{% endif %}>
+                        <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
+                        {% if item.converted_from_bookmark %}
+                            <span class="label label-warning rank-hint-button">Bookmark</span>
+                        {% endif %}
+                        {% if show_hint %}
+                            <div class="rank-hint-button">
+                                <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                    Hint
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-right">
+                                    {% set menu_items = item.menu_order %}
+                                    {% for mi in menu_items %}
+                                        {% if mi is string %}
+                                            <li role="separator" class="divider"></li>
+                                            <li class="dropdown-header">{{ mi }}</li>
+                                        {% elif mi is number %}
+                                            {% set disabled = (mi == item.hint) %}
+                                            <li {% if disabled %}class="disabled"{% endif %}>
+                                                <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                    {{ item.menu_item(mi)|safe }}
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-xs-4">
+                        {{ item.owner.submission_time.strftime("%a %d %b %Y %H:%M:%S") }} /
+                        {{ item.owner.submission_IP }}
+                    </div>
+                    <div class="col-xs-1">
+                        <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                    </div>
                 </div>
-                <div {% if show_hint %}class="col-xs-3"{% else %}class="col-xs-2"{% endif %}>
-                    <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
-                    {% if item.converted_from_bookmark %}
-                        <span class="label label-warning rank-hint-button">Bookmark</span>
-                    {% endif %}
-                    {% if show_hint %}
-                        <div class="rank-hint-button">
-                            <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
-                                Hint
-                                <span class="caret"></span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-right">
-                                {% set menu_items = item.menu_order %}
-                                {% for mi in menu_items %}
-                                    {% if mi is string %}
-                                        <li role="separator" class="divider"></li>
-                                        <li class="dropdown-header">{{ mi }}</li>
-                                    {% elif mi is number %}
-                                        {% set disabled = (mi == item.hint) %}
-                                        <li {% if disabled %}class="disabled"{% endif %}>
-                                            <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                                {{ item.menu_item(mi)|safe }}
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    {% endif %}
-                </div>
-                <div class="col-xs-3">
-                    {{ item.owner.submission_time.strftime("%a %d %b %Y %H:%M:%S") }}
-                </div>
-                <div class="col-xs-2">
-                    {{ item.owner.submission_IP }}
-                </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
     </div>
 {% endmacro %}
 
@@ -140,56 +151,60 @@
         <div class="row vertical-align final-selection-table">
             <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}><strong>Rank</strong></div>
             <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}><strong>Project title</strong></div>
-            <div class="col-xs-3"><strong>Research group</strong></div>
-            <div class="col-xs-3"><strong>Supervisor</strong></div>
+            <div class="col-xs-5"><strong>Supervisor/Research group</strong></div>
+            <div class="col-xs-1"></div>
         </div>
-        {% for item in list %}
-            {% set project = item.liveproject %}
-            <div class="row vertical-top final-selection-table">
-                <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}>
-                    <span class="label label-success rank-hint-button">#{{ item.rank }}</span>
-                    {% if item.converted_from_bookmark %}
-                        <span class="label label-warning rank-hint-button">Bookmark</span>
-                    {% endif %}
-                    {% if show_hint %}
-                        <div class="rank-hint-button">
-                            <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
-                                Hint
-                                <span class="caret"></span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-right">
-                                {% set menu_items = item.menu_order %}
-                                {% for mi in menu_items %}
-                                    {% if mi is string %}
-                                        <li role="separator" class="divider"></li>
-                                        <li class="dropdown-header">{{ mi }}</li>
-                                    {% elif mi is number %}
-                                        {% set disabled = (mi == item.hint) %}
-                                        <li {% if disabled %}class="disabled"{% endif %}>
-                                            <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
-                                                {{ item.menu_item(mi)|safe }}
-                                            </a>
-                                        </li>
-                                    {% endif %}
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    {% endif %}
+        <div class="list-group" id="project-selections">
+            {% for item in list %}
+                {% set project = item.liveproject %}
+                <div id="P-{{ project.id }}" class="row vertical-top final-selection-table">
+                    <div {% if show_hint %}class="col-xs-2"{% else %}class="col-xs-1"{% endif %}>
+                        <i class="fa fa-bars drag-handle"></i>
+                        <span id="ranking" class="label label-success rank-hint-button">#{{ item.rank }}</span>
+                        {% if item.converted_from_bookmark %}
+                            <span class="label label-warning rank-hint-button">Bookmark</span>
+                        {% endif %}
+                        {% if show_hint %}
+                            <div class="rank-hint-button">
+                                <a class="label label-info dropdown-toggle" type="button" data-toggle="dropdown">
+                                    Hint
+                                    <span class="caret"></span>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-right">
+                                    {% set menu_items = item.menu_order %}
+                                    {% for mi in menu_items %}
+                                        {% if mi is string %}
+                                            <li role="separator" class="divider"></li>
+                                            <li class="dropdown-header">{{ mi }}</li>
+                                        {% elif mi is number %}
+                                            {% set disabled = (mi == item.hint) %}
+                                            <li {% if disabled %}class="disabled"{% endif %}>
+                                                <a {% if not disabled %}href="{{ url_for('convenor.set_hint', id=item.id, hint=mi) }}"{% endif %}>
+                                                    {{ item.menu_item(mi)|safe }}
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
+                        <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
+                            {{ item.format_project(show_hint=show_hint)|safe }}
+                        </a>
+                    </div>
+                    <div class="col-xs-5">
+                        <a href="mailto:{{ project.owner.user.email }}">
+                            {{ project.owner.user.name }}
+                        </a>
+                        {{ project.group.make_label(project.group.name)|safe }}
+                    </div>
+                    <div class="col-xs-1">
+                        <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                    </div>
                 </div>
-                <div {% if show_hint %}class="col-xs-4"{% else %}class="col-xs-5"{% endif %}>
-                    <a href="{{ url_for('faculty.live_project', pid=project.id, text=nav_text, url=nav_url) }}">
-                        {{ item.format_project(show_hint=show_hint)|safe }}
-                    </a>
-                </div>
-                <div class="col-xs-3">
-                    {{ project.group.make_label(project.group.name)|safe }}
-                </div>
-                <div class="col-xs-3">
-                    <a href="mailto:{{ project.owner.user.email }}">
-                        {{ project.owner.user.name }}
-                    </a>
-                </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
     </div>
 {% endmacro %}

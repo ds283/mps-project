@@ -2,6 +2,31 @@
 
 {% from "convenor/macros.html" import bookmark_projects %}
 
+{% block scripts %}
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.10.2/Sortable.min.js"></script>
+
+    <script type=text/javascript>
+        $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+        Sortable.create(document.getElementById("project-bookmarks"), {
+            handle: '.drag-handle',
+            animation: 150,
+            onSort: function(e) {
+                const items = e.to.children;
+                let result = [];
+                for (let i=0; i < items.length; i++) {
+                    // push id onto ranking list
+                    result.push($(items[i]).attr("id"));
+
+                    rspan = $(items[i]).find('#ranking');
+                    rspan.html("#" + (i+1));
+                }
+            }
+        })
+    </script>
+{% endblock %}
+
 {% block title %}
     View bookmarks for {{ sel.student.user.name }}
 {% endblock %}

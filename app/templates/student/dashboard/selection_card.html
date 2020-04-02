@@ -286,37 +286,33 @@
 
                 {{ open_card(config, sel) }}
 
-                    <hr class="intro-divider">
-                    <div class="row vertical-top">
-                        <div class="col-xs-12">
-                            {% set num_choices = sel.number_choices %}
-                            {% set numpl = 's' %}
-                            {% if num_choices == 1 %}
-                                {% set numpl = '' %}
-                            {% endif %}
-                            {% if sel.is_optional %}
-                                <p>
-                                    Select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
-                                    It is not possible to guarantee that you will be assigned your highest-priority choices.
-                                </p>
-                              {% else %}
-                                {% if sel.is_initial_selection %}
-                                    <p>
-                                        Select at least <strong>{{ num_choices }}</strong> projects.
-                                        It is not possible to guarantee that you will be assigned your highest-priority choices.
-                                    </p>
-                                 {% else %}
-                                    <p>
-                                        To change supervisor, select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
-                                    </p>
-                                {% endif %}
-                            {% endif %}
+                <hr class="intro-divider">
+                <div class="row vertical-top">
+                    <div class="col-xs-12">
+                        {% set num_choices = sel.number_choices %}
+                        {% set numpl = 's' %}
+                        {% if num_choices == 1 %}{% set numpl = '' %}{% endif %}
+                        {% if sel.is_optional %}
                             <p>
-                                Bookmarks highlighted in <span class="label label-success">green</span> will be included in your selection.
-                                Bookmarks highlighted in <span class="label label-danger">red</span> will not be included.
+                                Select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                It is not possible to guarantee that you will be assigned your highest-priority choices.
                             </p>
-                        </div>
+                        {% elif sel.is_initial_selection %}
+                            <p>
+                                Select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                                It is not possible to guarantee that you will be assigned your highest-priority choices.
+                            </p>
+                         {% else %}
+                            <p>
+                                To change supervisor, select at least <strong>{{ num_choices }}</strong> project{{ numpl }}.
+                            </p>
+                        {% endif %}
+                        <p>
+                            Bookmarks highlighted in <span class="label label-success">green</span> will be included in your selection.
+                            Bookmarks highlighted in <span class="label label-danger">red</span> will not be included.
+                        </p>
                     </div>
+                </div>
 
                 {# render bookmarks #}
                 {% if sel.has_bookmarks %}

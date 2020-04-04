@@ -12,6 +12,7 @@
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+import parse
 from celery import chain
 from dateutil import parser
 from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
@@ -23,23 +24,20 @@ from sqlalchemy.orm.exc import StaleDataError
 
 import app.ajax as ajax
 from . import convenor
-from ..database import db
-
 from .forms import GoLiveFormFactory, IssueFacultyConfirmRequestFormFactory, OpenFeedbackFormFactory, \
     AssignMarkerFormFactory, AssignPresentationFeedbackFormFactory, CustomCATSLimitForm, \
     EditSubmissionRecordForm, UploadPeriodAttachmentForm, \
     EditPeriodAttachmentForm, ChangeDeadlineFormFactory
 from ..admin.forms import LevelSelectorForm
+from ..database import db
 from ..faculty.forms import AddProjectFormFactory, EditProjectFormFactory, SkillSelectorForm, \
     AddDescriptionFormFactory, EditDescriptionFormFactory, MoveDescriptionFormFactory, \
     PresentationFeedbackForm, SupervisorFeedbackForm, MarkerFeedbackForm, SupervisorResponseForm
-
 from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectClass, ProjectClassConfig, \
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
     SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role
-
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -50,10 +48,8 @@ from ..shared.utils import get_current_year, home_dashboard, get_convenor_dashbo
 from ..shared.validators import validate_is_convenor, validate_is_administrator, validate_edit_project, \
     validate_project_open, validate_assign_feedback, validate_project_class, validate_edit_description
 from ..student.actions import store_selection
-
 from ..task_queue import register_task
 from ..uploads import submitted_files
-
 
 _marker_menu = \
 """
@@ -4555,7 +4551,7 @@ def perform_reset_popularity_data(id):
 @roles_accepted('faculty', 'admin', 'root')
 def selector_bookmarks(id):
     # id is a SelectingStudent
-    sel = SelectingStudent.query.get_or_404(id)
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(sel.config.project_class):
@@ -4568,13 +4564,65 @@ def selector_bookmarks(id):
 @roles_accepted('faculty', 'admin', 'root')
 def project_bookmarks(id):
     # id is a LiveProject
-    proj = LiveProject.query.get_or_404(id)
+    proj: LiveProject = LiveProject.query.get_or_404(id)
 
     # reject user if not a convenor for this project class
     if not validate_is_convenor(proj.config.project_class):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/project_bookmarks.html', project=proj)
+
+
+def _demap_project(item_id):
+    result = parse.parse('P-{pid}', item_id)
+
+    return int(result['pid'])
+
+
+@convenor.route('/update_student_bookmarks', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def update_student_bookmarks():
+    data = request.get_json()
+
+    # discard is request is ill-formed
+    if 'ranking' not in data or 'sid' not in data:
+        return jsonify({'status': 'ill_formed'})
+
+    ranking = data['ranking']
+    sid = data['sid']
+
+    # sid is a SelectingStudent
+    sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
+
+    if sel is None:
+        return jsonify({'status': 'data_missing'})
+
+    if sel.retired:
+        return jsonify({'status': 'not_live'})
+
+    if not validate_is_convenor(sel.config.project_class, message=False):
+        return jsonify({'status': 'insufficient_privileges'})
+
+    projects = map(_demap_project, ranking)
+
+    rmap = {}
+    index = 1
+    for p in projects:
+        rmap[p] = index
+        index += 1
+
+    # update ranking
+    for bookmark in sel.bookmarks:
+        bookmark.rank = rmap[bookmark.liveproject.id]
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify({'status': 'database_failure'})
+
+    return jsonify({'status': 'success'})
 
 
 @convenor.route('/selector_choices/<int:id>')
@@ -4601,6 +4649,55 @@ def project_choices(id):
         return redirect(request.referrer)
 
     return render_template('convenor/selector/project_choices.html', project=proj)
+
+
+@convenor.route('/update_student_choices', methods=['GET', 'POST'])
+@roles_accepted('faculty', 'admin', 'root')
+def update_student_choices():
+    data = request.get_json()
+
+    # discard is request is ill-formed
+    if 'ranking' not in data or 'sid' not in data:
+        return jsonify({'status': 'ill_formed'})
+
+    ranking = data['ranking']
+    sid = data['sid']
+
+    if ranking is None or sid is None:
+        return jsonify({'status': 'ill_formed'})
+
+    # sid is a SelectingStudent
+    sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
+
+    if sel is None:
+        return jsonify({'status': 'data_missing'})
+
+    if sel.retired:
+        return jsonify({'status': 'not_live'})
+
+    if not validate_is_convenor(sel.config.project_class, message=False):
+        return jsonify({'status': 'insufficient_privileges'})
+
+    projects = map(_demap_project, ranking)
+
+    rmap = {}
+    index = 1
+    for p in projects:
+        rmap[p] = index
+        index += 1
+
+    # update ranking
+    for selection in sel.selections:
+        selection.rank = rmap[selection.liveproject.id]
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify({'status': 'database_failure'})
+
+    return jsonify({'status': 'success'})
 
 
 @convenor.route('/selector_confirmations/<int:id>')

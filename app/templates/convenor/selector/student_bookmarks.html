@@ -9,6 +9,15 @@
     <script type=text/javascript>
         $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 
+        function sendAjax(ranking, selid) {
+            $.ajax({
+               url: $SCRIPT_ROOT + "/convenor/update_student_bookmarks",
+               type: "POST",
+               data: JSON.stringify({ranking: ranking, sid: selid}),
+               contentType: "application/json; charset=utf-8"
+            });
+        }
+
         Sortable.create(document.getElementById("project-bookmarks"), {
             handle: '.drag-handle',
             animation: 150,
@@ -22,6 +31,7 @@
                     rspan = $(items[i]).find('#ranking');
                     rspan.html("#" + (i+1));
                 }
+                sendAjax(result, {{ sel.id }});
             }
         })
     </script>

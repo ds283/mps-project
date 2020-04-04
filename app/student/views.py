@@ -9,32 +9,27 @@
 #
 
 
-from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
-from flask_security import current_user, roles_required, roles_accepted
-from flask_mail import Message
+import re
+from datetime import datetime, date
 
+import parse
+from flask import render_template, redirect, url_for, flash, request, jsonify, current_app, session
+from flask_mail import Message
+from flask_security import current_user, roles_required, roles_accepted
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
 
+import app.ajax as ajax
 from . import student
-
-from .forms import StudentFeedbackForm, StudentSettingsForm
 from .actions import store_selection
-
+from .forms import StudentFeedbackForm, StudentSettingsForm
 from ..database import db
 from ..models import ProjectClass, ProjectClassConfig, SelectingStudent, LiveProject, \
     Bookmark, MessageOfTheDay, ResearchGroup, SkillGroup, SubmissionRecord, TransferableSkill, \
     User, EmailNotification, add_notification, CustomOffer
-from ..task_queue import register_task
-
 from ..shared.utils import home_dashboard, home_dashboard_url, filter_projects, get_count
 from ..shared.validators import validate_is_convenor, validate_submission_viewable
-
-import app.ajax as ajax
-
-import re
-from datetime import datetime, date
-import parse
+from ..task_queue import register_task
 
 
 def _verify_submitter(rec):
@@ -594,15 +589,17 @@ def update_ranking():
 
     # discard if request is ill-formed
     if 'ranking' not in data or 'configid' not in data or 'sid' not in data:
-
         return jsonify({'status': 'ill_formed'})
 
     config_id = data['configid']
     sid = data['sid']
     ranking = data['ranking']
 
-    config: ProjectClassConfig = ProjectClassConfig.query.filter_by(id=config_id).first()
-    sel = SelectingStudent.query.filter_by(id=sid).first()
+    if config_id is None or sid is None or ranking is None:
+        return jsonify({'status': 'ill_formed'})
+
+    config: ProjectClassConfig = db.session.query(ProjectClassConfig).filter_by(id=config_id).first()
+    sel: SelectingStudent = db.session.query(SelectingStudent).filter_by(id=sid).first()
 
     if config is None or sel is None:
         return jsonify({'status': 'data_missing'})
@@ -622,7 +619,13 @@ def update_ranking():
     # update ranking
     for bookmark in sel.bookmarks:
         bookmark.rank = rmap[bookmark.liveproject.id]
-    db.session.commit()
+
+    try:
+        db.session.commit()
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+        return jsonify({'status': 'database_failure'})
 
     # work out which HTML elements to make visible and which to hide, based on validity of this selection
     if sel.is_valid_selection:

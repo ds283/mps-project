@@ -11,7 +11,7 @@
 from functools import partial
 
 from flask import request
-from flask_security.forms import get_form_field_label, email_required, email_validator, password_length, EqualTo, Form, \
+from flask_security.forms import get_form_field_label, email_required, email_validator, EqualTo, Form, \
     RegisterFormMixin, UniqueEmailFormMixin, NextFormMixin
 from wtforms import StringField, BooleanField, PasswordField, SelectField, SubmitField, IntegerField, RadioField, \
     TextAreaField
@@ -59,7 +59,7 @@ class NewPasswordFormMixin():
 
     password = PasswordField(
         get_form_field_label('password'),
-        validators=[OptionalIf('random_password'), password_length, password_strength])
+        validators=[OptionalIf('random_password'), password_strength])
 
 
 class PasswordConfirmFormMixin():

@@ -50,6 +50,11 @@ class Config(object):
     SECURITY_CHANGEABLE = True
     SECURITY_REGISTERABLE = False
 
+    SECURITY_PASSWORD_LENGTH_MIN = 8
+    SECURITY_PASSWORD_COMPLEXITY_CHECKER = 'zxcvbn'
+    SECURITY_PASSWORD_CHECK_BREACHED = True
+    SECURITY_PASSWORD_BREACHED_COUNT = 1
+
     SECURITY_TOKEN_MAX_AGE = 10800    # tokens expire after 3 * 60 * 60 = 10,800 seconds = 3 hours
 
     SECURITY_PASSWORDLESS = False     # disable passwordless login

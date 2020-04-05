@@ -13,6 +13,9 @@ import json
 from usernames import is_safe_username
 from wtforms import ValidationError
 from wtforms.validators import Optional
+from flask_security import password_length_validator, password_complexity_validator, \
+    password_breached_validator
+
 from zxcvbn import zxcvbn
 
 from ...models import ResearchGroup, DegreeType, DegreeProgramme, TransferableSkill, SkillGroup, ProjectClass, \
@@ -484,46 +487,29 @@ def valid_json(form, field):
 
 
 def password_strength(form, field):
-
     username = form.username.data or ''
     first_name = form.first_name.data or ''
     last_name = form.last_name.data or ''
 
-    # password length validation doesn't stop the validation chain if the password is too short
-    # in this case, just exit because validating the password doesn't make sense
-    if len(field.data) < 6:
-        return
+    proposed_password = field.data
 
-    results = zxcvbn(field.data, user_inputs=[username, first_name, last_name])
+    length_msgs = password_length_validator(proposed_password)
+    complexity_msgs = password_complexity_validator(proposed_password, is_register=True,
+                                                    username=username, first_name=first_name, last_name=last_name)
+    pwn_msgs = password_breached_validator(proposed_password)
 
-    if 'score' in results and int(results['score']) <= 2:
+    msg_lst = [length_msgs, complexity_msgs, pwn_msgs]
+    msgs = None
 
-        msg = ''
-        if 'feedback' in results:
-            if 'warning' in results['feedback']:
-                msg = results['feedback']['warning']
-                if msg is not None and len(msg) > 0 and msg[-1] != '.':
-                    msg += '.'
+    for l in msg_lst:
+        if l is not None:
+            if msgs is None:
+                msgs = l
+            else:
+                msgs += l
 
-        if len(msg) is 0:
-            msg = 'Weak password (score {n}).'.format(n=results['score'])
-
-        if 'feedback' in results:
-            if 'suggestions' in results['feedback'] is not None:
-                for m in results['feedback']['suggestions']:
-                    msg = msg + " " + m
-                    if msg[-1] != '.':
-                        msg += '.'
-
-        if 'crack_times_display' in results:
-
-            if 'online_no_throttling_10_per_second' in results['crack_times_display']:
-
-                msg = msg + " Estimated crack time: " + results['crack_times_display']['online_no_throttling_10_per_second']
-                if msg[-1] != '.':
-                    msg += '.'
-
-        raise ValidationError(msg)
+    if msgs is not None:
+        raise ValidationError(". ".join(msgs))
 
 
 class OptionalIf(Optional):

@@ -4579,7 +4579,7 @@ def _demap_project(item_id):
     return int(result['pid'])
 
 
-@convenor.route('/update_student_bookmarks', methods=['GET', 'POST'])
+@convenor.route('/update_student_bookmarks', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def update_student_bookmarks():
     data = request.get_json()
@@ -4651,7 +4651,7 @@ def project_choices(id):
     return render_template('convenor/selector/project_choices.html', project=proj)
 
 
-@convenor.route('/update_student_choices', methods=['GET', 'POST'])
+@convenor.route('/update_student_choices', methods=['POST'])
 @roles_accepted('faculty', 'admin', 'root')
 def update_student_choices():
     data = request.get_json()

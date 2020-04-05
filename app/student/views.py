@@ -582,7 +582,7 @@ def _demap_project(item_id):
     return int(result['pid'])
 
 
-@student.route('/update_ranking', methods=['GET', 'POST'])
+@student.route('/update_ranking', methods=['POST'])
 @roles_accepted('student', 'admin', 'root')
 def update_ranking():
     data = request.get_json()

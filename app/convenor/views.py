@@ -37,7 +37,8 @@ from ..models import User, FacultyData, StudentData, TransferableSkill, ProjectC
     LiveProject, SelectingStudent, Project, EnrollmentRecord, ResearchGroup, SkillGroup, \
     PopularityRecord, FilterRecord, DegreeProgramme, ProjectDescription, SelectionRecord, SubmittingStudent, \
     SubmissionRecord, PresentationFeedback, Module, FHEQ_Level, DegreeType, ConfirmRequest, \
-    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role
+    SubmissionPeriodRecord, WorkflowMixin, CustomOffer, BackupRecord, SubmittedAsset, PeriodAttachment, Role, \
+    Bookmark
 from ..shared.actions import do_confirm, do_cancel_confirm, do_deconfirm, do_deconfirm_to_pending
 from ..shared.asset_tools import make_submitted_asset_filename
 from ..shared.convenor import add_selector, add_liveproject, add_blank_submitter
@@ -4603,6 +4604,10 @@ def update_student_bookmarks():
     if not validate_is_convenor(sel.config.project_class, message=False):
         return jsonify({'status': 'insufficient_privileges'})
 
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        return jsonify({'status': 'too_early'})
+
     projects = map(_demap_project, ranking)
 
     rmap = {}
@@ -4623,6 +4628,71 @@ def update_student_bookmarks():
         return jsonify({'status': 'database_failure'})
 
     return jsonify({'status': 'success'})
+
+
+@convenor.route('/delete_student_bookmark/<int:sid>/<int:bid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_student_bookmark(sid, bid):
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    # bid is a Bookmark
+    bookmark: Bookmark = Bookmark.query.get_or_404(bid)
+
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to delete selector bookmarks before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(request.referrer)
+
+    title = 'Delete selector bookmark'
+    panel_title = 'Delete bookmark for selector <i class="fa fa-user"></i> <strong>{name}</strong>, ' \
+                  'project <strong>{proj}</strong>'.format(name=sel.student.user.name,
+                                                           proj=bookmark.liveproject.name)
+    action_url = url_for('convenor.perform_delete_student_bookmark', sid=sid, bid=bid)
+    message = '<p>Please confirm that you wish to delete <i class="fa fa-user"></i> <strong>{name}</strong> ' \
+              'bookmark for project <strong>{proj}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>'.format(name=sel.student.user.name,
+                                                            proj=bookmark.liveproject.name)
+    submit_label = 'Delete bookmark'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/perform_delete_student_bookmark/<int:sid>/<int:bid>')
+@roles_accepted('faculty' 'admin', 'root')
+def perform_delete_student_bookmark(sid, bid):
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    if not validate_is_convenor(sel.config.project_class):
+        return home_dashboard()
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to delete selector bookmarks before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(url_for('convenor.selector_bookmarks', id=sid))
+
+    bm: Bookmark = sel.bookmarks.filter_by(id=bid).first()
+
+    if bm:
+        sel.bookmarks.remove(bm)
+        sel.re_rank_bookmarks()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not remove bookmark due to a database error. Please inform a system administrator.',
+                  'info')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            db.session.rollback()
+
+    return redirect(url_for('convenor.selector_bookmarks', id=sid))
 
 
 @convenor.route('/selector_choices/<int:id>')
@@ -4698,6 +4768,74 @@ def update_student_choices():
         return jsonify({'status': 'database_failure'})
 
     return jsonify({'status': 'success'})
+
+
+@convenor.route('/delete_student_choice/<int:sid>/<int:cid>')
+@roles_accepted('faculty', 'admin', 'root')
+def delete_student_choice(sid, cid):
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    # cid is a SelectionRecord
+    record: SelectionRecord = SelectionRecord.query.get_or_404(cid)
+
+    if not validate_is_convenor(sel.config.project_class):
+        return redirect(request.referrer)
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to delete selector rankings before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(request.referrer)
+
+    title = 'Delete selector ranking'
+    panel_title = 'Delete ranking for selector <i class="fa fa-user"></i> <strong>{name}</strong>, ' \
+                  'project <strong>{proj}</strong>'.format(name=sel.student.user.name,
+                                                           proj=record.liveproject.name)
+    action_url = url_for('convenor.perform_delete_student_choice', sid=sid, cid=cid)
+    message = '<p>Please confirm that you wish to delete <i class="fa fa-user"></i> <strong>{name}</strong> ' \
+              'ranking #{num} for project <strong>{proj}</strong>.</p>' \
+              '<p>This action cannot be undone.</p>' \
+              '<p><strong>Student-submitted rankings should be deleted only when there ' \
+              'is a clear rationale for doing ' \
+              'so.</strong></p>'.format(name=sel.student.user.name, num=record.rank,
+                                        proj=record.liveproject.name)
+    submit_label = 'Delete ranking'
+
+    return render_template('admin/danger_confirm.html', title=title, panel_title=panel_title, action_url=action_url,
+                           message=message, submit_label=submit_label)
+
+
+@convenor.route('/perform_delete_student_choice/<int:sid>/<int:cid>')
+@roles_accepted('faculty' 'admin', 'root')
+def perform_delete_student_choice(sid, cid):
+    # sid is a SelectingStudent
+    sel: SelectingStudent = SelectingStudent.query.get_or_404(sid)
+
+    if not validate_is_convenor(sel.config.project_class):
+        return home_dashboard()
+
+    state = sel.config.selector_lifecycle
+    if state <= ProjectClassConfig.SELECTOR_LIFECYCLE_READY_GOLIVE:
+        flash('It is not possible to delete selector rankings before the corresponding project '
+              'class has gone live.', 'error')
+        return redirect(url_for('convenor.selector_bookmarks', id=sid))
+
+    rec: SelectionRecord = sel.selections.filter_by(id=cid).first()
+
+    if rec:
+        sel.selections.remove(rec)
+        sel.re_rank_selections()
+
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not remove ranking due to a database error. Please inform a system administrator.',
+                  'info')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            db.session.rollback()
+
+    return redirect(url_for('convenor.selector_choices', id=sid))
 
 
 @convenor.route('/selector_confirmations/<int:id>')

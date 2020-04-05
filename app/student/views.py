@@ -481,14 +481,15 @@ def remove_bookmark(sid, pid):
 
     if bm:
         sel.bookmarks.remove(bm)
+        sel.re_rank_bookmarks()
 
-        # reorder bookmarks to keep the ranking contiguous
-        rk = 1
-        for bookmark in sel.bookmarks.order_by(Bookmark.rank.asc()):
-            bookmark.rank = rk
-            rk += 1
-
-        db.session.commit()
+        try:
+            db.session.commit()
+        except SQLAlchemyError as e:
+            flash('Could not remove bookmark due to a database error. Please inform a system administrator.',
+                  'info')
+            current_app.logger.exception("SQLAlchemyError exception", exc_info=e)
+            db.session.rollback()
 
     return redirect(request.referrer)
 

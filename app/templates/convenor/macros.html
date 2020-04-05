@@ -31,7 +31,7 @@
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
                    <div class="col-xs-1">
-                        <a href="#" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
+                        <a href="{{ url_for('convenor.delete_student_bookmark', sid=sel.id, bid=item.id) }}" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i> Delete</a>
                     </div>
                 </div>
             {% endfor %}
@@ -202,7 +202,7 @@
                         {{ project.group.make_label(project.group.name)|safe }}
                     </div>
                     <div class="col-xs-1">
-                        <a {% if can_delete %}href="#"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fa fa-trash"></i> Delete</a>
+                        <a {% if can_delete %}href="{{ url_for('convenor.delete_student_choice', sid=sel.id, cid=item.id) }}"{% endif %} class="btn btn-sm btn-danger {% if not can_delete %}disabled{% endif %}"><i class="fa fa-trash"></i> Delete</a>
                     </div>
                 </div>
             {% endfor %}

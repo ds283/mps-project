@@ -6500,6 +6500,24 @@ class SelectingStudent(db.Model):
         return self.bookmarks.order_by(Bookmark.rank)
 
 
+    def re_rank_bookmarks(self):
+        # reorder bookmarks to keep the ranking contiguous
+        rk = 1
+        bookmark: Bookmark
+        for bookmark in self.bookmarks.order_by(Bookmark.rank.asc()):
+            bookmark.rank = rk
+            rk += 1
+
+
+    def re_rank_selections(self):
+        # reorder selection records to keep rankings contiguous
+        rk = 1
+        selection: SelectionRecord
+        for selection in self.selections.order_by(SelectionRecord.rank.asc()):
+            selection.rank = rk
+            rk = 1
+
+
     @property
     def ordered_custom_offers(self):
         return self.custom_offers \
